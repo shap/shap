@@ -11,7 +11,7 @@ pip install shap
 ## Example (run in a Jupyter notebook)
 
 ```python
-from shap import ShapExplainer, DenseData, Model, visualize, initjs
+from shap import ShapExplainer, DenseData, visualize, initjs
 from sklearn import datasets,neighbors
 from numpy import random, arange
 
@@ -28,7 +28,7 @@ knn.fit(iris.data, iris.target == 0)
 
 # use Shap to explain a single prediction
 X = DenseData(iris.feature_names, iris.data[inds[:100],:]) # name the features
-explainer = ShapExplainer(f, X, nsamples=100)
+explainer = ShapExplainer(knn.predict, X, nsamples=100)
 visualize(explainer.explain(iris.data[inds[102:103],:]))
 ```
 <p align="center">
