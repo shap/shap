@@ -1,5 +1,18 @@
-# Expectation Shapley (ES) values
+# Shap
 
-Estimate and visualize Expectation Shapley (ES) values to explain any machine learning model.
+Shap explains the output of any machine learning model using expectations and Shapley values. It is easy to install and use, and under mild assumptions can be shown to be the optimal additive explanation of a model using the model inputs.
 
-This is going to be the home of our ES value estimation and visualization code that currently lives at https://github.com/interpretable-ml/iml
+## Install
+
+```
+pip install shap
+```
+
+## Usage
+
+```python
+from shap import ShapExplainer, visualize
+
+explanation = ShapExplainer(model_function, reference_dataset).explain(x)
+visualize(explaination) # works in a Jupyter notebook
+```
