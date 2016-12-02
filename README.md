@@ -1,6 +1,10 @@
-# Shap
+<p align="center">
+  <img src="https://slundberg.github.io/shap/artwork/logo.png" />
+</p>
 
-Shap explains the output of any machine learning model using expectations and Shapley values. Under certain assumptions it can be shown to be the optimal linear explanation of a model prediction (see our current [short paper](https://arxiv.org/abs/1611.07478) for details).
+---
+
+**Shap** explains the output of any machine learning model using expectations and Shapley values. Under certain assumptions it can be shown to be the optimal linear explanation of a model prediction (see our current [short paper](https://arxiv.org/abs/1611.07478) for details).
 
 ## Install
 
