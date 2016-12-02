@@ -53,6 +53,6 @@ visualize([explainer.explain(iris.data[inds[i:i+1],:]) for i in range(100,len(ir
 
 ## Sample notebooks
 
-The notebooks below demonstrate different use cases for Shap. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. If you have your own notebook you would like to share, or have an improvement to the notebooks below pull requests are welcome :)
+The notebooks below demonstrate different use cases for Shap. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. If you have your own notebook you would like to share, or have an improvement to the notebooks below, pull requests are welcome :)
 
 - [**Iris classification**](https://slundberg.github.io/shap/notebooks/python/Iris%20classification.html) - A basic demonstration using the popular iris species dataset. It explains predictions from six different models in scikit-learn using Shap.
