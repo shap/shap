@@ -36,7 +36,7 @@ explainer = ShapExplainer(knn.predict, X, nsamples=100)
 visualize(explainer.explain(iris.data[inds[102:103],:]))
 ```
 <p align="center">
-  <img src="https://slundberg.github.io/shap/simple_iris_explanation.png" />
+  <img src="https://slundberg.github.io/shap/artwork/simple_iris_explanation.png" />
 </p>
 
 The above explanation shows three features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to zero. If there were any features pushing the class label higher they would be shown in red.
@@ -48,5 +48,5 @@ If we take many explanations such as the one shown above, rotate them 90 degrees
 visualize([explainer.explain(iris.data[inds[i:i+1],:]) for i in range(100,len(iris.target))])
 ```
 <p align="center">
-  <img src="https://slundberg.github.io/shap/simple_iris_dataset.png" />
+  <img src="https://slundberg.github.io/shap/artwork/simple_iris_dataset.png" />
 </p>
