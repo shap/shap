@@ -15,7 +15,7 @@ pip install shap
 ## Example (run in a Jupyter notebook)
 
 ```python
-from shap import ShapExplainer, DenseData, visualize, initjs
+from shap import KernelExplainer, DenseData, visualize, initjs
 from sklearn import datasets,neighbors
 from numpy import random, arange
 
