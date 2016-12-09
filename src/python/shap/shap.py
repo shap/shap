@@ -14,7 +14,9 @@ from sklearn.linear_model import LassoLarsIC
 log = logging.getLogger('shap')
 
 
-class ShapExplainer:
+class KernelExplainer:
+
+    #@profile
     def __init__(self, model, data, link=IdentityLink(), **kwargs):
 
         # convert incoming inputs to standardized iml objects
@@ -32,12 +34,12 @@ class ShapExplainer:
         self.P = self.data.data.shape[1]
         self.weights = kwargs.get("weights", np.ones(self.N)) # TODO: Use these weights!
         self.weights /= sum(self.weights)
-        self.featureGroups = kwargs.get("featureGroups", [np.array([i]) for i in range(self.P)])
         assert len(self.weights) == self.N,  "Provided 'weights' must match the number of representative data points {0}!".format(self.N)
         self.linkfv = np.vectorize(self.link.f)
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
 
+    #@profile
     def explain(self, incoming_instance, **kwargs):
 
         # convert incoming input to a standardized iml object
@@ -47,7 +49,7 @@ class ShapExplainer:
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model
         self.varyingInds = self.varying_groups(instance.x)
-        self.varyingFeatureGroups = [self.featureGroups[i] for i in self.varyingInds]
+        self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
         self.M = len(self.varyingFeatureGroups)
 
         # find f(x) and E_x[f(x)]
@@ -159,9 +161,9 @@ class ShapExplainer:
 
         # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
         vphi,vphiVar = self.solve()
-        phi = np.zeros(len(self.featureGroups))
+        phi = np.zeros(len(self.data.groups))
         phi[self.varyingInds] = vphi
-        phiVar = np.zeros(len(self.featureGroups))
+        phiVar = np.zeros(len(self.data.groups))
         phiVar[self.varyingInds] = vphiVar
 
         # return the Shapley values along with variances of the estimates
@@ -170,10 +172,10 @@ class ShapExplainer:
         return AdditiveExplanation(self.fnull, self.fx, phi, phiVar, instance, self.link, self.model, self.data)
 
     def varying_groups(self, x):
-        varying = np.zeros(len(self.featureGroups))
-        for i in range(0,len(self.featureGroups)):
-            inds = self.featureGroups[i]
-            varying[i] = sum(sum(x[0,inds] == self.data.data[:,inds]) != inds.size)
+        varying = np.zeros(len(self.data.groups))
+        for i in range(0,len(self.data.groups)):
+            inds = self.data.groups[i]
+            varying[i] = sum(sum(x[0,inds] == self.data.data[:,inds]) != len(inds))
         return np.nonzero(varying)[0]
 
     def allocate(self):
