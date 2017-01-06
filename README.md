@@ -32,7 +32,7 @@ knn.fit(iris.data, iris.target == 0)
 
 # use Shap to explain a single prediction
 X = DenseData(iris.feature_names, iris.data[inds[:100],:]) # name the features
-explainer = ShapExplainer(knn.predict, X, nsamples=100)
+explainer = KernelExplainer(knn.predict, X, nsamples=100)
 visualize(explainer.explain(iris.data[inds[102:103],:]))
 ```
 <p align="center">
