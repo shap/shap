@@ -31,9 +31,10 @@ knn = neighbors.KNeighborsClassifier()
 knn.fit(iris.data, iris.target == 0)
 
 # use Shap to explain a single prediction
-X = DenseData(iris.feature_names, iris.data[inds[:100],:]) # name the features
-explainer = KernelExplainer(knn.predict, X, nsamples=100)
-visualize(explainer.explain(iris.data[inds[102:103],:]))
+background = DenseData(iris.feature_names, iris.data[inds[:100],:]) # name the features
+explainer = KernelExplainer(knn.predict, background, nsamples=100)
+x = iris.data[inds[102:103],:]
+visualize(explainer.explain(x))
 ```
 <p align="center">
   <img src="https://slundberg.github.io/shap/artwork/simple_iris_explanation.png" />
