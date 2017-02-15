@@ -58,13 +58,17 @@ class KernelExplainer:
 
         # if no features vary then there no feature has an effect
         if self.M == 0:
-            return self.fx,np.zeros(self.featureGroups.size),np.zeros(self.featureGroups.size)
+            phi = np.zeros(len(self.data.groups))
+            phi_var = np.zeros(len(self.data.groups))
+            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
+
 
         # if only one feature varies then it has all the effect
         elif self.M == 1:
-            phi = np.zeros(len(self.featureGroups))
-            phi[self.varyingInds[0]] = self.link(self.fx) - self.link(self.fnull)
-            return self.fnull,phi,np.zeros(len(self.featureGroups))
+            phi = np.zeros(len(self.data.groups))
+            phi[self.varyingInds[0]] = self.link.f(self.fx) - self.link.f(self.fnull)
+            phi_var = np.zeros(len(self.data.groups))
+            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
         # pick a reasonable number of samples if the user didn't specify how many they wanted
         self.nsamples = kwargs.get("nsamples", 0)
@@ -160,16 +164,16 @@ class KernelExplainer:
         self.run()
 
         # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
-        vphi,vphiVar = self.solve()
+        vphi,vphi_var = self.solve()
         phi = np.zeros(len(self.data.groups))
         phi[self.varyingInds] = vphi
-        phiVar = np.zeros(len(self.data.groups))
-        phiVar[self.varyingInds] = vphiVar
+        phi_var = np.zeros(len(self.data.groups))
+        phi_var[self.varyingInds] = vphi_var
 
         # return the Shapley values along with variances of the estimates
         # note that if features were eliminated by l1 regression their
         # variance will be 0, even though they are not perfectaly known
-        return AdditiveExplanation(self.fnull, self.fx, phi, phiVar, instance, self.link, self.model, self.data)
+        return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
     def varying_groups(self, x):
         varying = np.zeros(len(self.data.groups))
@@ -333,10 +337,10 @@ class KernelExplainer:
         log.info("phi = {0}".format(phi))
 
         # yHat = np.dot(self.maskMatrix, w)
-        # phiVar = np.var(yHat - eyAdj) * np.diag(tmp2)
-        # phiVar = np.hstack((phiVar, max(phiVar))) # since the last weight is inferred we use a pessimistic guess of its variance
+        # phi_var = np.var(yHat - eyAdj) * np.diag(tmp2)
+        # phi_var = np.hstack((phi_var, max(phi_var))) # since the last weight is inferred we use a pessimistic guess of its variance
 
         # a finite sample adjustment based on how much of the weight is left in the sample space
         # fractionWeightLeft = 1 - sum(self.kernelWeights)/sum(np.array([(self.M-1)/(s*(self.M-s)) for s in range(1, self.M)]))
 
-        return phi,np.ones(len(phi))#phiVar*fractionWeightLeft
+        return phi,np.ones(len(phi))#phi_var*fractionWeightLeft
