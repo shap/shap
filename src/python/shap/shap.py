@@ -76,8 +76,10 @@ class KernelExplainer:
             self.nsamples = 2*self.M+1000
 
         # if we have enough samples to enumerate all subsets then ignore the unneeded samples
+        self.max_samples = 2**30
         if self.M <= 30 and self.nsamples > 2**self.M-2:
             self.nsamples = 2**self.M-2
+            self.max_samples = self.nsamples
 
         # reserve space for some of our computations
         self.allocate()
@@ -164,7 +166,7 @@ class KernelExplainer:
         self.run()
 
         # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
-        vphi,vphi_var = self.solve()
+        vphi,vphi_var = self.solve(self.nsamples/self.max_samples)
         phi = np.zeros(len(self.data.groups))
         phi[self.varyingInds] = vphi
         phi_var = np.zeros(len(self.data.groups))
@@ -219,7 +221,7 @@ class KernelExplainer:
             self.ey[i] = eyVal/self.N
             self.nsamplesRun += 1
 
-    def solve(self):
+    def solve(self, fraction_evaluated):
         count = 0.0
         for i in range(self.maskMatrix.shape[0]):
             if self.maskMatrix[i,0] == 1 and sum(self.maskMatrix[i,1:]) == 0:
@@ -266,36 +268,38 @@ class KernelExplainer:
         s = np.sum(self.maskMatrix, 1)
 
 
-        # do feature selection
-        w_aug = np.hstack((self.kernelWeights * (self.M-s), self.kernelWeights*s))
-        log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
-        log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
-        w_sqrt_aug = np.sqrt(w_aug)
-        eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx) - self.link.f(self.fnull))))
-        eyAdj_aug *= w_sqrt_aug
-        mask_aug = np.transpose(w_sqrt_aug*np.transpose(np.vstack((self.maskMatrix, self.maskMatrix-1))))
-        var_norms = np.array([np.linalg.norm(mask_aug[:,i]) for i in range(mask_aug.shape[1])])
-        #mask_aug /= var_norms
-        # print(self.kernelWeights)
-        # print(w_aug)
+        # do feature selection if we have not well enumerated the space
+        nonzero_inds = np.arange(self.M)
+        if fraction_evaluated < 0.2:
+            w_aug = np.hstack((self.kernelWeights * (self.M-s), self.kernelWeights*s))
+            log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
+            log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
+            w_sqrt_aug = np.sqrt(w_aug)
+            eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx) - self.link.f(self.fnull))))
+            eyAdj_aug *= w_sqrt_aug
+            mask_aug = np.transpose(w_sqrt_aug*np.transpose(np.vstack((self.maskMatrix, self.maskMatrix-1))))
+            var_norms = np.array([np.linalg.norm(mask_aug[:,i]) for i in range(mask_aug.shape[1])])
+            #mask_aug /= var_norms
+            # print(self.kernelWeights)
+            # print(w_aug)
 
 
-        model = LassoLarsIC(criterion='bic', normalize=True)#fit_intercept
-        #model = Lasso(alpha=self.l1reg, fit_intercept=True)
-        model.fit(mask_aug, eyAdj_aug)
-        nonzero_inds = np.nonzero(model.coef_)[0]
-        # for i in range(mask_aug.shape[0]):
-        #     log.info("{0} {1} {2}".format(mask_aug[i,:], self.ey[i], self.kernelWeights[i]))
-        log.info("model.get_params() = {0}".format(model.get_params()))
-        #log.info("model.alpha_ = {0}".format(model.alpha_))
-        log.info("model.coef_ = {0}".format(model.coef_))
-        log.info("nonzero_inds = {0}".format(nonzero_inds))
+            model = LassoLarsIC(criterion='bic', normalize=True)#fit_intercept
+            #model = Lasso(alpha=self.l1reg, fit_intercept=True)
+            model.fit(mask_aug, eyAdj_aug)
+            nonzero_inds = np.nonzero(model.coef_)[0]
+            # for i in range(mask_aug.shape[0]):
+            #     log.info("{0} {1} {2}".format(mask_aug[i,:], self.ey[i], self.kernelWeights[i]))
+            log.info("model.get_params() = {0}".format(model.get_params()))
+            #log.info("model.alpha_ = {0}".format(model.alpha_))
+            log.info("model.coef_ = {0}".format(model.coef_))
+            log.info("nonzero_inds = {0}".format(nonzero_inds))
 
-        w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-        log.info("w1 = {0}".format(w1))
+            w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
+            log.info("w1 = {0}".format(w1))
 
-        w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-        log.info("w1 = {0}".format(w1))
+            w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
+            log.info("w1 = {0}".format(w1))
 
         #np.transpose(self.maskMatrix) * self.kernelWeights
 
@@ -335,6 +339,11 @@ class KernelExplainer:
         phi[nonzero_inds[:-1]] = w
         phi[nonzero_inds[-1]] = (self.link.f(self.fx) - self.link.f(self.fnull)) - sum(w)
         log.info("phi = {0}".format(phi))
+
+        # clean up any rounding errors
+        for i in range(self.M):
+            if np.abs(phi[i]) < 1e-10:
+                phi[i] = 0
 
         # yHat = np.dot(self.maskMatrix, w)
         # phi_var = np.var(yHat - eyAdj) * np.diag(tmp2)
