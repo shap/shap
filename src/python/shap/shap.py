@@ -87,7 +87,7 @@ class KernelExplainer:
         # weight the different subset sizes
         num_subset_sizes = np.int(np.ceil((self.M-1)/2.0))
         num_paired_subset_sizes = np.int(np.floor((self.M-1)/2.0))
-        weight_vector = np.array([(self.M-1)/(i*(self.M-i)) for i in range(1,num_subset_sizes+1)])
+        weight_vector = np.array([(self.M-1.0)/(i*(self.M-i)) for i in range(1,num_subset_sizes+1)])
         weight_vector[:num_paired_subset_sizes] *= 2
         weight_vector /= np.sum(weight_vector)
         log.debug("weight_vector = {0}".format(weight_vector))
@@ -122,7 +122,7 @@ class KernelExplainer:
 
                 # add all the samples of the current subset size
                 w = weight_vector[subset_size-1] / binom(self.M, subset_size)
-                if subset_size <= num_paired_subset_sizes: w /= 2
+                if subset_size <= num_paired_subset_sizes: w /= 2.0
                 for inds in itertools.combinations(group_inds, subset_size):
                     mask[:] = 0.0
                     mask[np.array(inds, dtype='int64')] = 1.0
@@ -222,45 +222,45 @@ class KernelExplainer:
             self.nsamplesRun += 1
 
     def solve(self, fraction_evaluated):
-        count = 0.0
-        for i in range(self.maskMatrix.shape[0]):
-            if self.maskMatrix[i,0] == 1 and sum(self.maskMatrix[i,1:]) == 0:
-                count += 1
-        log.info("[1,0,0,0] ratio = {0}".format(count/self.maskMatrix.shape[0]))
-
-        count = 0.0
-        for i in range(self.maskMatrix.shape[0]):
-            if sum(self.maskMatrix[i,:]) == 2 or sum(self.maskMatrix[i,:]) == 18:
-                count += 1
-        log.info("2 or 18 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-
-        count = 0.0
-        for i in range(self.maskMatrix.shape[0]):
-            if sum(self.maskMatrix[i,:]) == 3 or sum(self.maskMatrix[i,:]) == 17:
-                count += 1
-        log.info("3 or 17 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-
-        count = 0.0
-        for i in range(self.maskMatrix.shape[0]):
-            if sum(self.maskMatrix[i,:]) == 0:
-                count += 1
-        log.info("0 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-
-        count = 0.0
-        for i in range(self.maskMatrix.shape[0]):
-            if sum(self.maskMatrix[i,:]) == 10:
-                count += 1
-        log.info("10 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
+        # count = 0.0
+        # for i in range(self.maskMatrix.shape[0]):
+        #     if self.maskMatrix[i,0] == 1 and sum(self.maskMatrix[i,1:]) == 0:
+        #         count += 1
+        # log.info("[1,0,0,0] ratio = {0}".format(count/self.maskMatrix.shape[0]))
+        #
+        # count = 0.0
+        # for i in range(self.maskMatrix.shape[0]):
+        #     if sum(self.maskMatrix[i,:]) == 2 or sum(self.maskMatrix[i,:]) == 18:
+        #         count += 1
+        # log.info("2 or 18 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
+        #
+        # count = 0.0
+        # for i in range(self.maskMatrix.shape[0]):
+        #     if sum(self.maskMatrix[i,:]) == 3 or sum(self.maskMatrix[i,:]) == 17:
+        #         count += 1
+        # log.info("3 or 17 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
+        #
+        # count = 0.0
+        # for i in range(self.maskMatrix.shape[0]):
+        #     if sum(self.maskMatrix[i,:]) == 0:
+        #         count += 1
+        # log.info("0 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
+        #
+        # count = 0.0
+        # for i in range(self.maskMatrix.shape[0]):
+        #     if sum(self.maskMatrix[i,:]) == 10:
+        #         count += 1
+        # log.info("10 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
 
 
 
         # self.maskMatrix = self.maskMatrix[:self.nsamplesAdded,:]
         # self.ey = self.ey[:self.nsamplesAdded]
         # self.kernelWeights = self.kernelWeights[:self.nsamplesAdded]
-        log.debug("self.maskMatrix.shape = {0}".format(self.maskMatrix.shape))
-        # adjust the y value according to the constraints for the offset and sum
-        log.debug("self.link(self.fnull) = {0}".format(self.link.f(self.fnull)))
-        log.debug("self.link(self.fx) = {0}".format(self.link.f(self.fx)))
+        # log.debug("self.maskMatrix.shape = {0}".format(self.maskMatrix.shape))
+        # # adjust the y value according to the constraints for the offset and sum
+        # log.debug("self.link(self.fnull) = {0}".format(self.link.f(self.fnull)))
+        # log.debug("self.link(self.fx) = {0}".format(self.link.f(self.fx)))
         # for i in range(self.maskMatrix.shape[0]):
         #     log.debug("{0} {1} {2}".format(self.maskMatrix[i,:], self.ey[i], self.kernelWeights[i]))
         eyAdj = self.linkfv(self.ey) - self.link.f(self.fnull)
@@ -290,16 +290,16 @@ class KernelExplainer:
             nonzero_inds = np.nonzero(model.coef_)[0]
             # for i in range(mask_aug.shape[0]):
             #     log.info("{0} {1} {2}".format(mask_aug[i,:], self.ey[i], self.kernelWeights[i]))
-            log.info("model.get_params() = {0}".format(model.get_params()))
-            #log.info("model.alpha_ = {0}".format(model.alpha_))
-            log.info("model.coef_ = {0}".format(model.coef_))
-            log.info("nonzero_inds = {0}".format(nonzero_inds))
-
-            w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-            log.info("w1 = {0}".format(w1))
-
-            w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-            log.info("w1 = {0}".format(w1))
+            # log.info("model.get_params() = {0}".format(model.get_params()))
+            # #log.info("model.alpha_ = {0}".format(model.alpha_))
+            # log.info("model.coef_ = {0}".format(model.coef_))
+            # log.info("nonzero_inds = {0}".format(nonzero_inds))
+            #
+            # w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
+            # log.info("w1 = {0}".format(w1))
+            #
+            # w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
+            # log.info("w1 = {0}".format(w1))
 
         #np.transpose(self.maskMatrix) * self.kernelWeights
 
