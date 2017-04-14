@@ -31,7 +31,7 @@ knn = neighbors.KNeighborsClassifier()
 knn.fit(iris.data, iris.target == 0)
 
 # use Shap to explain a single prediction
-background = DenseData(iris.feature_names, iris.data[inds[:100],:]) # name the features
+background = DenseData(iris.data[inds[:100],:], iris.feature_names) # name the features
 explainer = KernelExplainer(knn.predict, background, nsamples=100)
 x = iris.data[inds[102:103],:]
 visualize(explainer.explain(x))
