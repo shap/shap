@@ -175,7 +175,7 @@ class KernelExplainer:
         # return the Shapley values along with variances of the estimates
         # note that if features were eliminated by l1 regression their
         # variance will be 0, even though they are not perfectaly known
-        return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
+        return AdditiveExplanation(self.link.f(self.fnull), self.link.f(self.fx), phi, phi_var, instance, self.link, self.model, self.data)
 
     def varying_groups(self, x):
         varying = np.zeros(len(self.data.groups))
