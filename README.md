@@ -4,7 +4,9 @@
 
 ---
 
-**Shap** explains the output of any machine learning model using expectations and Shapley values. Under certain assumptions it can be shown to be the optimal linear explanation of a model prediction (see our current [short paper](https://arxiv.org/abs/1611.07478) for details).
+**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. It is the only possible consistent and locally accuracy additive feature attribution method based on expectations (see [paper](https://arxiv.org/abs/1705.07874) for details).
+
+**Integration with XGBoost.** y 
 
 ## Install
 
@@ -12,7 +14,44 @@
 pip install shap
 ```
 
-## Example (run in a Jupyter notebook)
+## XGBoost example
+
+While SHAP values can explain the output of any machine learning model, we have developed high-speed exact algorithms for ensemble tree methods. These have been integrated directly into XGBoost, and you can use the `shap` package for visualization in a Jupyter notebook:
+
+```python
+import xgboost
+import sklearn.datasets
+import shap
+
+# load JS visualization code to notebook
+shap.initjs() 
+
+# train xgboost model
+d = sklearn.datasets.load_boston()
+bst = xgboost.train({"eta": 0.01}, xgb.DMatrix(d.data, label=d.target), 500)
+
+# explain the first prediction
+shap.explain(bst, d.data[0,:], feature_names=d.feature_names)
+```
+
+<p align="center">
+  <img src="https://slundberg.github.io/shap/artwork/boston_instance.png" />
+</p>
+
+The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.
+
+If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset:
+
+```python
+# explain the first 200 predictions
+shap.explain(bst, d.data[0:200,:], feature_names=d.feature_names)
+```
+
+<p align="center">
+  <img src="https://slundberg.github.io/shap/artwork/boston_dataset.png" />
+</p>
+
+## Model agnostic example
 
 ```python
 from shap import KernelExplainer, DenseData, visualize, initjs
@@ -31,7 +70,7 @@ knn = neighbors.KNeighborsClassifier()
 knn.fit(iris.data, iris.target == 0)
 
 # use Shap to explain a single prediction
-background = DenseData(iris.feature_names, iris.data[inds[:100],:]) # name the features
+background = DenseData(iris.data[inds[:100],:], iris.feature_names) # name the features
 explainer = KernelExplainer(knn.predict, background, nsamples=100)
 x = iris.data[inds[102:103],:]
 visualize(explainer.explain(x))
