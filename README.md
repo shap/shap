@@ -1,12 +1,10 @@
 <p align="center">
-  <img src="https://slundberg.github.io/shap/artwork/logo.png" />
+  <img src="https://github.com/slundberg/slundberg.github.io/blob/master/images/shap_diagram.png?raw=true" width="400" />
 </p>
 
 ---
 
-**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. It is the only possible consistent and locally accuracy additive feature attribution method based on expectations (see [paper](https://arxiv.org/abs/1705.07874) for details).
-
-**Integration with XGBoost.** y 
+**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. It is the only possible consistent and locally accurate additive feature attribution method based on expectations (see [paper](https://arxiv.org/abs/1705.07874) for details).
 
 ## Install
 
@@ -14,24 +12,27 @@
 pip install shap
 ```
 
-## XGBoost example
+## LightGBM example
 
-While SHAP values can explain the output of any machine learning model, we have developed high-speed exact algorithms for ensemble tree methods. These have been integrated directly into XGBoost, and you can use the `shap` package for visualization in a Jupyter notebook:
+While SHAP values can explain the output of any machine learning model, we have developed high-speed exact algorithms for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). These have been integrated directly into LightGBM, and you can use the `shap` package for visualization in a Jupyter notebook:
 
 ```python
-import xgboost
+import lightgbm
 import sklearn.datasets
 import shap
 
 # load JS visualization code to notebook
 shap.initjs() 
 
-# train xgboost model
+# train LightGBM model
 d = sklearn.datasets.load_boston()
-bst = xgboost.train({"eta": 0.01}, xgb.DMatrix(d.data, label=d.target), 500)
+bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
 
-# explain the first prediction
-shap.explain(bst, d.data[0,:], feature_names=d.feature_names)
+# explain the model's prediction on the first 500 training data samples
+shap_values = bst.predict(d.data[0:1000,:], pred_contrib=True)
+
+# visualize the first prediction's explaination
+shap.visualize(shap_values[0,:], feature_names=d.feature_names, data=d.data[0,:])
 ```
 
 <p align="center">
@@ -43,8 +44,8 @@ The above explanation shows features each contributing to push the model output 
 If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset:
 
 ```python
-# explain the first 200 predictions
-shap.explain(bst, d.data[0:200,:], feature_names=d.feature_names)
+# visualize the first 1000 predictions
+shap.visualize(shap_values[:1000,:], feature_names=d.feature_names, data=d.data[:1000,:])
 ```
 
 <p align="center">
