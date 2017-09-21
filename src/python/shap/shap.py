@@ -2,7 +2,7 @@ from iml.common import convert_to_instance, convert_to_model, match_instance_to_
 from iml.explanations import AdditiveExplanation
 from iml.links import convert_to_link, IdentityLink
 from iml.datatypes import convert_to_data, DenseData
-from iml import initjs
+from iml import initjs, Instance, Model
 from scipy.special import binom
 import numpy as np
 import logging
@@ -10,9 +10,130 @@ import copy
 import itertools
 from sklearn.linear_model import LassoLarsIC
 
+try:
+    import xgboost
+except ImportError:
+    pass
+
+try:
+    import lightgbm
+except ImportError:
+    pass
 
 log = logging.getLogger('shap')
 
+def visualize(shap_values, feature_names=None, data=None, out_names=None):
+    if len(shap_values.shape) == 1:
+        shap_values = np.reshape(shap_values, (1,len(shap_values)))
+
+    if out_names is None:
+        out_names = ["output value"]
+
+    if shap_values.shape[0] == 1:
+        if feature_names is None:
+            feature_names = ["" for i in range(shap_values.shape[1]-1)]
+        if data is None:
+            data = ["" for i in range(len(feature_names))]
+        if type(data) == np.ndarray:
+            data = data.flatten()
+
+        instance = Instance(np.zeros((1,len(feature_names))), data)
+        e = AdditiveExplanation(
+            shap_values[0,-1],
+            np.sum(shap_values[0,:]),
+            shap_values[0,:-1],
+            None,
+            instance,
+            IdentityLink(),
+            Model(None, out_names),
+            DenseData(np.zeros((1,len(feature_names))), list(feature_names))
+        )
+        return e
+
+    else:
+        exps = []
+        for i in range(shap_values.shape[0]):
+            if feature_names is None:
+                feature_names = ["" for i in range(shap_values.shape[1]-1)]
+            if data is None:
+                display_data = ["" for i in range(len(feature_names))]
+            else:
+                display_data = data[i,:]
+
+            instance = Instance(np.ones((1,len(feature_names))), display_data)
+            e = AdditiveExplanation(
+                shap_values[i,-1],
+                np.sum(shap_values[i,:]),
+                shap_values[i,:-1],
+                None,
+                instance,
+                IdentityLink(),
+                Model(None, out_names),
+                DenseData(np.ones((1,len(feature_names))), list(feature_names))
+            )
+            exps.append(e)
+        return exps
+
+def explain(model, data=None, feature_names=None, out_names=None):
+    if data is None:
+        return explain_model(model, feature_names, out_names)
+    elif len(data.shape) == 1:
+        return explain_instance(model, np.reshape(data, (1,len(data))), feature_names, out_names)
+    elif data.shape[0] == 1:
+        return explain_instance(model, data, feature_names, out_names)
+    else:
+        return explain_instances(model, data, feature_names, out_names)
+
+
+def explain_instance(model, data, feature_names, out_names):
+    if out_names is None:
+        out_names = ["model output"]
+    if feature_names is None:
+        feature_names = [(i+1)+"" for i in range(data.shape[1])]
+
+    if type(model) == xgboost.core.Booster:
+        contribs = model.predict(xgboost.DMatrix(data), pred_contribs=True)
+    elif type(model) == lightgbm.basic.Booster:
+        contribs = model.predict(data, pred_contrib=True)
+    else:
+        return None
+
+    instance = Instance(data[0:1,:], data[0,:])
+    e = AdditiveExplanation(
+        contribs[0,-1],
+        np.sum(contribs[0,:]),
+        contribs[0,:-1],
+        None,
+        instance,
+        IdentityLink(),
+        Model(None, out_names),
+        DenseData(np.zeros((1,data.shape[1])), list(feature_names))
+    )
+    return e
+
+def explain_instances(model, data, feature_names, out_names):
+    if out_names is None:
+        out_names = ["model output"]
+    if feature_names is None:
+        feature_names = [(i+1)+"" for i in range(data.shape[1])]
+
+    if type(model) == xgboost.core.Booster:
+        exps = []
+        contribs = model.predict(xgboost.DMatrix(data), pred_contribs=True)
+        for i in range(data.shape[0]):
+            instance = Instance(data[i:i+1,:], data[i,:])
+            e = AdditiveExplanation(
+                contribs[i,-1],
+                np.sum(contribs[i,:]),
+                contribs[i,:-1],
+                None,
+                instance,
+                IdentityLink(),
+                Model(None, out_names),
+                DenseData(np.zeros((1,data.shape[1])), list(feature_names))
+            )
+            exps.append(e)
+        return exps
 
 class KernelExplainer:
 
@@ -69,6 +190,8 @@ class KernelExplainer:
             phi[self.varyingInds[0]] = self.link.f(self.fx) - self.link.f(self.fnull)
             phi_var = np.zeros(len(self.data.groups))
             return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
+
+        self.use_l1 = kwargs.get("use_l1", None)
 
         # pick a reasonable number of samples if the user didn't specify how many they wanted
         self.nsamples = kwargs.get("nsamples", 0)
@@ -270,7 +393,9 @@ class KernelExplainer:
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
-        if fraction_evaluated < 0.2:
+        #print("fraction_evaluated", fraction_evaluated)
+        if self.use_l1 == True or (fraction_evaluated < 0.2 and self.use_l1 != False):
+            #print("using feature selection...")
             w_aug = np.hstack((self.kernelWeights * (self.M-s), self.kernelWeights*s))
             log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
             log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
