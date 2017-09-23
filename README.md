@@ -28,7 +28,7 @@ shap.initjs()
 d = sklearn.datasets.load_boston()
 bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
 
-# explain the model's prediction on the first 500 training data samples
+# explain the model's prediction using SHAP values on the first 1000 training data samples
 shap_values = bst.predict(d.data[0:1000,:], pred_contrib=True)
 
 # visualize the first prediction's explaination
