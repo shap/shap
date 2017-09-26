@@ -28,7 +28,7 @@ shap.initjs()
 d = sklearn.datasets.load_boston()
 bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
 
-# explain the model's prediction on the first 500 training data samples
+# explain the model's prediction using SHAP values on the first 1000 training data samples
 shap_values = bst.predict(d.data[0:1000,:], pred_contrib=True)
 
 # visualize the first prediction's explaination
@@ -36,7 +36,7 @@ shap.visualize(shap_values[0,:], feature_names=d.feature_names, data=d.data[0,:]
 ```
 
 <p align="center">
-  <img src="https://slundberg.github.io/shap/artwork/boston_instance.png" />
+  <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_instance.png" />
 </p>
 
 The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.
@@ -49,7 +49,7 @@ shap.visualize(shap_values[:1000,:], feature_names=d.feature_names, data=d.data[
 ```
 
 <p align="center">
-  <img src="https://slundberg.github.io/shap/artwork/boston_dataset.png" />
+  <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
 ## Model agnostic example
