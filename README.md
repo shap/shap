@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/slundberg/slundberg.github.io/blob/master/images/shap_diagram.png?raw=true" width="400" />
+  <img src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/shap_diagram.png" width="400" />
 </p>
 
 ---
