@@ -2,7 +2,7 @@ from setuptools import setup
 
 
 setup(name='shap',
-      version='0.3',
+      version='0.3.1',
       description='Explains the output of any machine learning model using expectations and Shapley values.',
       url='http://github.com/slundberg/shap',
       author='Scott Lundberg',
