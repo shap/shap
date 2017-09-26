@@ -3,6 +3,7 @@ from iml.explanations import AdditiveExplanation
 from iml.links import convert_to_link, IdentityLink
 from iml.datatypes import convert_to_data, DenseData
 from iml import initjs, Instance, Model
+import iml
 from scipy.special import binom
 import numpy as np
 import logging
@@ -23,6 +24,9 @@ except ImportError:
 log = logging.getLogger('shap')
 
 def visualize(shap_values, feature_names=None, data=None, out_names=None):
+    if type(shap_values) != np.ndarray:
+        return iml.visualize(shap_values)
+
     if len(shap_values.shape) == 1:
         shap_values = np.reshape(shap_values, (1,len(shap_values)))
 
