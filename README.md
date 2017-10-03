@@ -64,6 +64,18 @@ shap.plot(d.data[:,5], shap_values[:,5], "Avg. # rooms in home")
 </p>
 
 
+To get an overview of which features are most important for a model we can plot the SHAP values of every feature for every sample. The plot below sorts features by the sum of SHAP value magnitudes over all samples, and uses SHAP values to show the distribution of the impacts each feature has on the model output.
+
+```python
+# summarize the effects of all the features
+shap.summary_plot(shap_values, d.feature_names)
+```
+
+<p align="center">
+  <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_overview.png" />
+</p>
+
+
 ## Model agnostic example
 
 ```python
