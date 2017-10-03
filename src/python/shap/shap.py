@@ -21,7 +21,40 @@ try:
 except ImportError:
     pass
 
+try:
+    import matplotlib.pyplot as pl
+except ImportError:
+    pass
+
 log = logging.getLogger('shap')
+
+def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", title=None, show=True):
+    if type(x[0]) == str:
+        xnames = list(set(x))
+        xnames.sort()
+        name_map = {n: i for i,n in enumerate(xnames)}
+        xv = [name_map[v] for v in x]
+    else:
+        xv = x
+
+    pl.plot(xv, shap_values, ".", markersize=5, color=color)
+
+    # make the plot more readable
+    pl.xlabel(name, color=axis_color)
+    pl.ylabel("SHAP value for "+name, color=axis_color)
+    if title != None:
+        pl.title("SHAP plot for "+name, color=axis_color, fontsize=11)
+    pl.gca().xaxis.set_ticks_position('bottom')
+    pl.gca().yaxis.set_ticks_position('left')
+    pl.gca().spines['right'].set_visible(False)
+    pl.gca().spines['top'].set_visible(False)
+    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    for spine in pl.gca().spines.values():
+        spine.set_edgecolor(axis_color)
+    if type(x[0]) == str:
+        pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical')
+    if show:
+        pl.show()
 
 def visualize(shap_values, feature_names=None, data=None, out_names=None):
     if type(shap_values) != np.ndarray:
