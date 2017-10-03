@@ -52,6 +52,18 @@ shap.visualize(shap_values[:1000,:], feature_names=d.feature_names, data=d.data[
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
+To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in the training dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as the average number of rooms per house in an area changes.
+
+```python
+# create a SHAP plot to show the effect of a single feature across the whole dataset
+shap.plot(d.data[:,5], shap_values[:,5], "Avg. # rooms in home")
+```
+
+<p align="center">
+  <img width="544" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_shap_plot.png" />
+</p>
+
+
 ## Model agnostic example
 
 ```python
