@@ -23,10 +23,54 @@ except ImportError:
 
 try:
     import matplotlib.pyplot as pl
+    from matplotlib.colors import LinearSegmentedColormap
+
+    cdict1 = {'red':   ((0.0, 0.11764705882352941, 0.11764705882352941),
+                        (1.0, 0.9607843137254902, 0.9607843137254902)),
+
+             'green': ((0.0, 0.5333333333333333, 0.5333333333333333),
+                       (1.0, 0.15294117647058825, 0.15294117647058825)),
+
+             'blue':  ((0.0, 0.8980392156862745, 0.8980392156862745),
+                       (1.0, 0.3411764705882353, 0.3411764705882353))
+            }
+    red_blue = LinearSegmentedColormap('RedBlue', cdict1)
 except ImportError:
     pass
 
 log = logging.getLogger('shap')
+
+
+def joint_plot(x, y, joint_shap_values, xname, yname, axis_color="#000000", show=True):
+    if type(x[0]) == str:
+        xnames = list(set(x))
+        xnames.sort()
+        name_map = {n: i for i,n in enumerate(xnames)}
+        xv = [name_map[v] for v in x]
+    else:
+        xv = x
+
+    if type(y[0]) == str:
+        ynames = list(set(y))
+        ynames.sort()
+        name_map = {n: i for i,n in enumerate(ynames)}
+        yv = [name_map[v] for v in y]
+    else:
+        yv = y
+
+    sc = pl.scatter(x, y, s=20, c=joint_shap_values, edgecolor='', alpha=1, cmap=red_blue)
+    pl.xlabel(xname, color=axis_color)
+    pl.ylabel(yname, color=axis_color)
+    pl.colorbar(sc, label="Joint SHAP value")
+
+    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    for spine in pl.gca().spines.values():
+        spine.set_edgecolor(axis_color)
+    if type(x[0]) == str:
+        pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical')
+    if show:
+        pl.show()
+
 
 def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", title=None, show=True):
     if type(x[0]) == str:
