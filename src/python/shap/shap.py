@@ -56,6 +56,27 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", title=None
     if show:
         pl.show()
 
+def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", axis_color="#333333", title=None, show=True):
+    ind_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
+    ind_order = ind_order[-min(max_display,len(ind_order)):]
+    fig = pl.figure(figsize=(5,len(ind_order)*0.35))
+    pl.axvline(x=0, color="#999999")
+
+    for pos,i in enumerate(ind_order):
+        pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
+        pl.plot(shap_values[:,i], np.ones(shap_values.shape[0])*pos, ".", color=color, markersize=7, alpha=0.1, markeredgewidth=0)
+    pl.gca().xaxis.set_ticks_position('bottom')
+    pl.gca().yaxis.set_ticks_position('none')
+    pl.gca().spines['right'].set_visible(False)
+    pl.gca().spines['top'].set_visible(False)
+    pl.gca().spines['left'].set_visible(False)
+    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    pl.yticks(range(len(ind_order)), [feature_names[i] for i in ind_order])
+    pl.gca().tick_params('y', length=20, width=0.5, which='major')
+    pl.ylim(-1, len(ind_order))
+    pl.xlabel("SHAP value (impact on model output)")
+    pl.show()
+
 def visualize(shap_values, feature_names=None, data=None, out_names=None):
     if type(shap_values) != np.ndarray:
         return iml.visualize(shap_values)
