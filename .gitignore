@@ -2,5 +2,12 @@ node_modules
 __pycache__
 shap.egg-info
 *.pyc
-src/python/build
-src/python/dist
+/build
+/dist
+notebooks/local_scratch
+docs/aaai_2017
+docs/icml_2017
+docs/icml_2017_iml_workshop
+docs/nips_2017
+docs/presentations
+.ipynb_checkpoints
