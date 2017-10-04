@@ -1,0 +1,8 @@
+language: python
+python:
+  - "3.4"
+# command to install dependencies
+install:
+  - pip install src/python
+# command to run tests
+script: nosetests src/python

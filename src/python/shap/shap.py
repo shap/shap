@@ -447,51 +447,9 @@ class KernelExplainer:
             self.nsamplesRun += 1
 
     def solve(self, fraction_evaluated):
-        # count = 0.0
-        # for i in range(self.maskMatrix.shape[0]):
-        #     if self.maskMatrix[i,0] == 1 and sum(self.maskMatrix[i,1:]) == 0:
-        #         count += 1
-        # log.info("[1,0,0,0] ratio = {0}".format(count/self.maskMatrix.shape[0]))
-        #
-        # count = 0.0
-        # for i in range(self.maskMatrix.shape[0]):
-        #     if sum(self.maskMatrix[i,:]) == 2 or sum(self.maskMatrix[i,:]) == 18:
-        #         count += 1
-        # log.info("2 or 18 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-        #
-        # count = 0.0
-        # for i in range(self.maskMatrix.shape[0]):
-        #     if sum(self.maskMatrix[i,:]) == 3 or sum(self.maskMatrix[i,:]) == 17:
-        #         count += 1
-        # log.info("3 or 17 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-        #
-        # count = 0.0
-        # for i in range(self.maskMatrix.shape[0]):
-        #     if sum(self.maskMatrix[i,:]) == 0:
-        #         count += 1
-        # log.info("0 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-        #
-        # count = 0.0
-        # for i in range(self.maskMatrix.shape[0]):
-        #     if sum(self.maskMatrix[i,:]) == 10:
-        #         count += 1
-        # log.info("10 sum ratio = {0}".format(count/self.maskMatrix.shape[0]))
-
-
-
-        # self.maskMatrix = self.maskMatrix[:self.nsamplesAdded,:]
-        # self.ey = self.ey[:self.nsamplesAdded]
-        # self.kernelWeights = self.kernelWeights[:self.nsamplesAdded]
-        # log.debug("self.maskMatrix.shape = {0}".format(self.maskMatrix.shape))
-        # # adjust the y value according to the constraints for the offset and sum
-        # log.debug("self.link(self.fnull) = {0}".format(self.link.f(self.fnull)))
-        # log.debug("self.link(self.fx) = {0}".format(self.link.f(self.fx)))
-        # for i in range(self.maskMatrix.shape[0]):
-        #     log.debug("{0} {1} {2}".format(self.maskMatrix[i,:], self.ey[i], self.kernelWeights[i]))
         eyAdj = self.linkfv(self.ey) - self.link.f(self.fnull)
 
         s = np.sum(self.maskMatrix, 1)
-
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
@@ -506,57 +464,22 @@ class KernelExplainer:
             eyAdj_aug *= w_sqrt_aug
             mask_aug = np.transpose(w_sqrt_aug*np.transpose(np.vstack((self.maskMatrix, self.maskMatrix-1))))
             var_norms = np.array([np.linalg.norm(mask_aug[:,i]) for i in range(mask_aug.shape[1])])
-            #mask_aug /= var_norms
-            # print(self.kernelWeights)
-            # print(w_aug)
 
 
             model = LassoLarsIC(criterion='bic', normalize=True)#fit_intercept
             #model = Lasso(alpha=self.l1reg, fit_intercept=True)
             model.fit(mask_aug, eyAdj_aug)
             nonzero_inds = np.nonzero(model.coef_)[0]
-            # for i in range(mask_aug.shape[0]):
-            #     log.info("{0} {1} {2}".format(mask_aug[i,:], self.ey[i], self.kernelWeights[i]))
-            # log.info("model.get_params() = {0}".format(model.get_params()))
-            # #log.info("model.alpha_ = {0}".format(model.alpha_))
-            # log.info("model.coef_ = {0}".format(model.coef_))
-            # log.info("nonzero_inds = {0}".format(nonzero_inds))
-            #
-            # w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-            # log.info("w1 = {0}".format(w1))
-            #
-            # w1 = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-            # log.info("w1 = {0}".format(w1))
 
-        #np.transpose(self.maskMatrix) * self.kernelWeights
-
-        #w = np.dot(np.linalg.inv(np.dot(np.transpose(mask_aug),mask_aug)),np.dot(np.transpose(mask_aug), eyAdj_aug))
-
-        # eyAdj1 = eyAdj - self.maskMatrix[:,-1]*(self.link(self.fx) - self.link(self.fnull))
-        # etmp = self.maskMatrix[:,:-1] - self.maskMatrix[:,-1:]
-        # var_norms = np.array([np.linalg.norm(etmp[:,i]) for i in range(etmp.shape[1])])
-        # etmp /= var_norms
-        # print(var_norms)
-        # model_bic = LassoLarsIC(criterion='bic')
-        # model_bic.fit(etmp, eyAdj1)
-        # nonzero_inds = np.nonzero(model_bic.coef_)[0]
-        # print(nonzero_inds.shape)
-        # # solve a weighted least squares equation to estimate phi
-        # print(self.maskMatrix[:,nonzero_inds[-1]].shape)
-        # print(nonzero_inds)
-        #nonzero_inds = np.arange(self.M)
+        if len(nonzero_inds) == 0:
+            return np.zeros(self.M),np.ones(self.M)
 
         eyAdj2 = eyAdj - self.maskMatrix[:,nonzero_inds[-1]]*(self.link.f(self.fx) - self.link.f(self.fnull))
         etmp = np.transpose(np.transpose(self.maskMatrix[:,nonzero_inds[:-1]]) - self.maskMatrix[:,nonzero_inds[-1]])
-        #print(self.maskMatrix)
         log.debug("etmp[1:4,:] {0}".format(etmp[0:4,:]))
-        # etmp = self.maskMatrix
-        # eyAdj2 = eyAdj
+
         # solve a weighted least squares equation to estimate phi
         tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
-        #tmp = etmp
-        # log.debug("tmp.shape", tmp.shape)
-        # log.debug("tmp.shape", tmp.shape)
         tmp2 = np.linalg.inv(np.dot(np.transpose(tmp),etmp))
         w = np.dot(tmp2,np.dot(np.transpose(tmp),eyAdj2))
         #log.info("w = {0}".format(w))
@@ -580,3 +503,6 @@ class KernelExplainer:
         # fractionWeightLeft = 1 - sum(self.kernelWeights)/sum(np.array([(self.M-1)/(s*(self.M-s)) for s in range(1, self.M)]))
 
         return phi,np.ones(len(phi))#phi_var*fractionWeightLeft
+
+def test_blank():
+    pass
