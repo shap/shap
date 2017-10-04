@@ -3,6 +3,6 @@ python:
   - "3.4"
 # command to install dependencies
 install:
-  - pip install src/python
+  - pip install .
 # command to run tests
-script: nosetests src/python
+script: nosetests .
