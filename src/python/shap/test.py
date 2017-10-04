@@ -1,6 +1,11 @@
 import shap
 import numpy as np
 
+def test_null_model_small():
+    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,4)), nsamples=100)#knn.predict
+    e = explainer.explain(np.ones((1,4)))
+    assert np.sum(np.abs(e.effects)) < 1e-8
+
 def test_null_model():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,10)), nsamples=100)#knn.predict
     e = explainer.explain(np.ones((1,10)))
