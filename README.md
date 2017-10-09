@@ -19,7 +19,7 @@ pip install shap
 
 ## LightGBM example
 
-While SHAP values can explain the output of any machine learning model, we have developed high-speed exact algorithms for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). These have been integrated directly into LightGBM, and you can use the `shap` package for visualization in a Jupyter notebook:
+While SHAP values can explain the output of any machine learning model, we have developed high-speed exact algorithms for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). These have been integrated directly into LightGBM, and you can use the `shap` package for visualization in a Jupyter notebook (similar support will be available for XGBoost pending https://github.com/dmlc/xgboost/pull/2438):
 
 ```python
 import lightgbm
