@@ -17,12 +17,13 @@
 pip install shap
 ```
 
-## LightGBM example
+## XGBoost/LightGBM example
 
-While SHAP values can explain the output of any machine learning model, we have developed high-speed exact algorithms for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). These have been integrated directly into LightGBM, and you can use the `shap` package for visualization in a Jupyter notebook (similar support will be available for XGBoost pending https://github.com/dmlc/xgboost/pull/2438):
+While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (make sure you have the latest checkout of master), and you can use the `shap` package for visualization in a Jupyter notebook:
 
 ```python
-import lightgbm
+import xgboost
+# or import lightgbm
 import sklearn.datasets
 import shap
 
@@ -31,10 +32,12 @@ shap.initjs()
 
 # train LightGBM model
 d = sklearn.datasets.load_boston()
-bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
+bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(d.data, label=d.target), 10)
+# or bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
 
 # explain the model's prediction using SHAP values on the first 1000 training data samples
-shap_values = bst.predict(d.data[0:1000,:], pred_contrib=True)
+shap_values = bst.predict(xgboost.DMatrix(d.data[0:1000,:]), pred_contribs=True)
+# or shap_values = bst.predict(d.data[0:1000,:], pred_contrib=True)
 
 # visualize the first prediction's explaination
 shap.visualize(shap_values[0,:], feature_names=d.feature_names, data=d.data[0,:])
