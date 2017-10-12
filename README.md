@@ -30,7 +30,7 @@ import shap
 # load JS visualization code to notebook
 shap.initjs() 
 
-# train LightGBM model
+# train XGBoost or LightGBM model
 d = sklearn.datasets.load_boston()
 bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(d.data, label=d.target), 10)
 # or bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
