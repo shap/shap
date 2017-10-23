@@ -49,7 +49,7 @@ shap.visualize(shap_values[0,:], feature_names=d.feature_names, data=d.data[0,:]
 
 The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue.
 
-If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset:
+If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset (in the notebook this plot is interactive):
 
 ```python
 # visualize the first 1000 predictions
