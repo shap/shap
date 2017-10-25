@@ -100,6 +100,71 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", title=None
     if show:
         pl.show()
 
+def interactions(X, shap_values, index):
+    """ Order other features by how much interaction they have with the feature at the given index. """
+    if X.shape[0] > 10000:
+        a = np.arange(X.shape[0])
+        np.random.shuffle(a)
+        inds = a[:10000]
+    else:
+        inds = np.arange(X.shape[0])
+
+    x = X[inds,index]
+    srt = np.argsort(x)
+    shap_ref = shap_values[inds,index]
+    shap_ref = shap_ref[srt]
+    inc = int(len(x)/10.0)
+    interactions = []
+    for i in range(X.shape[1]):
+        shap_other = shap_values[inds,i][srt]
+
+        if i == index or np.sum(np.abs(shap_other)) < 1e-8:
+            v = 0
+        else:
+            v = np.sum(np.abs([np.corrcoef(shap_ref[i:i+inc],shap_other[i:i+inc])[0,1] for i in range(0,len(x),inc)]))
+        interactions.append(v)
+
+    return np.argsort(-np.abs(interactions))
+
+def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interaction=False, color="#ff0052", axis_color="#333333", title=None, show=True):
+
+    # convert from a DataFrame if we got one
+    if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
+        if feature_names is None:
+            feature_names = X.columns
+        X = X.as_matrix()
+
+    x = X[:,ind]
+    name = feature_names[ind]
+    shap_values = shap_value_matrix[:,ind]
+    if type(x[0]) == str:
+        xnames = list(set(x))
+        xnames.sort()
+        name_map = {n: i for i,n in enumerate(xnames)}
+        xv = [name_map[v] for v in x]
+    else:
+        xv = x
+
+    top_interaction = interactions(X, shap_value_matrix, ind)[0]
+    pl.scatter(xv, shap_values, s=12.0, linewidth=0, c=shap_value_matrix[:,top_interaction], cmap=red_blue)
+    pl.colorbar(label="SHAP value for "+feature_names[top_interaction])
+    # make the plot more readable
+    pl.xlabel(name, color=axis_color)
+    pl.ylabel("SHAP value for "+name, color=axis_color)
+    if title != None:
+        pl.title("SHAP plot for "+name, color=axis_color, fontsize=11)
+    pl.gca().xaxis.set_ticks_position('bottom')
+    pl.gca().yaxis.set_ticks_position('left')
+    pl.gca().spines['right'].set_visible(False)
+    pl.gca().spines['top'].set_visible(False)
+    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    for spine in pl.gca().spines.values():
+        spine.set_edgecolor(axis_color)
+    if type(x[0]) == str:
+        pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical')
+    if show:
+        pl.show()
+
 def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", axis_color="#333333", title=None, show=True):
     ind_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
     ind_order = ind_order[-min(max_display,len(ind_order)):]
