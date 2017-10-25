@@ -7,7 +7,7 @@
 ---
 <a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.org/slundberg/shap.svg?branch=master"></a>
 
-**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. It is the only possible consistent and locally accurate additive feature attribution method based on expectations (see [paper](https://arxiv.org/abs/1705.07874) for details).
+**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. It is the only possible consistent and locally accurate additive feature attribution method based on expectations (see [SHAP paper](https://arxiv.org/abs/1705.07874) for details).
 
 
 
@@ -19,7 +19,7 @@ pip install shap
 
 ## XGBoost/LightGBM example
 
-While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (*make sure you have the latest checkout of master*), and you can use the `shap` package for visualization in a Jupyter notebook:
+While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (*make sure you have the latest checkout of master*), and you can use the `shap` package for visualization in a Jupyter notebook:
 
 ```python
 import xgboost
