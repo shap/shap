@@ -72,7 +72,7 @@ def joint_plot(x, y, joint_shap_values, xname, yname, axis_color="#000000", show
         pl.show()
 
 
-def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", title=None, show=True):
+def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", alpha=1, title=None, show=True):
     if type(x[0]) == str:
         xnames = list(set(x))
         xnames.sort()
@@ -81,7 +81,7 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", title=None
     else:
         xv = x
 
-    pl.plot(xv, shap_values, ".", markersize=5, color=color)
+    pl.plot(xv, shap_values, ".", markersize=5, color=color, alpha=alpha)
 
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
@@ -126,7 +126,7 @@ def interactions(X, shap_values, index):
 
     return np.argsort(-np.abs(interactions))
 
-def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interaction=False, color="#ff0052", axis_color="#333333", title=None, show=True):
+def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interaction=False, color="#ff0052", axis_color="#333333", alpha=1, title=None, show=True):
 
     # convert from a DataFrame if we got one
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -146,8 +146,10 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interac
         xv = x
 
     top_interaction = interactions(X, shap_value_matrix, ind)[0]
-    pl.scatter(xv, shap_values, s=12.0, linewidth=0, c=shap_value_matrix[:,top_interaction], cmap=red_blue)
-    pl.colorbar(label="SHAP value for "+feature_names[top_interaction])
+    pl.scatter(xv, shap_values, s=12.0, linewidth=0, c=shap_value_matrix[:,top_interaction], cmap=red_blue, alpha=alpha)
+    cb = pl.colorbar(label="SHAP value for "+feature_names[top_interaction])
+    cb.set_alpha(1)
+    cb.draw_all()
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
     pl.ylabel("SHAP value for "+name, color=axis_color)
