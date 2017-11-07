@@ -7,7 +7,7 @@
 ---
 <a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.org/slundberg/shap.svg?branch=master"></a>
 
-**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. It is the only possible consistent and locally accurate additive feature attribution method based on expectations (see [paper](https://arxiv.org/abs/1705.07874) for details).
+**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. SHAP unifies aspects of several previous methods [1-7] and represents the only possible consistent and locally accurate additive feature attribution method based on expectations (see [SHAP paper](https://arxiv.org/abs/1705.07874) for details).
 
 
 
@@ -19,7 +19,7 @@ pip install shap
 
 ## XGBoost/LightGBM example
 
-While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (make sure you have the latest checkout of master), and you can use the `shap` package for visualization in a Jupyter notebook:
+While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (*make sure you have the latest checkout of master*), and you can use the `shap` package for visualization in a Jupyter notebook:
 
 ```python
 import xgboost
@@ -126,7 +126,7 @@ visualize([explainer.explain(iris.data[inds[i:i+1],:]) for i in range(100,len(ir
 
 ## Sample notebooks
 
-The notebooks below demonstrate different use cases for Shap. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the LightGBM example uses the fast exact Tree SHAP algorithm, the others use a model agnostic Kernel SHAP algorithm.
+The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the LightGBM and XGBoost examples use the fast and exact Tree SHAP algorithm, the others use a model agnostic Kernel SHAP algorithm.
 
 - [**Census income classification with LightGBM**](https://slundberg.github.io/shap/notebooks/Census+income+classification+with+LightGBM.html) - Using the standard adult census income dataset, this notebook trains a gradient boosting tree model with LightGBM and then explains predictions using `shap`.
 
@@ -134,4 +134,25 @@ The notebooks below demonstrate different use cases for Shap. Look inside the no
 
 - [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification.html) - Using the standard adult census income dataset, this notebook trains a random forest classifier using scikit-learn and then explains predictions using `shap`.
 
+- [**League of Legends Win Prediction with XGBoost**](https://slundberg.github.io/shap/notebooks/League+of+Legends+Win+Prediction+with+XGBoost.html) - Using a Kaggle dataset of 180,000 ranked matches from League of Legends we train and explain a gradient boosting tree model with XGBoost to predict if a player will win their match.
+
 - [**Iris classification**](https://slundberg.github.io/shap/notebooks/Iris+classification+with+scikit-learn.html) - A basic demonstration using the popular iris species dataset. It explains predictions from six different models in scikit-learn using `shap`.
+
+### Methods Unified by SHAP
+
+1. Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should i trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. ACM, 2016.
+
+2. Štrumbelj, Erik, and Igor Kononenko. "Explaining prediction models and individual predictions with feature contributions." Knowledge and information systems 41.3 (2014): 647-665.
+
+3. Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." arXiv preprint arXiv:1704.02685 (2017).
+
+4. Datta, Anupam, Shayak Sen, and Yair Zick. "Algorithmic transparency via quantitative input influence: Theory and experiments with learning systems." Security and Privacy (SP), 2016 IEEE Symposium on. IEEE, 2016.
+
+5. Bach, Sebastian, et al. "On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation." PloS one 10.7 (2015): e0130140.
+
+6. Lipovetsky, Stan, and Michael Conklin. "Analysis of regression in game theory approach." Applied Stochastic Models in Business and Industry 17.4 (2001): 319-330.
+
+7. Saabas, Ando. Interpreting random forests. http://blog.datadive.net/interpreting-random-forests/
+
+
+
