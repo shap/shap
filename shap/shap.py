@@ -41,7 +41,27 @@ except ImportError:
 log = logging.getLogger('shap')
 
 
-def joint_plot(x, y, joint_shap_values, xname, yname, axis_color="#000000", show=True):
+def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, other_auto_ind=0, alpha=1, axis_color="#000000", show=True):
+
+    # convert from a DataFrame if we got one
+    if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
+        if feature_names is None:
+            feature_names = X.columns
+        X = X.as_matrix()
+    if feature_names is None:
+        feature_names = ["Feature %d"%i for i in range(X.shape[1])]
+
+    x = X[:,ind]
+    xname = feature_names[ind]
+
+    if other_ind is None:
+        other_ind = interactions(X, shap_value_matrix, ind)[other_auto_ind]
+
+    y = X[:,other_ind]
+    yname = feature_names[other_ind]
+
+    joint_shap_values = shap_value_matrix[:,ind] + shap_value_matrix[:,other_ind]
+
     if type(x[0]) == str:
         xnames = list(set(x))
         xnames.sort()
@@ -58,10 +78,12 @@ def joint_plot(x, y, joint_shap_values, xname, yname, axis_color="#000000", show
     else:
         yv = y
 
-    sc = pl.scatter(x, y, s=20, c=joint_shap_values, edgecolor='', alpha=1, cmap=red_blue)
+    sc = pl.scatter(x, y, s=20, c=joint_shap_values, edgecolor='', alpha=alpha, cmap=red_blue)
     pl.xlabel(xname, color=axis_color)
     pl.ylabel(yname, color=axis_color)
-    pl.colorbar(sc, label="Joint SHAP value")
+    cb = pl.colorbar(sc, label="Joint SHAP value")
+    cb.set_alpha(1)
+    cb.draw_all()
 
     pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
     for spine in pl.gca().spines.values():
