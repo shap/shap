@@ -2,12 +2,12 @@ import shap
 import numpy as np
 
 def test_null_model_small():
-    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,4)), nsamples=100)#knn.predict
+    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,4)), nsamples=100)
     e = explainer.explain(np.ones((1,4)))
     assert np.sum(np.abs(e.effects)) < 1e-8
 
 def test_null_model():
-    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,10)), nsamples=100)#knn.predict
+    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,10)), nsamples=100)
     e = explainer.explain(np.ones((1,10)))
 
 def test_front_page_model_agnostic():
@@ -28,6 +28,6 @@ def test_front_page_model_agnostic():
 
     # use Shap to explain a single prediction
     background = DenseData(iris.data[inds[:100],:], iris.feature_names) # name the features
-    explainer = KernelExplainer(knn.predict, background, nsamples=100)#knn.predict
+    explainer = KernelExplainer(knn.predict, background, nsamples=100)
     x = iris.data[inds[102:103],:]
     visualize(explainer.explain(x))

@@ -9,7 +9,7 @@ import numpy as np
 import logging
 import copy
 import itertools
-from sklearn.linear_model import LassoLarsIC
+from sklearn.linear_model import LassoLarsIC, Lasso
 
 try:
     import xgboost
@@ -103,7 +103,7 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", alpha=1, t
     else:
         xv = x
 
-    pl.plot(xv, shap_values, ".", markersize=5, color=color, alpha=alpha)
+    pl.plot(xv, shap_values, ".", markersize=5, color=color, alpha=alpha, markeredgewidth=0)
 
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
@@ -122,8 +122,12 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", alpha=1, t
     if show:
         pl.show()
 
-def interactions(X, shap_values, index):
-    """ Order other features by how much interaction they have with the feature at the given index. """
+def approx_interactions(X, shap_values, index):
+    """ Order other features by how much interaction they seem to have with the feature at the given index.
+
+    This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
+    index values for SHAP see the interaction_contrib option implemented in XGBoost.
+    """
     if X.shape[0] > 10000:
         a = np.arange(X.shape[0])
         np.random.shuffle(a)
@@ -135,7 +139,7 @@ def interactions(X, shap_values, index):
     srt = np.argsort(x)
     shap_ref = shap_values[inds,index]
     shap_ref = shap_ref[srt]
-    inc = int(len(x)/10.0)
+    inc = min(int(len(x)/10.0), 50)
     interactions = []
     for i in range(X.shape[1]):
         shap_other = shap_values[inds,i][srt]
@@ -148,7 +152,7 @@ def interactions(X, shap_values, index):
 
     return np.argsort(-np.abs(interactions))
 
-def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interaction=False, color="#ff0052", axis_color="#333333", alpha=1, title=None, show=True):
+def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interaction=False, color="#ff0052", axis_color="#333333", alpha=1, title=None, dot_size=12, show=True):
 
     # convert from a DataFrame if we got one
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -167,8 +171,8 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interac
     else:
         xv = x
 
-    top_interaction = interactions(X, shap_value_matrix, ind)[0]
-    pl.scatter(xv, shap_values, s=12.0, linewidth=0, c=shap_value_matrix[:,top_interaction], cmap=red_blue, alpha=alpha)
+    top_interaction = approx_interactions(X, shap_value_matrix, ind)[0]
+    pl.scatter(xv, shap_values, s=dot_size, linewidth=0, c=shap_value_matrix[:,top_interaction], cmap=red_blue, alpha=alpha)
     cb = pl.colorbar(label="SHAP value for "+feature_names[top_interaction])
     cb.set_alpha(1)
     cb.draw_all()
@@ -189,15 +193,28 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interac
     if show:
         pl.show()
 
-def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", axis_color="#333333", title=None, show=True):
+def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", axis_color="#333333", title=None, alpha=1, violin=True, show=True):
     ind_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
     ind_order = ind_order[-min(max_display,len(ind_order)):]
     fig = pl.figure(figsize=(5,len(ind_order)*0.35))
     pl.axvline(x=0, color="#999999")
 
-    for pos,i in enumerate(ind_order):
-        pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
-        pl.plot(shap_values[:,i], np.ones(shap_values.shape[0])*pos, ".", color=color, markersize=7, alpha=0.1, markeredgewidth=0)
+    if violin:
+        for pos,i in enumerate(ind_order):
+            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
+
+        parts = pl.violinplot(shap_values[:,ind_order], range(len(ind_order)), points=200, vert=False, widths=0.7,
+                          showmeans=False, showextrema=False, showmedians=False)
+
+        for pc in parts['bodies']:
+            pc.set_facecolor(color)
+            pc.set_edgecolor('none')
+            pc.set_alpha(alpha)
+    else:
+        for pos,i in enumerate(ind_order):
+            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
+            pl.scatter(shap_values[:,i], np.ones(shap_values.shape[0])*pos, alpha=alpha, linewidth=0)
+
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('none')
     pl.gca().spines['right'].set_visible(False)
@@ -211,6 +228,8 @@ def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", ax
     pl.show()
 
 def visualize(shap_values, feature_names=None, data=None, out_names=None):
+    """ Visualize the given SHAP values with an additive force layout. """
+
     if type(shap_values) != np.ndarray:
         return iml.visualize(shap_values)
 
@@ -265,66 +284,6 @@ def visualize(shap_values, feature_names=None, data=None, out_names=None):
             exps.append(e)
         return exps
 
-def explain(model, data=None, feature_names=None, out_names=None):
-    if data is None:
-        return explain_model(model, feature_names, out_names)
-    elif len(data.shape) == 1:
-        return explain_instance(model, np.reshape(data, (1,len(data))), feature_names, out_names)
-    elif data.shape[0] == 1:
-        return explain_instance(model, data, feature_names, out_names)
-    else:
-        return explain_instances(model, data, feature_names, out_names)
-
-
-def explain_instance(model, data, feature_names, out_names):
-    if out_names is None:
-        out_names = ["model output"]
-    if feature_names is None:
-        feature_names = [(i+1)+"" for i in range(data.shape[1])]
-
-    if type(model) == xgboost.core.Booster:
-        contribs = model.predict(xgboost.DMatrix(data), pred_contribs=True)
-    elif type(model) == lightgbm.basic.Booster:
-        contribs = model.predict(data, pred_contrib=True)
-    else:
-        return None
-
-    instance = Instance(data[0:1,:], data[0,:])
-    e = AdditiveExplanation(
-        contribs[0,-1],
-        np.sum(contribs[0,:]),
-        contribs[0,:-1],
-        None,
-        instance,
-        IdentityLink(),
-        Model(None, out_names),
-        DenseData(np.zeros((1,data.shape[1])), list(feature_names))
-    )
-    return e
-
-def explain_instances(model, data, feature_names, out_names):
-    if out_names is None:
-        out_names = ["model output"]
-    if feature_names is None:
-        feature_names = [(i+1)+"" for i in range(data.shape[1])]
-
-    if type(model) == xgboost.core.Booster:
-        exps = []
-        contribs = model.predict(xgboost.DMatrix(data), pred_contribs=True)
-        for i in range(data.shape[0]):
-            instance = Instance(data[i:i+1,:], data[i,:])
-            e = AdditiveExplanation(
-                contribs[i,-1],
-                np.sum(contribs[i,:]),
-                contribs[i,:-1],
-                None,
-                instance,
-                IdentityLink(),
-                Model(None, out_names),
-                DenseData(np.zeros((1,data.shape[1])), list(feature_names))
-            )
-            exps.append(e)
-        return exps
 
 class KernelExplainer:
 
@@ -382,7 +341,7 @@ class KernelExplainer:
             phi_var = np.zeros(len(self.data.groups))
             return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
-        self.use_l1 = kwargs.get("use_l1", None)
+        self.l1_reg = kwargs.get("l1_reg", "auto")
 
         # pick a reasonable number of samples if the user didn't specify how many they wanted
         self.nsamples = kwargs.get("nsamples", 0)
@@ -524,6 +483,8 @@ class KernelExplainer:
 
     def run(self):
         modelOut = self.model.f(self.synth_data[self.nsamplesRun*self.N:self.nsamplesAdded*self.N,:])
+        if len(modelOut.shape) > 1:
+            raise ValueError("The supplied model function should output a vector not a matrix!")
         self.y[self.nsamplesRun*self.N:self.nsamplesAdded*self.N] = modelOut
 
         # find the expected value of each output
@@ -542,9 +503,7 @@ class KernelExplainer:
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
-        #print("fraction_evaluated", fraction_evaluated)
-        if self.use_l1 == True or (fraction_evaluated < 0.2 and self.use_l1 != False):
-            #print("using feature selection...")
+        if (self.l1_reg not in [False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M-s), self.kernelWeights*s))
             log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
             log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
@@ -554,15 +513,21 @@ class KernelExplainer:
             mask_aug = np.transpose(w_sqrt_aug*np.transpose(np.vstack((self.maskMatrix, self.maskMatrix-1))))
             var_norms = np.array([np.linalg.norm(mask_aug[:,i]) for i in range(mask_aug.shape[1])])
 
+            if self.l1_reg == "auto":
+                model = LassoLarsIC(criterion="aic")
+            elif self.l1_reg == "bic" or self.l1_reg == "aic":
+                model = LassoLarsIC(criterion=self.l1_reg)
+            else:
+                print("l1_reg",self.l1_reg)
+                model = Lasso(alpha=self.l1_reg)
 
-            model = LassoLarsIC(criterion='bic', normalize=True)#fit_intercept
-            #model = Lasso(alpha=self.l1reg, fit_intercept=True)
             model.fit(mask_aug, eyAdj_aug)
             nonzero_inds = np.nonzero(model.coef_)[0]
 
         if len(nonzero_inds) == 0:
             return np.zeros(self.M),np.ones(self.M)
 
+        # eliminate one variable with the constraint that all features sum to the output
         eyAdj2 = eyAdj - self.maskMatrix[:,nonzero_inds[-1]]*(self.link.f(self.fx) - self.link.f(self.fnull))
         etmp = np.transpose(np.transpose(self.maskMatrix[:,nonzero_inds[:-1]]) - self.maskMatrix[:,nonzero_inds[-1]])
         log.debug("etmp[1:4,:] {0}".format(etmp[0:4,:]))
@@ -571,7 +536,6 @@ class KernelExplainer:
         tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
         tmp2 = np.linalg.inv(np.dot(np.transpose(tmp),etmp))
         w = np.dot(tmp2,np.dot(np.transpose(tmp),eyAdj2))
-        #log.info("w = {0}".format(w))
         log.debug("np.sum(w) = {0}".format(np.sum(w)))
         log.debug("self.link(self.fx) - self.link(self.fnull) = {0}".format(self.link.f(self.fx) - self.link.f(self.fnull)))
         phi = np.zeros(self.M)
@@ -584,14 +548,4 @@ class KernelExplainer:
             if np.abs(phi[i]) < 1e-10:
                 phi[i] = 0
 
-        # yHat = np.dot(self.maskMatrix, w)
-        # phi_var = np.var(yHat - eyAdj) * np.diag(tmp2)
-        # phi_var = np.hstack((phi_var, max(phi_var))) # since the last weight is inferred we use a pessimistic guess of its variance
-
-        # a finite sample adjustment based on how much of the weight is left in the sample space
-        # fractionWeightLeft = 1 - sum(self.kernelWeights)/sum(np.array([(self.M-1)/(s*(self.M-s)) for s in range(1, self.M)]))
-
-        return phi,np.ones(len(phi))#phi_var*fractionWeightLeft
-
-def test_blank():
-    pass
+        return phi,np.ones(len(phi))
