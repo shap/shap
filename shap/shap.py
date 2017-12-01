@@ -152,7 +152,7 @@ def approx_interactions(X, shap_values, index):
 
     return np.argsort(-np.abs(interactions))
 
-def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interaction=False, color="#ff0052", axis_color="#333333", alpha=1, title=None, dot_size=12, show=True):
+def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_index=None, color="#ff0052", axis_color="#333333", alpha=1, title=None, dot_size=12, show=True):
 
     # convert from a DataFrame if we got one
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -171,9 +171,10 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interac
     else:
         xv = x
 
-    top_interaction = approx_interactions(X, shap_value_matrix, ind)[0]
-    pl.scatter(xv, shap_values, s=dot_size, linewidth=0, c=shap_value_matrix[:,top_interaction], cmap=red_blue, alpha=alpha)
-    cb = pl.colorbar(label="SHAP value for "+feature_names[top_interaction])
+    if interaction_index is None:
+        interaction_index = approx_interactions(X, shap_value_matrix, ind)[0]
+    pl.scatter(xv, shap_values, s=dot_size, linewidth=0, c=shap_value_matrix[:,interaction_index], cmap=red_blue, alpha=alpha)
+    cb = pl.colorbar(label="SHAP value for "+feature_names[interaction_index])
     cb.set_alpha(1)
     cb.draw_all()
     # make the plot more readable
@@ -196,7 +197,7 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, show_interac
 def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", axis_color="#333333", title=None, alpha=1, violin=True, show=True):
     ind_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
     ind_order = ind_order[-min(max_display,len(ind_order)):]
-    fig = pl.figure(figsize=(5,len(ind_order)*0.35))
+    pl.gcf().set_size_inches(5, len(ind_order)*0.35)
     pl.axvline(x=0, color="#999999")
 
     if violin:
@@ -503,7 +504,8 @@ class KernelExplainer:
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
-        if (self.l1_reg not in [False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
+        log.debug("fraction_evaluated = {0}".format(fraction_evaluated))
+        if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M-s), self.kernelWeights*s))
             log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
             log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
@@ -518,7 +520,6 @@ class KernelExplainer:
             elif self.l1_reg == "bic" or self.l1_reg == "aic":
                 model = LassoLarsIC(criterion=self.l1_reg)
             else:
-                print("l1_reg",self.l1_reg)
                 model = Lasso(alpha=self.l1_reg)
 
             model.fit(mask_aug, eyAdj_aug)
@@ -530,7 +531,7 @@ class KernelExplainer:
         # eliminate one variable with the constraint that all features sum to the output
         eyAdj2 = eyAdj - self.maskMatrix[:,nonzero_inds[-1]]*(self.link.f(self.fx) - self.link.f(self.fnull))
         etmp = np.transpose(np.transpose(self.maskMatrix[:,nonzero_inds[:-1]]) - self.maskMatrix[:,nonzero_inds[-1]])
-        log.debug("etmp[1:4,:] {0}".format(etmp[0:4,:]))
+        log.debug("etmp[:4,:] {0}".format(etmp[:4,:]))
 
         # solve a weighted least squares equation to estimate phi
         tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
