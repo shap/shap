@@ -142,12 +142,12 @@ def approx_interactions(X, shap_values, index):
     inc = min(int(len(x)/10.0), 50)
     interactions = []
     for i in range(X.shape[1]):
-        shap_other = shap_values[inds,i][srt]
+        val_other = X[inds,i][srt]
 
-        if i == index or np.sum(np.abs(shap_other)) < 1e-8:
+        if i == index or np.sum(np.abs(val_other)) < 1e-8:
             v = 0
         else:
-            v = np.sum(np.abs([np.corrcoef(shap_ref[i:i+inc],shap_other[i:i+inc])[0,1] for i in range(0,len(x),inc)]))
+            v = np.sum(np.abs([np.corrcoef(shap_ref[i:i+inc],val_other[i:i+inc])[0,1] for i in range(0,len(x),inc)]))
         interactions.append(v)
 
     return np.argsort(-np.abs(interactions))
@@ -173,8 +173,8 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
 
     if interaction_index is None:
         interaction_index = approx_interactions(X, shap_value_matrix, ind)[0]
-    pl.scatter(xv, shap_values, s=dot_size, linewidth=0, c=shap_value_matrix[:,interaction_index], cmap=red_blue, alpha=alpha)
-    cb = pl.colorbar(label="SHAP value for "+feature_names[interaction_index])
+    pl.scatter(xv, shap_values, s=dot_size, linewidth=0, c=X[:,interaction_index], cmap=red_blue, alpha=alpha)
+    cb = pl.colorbar(label=feature_names[interaction_index])
     cb.set_alpha(1)
     cb.draw_all()
     # make the plot more readable
@@ -325,8 +325,17 @@ class KernelExplainer:
         self.M = len(self.varyingFeatureGroups)
 
         # find f(x) and E_x[f(x)]
-        self.fx = self.model.f(instance.x)[0]
-        self.fnull = np.mean(self.model.f(self.data.data))
+        model_out = self.model.f(instance.x)
+        self.fx = model_out[0]
+        self.fnull = np.mean(self.model.f(self.data.data),0)
+        self.vector_out = True
+        if len(model_out.shape) == 1:
+            self.vector_out = False
+            self.D = 1
+            self.fx = np.array([self.fx])
+            self.fnull = np.array([self.fnull])
+        else:
+            self.D = model_out.shape[1]
 
         # if no features vary then there no feature has an effect
         if self.M == 0:
@@ -440,11 +449,18 @@ class KernelExplainer:
         self.run()
 
         # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
-        vphi,vphi_var = self.solve(self.nsamples/self.max_samples)
-        phi = np.zeros(len(self.data.groups))
-        phi[self.varyingInds] = vphi
-        phi_var = np.zeros(len(self.data.groups))
-        phi_var[self.varyingInds] = vphi_var
+        phi = np.zeros((len(self.data.groups), self.D))
+        phi_var = np.zeros((len(self.data.groups), self.D))
+        for d in range(self.D):
+            vphi,vphi_var = self.solve(self.nsamples/self.max_samples, d)
+            phi[self.varyingInds,d] = vphi
+            phi_var[self.varyingInds,d] = vphi_var
+
+        if not self.vector_out:
+            phi = np.squeeze(phi, axis=1)
+            phi_var = np.squeeze(phi_var, axis=1)
+            self.fx = self.fx[0]
+            self.fnull = self.fnull[0]
 
         # return the Shapley values along with variances of the estimates
         # note that if features were eliminated by l1 regression their
@@ -462,8 +478,8 @@ class KernelExplainer:
         self.synth_data = np.zeros((self.nsamples * self.N, self.P))
         self.maskMatrix = np.zeros((self.nsamples, self.M))
         self.kernelWeights = np.zeros(self.nsamples)
-        self.y = np.zeros(self.nsamples * self.N)
-        self.ey = np.zeros(self.nsamples)
+        self.y = np.zeros((self.nsamples * self.N, self.D))
+        self.ey = np.zeros((self.nsamples, self.D))
         self.lastMask = np.zeros(self.nsamples)
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
@@ -483,22 +499,23 @@ class KernelExplainer:
         self.nsamplesAdded += 1
 
     def run(self):
+        num_to_run = self.nsamplesAdded*self.N - self.nsamplesRun*self.N
         modelOut = self.model.f(self.synth_data[self.nsamplesRun*self.N:self.nsamplesAdded*self.N,:])
-        if len(modelOut.shape) > 1:
-            raise ValueError("The supplied model function should output a vector not a matrix!")
-        self.y[self.nsamplesRun*self.N:self.nsamplesAdded*self.N] = modelOut
+        # if len(modelOut.shape) > 1:
+        #     raise ValueError("The supplied model function should output a vector not a matrix!")
+        self.y[self.nsamplesRun*self.N:self.nsamplesAdded*self.N,:] = np.reshape(modelOut, (num_to_run,self.D))
 
         # find the expected value of each output
         for i in range(self.nsamplesRun, self.nsamplesAdded):
-            eyVal = 0.0
+            eyVal = np.zeros(self.D)
             for j in range(0, self.N):
-                eyVal += self.y[i*self.N + j]
+                eyVal += self.y[i*self.N + j,:]
 
-            self.ey[i] = eyVal/self.N
+            self.ey[i,:] = eyVal/self.N
             self.nsamplesRun += 1
 
-    def solve(self, fraction_evaluated):
-        eyAdj = self.linkfv(self.ey) - self.link.f(self.fnull)
+    def solve(self, fraction_evaluated, dim):
+        eyAdj = self.linkfv(self.ey[:,dim]) - self.link.f(self.fnull[dim])
 
         s = np.sum(self.maskMatrix, 1)
 
@@ -510,7 +527,7 @@ class KernelExplainer:
             log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
             log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
             w_sqrt_aug = np.sqrt(w_aug)
-            eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx) - self.link.f(self.fnull))))
+            eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))))
             eyAdj_aug *= w_sqrt_aug
             mask_aug = np.transpose(w_sqrt_aug*np.transpose(np.vstack((self.maskMatrix, self.maskMatrix-1))))
             var_norms = np.array([np.linalg.norm(mask_aug[:,i]) for i in range(mask_aug.shape[1])])
@@ -529,7 +546,7 @@ class KernelExplainer:
             return np.zeros(self.M),np.ones(self.M)
 
         # eliminate one variable with the constraint that all features sum to the output
-        eyAdj2 = eyAdj - self.maskMatrix[:,nonzero_inds[-1]]*(self.link.f(self.fx) - self.link.f(self.fnull))
+        eyAdj2 = eyAdj - self.maskMatrix[:,nonzero_inds[-1]]*(self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))
         etmp = np.transpose(np.transpose(self.maskMatrix[:,nonzero_inds[:-1]]) - self.maskMatrix[:,nonzero_inds[-1]])
         log.debug("etmp[:4,:] {0}".format(etmp[:4,:]))
 
@@ -538,10 +555,14 @@ class KernelExplainer:
         tmp2 = np.linalg.inv(np.dot(np.transpose(tmp),etmp))
         w = np.dot(tmp2,np.dot(np.transpose(tmp),eyAdj2))
         log.debug("np.sum(w) = {0}".format(np.sum(w)))
-        log.debug("self.link(self.fx) - self.link(self.fnull) = {0}".format(self.link.f(self.fx) - self.link.f(self.fnull)))
+        log.debug("self.link(self.fx) - self.link(self.fnull) = {0}".format(self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
+        log.debug("self.fx = {0}".format(self.fx[dim]))
+        log.debug("self.link(self.fx) = {0}".format(self.link.f(self.fx[dim])))
+        log.debug("self.fnull = {0}".format(self.fnull[dim]))
+        log.debug("self.link(self.fnull) = {0}".format(self.link.f(self.fnull[dim])))
         phi = np.zeros(self.M)
         phi[nonzero_inds[:-1]] = w
-        phi[nonzero_inds[-1]] = (self.link.f(self.fx) - self.link.f(self.fnull)) - sum(w)
+        phi[nonzero_inds[-1]] = (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])) - sum(w)
         log.info("phi = {0}".format(phi))
 
         # clean up any rounding errors
