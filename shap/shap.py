@@ -214,7 +214,7 @@ def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", ax
     else:
         for pos,i in enumerate(ind_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
-            pl.scatter(shap_values[:,i], np.ones(shap_values.shape[0])*pos, alpha=alpha, linewidth=0)
+            pl.scatter(shap_values[:,i], np.ones(shap_values.shape[0])*pos, color=color, alpha=alpha, linewidth=0)
 
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('none')
