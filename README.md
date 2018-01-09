@@ -86,6 +86,7 @@ shap.summary_plot(shap_values, d.feature_names)
 *Interaction plots* are an extention of SHAP plots where each sample is colored by another interacting feature. As an example of a model trained on a more complex dataset, we explain the effect of total cholesterol on a XGBoost Cox proportional hazards model trained on NHANES I survival data. The y-axis is a log odds ratio, where higher values represent a higher risk of death. The vertical spread means having high cholesterol raises the predicted risk of death for some people more than others. Specifically, having high cholesterol when you are young is concerning to the model.
 
 ```python
+# each dot in this plot is a person
 shap.interaction_plot(chol_index, X_nhanes, nhanes_shap_values)
 ```
 
