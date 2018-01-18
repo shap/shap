@@ -193,29 +193,85 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
         pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical')
     if show:
         pl.show()
+import matplotlib.pyplot as pl
+from scipy.stats import gaussian_kde
 
-def summary_plot(shap_values, feature_names, max_display=20, color="#ff0052", axis_color="#333333", title=None, alpha=1, violin=True, show=True):
+def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", axis_color="#333333", title=None, alpha=1, violin=True, show=True, features=None, max_num_bins=20, size=(10, 10), width=0.7):
+    """
+    Use cases:
+        - scatter plot: TODO
+        - scatter plot split: TODO
+        - violin plot: color="#ff0052"
+        - violin plot split: color="coolwarm", features != None
+    """
+    
+    # NOTE: the sum of individual kdes may not be the full kde ...
+    
     ind_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
     ind_order = ind_order[-min(max_display,len(ind_order)):]
-    pl.gcf().set_size_inches(5, len(ind_order)*0.35)
+    pl.gcf().set_size_inches(size)
     pl.axvline(x=0, color="#999999")
-
+    
+    is_distributed = color in plt.cm.datad
+    
     if violin:
+        num_x_points = 200
         for pos,i in enumerate(ind_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
-
-        parts = pl.violinplot(shap_values[:,ind_order], range(len(ind_order)), points=200, vert=False, widths=0.7,
-                          showmeans=False, showextrema=False, showmedians=False)
-
-        for pc in parts['bodies']:
-            pc.set_facecolor(color)
-            pc.set_edgecolor('none')
-            pc.set_alpha(alpha)
+        if is_distributed:
+            if features is None:
+                raise ValueError("features must be provided if doing a distributed plot")
+            bins = np.linspace(0, features.shape[0], max_num_bins + 1).round(0).astype('int') # the indices of the feature data corresponding to each bin
+            x_points = np.linspace(-1, 1, num_x_points)
+            cmap = pl.get_cmap(color)
+            # loop through each feature and plot:
+            for pos, ind in enumerate(ind_order):
+                # decide how to handle: if #unique < max_num_bins then split by unique value, otherwise use bins/percentiles.
+                # to keep simpler code, in the case of uniques, we just adjust the bins to align with the unique counts.
+                feature = features[:, ind]
+                unique, counts = np.unique(feature, return_counts=True)
+                if unique.shape[0] <= max_num_bins:
+                    order = np.argsort(unique)
+                    thesebins = np.cumsum(counts[order])
+                else:
+                    thesebins = bins
+                nbins = thesebins.shape[0] - 1
+                order = np.argsort(feature)
+                y0 = np.ones(num_x_points) * pos
+                # calculate kdes:
+                ys = np.zeros((nbins, num_x_points))
+                for i in range(nbins):
+                    shaps = shap_values[order[bins[i]:bins[i+1]], ind]
+                    ys[i, :] = gaussian_kde(shaps)(x_points)
+                # now plot 'em. We don't plot the individual strips, as this can leave whitespace between them.
+                # instead, we plot the full kde, then remove outer strip and plot over it, etc., to ensure no
+                # whitespace
+                ys = np.cumsum(ys, axis=0)
+                scale = ys.max() * 2 / width
+                for i in range(nbins - 1, -1, -1):
+                    y = ys[i, :] / scale
+                    c = cmap(i / nbins)
+                    pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
+                        
+            
+        else:
+            parts = pl.violinplot(shap_values[:,ind_order], range(len(ind_order)), points=num_x_points, vert=False, widths=width,
+                              showmeans=False, showextrema=False, showmedians=False)
+            for pc in parts['bodies']:
+                pc.set_facecolor(color)
+                pc.set_edgecolor('none')
+                pc.set_alpha(alpha)
     else:
         for pos,i in enumerate(ind_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
-            pl.scatter(shap_values[:,i], np.ones(shap_values.shape[0])*pos, color=color, alpha=alpha, linewidth=0)
 
+            if is_distributed:
+                # random values bounded between pos +-width                
+                y = pos + width * (1 / (1 + np.exp(-np.random.normal(size=shap_values.shape[0]))) - 0.5)
+                pl.scatter(shap_values[:, i], y, c=np.argsort(np.argsort(features[:, i])), cmap=pl.get_cmap(color), alpha=alpha, linewidth=0)
+            else:
+                pl.scatter(shap_values[:,i], np.ones(shap_values.shape[0])*pos, color=color, alpha=alpha, linewidth=0)
+    
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('none')
     pl.gca().spines['right'].set_visible(False)
