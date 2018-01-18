@@ -233,6 +233,7 @@ def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", a
                 if unique.shape[0] <= max_num_bins:
                     order = np.argsort(unique)
                     thesebins = np.cumsum(counts[order])
+                    thesebins = np.insert(thesebins, 0, 0)
                 else:
                     thesebins = bins
                 nbins = thesebins.shape[0] - 1
@@ -250,7 +251,7 @@ def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", a
                 scale = ys.max() * 2 / width
                 for i in range(nbins - 1, -1, -1):
                     y = ys[i, :] / scale
-                    c = cmap(i / nbins)
+                    c = cmap(i / (nbins - 1))
                     pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
                         
             
