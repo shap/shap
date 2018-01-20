@@ -10,6 +10,7 @@ import logging
 import copy
 import itertools
 from sklearn.linear_model import LassoLarsIC, Lasso
+import pandas as pd
 
 try:
     import xgboost
@@ -195,8 +196,7 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
         pl.show()
 import matplotlib.pyplot as pl
 from scipy.stats import gaussian_kde
-
-def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", axis_color="#333333", title=None, alpha=1, violin=True, show=True, features=None, max_num_bins=20, size=(10, 10), width=0.7):
+def summary_plot(shap_values, features, feature_names=None, max_display=10, color=None, axis_color="#333333", title=None, alpha=1, violin=True, distributed=True, show=True, max_num_bins=20, size=(10, 10), width=0.7):
     """
     Use cases:
         - scatter plot: TODO
@@ -207,20 +207,40 @@ def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", a
     
     # NOTE: the sum of individual kdes may not be the full kde ...
     
+    
     ind_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
     ind_order = ind_order[-min(max_display,len(ind_order)):]
     pl.gcf().set_size_inches(size)
     pl.axvline(x=0, color="#999999")
     
-    is_distributed = color in plt.cm.datad
+    # features can be a pandas dataframe or a matrix: handle both cases:
+    # TODO: could be more error handling here e.g. provide feature matrix of wrong dimension, etc.
+    if isinstance(features, pd.DataFrame):
+        feature_matrix = features.as_matrix()
+        # use dataframe columns if no names provided:
+        if feature_names is None:
+            feature_names = features.columns
+    else:
+        feature_matrix = features
+        if feature_names is None:
+            raise ValueError("if provided features as a matrix, you must provide feature_names")
+    
+    # set default colors:
+    if color is None:
+        color = "coolwarm" if distributed else "#ff0052"
+    
+    # check stuff:
+    if distributed:
+        if not color in pl.cm.datad:
+            raise ValueError("'%s' is not a known colormap" % color)
+        if feature_matrix is None:
+            raise ValueError("features must be provided if doing a distributed plot")
     
     if violin:
         num_x_points = 200
-        for pos,i in enumerate(ind_order):
+        for pos, i in enumerate(ind_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
-        if is_distributed:
-            if features is None:
-                raise ValueError("features must be provided if doing a distributed plot")
+        if distributed:
             bins = np.linspace(0, features.shape[0], max_num_bins + 1).round(0).astype('int') # the indices of the feature data corresponding to each bin
             x_points = np.linspace(-1, 1, num_x_points)
             cmap = pl.get_cmap(color)
@@ -228,7 +248,7 @@ def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", a
             for pos, ind in enumerate(ind_order):
                 # decide how to handle: if #unique < max_num_bins then split by unique value, otherwise use bins/percentiles.
                 # to keep simpler code, in the case of uniques, we just adjust the bins to align with the unique counts.
-                feature = features[:, ind]
+                feature = feature_matrix[:, ind]
                 unique, counts = np.unique(feature, return_counts=True)
                 if unique.shape[0] <= max_num_bins:
                     order = np.argsort(unique)
@@ -237,24 +257,26 @@ def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", a
                 else:
                     thesebins = bins
                 nbins = thesebins.shape[0] - 1
+                # order the feature data so we can apply percentiling
                 order = np.argsort(feature)
+                # x axis is located at y0 = pos, with pos being there for offset
                 y0 = np.ones(num_x_points) * pos
                 # calculate kdes:
                 ys = np.zeros((nbins, num_x_points))
                 for i in range(nbins):
+                    # get shap values in this bin:
                     shaps = shap_values[order[bins[i]:bins[i+1]], ind]
-                    ys[i, :] = gaussian_kde(shaps)(x_points)
+                    # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
+                    ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
                 # now plot 'em. We don't plot the individual strips, as this can leave whitespace between them.
                 # instead, we plot the full kde, then remove outer strip and plot over it, etc., to ensure no
                 # whitespace
                 ys = np.cumsum(ys, axis=0)
-                scale = ys.max() * 2 / width
+                scale = ys.max() * 2 / width # 2 is here as we plot both sides of x axis
                 for i in range(nbins - 1, -1, -1):
                     y = ys[i, :] / scale
                     c = cmap(i / (nbins - 1))
                     pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
-                        
-            
         else:
             parts = pl.violinplot(shap_values[:,ind_order], range(len(ind_order)), points=num_x_points, vert=False, widths=width,
                               showmeans=False, showextrema=False, showmedians=False)
@@ -265,11 +287,13 @@ def summary_plot(shap_values, feature_names, max_display=10, color="coolwarm", a
     else:
         for pos,i in enumerate(ind_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1,5))
-
-            if is_distributed:
-                # random values bounded between pos +-width                
+            if distributed:
+                # set y values as random values bounded between pos +-width                
                 y = pos + width * (1 / (1 + np.exp(-np.random.normal(size=shap_values.shape[0]))) - 0.5)
-                pl.scatter(shap_values[:, i], y, c=np.argsort(np.argsort(features[:, i])), cmap=pl.get_cmap(color), alpha=alpha, linewidth=0)
+                # get colors: the order of the item in the sorted list
+                colors = np.argsort(np.argsort(feature_matrix[:, i]))
+                cmap = pl.get_cmap(color)
+                pl.scatter(shap_values[:, i], y, c=colors, cmap=cmap, alpha=alpha, linewidth=0)
             else:
                 pl.scatter(shap_values[:,i], np.ones(shap_values.shape[0])*pos, color=color, alpha=alpha, linewidth=0)
     
