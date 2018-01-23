@@ -17,30 +17,26 @@
 pip install shap
 ```
 
-## XGBoost/LightGBM example
+## XGBoost (or LightGBM) example
 
 While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (*make sure you have the latest checkout of master*), and you can use the `shap` package for visualization in a Jupyter notebook:
 
 ```python
 import xgboost
-# or import lightgbm
-import sklearn.datasets
 import shap
 
 # load JS visualization code to notebook
 shap.initjs() 
 
-# train XGBoost or LightGBM model
-d = sklearn.datasets.load_boston()
-bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(d.data, label=d.target), 10)
-# or bst = lightgbm.train({"learning_rate": 0.01}, lightgbm.Dataset(d.data, label=d.target), 10)
+# train XGBoost model
+X,y,X_display = shap.datasets.boston()
+bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
-# explain the model's prediction using SHAP values on the first 1000 training data samples
-shap_values = bst.predict(xgboost.DMatrix(d.data[0:1000,:]), pred_contribs=True)
-# or shap_values = bst.predict(d.data[0:1000,:], pred_contrib=True)
+# explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
+shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
 
 # visualize the first prediction's explaination
-shap.visualize(shap_values[0,:], feature_names=d.feature_names, data=d.data[0,:])
+shap.visualize(shap_values[0,:], X.iloc[0,:], feature_names=X.columns)
 ```
 
 <p align="center">
@@ -52,19 +48,19 @@ The above explanation shows features each contributing to push the model output 
 If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset (in the notebook this plot is interactive):
 
 ```python
-# visualize the first 1000 predictions
-shap.visualize(shap_values[:1000,:], feature_names=d.feature_names, data=d.data[:1000,:])
+# visualize the training set predictions
+shap.visualize(shap_values, X)
 ```
 
 <p align="center">
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
-To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in the training dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as the average number of rooms per house in an area changes.
+To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in the training dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as the average number of rooms per house in an area changes. Another feature is automatically chosen for coloring to hightlight interaction effects. 
 
 ```python
-# create a SHAP plot to show the effect of a single feature across the whole dataset
-shap.plot(d.data[:,5], shap_values[:,5], "Avg. # rooms in home")
+# create a SHAP dependence plot to show the effect of a single feature across the whole dataset
+shap.dependence_plot(5, shap_values, X)
 ```
 
 <p align="center">
@@ -76,22 +72,11 @@ To get an overview of which features are most important for a model we can plot 
 
 ```python
 # summarize the effects of all the features
-shap.summary_plot(shap_values, d.feature_names)
+shap.summary_plot(shap_values, X)
 ```
 
 <p align="center">
-  <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_overview.png" />
-</p>
-
-*Interaction plots* are an extention of SHAP plots where each sample is colored by another interacting feature. As an example of a model trained on a more complex dataset, we explain the effect of total cholesterol on a XGBoost Cox proportional hazards model trained on NHANES I survival data. The y-axis is the estimated effect of the cholosterol feature on the model's output as a log odds ratio, where higher values represent a higher risk of death. The vertical spread means having high cholesterol raises the predicted risk of death for some people more than others. Specifically, having high total cholesterol when you are young is concerning to the model.
-
-```python
-# each dot in this plot is a person
-shap.interaction_plot(chol_index, X_nhanes, nhanes_shap_values)
-```
-
-<p align="center">
-  <img width="523" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/nhanes1_chol_interaction.png" />
+  <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot.png" />
 </p>
 
 
