@@ -316,7 +316,11 @@ def visualize(shap_values, features=None, feature_names=None, out_names=None, da
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
-            feature_names = features.columns
+            feature_names = list(features.columns)
+        features = features.as_matrix()
+    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+        if feature_names is None:
+            feature_names = list(features.index)
         features = features.as_matrix()
     elif str(type(features)) == "list":
         if feature_names is None:
