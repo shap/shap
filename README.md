@@ -17,7 +17,7 @@
 pip install shap
 ```
 
-## XGBoost (or LightGBM) example
+## XGBoost (LightGBM) example
 
 While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP paper](https://arxiv.org/abs/1706.06060)). This has been integrated directly into XGBoost and LightGBM (*make sure you have the latest checkout of master*), and you can use the `shap` package for visualization in a Jupyter notebook:
 
@@ -36,7 +36,7 @@ bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
 
 # visualize the first prediction's explaination
-shap.visualize(shap_values[0,:], X.iloc[0,:], feature_names=X.columns)
+shap.visualize(shap_values[0,:], X.iloc[0,:])
 ```
 
 <p align="center">
@@ -56,7 +56,7 @@ shap.visualize(shap_values, X)
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
-To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in the training dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as the average number of rooms per house in an area changes. Another feature is automatically chosen for coloring to hightlight interaction effects. 
+To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as RM (the average number of rooms per house in an area) changes. Vertical dispersion at a single value of RM represents interaction effects with other features. To help reveal these interactions `dependence_plot` automatically selects another feature for coloring. In this case coloring by RAD (index of accessibility to radial highways) highlights that RM has less impact on home price for areas close to radial highways.
 
 ```python
 # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
