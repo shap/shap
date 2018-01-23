@@ -4,7 +4,7 @@ from iml import Instance, Model
 from iml.explanations import AdditiveExplanation
 from iml.links import IdentityLink
 from iml.datatypes import DenseData
-
+import iml
 import numpy as np
 
 try:
