@@ -194,7 +194,7 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
         if feature_names is None:
             feature_names = features.columns
         features = features.as_matrix()
-    elif str(type(features)) == "list":
+    elif str(type(features)) == "<class 'list'>":
         if feature_names is None:
             feature_names = features
         features = None
