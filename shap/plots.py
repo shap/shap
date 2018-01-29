@@ -167,7 +167,7 @@ def approx_interactions(index, shap_values, X):
     return np.argsort(-np.abs(interactions))
 
 def summary_plot(shap_values, features, feature_names=None, max_display=20, plot_type="dot",
-                 color="#ff0052", axis_color="#333333", title=None, alpha=1, show=True):
+                 color="#ff0052", axis_color="#333333", title=None, alpha=1, show=True, sort=True):
     """
     Create a SHAP summary plot, colored by feature values when they are provided.
 
@@ -202,9 +202,12 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
         feature_names = features
         features = None
 
-    # order features by the sum of their effect magnitudes
-    feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
-    feature_order = feature_order[-min(max_display,len(feature_order)):]
+    if sort:
+        # order features by the sum of their effect magnitudes
+        feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
+        feature_order = feature_order[-min(max_display,len(feature_order)):]
+    else:
+        feature_order = np.arange(min(max_display,shap_values.shape[1]-1))
 
     row_height = 0.4
     pl.gcf().set_size_inches(7, len(feature_order)*row_height+0.6)
@@ -299,7 +302,7 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
     pl.gca().tick_params('x', labelsize=11)
     pl.ylim(-1, len(feature_order))
     pl.xlabel("SHAP value (impact on model output)", fontsize=13)
-    pl.show()
+    if show: pl.show()
 
 def visualize(shap_values, features=None, feature_names=None, out_names=None, data=None):
     """ Visualize the given SHAP values with an additive force layout. """
