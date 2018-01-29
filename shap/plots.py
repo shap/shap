@@ -207,7 +207,7 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
         feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
         feature_order = feature_order[-min(max_display,len(feature_order)):]
     else:
-        feature_order = np.arange(min(max_display,shap_values.shape[1]-1))
+        feature_order = np.flip(np.arange(min(max_display,shap_values.shape[1]-1)),0)
 
     row_height = 0.4
     pl.gcf().set_size_inches(7, len(feature_order)*row_height+0.6)
