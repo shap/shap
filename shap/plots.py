@@ -232,7 +232,7 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
                 ys[ind] = layer * ((layer%2)*2-1)
                 layer += 1
                 last_bin = quant[ind]
-            ys *= row_height/np.max(ys)
+            ys *= row_height/np.max(ys+1)
 
             if features is not None:
                 vmin = np.nanpercentile(features[:,i], 5)
@@ -302,6 +302,7 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
     pl.gca().tick_params('x', labelsize=11)
     pl.ylim(-1, len(feature_order))
     pl.xlabel("SHAP value (impact on model output)", fontsize=13)
+    pl.tight_layout()
     if show: pl.show()
 
 def visualize(shap_values, features=None, feature_names=None, out_names=None, data=None):
