@@ -108,11 +108,24 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         cb = pl.colorbar(ticks=[cname_map[n] for n in cnames])
         cb.set_ticklabels(cnames)
     else:
+        # # draw the color bar
+        # if color_bar and features is not None:
+        #     cb = pl.colorbar(ticks=[vmin,vmax], aspect=1000)
+        #     cb.set_ticklabels(["Low", "High"])
+        #     cb.set_label("Feature value", size=12, labelpad=0)
+        #     cb.ax.tick_params(labelsize=11, length=0)
+        #     cb.set_alpha(1)
+        #     cb.outline.set_visible(False)
+        #
+        #     cb.draw_all()
         cb = pl.colorbar()
     cb.set_label(feature_names[interaction_index], size=13)
     cb.ax.tick_params(labelsize=11)
     cb.set_alpha(1)
-    cb.draw_all()
+    cb.outline.set_visible(False)
+    bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    cb.ax.set_aspect((bbox.height-0.7)*20)
+    #cb.draw_all()
 
     # make the plot more readable
     pl.gcf().set_size_inches(7.5, 5)
@@ -166,8 +179,9 @@ def approx_interactions(index, shap_values, X):
 
     return np.argsort(-np.abs(interactions))
 
-def summary_plot(shap_values, features, feature_names=None, max_display=20, plot_type="dot",
-                 color="#ff0052", axis_color="#333333", title=None, alpha=1, show=True, sort=True):
+def summary_plot(shap_values, features=None, feature_names=None, max_display=20, plot_type="dot",
+                 color="#ff0052", axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+                 color_bar=True):
     """
     Create a SHAP summary plot, colored by feature values when they are provided.
 
@@ -198,9 +212,12 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
         if feature_names is None:
             feature_names = features
         features = None
-    elif len(features.shape) == 1 and feature_names is None:
+    elif (features is not None) and len(features.shape) == 1 and feature_names is None:
         feature_names = features
         features = None
+
+    if feature_names is None:
+        feature_names = ["Feature "+str(i) for i in range(shap_values.shape[1]-1)]
 
     if sort:
         # order features by the sum of their effect magnitudes
@@ -209,8 +226,8 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
     else:
         feature_order = np.flip(np.arange(min(max_display,shap_values.shape[1]-1)),0)
 
-    row_height = 0.4
-    pl.gcf().set_size_inches(7, len(feature_order)*row_height+0.6)
+    row_height = 0.5
+    pl.gcf().set_size_inches(8, len(feature_order)*row_height+1.5)
     pl.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "dot":
@@ -232,7 +249,7 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
                 ys[ind] = layer * ((layer%2)*2-1)
                 layer += 1
                 last_bin = quant[ind]
-            ys *= row_height/np.max(ys+1)
+            ys *= 0.8*(row_height/np.max(ys+1))
 
             if features is not None:
                 vmin = np.nanpercentile(features[:,i], 5)
@@ -290,6 +307,18 @@ def summary_plot(shap_values, features, feature_names=None, max_display=20, plot
                 pc.set_facecolor(color)
                 pc.set_edgecolor('none')
                 pc.set_alpha(alpha)
+
+    # draw the color bar
+    if color_bar and features is not None:
+        cb = pl.colorbar(ticks=[vmin,vmax], aspect=1000)
+        cb.set_ticklabels(["Low", "High"])
+        cb.set_label("Feature value", size=12, labelpad=0)
+        cb.ax.tick_params(labelsize=11, length=0)
+        cb.set_alpha(1)
+        cb.outline.set_visible(False)
+        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+        cb.ax.set_aspect((bbox.height-0.9)*20)
+        #cb.draw_all()
 
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('none')
