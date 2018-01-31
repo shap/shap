@@ -226,7 +226,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
     else:
         feature_order = np.flip(np.arange(min(max_display,shap_values.shape[1]-1)),0)
 
-    row_height = 0.5
+    row_height = 0.4
     pl.gcf().set_size_inches(8, len(feature_order)*row_height+1.5)
     pl.axvline(x=0, color="#999999", zorder=-1)
 
@@ -249,7 +249,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
                 ys[ind] = layer * ((layer%2)*2-1)
                 layer += 1
                 last_bin = quant[ind]
-            ys *= 0.8*(row_height/np.max(ys+1))
+            ys *= 0.9*(row_height/np.max(ys+1))
 
             if features is not None:
                 vmin = np.nanpercentile(features[:,i], 5)
