@@ -63,11 +63,22 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     elif display_features is None:
         display_features = features
 
+    if feature_names is None:
+        feature_names = ["Feature "+str(i) for i in range(shap_values.shape[1]-1)]
+
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
         shap_values = np.reshape(shap_values, len(shap_values), 1)
     if len(features.shape) == 1:
         features = np.reshape(features, len(features), 1)
+
+    if type(ind) == str:
+        nzinds = np.where(feature_names == ind)[0]
+        if len(nzinds) == 0:
+            print("Could not find feature named: "+ind)
+            return
+        else:
+            ind = nzinds[0]
 
     # get both the raw and display feature values
     xv = features[:,ind]
@@ -334,7 +345,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
     pl.tight_layout()
     if show: pl.show()
 
-def visualize(shap_values, features=None, feature_names=None, out_names=None, data=None):
+def visualize(shap_values, features=None, feature_names=None, out_names=None, data=None,
+              link=IdentityLink()):
     """ Visualize the given SHAP values with an additive force layout. """
 
     # backwards compatability
@@ -384,7 +396,7 @@ def visualize(shap_values, features=None, feature_names=None, out_names=None, da
             shap_values[0,:-1],
             None,
             instance,
-            IdentityLink(),
+            link,
             Model(None, out_names),
             DenseData(np.zeros((1,len(feature_names))), list(feature_names))
         )

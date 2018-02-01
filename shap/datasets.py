@@ -43,3 +43,8 @@ def adult():
                 data[k] = data[k].cat.codes
 
     return data.drop(["Target"], axis=1),data["Target"],raw_data.drop(["Education", "Target"], axis=1)
+
+def nhanesi():
+    X = pd.read_csv("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv")
+    y = pd.read_csv("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_y.csv")["y"]
+    return X,np.array(y),X
