@@ -47,4 +47,6 @@ def adult():
 def nhanesi():
     X = pd.read_csv("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv")
     y = pd.read_csv("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_y.csv")["y"]
-    return X,np.array(y),X
+    X_display = X.copy()
+    X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
+    return X,np.array(y),X_display

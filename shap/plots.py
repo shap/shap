@@ -11,15 +11,20 @@ try:
     import matplotlib.pyplot as pl
     from matplotlib.colors import LinearSegmentedColormap
 
-    cdict1 = {'red':   ((0.0, 0.11764705882352941, 0.11764705882352941),
-                        (1.0, 0.9607843137254902, 0.9607843137254902)),
+    cdict1 = {
+          'red': ((0.0, 0.11764705882352941, 0.11764705882352941),
+                  (1.0, 0.9607843137254902, 0.9607843137254902)),
 
-             'green': ((0.0, 0.5333333333333333, 0.5333333333333333),
-                       (1.0, 0.15294117647058825, 0.15294117647058825)),
+        'green': ((0.0, 0.5333333333333333, 0.5333333333333333),
+                   (1.0, 0.15294117647058825, 0.15294117647058825)),
 
-             'blue':  ((0.0, 0.8980392156862745, 0.8980392156862745),
-                       (1.0, 0.3411764705882353, 0.3411764705882353))
-            }
+         'blue':  ((0.0, 0.8980392156862745, 0.8980392156862745),
+                   (1.0, 0.3411764705882353, 0.3411764705882353)),
+
+        'alpha':  ((0.0, 1, 1),
+                   (0.5, 0.3, 0.3),
+                   (1.0, 1, 1))
+    }
     red_blue = LinearSegmentedColormap('RedBlue', cdict1)
 except ImportError:
     pass
@@ -72,13 +77,31 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if len(features.shape) == 1:
         features = np.reshape(features, len(features), 1)
 
-    if type(ind) == str:
-        nzinds = np.where(feature_names == ind)[0]
-        if len(nzinds) == 0:
-            print("Could not find feature named: "+ind)
-            return
+    def convert_name(ind):
+        if type(ind) == str:
+            nzinds = np.where(feature_names == ind)[0]
+            if len(nzinds) == 0:
+                print("Could not find feature named: "+ind)
+                return None
+            else:
+                return nzinds[0]
         else:
-            ind = nzinds[0]
+            return ind
+
+    ind = convert_name(ind)
+
+    # plotting SHAP interaction values
+    if len(shap_values.shape) == 3 and len(ind) == 2:
+        ind1 = convert_name(ind[0])
+        ind2 = convert_name(ind[1])
+        dependence_plot(
+            ind1, shap_values[:,ind2,:], features, feature_names=feature_names,
+            interaction_index=ind2, display_features=display_features, show=False
+        )
+        pl.ylabel("SHAP interaction value for\n"+feature_names[ind1]+" and "+feature_names[ind2])
+        if show:
+            pl.show()
+        return
 
     # get both the raw and display feature values
     xv = features[:,ind]
@@ -141,7 +164,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # make the plot more readable
     pl.gcf().set_size_inches(7.5, 5)
     pl.xlabel(name, color=axis_color, fontsize=13)
-    pl.ylabel("SHAP value for "+name, color=axis_color, fontsize=13)
+    pl.ylabel("SHAP value for\n"+name, color=axis_color, fontsize=13)
     if title != None:
         pl.title(title, color=axis_color, fontsize=13)
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -190,9 +213,9 @@ def approx_interactions(index, shap_values, X):
 
     return np.argsort(-np.abs(interactions))
 
-def summary_plot(shap_values, features=None, feature_names=None, max_display=20, plot_type="dot",
+def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type="dot",
                  color="#ff0052", axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True):
+                 color_bar=True, auto_size_plot=True):
     """
     Create a SHAP summary plot, colored by feature values when they are provided.
 
@@ -208,7 +231,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
         Names of the features (length # features)
 
     max_display : int
-        How many top features to include in the plot
+        How many top features to include in the plot (default is 20, or 7 for interaction plots)
 
     plot_type : "dot" (default) or "violin"
         What type of summary plot to produce
@@ -230,6 +253,62 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
     if feature_names is None:
         feature_names = ["Feature "+str(i) for i in range(shap_values.shape[1]-1)]
 
+    # plotting SHAP interaction values
+    if len(shap_values.shape) == 3:
+        if max_display is None:
+            max_display = 7
+        else:
+            max_display = min(len(feature_names), max_display)
+
+        sort_inds = np.argsort(-np.abs(shap_values[:,:-1,:-1].sum(1)).sum(0))
+
+        # get plotting limits
+        delta = 1.0 / (shap_values.shape[1]**2)
+        slow = np.nanpercentile(shap_values, delta)
+        shigh = np.nanpercentile(shap_values, 100 - delta)
+        v = max(abs(slow), abs(shigh))
+        slow = -v
+        shigh = v
+
+        pl.figure(figsize=(1.5*max_display+1,1*max_display+1))
+        pl.subplot(1,max_display,1)
+        summary_plot(
+            shap_values[:,sort_inds[0],np.hstack((sort_inds, len(sort_inds)))], features[:,sort_inds],
+            feature_names=feature_names[sort_inds],
+            sort=False, show=False, color_bar=False,
+            auto_size_plot=False,
+            max_display=max_display
+        )
+        pl.xlim((slow,shigh))
+        pl.xlabel("")
+        title_length_limit = 11
+        pl.title(shorten_text(feature_names[sort_inds[0]], title_length_limit))
+        for i in range(1,max_display):
+            ind = sort_inds[i]
+            pl.subplot(1,max_display,i+1)
+            summary_plot(
+                shap_values[:,ind,np.hstack((sort_inds, len(sort_inds)))], features[:,sort_inds],
+                sort=False,
+                feature_names=["" for i in range(features.shape[1])],
+                show=False,
+                color_bar=False,
+                auto_size_plot=False,
+                max_display=max_display
+            )
+            pl.xlim((slow,shigh))
+            pl.xlabel("")
+            if i == max_display//2:
+                pl.xlabel("SHAP interaction value")
+            pl.title(shorten_text(feature_names[ind], title_length_limit))
+        pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
+        pl.subplots_adjust(hspace=0, wspace=0.1)
+        if show:
+            pl.show()
+        return
+
+    if max_display is None:
+        max_display = 20
+
     if sort:
         # order features by the sum of their effect magnitudes
         feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
@@ -238,7 +317,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
         feature_order = np.flip(np.arange(min(max_display,shap_values.shape[1]-1)),0)
 
     row_height = 0.4
-    pl.gcf().set_size_inches(8, len(feature_order)*row_height+1.5)
+    if auto_size_plot:
+        pl.gcf().set_size_inches(8, len(feature_order)*row_height+1.5)
     pl.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "dot":
@@ -263,8 +343,17 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=20,
             ys *= 0.9*(row_height/np.max(ys+1))
 
             if features is not None:
+
+                # trim the color range, but prevent the color range from collapsing
                 vmin = np.nanpercentile(features[:,i], 5)
                 vmax = np.nanpercentile(features[:,i], 95)
+                if vmin == vmax:
+                    vmin = np.nanpercentile(features[:,i], 1)
+                    vmax = np.nanpercentile(features[:,i], 99)
+                    if vmin == vmax:
+                        vmin = np.min(features[:,i])
+                        vmax = np.max(features[:,i])
+
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
                 pl.scatter(shaps, pos+ys, cmap=red_blue, vmin=vmin, vmax=vmax, s=16, c=np.nan_to_num(features[:,i]), alpha=alpha, linewidth=0, zorder=3)
             else:
@@ -426,6 +515,11 @@ def visualize(shap_values, features=None, feature_names=None, out_names=None, da
             exps.append(e)
         return exps
 
+def shorten_text(text, length_limit):
+    if len(text) > length_limit:
+        return text[:length_limit-3]+"..."
+    else:
+        return text
 
 def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, other_auto_ind=0, alpha=1, axis_color="#000000", show=True):
     warnings.warn("shap.joint_plot is not yet finalized and should be used with caution")

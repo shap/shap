@@ -31,3 +31,30 @@ def test_front_page_model_agnostic():
     explainer = KernelExplainer(knn.predict, background, nsamples=100)
     x = iris.data[inds[102:103],:]
     visualize(explainer.explain(x))
+
+def test_front_page_xgboost():
+    import xgboost
+    import shap
+
+    # load JS visualization code to notebook
+    shap.initjs()
+
+    # train XGBoost model
+    X,y,X_display = shap.datasets.boston()
+    bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+
+    # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
+    shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
+
+    # visualize the first prediction's explaination
+    shap.visualize(shap_values[0,:], X.iloc[0,:])
+
+    # visualize the training set predictions
+    shap.visualize(shap_values, X)
+
+    # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
+    shap.dependence_plot(5, shap_values, X, show=False)
+    shap.dependence_plot("RM", shap_values, X, show=False)
+
+    # summarize the effects of all the features
+    shap.summary_plot(shap_values, X, show=False)
