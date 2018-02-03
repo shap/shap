@@ -55,8 +55,8 @@ def test_front_page_xgboost():
     shap.visualize(shap_values, X)
 
     # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
-    shap.dependence_plot(5, shap_values, X, show=False)
-    shap.dependence_plot("RM", shap_values, X, show=False)
+    #shap.dependence_plot(5, shap_values, X, show=False)
+    #shap.dependence_plot("RM", shap_values, X, show=False)
 
     # summarize the effects of all the features
-    shap.summary_plot(shap_values, X, show=False)
+    #shap.summary_plot(shap_values, X, show=False)
