@@ -2,9 +2,6 @@ import shap
 import numpy as np
 import matplotlib
 
-# this is so we don't fail on the travis servers that have no display
-matplotlib.use('Agg')
-
 def test_null_model_small():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,4)), nsamples=100)
     e = explainer.explain(np.ones((1,4)))
@@ -39,6 +36,7 @@ def test_front_page_model_agnostic():
 def test_front_page_xgboost():
     import xgboost
     import shap
+    matplotlib.use('Agg')
 
     # load JS visualization code to notebook
     shap.initjs()
