@@ -1,5 +1,9 @@
 import shap
 import numpy as np
+import matplotlib
+
+# this is so we don't fail on the travis servers that have no display
+matplotlib.use('Agg')
 
 def test_null_model_small():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,4)), nsamples=100)
