@@ -1,6 +1,7 @@
+import matplotlib
+matplotlib.use('Agg')
 import shap
 import numpy as np
-import matplotlib
 
 def test_null_model_small():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2,4)), nsamples=100)
@@ -36,7 +37,6 @@ def test_front_page_model_agnostic():
 def test_front_page_xgboost():
     import xgboost
     import shap
-    matplotlib.use('Agg')
 
     # load JS visualization code to notebook
     shap.initjs()
