@@ -9,6 +9,7 @@ import numpy as np
 
 try:
     import matplotlib.pyplot as pl
+    import matplotlib
     from matplotlib.colors import LinearSegmentedColormap
 
     cdict1 = {
@@ -125,36 +126,44 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # get both the raw and display color values
     cv = features[:,interaction_index]
     cd = display_features[:,interaction_index]
+    categorical_interaction = False
     if type(cd[0]) == str:
         cname_map = {}
         for i in range(len(cv)):
             cname_map[cd[i]] = cv[i]
         cnames = list(cname_map.keys())
+        categorical_interaction = True
+    elif clow % 1 == 0 and chigh % 1 == 0:
+        categorical_interaction = True
     clow = np.nanpercentile(features[:,interaction_index], 5)
     chigh = np.nanpercentile(features[:,interaction_index], 95)
 
+    # discritize colors for categorical features
+    color_norm = None
+    if categorical_interaction and clow != chigh:
+        bounds = np.linspace(clow, chigh, chigh-clow+2)
+        color_norm = matplotlib.colors.BoundaryNorm(bounds, red_blue.N)
+
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points
     pl.scatter(xv, s, s=dot_size, linewidth=0, c=features[:,interaction_index], cmap=red_blue,
-               alpha=alpha, vmin=clow, vmax=chigh)
+               alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm)
 
     # draw the color bar
+    norm = None
     if type(cd[0]) == str:
-        cb = pl.colorbar(ticks=[cname_map[n] for n in cnames])
+        tick_positions = [cname_map[n] for n in cnames]
+        if len(tick_positions) == 2:
+            tick_positions[0] -= 0.25
+            tick_positions[1] += 0.25
+        cb = pl.colorbar(ticks=tick_positions)
         cb.set_ticklabels(cnames)
+
     else:
-        # # draw the color bar
-        # if color_bar and features is not None:
-        #     cb = pl.colorbar(ticks=[vmin,vmax], aspect=1000)
-        #     cb.set_ticklabels(["Low", "High"])
-        #     cb.set_label("Feature value", size=12, labelpad=0)
-        #     cb.ax.tick_params(labelsize=11, length=0)
-        #     cb.set_alpha(1)
-        #     cb.outline.set_visible(False)
-        #
-        #     cb.draw_all()
         cb = pl.colorbar()
     cb.set_label(feature_names[interaction_index], size=13)
     cb.ax.tick_params(labelsize=11)
+    if categorical_interaction:
+        cb.ax.tick_params(length=0)
     cb.set_alpha(1)
     cb.outline.set_visible(False)
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
@@ -508,7 +517,7 @@ def visualize(shap_values, features=None, feature_names=None, out_names=None, da
                 shap_values[i,:-1],
                 None,
                 instance,
-                IdentityLink(),
+                link,
                 Model(None, out_names),
                 DenseData(np.ones((1,len(feature_names))), list(feature_names))
             )
