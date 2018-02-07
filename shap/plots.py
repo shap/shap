@@ -127,6 +127,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     cv = features[:,interaction_index]
     cd = display_features[:,interaction_index]
     categorical_interaction = False
+    clow = np.nanpercentile(features[:,interaction_index], 5)
+    chigh = np.nanpercentile(features[:,interaction_index], 95)
     if type(cd[0]) == str:
         cname_map = {}
         for i in range(len(cv)):
@@ -135,8 +137,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         categorical_interaction = True
     elif clow % 1 == 0 and chigh % 1 == 0:
         categorical_interaction = True
-    clow = np.nanpercentile(features[:,interaction_index], 5)
-    chigh = np.nanpercentile(features[:,interaction_index], 95)
 
     # discritize colors for categorical features
     color_norm = None
