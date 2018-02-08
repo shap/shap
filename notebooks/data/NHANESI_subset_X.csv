@@ -1,4 +1,4 @@
-Age,Poverty index,Red blood cells,Sedimentation rate,Serum Cholesterol,Serum Iron,Serum Magnesium,Serum Protein,Sex,Systolic BP,TS,White blood cells,BMI,Pulse pressure
+Age,Poverty index,Red blood cells,Sedimentation rate,Serum cholesterol,Serum iron,Serum magnesium,Serum protein,Sex,Systolic BP,TS,White blood cells,BMI,Pulse pressure
 35.0,126.0,77.7,12.0,165.0,135.0,1.37,7.6000000000000005,2.0,142.0,41.800000000000004,5.800000000000001,31.1094335693461,50.0
 71.0,210.0,77.7,37.0,298.0,89.0,1.3800000000000001,6.4,2.0,156.0,26.900000000000002,5.300000000000001,32.362571547903926,78.0
 74.0,999.0,77.7,31.0,222.0,115.0,1.37,7.4,2.0,170.0,38.5,8.1,25.388496935587245,84.0
