@@ -124,6 +124,8 @@ visualize([explainer.explain(iris.data[inds[i:i+1],:]) for i in range(100,len(ir
 
 The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the LightGBM and XGBoost examples use the fast and exact Tree SHAP algorithm, the others use the model agnostic Kernel SHAP algorithm.
 
+- [**NHANES survival model with XGBoost and SHAP interaction values**](https://slundberg.github.io/shap/notebooks/NHANES+I+Survival+Model.html) - Using mortality data from 20 years of followup this notebook demonstrates how to use XGBoost and `shap` to uncover complex risk factor relationships.
+
 - [**Census income classification with LightGBM**](https://slundberg.github.io/shap/notebooks/Census+income+classification+with+LightGBM.html) - Using the standard adult census income dataset, this notebook trains a gradient boosting tree model with LightGBM and then explains predictions using `shap`.
 
 - [**Census income classification with Keras**](https://slundberg.github.io/shap/notebooks/Census+income+classification+with+Keras.html) - Using the standard adult census income dataset, this notebook trains a gradient boosting tree model with Keras and then explains predictions using `shap`.
