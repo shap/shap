@@ -95,8 +95,12 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if len(shap_values.shape) == 3 and len(ind) == 2:
         ind1 = convert_name(ind[0])
         ind2 = convert_name(ind[1])
+        if ind1 == ind2:
+            proj_shap_values = shap_values[:,ind2,:]
+        else:
+            proj_shap_values = shap_values[:,ind2,:] * 2 # off-diag values are split in half
         dependence_plot(
-            ind1, shap_values[:,ind2,:], features, feature_names=feature_names,
+            ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=ind2, display_features=display_features, show=False
         )
         pl.ylabel("SHAP interaction value for\n"+feature_names[ind1]+" and "+feature_names[ind2])
@@ -122,6 +126,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # guess what other feature as the stongest interaction with the plotted feature
     if interaction_index == "auto":
         interaction_index = approx_interactions(ind, shap_values, features)[0]
+    interaction_index = convert_name(interaction_index)
 
     # get both the raw and display color values
     cv = features[:,interaction_index]
@@ -146,7 +151,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points
     pl.scatter(xv, s, s=dot_size, linewidth=0, c=features[:,interaction_index], cmap=red_blue,
-               alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm)
+               alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
 
     # draw the color bar
     norm = None
@@ -168,7 +173,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     cb.outline.set_visible(False)
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height-0.7)*20)
-    #cb.draw_all()
 
     # make the plot more readable
     pl.gcf().set_size_inches(7.5, 5)
@@ -281,8 +285,10 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
         pl.figure(figsize=(1.5*max_display+1,1*max_display+1))
         pl.subplot(1,max_display,1)
+        proj_shap_values = shap_values[:,sort_inds[0],np.hstack((sort_inds, len(sort_inds)))]
+        proj_shap_values[:,1:] *= 2 # because off diag effects are split in half
         summary_plot(
-            shap_values[:,sort_inds[0],np.hstack((sort_inds, len(sort_inds)))], features[:,sort_inds],
+            proj_shap_values, features[:,sort_inds],
             feature_names=feature_names[sort_inds],
             sort=False, show=False, color_bar=False,
             auto_size_plot=False,
@@ -295,8 +301,11 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         for i in range(1,max_display):
             ind = sort_inds[i]
             pl.subplot(1,max_display,i+1)
+            proj_shap_values = shap_values[:,ind,np.hstack((sort_inds, len(sort_inds)))]
+            proj_shap_values *= 2
+            proj_shap_values[:,i] /= 2 # because only off diag effects are split in half
             summary_plot(
-                shap_values[:,ind,np.hstack((sort_inds, len(sort_inds)))], features[:,sort_inds],
+                proj_shap_values, features[:,sort_inds],
                 sort=False,
                 feature_names=["" for i in range(features.shape[1])],
                 show=False,
@@ -364,9 +373,12 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                         vmax = np.max(features[:,i])
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
-                pl.scatter(shaps, pos+ys, cmap=red_blue, vmin=vmin, vmax=vmax, s=16, c=np.nan_to_num(features[:,i]), alpha=alpha, linewidth=0, zorder=3)
+                pl.scatter(shaps, pos+ys, cmap=red_blue, vmin=vmin, vmax=vmax, s=16,
+                           c=np.nan_to_num(features[:,i]), alpha=alpha, linewidth=0,
+                           zorder=3, rasterized=len(shaps) > 500)
             else:
-                pl.scatter(shaps, pos+ys, s=16, alpha=alpha, linewidth=0, zorder=3, color=color)
+                pl.scatter(shaps, pos+ys, s=16, alpha=alpha, linewidth=0, zorder=3,
+                           color=color, rasterized=len(shaps) > 500)
 
     elif plot_type == "violin":
         for pos,i in enumerate(feature_order):

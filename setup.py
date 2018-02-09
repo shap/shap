@@ -5,7 +5,7 @@ from setuptools import setup
 # which depends on ~/.pypirc
 
 setup(name='shap',
-      version='0.8.9',
+      version='0.9.0',
       description='Explains the output of any machine learning model using expectations and Shapley values.',
       url='http://github.com/slundberg/shap',
       author='Scott Lundberg',

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import sklearn.datasets
+import os
+import urllib.request
 
 def boston():
     """ Return the boston housing data in a nice package. """
@@ -19,7 +21,7 @@ def adult():
         ("Hours per week", "float32"), ("Country", "category"), ("Target", "category")
     ]
     raw_data = pd.read_csv(
-        "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data",
+        cache("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"),
         names=[d[0] for d in dtypes],
         na_values="?",
         dtype=dict(dtypes)
@@ -45,8 +47,21 @@ def adult():
     return data.drop(["Target"], axis=1),data["Target"],raw_data.drop(["Education", "Target"], axis=1)
 
 def nhanesi():
-    X = pd.read_csv("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv")
-    y = pd.read_csv("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_y.csv")["y"]
+    X = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv"))
+    y = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_y.csv"))["y"]
     X_display = X.copy()
     X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
     return X,np.array(y),X_display
+
+def cache(url, file_name=None):
+    if file_name is None:
+        file_name = os.path.basename(url)
+    data_dir = os.path.join(os.path.dirname(__file__), "cached_data")
+    if not os.path.isdir(data_dir):
+        os.mkdir(data_dir)
+
+    file_path = os.path.join(data_dir, file_name)
+    if not os.path.isfile(file_path):
+        urllib.request.urlretrieve(url, os.path.join(data_dir, file_name))
+
+    return file_path

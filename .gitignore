@@ -4,6 +4,7 @@ shap.egg-info
 *.pyc
 /build
 /dist
+/shap/cached_data
 notebooks/local_scratch
 docs
 .ipynb_checkpoints
