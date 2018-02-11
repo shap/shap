@@ -8,3 +8,4 @@ shap.egg-info
 notebooks/local_scratch
 docs
 .ipynb_checkpoints
+.eggs

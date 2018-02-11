@@ -11,6 +11,7 @@ try:
     import matplotlib.pyplot as pl
     import matplotlib
     from matplotlib.colors import LinearSegmentedColormap
+    from matplotlib.ticker import MaxNLocator
 
     cdict1 = {
           'red': ((0.0, 0.11764705882352941, 0.11764705882352941),
@@ -25,13 +26,13 @@ try:
         'alpha':  ((0.0, 1, 1),
                    (0.5, 0.3, 0.3),
                    (1.0, 1, 1))
-    }
+    } # #1E88E5 -> #ff0052
     red_blue = LinearSegmentedColormap('RedBlue', cdict1)
 except ImportError:
     pass
 
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
-                    interaction_index="auto", color="#ff0052", axis_color="#333333",
+                    interaction_index="auto", color="#1E88E5", axis_color="#333333",
                     dot_size=16, alpha=1, title=None, show=True):
     """
     Create a SHAP dependence plot, colored by an interaction feature.
@@ -53,7 +54,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     display_features : numpy.array or pandas.DataFrame
         Matrix of feature values for visual display (such as strings instead of coded values)
 
-    interaction_index : "auto" or int
+    interaction_index : "auto", None, or int
         The index of the feature used to color the plot.
     """
 
@@ -103,7 +104,11 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=ind2, display_features=display_features, show=False
         )
-        pl.ylabel("SHAP interaction value for\n"+feature_names[ind1]+" and "+feature_names[ind2])
+        if ind1 == ind2:
+            pl.ylabel("SHAP main effect value for\n"+feature_names[ind1])
+        else:
+            pl.ylabel("SHAP interaction value for\n"+feature_names[ind1]+" and "+feature_names[ind2])
+
         if show:
             pl.show()
         return
@@ -140,7 +145,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             cname_map[cd[i]] = cv[i]
         cnames = list(cname_map.keys())
         categorical_interaction = True
-    elif clow % 1 == 0 and chigh % 1 == 0:
+    elif clow % 1 == 0 and chigh % 1 == 0 and len(set(features[:,interaction_index])) < 50:
         categorical_interaction = True
 
     # discritize colors for categorical features
@@ -149,33 +154,37 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         bounds = np.linspace(clow, chigh, chigh-clow+2)
         color_norm = matplotlib.colors.BoundaryNorm(bounds, red_blue.N)
 
-    # the actual scatter plot, TODO: adapt the dot_size to the number of data points
+    # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     pl.scatter(xv, s, s=dot_size, linewidth=0, c=features[:,interaction_index], cmap=red_blue,
                alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
 
-    # draw the color bar
-    norm = None
-    if type(cd[0]) == str:
-        tick_positions = [cname_map[n] for n in cnames]
-        if len(tick_positions) == 2:
-            tick_positions[0] -= 0.25
-            tick_positions[1] += 0.25
-        cb = pl.colorbar(ticks=tick_positions)
-        cb.set_ticklabels(cnames)
+    if interaction_index != ind:
+        # draw the color bar
+        norm = None
+        if type(cd[0]) == str:
+            tick_positions = [cname_map[n] for n in cnames]
+            if len(tick_positions) == 2:
+                tick_positions[0] -= 0.25
+                tick_positions[1] += 0.25
+            cb = pl.colorbar(ticks=tick_positions)
+            cb.set_ticklabels(cnames)
 
-    else:
-        cb = pl.colorbar()
-    cb.set_label(feature_names[interaction_index], size=13)
-    cb.ax.tick_params(labelsize=11)
-    if categorical_interaction:
-        cb.ax.tick_params(length=0)
-    cb.set_alpha(1)
-    cb.outline.set_visible(False)
-    bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-    cb.ax.set_aspect((bbox.height-0.7)*20)
+        else:
+            cb = pl.colorbar()
+        cb.set_label(feature_names[interaction_index], size=13)
+        cb.ax.tick_params(labelsize=11)
+        if categorical_interaction:
+            cb.ax.tick_params(length=0)
+        cb.set_alpha(1)
+        cb.outline.set_visible(False)
+        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+        cb.ax.set_aspect((bbox.height-0.7)*20)
 
     # make the plot more readable
-    pl.gcf().set_size_inches(7.5, 5)
+    if interaction_index != ind:
+        pl.gcf().set_size_inches(7.5, 5)
+    else:
+        pl.gcf().set_size_inches(6, 5)
     pl.xlabel(name, color=axis_color, fontsize=13)
     pl.ylabel("SHAP value for\n"+name, color=axis_color, fontsize=13)
     if title != None:
