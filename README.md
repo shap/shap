@@ -7,7 +7,7 @@
 ---
 <a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.org/slundberg/shap.svg?branch=master"></a>
 
-**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. SHAP unifies aspects of several previous methods [1-7] and represents the only possible consistent and locally accurate additive feature attribution method based on expectations (see [SHAP paper](https://arxiv.org/abs/1705.07874) for details, and Github issues for Q&A).
+**SHAP (SHapley Additive exPlanations)** explains the output of any machine learning model using expectations and Shapley values. SHAP unifies aspects of several previous methods [1-7] and represents the only possible consistent and locally accurate additive feature attribution method based on expectations (see [SHAP paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) for details, and Github issues for Q&A).
 
 
 
