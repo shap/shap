@@ -13,26 +13,24 @@ def test_null_model():
     e = explainer.explain(np.ones((1,10)))
 
 def test_front_page_model_agnostic():
-    from shap import KernelExplainer, DenseData, visualize, initjs
-    from sklearn import datasets,neighbors
-    from numpy import random, arange
+    import sklearn
+    import shap
+    from sklearn.model_selection import train_test_split
 
     # print the JS visualization code to the notebook
-    initjs()
+    shap.initjs()
 
-    # train a k-nearest neighbors classifier on a random subset
-    iris = datasets.load_iris()
-    random.seed(2)
-    inds = arange(len(iris.target))
-    random.shuffle(inds)
-    knn = neighbors.KNeighborsClassifier()
-    knn.fit(iris.data, iris.target == 0)
+    # train a SVM classifier
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+    svm = sklearn.svm.SVC(kernel='rbf', probability=True)
+    svm.fit(X, Y)
 
-    # use Shap to explain a single prediction
-    background = DenseData(iris.data[inds[:100],:], iris.feature_names) # name the features
-    explainer = KernelExplainer(knn.predict, background, nsamples=100)
-    x = iris.data[inds[102:103],:]
-    visualize(explainer.explain(x))
+    # use Kernel SHAP to explain test set predictions
+    explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
+    shap_values = explainer.shap_values(X_test)
+
+    # plot the SHAP values for the Setosa output of the first instance
+    shap.force_plot(shap_values[0][0,:], X_test.iloc[0,:], link="logit")
 
 def test_front_page_xgboost():
     import xgboost
@@ -42,17 +40,17 @@ def test_front_page_xgboost():
     shap.initjs()
 
     # train XGBoost model
-    X,y,X_display = shap.datasets.boston()
+    X,y = shap.datasets.boston()
     bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
     # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
     shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
 
     # visualize the first prediction's explaination
-    shap.visualize(shap_values[0,:], X.iloc[0,:])
+    shap.force_plot(shap_values[0,:], X.iloc[0,:])
 
     # visualize the training set predictions
-    shap.visualize(shap_values, X)
+    shap.force_plot(shap_values, X)
 
     # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
     shap.dependence_plot(5, shap_values, X, show=False)
