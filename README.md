@@ -29,14 +29,14 @@ import shap
 shap.initjs() 
 
 # train XGBoost model
-X,y,X_display = shap.datasets.boston()
+X,y = shap.datasets.boston()
 bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
 # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
 shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
 
 # visualize the first prediction's explaination
-shap.visualize(shap_values[0,:], X.iloc[0,:])
+shap.force_plot(shap_values[0,:], X.iloc[0,:])
 ```
 
 <p align="center">
@@ -49,7 +49,7 @@ If we take many explanations such as the one shown above, rotate them 90 degrees
 
 ```python
 # visualize the training set predictions
-shap.visualize(shap_values, X)
+shap.force_plot(shap_values, X)
 ```
 
 <p align="center">
@@ -60,11 +60,11 @@ To understand how a single feature effects the output of the model we can plot t
 
 ```python
 # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
-shap.dependence_plot(5, shap_values, X)
+shap.dependence_plot("RM", shap_values, X)
 ```
 
 <p align="center">
-  <img width="544" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_shap_plot.png" />
+  <img width="544" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dependence_plot.png" />
 </p>
 
 
@@ -80,41 +80,41 @@ shap.summary_plot(shap_values, X)
 </p>
 
 
-## Model agnostic example
+## Model agnostic example (SVM)
+
+Kernel SHAP uses a specially-weighted local linear regression to estimate SHAP values for any model. Below is a simple example for explaining a multi-class SVM on the classic iris dataset.
 
 ```python
-from shap import KernelExplainer, DenseData, visualize, initjs
-from sklearn import datasets,neighbors
-from numpy import random, arange
+import sklearn
+import shap
+from sklearn.model_selection import train_test_split
 
 # print the JS visualization code to the notebook
-initjs()
+shap.initjs()
 
-# train a k-nearest neighbors classifier on a random subset 
-iris = datasets.load_iris()
-random.seed(2)
-inds = arange(len(iris.target))
-random.shuffle(inds)
-knn = neighbors.KNeighborsClassifier()
-knn.fit(iris.data, iris.target == 0)
+# train a SVM classifier
+X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+svm = sklearn.svm.SVC(kernel='rbf', probability=True)
+svm.fit(X, Y)
 
-# use Shap to explain a single prediction
-background = DenseData(iris.data[inds[:100],:], iris.feature_names) # name the features
-explainer = KernelExplainer(knn.predict, background, nsamples=100)
-x = iris.data[inds[102:103],:]
-visualize(explainer.explain(x))
+# use Kernel SHAP to explain test set predictions
+explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
+shap_values = explainer.shap_values(X_test)
+
+# plot the SHAP values for the Setosa output of the first instance
+shap.force_plot(shap_values[0][0,:], X_test.iloc[0,:], link="logit")
 ```
 <p align="center">
   <img width="810" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/iris_instance.png" />
 </p>
 
-The above explanation shows three features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to zero. If there were any features pushing the class label higher they would be shown in red.
+The above explanation shows four features each contributing to push the model output from the base value (the average model output over the training dataset we passed) towards zero. If there were any features pushing the class label higher they would be shown in red.
 
 If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset. This is exactly what we do below for all the examples in the iris test set:
 
 ```python
-# use Shap to explain all test set predictions
-visualize([explainer.explain(iris.data[inds[i:i+1],:]) for i in range(100,len(iris.target))])
+# plot the SHAP values for the Setosa output of all instances
+shap.force_plot(shap_values[0], X_test, link="logit")
 ```
 <p align="center">
   <img width="813" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/iris_dataset.png" />
