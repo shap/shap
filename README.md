@@ -148,7 +148,7 @@ The notebooks below demonstrate different use cases for SHAP. Look inside the no
 
 5. Layer-wise relevance propagation: Bach, Sebastian, et al. "On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation." PloS one 10.7 (2015): e0130140.
 
-6. Shapley regreesion values: Lipovetsky, Stan, and Michael Conklin. "Analysis of regression in game theory approach." Applied Stochastic Models in Business and Industry 17.4 (2001): 319-330.
+6. Shapley regression values: Lipovetsky, Stan, and Michael Conklin. "Analysis of regression in game theory approach." Applied Stochastic Models in Business and Industry 17.4 (2001): 319-330.
 
 7. Tree interpreter: Saabas, Ando. Interpreting random forests. http://blog.datadive.net/interpreting-random-forests/
 
