@@ -4,14 +4,24 @@ import sklearn.datasets
 import os
 import urllib.request
 
-def boston():
+def boston(display=False):
     """ Return the boston housing data in a nice package. """
 
     d = sklearn.datasets.load_boston()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
-    return df,d.target,df
+    return df,d.target
 
-def adult():
+def iris(display=False):
+    """ Return the classic iris data in a nice package. """
+
+    d = sklearn.datasets.load_iris()
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)
+    if display:
+        return df,[d.target_names[v] for v in d.target]
+    else:
+        return df,d.target
+
+def adult(display=False):
     """ Return the Adult census data in a nice package. """
     dtypes = [
         ("Age", "float32"), ("Workclass", "category"), ("fnlwgt", "float32"),
@@ -44,14 +54,20 @@ def adult():
             else:
                 data[k] = data[k].cat.codes
 
-    return data.drop(["Target"], axis=1),data["Target"],raw_data.drop(["Education", "Target"], axis=1)
+    if display:
+        return raw_data.drop(["Education", "Target"], axis=1),data["Target"].as_matrix()
+    else:
+        return data.drop(["Target"], axis=1),data["Target"].as_matrix()
 
-def nhanesi():
+def nhanesi(display=False):
     X = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv"))
     y = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_y.csv"))["y"]
     X_display = X.copy()
     X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
-    return X,np.array(y),X_display
+    if display:
+        return X_display,np.array(y)
+    else:
+        return X,np.array(y)
 
 def cache(url, file_name=None):
     if file_name is None:

@@ -35,6 +35,52 @@ class KernelExplainer:
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
 
+    def shap_values(self, X, **kwargs):
+
+        # convert dataframes
+        if str(type(X)) == "<class 'pandas.core.series.Series'>":
+            X = X.as_matrix()
+        elif str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
+            X = X.as_matrix()
+
+        if type(X) == np.ndarray:
+
+            # single instance
+            if len(X.shape) == 1:
+                explanation = self.explain(X, **kwargs)
+                out = np.zeros(len(explanation.effects)+1)
+
+                out[:-1] = explanation.effects
+                out[-1] = explanation.base_value
+                return out
+
+            # explain the whole dataset
+            elif len(X.shape) == 2:
+                explanations = [self.explain(X[i:i+1,:], **kwargs) for i in range(X.shape[0])]
+
+                # vector-output
+                s = explanations[0].effects.shape
+                if len(s) == 2:
+                    outs = [np.zeros((X.shape[0],s[0]+1)) for j in range(s[1])]
+                    for i in range(X.shape[0]):
+                        for j in range(s[1]):
+                            outs[j][i,:-1] = explanations[i].effects[:,j]
+                            outs[j][i,-1] = explanations[i].base_value[j]
+                    return outs
+
+                # single-output
+                else:
+                    out = np.zeros((X.shape[0],s[0]+1))
+                    print(explanations[0].effects)
+                    for i in range(X.shape[0]):
+                        out[i,:-1] = explanations[i].effects
+                        out[i,-1] = explanations[i].base_value
+                    return out
+            else:
+                assert False, "Instance must have 1 or 2 dimensions!"
+        else:
+            assert False, "Unknown instance type: "+str(type(X))
+
     def explain(self, incoming_instance, **kwargs):
 
         # convert incoming input to a standardized iml object

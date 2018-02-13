@@ -466,13 +466,21 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
 def visualize(shap_values, features=None, feature_names=None, out_names=None, data=None,
               link=IdentityLink()):
-    """ Visualize the given SHAP values with an additive force layout. """
+
+    warnings.warn("the visualize() function has been renamed to 'force_plot' for consistency")
 
     # backwards compatability
     if data is not None:
         warnings.warn("the 'data' parameter has been renamed to 'features' for consistency")
         if features is None:
             features = data
+
+    return force_plot(shap_values, features, feature_names, out_names, link)
+
+def force_plot(shap_values, features=None, feature_names=None, out_names=None, link="identity"):
+    """ Visualize the given SHAP values with an additive force layout. """
+
+    link = iml.links.convert_to_link(link)
 
     if type(shap_values) != np.ndarray:
         return iml.visualize(shap_values)
