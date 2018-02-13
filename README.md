@@ -95,7 +95,7 @@ shap.initjs()
 # train a SVM classifier
 X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
 svm = sklearn.svm.SVC(kernel='rbf', probability=True)
-svm.fit(X, Y)
+svm.fit(X_train, Y_train)
 
 # use Kernel SHAP to explain test set predictions
 explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
