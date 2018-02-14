@@ -98,8 +98,8 @@ svm = sklearn.svm.SVC(kernel='rbf', probability=True)
 svm.fit(X_train, Y_train)
 
 # use Kernel SHAP to explain test set predictions
-explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
-shap_values = explainer.shap_values(X_test)
+explainer = shap.KernelExplainer(svm.predict_proba, X_train, link="logit")
+shap_values = explainer.shap_values(X_test, nsamples=100)
 
 # plot the SHAP values for the Setosa output of the first instance
 shap.force_plot(shap_values[0][0,:], X_test.iloc[0,:], link="logit")
