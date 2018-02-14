@@ -80,7 +80,7 @@ shap.summary_plot(shap_values, X)
 </p>
 
 
-## Model agnostic example (SVM)
+## Model agnostic SVM example
 
 Kernel SHAP uses a specially-weighted local linear regression to estimate SHAP values for any model. Below is a simple example for explaining a multi-class SVM on the classic iris dataset.
 
@@ -120,6 +120,22 @@ shap.force_plot(shap_values[0], X_test, link="logit")
   <img width="813" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/iris_dataset.png" />
 </p>
 
+## Model agnostic VGG16 example
+
+The VGG16 notebook below illustrates how to apply Kernel SHAP to image classification, which can help identify what parts of an image caused a prediction.
+
+<p align="center">
+  <img width="583" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/strawberry_example.png" />
+</p>
+
+## SHAP Interaction Values
+
+SHAP interaction values are a generalization of SHAP values to higher order interactions. Fast exact computation of pairwise interactions are implemented in the latest version of XGBoost with the `pred_interactions` flag. With this flag XGBoost returns a matrix for every prediction, where the main effects are on the diagonal and the interaction effects are off-diagonal. These values often reveal interesting hidden relationships, such as how the increased risk of death peaks for men at age 60 (see the NHANES notebook for details):
+
+<p align="center">
+  <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/nhanes_age_sex_interaction.png" />
+</p>
+
 ## Sample notebooks
 
 The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the LightGBM and XGBoost examples use the fast and exact Tree SHAP algorithm, the others use the model agnostic Kernel SHAP algorithm.
@@ -133,6 +149,8 @@ The notebooks below demonstrate different use cases for SHAP. Look inside the no
 - [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification.html) - Using the standard adult census income dataset, this notebook trains a random forest classifier using scikit-learn and then explains predictions using `shap`.
 
 - [**League of Legends Win Prediction with XGBoost**](https://slundberg.github.io/shap/notebooks/League+of+Legends+Win+Prediction+with+XGBoost.html) - Using a Kaggle dataset of 180,000 ranked matches from League of Legends we train and explain a gradient boosting tree model with XGBoost to predict if a player will win their match.
+
+- [**ImageNet VGG16 Model with Keras**](https://slundberg.github.io/shap/notebooks/ImageNet+VGG16+Model+with+Keras.html) - Explain the classic VGG16 convolutional nerual network's predictions for an image. This works by applying the model agnostic Kernel SHAP method to a super-pixel segmented image.
 
 - [**Iris classification**](https://slundberg.github.io/shap/notebooks/Iris+classification+with+scikit-learn.html) - A basic demonstration using the popular iris species dataset. It explains predictions from six different models in scikit-learn using `shap`.
 
