@@ -242,7 +242,7 @@ class KernelExplainer:
         varying = np.zeros(len(self.data.groups))
         for i in range(0,len(self.data.groups)):
             inds = self.data.groups[i]
-            varying[i] = sum(sum(x[0,inds] == self.data.data[:,inds]) != len(inds))
+            varying[i] = sum(sum(np.abs(x[0,inds] - self.data.data[:,inds]) < 1e-8) != len(inds))
         return np.nonzero(varying)[0]
 
     def allocate(self):
