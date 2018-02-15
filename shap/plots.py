@@ -498,7 +498,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         if feature_names is None:
             feature_names = features
         features = None
-    elif len(features.shape) == 1 and feature_names is None:
+    elif features is not None and len(features.shape) == 1 and feature_names is None:
         feature_names = features
         features = None
 
@@ -510,7 +510,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
 
     if shap_values.shape[0] == 1:
         if feature_names is None:
-            feature_names = ["" for i in range(shap_values.shape[1]-1)]
+            feature_names = ["Feature "+str(i) for i in range(shap_values.shape[1]-1)]
         if features is None:
             features = ["" for i in range(len(feature_names))]
         if type(features) == np.ndarray:
@@ -533,7 +533,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         exps = []
         for i in range(shap_values.shape[0]):
             if feature_names is None:
-                feature_names = ["" for i in range(shap_values.shape[1]-1)]
+                feature_names = ["Feature "+str(i) for i in range(shap_values.shape[1]-1)]
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:

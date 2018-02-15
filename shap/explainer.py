@@ -8,6 +8,7 @@ import logging
 import copy
 import itertools
 from sklearn.linear_model import LassoLarsIC, Lasso
+from tqdm import tqdm
 
 log = logging.getLogger('shap')
 
@@ -47,7 +48,7 @@ class KernelExplainer:
 
             # single instance
             if len(X.shape) == 1:
-                explanation = self.explain(X, **kwargs)
+                explanation = self.explain(X.reshape((1,X.shape[0])), **kwargs)
                 out = np.zeros(len(explanation.effects)+1)
 
                 out[:-1] = explanation.effects
@@ -56,7 +57,9 @@ class KernelExplainer:
 
             # explain the whole dataset
             elif len(X.shape) == 2:
-                explanations = [self.explain(X[i:i+1,:], **kwargs) for i in range(X.shape[0])]
+                explanations = []
+                for i in tqdm(range(X.shape[0])):
+                    explanations.append(self.explain(X[i:i+1,:], **kwargs))
 
                 # vector-output
                 s = explanations[0].effects.shape
@@ -71,7 +74,6 @@ class KernelExplainer:
                 # single-output
                 else:
                     out = np.zeros((X.shape[0],s[0]+1))
-                    print(explanations[0].effects)
                     for i in range(X.shape[0]):
                         out[i,:-1] = explanations[i].effects
                         out[i,-1] = explanations[i].base_value
