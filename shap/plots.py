@@ -482,6 +482,9 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
 
     link = iml.links.convert_to_link(link)
 
+    if type(shap_values) == list:
+        assert False, "The shap_values arg looks looks multi output, try shap_values[i]."
+
     if type(shap_values) != np.ndarray:
         return iml.visualize(shap_values)
 

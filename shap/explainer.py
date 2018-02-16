@@ -49,11 +49,22 @@ class KernelExplainer:
             # single instance
             if len(X.shape) == 1:
                 explanation = self.explain(X.reshape((1,X.shape[0])), **kwargs)
-                out = np.zeros(len(explanation.effects)+1)
 
-                out[:-1] = explanation.effects
-                out[-1] = explanation.base_value
-                return out
+                # vector-output
+                s = explanation.effects.shape
+                if len(s) == 2:
+                    outs = [np.zeros(s[0]+1) for j in range(s[1])]
+                    for j in range(s[1]):
+                        outs[j][:-1] = explanation.effects[:,j]
+                        outs[j][-1] = explanation.base_value[j]
+                    return outs
+
+                # single-output
+                else:
+                    out = np.zeros(s[0]+1)
+                    out[:-1] = explanation.effects
+                    out[-1] = explanation.base_value
+                    return out
 
             # explain the whole dataset
             elif len(X.shape) == 2:
