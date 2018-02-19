@@ -364,7 +364,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             for ind in inds:
                 if quant[ind] != last_bin:
                     layer = 0
-                ys[ind] = layer * ((layer%2)*2-1)
+                ys[ind] = np.ceil(layer/2) * ((layer%2)*2-1)
                 layer += 1
                 last_bin = quant[ind]
             ys *= 0.9*(row_height/np.max(ys+1))
@@ -412,8 +412,6 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 smooth_values = np.zeros(len(xs)-1)
                 for j in range(len(xs)-1):
                     smooth_values[j] = np.mean(values[max(0,j-window_size):min(len(xs),j+window_size)])
-
-
 
                 vmin = np.nanpercentile(values, 5)
                 vmax = np.nanpercentile(values, 95)
