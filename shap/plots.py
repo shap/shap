@@ -259,6 +259,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         What type of summary plot to produce
     """
 
+    if len(shap_values.shape) == 1:
+        assert False, "Summary plots need a matrix of shap_values, not a vector."
+
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:

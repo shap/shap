@@ -5,7 +5,7 @@ from setuptools import setup
 # which depends on ~/.pypirc
 
 setup(name='shap',
-      version='0.10.2',
+      version='0.10.3',
       description='A unified approach to explain the output of any machine learning model.',
       url='http://github.com/slundberg/shap',
       author='Scott Lundberg',
