@@ -1,6 +1,6 @@
 import warnings
 from scipy.stats import gaussian_kde
-from iml import Instance, Model
+from iml import Instance, Model,Plot_CMAP
 from iml.explanations import AdditiveExplanation
 from iml.links import IdentityLink
 from iml.datatypes import DenseData
@@ -478,7 +478,8 @@ def visualize(shap_values, features=None, feature_names=None, out_names=None, da
 
     return force_plot(shap_values, features, feature_names, out_names, link)
 
-def force_plot(shap_values, features=None, feature_names=None, out_names=None, link="identity"):
+def force_plot(shap_values, features=None, feature_names=None, out_names=None, link="identity",
+               plot_cmap="RdBu"):
     """ Visualize the given SHAP values with an additive force layout. """
 
     link = iml.links.convert_to_link(link)
@@ -486,8 +487,10 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
     if type(shap_values) == list:
         assert False, "The shap_values arg looks looks multi output, try shap_values[i]."
 
+
     if type(shap_values) != np.ndarray:
         return iml.visualize(shap_values)
+
 
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -529,7 +532,8 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
             instance,
             link,
             Model(None, out_names),
-            DenseData(np.zeros((1,len(feature_names))), list(feature_names))
+            DenseData(np.zeros((1,len(feature_names))), list(feature_names)),
+            Plot_CMAP(plot_cmap)
         )
         return e
 
@@ -552,7 +556,8 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
                 instance,
                 link,
                 Model(None, out_names),
-                DenseData(np.ones((1,len(feature_names))), list(feature_names))
+                DenseData(np.ones((1,len(feature_names))), list(feature_names)),
+                Plot_CMAP(plot_cmap)
             )
             exps.append(e)
         return exps
