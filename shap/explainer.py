@@ -1,5 +1,4 @@
-from iml.common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data,\
-    convert_to_plot_CMAP,verify_valid_cmap
+from iml.common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
 from iml.explanations import AdditiveExplanation
 from iml.links import convert_to_link, IdentityLink
 from iml.datatypes import convert_to_data, DenseData
@@ -15,12 +14,10 @@ log = logging.getLogger('shap')
 
 class KernelExplainer:
 
-    def __init__(self, model, data, link=IdentityLink(),plot_cmap="RdBu", **kwargs):
+    def __init__(self, model, data, link=IdentityLink(), **kwargs):
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
-        if verify_valid_cmap(plot_cmap):
-            self.plot_cmap=convert_to_plot_CMAP(plot_cmap)
         self.model = convert_to_model(model)
         self.data = convert_to_data(data)
         match_model_to_data(self.model, self.data)
@@ -126,8 +123,7 @@ class KernelExplainer:
         if self.M == 0:
             phi = np.zeros(len(self.data.groups))
             phi_var = np.zeros(len(self.data.groups))
-            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data,
-                                       self.plot_cmap)
+            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
 
         # if only one feature varies then it has all the effect
@@ -135,8 +131,7 @@ class KernelExplainer:
             phi = np.zeros(len(self.data.groups))
             phi[self.varyingInds[0]] = self.link.f(self.fx) - self.link.f(self.fnull)
             phi_var = np.zeros(len(self.data.groups))
-            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data,
-                                       self.plot_cmap)
+            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
         self.l1_reg = kwargs.get("l1_reg", "auto")
 
@@ -252,8 +247,7 @@ class KernelExplainer:
         # return the Shapley values along with variances of the estimates
         # note that if features were eliminated by l1 regression their
         # variance will be 0, even though they are not perfectaly known
-        return AdditiveExplanation(self.link.f(self.fnull), self.link.f(self.fx), phi, phi_var, instance, self.link, self.model, self.data,
-                                   self.plot_cmap)
+        return AdditiveExplanation(self.link.f(self.fnull), self.link.f(self.fx), phi, phi_var, instance, self.link, self.model, self.data)
 
     def varying_groups(self, x):
         varying = np.zeros(len(self.data.groups))
