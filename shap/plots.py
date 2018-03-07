@@ -535,6 +535,9 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         return iml.visualize(e, plot_cmap)
 
     else:
+        if shap_values.shape[0] > 3000:
+            warnings.warn("shap.force_plot is slow many thousands of rows, try subsampling your data.")
+
         exps = []
         for i in range(shap_values.shape[0]):
             if feature_names is None:
