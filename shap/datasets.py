@@ -2,7 +2,10 @@ import pandas as pd
 import numpy as np
 import sklearn.datasets
 import os
-import urllib.request
+try:
+    from urllib.request import urlretrieve
+except ImportError:
+    from urllib import urlretrieve
 
 def boston(display=False):
     """ Return the boston housing data in a nice package. """
@@ -78,6 +81,6 @@ def cache(url, file_name=None):
 
     file_path = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
-        urllib.request.urlretrieve(url, os.path.join(data_dir, file_name))
+        urlretrieve(url, os.path.join(data_dir, file_name))
 
     return file_path
