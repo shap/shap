@@ -2,17 +2,20 @@ import pandas as pd
 import numpy as np
 import sklearn.datasets
 import os
+
 try:
     from urllib.request import urlretrieve
 except ImportError:
     from urllib import urlretrieve
+
 
 def boston(display=False):
     """ Return the boston housing data in a nice package. """
 
     d = sklearn.datasets.load_boston()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
-    return df,d.target
+    return df, d.target
+
 
 def iris(display=False):
     """ Return the classic iris data in a nice package. """
@@ -20,9 +23,10 @@ def iris(display=False):
     d = sklearn.datasets.load_iris()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
     if display:
-        return df,[d.target_names[v] for v in d.target]
+        return df, [d.target_names[v] for v in d.target]
     else:
-        return df,d.target
+        return df, d.target
+
 
 def adult(display=False):
     """ Return the Adult census data in a nice package. """
@@ -39,7 +43,7 @@ def adult(display=False):
         na_values="?",
         dtype=dict(dtypes)
     )
-    data = raw_data.drop(["Education"], axis=1) # redundant with Education-Num
+    data = raw_data.drop(["Education"], axis=1)  # redundant with Education-Num
     filt_dtypes = list(filter(lambda x: not (x[0] in ["Target", "Education"]), dtypes))
     data["Target"] = data["Target"] == " >50K"
     rcode = {
@@ -50,7 +54,7 @@ def adult(display=False):
         "Husband": 4,
         "Wife": 5
     }
-    for k,dtype in filt_dtypes:
+    for k, dtype in filt_dtypes:
         if dtype == "category":
             if k == "Relationship":
                 data[k] = np.array([rcode[v.strip()] for v in data[k]])
@@ -58,9 +62,10 @@ def adult(display=False):
                 data[k] = data[k].cat.codes
 
     if display:
-        return raw_data.drop(["Education", "Target"], axis=1),data["Target"].as_matrix()
+        return raw_data.drop(["Education", "Target"], axis=1), data["Target"].as_matrix()
     else:
-        return data.drop(["Target"], axis=1),data["Target"].as_matrix()
+        return data.drop(["Target"], axis=1), data["Target"].as_matrix()
+
 
 def nhanesi(display=False):
     X = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv"))
@@ -68,9 +73,10 @@ def nhanesi(display=False):
     X_display = X.copy()
     X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
     if display:
-        return X_display,np.array(y)
+        return X_display, np.array(y)
     else:
-        return X,np.array(y)
+        return X, np.array(y)
+
 
 def cache(url, file_name=None):
     if file_name is None:
