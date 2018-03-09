@@ -40,12 +40,12 @@ class KernelExplainer:
 
     def shap_values(self, X, **kwargs):
         # convert dataframes
-        if str(type(X)) == "<class 'pandas.core.series.Series'>":
+        if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.as_matrix()
-        elif str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
+        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
             X = X.as_matrix()
 
-        assert str(type(X)) == "<class 'numpy.ndarray'>", "Unknown instance type: " + str(type(X))
+        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
