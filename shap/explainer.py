@@ -8,9 +8,47 @@ import logging
 import copy
 import itertools
 from sklearn.linear_model import LassoLarsIC, Lasso
+from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 log = logging.getLogger('shap')
+
+
+def kmeans(X, k, round_values=True):
+    """
+    Summarize a dataset with k mean samples weighted by the number of
+    data points they each represent.
+
+    Parameters
+    ----------
+    X : numpy.array or pandas.DataFrame
+        Matrix of data samples to summarise (# samples x # features)
+
+    k : int
+        Number of means to use for approximation.
+
+    round_values : bool
+        For all i, round the ith dimension of each mean sample to match the nearest value
+        from X[:,i]. This ensures discrete features always get a valid value.
+
+    Returns
+    -------
+    DenseData object.
+    """
+
+    group_names = [str(i) for i in range(X.shape[1])]
+    if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        group_names = X.columns
+        X = X.as_matrix()
+    kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
+
+    if round_values:
+        for i in range(k):
+            for j in range(X.shape[1]):
+                ind = np.argmin(np.abs(X[:,j] - kmeans.cluster_centers_[i,j]))
+                kmeans.cluster_centers_[i,j] = X[ind,j]
+
+    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
 
 
 class KernelExplainer:
@@ -29,11 +67,6 @@ class KernelExplainer:
         # init our parameters
         self.N = self.data.data.shape[0]
         self.P = self.data.data.shape[1]
-        self.weights = kwargs.get("weights", np.ones(self.N))  # TODO: Use these weights!
-        self.weights /= sum(self.weights)
-        assert len(
-            self.weights) == self.N, "Provided 'weights' must match the number of representative data points {0}!".format(
-            self.N)
         self.linkfv = np.vectorize(self.link.f)
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
@@ -106,7 +139,7 @@ class KernelExplainer:
         # find f(x) and E_x[f(x)]
         model_out = self.model.f(instance.x)
         self.fx = model_out[0]
-        self.fnull = np.mean(self.model.f(self.data.data), 0)
+        self.fnull = np.sum((self.model.f(self.data.data).T * self.data.weights).T, 0)
         self.vector_out = True
         if len(model_out.shape) == 1:
             self.vector_out = False
@@ -118,14 +151,17 @@ class KernelExplainer:
 
         # if no features vary then there no feature has an effect
         if self.M == 0:
-            phi = np.zeros(len(self.data.groups))
-            phi_var = np.zeros(len(self.data.groups))
+            phi = np.zeros((len(self.data.groups), self.D))
+            phi_var = np.zeros((len(self.data.groups), self.D))
             return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
         # if only one feature varies then it has all the effect
         elif self.M == 1:
-            phi = np.zeros(len(self.data.groups))
-            phi[self.varyingInds[0]] = self.link.f(self.fx) - self.link.f(self.fnull)
+            phi = np.zeros((len(self.data.groups), self.D))
+            phi_var = np.zeros((len(self.data.groups), self.D))
+            diff = self.link.f(self.fx) - self.link.f(self.fnull)
+            for d in range(self.D):
+                phi[self.varyingInds[0],d] = diff[d]
             phi_var = np.zeros(len(self.data.groups))
             return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
@@ -290,14 +326,13 @@ class KernelExplainer:
         for i in range(self.nsamplesRun, self.nsamplesAdded):
             eyVal = np.zeros(self.D)
             for j in range(0, self.N):
-                eyVal += self.y[i * self.N + j, :]
+                eyVal += self.y[i * self.N + j, :] * self.data.weights[j]
 
-            self.ey[i, :] = eyVal / self.N
+            self.ey[i, :] = eyVal
             self.nsamplesRun += 1
 
     def solve(self, fraction_evaluated, dim):
         eyAdj = self.linkfv(self.ey[:, dim]) - self.link.f(self.fnull[dim])
-
         s = np.sum(self.maskMatrix, 1)
 
         # do feature selection if we have not well enumerated the space

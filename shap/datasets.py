@@ -17,6 +17,14 @@ def boston(display=False):
     return df, d.target
 
 
+def diabetes(display=False):
+    """ Return the diabetes housing data in a nice package. """
+
+    d = sklearn.datasets.load_diabetes()
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)
+    return df, d.target
+
+
 def iris(display=False):
     """ Return the classic iris data in a nice package. """
 
