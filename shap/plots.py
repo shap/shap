@@ -61,11 +61,11 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     """
 
     # convert from DataFrames if we got any
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = features.columns
         features = features.as_matrix()
-    if str(type(display_features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if str(type(display_features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = display_features.columns
         display_features = display_features.as_matrix()
@@ -385,8 +385,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                         vmax = np.max(features[:, i])
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
-                pl.scatter(shaps, pos + ys, cmap=red_blue, vmin=vmin, vmax=vmax, s=16,
-                           c=np.nan_to_num(features[:, i]), alpha=alpha, linewidth=0,
+                nan_mask = np.isnan(features[:, i])
+                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
+                           vmax=vmax, s=16, alpha=alpha, linewidth=0,
+                           zorder=3, rasterized=len(shaps) > 500)
+                pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
+                           cmap=red_blue, vmin=vmin, vmax=vmax, s=16,
+                           c=features[:, i][np.invert(nan_mask)], alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
             else:
                 pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
