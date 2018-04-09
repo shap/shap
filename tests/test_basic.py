@@ -46,10 +46,10 @@ def test_front_page_xgboost():
 
     # train XGBoost model
     X, y = shap.datasets.boston()
-    bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+    model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
     # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
-    shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
+    shap_values = shap.TreeExplainer(model).shap_values(X)
 
     # visualize the first prediction's explaination
     shap.force_plot(shap_values[0, :], X.iloc[0, :])
