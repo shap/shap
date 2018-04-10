@@ -16,27 +16,41 @@ static PyMethodDef module_methods[] = {
   {NULL, NULL, 0, NULL}
 };
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+  PyModuleDef_HEAD_INIT,
+  "_cext",
+  "This module provides an interface for a fast Tree SHAP implementation.",
+  -1,
+  module_methods,
+  NULL,
+  NULL,
+  NULL,
+  NULL
+};
+#endif
+
+#if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC PyInit__cext(void)
+#else
+void init_cext(void)
+#endif
 {
-  PyObject *module;
-  static struct PyModuleDef moduledef = {
-    PyModuleDef_HEAD_INIT,
-    "_cext",
-    "This module provides an interface for a fast Tree SHAP implementation.",
-    -1,
-    module_methods,
-    NULL,
-    NULL,
-    NULL,
-    NULL
-  };
+  #if PY_MAJOR_VERSION >= 3
+    PyObject *module = PyModule_Create(&moduledef);
+  #else
+    PyObject *module = Py_InitModule("_cext", module_methods);
+  #endif
+
   module = PyModule_Create(&moduledef);
   if (!module) return NULL;
 
   /* Load `numpy` functionality. */
   import_array();
 
-  return module;
+  #if PY_MAJOR_VERSION >= 3
+    return module;
+  #endif
 }
 
 static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args)
