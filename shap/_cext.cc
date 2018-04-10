@@ -42,7 +42,6 @@ void init_cext(void)
     PyObject *module = Py_InitModule("_cext", module_methods);
   #endif
 
-  module = PyModule_Create(&moduledef);
   if (!module) return NULL;
 
   /* Load `numpy` functionality. */
