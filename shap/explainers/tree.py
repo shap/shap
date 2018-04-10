@@ -1,5 +1,5 @@
 import numpy as np
-import numba
+#import numba
 
 try:
     import xgboost
@@ -113,7 +113,7 @@ class TreeExplainer:
 
 
 # extend our decision path with a fraction of one and zero extensions
-@numba.jit(nopython=True, nogil=True)
+#@numba.jit(nopython=True, nogil=True)
 def extend_path(feature_indexes, zero_fractions, one_fractions, pweights,
                 unique_depth, zero_fraction, one_fraction, feature_index):
     feature_indexes[unique_depth] = feature_index
@@ -129,7 +129,7 @@ def extend_path(feature_indexes, zero_fractions, one_fractions, pweights,
         pweights[i] = zero_fraction * pweights[i] * (unique_depth - i) / (unique_depth + 1.)
 
 # undo a previous extension of the decision path
-@numba.jit(nopython=True, nogil=True)
+#@numba.jit(nopython=True, nogil=True)
 def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights,
                 unique_depth, path_index):
     one_fraction = one_fractions[path_index]
@@ -151,7 +151,7 @@ def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights,
 
 # determine what the total permuation weight would be if
 # we unwound a previous extension in the decision path
-@numba.jit(nopython=True, nogil=True)
+#@numba.jit(nopython=True, nogil=True)
 def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):
     one_fraction = one_fractions[path_index]
     zero_fraction = zero_fractions[path_index]
@@ -205,7 +205,7 @@ class Tree:
                 self.values, 0
             )
 
-@numba.jit(nopython=True)
+#@numba.jit(nopython=True)
 def compute_expectations(children_left, children_right, node_sample_weight, values, i, depth=0):
     if children_right[i] == -1:
         values[i,:] = values[i,:]
@@ -222,7 +222,7 @@ def compute_expectations(children_left, children_right, node_sample_weight, valu
         return max(depth_left, depth_right) + 1
 
 # recursive computation of SHAP values for a decision tree
-@numba.jit(nopython=True, nogil=True)
+#@numba.jit(nopython=True, nogil=True)
 def tree_shap_recursive(children_left, children_right, children_default, features, thresholds, values, node_sample_weight,
                         x, x_missing, phi, node_index, unique_depth, parent_feature_indexes,
                         parent_zero_fractions, parent_one_fractions, parent_pweights, parent_zero_fraction,
