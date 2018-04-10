@@ -33,7 +33,7 @@ static struct PyModuleDef moduledef = {
 #if PY_MAJOR_VERSION >= 3
 PyMODINIT_FUNC PyInit__cext(void)
 #else
-void init_cext(void)
+PyMODINIT_FUNC init_cext(void)
 #endif
 {
   #if PY_MAJOR_VERSION >= 3

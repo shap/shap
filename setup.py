@@ -7,7 +7,7 @@ import numpy
 
 setup(
     name='shap',
-    version='0.13.4',
+    version='0.13.5',
     description='A unified approach to explain the output of any machine learning model.',
     url='http://github.com/slundberg/shap',
     author='Scott Lundberg',
