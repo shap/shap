@@ -38,11 +38,11 @@ void init_cext(void)
 {
   #if PY_MAJOR_VERSION >= 3
     PyObject *module = PyModule_Create(&moduledef);
+    if (!module) return NULL;
   #else
     PyObject *module = Py_InitModule("_cext", module_methods);
+    if (!module) return;
   #endif
-
-  if (!module) return NULL;
 
   /* Load `numpy` functionality. */
   import_array();
