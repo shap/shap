@@ -17,9 +17,9 @@
 pip install shap
 ```
 
-## XGBoost (LightGBM) example
+## XGBoost example
 
-While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). This has been integrated directly into XGBoost and LightGBM (*make sure you have the latest checkout of master*), and you can use the `shap` package for visualization in a Jupyter notebook:
+While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, and *scikit-learn* tree models through the `shap` package:
 
 ```python
 import xgboost
@@ -30,12 +30,12 @@ shap.initjs()
 
 # train XGBoost model
 X,y = shap.datasets.boston()
-bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
-# explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
-shap_values = bst.predict(xgboost.DMatrix(X), pred_contribs=True)
+# explain the model's predictions using SHAP values
+shap_values = shap.TreeExplainer(model).shap_values(X)
 
-# visualize the first prediction's explaination
+# visualize the first prediction's explanation
 shap.force_plot(shap_values[0,:], X.iloc[0,:])
 ```
 
@@ -130,7 +130,7 @@ The VGG16 notebook below illustrates how to apply Kernel SHAP to image classific
 
 ## SHAP Interaction Values
 
-SHAP interaction values are a generalization of SHAP values to higher order interactions. Fast exact computation of pairwise interactions are implemented in the latest version of XGBoost with the `pred_interactions` flag. With this flag XGBoost returns a matrix for every prediction, where the main effects are on the diagonal and the interaction effects are off-diagonal. These values often reveal interesting hidden relationships, such as how the increased risk of death peaks for men at age 60 (see the NHANES notebook for details):
+SHAP interaction values are a generalization of SHAP values to higher order interactions. Fast exact computation of pairwise interactions are implemented for tree models with `shap.TreeExplainer(model).shap_interaction_values(X)`. This returns a matrix for every prediction, where the main effects are on the diagonal and the interaction effects are off-diagonal. These values often reveal interesting hidden relationships, such as how the increased risk of death peaks for men at age 60 (see the NHANES notebook for details):
 
 <p align="center">
   <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/nhanes_age_sex_interaction.png" />
@@ -138,7 +138,7 @@ SHAP interaction values are a generalization of SHAP values to higher order inte
 
 ## Sample notebooks
 
-The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the LightGBM and XGBoost examples use the fast and exact Tree SHAP algorithm, the others use the model agnostic Kernel SHAP algorithm.
+The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the tree examples use the fast and exact Tree SHAP algorithm, the others use the model agnostic Kernel SHAP algorithm.
 
 - [**NHANES survival model with XGBoost and SHAP interaction values**](https://slundberg.github.io/shap/notebooks/NHANES+I+Survival+Model.html) - Using mortality data from 20 years of followup this notebook demonstrates how to use XGBoost and `shap` to uncover complex risk factor relationships.
 
