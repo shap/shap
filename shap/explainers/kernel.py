@@ -170,7 +170,7 @@ class KernelExplainer:
         # pick a reasonable number of samples if the user didn't specify how many they wanted
         self.nsamples = kwargs.get("nsamples", 0)
         if self.nsamples == 0:
-            self.nsamples = 2 * self.M + 1000
+            self.nsamples = 2 * self.M + 2**11
 
         # if we have enough samples to enumerate all subsets then ignore the unneeded samples
         self.max_samples = 2 ** 30

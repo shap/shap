@@ -18,6 +18,8 @@ class TreeExplainer:
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
+        elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
+            self.trees = [Tree(model.tree_)]
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
