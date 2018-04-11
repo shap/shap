@@ -17,9 +17,9 @@
 pip install shap
 ```
 
-## XGBoost example
+## Tree ensemble example (XGBoost, LightGBM, and scikit-learn tree models) 
 
-While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for ensemble tree methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, and *scikit-learn* tree models through the `shap` package:
+While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, and *scikit-learn* tree models through the `shap` package:
 
 ```python
 import xgboost
@@ -33,6 +33,7 @@ X,y = shap.datasets.boston()
 model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
 # explain the model's predictions using SHAP values
+# (same syntax works for LightGBM and scikit-learn models)
 shap_values = shap.TreeExplainer(model).shap_values(X)
 
 # visualize the first prediction's explanation
