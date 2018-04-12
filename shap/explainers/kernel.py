@@ -1,9 +1,10 @@
-from iml.common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
+from iml.common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index
 from iml.explanations import AdditiveExplanation
 from iml.links import convert_to_link, IdentityLink
 from iml.datatypes import convert_to_data, DenseData
 from scipy.special import binom
 import numpy as np
+import pandas as pd
 import logging
 import copy
 import itertools
@@ -57,7 +58,8 @@ class KernelExplainer:
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
         self.model = convert_to_model(model)
-        self.data = convert_to_data(data)
+        self.keep_index = kwargs.get("keep_index", False)
+        self.data = convert_to_data(data, keep_index=self.keep_index)
         match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations
@@ -76,6 +78,10 @@ class KernelExplainer:
         if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.as_matrix()
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+            if self.keep_index:
+                index_value = X.index.values
+                index_name = X.index.name
+                column_name = list(X.columns)
             X = X.as_matrix()
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
@@ -83,7 +89,10 @@ class KernelExplainer:
 
         # single instance
         if len(X.shape) == 1:
-            explanation = self.explain(X.reshape((1, X.shape[0])), **kwargs)
+            if self.keep_index:
+                data = X.reshape((1, X.shape[0]))
+                data = convert_to_instance_with_index(data, column_name, index_name, index_value)
+            explanation = self.explain(data, **kwargs)
 
             # vector-output
             s = explanation.effects.shape
@@ -105,7 +114,10 @@ class KernelExplainer:
         elif len(X.shape) == 2:
             explanations = []
             for i in tqdm(range(X.shape[0])):
-                explanations.append(self.explain(X[i:i + 1, :], **kwargs))
+                data = X[i:i + 1, :]
+                if self.keep_index:
+                    data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
+                explanations.append(self.explain(data, **kwargs))
 
             # vector-output
             s = explanations[0].effects.shape
@@ -137,9 +149,20 @@ class KernelExplainer:
         self.M = len(self.varyingFeatureGroups)
 
         # find f(x) and E_x[f(x)]
-        model_out = self.model.f(instance.x)
+        if self.keep_index:
+            model_out = self.model.f(instance.convert_to_df())
+            model_null = self.model.f(self.data.convert_to_df())
+        else:
+            model_out = self.model.f(instance.x)
+            model_null = self.model.f(self.data.data)
+
+        if isinstance(model_out, (pd.DataFrame, pd.Series)):
+            model_out = model_out.as_matrix()[0]
+            model_null = model_null.as_matrix()
+
         self.fx = model_out[0]
-        self.fnull = np.sum((self.model.f(self.data.data).T * self.data.weights).T, 0)
+        self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
+
         self.vector_out = True
         if len(model_out.shape) == 1:
             self.vector_out = False
@@ -271,7 +294,6 @@ class KernelExplainer:
             vphi, vphi_var = self.solve(self.nsamples / self.max_samples, d)
             phi[self.varyingInds, d] = vphi
             phi_var[self.varyingInds, d] = vphi_var
-
         if not self.vector_out:
             phi = np.squeeze(phi, axis=1)
             phi_var = np.squeeze(phi_var, axis=1)
@@ -300,10 +322,14 @@ class KernelExplainer:
         self.lastMask = np.zeros(self.nsamples)
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
+        if self.keep_index:
+            self.synth_data_index = [None] * (self.nsamples * self.N)
 
     def addsample(self, x, m, w):
         offset = self.nsamplesAdded * self.N
         for i in range(self.N):
+            if self.keep_index:
+                self.synth_data_index[offset+i] = self.data.index_value[i]
             for j in range(self.M):
                 for k in self.varyingFeatureGroups[j]:
                     if m[j] == 1.0:
@@ -317,7 +343,15 @@ class KernelExplainer:
 
     def run(self):
         num_to_run = self.nsamplesAdded * self.N - self.nsamplesRun * self.N
-        modelOut = self.model.f(self.synth_data[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :])
+        data = self.synth_data[self.nsamplesRun*self.N:self.nsamplesAdded*self.N,:]
+        if self.keep_index:
+            index = self.synth_data_index[self.nsamplesRun*self.N:self.nsamplesAdded*self.N]
+            index = pd.DataFrame(index, columns=[self.data.index_name])
+            data = pd.DataFrame(data, columns=self.data.group_names)
+            data = pd.concat([index, data], axis=1).set_index(self.data.index_name)
+        modelOut = self.model.f(data)
+        if isinstance(modelOut, (pd.DataFrame, pd.Series)):
+            modelOut = modelOut.as_matrix()
         # if len(modelOut.shape) > 1:
         #     raise ValueError("The supplied model function should output a vector not a matrix!")
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
