@@ -115,6 +115,9 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             pl.show()
         return
 
+    assert shap_values.shape[0] == features.shape[0], "'shap_values' and 'features' values must have the same number of rows!"
+    assert shap_values.shape[1] == features.shape[1]+1, "'shap_values' must have one more column than 'features'!"
+
     # get both the raw and display feature values
     xv = features[:, ind]
     xd = display_features[:, ind]
@@ -221,11 +224,10 @@ def approx_interactions(index, shap_values, X):
     srt = np.argsort(x)
     shap_ref = shap_values[inds, index]
     shap_ref = shap_ref[srt]
-    inc = min(int(len(x) / 10.0), 50)
+    inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
         val_other = X[inds, i][srt]
-
         v = 0.0
         if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
