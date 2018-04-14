@@ -1,6 +1,8 @@
 import numpy as np
-#import numba
+import multiprocessing
 from .. import _cext
+
+
 
 try:
     import xgboost
@@ -11,6 +13,9 @@ try:
     import lightgbm
 except ImportError:
     pass
+
+def mapf(t):
+    self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
 
 class TreeExplainer:
     def __init__(self, model, **kwargs):
@@ -29,7 +34,7 @@ class TreeExplainer:
             self.model_type = "lightgbm"
             self.trees = model
         else:
-            raise Exception("Model type not supported by TreeExplainer: " + str(type(model)))
+            raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
     def shap_values(self, X, **kwargs):
 
@@ -51,34 +56,34 @@ class TreeExplainer:
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
-        n_outputs = self.trees[0].values.shape[1]
+        self.n_outputs = self.trees[0].values.shape[1]
 
         # single instance
         if len(X.shape) == 1:
 
-            phi = np.zeros((X.shape[0] + 1, n_outputs))
+            phi = np.zeros((X.shape[0] + 1, self.n_outputs))
             x_missing = np.zeros(X.shape[0], dtype=np.bool)
             for t in self.trees:
                 self.tree_shap(t, X, x_missing, phi)
             phi /= len(self.trees)
 
-            if n_outputs == 1:
+            if self.n_outputs == 1:
                 return phi[:, 0]
             else:
-                return [phi[:, i] for i in range(n_outputs)]
+                return [phi[:, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
-            phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
-            for i in range(X.shape[0]):
-                for t in self.trees:
-                    self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
-            phi /= len(self.trees)
+            mapf = lambda t: self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
+            pool = multiprocessing.Pool()
+            self._current_X = X
+            self._current_x_missing = x_missing
+            phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
 
-            if n_outputs == 1:
+            if self.n_outputs == 1:
                 return phi[:, :, 0]
             else:
-                return [phi[:, :, i] for i in range(n_outputs)]
+                return [phi[:, :, i] for i in range(self.n_outputs)]
 
     def shap_interaction_values(self, X, **kwargs):
 
@@ -89,6 +94,13 @@ class TreeExplainer:
             return self.trees.predict(X, pred_interactions=True)
         else:
             raise Exception("Interaction values not yet supported for model type: " + str(type(X)))
+
+    def _tree_shap_ind(self, i):
+        phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
+        for t in self.trees:
+            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi)
+        phi /= len(self.trees)
+        return phi
 
     def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
 

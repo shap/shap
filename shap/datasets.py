@@ -70,9 +70,9 @@ def adult(display=False):
                 data[k] = data[k].cat.codes
 
     if display:
-        return raw_data.drop(["Education", "Target"], axis=1), data["Target"].as_matrix()
+        return raw_data.drop(["Education", "Target", "fnlwgt"], axis=1), data["Target"].as_matrix()
     else:
-        return data.drop(["Target"], axis=1), data["Target"].as_matrix()
+        return data.drop(["Target", "fnlwgt"], axis=1), data["Target"].as_matrix()
 
 
 def nhanesi(display=False):
