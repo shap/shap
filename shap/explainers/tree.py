@@ -1,7 +1,7 @@
 import numpy as np
 import multiprocessing
 from .. import _cext
-
+import sys
 
 
 try:
@@ -78,7 +78,12 @@ class TreeExplainer:
             pool = multiprocessing.Pool()
             self._current_X = X
             self._current_x_missing = x_missing
-            phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
+
+            # Only python 3 can serialize a method to send to another process
+            if sys.version_info[0] < 3:
+                phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
+            else:
+                phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
 
             if self.n_outputs == 1:
                 return phi[:, :, 0]
