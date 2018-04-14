@@ -80,7 +80,7 @@ class TreeExplainer:
             self._current_x_missing = x_missing
 
             # Only python 3 can serialize a method to send to another process
-            if sys.version_info[0] < 3:
+            if sys.version_info[0] >= 3:
                 phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
             else:
                 phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
