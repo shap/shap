@@ -89,8 +89,8 @@ class KernelExplainer:
 
         # single instance
         if len(X.shape) == 1:
+            data = X.reshape((1, X.shape[0]))
             if self.keep_index:
-                data = X.reshape((1, X.shape[0]))
                 data = convert_to_instance_with_index(data, column_name, index_name, index_value)
             explanation = self.explain(data, **kwargs)
 
