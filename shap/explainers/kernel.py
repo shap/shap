@@ -176,7 +176,6 @@ class KernelExplainer:
         if self.M == 0:
             phi = np.zeros((len(self.data.groups), self.D))
             phi_var = np.zeros((len(self.data.groups), self.D))
-            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
         # if only one feature varies then it has all the effect
         elif self.M == 1:
@@ -185,115 +184,117 @@ class KernelExplainer:
             diff = self.link.f(self.fx) - self.link.f(self.fnull)
             for d in range(self.D):
                 phi[self.varyingInds[0],d] = diff[d]
-            phi_var = np.zeros(len(self.data.groups))
-            return AdditiveExplanation(self.fnull, self.fx, phi, phi_var, instance, self.link, self.model, self.data)
 
-        self.l1_reg = kwargs.get("l1_reg", "auto")
+        # if more than one feature varies then we have to do real work
+        else:
+            self.l1_reg = kwargs.get("l1_reg", "auto")
 
-        # pick a reasonable number of samples if the user didn't specify how many they wanted
-        self.nsamples = kwargs.get("nsamples", 0)
-        if self.nsamples == 0:
-            self.nsamples = 2 * self.M + 1000
+            # pick a reasonable number of samples if the user didn't specify how many they wanted
+            self.nsamples = kwargs.get("nsamples", 0)
+            if self.nsamples == 0:
+                self.nsamples = 2 * self.M + 2**11
 
-        # if we have enough samples to enumerate all subsets then ignore the unneeded samples
-        self.max_samples = 2 ** 30
-        if self.M <= 30 and self.nsamples > 2 ** self.M - 2:
-            self.nsamples = 2 ** self.M - 2
-            self.max_samples = self.nsamples
+            # if we have enough samples to enumerate all subsets then ignore the unneeded samples
+            self.max_samples = 2 ** 30
+            if self.M <= 30 and self.nsamples > 2 ** self.M - 2:
+                self.nsamples = 2 ** self.M - 2
+                self.max_samples = self.nsamples
 
-        # reserve space for some of our computations
-        self.allocate()
+            # reserve space for some of our computations
+            self.allocate()
 
-        # weight the different subset sizes
-        num_subset_sizes = np.int(np.ceil((self.M - 1) / 2.0))
-        num_paired_subset_sizes = np.int(np.floor((self.M - 1) / 2.0))
-        weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
-        weight_vector[:num_paired_subset_sizes] *= 2
-        weight_vector /= np.sum(weight_vector)
-        log.debug("weight_vector = {0}".format(weight_vector))
-        log.debug("num_subset_sizes = {0}".format(num_subset_sizes))
-        log.debug("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
+            # weight the different subset sizes
+            num_subset_sizes = np.int(np.ceil((self.M - 1) / 2.0))
+            num_paired_subset_sizes = np.int(np.floor((self.M - 1) / 2.0))
+            weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
+            weight_vector[:num_paired_subset_sizes] *= 2
+            weight_vector /= np.sum(weight_vector)
+            log.debug("weight_vector = {0}".format(weight_vector))
+            log.debug("num_subset_sizes = {0}".format(num_subset_sizes))
+            log.debug("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
+            log.debug("M = {0}".format(self.M))
 
-        # fill out all the subset sizes we can completely enumerate
-        # given nsamples*remaining_weight_vector[subset_size]
-        num_full_subsets = 0
-        num_samples_left = self.nsamples
-        group_inds = np.arange(self.M, dtype='int64')
-        mask = np.zeros(self.M)
-        remaining_weight_vector = copy.copy(weight_vector)
-        for subset_size in range(1, num_subset_sizes + 1):
+            # fill out all the subset sizes we can completely enumerate
+            # given nsamples*remaining_weight_vector[subset_size]
+            num_full_subsets = 0
+            num_samples_left = self.nsamples
+            group_inds = np.arange(self.M, dtype='int64')
+            mask = np.zeros(self.M)
+            remaining_weight_vector = copy.copy(weight_vector)
+            for subset_size in range(1, num_subset_sizes + 1):
 
-            # determine how many subsets (and their complements) are of the current size
-            nsubsets = binom(self.M, subset_size)
-            if subset_size <= num_paired_subset_sizes: nsubsets *= 2
-            log.debug("subset_size = {0}".format(subset_size))
-            log.debug("nsubsets = {0}".format(nsubsets))
-            log.debug("self.nsamples*weight_vector[subset_size-1] = {0}".format(
-                num_samples_left * remaining_weight_vector[subset_size - 1]))
-            log.debug("self.nsamples*weight_vector[subset_size-1/nsubsets = {0}".format(
-                num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
+                # determine how many subsets (and their complements) are of the current size
+                nsubsets = binom(self.M, subset_size)
+                if subset_size <= num_paired_subset_sizes: nsubsets *= 2
+                log.debug("subset_size = {0}".format(subset_size))
+                log.debug("nsubsets = {0}".format(nsubsets))
+                log.debug("self.nsamples*weight_vector[subset_size-1] = {0}".format(
+                    num_samples_left * remaining_weight_vector[subset_size - 1]))
+                log.debug("self.nsamples*weight_vector[subset_size-1/nsubsets = {0}".format(
+                    num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
 
-            # see if we have enough samples to enumerate all subsets of this size
-            if num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets >= 1.0 - 1e-8:
-                num_full_subsets += 1
-                num_samples_left -= nsubsets
+                # see if we have enough samples to enumerate all subsets of this size
+                if num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets >= 1.0 - 1e-8:
+                    num_full_subsets += 1
+                    num_samples_left -= nsubsets
 
-                # rescale what's left of the remaining weight vector to sum to 1
-                if remaining_weight_vector[subset_size - 1] < 1.0:
-                    remaining_weight_vector /= (1 - remaining_weight_vector[subset_size - 1])
+                    # rescale what's left of the remaining weight vector to sum to 1
+                    if remaining_weight_vector[subset_size - 1] < 1.0:
+                        remaining_weight_vector /= (1 - remaining_weight_vector[subset_size - 1])
 
-                # add all the samples of the current subset size
-                w = weight_vector[subset_size - 1] / binom(self.M, subset_size)
-                if subset_size <= num_paired_subset_sizes: w /= 2.0
-                for inds in itertools.combinations(group_inds, subset_size):
-                    mask[:] = 0.0
-                    mask[np.array(inds, dtype='int64')] = 1.0
-                    self.addsample(instance.x, mask, w)
-                    if subset_size <= num_paired_subset_sizes:
-                        mask[:] = np.abs(mask - 1)
+                    # add all the samples of the current subset size
+                    w = weight_vector[subset_size - 1] / binom(self.M, subset_size)
+                    if subset_size <= num_paired_subset_sizes: w /= 2.0
+                    for inds in itertools.combinations(group_inds, subset_size):
+                        mask[:] = 0.0
+                        mask[np.array(inds, dtype='int64')] = 1.0
                         self.addsample(instance.x, mask, w)
-            else:
-                break
-        log.info("num_full_subsets = {0}".format(num_full_subsets))
+                        if subset_size <= num_paired_subset_sizes:
+                            mask[:] = np.abs(mask - 1)
+                            self.addsample(instance.x, mask, w)
+                else:
+                    break
+            log.info("num_full_subsets = {0}".format(num_full_subsets))
 
-        # add random samples from what is left of the subset space
-        samples_left = self.nsamples - self.nsamplesAdded
-        log.debug("samples_left = {0}".format(samples_left))
-        if num_full_subsets != num_subset_sizes:
-            weight_left = np.sum(weight_vector[num_full_subsets:])
-            rand_sample_weight = weight_left / samples_left
-            log.info("weight_left = {0}".format(weight_left))
-            log.info("rand_sample_weight = {0}".format(rand_sample_weight))
-            remaining_weight_vector = weight_vector[num_full_subsets:]
-            remaining_weight_vector /= np.sum(remaining_weight_vector)
-            log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
-            log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
-            ind_set = np.arange(len(remaining_weight_vector))
-            while samples_left > 0:
-                mask[:] = 0.0
-                np.random.shuffle(group_inds)
-                ind = np.random.choice(ind_set, 1, p=remaining_weight_vector)[0]
-                mask[group_inds[:ind + num_full_subsets + 1]] = 1.0
-                samples_left -= 1
-                self.addsample(instance.x, mask, rand_sample_weight)
-
-                # add the compliment sample
-                if samples_left > 0:
-                    mask -= 1.0
-                    mask[:] = np.abs(mask)
-                    self.addsample(instance.x, mask, rand_sample_weight)
+            # add random samples from what is left of the subset space
+            samples_left = self.nsamples - self.nsamplesAdded
+            log.debug("samples_left = {0}".format(samples_left))
+            if num_full_subsets != num_subset_sizes:
+                weight_left = np.sum(weight_vector[num_full_subsets:])
+                rand_sample_weight = weight_left / samples_left
+                log.info("weight_left = {0}".format(weight_left))
+                log.info("rand_sample_weight = {0}".format(rand_sample_weight))
+                remaining_weight_vector = weight_vector[num_full_subsets:]
+                remaining_weight_vector /= np.sum(remaining_weight_vector)
+                log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
+                log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
+                ind_set = np.arange(len(remaining_weight_vector))
+                while samples_left > 0:
+                    mask[:] = 0.0
+                    np.random.shuffle(group_inds)
+                    ind = np.random.choice(ind_set, 1, p=remaining_weight_vector)[0]
+                    mask[group_inds[:ind + num_full_subsets + 1]] = 1.0
                     samples_left -= 1
+                    self.addsample(instance.x, mask, rand_sample_weight)
 
-        # execute the model on the synthetic samples we have created
-        self.run()
+                    # add the compliment sample
+                    if samples_left > 0:
+                        mask -= 1.0
+                        mask[:] = np.abs(mask)
+                        self.addsample(instance.x, mask, rand_sample_weight)
+                        samples_left -= 1
 
-        # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
-        phi = np.zeros((len(self.data.groups), self.D))
-        phi_var = np.zeros((len(self.data.groups), self.D))
-        for d in range(self.D):
-            vphi, vphi_var = self.solve(self.nsamples / self.max_samples, d)
-            phi[self.varyingInds, d] = vphi
-            phi_var[self.varyingInds, d] = vphi_var
+            # execute the model on the synthetic samples we have created
+            self.run()
+
+            # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
+            phi = np.zeros((len(self.data.groups), self.D))
+            phi_var = np.zeros((len(self.data.groups), self.D))
+            for d in range(self.D):
+                vphi, vphi_var = self.solve(self.nsamples / self.max_samples, d)
+                phi[self.varyingInds, d] = vphi
+                phi_var[self.varyingInds, d] = vphi_var
+
         if not self.vector_out:
             phi = np.squeeze(phi, axis=1)
             phi_var = np.squeeze(phi_var, axis=1)
@@ -310,7 +311,8 @@ class KernelExplainer:
         varying = np.zeros(len(self.data.groups))
         for i in range(0, len(self.data.groups)):
             inds = self.data.groups[i]
-            varying[i] = sum(sum(np.abs(x[0, inds] - self.data.data[:, inds]) < 1e-8) != len(inds))
+            num_matches = sum(np.abs(x[0, inds] - self.data.data[:, inds]) < 1e-7, 0)
+            varying[i] = sum(num_matches != len(inds) * self.data.data.shape[0])
         return np.nonzero(varying)[0]
 
     def allocate(self):

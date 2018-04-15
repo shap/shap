@@ -194,66 +194,6 @@ static PyObject *_cext_tree_shap(PyObject *self, PyObject *args)
   Py_XDECREF(x_missing_array);
   Py_XDECREF(out_contribs_array);
 
-                                      // unsigned M
-                                      // unsigned max_depth
-  // double m, b;
-  // PyObject *x_obj, *y_obj, *yerr_obj;
-  //
-  // /* Parse the input tuple */
-  // if (!PyArg_ParseTuple(args, "ddOOO", &m, &b, &x_obj, &y_obj,
-  //                                     &yerr_obj))
-  //     return NULL;
-  //
-  // /* Interpret the input objects as numpy arrays. */
-  // PyObject *x_array = PyArray_FROM_OTF(x_obj, NPY_DOUBLE, NPY_IN_ARRAY);
-  // PyObject *y_array = PyArray_FROM_OTF(y_obj, NPY_DOUBLE, NPY_IN_ARRAY);
-  // PyObject *yerr_array = PyArray_FROM_OTF(yerr_obj, NPY_DOUBLE,
-  //                                         NPY_IN_ARRAY);
-  //
-  // /* If that didn't work, throw an exception. */
-  // if (x_array == NULL || y_array == NULL || yerr_array == NULL) {
-  //     Py_XDECREF(x_array);
-  //     Py_XDECREF(y_array);
-  //     Py_XDECREF(yerr_array);
-  //     return NULL;
-  // }
-  //
-  // /* How many data points are there? */
-  // int N = (int)PyArray_DIM(x_array, 0);
-  //
-  // /* Get pointers to the data as C-types. */
-  // double *x    = (double*)PyArray_DATA(x_array);
-  // double *y    = (double*)PyArray_DATA(y_array);
-  // double *yerr = (double*)PyArray_DATA(yerr_array);
-  //
-  // /* Call the external C function to compute the chi-squared. */
-  // double value = chi2(m, b, x, y, yerr, N);
-  //
-  // /* Clean up. */
-  // Py_DECREF(x_array);
-  // Py_DECREF(y_array);
-  // Py_DECREF(yerr_array);
-  //
-  // if (value < 0.0) {
-  //     PyErr_SetString(PyExc_RuntimeError,
-  //                 "Chi-squared returned an impossible value.");
-  //     return NULL;
-  // }
-
-  // const int max_depth = compute_expectations(children_left, children_right, node_sample_weight, values, 0, 0);
-  //
-  // calculate_contributions(const unsigned M, const unsigned max_depth, const int *children_left,
-  //                                     const int *children_right,
-  //                                     const int *children_default, const int *features,
-  //                                     const tfloat *thresholds, const tfloat *values,
-  //                                     const tfloat *node_sample_weight,
-  //                                     const tfloat *x, const bool *x_missing, unsigned root_id,
-  //                                     tfloat *out_contribs, int condition,
-  //                                     unsigned condition_feature) const {
-    // find the expected value of the tree's predictions
-    //const int max_depth = compute_expectations(children_left, children_right, node_sample_weight, values, i, depth=0);
-
-
   /* Build the output tuple */
   PyObject *ret = Py_BuildValue("d", (double)values[0]);
   return ret;

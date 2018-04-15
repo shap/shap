@@ -63,3 +63,31 @@ def test_front_page_xgboost():
 
     # summarize the effects of all the features
     shap.summary_plot(shap_values, X, show=False)
+
+def test_front_page_sklearn():
+    import sklearn.ensemble
+    import shap
+
+    # load JS visualization code to notebook
+    shap.initjs()
+
+    # train model
+    X, y = shap.datasets.boston()
+    model = sklearn.ensemble.RandomForestRegressor(n_estimators=100)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
+    shap_values = shap.TreeExplainer(model).shap_values(X)
+
+    # visualize the first prediction's explaination
+    shap.force_plot(shap_values[0, :], X.iloc[0, :])
+
+    # visualize the training set predictions
+    shap.force_plot(shap_values, X)
+
+    # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
+    shap.dependence_plot(5, shap_values, X, show=False)
+    shap.dependence_plot("RM", shap_values, X, show=False)
+
+    # summarize the effects of all the features
+    shap.summary_plot(shap_values, X, show=False)
