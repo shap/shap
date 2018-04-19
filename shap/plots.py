@@ -28,6 +28,22 @@ try:
                   (1.0, 1, 1))
     }  # #1E88E5 -> #ff0052
     red_blue = LinearSegmentedColormap('RedBlue', cdict1)
+
+    cdict1 = {
+        'red': ((0.0, 0.11764705882352941, 0.11764705882352941),
+                (1.0, 0.9607843137254902, 0.9607843137254902)),
+
+        'green': ((0.0, 0.5333333333333333, 0.5333333333333333),
+                  (1.0, 0.15294117647058825, 0.15294117647058825)),
+
+        'blue': ((0.0, 0.8980392156862745, 0.8980392156862745),
+                 (1.0, 0.3411764705882353, 0.3411764705882353)),
+
+        'alpha': ((0.0, 1, 1),
+                  (0.5, 1, 1),
+                  (1.0, 1, 1))
+    }  # #1E88E5 -> #ff0052
+    red_blue_solid = LinearSegmentedColormap('RedBlue', cdict1)
 except ImportError:
     pass
 
@@ -137,21 +153,22 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if interaction_index == "auto":
         interaction_index = approx_interactions(ind, shap_values, features)[0]
     interaction_index = convert_name(interaction_index)
+    categorical_interaction = False
 
     # get both the raw and display color values
-    cv = features[:, interaction_index]
-    cd = display_features[:, interaction_index]
-    categorical_interaction = False
-    clow = np.nanpercentile(features[:, interaction_index], 5)
-    chigh = np.nanpercentile(features[:, interaction_index], 95)
-    if type(cd[0]) == str:
-        cname_map = {}
-        for i in range(len(cv)):
-            cname_map[cd[i]] = cv[i]
-        cnames = list(cname_map.keys())
-        categorical_interaction = True
-    elif clow % 1 == 0 and chigh % 1 == 0 and len(set(features[:, interaction_index])) < 50:
-        categorical_interaction = True
+    if interaction_index is not None:
+        cv = features[:, interaction_index]
+        cd = display_features[:, interaction_index]
+        clow = np.nanpercentile(features[:, interaction_index], 5)
+        chigh = np.nanpercentile(features[:, interaction_index], 95)
+        if type(cd[0]) == str:
+            cname_map = {}
+            for i in range(len(cv)):
+                cname_map[cd[i]] = cv[i]
+            cnames = list(cname_map.keys())
+            categorical_interaction = True
+        elif clow % 1 == 0 and chigh % 1 == 0 and len(set(features[:, interaction_index])) < 50:
+            categorical_interaction = True
 
     # discritize colors for categorical features
     color_norm = None
@@ -160,10 +177,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         color_norm = matplotlib.colors.BoundaryNorm(bounds, red_blue.N)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
-    pl.scatter(xv, s, s=dot_size, linewidth=0, c=features[:, interaction_index], cmap=red_blue,
-               alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
+    if interaction_index is not None:
+        pl.scatter(xv, s, s=dot_size, linewidth=0, c=features[:, interaction_index], cmap=red_blue,
+                   alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
+    else:
+        pl.scatter(xv, s, s=dot_size, linewidth=0, color="#1E88E5",
+                   alpha=alpha, rasterized=len(xv) > 500)
 
-    if interaction_index != ind:
+    if interaction_index != ind and interaction_index is not None:
         # draw the color bar
         if type(cd[0]) == str:
             tick_positions = [cname_map[n] for n in cnames]
@@ -358,11 +379,16 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         for pos, i in enumerate(feature_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
             shaps = shap_values[:, i]
+            values = features[:, i]
+            inds = np.arange(len(shaps))
+            np.random.shuffle(inds)
+            values = values[inds]
+            shaps = shaps[inds]
             N = len(shaps)
             # hspacing = (np.max(shaps) - np.min(shaps)) / 200
             # curr_bin = []
             nbins = 100
-            quant = np.round(nbins * (shap_values[:, i] - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
+            quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
             inds = np.argsort(quant + np.random.randn(N) * 1e-6)
             layer = 0
             last_bin = -1
@@ -377,23 +403,23 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
             if features is not None:
                 # trim the color range, but prevent the color range from collapsing
-                vmin = np.nanpercentile(features[:, i], 5)
-                vmax = np.nanpercentile(features[:, i], 95)
+                vmin = np.nanpercentile(values, 5)
+                vmax = np.nanpercentile(values, 95)
                 if vmin == vmax:
-                    vmin = np.nanpercentile(features[:, i], 1)
-                    vmax = np.nanpercentile(features[:, i], 99)
+                    vmin = np.nanpercentile(values, 1)
+                    vmax = np.nanpercentile(values, 99)
                     if vmin == vmax:
-                        vmin = np.min(features[:, i])
-                        vmax = np.max(features[:, i])
+                        vmin = np.min(values)
+                        vmax = np.max(values)
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
-                nan_mask = np.isnan(features[:, i])
+                nan_mask = np.isnan(values)
                 pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
                            vmax=vmax, s=16, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
                 pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
                            cmap=red_blue, vmin=vmin, vmax=vmax, s=16,
-                           c=features[:, i][np.invert(nan_mask)], alpha=alpha, linewidth=0,
+                           c=values[np.invert(nan_mask)], alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
             else:
                 pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
@@ -420,24 +446,40 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 values = features[:, i]
                 window_size = max(10, len(values) // 20)
                 smooth_values = np.zeros(len(xs) - 1)
+                sort_inds = np.argsort(shaps)
+                trailing_pos = 0
+                leading_pos = 0
+                running_sum = 0
+                back_fill = 0
                 for j in range(len(xs) - 1):
-                    smooth_values[j] = np.mean(values[max(0, j - window_size):min(len(xs), j + window_size)])
+
+                    while leading_pos < len(shaps) and xs[j] >= shaps[sort_inds[leading_pos]]:
+                        running_sum += values[sort_inds[leading_pos]]
+                        leading_pos += 1
+                        if leading_pos - trailing_pos > 20:
+                            running_sum -= values[sort_inds[trailing_pos]]
+                            trailing_pos += 1
+                    if leading_pos - trailing_pos > 0:
+                        smooth_values[j] = running_sum / (leading_pos - trailing_pos)
+                        for k in range(back_fill):
+                            smooth_values[j-k-1] = smooth_values[j]
+                    else:
+                        back_fill += 1
 
                 vmin = np.nanpercentile(values, 5)
                 vmax = np.nanpercentile(values, 95)
+                pl.scatter(shaps, np.ones(shap_values.shape[0]) * pos, s=9, cmap=red_blue_solid, vmin=vmin, vmax=vmax,
+                           c=values, alpha=alpha, linewidth=0, zorder=1)
                 # smooth_values -= nxp.nanpercentile(smooth_values, 5)
                 # smooth_values /= np.nanpercentile(smooth_values, 95)
                 smooth_values -= vmin
-                smooth_values /= vmax - vmin
+                if vmax - vmin > 0:
+                    smooth_values /= vmax - vmin
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=red_blue(smooth_values[i]), zorder=2)
+                                        [pos - ds[i], pos - ds[i + 1]], color=red_blue_solid(smooth_values[i]), zorder=2)
 
-                vmin = np.nanpercentile(values, 5)
-                vmax = np.nanpercentile(values, 95)
-                pl.scatter(shaps, np.ones(shap_values.shape[0]) * pos, s=9, cmap=red_blue, vmin=vmin, vmax=vmax,
-                           c=values, alpha=alpha, linewidth=0, zorder=3)
 
         else:
             parts = pl.violinplot(shap_values[:, feature_order], range(len(feature_order)), points=200, vert=False,
