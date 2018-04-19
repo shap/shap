@@ -1,8 +1,11 @@
 import numpy as np
 import multiprocessing
-from .. import _cext
 import sys
 
+try:
+    from .. import _cext
+except ImportError:
+    pass
 
 try:
     import xgboost
