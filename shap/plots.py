@@ -468,6 +468,12 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
                 vmin = np.nanpercentile(values, 5)
                 vmax = np.nanpercentile(values, 95)
+                if vmin == vmax:
+                    vmin = np.nanpercentile(values, 1)
+                    vmax = np.nanpercentile(values, 99)
+                    if vmin == vmax:
+                        vmin = np.min(values)
+                        vmax = np.max(values)
                 pl.scatter(shaps, np.ones(shap_values.shape[0]) * pos, s=9, cmap=red_blue_solid, vmin=vmin, vmax=vmax,
                            c=values, alpha=alpha, linewidth=0, zorder=1)
                 # smooth_values -= nxp.nanpercentile(smooth_values, 5)
@@ -480,7 +486,6 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
                                         [pos - ds[i], pos - ds[i + 1]], color=red_blue_solid(smooth_values[i]), zorder=2)
 
-
         else:
             parts = pl.violinplot(shap_values[:, feature_order], range(len(feature_order)), points=200, vert=False,
                                   widths=0.7,
@@ -491,8 +496,53 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 pc.set_edgecolor('none')
                 pc.set_alpha(alpha)
 
+    elif plot_type == "layered_violin": # courtesy of @kodonnell
+        print("Warning: layered_violin this needs debugged still...")
+        num_x_points = 200
+        max_num_bins=20
+        bins = np.linspace(0, features.shape[0], max_num_bins + 1).round(0).astype('int') # the indices of the feature data corresponding to each bin
+        shap_min, shap_max = np.min(shap_values[:,:-1]), np.max(shap_values[:,:-1])
+        x_points = np.linspace(shap_min, shap_max, num_x_points)
+        cmap = red_blue #pl.get_cmap(color)
+        # loop through each feature and plot:
+
+        for pos, ind in enumerate(feature_order):
+            # decide how to handle: if #unique < max_num_bins then split by unique value, otherwise use bins/percentiles.
+            # to keep simpler code, in the case of uniques, we just adjust the bins to align with the unique counts.
+            feature = features[:, ind]
+            unique, counts = np.unique(feature, return_counts=True)
+            if unique.shape[0] <= max_num_bins:
+                order = np.argsort(unique)
+                thesebins = np.cumsum(counts[order])
+                thesebins = np.insert(thesebins, 0, 0)
+            else:
+                thesebins = bins
+            nbins = thesebins.shape[0] - 1
+            # order the feature data so we can apply percentiling
+            order = np.argsort(feature)
+            # x axis is located at y0 = pos, with pos being there for offset
+            y0 = np.ones(num_x_points) * pos
+            # calculate kdes:
+            ys = np.zeros((nbins, num_x_points))
+            for i in range(nbins):
+                # get shap values in this bin:
+                shaps = shap_values[order[bins[i]:bins[i + 1]], ind]
+                # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
+                ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
+            # now plot 'em. We don't plot the individual strips, as this can leave whitespace between them.
+            # instead, we plot the full kde, then remove outer strip and plot over it, etc., to ensure no
+            # whitespace
+            ys = np.cumsum(ys, axis=0)
+            width = 0.8
+            scale = ys.max() * 2 / width # 2 is here as we plot both sides of x axis
+            for i in range(nbins - 1, -1, -1):
+                y = ys[i, :] / scale
+                c = cmap(i / (nbins - 0))
+                pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
+        pl.xlim(shap_min, shap_max)
+
     # draw the color bar
-    if color_bar and features is not None:
+    if color_bar and features is not None and plot_type != "layered_violin":
         cb = pl.colorbar(ticks=[vmin, vmax], aspect=1000)
         cb.set_ticklabels(["Low", "High"])
         cb.set_label("Feature value", size=12, labelpad=0)
