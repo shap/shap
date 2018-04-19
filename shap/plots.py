@@ -379,11 +379,17 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         for pos, i in enumerate(feature_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
             shaps = shap_values[:, i]
-            values = features[:, i]
+            values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
             np.random.shuffle(inds)
-            values = values[inds]
+            if values is not None:
+                values = values[inds]
             shaps = shaps[inds]
+            colored_feature = True
+            try:
+                values = np.array(values, dtype=np.float64) # make sure this can be numeric
+            except:
+                colored_feature = False
             N = len(shaps)
             # hspacing = (np.max(shaps) - np.min(shaps)) / 200
             # curr_bin = []
@@ -401,7 +407,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 last_bin = quant[ind]
             ys *= 0.9 * (row_height / np.max(ys + 1))
 
-            if features is not None:
+            if features is not None and colored_feature:
                 # trim the color range, but prevent the color range from collapsing
                 vmin = np.nanpercentile(values, 5)
                 vmax = np.nanpercentile(values, 95)
@@ -422,8 +428,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                            c=values[np.invert(nan_mask)], alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
             else:
+
                 pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                           color=color, rasterized=len(shaps) > 500)
+                           color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
 
     elif plot_type == "violin":
         for pos, i in enumerate(feature_order):
@@ -543,7 +550,10 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     # draw the color bar
     if color_bar and features is not None and plot_type != "layered_violin":
-        cb = pl.colorbar(ticks=[vmin, vmax], aspect=1000)
+        import matplotlib.cm as cm
+        m = cm.ScalarMappable(cmap=red_blue_solid)
+        m.set_array([0,1])
+        cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
         cb.set_ticklabels(["Low", "High"])
         cb.set_label("Feature value", size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
