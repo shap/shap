@@ -533,6 +533,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 shaps = shap_values[order[thesebins[i]:thesebins[i + 1]], ind]
                 # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
                 ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
+                # scale it up so that the 'size' of each y represents the size of the bin. For continuous data this will
+                # do nothing, but when we've gone with the unqique option, this will matter - e.g. if 99% are male and 1%
+                # female, we want the 1% to appear a lot smaller.
+                size = thesebins[i + 1] - thesebins[i]
+                bin_size_if_even = features.shape[0] / nbins
+                relative_bin_size = size / bin_size_if_even
+                ys[i, :] *= relative_bin_size
             # now plot 'em. We don't plot the individual strips, as this can leave whitespace between them.
             # instead, we plot the full kde, then remove outer strip and plot over it, etc., to ensure no
             # whitespace
