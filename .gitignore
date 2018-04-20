@@ -4,10 +4,8 @@ shap.egg-info
 *.pyc
 /build
 /dist
+/shap/cached_data
 notebooks/local_scratch
-docs/aaai_2017
-docs/icml_2017
-docs/icml_2017_iml_workshop
-docs/nips_2017
-docs/presentations
+docs
 .ipynb_checkpoints
+.eggs
