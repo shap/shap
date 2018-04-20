@@ -6,15 +6,32 @@ try:
     from .. import _cext
 except ImportError:
     pass
+except:
+    print("the C extension is installed...but failed to load!")
+    pass
 
 try:
     import xgboost
 except ImportError:
     pass
+except:
+    print("xgboost is installed...but failed to load!")
+    pass
 
 try:
     import lightgbm
 except ImportError:
+    pass
+except:
+    print("lightgbm is installed...but failed to load!")
+    pass
+
+try:
+    import catboost
+except ImportError:
+    pass
+except:
+    print("catboost is installed...but failed to load!")
     pass
 
 def mapf(t):
