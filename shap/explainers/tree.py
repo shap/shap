@@ -118,7 +118,7 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             return self.trees.predict(X, pred_interactions=True)
         else:
-            raise Exception("Interaction values not yet supported for model type: " + str(type(X)))
+            raise Exception("Interaction values not yet supported for model type: " + self.model_type)
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
