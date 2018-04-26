@@ -53,6 +53,12 @@ class TreeExplainer:
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.trees = model
+        elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
+            self.model_type = "catboost"
+            self.trees = model
+        elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
+            self.model_type = "catboost"
+            self.trees = model
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -66,6 +72,8 @@ class TreeExplainer:
             return self.trees.predict(X, pred_contribs=True)
         elif self.model_type == "lightgbm":
             return self.trees.predict(X, pred_contrib=True)
+        elif self.model_type == "catboost":
+            return self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
