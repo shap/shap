@@ -504,6 +504,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 pc.set_alpha(alpha)
 
     elif plot_type == "layered_violin": # courtesy of @kodonnell
+        pass
 
     # draw the color bar
     if color_bar and features is not None and plot_type != "layered_violin":
