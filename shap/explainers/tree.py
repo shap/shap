@@ -6,15 +6,32 @@ try:
     from .. import _cext
 except ImportError:
     pass
+except:
+    print("the C extension is installed...but failed to load!")
+    pass
 
 try:
     import xgboost
 except ImportError:
     pass
+except:
+    print("xgboost is installed...but failed to load!")
+    pass
 
 try:
     import lightgbm
 except ImportError:
+    pass
+except:
+    print("lightgbm is installed...but failed to load!")
+    pass
+
+try:
+    import catboost
+except ImportError:
+    pass
+except:
+    print("catboost is installed...but failed to load!")
     pass
 
 def mapf(t):
@@ -36,6 +53,12 @@ class TreeExplainer:
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.trees = model
+        elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
+            self.model_type = "catboost"
+            self.trees = model
+        elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
+            self.model_type = "catboost"
+            self.trees = model
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -49,6 +72,8 @@ class TreeExplainer:
             return self.trees.predict(X, pred_contribs=True)
         elif self.model_type == "lightgbm":
             return self.trees.predict(X, pred_contrib=True)
+        elif self.model_type == "catboost":
+            return self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
@@ -101,7 +126,7 @@ class TreeExplainer:
                 X = xgboost.DMatrix(X)
             return self.trees.predict(X, pred_interactions=True)
         else:
-            raise Exception("Interaction values not yet supported for model type: " + str(type(X)))
+            raise Exception("Interaction values not yet supported for model type: " + self.model_type)
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
