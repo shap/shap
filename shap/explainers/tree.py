@@ -72,7 +72,7 @@ class TreeExplainer:
             return self.trees.predict(X, pred_contribs=True)
         elif self.model_type == "lightgbm":
             return self.trees.predict(X, pred_contrib=True)
-        elif self.model_type == "catboost":
+        elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
             return self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
         # convert dataframes
