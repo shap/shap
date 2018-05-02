@@ -287,7 +287,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
-    color = "coolwarm" if plot_type == 'layered_violin' else "#ff0052"
+    if color is None:
+        color = "coolwarm" if plot_type == 'layered_violin' else "#ff0052"
     
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
