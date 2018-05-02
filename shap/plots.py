@@ -533,7 +533,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 shaps = shap_values[order[thesebins[i]:thesebins[i + 1]], ind]
                 # if there's only one element, then we can't 
                 if shaps.shape[0] == 1:
-                    warnings.warn("not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot.")
+                    warnings.warn("not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot." 
+                    % (i, feature_names[ind]))
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0
                     if i > 0:
