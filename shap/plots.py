@@ -261,7 +261,7 @@ def approx_interactions(index, shap_values, X):
 
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type="dot",
-                 color="#ff0052", axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
                  color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20):
     """
     Create a SHAP summary plot, colored by feature values when they are provided.
@@ -286,6 +286,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
+    # default color:
+    color = "coolwarm" if plot_type == 'layered_violin' else "#ff0052"
+    
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
