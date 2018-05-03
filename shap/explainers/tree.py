@@ -50,6 +50,12 @@ class TreeExplainer:
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
             self.trees = model
+        elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
+            self.model_type = "xgboost"
+            self.trees = model.get_booster()
+        elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
+            self.model_type = "xgboost"
+            self.trees = model.get_booster()
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.trees = model
@@ -65,15 +71,21 @@ class TreeExplainer:
     def shap_values(self, X, **kwargs):
 
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
-        # these are about 10x faster than the numba jit'd implementation below...
+        phi = None
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            return self.trees.predict(X, pred_contribs=True)
+            phi = self.trees.predict(X, pred_contribs=True)
         elif self.model_type == "lightgbm":
-            return self.trees.predict(X, pred_contrib=True)
+            phi = self.trees.predict(X, pred_contrib=True)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
-            return self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
+            phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
+
+        if phi is not None:
+            if len(phi.shape) == 3:
+                return [phi[:, i, :] for i in range(phi.shape[1])]
+            else:
+                return phi
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
