@@ -48,6 +48,19 @@ except ImportError:
     pass
 
 
+SHAP_MAIN_EFFECT = "SHAP main effect value for\n%s"
+SHAP_INTERACTION_VALUE = "SHAP interaction value"
+SHAP_INTERACTION_EFFECT = "SHAP interaction value for\n%s and %s"
+SHAP_VALUE = "SHAP value (impact on model output)"
+SHAP_VALUE_FOR = "SHAP value for\n%s"
+SHAP_PLOT_FOR = "SHAP plot for %s"
+SHAP_FEATURE = "Feature %s"
+SHAP_FEATURE_VALUE = "Feature value"
+SHAP_FEATURE_VALUE_LOW = "Low"
+SHAP_FEATURE_VALUE_HIGH = "High"
+SHAP_JOINT_VALUE = "Joint SHAP value"
+
+
 # TODO: remove color argument / use color argument
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto", color="#1E88E5", axis_color="#333333",
@@ -89,7 +102,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         display_features = features
 
     if feature_names is None:
-        feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+        feature_names = [SHAP_FEATURE % str(i) for i in range(shap_values.shape[1] - 1)]
 
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
@@ -118,14 +131,16 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             proj_shap_values = shap_values[:, ind2, :]
         else:
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
+
+        # TODO: remove sick ugly recursion
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=ind2, display_features=display_features, show=False
         )
         if ind1 == ind2:
-            pl.ylabel("SHAP main effect value for\n" + feature_names[ind1])
+            pl.ylabel(SHAP_MAIN_EFFECT % feature_names[ind1])
         else:
-            pl.ylabel("SHAP interaction value for\n" + feature_names[ind1] + " and " + feature_names[ind2])
+            pl.ylabel(SHAP_INTERACTION_EFFECT % (feature_names[ind1], feature_names[ind2]))
 
         if show:
             pl.show()
@@ -211,7 +226,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     else:
         pl.gcf().set_size_inches(6, 5)
     pl.xlabel(name, color=axis_color, fontsize=13)
-    pl.ylabel("SHAP value for\n" + name, color=axis_color, fontsize=13)
+    pl.ylabel(SHAP_VALUE_FOR % name, color=axis_color, fontsize=13)
     if title is not None:
         pl.title(title, color=axis_color, fontsize=13)
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -304,7 +319,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         features = None
 
     if feature_names is None:
-        feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+        feature_names = [SHAP_FEATURE % str(i) for i in range(shap_values.shape[1] - 1)]
 
     # plotting SHAP interaction values
     if len(shap_values.shape) == 3:
@@ -356,7 +371,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             pl.xlim((slow, shigh))
             pl.xlabel("")
             if i == max_display // 2:
-                pl.xlabel("SHAP interaction value")
+                pl.xlabel(SHAP_INTERACTION_VALUE)
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
         pl.subplots_adjust(hspace=0, wspace=0.1)
@@ -571,8 +586,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         m = cm.ScalarMappable(cmap=red_blue_solid if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0,1])
         cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
-        cb.set_ticklabels(["Low", "High"])
-        cb.set_label("Feature value", size=12, labelpad=0)
+        cb.set_ticklabels([SHAP_FEATURE_VALUE_LOW, SHAP_FEATURE_VALUE_HIGH])
+        cb.set_label(SHAP_FEATURE_VALUE, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
@@ -590,7 +605,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     pl.gca().tick_params('y', length=20, width=0.5, which='major')
     pl.gca().tick_params('x', labelsize=11)
     pl.ylim(-1, len(feature_order))
-    pl.xlabel("SHAP value (impact on model output)", fontsize=13)
+    pl.xlabel(SHAP_VALUE, fontsize=13)
     pl.tight_layout()
     if show:
         pl.show()
@@ -645,7 +660,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
 
     if shap_values.shape[0] == 1:
         if feature_names is None:
-            feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+            feature_names = [SHAP_FEATURE % str(i) for i in range(shap_values.shape[1] - 1)]
         if features is None:
             features = ["" for _ in range(len(feature_names))]
         if type(features) == np.ndarray:
@@ -671,7 +686,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         exps = []
         for i in range(shap_values.shape[0]):
             if feature_names is None:
-                feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+                feature_names = [SHAP_FEATURE % str(i) for i in range(shap_values.shape[1] - 1)]
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
@@ -709,7 +724,7 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
             feature_names = X.columns
         X = X.as_matrix()
     if feature_names is None:
-        feature_names = ["Feature %d" % i for i in range(X.shape[1])]
+        feature_names = [SHAP_FEATURE % str(i) for i in range(X.shape[1])]
 
     x = X[:, ind]
     xname = feature_names[ind]
@@ -742,7 +757,7 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
     sc = pl.scatter(x, y, s=20, c=joint_shap_values, edgecolor='', alpha=alpha, cmap=red_blue)
     pl.xlabel(xname, color=axis_color)
     pl.ylabel(yname, color=axis_color)
-    cb = pl.colorbar(sc, label="Joint SHAP value")
+    cb = pl.colorbar(sc, label=SHAP_JOINT_VALUE)
     cb.set_alpha(1)
     cb.draw_all()
 
@@ -785,9 +800,9 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
     cb.draw_all()
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
-    pl.ylabel("SHAP value for " + name, color=axis_color)
+    pl.ylabel(SHAP_VALUE_FOR % name, color=axis_color)
     if title is not None:
-        pl.title("SHAP plot for " + name, color=axis_color, fontsize=11)
+        pl.title(SHAP_PLOT_FOR % name, color=axis_color, fontsize=11)
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('left')
     pl.gca().spines['right'].set_visible(False)
@@ -817,9 +832,9 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", alpha=1, t
 
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
-    pl.ylabel("SHAP value for " + name, color=axis_color)
+    pl.ylabel(SHAP_VALUE_FOR % name, color=axis_color)
     if title is not None:
-        pl.title("SHAP plot for " + name, color=axis_color, fontsize=11)
+        pl.title(SHAP_PLOT_FOR % name, color=axis_color, fontsize=11)
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('left')
     pl.gca().spines['right'].set_visible(False)
