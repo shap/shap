@@ -132,7 +132,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         else:
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
 
-        # TODO: remove sick ugly recursion
+        # TODO: remove recursion; generally the functions should be shorter for more maintainable code
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=ind2, display_features=display_features, show=False
