@@ -1,11 +1,12 @@
 import warnings
-from scipy.stats import gaussian_kde
-from iml import Instance, Model, visualize
-from iml.explanations import AdditiveExplanation
-from iml.links import IdentityLink
-from iml.datatypes import DenseData
+
 import iml
 import numpy as np
+from iml import Instance, Model
+from iml.datatypes import DenseData
+from iml.explanations import AdditiveExplanation
+from iml.links import IdentityLink
+from scipy.stats import gaussian_kde
 
 try:
     import matplotlib.pyplot as pl
@@ -582,7 +583,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = pl.get_cmap(color)(i / (
-                            nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
+                        nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
         pl.xlim(shap_min, shap_max)
 
