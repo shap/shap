@@ -95,11 +95,11 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = features.columns
-        features = features.as_matrix()
+        features = features.values
     if str(type(display_features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = display_features.columns
-        display_features = display_features.as_matrix()
+        display_features = display_features.values
     elif display_features is None:
         display_features = features
 
@@ -312,7 +312,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = features.columns
-        features = features.as_matrix()
+        features = features.values
     elif str(type(features)) == "<class 'list'>":
         if feature_names is None:
             feature_names = features
@@ -555,7 +555,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             for i in range(nbins):
                 # get shap values in this bin:
                 shaps = shap_values[order[thesebins[i]:thesebins[i + 1]], ind]
-                # if there's only one element, then we can't 
+                # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
                         "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
@@ -646,11 +646,11 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = list(features.columns)
-        features = features.as_matrix()
+        features = features.values
     elif str(type(features)) == "<class 'pandas.core.series.Series'>":
         if feature_names is None:
             feature_names = list(features.index)
-        features = features.as_matrix()
+        features = features.values
     elif str(type(features)) == "list":
         if feature_names is None:
             feature_names = features
@@ -729,7 +729,7 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = X.columns
-        X = X.as_matrix()
+        X = X.values
     if feature_names is None:
         feature_names = [labels['FEATURE'] % str(i) for i in range(X.shape[1])]
 
@@ -786,7 +786,7 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = X.columns
-        X = X.as_matrix()
+        X = X.values
 
     x = X[:, ind]
     name = feature_names[ind]

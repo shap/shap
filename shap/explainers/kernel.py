@@ -40,7 +40,7 @@ def kmeans(X, k, round_values=True):
     group_names = [str(i) for i in range(X.shape[1])]
     if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
         group_names = X.columns
-        X = X.as_matrix()
+        X = X.values
     kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
 
     if round_values:
@@ -82,13 +82,13 @@ class KernelExplainer:
     def shap_values(self, X, **kwargs):
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.as_matrix()
+            X = X.values
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
                 column_name = list(X.columns)
-            X = X.as_matrix()
+            X = X.values
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
@@ -163,8 +163,8 @@ class KernelExplainer:
             model_null = self.model.f(self.data.data)
 
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
-            model_out = model_out.as_matrix()[0]
-            model_null = model_null.as_matrix()
+            model_out = model_out.values[0]
+            model_null = model_null.values
 
         self.fx = model_out[0]
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
@@ -359,7 +359,7 @@ class KernelExplainer:
             data = pd.concat([index, data], axis=1).set_index(self.data.index_name)
         modelOut = self.model.f(data)
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
-            modelOut = modelOut.as_matrix()
+            modelOut = modelOut.values
         # if len(modelOut.shape) > 1:
         #     raise ValueError("The supplied model function should output a vector not a matrix!")
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
