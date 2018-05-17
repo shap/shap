@@ -14,7 +14,7 @@ def run_setup(with_binary):
 
     setup(
         name='shap',
-        version='0.15.0',
+        version='0.16.0',
         description='A unified approach to explain the output of any machine learning model.',
         url='http://github.com/slundberg/shap',
         author='Scott Lundberg',
