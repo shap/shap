@@ -1,11 +1,12 @@
 import warnings
-from scipy.stats import gaussian_kde
-from iml import Instance, Model, visualize
-from iml.explanations import AdditiveExplanation
-from iml.links import IdentityLink
-from iml.datatypes import DenseData
+
 import iml
 import numpy as np
+from iml import Instance, Model
+from iml.datatypes import DenseData
+from iml.explanations import AdditiveExplanation
+from iml.links import IdentityLink
+from scipy.stats import gaussian_kde
 
 try:
     import matplotlib.pyplot as pl
@@ -47,6 +48,20 @@ try:
 except ImportError:
     pass
 
+labels = {
+    'MAIN_EFFECT': "SHAP main effect value for\n%s",
+    'INTERACTION_VALUE': "SHAP interaction value",
+    'INTERACTION_EFFECT': "SHAP interaction value for\n%s and %s",
+    'VALUE': "SHAP value (impact on model output)",
+    'VALUE_FOR': "SHAP value for\n%s",
+    'PLOT_FOR': "SHAP plot for %s",
+    'FEATURE': "Feature %s",
+    'FEATURE_VALUE': "Feature value",
+    'FEATURE_VALUE_LOW': "Low",
+    'FEATURE_VALUE_HIGH': "High",
+    'JOINT_VALUE': "Joint SHAP value"
+}
+
 
 # TODO: remove color argument / use color argument
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
@@ -80,16 +95,16 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = features.columns
-        features = features.as_matrix()
+        features = features.values
     if str(type(display_features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = display_features.columns
-        display_features = display_features.as_matrix()
+        display_features = display_features.values
     elif display_features is None:
         display_features = features
 
     if feature_names is None:
-        feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+        feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
 
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
@@ -118,21 +133,24 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             proj_shap_values = shap_values[:, ind2, :]
         else:
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
+
+        # TODO: remove recursion; generally the functions should be shorter for more maintainable code
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=ind2, display_features=display_features, show=False
         )
         if ind1 == ind2:
-            pl.ylabel("SHAP main effect value for\n" + feature_names[ind1])
+            pl.ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
         else:
-            pl.ylabel("SHAP interaction value for\n" + feature_names[ind1] + " and " + feature_names[ind2])
+            pl.ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
 
         if show:
             pl.show()
         return
 
-    assert shap_values.shape[0] == features.shape[0], "'shap_values' and 'features' values must have the same number of rows!"
-    assert shap_values.shape[1] == features.shape[1]+1, "'shap_values' must have one more column than 'features'!"
+    assert shap_values.shape[0] == features.shape[
+        0], "'shap_values' and 'features' values must have the same number of rows!"
+    assert shap_values.shape[1] == features.shape[1] + 1, "'shap_values' must have one more column than 'features'!"
 
     # get both the raw and display feature values
     xv = features[:, ind]
@@ -211,7 +229,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     else:
         pl.gcf().set_size_inches(6, 5)
     pl.xlabel(name, color=axis_color, fontsize=13)
-    pl.ylabel("SHAP value for\n" + name, color=axis_color, fontsize=13)
+    pl.ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
     if title is not None:
         pl.title(title, color=axis_color, fontsize=13)
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -289,12 +307,12 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     # default color:
     if color is None:
         color = "coolwarm" if plot_type == 'layered_violin' else "#ff0052"
-    
+
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = features.columns
-        features = features.as_matrix()
+        features = features.values
     elif str(type(features)) == "<class 'list'>":
         if feature_names is None:
             feature_names = features
@@ -304,7 +322,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         features = None
 
     if feature_names is None:
-        feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+        feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
 
     # plotting SHAP interaction values
     if len(shap_values.shape) == 3:
@@ -356,7 +374,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             pl.xlim((slow, shigh))
             pl.xlabel("")
             if i == max_display // 2:
-                pl.xlabel("SHAP interaction value")
+                pl.xlabel(labels['INTERACTION_VALUE'])
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
         pl.subplots_adjust(hspace=0, wspace=0.1)
@@ -391,7 +409,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             shaps = shaps[inds]
             colored_feature = True
             try:
-                values = np.array(values, dtype=np.float64) # make sure this can be numeric
+                values = np.array(values, dtype=np.float64)  # make sure this can be numeric
             except:
                 colored_feature = False
             N = len(shaps)
@@ -473,7 +491,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                     if leading_pos - trailing_pos > 0:
                         smooth_values[j] = running_sum / (leading_pos - trailing_pos)
                         for k in range(back_fill):
-                            smooth_values[j-k-1] = smooth_values[j]
+                            smooth_values[j - k - 1] = smooth_values[j]
                     else:
                         back_fill += 1
 
@@ -495,7 +513,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=red_blue_solid(smooth_values[i]), zorder=2)
+                                        [pos - ds[i], pos - ds[i + 1]], color=red_blue_solid(smooth_values[i]),
+                                        zorder=2)
 
         else:
             parts = pl.violinplot(shap_values[:, feature_order], range(len(feature_order)), points=200, vert=False,
@@ -507,12 +526,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 pc.set_edgecolor('none')
                 pc.set_alpha(alpha)
 
-    elif plot_type == "layered_violin": # courtesy of @kodonnell
+    elif plot_type == "layered_violin":  # courtesy of @kodonnell
         num_x_points = 200
-        bins = np.linspace(0, features.shape[0], layered_violin_max_num_bins + 1).round(0).astype('int') # the indices of the feature data corresponding to each bin
-        shap_min, shap_max = np.min(shap_values[:,:-1]), np.max(shap_values[:,:-1])
+        bins = np.linspace(0, features.shape[0], layered_violin_max_num_bins + 1).round(0).astype(
+            'int')  # the indices of the feature data corresponding to each bin
+        shap_min, shap_max = np.min(shap_values[:, :-1]), np.max(shap_values[:, :-1])
         x_points = np.linspace(shap_min, shap_max, num_x_points)
-        
+
         # loop through each feature and plot:
         for pos, ind in enumerate(feature_order):
             # decide how to handle: if #unique < layered_violin_max_num_bins then split by unique value, otherwise use bins/percentiles.
@@ -535,10 +555,11 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             for i in range(nbins):
                 # get shap values in this bin:
                 shaps = shap_values[order[thesebins[i]:thesebins[i + 1]], ind]
-                # if there's only one element, then we can't 
+                # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
-                    warnings.warn("not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot." 
-                    % (i, feature_names[ind]))
+                    warnings.warn(
+                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
+                        % (i, feature_names[ind]))
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0
                     if i > 0:
@@ -558,10 +579,11 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             # whitespace
             ys = np.cumsum(ys, axis=0)
             width = 0.8
-            scale = ys.max() * 2 / width # 2 is here as we plot both sides of x axis
+            scale = ys.max() * 2 / width  # 2 is here as we plot both sides of x axis
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
-                c = pl.get_cmap(color)(i / (nbins - 1)) if color in pl.cm.datad else color # if color is a cmap, use it, otherwise use a color
+                c = pl.get_cmap(color)(i / (
+                        nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
         pl.xlim(shap_min, shap_max)
 
@@ -569,10 +591,10 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if color_bar and features is not None and (plot_type != "layered_violin" or color in pl.cm.datad):
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=red_blue_solid if plot_type != "layered_violin" else pl.get_cmap(color))
-        m.set_array([0,1])
+        m.set_array([0, 1])
         cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
-        cb.set_ticklabels(["Low", "High"])
-        cb.set_label("Feature value", size=12, labelpad=0)
+        cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
+        cb.set_label(labels['FEATURE_VALUE'], size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
@@ -590,7 +612,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     pl.gca().tick_params('y', length=20, width=0.5, which='major')
     pl.gca().tick_params('x', labelsize=11)
     pl.ylim(-1, len(feature_order))
-    pl.xlabel("SHAP value (impact on model output)", fontsize=13)
+    pl.xlabel(labels['VALUE'], fontsize=13)
     pl.tight_layout()
     if show:
         pl.show()
@@ -624,11 +646,11 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = list(features.columns)
-        features = features.as_matrix()
+        features = features.values
     elif str(type(features)) == "<class 'pandas.core.series.Series'>":
         if feature_names is None:
             feature_names = list(features.index)
-        features = features.as_matrix()
+        features = features.values
     elif str(type(features)) == "list":
         if feature_names is None:
             feature_names = features
@@ -645,7 +667,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
 
     if shap_values.shape[0] == 1:
         if feature_names is None:
-            feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+            feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
         if features is None:
             features = ["" for _ in range(len(feature_names))]
         if type(features) == np.ndarray:
@@ -671,7 +693,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         exps = []
         for i in range(shap_values.shape[0]):
             if feature_names is None:
-                feature_names = ["Feature " + str(i) for i in range(shap_values.shape[1] - 1)]
+                feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
@@ -707,9 +729,9 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = X.columns
-        X = X.as_matrix()
+        X = X.values
     if feature_names is None:
-        feature_names = ["Feature %d" % i for i in range(X.shape[1])]
+        feature_names = [labels['FEATURE'] % str(i) for i in range(X.shape[1])]
 
     x = X[:, ind]
     xname = feature_names[ind]
@@ -742,7 +764,7 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
     sc = pl.scatter(x, y, s=20, c=joint_shap_values, edgecolor='', alpha=alpha, cmap=red_blue)
     pl.xlabel(xname, color=axis_color)
     pl.ylabel(yname, color=axis_color)
-    cb = pl.colorbar(sc, label="Joint SHAP value")
+    cb = pl.colorbar(sc, label=labels['JOINT_VALUE'])
     cb.set_alpha(1)
     cb.draw_all()
 
@@ -764,7 +786,7 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
     if str(type(X)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = X.columns
-        X = X.as_matrix()
+        X = X.values
 
     x = X[:, ind]
     name = feature_names[ind]
@@ -785,9 +807,9 @@ def interaction_plot(ind, X, shap_value_matrix, feature_names=None, interaction_
     cb.draw_all()
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
-    pl.ylabel("SHAP value for " + name, color=axis_color)
+    pl.ylabel(labels['VALUE_FOR'] % name, color=axis_color)
     if title is not None:
-        pl.title("SHAP plot for " + name, color=axis_color, fontsize=11)
+        pl.title(labels['PLOT_FOR'] % name, color=axis_color, fontsize=11)
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('left')
     pl.gca().spines['right'].set_visible(False)
@@ -817,9 +839,9 @@ def plot(x, shap_values, name, color="#ff0052", axis_color="#333333", alpha=1, t
 
     # make the plot more readable
     pl.xlabel(name, color=axis_color)
-    pl.ylabel("SHAP value for " + name, color=axis_color)
+    pl.ylabel(labels['VALUE_FOR'] % name, color=axis_color)
     if title is not None:
-        pl.title("SHAP plot for " + name, color=axis_color, fontsize=11)
+        pl.title(labels['PLOT_FOR'] % name, color=axis_color, fontsize=11)
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('left')
     pl.gca().spines['right'].set_visible(False)
