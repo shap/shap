@@ -68,9 +68,9 @@ class KernelExplainer:
 
         # warn users about large background data sets
         if len(self.data.weights) > 100:
-            log.warn("Using " + str(len(self.data.weights)) + " background data samples could cause " +
-                     "slower run times. Consider using shap.kmeans(data, K) to summarize the background " +
-                     "as K weighted samples.")
+            log.warning("Using " + str(len(self.data.weights)) + " background data samples could cause " +
+                        "slower run times. Consider using shap.kmeans(data, K) to summarize the background " +
+                        "as K weighted samples.")
 
         # init our parameters
         self.N = self.data.data.shape[0]
@@ -119,7 +119,7 @@ class KernelExplainer:
         # explain the whole dataset
         elif len(X.shape) == 2:
             explanations = []
-            for i in tqdm(range(X.shape[0])):
+            for i in tqdm(range(X.shape[0]), disable=kwargs.get("silent", False)):
                 data = X[i:i + 1, :]
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
