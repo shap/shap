@@ -46,9 +46,9 @@ class TreeExplainer:
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.as_matrix()
+            X = X.values
         elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
-            X = X.as_matrix()
+            X = X.values
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
@@ -182,9 +182,9 @@ class TreeExplainer:
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.as_matrix()
+            X = X.values
         elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
-            X = X.as_matrix()
+            X = X.values
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
