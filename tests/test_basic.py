@@ -106,3 +106,15 @@ def test_xgboost_multiclass():
 
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
+
+def test_mixed_types():
+    import xgboost
+    import shap
+    import numpy as np
+
+    X,y = shap.datasets.boston()
+    X["LSTAT"] = X["LSTAT"].astype(np.int64)
+    X["B"] = X["B"].astype(np.bool)
+    bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 1000)
+    shap_values = shap.TreeExplainer(bst).shap_values(X)
+    shap.dependence_plot(0, shap_values, X, show=False)

@@ -177,8 +177,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if interaction_index is not None:
         cv = features[:, interaction_index]
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(features[:, interaction_index], 5)
-        chigh = np.nanpercentile(features[:, interaction_index], 95)
+        clow = np.nanpercentile(features[:, interaction_index].astype(np.float), 5)
+        chigh = np.nanpercentile(features[:, interaction_index].astype(np.float), 95)
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
@@ -266,7 +266,7 @@ def approx_interactions(index, shap_values, X):
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
-        val_other = X[inds, i][srt]
+        val_other = X[inds, i][srt].astype(np.float)
         v = 0.0
         if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
