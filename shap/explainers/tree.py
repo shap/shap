@@ -34,10 +34,15 @@ except:
     print("catboost is installed...but failed to load!")
     pass
 
-def mapf(t):
-    self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
 
 class TreeExplainer:
+    """Uses the Tree SHAP method to explain the output of ensemble tree models.
+
+    Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles
+    of trees. It depends on fast C++ implementations either inside the package or in the
+    compiled C extention.
+    """
+
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
 
@@ -69,6 +74,21 @@ class TreeExplainer:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
     def shap_values(self, X, **kwargs):
+        """ Estimate the SHAP values for a set of samples.
+
+        Parameters
+        ----------
+        X : numpy.array or pandas.DataFrame
+            A matrix of samples (# samples x # features) on which to explain the model's output.
+
+        Returns
+        -------
+        For a models with a single output this returns a matrix of SHAP values
+        (# samples x # features + 1). The last column is the base value of the model, which is
+        the expected value of the model applied to the background dataset. This causes each row to
+        sum to the model output for that sample. For models with vector outputs this returns a list
+        of such matrices, one for each output.
+        """
 
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         phi = None
@@ -114,7 +134,6 @@ class TreeExplainer:
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
-            mapf = lambda t: self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
             pool = multiprocessing.Pool()
             self._current_X = X
             self._current_x_missing = x_missing

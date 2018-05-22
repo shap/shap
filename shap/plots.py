@@ -1,3 +1,6 @@
+""" Plots for feature attributions.
+"""
+
 import warnings
 
 import iml
@@ -281,8 +284,7 @@ def approx_interactions(index, shap_values, X):
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type="dot",
                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
                  color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20):
-    """
-    Create a SHAP summary plot, colored by feature values when they are provided.
+    """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
     ----------

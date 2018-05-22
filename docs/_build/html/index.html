@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to SHAP’s documentation! &#8212; SHAP 0.16 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.16',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="SHAP 0.16 documentation" href="#" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-shap-s-documentation">
+<h1>Welcome to SHAP&#8217;s documentation!<a class="headerlink" href="#welcome-to-shap-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="plots-module">
+<h1>plots module<a class="headerlink" href="#plots-module" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="shap.summary_plot">
+<code class="descclassname">shap.</code><code class="descname">summary_plot</code><span class="sig-paren">(</span><em>shap_values</em>, <em>features=None</em>, <em>feature_names=None</em>, <em>max_display=None</em>, <em>plot_type='dot'</em>, <em>color=None</em>, <em>axis_color='#333333'</em>, <em>title=None</em>, <em>alpha=1</em>, <em>show=True</em>, <em>sort=True</em>, <em>color_bar=True</em>, <em>auto_size_plot=True</em>, <em>layered_violin_max_num_bins=20</em><span class="sig-paren">)</span><a class="headerlink" href="#shap.summary_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a SHAP summary plot, colored by feature values when they are provided.</p>
+<dl class="docutils">
+<dt>shap_values</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">numpy.array</span><dd>Matrix of SHAP values (# samples x # features)</dd>
+<dt>features</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">numpy.array or pandas.DataFrame or list</span><dd>Matrix of feature values (# samples x # features) or a feature_names list as shorthand</dd>
+<dt>feature_names</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">list</span><dd>Names of the features (length # features)</dd>
+<dt>max_display</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd>How many top features to include in the plot (default is 20, or 7 for interaction plots)</dd>
+<dt>plot_type</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">&#8220;dot&#8221; (default) or &#8220;violin&#8221;</span><dd>What type of summary plot to produce</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="shap.dependence_plot">
+<code class="descclassname">shap.</code><code class="descname">dependence_plot</code><span class="sig-paren">(</span><em>ind</em>, <em>shap_values</em>, <em>features</em>, <em>feature_names=None</em>, <em>display_features=None</em>, <em>interaction_index='auto'</em>, <em>color='#1E88E5'</em>, <em>axis_color='#333333'</em>, <em>dot_size=16</em>, <em>alpha=1</em>, <em>title=None</em>, <em>show=True</em><span class="sig-paren">)</span><a class="headerlink" href="#shap.dependence_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a SHAP dependence plot, colored by an interaction feature.</p>
+<dl class="docutils">
+<dt>ind</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd>Index of the feature to plot.</dd>
+<dt>shap_values</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">numpy.array</span><dd>Matrix of SHAP values (# samples x # features)</dd>
+<dt>features</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">numpy.array or pandas.DataFrame</span><dd>Matrix of feature values (# samples x # features)</dd>
+<dt>feature_names</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">list</span><dd>Names of the features (length # features)</dd>
+<dt>display_features</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">numpy.array or pandas.DataFrame</span><dd>Matrix of feature values for visual display (such as strings instead of coded values)</dd>
+<dt>interaction_index</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">&#8220;auto&#8221;, None, or int</span><dd>The index of the feature used to color the plot.</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="shap.force_plot">
+<code class="descclassname">shap.</code><code class="descname">force_plot</code><span class="sig-paren">(</span><em>shap_values</em>, <em>features=None</em>, <em>feature_names=None</em>, <em>out_names=None</em>, <em>link='identity'</em>, <em>plot_cmap='RdBu'</em><span class="sig-paren">)</span><a class="headerlink" href="#shap.force_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize the given SHAP values with an additive force layout.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to SHAP&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#plots-module">plots module</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Scott Lundberg.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="_sources/index.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

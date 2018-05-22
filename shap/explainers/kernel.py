@@ -16,14 +16,13 @@ log = logging.getLogger('shap')
 
 
 def kmeans(X, k, round_values=True):
-    """
-    Summarize a dataset with k mean samples weighted by the number of
-    data points they each represent.
+    """ Summarize a dataset with k mean samples weighted by the number of data points they
+    each represent.
 
     Parameters
     ----------
     X : numpy.array or pandas.DataFrame
-        Matrix of data samples to summarise (# samples x # features)
+        Matrix of data samples to summarize (# samples x # features)
 
     k : int
         Number of means to use for approximation.
@@ -53,6 +52,39 @@ def kmeans(X, k, round_values=True):
 
 
 class KernelExplainer:
+    """Uses the Kernel SHAP method to explain the output of any function.
+
+    Kernel SHAP is a method that uses a special weighted linear regression
+    to compute the importance of each feature. The computed importance values
+    are Shapley values from game theory and also coefficents from a local linear
+    regression.
+
+
+    Parameters
+    ----------
+    model : function or iml.Model
+        User supplied function that takes a matrix of samples (# samples x # features) and
+        computes a the output of the model for those samples. The output can be a vector
+        (# samples) or a matrix (# samples x # model outputs).
+
+    data : numpy.array or pandas.DataFrame or iml.DenseData
+        The background dataset to use for integrating out features. To determine the impact
+        of a feature, that feature is set to "missing" and the change in the model output
+        is observed. Since most models aren't designed to handle arbitrary missing data at test
+        time, we simulate "missing" by replacing the feature with the values it takes in the
+        background dataset. So if the background dataset is a simple sample of all zeros, then
+        we would approximate a feature being missing by setting it to zero. For small problems
+        this background datset can be the whole training set, but for larger problems consider
+        using a single reference value or using the kmeans function to summarize the dataset.
+
+    link : "identity" or "logit"
+        A generalized linear model link to connect the feature importance values to the model
+        output. Since the feature importance values, phi, sum up to the model output, it often makes
+        sense to connect them to the ouput with a link function where link(outout) = sum(phi).
+        If the model output is a probability then the LogitLink link function makes the feature
+        importance values have log-odds units.
+    """
+
     def __init__(self, model, data, link=IdentityLink(), **kwargs):
 
         # convert incoming inputs to standardized iml objects
@@ -80,6 +112,30 @@ class KernelExplainer:
         self.nsamplesRun = 0
 
     def shap_values(self, X, **kwargs):
+        """ Estimate the SHAP values for a set of samples.
+
+        Parameters
+        ----------
+        X : numpy.array or pandas.DataFrame
+            A matrix of samples (# samples x # features) on which to explain the model's output.
+
+        nsamples : "auto" or int
+            Number of times to re-evaluate the model when explaining each prediction. More samples
+            lead to lower variance estimates of the SHAP values.
+
+        l1_reg : "auto" or float
+            The l1 regularization to use for feature selection (the estimation procedure is based on
+            a debiased lasso). Set this to zero to remove the feature selection step before estimation.
+
+        Returns
+        -------
+        For a models with a single output this returns a matrix of SHAP values
+        (# samples x # features + 1). The last column is the base value of the model, which is
+        the expected value of the model applied to the background dataset. This causes each row to
+        sum to the model output for that sample. For models with vector outputs this returns a list
+        of such matrices, one for each output.
+        """
+
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.values
@@ -196,8 +252,8 @@ class KernelExplainer:
             self.l1_reg = kwargs.get("l1_reg", "auto")
 
             # pick a reasonable number of samples if the user didn't specify how many they wanted
-            self.nsamples = kwargs.get("nsamples", 0)
-            if self.nsamples == 0:
+            self.nsamples = kwargs.get("nsamples", "auto")
+            if self.nsamples == "auto":
                 self.nsamples = 2 * self.M + 2**11
 
             # if we have enough samples to enumerate all subsets then ignore the unneeded samples
