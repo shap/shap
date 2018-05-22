@@ -2,8 +2,10 @@ import numpy as np
 import multiprocessing
 import sys
 
+have_cext = False
 try:
     from .. import _cext
+    have_cext = True
 except ImportError:
     pass
 except:
@@ -167,8 +169,8 @@ class TreeExplainer:
         return phi
 
     def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
-
         # start the recursive algorithm
+        assert have_cext, "C extension was not built during install!"
         _cext.tree_shap(
             tree.max_depth, tree.children_left, tree.children_right, tree.children_default, tree.features,
             tree.thresholds, tree.values, tree.node_sample_weight,
@@ -187,6 +189,7 @@ class Tree:
         self.node_sample_weight = node_sample_weight
 
         # we compute the expectations to make sure they follow the SHAP logic
+        assert have_cext, "C extension was not built during install!"
         self.max_depth = _cext.compute_expectations(
             self.children_left, self.children_right, self.node_sample_weight,
             self.values
