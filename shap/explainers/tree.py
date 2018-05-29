@@ -66,6 +66,12 @@ class TreeExplainer:
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.trees = model
+        elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
+            self.model_type = "lightgbm"
+            self.trees = model.booster_
+        elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
+            self.model_type = "lightgbm"
+            self.trees = model.booster_
         elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
             self.model_type = "catboost"
             self.trees = model
@@ -100,6 +106,8 @@ class TreeExplainer:
             phi = self.trees.predict(X, pred_contribs=True)
         elif self.model_type == "lightgbm":
             phi = self.trees.predict(X, pred_contrib=True)
+            if phi.shape[1] != X.shape[1] + 1:
+                phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
             phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 

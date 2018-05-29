@@ -14,7 +14,7 @@ def run_setup(with_binary):
 
     setup(
         name='shap',
-        version='0.16.2',
+        version='0.17.0',
         description='A unified approach to explain the output of any machine learning model.',
         url='http://github.com/slundberg/shap',
         author='Scott Lundberg',
@@ -23,7 +23,7 @@ def run_setup(with_binary):
         packages=['shap', 'shap.explainers'],
         install_requires=['numpy', 'scipy', 'iml>=0.6.0', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm'],
         test_suite='nose.collector',
-        tests_require=['nose', 'xgboost'],
+        tests_require=['nose', 'xgboost', 'lightgbm'],
         ext_modules = ext_modules,
         zip_safe=False
     )
