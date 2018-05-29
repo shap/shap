@@ -23,7 +23,7 @@ def run_setup(with_binary):
         packages=['shap', 'shap.explainers'],
         install_requires=['numpy', 'scipy', 'iml>=0.6.0', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm'],
         test_suite='nose.collector',
-        tests_require=['nose', 'xgboost', 'lightgbm'],
+        tests_require=['nose', 'xgboost'], # , 'lightgbm'
         ext_modules = ext_modules,
         zip_safe=False
     )
