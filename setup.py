@@ -43,6 +43,7 @@ def run_setup(with_binary):
 
 try:
     run_setup(True)
-except:
+except e:
+    print(e)
     print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
     run_setup(False)
