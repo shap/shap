@@ -119,6 +119,21 @@ def test_mixed_types():
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
 
+def test_sklearn_multiclass():
+    import shap
+    from sklearn.ensemble import RandomForestClassifier
+
+    X, y = shap.datasets.iris()
+    y[y == 2] = 1
+    model = RandomForestClassifier(n_estimators=100, max_depth=None, min_samples_split=2, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    assert np.abs(shap_values[0][0,0] - 0.05) < 1e-3
+    assert np.abs(shap_values[1][0,0] + 0.05) < 1e-3
+
 # def test_lightgbm():
 #     import lightgbm
 #     import shap
