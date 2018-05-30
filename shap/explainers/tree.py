@@ -98,7 +98,7 @@ class TreeExplainer:
         of such matrices, one for each output.
         """
 
-        # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
+        # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
         phi = None
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):

@@ -123,7 +123,7 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
       const unsigned values_offset = node_index * num_outputs;
       const tfloat scale = w * (el.one_fraction - el.zero_fraction) * condition_fraction;
       for (unsigned j = 0; j < num_outputs; ++j) {
-        phi[phi_offset + j] += scale * values[values_offset];
+        phi[phi_offset + j] += scale * values[values_offset + j];
       }
     }
 
@@ -243,3 +243,31 @@ inline void tree_shap(const unsigned M, const unsigned num_outputs, const unsign
   );
   delete[] unique_path_data;
 }
+
+// inline void tree_shap(const unsigned M, const unsigned num_outputs, const unsigned max_depth,
+//                       const int *children_left, const int *children_right,
+//                       const int *children_default, const int *features,
+//                       const tfloat *thresholds, const tfloat *values,
+//                       const tfloat *node_sample_weight,
+//                       const tfloat *x, const bool *x_missing,
+//                       tfloat *out_contribs, int condition,
+//                       unsigned condition_feature) {
+//
+//   // update the reference value with the expected value of the tree's predictions
+//   if (condition == 0) {
+//     for (unsigned j = 0; j < num_outputs; ++j) {
+//       out_contribs[M * num_outputs + j] += values[j];
+//     }
+//   }
+//
+//   // Preallocate space for the unique path data
+//   const unsigned maxd = max_depth + 2; // need a bit more space than the max depth
+//   PathElement *unique_path_data = new PathElement[(maxd * (maxd + 1)) / 2];
+//
+//   tree_shap_recursive(
+//     num_outputs, children_left, children_right, children_default, features, thresholds, values,
+//     node_sample_weight, x, x_missing, out_contribs, 0, 0, unique_path_data,
+//     1, 1, -1, condition, condition_feature, 1
+//   );
+//   delete[] unique_path_data;
+// }
