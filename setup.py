@@ -20,7 +20,7 @@ def run_setup(with_binary):
     ext_modules = []
     if with_binary:
         ext_modules.append(
-            Extension('shap._cext', sources=['shap/_cext.cc'], include_dirs=[numpy.get_include()])
+            Extension('shap._cext', sources=['shap/_cext.cc'])
         )
 
     setup(
