@@ -9,12 +9,12 @@ from setuptools.command.build_ext import build_ext as _build_ext
 # that are needed to build C extensions.
 # see https://stackoverflow.com/questions/19919905/how-to-bootstrap-numpy-installation-in-setup-py
 class build_ext(_build_ext):
-    def run(self):
-#         _build_ext.finalize_options(self)
-#         __builtins__.__NUMPY_SETUP__ = False
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
+        __builtins__.__NUMPY_SETUP__ = False
         import numpy
+        print("numpy.get_include()", numpy.get_include())
         self.include_dirs.append(numpy.get_include())
-        build_ext.run(self)
 
 
 def run_setup(with_binary):
@@ -34,6 +34,7 @@ def run_setup(with_binary):
         license='MIT',
         packages=['shap', 'shap.explainers'],
         cmdclass={'build_ext': build_ext},
+        setup_requires=['numpy'],
         install_requires=['numpy', 'scipy', 'iml>=0.6.0', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm'],
         test_suite='nose.collector',
         tests_require=['nose', 'xgboost'],
