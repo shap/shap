@@ -615,7 +615,6 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     pl.gca().tick_params('x', labelsize=11)
     pl.ylim(-1, len(feature_order))
     pl.xlabel(labels['VALUE'], fontsize=13)
-    pl.tight_layout()
     if show:
         pl.show()
 
