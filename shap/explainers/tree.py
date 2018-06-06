@@ -81,7 +81,7 @@ class TreeExplainer:
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-    def shap_values(self, X, **kwargs):
+    def shap_values(self, X, tree_limit=-1, **kwargs):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -103,9 +103,11 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            phi = self.trees.predict(X, pred_contribs=True)
+            if tree_limit==-1:
+                tree_limit=0
+            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
-            phi = self.trees.predict(X, pred_contrib=True)
+            phi = self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
@@ -159,13 +161,15 @@ class TreeExplainer:
             else:
                 return [phi[:, :, i] for i in range(self.n_outputs)]
 
-    def shap_interaction_values(self, X, **kwargs):
+    def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
 
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            return self.trees.predict(X, pred_interactions=True)
+            if tree_limit==-1:
+                tree_limit=0
+            return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
         else:
             raise Exception("Interaction values not yet supported for model type: " + self.model_type)
 
