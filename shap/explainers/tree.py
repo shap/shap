@@ -144,13 +144,14 @@ class TreeExplainer:
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
-            pool = multiprocessing.Pool()
             self._current_X = X
             self._current_x_missing = x_missing
 
             # Only python 3 can serialize a method to send to another process
             if sys.version_info[0] >= 3:
+                pool = multiprocessing.Pool()
                 phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
+                pool.close()
             else:
                 phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
 
@@ -165,7 +166,11 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            return self.trees.predict(X, pred_interactions=True)
+            phi = self.trees.predict(X, pred_interactions=True)
+            if len(phi.shape) == 4:
+                return [phi[:, i, :, :] for i in range(phi.shape[1])]
+            else:
+                return phi
         else:
             raise Exception("Interaction values not yet supported for model type: " + self.model_type)
 

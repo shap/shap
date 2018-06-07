@@ -51,11 +51,23 @@ try:
 except ImportError:
     pass
 
+default_colors = ["#1E88E5", "#ff0052", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
+
+blue_rgba = np.array([0.11764705882352941, 0.5333333333333333, 0.8980392156862745, 1.0])
+
+default_colors = []
+tmp = blue_rgba.copy()
+for i in range(10):
+    default_colors.append(tmp.copy())
+    if tmp[-1] > 0.1:
+        tmp[-1] *= 0.7
+
 labels = {
     'MAIN_EFFECT': "SHAP main effect value for\n%s",
     'INTERACTION_VALUE': "SHAP interaction value",
     'INTERACTION_EFFECT': "SHAP interaction value for\n%s and %s",
     'VALUE': "SHAP value (impact on model output)",
+    'GLOBAL_VALUE': "mean(|SHAP value|) (average impact on model output magnitude)",
     'VALUE_FOR': "SHAP value for\n%s",
     'PLOT_FOR': "SHAP plot for %s",
     'FEATURE': "Feature %s",
@@ -283,7 +295,7 @@ def approx_interactions(index, shap_values, X):
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type="dot",
                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20):
+                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -304,11 +316,16 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         What type of summary plot to produce
     """
 
-    assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
+    multi_class = False
+    if str(type(shap_values)).endswith("list'>"):
+        multi_class = True
+        plot_type = "bar" # only type supported for now
+    else:
+        assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
     if color is None:
-        color = "coolwarm" if plot_type == 'layered_violin' else "#ff0052"
+        color = "coolwarm" if plot_type == 'layered_violin' else "#1E88E5" #"#ff0052"
 
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -323,11 +340,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         feature_names = features
         features = None
 
+    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1]) - 1
+
     if feature_names is None:
-        feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
+        feature_names = [labels['FEATURE'] % str(i) for i in range(num_features)]
 
     # plotting SHAP interaction values
-    if len(shap_values.shape) == 3:
+    if not multi_class and len(shap_values.shape) == 3:
         if max_display is None:
             max_display = 7
         else:
@@ -343,7 +362,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         slow = -v
         shigh = v
 
-        pl.figure(figsize=(1.5 * max_display + 1, 1 * max_display + 1))
+        pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
         pl.subplot(1, max_display, 1)
         proj_shap_values = shap_values[:, sort_inds[0], np.hstack((sort_inds, len(sort_inds)))]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
@@ -358,7 +377,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         pl.xlabel("")
         title_length_limit = 11
         pl.title(shorten_text(feature_names[sort_inds[0]], title_length_limit))
-        for i in range(1, max_display):
+        for i in range(1, min(len(sort_inds), max_display)):
             ind = sort_inds[i]
             pl.subplot(1, max_display, i + 1)
             proj_shap_values = shap_values[:, ind, np.hstack((sort_inds, len(sort_inds)))]
@@ -389,10 +408,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     if sort:
         # order features by the sum of their effect magnitudes
-        feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
+        if multi_class:
+            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=0), axis=0)[:-1])
+        else:
+            feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
         feature_order = feature_order[-min(max_display, len(feature_order)):]
     else:
-        feature_order = np.flip(np.arange(min(max_display, shap_values.shape[1] - 1)), 0)
+        feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
 
     row_height = 0.4
     if auto_size_plot:
@@ -589,8 +611,42 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
         pl.xlim(shap_min, shap_max)
 
+    elif not multi_class and plot_type == "bar":
+        feature_inds = feature_order[:max_display]
+        y_pos = np.arange(len(feature_inds))
+        global_shap_values = np.abs(shap_values).mean(0)
+        pl.barh(y_pos, global_shap_values[feature_inds], 0.7, align='center', color=color)
+        pl.yticks(y_pos, fontsize=13)
+        pl.gca().set_yticklabels([feature_names[i] for i in feature_inds])
+
+    elif multi_class and plot_type == "bar":
+        if class_names is None:
+            class_names = ["Class "+str(i) for i in range(len(shap_values))]
+        #print("feature_order", feature_order)
+        feature_inds = feature_order[:max_display]
+        y_pos = np.arange(len(feature_inds))
+        left_pos = np.zeros(len(feature_inds))
+        #print("feature_inds", feature_inds)
+
+        class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
+        for i,ind in enumerate(class_inds):
+            global_shap_values = np.abs(shap_values[ind]).mean(0)
+            #print("global_shap_values", global_shap_values)
+
+            #print("default_colors", default_colors)
+            #print("np.min(i, len(default_colors)-1)", min(i, len(default_colors)-1))
+            pl.barh(
+                y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
+                color=default_colors[min(i, len(default_colors)-1)], label=class_names[ind]
+            )
+            left_pos += global_shap_values[feature_inds]
+        pl.yticks(y_pos, fontsize=13)
+        pl.gca().set_yticklabels([feature_names[i] for i in feature_inds])
+        pl.legend(frameon=False, fontsize=12)
+
     # draw the color bar
-    if color_bar and features is not None and (plot_type != "layered_violin" or color in pl.cm.datad):
+    if color_bar and features is not None and plot_type != "bar" and \
+            (plot_type != "layered_violin" or color in pl.cm.datad):
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=red_blue_solid if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
@@ -611,10 +667,14 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     pl.gca().spines['left'].set_visible(False)
     pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
     pl.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
-    pl.gca().tick_params('y', length=20, width=0.5, which='major')
+    if plot_type != "bar":
+        pl.gca().tick_params('y', length=20, width=0.5, which='major')
     pl.gca().tick_params('x', labelsize=11)
     pl.ylim(-1, len(feature_order))
-    pl.xlabel(labels['VALUE'], fontsize=13)
+    if plot_type == "bar":
+        pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
+    else:
+        pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
 
