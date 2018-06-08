@@ -5,6 +5,7 @@ from iml.datatypes import Data, DenseData
 from iml.links import Link, IdentityLink, LogitLink
 from iml.common import Instance, Model
 from .explainers.kernel import KernelExplainer, kmeans
+from .explainers.sampling import SamplingExplainer
 from .explainers.tree import TreeExplainer
 from .plots import visualize, plot, summary_plot, joint_plot, interaction_plot, dependence_plot, force_plot
 from iml.visualizers import initjs, SimpleListVisualizer, SimpleListVisualizer, AdditiveForceVisualizer, \

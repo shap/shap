@@ -111,6 +111,24 @@ class KernelExplainer:
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
 
+        # find E_x[f(x)]
+        if self.keep_index:
+            model_null = self.model.f(self.data.convert_to_df())
+        else:
+            model_null = self.model.f(self.data.data)
+        if isinstance(model_null, (pd.DataFrame, pd.Series)):
+            model_null = model_null.values
+        self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
+        
+        # see if we have a vector output
+        self.vector_out = True
+        if len(self.fnull.shape) == 0:
+            self.vector_out = False
+            self.fnull = np.array([self.fnull])
+            self.D = 1
+        else:
+            self.D = self.fnull.shape[0]
+
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
 
@@ -210,29 +228,17 @@ class KernelExplainer:
         self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
         self.M = len(self.varyingFeatureGroups)
 
-        # find f(x) and E_x[f(x)]
+        # find f(x)
         if self.keep_index:
             model_out = self.model.f(instance.convert_to_df())
-            model_null = self.model.f(self.data.convert_to_df())
         else:
             model_out = self.model.f(instance.x)
-            model_null = self.model.f(self.data.data)
-
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values[0]
-            model_null = model_null.values
-
         self.fx = model_out[0]
-        self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
 
-        self.vector_out = True
-        if len(model_out.shape) == 1:
-            self.vector_out = False
-            self.D = 1
+        if not self.vector_out:
             self.fx = np.array([self.fx])
-            self.fnull = np.array([self.fnull])
-        else:
-            self.D = model_out.shape[1]
 
         # if no features vary then there no feature has an effect
         if self.M == 0:

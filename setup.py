@@ -24,10 +24,15 @@ def run_setup(with_binary):
             Extension('shap._cext', sources=['shap/_cext.cc'])
         )
 
+    with open("README.md", "r") as fh:
+        long_description = fh.read()
+
     setup(
         name='shap',
-        version='0.18.0',
+        version='0.19.0',
         description='A unified approach to explain the output of any machine learning model.',
+        long_description=long_description,
+        long_description_content_type="text/markdown",
         url='http://github.com/slundberg/shap',
         author='Scott Lundberg',
         author_email='slund1@cs.washington.edu',
