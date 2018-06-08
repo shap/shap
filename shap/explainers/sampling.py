@@ -28,7 +28,7 @@ class SamplingExplainer(KernelExplainer):
         super(SamplingExplainer, self).__init__(model, data, **kwargs)
         log.setLevel(level)
 
-        assert type(self.link) == IdentityLink, "SamplingExplainer only supports IdentityLink not " + str(self.link)
+        assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)
 
     def explain(self, incoming_instance, **kwargs):
         # convert incoming input to a standardized iml object
