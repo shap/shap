@@ -51,7 +51,7 @@ def kmeans(X, k, round_values=True):
     return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
 
 
-class KernelExplainer:
+class KernelExplainer(object):
     """Uses the Kernel SHAP method to explain the output of any function.
 
     Kernel SHAP is a method that uses a special weighted linear regression
@@ -119,7 +119,7 @@ class KernelExplainer:
         if isinstance(model_null, (pd.DataFrame, pd.Series)):
             model_null = model_null.values
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
-        
+
         # see if we have a vector output
         self.vector_out = True
         if len(self.fnull.shape) == 0:
