@@ -16,7 +16,7 @@ class SamplingExplainer(KernelExplainer):
 
     SamplingExplainer computes SHAP values under the assumption of feature independence and is an
     extension of the algorithm proposed in "An Efficient Explanation of Individual Classifications
-    using Game Theory", Erik Štrumbelj, Igor Kononenko, JMLR 2010. It is a good alternative to
+    using Game Theory", Erik Strumbelj, Igor Kononenko, JMLR 2010. It is a good alternative to
     KernelExplainer when you want to use a large background set (as opposed to a single reference
     value for example).
     """
