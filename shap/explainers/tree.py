@@ -1,10 +1,11 @@
 import numpy as np
 import multiprocessing
 import sys
+from functools import partial
 
 have_cext = False
 try:
-    from .. import _cext
+    from shap import _cext
     have_cext = True
 except ImportError:
     pass
@@ -65,10 +66,12 @@ class TreeExplainer:
             self.trees = model.get_booster()
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
-            self.trees = model
+            self.model = model
+            self.trees = [Tree(e,num_trees=len(model.dump_model()["tree_info"])) for e in model.dump_model()["tree_info"]]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             self.model_type = "lightgbm"
-            self.trees = model.booster_
+            self.model = model.booster_
+            self.trees = [Tree(e,num_trees=len(model.dump_model()["tree_info"])) for e in model.booster_.dump_model()["tree_info"]]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
             self.model_type = "lightgbm"
             self.trees = model.booster_
@@ -81,7 +84,7 @@ class TreeExplainer:
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-    def shap_values(self, X, **kwargs):
+    def shap_values(self, X, tree_limit=-1, **kwargs):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -103,9 +106,11 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            phi = self.trees.predict(X, pred_contribs=True)
+            if tree_limit==-1:
+                tree_limit=0
+            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
-            phi = self.trees.predict(X, pred_contrib=True)
+            phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
@@ -124,10 +129,9 @@ class TreeExplainer:
             X = X.values
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
-
+        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!" + str(len(X.shape))
+        
         self.n_outputs = self.trees[0].values.shape[1]
-
         # single instance
         if len(X.shape) == 1:
 
@@ -160,24 +164,69 @@ class TreeExplainer:
             else:
                 return [phi[:, :, i] for i in range(self.n_outputs)]
 
-    def shap_interaction_values(self, X, **kwargs):
+    def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
 
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            phi = self.trees.predict(X, pred_interactions=True)
+            if tree_limit==-1:
+                tree_limit=0
+            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
             if len(phi.shape) == 4:
                 return [phi[:, i, :, :] for i in range(phi.shape[1])]
             else:
                 return phi
         else:
-            raise Exception("Interaction values not yet supported for model type: " + self.model_type)
+            if str(type(X)).endswith("pandas.core.series.Series'>"):
+                X = X.values
+            elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+                X = X.values
 
-    def _tree_shap_ind(self, i):
+            assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+            assert len(X.shape) == 2, "Instance must have 2 dimensions!"
+
+            self.n_outputs = self.trees[0].values.shape[1]
+
+            x_missing = np.zeros(X.shape[1], dtype=np.bool)
+            pool = multiprocessing.Pool()
+            self._current_X = X
+            self._current_x_missing = x_missing
+
+            # Only python 3 can serialize a method to send to another process
+            if sys.version_info[0] >= 3:
+                phi = np.stack(pool.map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
+            else:
+                phi = np.stack(map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
+
+            if self.n_outputs == 1:
+                return phi[:, :, :, 0]
+            else:
+                return [phi[:, :, :, i] for i in range(self.n_outputs)]
+
+    def _tree_shap_ind(self, i, condition=0, condition_feature=0):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
         for t in self.trees:
-            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi)
+            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi, condition, condition_feature)
+        phi /= len(self.trees)
+        return phi
+
+    def _tree_shap_ind_interactions(self, i, condition=0, condition_feature=0):
+        phi = np.zeros((self._current_X.shape[1] + 1, self._current_X.shape[1] + 1, self.n_outputs))
+        phi_diag = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
+        for t in self.trees:
+            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_diag, condition, condition_feature)
+            unique_features = np.unique(t.features)
+            unique_features = np.delete(unique_features, np.where(unique_features==-1))
+            for j in unique_features:
+                phi_on = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
+                phi_off = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
+                self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_on, 1, j)
+                self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_off, -1, j)
+                phi[j] += np.true_divide(np.subtract(phi_on,phi_off),2.0)
+                phi_diag[j] -= np.sum(np.true_divide(np.subtract(phi_on,phi_off),2.0))
+        for j in range(self._current_X.shape[1]+1):
+            phi[j][j] = phi_diag[j]
         phi /= len(self.trees)
         return phi
 
@@ -199,8 +248,6 @@ class Tree:
         self.features = feature.astype(np.int32)
         self.thresholds = threshold
         self.values = value
-        self.node_sample_weight = node_sample_weight
-
         # we compute the expectations to make sure they follow the SHAP logic
         assert have_cext, "C extension was not built during install!"
         self.max_depth = _cext.compute_expectations(
@@ -208,7 +255,7 @@ class Tree:
             self.values
         )
 
-    def __init__(self, tree, normalize=False):
+    def __init__(self, tree, normalize=False, num_trees=0):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
@@ -224,6 +271,59 @@ class Tree:
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
 
             # we compute the expectations to make sure they follow the SHAP logic
+            self.max_depth = _cext.compute_expectations(
+                self.children_left, self.children_right, self.node_sample_weight,
+                self.values
+            )
+        elif str(type(tree)).endswith("<type 'dict'>"):
+            start = tree['tree_structure']
+            num_parents = tree['num_leaves']-1
+            self.children_left = np.empty((2*num_parents+1), dtype=np.int32)
+            self.children_right = np.empty((2*num_parents+1), dtype=np.int32)
+            self.children_default = np.empty((2*num_parents+1), dtype=np.int32)
+            self.features = np.empty((2*num_parents+1), dtype=np.int32)
+            self.thresholds = np.empty((2*num_parents+1), dtype=np.float64)
+            self.values = [-2]*(2*num_parents+1)
+            self.node_sample_weight = np.empty((2*num_parents+1), dtype=np.float64)
+            visited, queue = [], [start]
+            while queue:
+                vertex = queue.pop(0)
+                if 'split_index' in vertex.keys():
+                    if vertex['split_index'] not in visited:
+                        if 'split_index' in vertex['left_child'].keys():
+                            self.children_left[vertex['split_index']] = vertex['left_child']['split_index']
+                        else:
+                            self.children_left[vertex['split_index']] = vertex['left_child']['leaf_index']+num_parents
+                        if 'split_index' in vertex['right_child'].keys():
+                            self.children_right[vertex['split_index']] = vertex['right_child']['split_index']
+                        else:
+                            self.children_right[vertex['split_index']] = vertex['right_child']['leaf_index']+num_parents
+                        if vertex['default_left']:
+                            self.children_default[vertex['split_index']] = self.children_left[vertex['split_index']]
+                        else:
+                            self.children_default[vertex['split_index']] = self.children_right[vertex['split_index']]
+                        self.features[vertex['split_index']] = vertex['split_feature']
+                        self.thresholds[vertex['split_index']] = vertex['threshold']
+                        self.values[vertex['split_index']] = [vertex['internal_value']]
+                        self.node_sample_weight[vertex['split_index']] = vertex['internal_count']
+                        visited.append(vertex['split_index'])
+                        queue.append(vertex['left_child'])
+                        queue.append(vertex['right_child'])
+                else:
+                    self.children_left[vertex['leaf_index']+num_parents] = -1
+                    self.children_right[vertex['leaf_index']+num_parents] = -1
+                    self.children_default[vertex['leaf_index']+num_parents] = -1
+                    self.features[vertex['leaf_index']+num_parents] = -1
+                    self.children_left[vertex['leaf_index']+num_parents] = -1
+                    self.children_right[vertex['leaf_index']+num_parents] = -1
+                    self.children_default[vertex['leaf_index']+num_parents] = -1
+                    self.features[vertex['leaf_index']+num_parents] = -1
+                    self.thresholds[vertex['leaf_index']+num_parents] = -1
+                    self.values[vertex['leaf_index']+num_parents] = [vertex['leaf_value']]
+                    self.node_sample_weight[vertex['leaf_index']+num_parents] = vertex['leaf_count']
+            self.values = np.asarray(self.values)
+            self.values = np.multiply(self.values, num_trees)
+            assert have_cext, "C extension was not built during install!" + str(have_cext)
             self.max_depth = _cext.compute_expectations(
                 self.children_left, self.children_right, self.node_sample_weight,
                 self.values
