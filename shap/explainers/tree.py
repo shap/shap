@@ -84,7 +84,7 @@ class TreeExplainer:
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-    def shap_values(self, X, old, tree_limit=-1, **kwargs):
+    def shap_values(self, X, tree_limit=-1, **kwargs):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -110,10 +110,9 @@ class TreeExplainer:
                 tree_limit=0
             phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
-            if old:
-                phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
-                if phi.shape[1] != X.shape[1] + 1:
-                    phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
+            phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
+            if phi.shape[1] != X.shape[1] + 1:
+                phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
             phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
@@ -210,9 +209,7 @@ class TreeExplainer:
     def _tree_shap_ind_interactions(self, i, condition=0, condition_feature=0):
         phi = np.zeros((self._current_X.shape[1] + 1, self._current_X.shape[1] + 1, self.n_outputs))
         phi_diag = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
-        phi_diag_sum = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
         for t in self.trees:
-            #phi_diag = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
             self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_diag, condition, condition_feature)
             unique_features = np.unique(t.features)
             unique_features = np.delete(unique_features, np.where(unique_features==-1))
@@ -222,10 +219,9 @@ class TreeExplainer:
                 self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_on, 1, j)
                 self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_off, -1, j)
                 phi[j] += np.true_divide(np.subtract(phi_on,phi_off),2.0)
-                phi_diag_sum[j] -= np.sum(np.true_divide(np.subtract(phi_on,phi_off),2.0))
-        phi_diag_sum += phi_diag
+                phi_diag[j] -= np.sum(np.true_divide(np.subtract(phi_on,phi_off),2.0))
         for j in range(self._current_X.shape[1]+1):
-            phi[j][j] = phi_diag_sum[j]
+            phi[j][j] = phi_diag[j]
         phi /= len(self.trees)
         return phi
 
