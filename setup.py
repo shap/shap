@@ -11,13 +11,16 @@ from setuptools.command.build_ext import build_ext as _build_ext
 class build_ext(_build_ext):
     def finalize_options(self):
         _build_ext.finalize_options(self)
-        __builtins__.__NUMPY_SETUP__ = False
+        if isinstance(__builtins__, dict):
+            __builtins__["__NUMPY_SETUP__"] = False
+        else:
+            setattr(__builtins__, "__NUMPY_SETUP__", False)
         import numpy
         print("numpy.get_include()", numpy.get_include())
         self.include_dirs.append(numpy.get_include())
 
 
-def run_setup(with_binary):
+def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
     ext_modules = []
     if with_binary:
         ext_modules.append(
@@ -26,6 +29,15 @@ def run_setup(with_binary):
 
     with open("README.md", "r") as fh:
         long_description = fh.read()
+
+    if test_xgboost and test_lightgbm:
+        tests_require = ['nose', 'xgboost', 'lightgbm']
+    elif test_xgboost:
+        tests_require = ['nose', 'xgboost']
+    elif test_lightgbm:
+        tests_require = ['nose', 'lightgbm']
+    else:
+        tests_require = ['nose']
 
     setup(
         name='shap',
@@ -42,14 +54,35 @@ def run_setup(with_binary):
         setup_requires=['numpy'],
         install_requires=['numpy', 'scipy', 'iml>=0.6.0', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm'],
         test_suite='nose.collector',
-        tests_require=['nose', 'xgboost'], # , 'lightgbm'
-        ext_modules = ext_modules,
+        tests_require=tests_require,
+        ext_modules=ext_modules,
         zip_safe=False
     )
 
-try:
-    run_setup(True)
-except Exception as e:
-    print(e)
-    print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-    run_setup(False)
+
+def try_run_setup(**kwargs):
+    """ Fails gracefully when various install steps don't work.
+    """
+
+    try:
+        run_setup(**kwargs)
+    except Exception as e:
+        print(str(e))
+        if "xgboost" in str(e).lower():
+            kwargs["test_xgboost"] = False
+            print("Couldn't install XGBoost for testing!")
+            try_run_setup(**kwargs)
+        elif "lightgbm" in str(e).lower():
+            kwargs["test_lightgbm"] = False
+            print("Couldn't install LightGBM for testing!")
+            try_run_setup(**kwargs)
+        elif kwargs["with_binary"]:
+            kwargs["with_binary"] = False
+            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+            try_run_setup(**kwargs)
+        else:
+            print("ERROR: Failed to build!")
+
+# we seem to need this import guard for appveyor
+if __name__ == "__main__":
+    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
