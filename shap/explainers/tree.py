@@ -66,14 +66,18 @@ class TreeExplainer:
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.model = model
-            self.trees = [Tree(e, num_trees=len(model.dump_model()["tree_info"])) for e in model.dump_model()["tree_info"]]
+            tree_info = self.model.dump_model()["tree_info"]
+            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             self.model_type = "lightgbm"
             self.model = model.booster_
-            self.trees = [Tree(e, num_trees=len(model.booster_.dump_model()["tree_info"])) for e in model.booster_.dump_model()["tree_info"]]
+            tree_info = self.model.dump_model()["tree_info"]
+            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
             self.model_type = "lightgbm"
-            self.trees = model.booster_
+            self.model = model.booster_
+            tree_info = self.model.dump_model()["tree_info"]
+            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
             self.model_type = "catboost"
             self.trees = model
@@ -105,14 +109,15 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            if tree_limit==-1:
-                tree_limit=0
+            if tree_limit == -1:
+                tree_limit = 0
             phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
             phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
+            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
         if phi is not None:
@@ -182,6 +187,7 @@ class TreeExplainer:
             else:
                 return phi
         else:
+            
             if str(type(X)).endswith("pandas.core.series.Series'>"):
                 X = X.values
             elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
@@ -189,6 +195,13 @@ class TreeExplainer:
 
             assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
             assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
+
+            self.n_outputs = self.trees[0].values.shape[1]
+
+            x_missing = np.zeros(X.shape[1], dtype=np.bool)
+            pool = multiprocessing.Pool()
+            self._current_X = X
+            self._current_x_missing = x_missing
 
             if tree_limit<0 or tree_limit>len(self.trees):
                 self.tree_limit = len(self.trees)
@@ -281,7 +294,6 @@ class Tree:
         self.node_sample_weight = node_sample_weight
         self.unique_features = np.unique(self.features)
         self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
-
         # we compute the expectations to make sure they follow the SHAP logic
         assert have_cext, "C extension was not built during install!"
         self.max_depth = _cext.compute_expectations(
@@ -289,7 +301,7 @@ class Tree:
             self.values
         )
 
-    def __init__(self, tree, normalize=False, num_trees=0):
+    def __init__(self, tree, normalize=False, scaling=0):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
@@ -358,7 +370,7 @@ class Tree:
                     self.values[vertex['leaf_index']+num_parents] = [vertex['leaf_value']]
                     self.node_sample_weight[vertex['leaf_index']+num_parents] = vertex['leaf_count']
             self.values = np.asarray(self.values)
-            self.values = np.multiply(self.values, num_trees)
+            self.values = np.multiply(self.values, scaling)
             self.unique_features = np.unique(self.features)
             self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
 
