@@ -65,16 +65,17 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
     print("Setup is complete!")
 
 # xgboost can't be installed from pip on windows
-if os.name == 'nt':
-    print("Building on Windows, so skipping XGBoost tests...")
-    try:
-        run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
-    except Exception as e:
-        print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-        run_setup(with_binary=False, test_xgboost=False, test_lightgbm=True)
-else:
-    try:
-        run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
-    except Exception as e:
-        print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-        run_setup(with_binary=False, test_xgboost=True, test_lightgbm=True)
+if __name__ == "__main__":
+    if os.name == 'nt':
+        print("Building on Windows, so skipping XGBoost tests...")
+        try:
+            run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
+        except Exception as e:
+            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+            run_setup(with_binary=False, test_xgboost=False, test_lightgbm=True)
+    else:
+        try:
+            run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
+        except Exception as e:
+            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+            run_setup(with_binary=False, test_xgboost=True, test_lightgbm=True)
