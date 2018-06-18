@@ -21,6 +21,8 @@ class build_ext(_build_ext):
 
 
 def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
+    print("run_setup(with_binary=%r, test_xgboost=%r, test_lightgbm=%r)" % (with_binary, test_xgboost, test_lightgbm))
+
     ext_modules = []
     if with_binary:
         ext_modules.append(
@@ -39,6 +41,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
     else:
         tests_require = ['nose']
 
+    print("tests_require = %r" % tests_require)
+
     setup(
         name='shap',
         version='0.19.0',
@@ -55,7 +59,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         install_requires=['numpy', 'scipy', 'iml>=0.6.0', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm'],
         test_suite='nose.collector',
         tests_require=tests_require,
-        ext_modules = ext_modules,
+        ext_modules=ext_modules,
         zip_safe=False
     )
 

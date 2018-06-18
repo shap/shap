@@ -1,7 +1,7 @@
 language: python
 python:
   - "2.7"
-  - "3.4"
+  - "3.6"
 # command to install dependencies
 install:
   - pip install .
