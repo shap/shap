@@ -227,6 +227,7 @@ class TreeExplainer:
         phi_diag = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
         for t in self.trees:
             self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_diag, condition, condition_feature)
+            # TODO: Find the unique features in the constructor not inside this loop
             unique_features = np.unique(t.features)
             unique_features = np.delete(unique_features, np.where(unique_features==-1))
             for j in unique_features:
