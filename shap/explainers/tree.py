@@ -206,7 +206,7 @@ class TreeExplainer:
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
         for t in self.trees:
-            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi, condition, condition_feature)
+            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi)
         phi /= len(self.trees)
         return phi
 
