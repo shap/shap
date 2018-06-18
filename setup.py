@@ -20,8 +20,11 @@ class build_ext(_build_ext):
         print("numpy.get_include()", numpy.get_include())
         self.include_dirs.append(numpy.get_include())
 
+setup_complete = False
 
 def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
+    global setup_complete
+    if setup_complete: exit() # appveyor seems to try and run this again
     print("run_setup(with_binary=%r, test_xgboost=%r, test_lightgbm=%r)" % (with_binary, test_xgboost, test_lightgbm))
 
     ext_modules = []
@@ -41,9 +44,6 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         tests_require = ['nose', 'lightgbm']
     else:
         tests_require = ['nose']
-
-    if test_xgboost:
-        raise Exception("xgboost")
 
     print("tests_require = %r" % tests_require)
 
@@ -66,6 +66,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         ext_modules=ext_modules,
         zip_safe=False
     )
+    print("Setup is complete!")
+    setup_complete = True
 
 
 def try_run_setup(**kwargs):
