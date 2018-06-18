@@ -92,7 +92,7 @@ def try_run_setup(**kwargs):
             print("ERROR: Failed to build!")
 
 # xgboost can't be installed from pip on windows
-if os.name == 'nt'
+if os.name == 'nt':
     try_run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
 else:
     try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
