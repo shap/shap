@@ -20,11 +20,7 @@ class build_ext(_build_ext):
         print("numpy.get_include()", numpy.get_include())
         self.include_dirs.append(numpy.get_include())
 
-setup_complete = False
-
 def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
-    global setup_complete
-    if setup_complete: exit() # appveyor seems to try and run this again
     print("run_setup(with_binary=%r, test_xgboost=%r, test_lightgbm=%r)" % (with_binary, test_xgboost, test_lightgbm))
 
     ext_modules = []
@@ -67,34 +63,18 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         zip_safe=False
     )
     print("Setup is complete!")
-    setup_complete = True
-
-
-def try_run_setup(**kwargs):
-    """ Fails gracefully when various install steps don't work.
-    """
-
-    try:
-        run_setup(**kwargs)
-    except Exception as e:
-        print(str(e))
-        if "xgboost" in str(e).lower():
-            kwargs["test_xgboost"] = False
-            print("Couldn't install XGBoost for testing!")
-            try_run_setup(**kwargs)
-        elif "lightgbm" in str(e).lower():
-            kwargs["test_lightgbm"] = False
-            print("Couldn't install LightGBM for testing!")
-            try_run_setup(**kwargs)
-        elif kwargs["with_binary"]:
-            kwargs["with_binary"] = False
-            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-            try_run_setup(**kwargs)
-        else:
-            print("ERROR: Failed to build!")
 
 # xgboost can't be installed from pip on windows
 if os.name == 'nt':
-    try_run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
+    print("Building on Windows, so skipping XGBoost tests...")
+    try:
+        run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
+    except Exception as e:
+        print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+        run_setup(with_binary=False, test_xgboost=False, test_lightgbm=True)
 else:
-    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
+    try:
+        run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
+    except Exception as e:
+        print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+        run_setup(with_binary=False, test_xgboost=True, test_lightgbm=True)
