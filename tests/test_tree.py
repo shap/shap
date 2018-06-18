@@ -146,6 +146,9 @@ def test_lightgbm_multiclass():
     # explain the model's predictions using SHAP values
     shap_values = shap.TreeExplainer(model).shap_values(X)
     
+    # ensure plot works for first class
+    shap.dependence_plot(0, shap_values[0], X, show=False)
+    
 def test_sklearn_interaction():
     import sklearn
     from sklearn.model_selection import train_test_split
@@ -162,7 +165,3 @@ def test_sklearn_interaction():
                     assert abs(interaction_vals[i][j][k][l]-interaction_vals[i][j][l][k])<0.0000001
             if j<len(interaction_vals[i])-1:
                 assert abs(interaction_vals[i][j][len(interaction_vals[i][j])-1][len(interaction_vals[i][j])-1]-interaction_vals[i][j+1][len(interaction_vals[i][j])-1][len(interaction_vals[i][j])-1])<0.0000001
-
-
-    # ensure plot works for first class
-    shap.dependence_plot(0, shap_values[0], X, show=False)
