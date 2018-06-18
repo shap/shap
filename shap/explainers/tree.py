@@ -66,14 +66,18 @@ class TreeExplainer:
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.model = model
-            self.trees = [Tree(e,num_trees=len(model.dump_model()["tree_info"])) for e in model.dump_model()["tree_info"]]
+            tree_info = self.model.dump_model()["tree_info"]
+            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             self.model_type = "lightgbm"
             self.model = model.booster_
-            self.trees = [Tree(e,num_trees=len(model.dump_model()["tree_info"])) for e in model.booster_.dump_model()["tree_info"]]
+            tree_info = self.model.dump_model()["tree_info"]
+            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
             self.model_type = "lightgbm"
-            self.trees = model.booster_
+            self.model = model.booster_
+            tree_info = self.model.dump_model()["tree_info"]
+            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
             self.model_type = "catboost"
             self.trees = model
@@ -254,7 +258,7 @@ class Tree:
             self.values
         )
 
-    def __init__(self, tree, normalize=False, num_trees=0):
+    def __init__(self, tree, normalize=False, scaling=0):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
@@ -321,7 +325,7 @@ class Tree:
                     self.values[vertex['leaf_index']+num_parents] = [vertex['leaf_value']]
                     self.node_sample_weight[vertex['leaf_index']+num_parents] = vertex['leaf_count']
             self.values = np.asarray(self.values)
-            self.values = np.multiply(self.values, num_trees)
+            self.values = np.multiply(self.values, scaling)
             assert have_cext, "C extension was not built during install!" + str(have_cext)
             self.max_depth = _cext.compute_expectations(
                 self.children_left, self.children_right, self.node_sample_weight,
