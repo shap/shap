@@ -6,7 +6,11 @@ import shap
 
 
 def test_front_page_xgboost():
-    import xgboost
+    try:
+        import xgboost
+    except Exception as e:
+        print("Skipping test_front_page_xgboost!")
+        return
     import shap
 
     # load JS visualization code to notebook
@@ -61,7 +65,11 @@ def test_front_page_sklearn():
     shap.summary_plot(shap_values, X, show=False)
 
 def test_xgboost_multiclass():
-    import xgboost
+    try:
+        import xgboost
+    except Exception as e:
+        print("Skipping test_xgboost_multiclass!")
+        return
     import shap
 
     # train XGBoost model
@@ -75,8 +83,12 @@ def test_xgboost_multiclass():
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
 
-def test_mixed_types():
-    import xgboost
+def test_xgboost_mixed_types():
+    try:
+        import xgboost
+    except Exception as e:
+        print("Skipping test_xgboost_mixed_types!")
+        return
     import shap
     import numpy as np
 
@@ -102,29 +114,37 @@ def test_sklearn_multiclass():
     assert np.abs(shap_values[0][0,0] - 0.05) < 1e-3
     assert np.abs(shap_values[1][0,0] + 0.05) < 1e-3
 
-# def test_lightgbm():
-#     import lightgbm
-#     import shap
-#
-#     # train XGBoost model
-#     X, y = shap.datasets.boston()
-#     model = lightgbm.sklearn.LGBMRegressor()
-#     model.fit(X, y)
-#
-#     # explain the model's predictions using SHAP values
-#     shap_values = shap.TreeExplainer(model).shap_values(X)
-#
-# def test_lightgbm_multiclass():
-#     import lightgbm
-#     import shap
-#
-#     # train XGBoost model
-#     X, Y = shap.datasets.iris()
-#     model = lightgbm.sklearn.LGBMClassifier()
-#     model.fit(X, Y)
-#
-#     # explain the model's predictions using SHAP values
-#     shap_values = shap.TreeExplainer(model).shap_values(X)
-#
-#     # ensure plot works for first class
-#     shap.dependence_plot(0, shap_values[0], X, show=False)
+def test_lightgbm():
+    try:
+        import lightgbm
+    except Exception as e:
+        print("Skipping test_lightgbm!")
+        return
+    import shap
+
+    # train XGBoost model
+    X, y = shap.datasets.boston()
+    model = lightgbm.sklearn.LGBMRegressor()
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    shap_values = shap.TreeExplainer(model).shap_values(X)
+
+def test_lightgbm_multiclass():
+    try:
+        import lightgbm
+    except Exception as e:
+        print("Skipping test_lightgbm_multiclass!")
+        return
+    import shap
+
+    # train XGBoost model
+    X, Y = shap.datasets.iris()
+    model = lightgbm.sklearn.LGBMClassifier()
+    model.fit(X, Y)
+
+    # explain the model's predictions using SHAP values
+    shap_values = shap.TreeExplainer(model).shap_values(X)
+
+    # ensure plot works for first class
+    shap.dependence_plot(0, shap_values[0], X, show=False)
