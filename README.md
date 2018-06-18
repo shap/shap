@@ -76,8 +76,6 @@ To get an overview of which features are most important for a model we can plot 
 shap.summary_plot(shap_values, X)
 ```
 
-For LightGBM calculations, expectations are taken without regard to sample weighting. 
-
 <p align="center">
   <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot.png" />
 </p>

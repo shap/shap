@@ -1,11 +1,10 @@
 import numpy as np
 import multiprocessing
 import sys
-from functools import partial
 
 have_cext = False
 try:
-    from shap import _cext
+    from .. import _cext
     have_cext = True
 except ImportError:
     pass
@@ -129,7 +128,7 @@ class TreeExplainer:
             X = X.values
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!" + str(len(X.shape))
+        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
         
         self.n_outputs = self.trees[0].values.shape[1]
         # single instance
@@ -204,7 +203,7 @@ class TreeExplainer:
             else:
                 return [phi[:, :, :, i] for i in range(self.n_outputs)]
 
-    def _tree_shap_ind(self, i, condition=0, condition_feature=0):
+    def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
         for t in self.trees:
             self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi, condition, condition_feature)
