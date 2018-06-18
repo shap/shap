@@ -109,14 +109,15 @@ class TreeExplainer:
         if self.model_type == "xgboost":
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
-            if tree_limit==-1:
-                tree_limit=0
+            if tree_limit == -1:
+                tree_limit = 0
             phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
             phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
+            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
         if phi is not None:
@@ -133,6 +134,8 @@ class TreeExplainer:
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
+        # TODO: support tree_limit
+        assert tree_limit == -1, "tree_limit is not yet supported for sklearn models!"
         
         self.n_outputs = self.trees[0].values.shape[1]
         # single instance
@@ -181,12 +184,17 @@ class TreeExplainer:
             else:
                 return phi
         else:
+            # TODO: support tree_limit
+            assert tree_limit == -1, "tree_limit is not yet supported for sklearn and LightGBM interaction effects!"
+            
             if str(type(X)).endswith("pandas.core.series.Series'>"):
                 X = X.values
             elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
                 X = X.values
 
             assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+            # TODO: support vector inputs for interaction effects
+            assert len(X.shape) != 1, "Interaction effects currently can't handle vector inputs, please pass a matrix."
             assert len(X.shape) == 2, "Instance must have 2 dimensions!"
 
             self.n_outputs = self.trees[0].values.shape[1]
