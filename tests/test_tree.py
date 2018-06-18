@@ -148,7 +148,9 @@ def test_lightgbm_multiclass():
     
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
-    
+   
+# TODO: Test tree_limit argument
+
 def test_sklearn_interaction():
     import sklearn
     from sklearn.model_selection import train_test_split
