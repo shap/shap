@@ -198,11 +198,6 @@ class TreeExplainer:
 
             self.n_outputs = self.trees[0].values.shape[1]
 
-            x_missing = np.zeros(X.shape[1], dtype=np.bool)
-            pool = multiprocessing.Pool()
-            self._current_X = X
-            self._current_x_missing = x_missing
-
             if tree_limit<0 or tree_limit>len(self.trees):
                 self.tree_limit = len(self.trees)
             else:
