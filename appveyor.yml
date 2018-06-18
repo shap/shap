@@ -1,120 +1,46 @@
 environment:
-  global:
-    # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
-    # /E:ON and /V:ON options are not enabled in the batch script intepreter
-    # See: http://stackoverflow.com/a/13751649/163740
-    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
-
-  # password:
-  #   secure: P2e7kP/2kOXij6nJNO75wA==
 
   matrix:
 
-    # Pre-installed Python versions, which Appveyor may upgrade to
-    # a later point release.
-    # See: http://www.appveyor.com/docs/installed-software#python
+    # For Python versions available on Appveyor, see
+    # http://www.appveyor.com/docs/installed-software#python
+    # The list here is complete (excluding Python 2.6, which
+    # isn't covered by this document) at the time of writing.
 
     - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7" # currently 2.7.9
-      PYTHON_ARCH: "32"
-      MINICONDA: C:\Miniconda
-
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7" # currently 2.7.9
-      PYTHON_ARCH: "64"
-      MINICONDA: C:\Miniconda-x64
-
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4" # currently 3.4.3
-      PYTHON_ARCH: "32"
-      MINICONDA: C:\Miniconda3
-
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4" # currently 3.4.3
-      PYTHON_ARCH: "64"
-      MINICONDA: C:\Miniconda3-x64
-
-    # Python versions not pre-installed
-
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "32"
-      MINICONDA: C:\Miniconda3
-
+    - PYTHON: "C:\\Python27-x64"
     - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "64"
-      MINICONDA: C:\Miniconda3-x64
-
-    - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "32"
-      MINICONDA: C:\Miniconda3
-
     - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
-      MINICONDA: C:\Miniconda3-x64
 
 install:
-  # If there is a newer build queued for the same PR, cancel this one.
-  # The AppVeyor 'rollout builds' option is supposed to serve the same
-  # purpose but it is problematic because it tends to cancel builds pushed
-  # directly to master instead of just PR builds (or the converse).
-  # credits: JuliaLang developers.
-  - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
-        https://ci.appveyor.com/api/projects/$env:APPVEYOR_ACCOUNT_NAME/$env:APPVEYOR_PROJECT_SLUG/history?recordsNumber=50).builds | `
-        Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
-          throw "There are newer queued builds for this pull request, failing early." }
-  - ECHO "Filesystem root:"
-  - ps: "ls \"C:/\""
+  # We need wheel installed to build wheels
+  - "%PYTHON%\\python.exe -m pip install wheel"
 
-  - ECHO "Installed SDKs:"
-  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
-
-  # Install Python (from the official .msi of http://python.org) and pip when
-  # not already installed.
-  - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
-
-  # Prepend newly installed Python to the PATH of this build (this cannot be
-  # done from inside the powershell script as it would require to restart
-  # the parent CMD process).
-
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
-  # We need to install numpy, scipy and matplotlib through conda
-  - "conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy"
-  - activate test-environment
-
-  # Upgrade to the latest version of pip to avoid it displaying warnings
-  # about it being out of date.
-  - "%CMD_IN_ENV% pip install --disable-pip-version-check --user --upgrade pip"
-
-  # Install the build dependencies of the project. If some dependencies contain
-  # compiled extensions and are not provided as pre-built wheel packages,
-  # pip will build them from source using the MSVC compiler matching the
-  # target Python version and architecture
-  - "%CMD_IN_ENV% pip install -r dev-requirements.txt"
-  - "%CMD_IN_ENV% pip install twine"
-
-build_script:
-  # Build the compiled extension
-  - "%CMD_IN_ENV% python setup.py build"
+build: off
 
 test_script:
-  # Run the project tests
-  - "%CMD_IN_ENV% python setup.py test"
+  # Put your test command here.
+  # If you don't need to build C extensions on 64-bit Python 3.3 or 3.4,
+  # you can remove "build.cmd" from the front of the command, as it's
+  # only needed to support those cases.
+  # Note that you must use the environment variable %PYTHON% to refer to
+  # the interpreter you're using - Appveyor does not do anything special
+  # to put the Python version you want to use on PATH.
+  - "build.cmd %PYTHON%\\python.exe setup.py test"
 
 after_test:
-  # If tests are successful, create binary packages for the project.
-  - "%CMD_IN_ENV% python setup.py bdist_wheel"
-  - ps: "ls dist"
+  # This step builds your wheels.
+  # Again, you only need build.cmd if you're building C extensions for
+  # 64-bit Python 3.3/3.4. And you need to use %PYTHON% to get the correct
+  # interpreter
+  - "build.cmd %PYTHON%\\python.exe setup.py bdist_wheel"
 
 artifacts:
-  # Archive the generated packages in the ci.appveyor.com build report.
+  # bdist_wheel puts your built wheel in the dist directory
   - path: dist\*
 
-# deploy_script:
-#   - if "%APPVEYOR_REPO_TAG%"=="true" ( twine upload -u jmschreiber -p %password% --skip-existing dist/* ) else ( echo "Not deplaying because not a tagged commit.")
+#on_success:
+#  You can use this step to upload your artifacts to a public website.
+#  See Appveyor's documentation for more details. Or you can simply
+#  access your wheels from the Appveyor "artifacts" tab for your build.
