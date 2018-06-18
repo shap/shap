@@ -1,6 +1,5 @@
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
-import os
 
 # to publish use:
 # > python setup.py sdist upload
@@ -20,9 +19,8 @@ class build_ext(_build_ext):
         print("numpy.get_include()", numpy.get_include())
         self.include_dirs.append(numpy.get_include())
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
-    print("run_setup(with_binary=%r, test_xgboost=%r, test_lightgbm=%r)" % (with_binary, test_xgboost, test_lightgbm))
 
+def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
     ext_modules = []
     if with_binary:
         ext_modules.append(
@@ -40,8 +38,6 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         tests_require = ['nose', 'lightgbm']
     else:
         tests_require = ['nose']
-
-    print("tests_require = %r" % tests_require)
 
     setup(
         name='shap',
@@ -62,20 +58,31 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         ext_modules=ext_modules,
         zip_safe=False
     )
-    print("Setup is complete!")
 
-# xgboost can't be installed from pip on windows
+
+def try_run_setup(**kwargs):
+    """ Fails gracefully when various install steps don't work.
+    """
+
+    try:
+        run_setup(**kwargs)
+    except Exception as e:
+        print(str(e))
+        if "xgboost" in str(e).lower():
+            kwargs["test_xgboost"] = False
+            print("Couldn't install XGBoost for testing!")
+            try_run_setup(**kwargs)
+        elif "lightgbm" in str(e).lower():
+            kwargs["test_lightgbm"] = False
+            print("Couldn't install LightGBM for testing!")
+            try_run_setup(**kwargs)
+        elif kwargs["with_binary"]:
+            kwargs["with_binary"] = False
+            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+            try_run_setup(**kwargs)
+        else:
+            print("ERROR: Failed to build!")
+
+# we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    if os.name == 'nt':
-        print("Building on Windows, so skipping XGBoost tests...")
-        try:
-            run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
-        except Exception as e:
-            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-            run_setup(with_binary=False, test_xgboost=False, test_lightgbm=True)
-    else:
-        try:
-            run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
-        except Exception as e:
-            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-            run_setup(with_binary=False, test_xgboost=True, test_lightgbm=True)
+    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
