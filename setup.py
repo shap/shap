@@ -1,5 +1,6 @@
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
+import os
 
 # to publish use:
 # > python setup.py sdist upload
@@ -40,6 +41,9 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         tests_require = ['nose', 'lightgbm']
     else:
         tests_require = ['nose']
+
+    if test_xgboost:
+        raise Exception("xgboost")
 
     print("tests_require = %r" % tests_require)
 
@@ -87,4 +91,8 @@ def try_run_setup(**kwargs):
         else:
             print("ERROR: Failed to build!")
 
-try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
+# xgboost can't be installed from pip on windows
+if os.name == 'nt'
+    try_run_setup(with_binary=True, test_xgboost=False, test_lightgbm=True)
+else:
+    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
