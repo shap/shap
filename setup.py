@@ -73,9 +73,11 @@ def try_run_setup(**kwargs):
             kwargs["test_lightgbm"] = False
             print("Couldn't install LightGBM for testing!")
             try_run_setup(**kwargs)
-        else:
+        elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
             try_run_setup(**kwargs)
+        else:
+            print("ERROR: Failed to build!")
 
 try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
