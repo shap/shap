@@ -260,6 +260,8 @@ class Tree:
         self.features = feature.astype(np.int32)
         self.thresholds = threshold
         self.values = value
+        self.node_sample_weight = node_sample_weight
+        
         # we compute the expectations to make sure they follow the SHAP logic
         assert have_cext, "C extension was not built during install!"
         self.max_depth = _cext.compute_expectations(
