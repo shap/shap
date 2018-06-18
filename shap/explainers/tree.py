@@ -143,17 +143,14 @@ class TreeExplainer:
         self.n_outputs = self.trees[0].values.shape[1]
         # single instance
         if len(X.shape) == 1:
-
-            phi = np.zeros((X.shape[0] + 1, self.n_outputs))
-            x_missing = np.zeros(X.shape[0], dtype=np.bool)
-            for t in range(self.tree_limit):
-                self.tree_shap(self.trees[t], X, x_missing, phi)
-            phi /= self.tree_limit
+            self._current_X = X.reshape(1,X.shape[0])
+            self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
+            phi = self.c_tree_shap_ind(0)
 
             if self.n_outputs == 1:
-                return phi[:, 0]
+                return phi[0, :, 0]
             else:
-                return [phi[:, i] for i in range(self.n_outputs)]
+                return [phi[0, :, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
@@ -206,25 +203,13 @@ class TreeExplainer:
             self.n_outputs = self.trees[0].values.shape[1]
             # single instance            
             if len(X.shape) == 1:
-                phi = np.zeros((self.X.shape[0] + 1, self.X.shape[0] + 1, self.n_outputs))
-                phi_diag = np.zeros((self.X.shape[0] + 1, self.n_outputs))
-                x_missing = np.zeros(X.shape[0], dtype=np.bool)
-                for t in range(self.tree_limit):
-                    self.tree_shap(self.trees[t], X, x_missing, phi_diag)
-                    for j in self.trees[t].unique_features:
-                        phi_on = np.zeros((self.X.shape[0] + 1, self.n_outputs))
-                        phi_off = np.zeros((self.X.shape[0] + 1, self.n_outputs))
-                        self.tree_shap(self.trees[t], X, x_missing, phi_on, 1, j)
-                        self.tree_shap(self.trees[t], X, x_missing, phi_off, -1, j)
-                        phi[j] += np.true_divide(np.subtract(phi_on,phi_off),2.0)
-                        phi_diag[j] -= np.sum(np.true_divide(np.subtract(phi_on,phi_off),2.0))
-                for j in range(self.X.shape[0]+1):
-                    phi[j][j] = phi_diag[j]
-                phi /= self.tree_limit
+                self._current_X = X.reshape(1,X.shape[0])
+                self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
+                phi = self._tree_shap_ind_interactions(0)
                 if self.n_outputs == 1:
-                    return phi[:, :, 0]
+                    return phi[0, :, :, 0]
                 else:
-                    return [phi[:, :, i] for i in range(self.n_outputs)]                
+                    return [phi[0, :, :, i] for i in range(self.n_outputs)]                
 
             elif len(X.shape) == 2:
                 x_missing = np.zeros(X.shape[1], dtype=np.bool)
