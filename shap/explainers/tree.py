@@ -134,23 +134,23 @@ class TreeExplainer:
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
-        # TODO: support tree_limit
-        assert tree_limit == -1, "tree_limit is not yet supported for sklearn models!"
-        
+
+        if tree_limit<0 or tree_limit>len(self.trees):
+            self.tree_limit = len(self.trees)
+        else:
+            self.tree_limit = tree_limit
+ 
         self.n_outputs = self.trees[0].values.shape[1]
         # single instance
         if len(X.shape) == 1:
-
-            phi = np.zeros((X.shape[0] + 1, self.n_outputs))
-            x_missing = np.zeros(X.shape[0], dtype=np.bool)
-            for t in self.trees:
-                self.tree_shap(t, X, x_missing, phi)
-            phi /= len(self.trees)
+            self._current_X = X.reshape(1,X.shape[0])
+            self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
+            phi = self.c_tree_shap_ind(0)
 
             if self.n_outputs == 1:
-                return phi[:, 0]
+                return phi[0, :, 0]
             else:
-                return [phi[:, i] for i in range(self.n_outputs)]
+                return [phi[0, :, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
@@ -184,8 +184,6 @@ class TreeExplainer:
             else:
                 return phi
         else:
-            # TODO: support tree_limit
-            assert tree_limit == -1, "tree_limit is not yet supported for sklearn and LightGBM interaction effects!"
             
             if str(type(X)).endswith("pandas.core.series.Series'>"):
                 X = X.values
@@ -193,53 +191,66 @@ class TreeExplainer:
                 X = X.values
 
             assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-            # TODO: support vector inputs for interaction effects
-            assert len(X.shape) != 1, "Interaction effects currently can't handle vector inputs, please pass a matrix."
-            assert len(X.shape) == 2, "Instance must have 2 dimensions!"
+            assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
             self.n_outputs = self.trees[0].values.shape[1]
 
-            x_missing = np.zeros(X.shape[1], dtype=np.bool)
-            pool = multiprocessing.Pool()
-            self._current_X = X
-            self._current_x_missing = x_missing
-
-            # Only python 3 can serialize a method to send to another process
-            if sys.version_info[0] >= 3:
-                phi = np.stack(pool.map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
+            if tree_limit<0 or tree_limit>len(self.trees):
+                self.tree_limit = len(self.trees)
             else:
-                phi = np.stack(map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
+                self.tree_limit = tree_limit
 
-            if self.n_outputs == 1:
-                return phi[:, :, :, 0]
-            else:
-                return [phi[:, :, :, i] for i in range(self.n_outputs)]
+            self.n_outputs = self.trees[0].values.shape[1]
+            # single instance            
+            if len(X.shape) == 1:
+                self._current_X = X.reshape(1,X.shape[0])
+                self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
+                phi = self._tree_shap_ind_interactions(0)
+                if self.n_outputs == 1:
+                    return phi[0, :, :, 0]
+                else:
+                    return [phi[0, :, :, i] for i in range(self.n_outputs)]                
+
+            elif len(X.shape) == 2:
+                x_missing = np.zeros(X.shape[1], dtype=np.bool)
+                self._current_X = X
+                self._current_x_missing = x_missing
+
+                # Only python 3 can serialize a method to send to another process
+                if sys.version_info[0] >= 3:
+                    pool = multiprocessing.Pool()
+                    phi = np.stack(pool.map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
+                    pool.close()
+                else:
+                    phi = np.stack(map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
+
+                if self.n_outputs == 1:
+                    return phi[:, :, :, 0]
+                else:
+                    return [phi[:, :, :, i] for i in range(self.n_outputs)]
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
-        for t in self.trees:
-            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi)
-        phi /= len(self.trees)
+        for t in range(self.tree_limit):
+            self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi)
+        phi /= self.tree_limit
         return phi
 
-    def _tree_shap_ind_interactions(self, i, condition=0, condition_feature=0):
+    def _tree_shap_ind_interactions(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self._current_X.shape[1] + 1, self.n_outputs))
         phi_diag = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
-        for t in self.trees:
-            self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_diag, condition, condition_feature)
-            # TODO: Find the unique features in the constructor not inside this loop
-            unique_features = np.unique(t.features)
-            unique_features = np.delete(unique_features, np.where(unique_features==-1))
-            for j in unique_features:
+        for t in range(self.tree_limit):
+            self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi_diag)
+            for j in self.trees[t].unique_features:
                 phi_on = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
                 phi_off = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
-                self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_on, 1, j)
-                self.tree_shap(t, self._current_X[i,:], self._current_x_missing, phi_off, -1, j)
+                self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi_on, 1, j)
+                self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi_off, -1, j)
                 phi[j] += np.true_divide(np.subtract(phi_on,phi_off),2.0)
                 phi_diag[j] -= np.sum(np.true_divide(np.subtract(phi_on,phi_off),2.0))
         for j in range(self._current_X.shape[1]+1):
             phi[j][j] = phi_diag[j]
-        phi /= len(self.trees)
+        phi /= self.tree_limit
         return phi
 
     def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
@@ -261,7 +272,8 @@ class Tree:
         self.thresholds = threshold
         self.values = value
         self.node_sample_weight = node_sample_weight
-        
+        self.unique_features = np.unique(self.features)
+        self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
         # we compute the expectations to make sure they follow the SHAP logic
         assert have_cext, "C extension was not built during install!"
         self.max_depth = _cext.compute_expectations(
@@ -283,6 +295,8 @@ class Tree:
 
 
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
+            self.unique_features = np.unique(self.features)
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
 
             # we compute the expectations to make sure they follow the SHAP logic
             self.max_depth = _cext.compute_expectations(
@@ -337,6 +351,9 @@ class Tree:
                     self.node_sample_weight[vertex['leaf_index']+num_parents] = vertex['leaf_count']
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
+            self.unique_features = np.unique(self.features)
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+
             assert have_cext, "C extension was not built during install!" + str(have_cext)
             self.max_depth = _cext.compute_expectations(
                 self.children_left, self.children_right, self.node_sample_weight,
