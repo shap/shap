@@ -68,6 +68,11 @@ class TreeExplainer:
             self.model = model
             tree_info = self.model.dump_model()["tree_info"]
             self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
+        elif str(type(model)).endswith("<class 'dict'>"):
+            self.model_type = model["class"]
+            self.model = model
+            trees = self.model["params"]["trees"]
+            self.trees = [Tree(e, self.model["features"], e["weight"]) for e in trees]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             self.model_type = "lightgbm"
             self.model = model.booster_
@@ -114,6 +119,10 @@ class TreeExplainer:
             phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
         elif self.model_type == "lightgbm":
             phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
+            if phi.shape[1] != X.shape[1] + 1:
+                phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
+        elif self.model_type == "org.apache.solr.ltr.model.MultipleAdditiveTreesModel":
+            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
@@ -359,3 +368,61 @@ class Tree:
                 self.children_left, self.children_right, self.node_sample_weight,
                 self.values
             )
+
+    def __init__(self, tree, features, scaling=0):
+            features_map = self.extract_feature_map(features)
+            root = tree['root']
+            num_leaves = self.count_leaves(root)
+            num_parents = num_leaves -1
+            num_tree_nodes = (2 * num_parents +1)
+            self.children_left = np.empty(num_parents, dtype=np.int32)
+            self.children_right = np.empty(num_parents, dtype=np.int32)
+            self.children_default = np.empty(num_parents, dtype=np.int32)
+            self.features = np.empty(num_parents, dtype=np.int32)
+            self.thresholds = np.empty(num_parents, dtype=np.float64)
+            self.values = [-2] * num_tree_nodes
+            self.node_sample_weight = np.empty(num_tree_nodes, dtype=np.float64)
+
+            root_node_id = 0
+            self.visit(root, root_node_id,features_map)
+
+            self.values = np.asarray(self.values)
+            self.values = np.multiply(self.values, scaling)
+            self.unique_features = np.unique(self.features)
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+
+    def count_leaves(self, tree_node):
+        if 'threshold' in tree_node.keys():
+            return self.count_leaves(tree_node['left']) + self.count_leaves(tree_node['right'])
+        else:
+            return 1
+
+    def visit(self, tree_node, tree_node_id,features_map):
+        if 'threshold' in tree_node.keys():
+            left_node_id = tree_node_id+1
+            right_node_id = left_node_id + 1
+            self.children_left[tree_node_id] = left_node_id
+            self.children_right[tree_node_id] = right_node_id
+            self.children_default[tree_node_id] = left_node_id
+            self.features[tree_node_id] = features_map[tree_node['feature']]
+            self.thresholds[tree_node_id] = tree_node['threshold']
+            self.visit(tree_node['left'], left_node_id,features_map)
+            self.visit(tree_node['right'], right_node_id,features_map)
+        else:
+            self.children_left[tree_node_id] = -1
+            self.children_right[tree_node_id] = -1
+            self.children_default[tree_node_id] = -1
+            self.features[tree_node_id] = -1
+            self.thresholds[tree_node_id] = -1
+            self.values[tree_node_id] = tree_node['value']
+
+    @staticmethod
+    def extract_feature_map(features):
+        feature_id = -1
+        features_map = {}
+        for feature in features:
+            feature_id +=1
+            features_map[feature["name"]] = feature_id
+        return features_map
+
+
