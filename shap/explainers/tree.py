@@ -54,7 +54,7 @@ class TreeExplainer:
             self.trees = [Tree(model.tree_)]
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
-        elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"):
+        elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_] 
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
