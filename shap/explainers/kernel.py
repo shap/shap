@@ -122,7 +122,7 @@ class KernelExplainer(object):
 
         # see if we have a vector output
         self.vector_out = True
-        if len(self.fnull.shape) == 0:
+        if len(self.fnull.shape) == 0 or (len(self.fnull.shape) == 1 and self.fnull.shape[0] == 1):
             self.vector_out = False
             self.fnull = np.array([self.fnull])
             self.D = 1
@@ -367,7 +367,6 @@ class KernelExplainer(object):
             phi = np.squeeze(phi, axis=1)
             phi_var = np.squeeze(phi_var, axis=1)
             self.fx = self.fx[0]
-            self.fnull = self.fnull[0]
 
         # return the Shapley values along with variances of the estimates
         # note that if features were eliminated by l1 regression their
