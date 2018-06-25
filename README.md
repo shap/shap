@@ -17,7 +17,7 @@
 pip install shap
 ```
 
-## Tree ensemble example (XGBoost/LightGBM/CatBoost/scikit-learn models) 
+## Tree ensemble example (XGBoost/LightGBM/CatBoost/scikit-learn models)
 
 While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, and *scikit-learn* tree models:
 
@@ -26,7 +26,7 @@ import xgboost
 import shap
 
 # load JS visualization code to notebook
-shap.initjs() 
+shap.initjs()
 
 # train XGBoost model
 X,y = shap.datasets.boston()
@@ -159,7 +159,7 @@ The notebooks below demonstrate different use cases for SHAP. Look inside the no
 
 1. *LIME:* Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should i trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. ACM, 2016.
 
-2. *Shapley sampling values:* Štrumbelj, Erik, and Igor Kononenko. "Explaining prediction models and individual predictions with feature contributions." Knowledge and information systems 41.3 (2014): 647-665.
+2. *Shapley sampling values:* Strumbelj, Erik, and Igor Kononenko. "Explaining prediction models and individual predictions with feature contributions." Knowledge and information systems 41.3 (2014): 647-665.
 
 3. *DeepLIFT:* Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." arXiv preprint arXiv:1704.02685 (2017).
 
@@ -172,4 +172,3 @@ The notebooks below demonstrate different use cases for SHAP. Look inside the no
 7. *Tree interpreter:* Saabas, Ando. Interpreting random forests. http://blog.datadive.net/interpreting-random-forests/
 
 <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=189147091855991&ev=PageView&noscript=1" />
-
