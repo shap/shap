@@ -121,10 +121,6 @@ class TreeExplainer:
             phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
-        elif self.model_type == "org.apache.solr.ltr.model.MultipleAdditiveTreesModel":
-            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
-            if phi.shape[1] != X.shape[1] + 1:
-                phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
             assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
@@ -390,6 +386,12 @@ class Tree:
             self.values = np.multiply(self.values, scaling)
             self.unique_features = np.unique(self.features)
             self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+
+            assert have_cext, "C extension was not built during install!" + str(have_cext)
+            self.max_depth = _cext.compute_expectations(
+                self.children_left, self.children_right, self.node_sample_weight,
+                self.values
+            )
 
     def count_leaves(self, tree_node):
         if 'threshold' in tree_node.keys():
