@@ -366,14 +366,15 @@ class KernelExplainer(object):
         if not self.vector_out:
             phi = np.squeeze(phi, axis=1)
             phi_var = np.squeeze(phi_var, axis=1)
-            self.fx = self.fx[0]
-            self.fnull = self.fnull[0]
 
         # return the Shapley values along with variances of the estimates
         # note that if features were eliminated by l1 regression their
         # variance will be 0, even though they are not perfectly known
-        return AdditiveExplanation(self.link.f(self.fnull), self.link.f(self.fx), phi, phi_var, instance, self.link,
-                                   self.model, self.data)
+        return AdditiveExplanation(
+            self.link.f(self.fnull if self.vector_out else self.fnull[0]),
+            self.link.f(self.fx if self.vector_out else self.fx[0]),
+            phi, phi_var, instance, self.link, self.model, self.data
+        )
 
     def varying_groups(self, x):
         varying = np.zeros(len(self.data.groups))
