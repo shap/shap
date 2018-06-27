@@ -36,3 +36,23 @@ def test_front_page_model_agnostic():
 
     # plot the SHAP values for the Setosa output of the first instance
     shap.force_plot(shap_values[0][0, :], X_test.iloc[0, :], link="logit")
+
+def test_kernel_shap_with_dataframe():
+    from sklearn.linear_model import LinearRegression
+    import shap
+    import pandas as pd
+    import numpy as np
+    np.random.seed(3)
+
+    df_X = pd.DataFrame(np.random.random((10, 3)), columns=list('abc'))
+    df_X.index = pd.date_range('2018-01-01', periods=10, freq='D', tz='UTC')
+
+    df_y = df_X.eval('a - 2 * b + 3 * c')
+    df_y = df_y + np.random.normal(0.0, 0.1, df_y.shape)
+
+    linear_model = LinearRegression()
+    linear_model.fit(df_X, df_y)
+
+    explainer = shap.KernelExplainer(linear_model.predict, df_X)
+    shap_values = explainer.shap_values(df_X)
+
