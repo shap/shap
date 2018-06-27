@@ -18,42 +18,55 @@ try:
     from matplotlib.ticker import MaxNLocator
 
     cdict1 = {
-        'red': ((0.0, 0.11764705882352941, 0.11764705882352941),
-                (1.0, 0.9607843137254902, 0.9607843137254902)),
+        'red': ((0.0, 30./255, 30./255),
+                (1.0, 255./255, 255./255)),
 
-        'green': ((0.0, 0.5333333333333333, 0.5333333333333333),
-                  (1.0, 0.15294117647058825, 0.15294117647058825)),
+        'green': ((0.0, 136./255, 136./255),
+                  (1.0, 13./255, 13./255)),
 
-        'blue': ((0.0, 0.8980392156862745, 0.8980392156862745),
-                 (1.0, 0.3411764705882353, 0.3411764705882353)),
+        'blue': ((0.0, 229./255, 229./255),
+                 (1.0, 87./255, 87./255)),
 
         'alpha': ((0.0, 1, 1),
                   (0.5, 0.3, 0.3),
                   (1.0, 1, 1))
     }  # #1E88E5 -> #ff0052
-    red_blue = LinearSegmentedColormap('RedBlue', cdict1)
+    red_blue = LinearSegmentedColormap('red_blue', cdict1)
 
     cdict1 = {
-        'red': ((0.0, 0.11764705882352941, 0.11764705882352941),
-                (1.0, 0.9607843137254902, 0.9607843137254902)),
+        'red': ((0.0, 30./255, 30./255),
+                (1.0, 255./255, 255./255)),
 
-        'green': ((0.0, 0.5333333333333333, 0.5333333333333333),
-                  (1.0, 0.15294117647058825, 0.15294117647058825)),
+        'green': ((0.0, 136./255, 136./255),
+                  (1.0, 13./255, 13./255)),
 
-        'blue': ((0.0, 0.8980392156862745, 0.8980392156862745),
-                 (1.0, 0.3411764705882353, 0.3411764705882353)),
+        'blue': ((0.0, 229./255, 229./255),
+                 (1.0, 87./255, 87./255)),
 
         'alpha': ((0.0, 1, 1),
                   (0.5, 1, 1),
                   (1.0, 1, 1))
     }  # #1E88E5 -> #ff0052
-    red_blue_solid = LinearSegmentedColormap('RedBlue', cdict1)
+    red_blue_solid = LinearSegmentedColormap('red_blue_solid', cdict1)
+
+    # make a color map
+    colors = []
+    for l in np.linspace(1, 0, 100):
+        colors.append((30./255, 136./255, 229./255,l))
+    for l in np.linspace(0, 1, 100):
+        colors.append((255./255, 13./255, 87./255,l))
+    red_transparent_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
+
 except ImportError:
     pass
 
-default_colors = ["#1E88E5", "#ff0052", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
+#default_colors = ["#1E88E5", "#ff0052", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
+default_colors = ["#1E88E5", "#ff0d57", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
 
-blue_rgba = np.array([0.11764705882352941, 0.5333333333333333, 0.8980392156862745, 1.0])
+#blue_rgba = np.array([0.11764705882352941, 0.5333333333333333, 0.8980392156862745, 1.0])
+blue_rgba = np.array([30, 136, 229, 255]) / 255
+blue_rgb = np.array([30, 136, 229]) / 255
+red_rgb = np.array([255, 13, 87]) / 255
 
 default_colors = []
 tmp = blue_rgba.copy()
@@ -836,6 +849,39 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
         pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical')
     if show:
         pl.show()
+
+def image_plot(shap_values, x):
+    multi_output = True
+    if type(shap_values) != list:
+        multi_output = False
+        shap_values = [shap_values]
+
+    assert shap_values[0].shape == x.shape
+
+    # plot our explanations
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=(3 * (len(shap_values) + 1), 3 * (x.shape[0] + 1)))
+    if len(axes.shape) == 1:
+        axes = axes.reshape(1,axes.size)
+    print(axes.shape)
+    for row in range(x.shape[0]):
+        x_curr = x[row]
+        if len(x_curr.shape) == 3 and x_curr.shape[2] == 1:
+            x_curr = x_curr.reshape(x_curr.shape[:2])
+        axes[row,0].imshow(x_curr, cmap="Greys")
+        axes[row,0].axis('off')
+        max_val = np.max([np.abs(shap_values[i]).max() for i in range(len(shap_values))])
+        for i in range(len(shap_values)):
+
+            if multi_output:
+                axes[row,i+1].set_title(i)
+            axes[row,i+1].imshow(x_curr, cmap="Greys", alpha=0.15)
+            axes[row,i+1]
+            shap_values[i][row]
+            im = axes[row,i+1].imshow(shap_values[i][row].sum(-1), cmap=red_transparent_blue, vmin=-max_val, vmax=max_val)
+            axes[row,i+1].axis('off')
+    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=60)
+    cb.outline.set_visible(False)
+    pl.show()
 
 
 # TODO: remove interaction plot
