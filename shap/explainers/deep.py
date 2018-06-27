@@ -55,7 +55,7 @@ class DeepExplainer(object):
         "Shape", "RandomUniform"
     ]
 
-    def __init__(self, model, data, session=tf.get_default_session()):
+    def __init__(self, model, data, session=None):
         """ An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -96,7 +96,8 @@ class DeepExplainer(object):
             data = [data]
 
         self.data = data
-        self.session = tf.keras.backend.get_session() if session is None else session
+        self.session = tf.get_default_session() if session is None else session
+        self.session = tf.keras.backend.get_session() if self.session is None else self.session
 
         # see if there is a keras operation we need to save
         self.keras_phase_placeholder = None
