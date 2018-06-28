@@ -41,7 +41,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
 
     setup(
         name='shap',
-        version='0.19.0',
+        version='0.19.1',
         description='A unified approach to explain the output of any machine learning model.',
         long_description=long_description,
         long_description_content_type="text/markdown",
