@@ -264,9 +264,10 @@ class KernelExplainer(object):
 
             # if we have enough samples to enumerate all subsets then ignore the unneeded samples
             self.max_samples = 2 ** 30
-            if self.M <= 30 and self.nsamples > 2 ** self.M - 2:
-                self.nsamples = 2 ** self.M - 2
-                self.max_samples = self.nsamples
+            if self.M <= 30:
+                self.max_samples = 2 ** self.M - 2
+                if self.nsamples > self.max_samples:
+                    self.nsamples = self.max_samples
 
             # reserve space for some of our computations
             self.allocate()
