@@ -145,10 +145,10 @@ def test_lightgbm_multiclass():
 
     # explain the model's predictions using SHAP values
     shap_values = shap.TreeExplainer(model).shap_values(X)
-    
+
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
-   
+
 # TODO: Test tree_limit argument
 
 def test_sklearn_interaction():
@@ -167,3 +167,18 @@ def test_sklearn_interaction():
                     assert abs(interaction_vals[i][j][k][l]-interaction_vals[i][j][l][k])<0.0000001
             if j<len(interaction_vals[i])-1:
                 assert abs(interaction_vals[i][j][len(interaction_vals[i][j])-1][len(interaction_vals[i][j])-1]-interaction_vals[i][j+1][len(interaction_vals[i][j])-1][len(interaction_vals[i][j])-1])<0.0000001
+
+def test_sum_match_random_forest():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import RandomForestClassifier
+    import sklearn
+    import graphviz
+
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+    predicted = clf.predict_proba(X_test)
+    shap_values = shap.TreeExplainer(clf).shap_values(X_test)
+    assert np.abs(shap_values[0].sum(1) - predicted[:,0]).max() < 1e-6, "SHAP values don't sum to model output!"
