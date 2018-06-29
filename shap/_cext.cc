@@ -118,12 +118,13 @@ static PyObject *_cext_tree_shap(PyObject *self, PyObject *args)
   PyObject *out_contribs_obj;
   int condition;
   int condition_feature;
+  bool less_than_or_equal;
 
   /* Parse the input tuple */
   if (!PyArg_ParseTuple(
-    args, "iOOOOOOOOOOii", &max_depth, &children_left_obj, &children_right_obj, &children_default_obj,
+    args, "iOOOOOOOOOOiib", &max_depth, &children_left_obj, &children_right_obj, &children_default_obj,
     &features_obj, &thresholds_obj, &values_obj, &node_sample_weight_obj, &x_obj,
-    &x_missing_obj, &out_contribs_obj, &condition, &condition_feature
+    &x_missing_obj, &out_contribs_obj, &condition, &condition_feature, &less_than_or_equal
   )) return NULL;
 
   /* Interpret the input objects as numpy arrays. */
@@ -179,7 +180,7 @@ static PyObject *_cext_tree_shap(PyObject *self, PyObject *args)
   tree_shap(
     M, num_outputs, max_depth, children_left, children_right, children_default, features,
     thresholds, values, node_sample_weight, x, x_missing, out_contribs,
-    condition, condition_feature
+    condition, condition_feature, less_than_or_equal
   );
 
   // clean up the created python objects

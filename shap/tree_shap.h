@@ -99,7 +99,7 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
                                 PathElement *parent_unique_path, tfloat parent_zero_fraction,
                                 tfloat parent_one_fraction, int parent_feature_index,
                                 int condition, unsigned condition_feature,
-                                tfloat condition_fraction) {
+                                tfloat condition_fraction, bool less_than_or_equal) {
 
   // stop if we have no weight coming down to us
   if (condition_fraction == 0) return;
@@ -133,7 +133,8 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
     unsigned hot_index = 0;
     if (x_missing[split_index]) {
       hot_index = children_default[node_index];
-    } else if (x[split_index] < thresholds[node_index]) {
+    } else if ((less_than_or_equal && x[split_index] <= thresholds[node_index]) ||
+               (!less_than_or_equal && x[split_index] < thresholds[node_index])) {
       hot_index = children_left[node_index];
     } else {
       hot_index = children_right[node_index];
@@ -175,14 +176,14 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
       num_outputs, children_left, children_right, children_default, features, thresholds, values,
       node_sample_weight, x, x_missing, phi, hot_index, unique_depth + 1, unique_path,
       hot_zero_fraction * incoming_zero_fraction, incoming_one_fraction,
-      split_index, condition, condition_feature, hot_condition_fraction
+      split_index, condition, condition_feature, hot_condition_fraction, less_than_or_equal
     );
 
     tree_shap_recursive(
       num_outputs, children_left, children_right, children_default, features, thresholds, values,
       node_sample_weight, x, x_missing, phi, cold_index, unique_depth + 1, unique_path,
       cold_zero_fraction * incoming_zero_fraction, 0,
-      split_index, condition, condition_feature, cold_condition_fraction
+      split_index, condition, condition_feature, cold_condition_fraction, less_than_or_equal
     );
   }
 }
@@ -223,7 +224,7 @@ inline void tree_shap(const unsigned M, const unsigned num_outputs, const unsign
                       const tfloat *node_sample_weight,
                       const tfloat *x, const bool *x_missing,
                       tfloat *out_contribs, int condition,
-                      unsigned condition_feature) {
+                      unsigned condition_feature, bool less_than_or_equal) {
 
   // update the reference value with the expected value of the tree's predictions
   if (condition == 0) {
@@ -239,7 +240,7 @@ inline void tree_shap(const unsigned M, const unsigned num_outputs, const unsign
   tree_shap_recursive(
     num_outputs, children_left, children_right, children_default, features, thresholds, values,
     node_sample_weight, x, x_missing, out_contribs, 0, 0, unique_path_data,
-    1, 1, -1, condition, condition_feature, 1
+    1, 1, -1, condition, condition_feature, 1, less_than_or_equal
   );
   delete[] unique_path_data;
 }

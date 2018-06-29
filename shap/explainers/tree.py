@@ -47,15 +47,20 @@ class TreeExplainer:
 
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
+        self.less_than_or_equal = False # are threshold comparisons < or <= for this model
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
+            self.less_than_or_equal = True
         elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
             self.trees = [Tree(model.tree_)]
+            self.less_than_or_equal = True
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
+            self.less_than_or_equal = True
         elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
-            self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_] 
+            self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
+            self.less_than_or_equal = True
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
             self.trees = model
@@ -141,7 +146,7 @@ class TreeExplainer:
             self.tree_limit = len(self.trees)
         else:
             self.tree_limit = tree_limit
- 
+
         self.n_outputs = self.trees[0].values.shape[1]
         # single instance
         if len(X.shape) == 1:
@@ -186,7 +191,7 @@ class TreeExplainer:
             else:
                 return phi
         else:
-            
+
             if str(type(X)).endswith("pandas.core.series.Series'>"):
                 X = X.values
             elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
@@ -203,7 +208,7 @@ class TreeExplainer:
                 self.tree_limit = tree_limit
 
             self.n_outputs = self.trees[0].values.shape[1]
-            # single instance            
+            # single instance
             if len(X.shape) == 1:
                 self._current_X = X.reshape(1,X.shape[0])
                 self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
@@ -211,7 +216,7 @@ class TreeExplainer:
                 if self.n_outputs == 1:
                     return phi[0, :, :, 0]
                 else:
-                    return [phi[0, :, :, i] for i in range(self.n_outputs)]                
+                    return [phi[0, :, :, i] for i in range(self.n_outputs)]
 
             elif len(X.shape) == 2:
                 x_missing = np.zeros(X.shape[1], dtype=np.bool)
@@ -261,7 +266,7 @@ class TreeExplainer:
         _cext.tree_shap(
             tree.max_depth, tree.children_left, tree.children_right, tree.children_default, tree.features,
             tree.thresholds, tree.values, tree.node_sample_weight,
-            x, x_missing, phi, condition, condition_feature
+            x, x_missing, phi, condition, condition_feature, self.less_than_or_equal
         )
 
 
