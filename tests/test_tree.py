@@ -174,7 +174,6 @@ def test_sum_match_random_forest():
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import RandomForestClassifier
     import sklearn
-    import graphviz
 
     X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
