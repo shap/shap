@@ -12,6 +12,15 @@ except:
     print("tensorflow is installed...but failed to load!")
     pass
 
+keras = None
+try:
+    import keras
+except ImportError:
+    pass
+except:
+    print("keras is installed...but failed to load!")
+    pass
+
 
 class DeepExplainer(object):
     """ Meant to approximate SHAP values for deep learning models.
@@ -50,7 +59,7 @@ class DeepExplainer(object):
     ]
 
     # these operations may be connected above input data values in the graph but their outputs
-    # don't depend on the input values
+    # don't depend on the input values (for example they just depend on the shape)
     dependence_breakers = [
         "Shape", "RandomUniform"
     ]
@@ -96,8 +105,15 @@ class DeepExplainer(object):
             data = [data]
 
         self.data = data
+
+        # if we are not given a session find a default session
+        if session is None:
+            # if keras is installed and already has a session then use it
+            if keras is not None and keras.backend.tensorflow_backend._SESSION is not None:
+                session = keras.backend.get_session()
+            else:
+                session = tf.keras.backend.get_session()
         self.session = tf.get_default_session() if session is None else session
-        self.session = tf.keras.backend.get_session() if self.session is None else self.session
 
         # see if there is a keras operation we need to save
         self.keras_phase_placeholder = None
@@ -105,9 +121,8 @@ class DeepExplainer(object):
             if 'keras_learning_phase' in op.name:
                 self.keras_phase_placeholder = op.outputs[0]
 
+        # save the expected output of the model
         self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
-        if not self.multi_output:
-            self.expected_value = np.array([self.expected_value])
 
         # check to make sure we have no unsupported operations in the graph between our
         # inputs and outputs, and save all the non-linearities
@@ -136,29 +151,65 @@ class DeepExplainer(object):
                 else:
                     assert False, op.type + " is not known to be either linear or a supported non-linearity!"
 
-        # replace the gradients for all the non-linear activations
-        self.orig_grads = {}
-        reg = ops._gradient_registry._registry # hack our way in to the registry (TODO: find an API for this)
-        for n in DeepExplainer.nonlinearities:
-            self.orig_grads[n] = reg[n]["type"]
-            reg[n]["type"] = self.custom_grad
+        if not self.multi_output:
+            self.phi_symbolics = [None]
+        else:
+            self.phi_symbolics = [None for i in range(self.model_output.shape[1])]
 
-        # define the computation graph for the attribution values using custom a gradient-like computation
-        try:
-            if not self.multi_output:
-                self.phi_symbolics = [tf.gradients(self.model_output, self.model_inputs)]
-            else:
-                self.phi_symbolics = [tf.gradients(self.model_output[:,i], self.model_inputs) for i in range(self.model_output.shape[1])]
+    def phi_symbolic(self, i):
 
-        # restore the original gradient definitions
-        finally:
+        if self.phi_symbolics[i] is None:
+
+            # replace the gradients for all the non-linear activations
+            self.orig_grads = {}
+            reg = ops._gradient_registry._registry # hack our way in to the registry (TODO: find an API for this)
             for n in DeepExplainer.nonlinearities:
-                reg[n]["type"] = self.orig_grads[n]
+                self.orig_grads[n] = reg[n]["type"]
+                reg[n]["type"] = self.custom_grad
 
-    def learning_phase_only(self, op):
-        self.only_learning_phase
+            # define the computation graph for the attribution values using custom a gradient-like computation
+            try:
+                out = self.model_output[:,i] if self.multi_output else self.model_output
+                self.phi_symbolics[i] = tf.gradients(out, self.model_inputs)
 
-    def shap_values(self, X):
+            # restore the original gradient definitions
+            finally:
+                for n in DeepExplainer.nonlinearities:
+                    reg[n]["type"] = self.orig_grads[n]
+
+        return self.phi_symbolics[i]
+
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
+        """ Return the values for the model applied to X.
+
+        Parameters
+        ----------
+        X : list, numpy.array, or pandas.DataFrame
+            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
+            explain the model's output.
+
+        ranked_outputs : None or int
+            If ranked_outputs is None then we explain all the outputs in a multi-output model. If
+            ranked_outputs is a positive integer then we only explain that many of the top model
+            outputs (where "top" is determined by output_rank_order). Note that this causes a pair
+            of values to be returned (shap_values, indexes), where phi is a list of numpy arrays for each of
+            the output ranks, and indexes is a matrix that tells for each sample which output indexes
+            were choses as "top".
+
+        output_rank_order : "max", "min", or "max_abs"
+            How to order the model outputs when using ranked_outputs, either by maximum, minimum, or
+            maximum absolute value.
+
+        Returns
+        -------
+        For a models with a single output this returns a tensor of SHAP values with the same shape
+        as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
+        which are the same shape as X. If ranked_outputs is None then this list of tensors matches
+        the number of model outputs. If ranked_outputs is a positive integer a pair is returned
+        (shap_values, indexes), where shap_values is a list of tensors with a length of
+        ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
+        were chosen as "top".
+        """
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -168,13 +219,27 @@ class DeepExplainer(object):
             assert type(X) == list, "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
+        # rank and determine the model outputs that we will explain
+        if ranked_outputs is not None and self.multi_output:
+            model_output_values = self.run(self.model_output, self.model_inputs, X)
+            if output_rank_order == "max":
+                model_output_ranks = np.argsort(-model_output_values)
+            elif output_rank_order == "min":
+                model_output_ranks = np.argsort(model_output_values)
+            elif output_rank_order == "max_abs":
+                model_output_ranks = np.argsort(np.abs(model_output_values))
+            else:
+                assert False, "output_rank_order must be max, min, or max_abs!"
+            model_output_ranks = model_output_ranks[:,:ranked_outputs]
+        else:
+            model_output_ranks = np.tile(np.arange(len(self.phi_symbolics)), (X[0].shape[0], 1))
+
         # compute the attributions
         output_phis = []
-        for i in range(len(self.phi_symbolics)):
+        for i in range(model_output_ranks.shape[1]):
             phis = []
             for k in range(len(X)):
-                phis.append(shaparray(self.expected_value[i], X[k].shape))
-                phis[-1].fill(0)
+                phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
 
                 # tile the inputs to line up with the background data samples
@@ -184,14 +249,20 @@ class DeepExplainer(object):
                 joint_input = [np.concatenate([tiled_X[l], self.data[l]], 0) for l in range(len(X))]
 
                 # run attribution computation graph
-                sample_phis = self.run(self.phi_symbolics[i], self.model_inputs, joint_input)
+                feature_ind = model_output_ranks[j,i]
+                sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
                 for l in range(len(X)):
                     phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (X[l][j] - self.data[l])).mean(0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
-        return output_phis[0] if not self.multi_output else output_phis
+        if not self.multi_output:
+            return output_phis[0]
+        elif ranked_outputs is not None:
+            return output_phis, model_output_ranks
+        else:
+            return output_phis
 
     def run(self, out, model_inputs, X):
         feed_dict = dict(zip(model_inputs, X))

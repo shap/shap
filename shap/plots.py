@@ -10,6 +10,7 @@ from iml.datatypes import DenseData
 from iml.explanations import AdditiveExplanation
 from iml.links import IdentityLink
 from scipy.stats import gaussian_kde
+import colorsys
 
 try:
     import matplotlib.pyplot as pl
@@ -850,7 +851,8 @@ def joint_plot(ind, X, shap_value_matrix, feature_names=None, other_ind=None, ot
     if show:
         pl.show()
 
-def image_plot(shap_values, x):
+
+def image_plot(shap_values, x, labels=None):
     multi_output = True
     if type(shap_values) != list:
         multi_output = False
@@ -858,26 +860,43 @@ def image_plot(shap_values, x):
 
     assert shap_values[0].shape == x.shape
 
+    # make sure labels
+    if labels is not None:
+        assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
+        if multi_output:
+            assert labels.shape[1] == len(shap_values), "Labels must have a column for each output in shap_values!"
+        else:
+            assert len(labels.shape) == 1, "Labels must be a vector for single output shap_values."
+
     # plot our explanations
     fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=(3 * (len(shap_values) + 1), 3 * (x.shape[0] + 1)))
     if len(axes.shape) == 1:
         axes = axes.reshape(1,axes.size)
-    print(axes.shape)
     for row in range(x.shape[0]):
-        x_curr = x[row]
+        x_curr = x[row].copy()
+
+        # make sure
         if len(x_curr.shape) == 3 and x_curr.shape[2] == 1:
             x_curr = x_curr.reshape(x_curr.shape[:2])
-        axes[row,0].imshow(x_curr, cmap="Greys")
+        if x_curr.max() > 1:
+            x_curr /= 255.
+
+        # get a grayscale version of the image
+        if len(x_curr.shape) == 3 and x_curr.shape[2] == 3:
+            x_curr_gray = (0.2989 * x_curr[:,:,0] + 0.5870 * x_curr[:,:,1] + 0.1140 * x_curr[:,:,2]) # rgb to gray
+        else:
+            x_curr_gray = x_curr
+
+        axes[row,0].imshow(x_curr, cmap=pl.get_cmap('gray'))
         axes[row,0].axis('off')
         max_val = np.max([np.abs(shap_values[i]).max() for i in range(len(shap_values))])
         for i in range(len(shap_values)):
-
-            if multi_output:
-                axes[row,i+1].set_title(i)
-            axes[row,i+1].imshow(x_curr, cmap="Greys", alpha=0.15)
+            if labels is not None:
+                axes[row,i+1].set_title(labels[row,i])
+            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15)
             axes[row,i+1]
-            shap_values[i][row]
-            im = axes[row,i+1].imshow(shap_values[i][row].sum(-1), cmap=red_transparent_blue, vmin=-max_val, vmax=max_val)
+            sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
+            im = axes[row,i+1].imshow(sv, cmap=shap.plots.red_transparent_blue, vmin=-max_val, vmax=max_val)
             axes[row,i+1].axis('off')
     cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=60)
     cb.outline.set_visible(False)
