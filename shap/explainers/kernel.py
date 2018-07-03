@@ -91,6 +91,7 @@ class KernelExplainer(object):
         self.link = convert_to_link(link)
         self.model = convert_to_model(model)
         self.keep_index = kwargs.get("keep_index", False)
+        self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
         self.data = convert_to_data(data, keep_index=self.keep_index)
         match_model_to_data(self.model, self.data)
 
@@ -421,6 +422,8 @@ class KernelExplainer(object):
             index = pd.DataFrame(index, columns=[self.data.index_name])
             data = pd.DataFrame(data, columns=self.data.group_names)
             data = pd.concat([index, data], axis=1).set_index(self.data.index_name)
+            if self.keep_index_ordered:
+                data = data.sort_index()
         modelOut = self.model.f(data)
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
