@@ -55,6 +55,9 @@ class TreeExplainer:
         elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
             self.trees = [Tree(model.tree_)]
             self.less_than_or_equal = True
+        elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
+            self.trees = [Tree(model.tree_)]
+            self.less_than_or_equal = True
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
             self.less_than_or_equal = True
