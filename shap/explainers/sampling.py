@@ -130,7 +130,7 @@ class SamplingExplainer(KernelExplainer):
             for i in range(self.D):
                 # this is a ridge regression with one sample of all ones with sum_error[i] as the label
                 # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
-                # Sherman–Morrison formula
+                # Sherman-Morrison formula
                 v = (phi_var[:,i] / phi_var[:,i].max()) * 1e6
                 adj = sum_error[i] * (v - (v * v.sum()) / (1 + v.sum()))
                 phi[:,i] += adj

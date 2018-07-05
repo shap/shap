@@ -26,9 +26,9 @@ class GradientExplainer(object):
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
     feature attribution method designed for differentiable models based on an extension of Shapley
-    values to infinite player games (Aumann-Shapley values). Tntegrated gradients values are a bit
+    values to infinite player games (Aumann-Shapley values). Integrated gradients values are a bit
     different from SHAP values, and require a single reference value to integrate from. As an adaptation
-    to make them approximate SHAP values wxpected gradients reformulates the integral as an expectation
+    to make them approximate SHAP values, expected gradients reformulates the integral as an expectation
     and combines that expectation with sampling reference values from the background dataset. This leads
     to a single combined expectation of gradients that converges to attributions that sum to the
     difference between the expected model output and the current output.
@@ -55,8 +55,6 @@ class GradientExplainer(object):
             over these samples. The data passed here must match the input operations given in the
             first argument.
         """
-
-        warnings.warn("shap.GradientExplainer is in an alpha state, use at your own risk!")
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
@@ -212,7 +210,7 @@ class GradientExplainer(object):
 
                 # this is a ridge regression with one sample of all ones with sum_error as the label
                 # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
-                # Sherman–Morrison formula
+                # Sherman-Morrison formula
                 v = (phi_vars_s / phi_vars_s.max()) * 1e6
                 adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
 
