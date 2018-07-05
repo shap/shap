@@ -1,0 +1,238 @@
+import numpy as np
+import warnings
+
+try:
+    import tensorflow as tf
+    from tensorflow.python.framework import ops
+    from tensorflow.python.ops import nn_grad
+except ImportError:
+    pass
+except:
+    print("tensorflow is installed...but failed to load!")
+    pass
+
+keras = None
+try:
+    import keras
+except ImportError:
+    pass
+except:
+    print("keras is installed...but failed to load!")
+    pass
+
+
+class GradientExplainer(object):
+    """ Explains a model using expected gradients (an extension of integrated gradients).
+
+    Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
+    feature attribution method designed for differentiable models based on an extension of Shapley
+    values to infinite player games (Aumann-Shapley values). Tntegrated gradients values are a bit
+    different from SHAP values, and require a single reference value to integrate from. As an adaptation
+    to make them approximate SHAP values wxpected gradients reformulates the integral as an expectation
+    and combines that expectation with sampling reference values from the background dataset. This leads
+    to a single combined expectation of gradients that converges to attributions that sum to the
+    difference between the expected model output and the current output.
+    """
+
+    def __init__(self, model, data, session=None):
+        """ An explainer object for a differentiable model using a given background dataset.
+
+        Note that the complexity of the method scales linearly with the number of background data
+        samples. Passing the entire training dataset as `data` will give very accurate expected
+        values, but be unreasonably expensive. The variance of the expectation estimates scale by
+        roughly 1/sqrt(N) for N background data samples. So 100 samples will give a good estimate,
+        and 1000 samples a very good estimate of the expected values.
+
+        Parameters
+        ----------
+        model : (input : [tf.Operation], output : tf.Operation)
+            A pair of TensorFlow operations (or a list and an op) that specifies the input and
+            output of the model to be explained. Note that SHAP values are specific to a single
+            output value, so the output tf.Operation should be a single dimensional output (,1).
+
+        data : [numpy.array] or [pandas.DataFrame]
+            The background dataset to use for integrating out features. GradientExplainer integrates
+            over these samples. The data passed here must match the input operations given in the
+            first argument.
+        """
+
+        warnings.warn("shap.GradientExplainer is in an alpha state, use at your own risk!")
+
+        # determine the model inputs and outputs
+        if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
+            self.model_inputs = model.layers[0].input
+            self.model_output = model.layers[-1].output
+        elif str(type(model)).endswith("tuple'>"):
+            self.model_inputs = model[0]
+            self.model_output = model[1]
+        else:
+            assert False, str(type(model)) + " is not currently a supported model type!"
+        assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
+        assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
+        self.multi_output = True
+        if len(self.model_output.shape) == 1:
+            self.multi_output = False
+
+        # check if we have multiple inputs
+        self.multi_input = True
+        if type(self.model_inputs) != list:
+            self.multi_input = False
+            self.model_inputs = [self.model_inputs]
+        if type(data) != list:
+            data = [data]
+
+        self.data = data
+        self._num_vinputs = {}
+
+        # if we are not given a session find a default session
+        if session is None:
+            # if keras is installed and already has a session then use it
+            if keras is not None and keras.backend.tensorflow_backend._SESSION is not None:
+                session = keras.backend.get_session()
+            else:
+                session = tf.keras.backend.get_session()
+        self.session = tf.get_default_session() if session is None else session
+
+        # see if there is a keras operation we need to save
+        self.keras_phase_placeholder = None
+        for op in self.session.graph.get_operations():
+            if 'keras_learning_phase' in op.name:
+                self.keras_phase_placeholder = op.outputs[0]
+
+        # save the expected output of the model
+        self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+
+        if not self.multi_output:
+            self.gradients = [None]
+        else:
+            self.gradients = [None for i in range(self.model_output.shape[1])]
+
+    def gradient(self, i):
+        if self.gradients[i] is None:
+            out = self.model_output[:,i] if self.multi_output else self.model_output
+            self.gradients[i] = tf.gradients(out, self.model_inputs)
+        return self.gradients[i]
+
+    def shap_values(self, X, nsamples=100, ranked_outputs=None, output_rank_order="max"):
+        """ Return the values for the model applied to X.
+
+        Parameters
+        ----------
+        X : list, numpy.array, or pandas.DataFrame
+            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
+            explain the model's output.
+
+        ranked_outputs : None or int
+            If ranked_outputs is None then we explain all the outputs in a multi-output model. If
+            ranked_outputs is a positive integer then we only explain that many of the top model
+            outputs (where "top" is determined by output_rank_order). Note that this causes a pair
+            of values to be returned (shap_values, indexes), where phi is a list of numpy arrays for each of
+            the output ranks, and indexes is a matrix that tells for each sample which output indexes
+            were choses as "top".
+
+        output_rank_order : "max", "min", or "max_abs"
+            How to order the model outputs when using ranked_outputs, either by maximum, minimum, or
+            maximum absolute value.
+
+        Returns
+        -------
+        For a models with a single output this returns a tensor of SHAP values with the same shape
+        as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
+        which are the same shape as X. If ranked_outputs is None then this list of tensors matches
+        the number of model outputs. If ranked_outputs is a positive integer a pair is returned
+        (shap_values, indexes), where shap_values is a list of tensors with a length of
+        ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
+        were chosen as "top".
+        """
+
+        # check if we have multiple inputs
+        if not self.multi_input:
+            assert type(X) != list, "Expected a single tensor model input!"
+            X = [X]
+        else:
+            assert type(X) == list, "Expected a list of model inputs!"
+        assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
+
+        # rank and determine the model outputs that we will explain
+        model_output_values = self.run(self.model_output, self.model_inputs, X)
+        if ranked_outputs is not None and self.multi_output:
+            if output_rank_order == "max":
+                model_output_ranks = np.argsort(-model_output_values)
+            elif output_rank_order == "min":
+                model_output_ranks = np.argsort(model_output_values)
+            elif output_rank_order == "max_abs":
+                model_output_ranks = np.argsort(np.abs(model_output_values))
+            else:
+                assert False, "output_rank_order must be max, min, or max_abs!"
+            model_output_ranks = model_output_ranks[:,:ranked_outputs]
+        else:
+            #model_output_values = model_output_values.reshape((-1,1))
+            model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
+
+        # compute the attributions
+        output_phis = []
+        samples_input = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
+        samples_delta = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
+        for i in range(model_output_ranks.shape[1]):
+            phis = []
+            phi_vars = []
+            for k in range(len(X)):
+                phis.append(np.zeros(X[k].shape))
+                phi_vars.append(np.zeros(X[k].shape))
+            for j in range(X[0].shape[0]):
+
+                # fill in the samples arrays
+                for k in range(nsamples):
+                    rind = np.random.choice(self.data[0].shape[0])
+                    t = np.random.uniform()
+                    for l in range(len(X)):
+                        samples_input[l][k] = t * X[l][j] + (1 - t) * self.data[l][rind]
+                        samples_delta[l][k] = X[l][j] - self.data[l][rind]
+
+                # compute the gradients at all the sample points
+                find = model_output_ranks[j,i]
+                grad = self.run(self.gradient(find), self.model_inputs, samples_input)
+
+                # assign the attributions to the right part of the output arrays
+                for l in range(len(X)):
+                    samples = grad[l] * samples_delta[l]
+                    phis[l][j] = samples.mean(0)
+                    phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
+
+                # correct the sum of the values to equal the output of the model using a linear
+                # regression model with priors of the coefficents equal to the estimated variances for each
+                # value (note that 1e-6 is designed to increase the weight of the sample and so closely
+                # match the correct sum)
+                phis_sum = np.sum([phis[l][j].sum() for l in range(len(X))])
+                phi_vars_s = np.stack([phi_vars[l][j] for l in range(len(X))], 0).flatten()
+                if self.multi_output:
+                    sum_error = model_output_values[j,find] - phis_sum - self.expected_value[find]
+                else:
+                    sum_error = model_output_values[j] - phis_sum - self.expected_value
+
+                # this is a ridge regression with one sample of all ones with sum_error as the label
+                # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                # Sherman–Morrison formula
+                v = (phi_vars_s / phi_vars_s.max()) * 1e6
+                adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
+
+                # add the adjustment to the output so the sum matches
+                offset = 0
+                for l in range(len(X)):
+                    s = np.prod(phis[l][j].shape)
+                    phis[l][j] += adj[offset:offset+s].reshape(phis[l][j].shape)
+                    offset += s
+
+            output_phis.append(phis[0] if not self.multi_input else phis)
+        if not self.multi_output:
+            return output_phis[0]
+        elif ranked_outputs is not None:
+            return output_phis, model_output_ranks
+        else:
+            return output_phis
+
+    def run(self, out, model_inputs, X):
+        feed_dict = dict(zip(model_inputs, X))
+        if self.keras_phase_placeholder is not None:
+            feed_dict[self.keras_phase_placeholder] = 0
+        return self.session.run(out, feed_dict)

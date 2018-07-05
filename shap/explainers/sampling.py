@@ -124,16 +124,16 @@ class SamplingExplainer(KernelExplainer):
 
             # correct the sum of the SHAP values to equal the output of the model using a linear
             # regression model with priors of the coefficents equal to the estimated variances for each
-            # SHAP value (note that 1e-6 is designed to increase the weight of the sample and so closely
+            # SHAP value (note that 1e6 is designed to increase the weight of the sample and so closely
             # match the correct sum)
             sum_error = self.fx - phi.sum(0) - self.fnull
             for i in range(self.D):
-                inds = np.where(phi_var[:,i] > 0)[0]
-                normed_vars = 1 / phi_var[inds,i]
-                normed_vars /= normed_vars.sum()
-                adj = np.linalg.inv(np.ones((len(inds), len(inds))) + 1e-6 * np.diag(normed_vars)).sum(1) * sum_error[i]
-                adj += (sum_error[i] - adj.sum())/len(adj)
-                phi[inds,i] += adj
+                # this is a ridge regression with one sample of all ones with sum_error[i] as the label
+                # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                # Sherman–Morrison formula
+                v = (phi_var[:,i] / phi_var[:,i].max()) * 1e6
+                adj = sum_error[i] * (v - (v * v.sum()) / (1 + v.sum()))
+                phi[:,i] += adj
 
         if phi.shape[1] == 1:
             phi = phi[:,0]

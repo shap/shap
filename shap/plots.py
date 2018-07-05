@@ -896,7 +896,7 @@ def image_plot(shap_values, x, labels=None):
             axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15)
             axes[row,i+1]
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            im = axes[row,i+1].imshow(sv, cmap=shap.plots.red_transparent_blue, vmin=-max_val, vmax=max_val)
+            im = axes[row,i+1].imshow(sv, cmap=red_transparent_blue, vmin=-max_val, vmax=max_val)
             axes[row,i+1].axis('off')
     cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=60)
     cb.outline.set_visible(False)

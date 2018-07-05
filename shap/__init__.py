@@ -8,7 +8,7 @@ from .explainers.kernel import KernelExplainer, kmeans
 from .explainers.sampling import SamplingExplainer
 from .explainers.tree import TreeExplainer, Tree
 from .explainers.deep import DeepExplainer
-from .common import shaparray, shapinteractionarray
+from .explainers.gradient import GradientExplainer
 from .plots import visualize, plot, summary_plot, joint_plot, interaction_plot, dependence_plot, force_plot, image_plot
 from iml.visualizers import initjs, SimpleListVisualizer, SimpleListVisualizer, AdditiveForceVisualizer, \
     AdditiveForceArrayVisualizer
