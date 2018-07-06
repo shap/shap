@@ -858,8 +858,6 @@ def image_plot(shap_values, x, labels=None):
         multi_output = False
         shap_values = [shap_values]
 
-    assert shap_values[0].shape == x.shape
-
     # make sure labels
     if labels is not None:
         assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
@@ -869,7 +867,7 @@ def image_plot(shap_values, x, labels=None):
             assert len(labels.shape) == 1, "Labels must be a vector for single output shap_values."
 
     # plot our explanations
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=(3 * (len(shap_values) + 1), 3 * (x.shape[0] + 1)))
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=(3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)))
     if len(axes.shape) == 1:
         axes = axes.reshape(1,axes.size)
     for row in range(x.shape[0]):
@@ -889,13 +887,15 @@ def image_plot(shap_values, x, labels=None):
 
         axes[row,0].imshow(x_curr, cmap=pl.get_cmap('gray'))
         axes[row,0].axis('off')
-        max_val = np.max([np.abs(shap_values[i]).max() for i in range(len(shap_values))])
+        if len(shap_values[0][row].shape) == 2:
+            max_val = np.max([np.abs(shap_values[i]).max() for i in range(len(shap_values))])
+        else:
+            max_val = np.max([np.abs(shap_values[i].sum(-1)).max() for i in range(len(shap_values))])
         for i in range(len(shap_values)):
             if labels is not None:
                 axes[row,i+1].set_title(labels[row,i])
-            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15)
-            axes[row,i+1]
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
+            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(0, sv.shape[0], sv.shape[1], 0))
             im = axes[row,i+1].imshow(sv, cmap=red_transparent_blue, vmin=-max_val, vmax=max_val)
             axes[row,i+1].axis('off')
     cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=60)

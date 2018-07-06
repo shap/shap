@@ -41,7 +41,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
 
     setup(
         name='shap',
-        version='0.19.2',
+        version='0.19.3',
         description='A unified approach to explain the output of any machine learning model.',
         long_description=long_description,
         long_description_content_type="text/markdown",
@@ -52,7 +52,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         packages=['shap', 'shap.explainers'],
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'iml>=0.6.1', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm'],
+        install_requires=['numpy', 'scipy', 'iml>=0.6.1', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', ''],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,

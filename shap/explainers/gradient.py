@@ -34,7 +34,7 @@ class GradientExplainer(object):
     difference between the expected model output and the current output.
     """
 
-    def __init__(self, model, data, session=None):
+    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
         """ An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -81,6 +81,8 @@ class GradientExplainer(object):
 
         self.data = data
         self._num_vinputs = {}
+        self.batch_size = batch_size
+        self.local_smoothing = local_smoothing
 
         # if we are not given a session find a default session
         if session is None:
@@ -98,7 +100,7 @@ class GradientExplainer(object):
                 self.keras_phase_placeholder = op.outputs[0]
 
         # save the expected output of the model
-        self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+        #self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         if not self.multi_output:
             self.gradients = [None]
@@ -111,7 +113,7 @@ class GradientExplainer(object):
             self.gradients[i] = tf.gradients(out, self.model_inputs)
         return self.gradients[i]
 
-    def shap_values(self, X, nsamples=100, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
         """ Return the values for the model applied to X.
 
         Parameters
@@ -164,14 +166,15 @@ class GradientExplainer(object):
                 assert False, "output_rank_order must be max, min, or max_abs!"
             model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
-            #model_output_values = model_output_values.reshape((-1,1))
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
         # compute the attributions
         output_phis = []
         samples_input = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
+        rseed = np.random.randint(0,1e6)
         for i in range(model_output_ranks.shape[1]):
+            np.random.seed(rseed) # so we get the same noise patterns for each output class
             phis = []
             phi_vars = []
             for k in range(len(X)):
@@ -184,12 +187,20 @@ class GradientExplainer(object):
                     rind = np.random.choice(self.data[0].shape[0])
                     t = np.random.uniform()
                     for l in range(len(X)):
-                        samples_input[l][k] = t * X[l][j] + (1 - t) * self.data[l][rind]
-                        samples_delta[l][k] = X[l][j] - self.data[l][rind]
+                        if self.local_smoothing > 0:
+                            x = X[l][j] + np.random.randn(*X[l][j].shape) * self.local_smoothing
+                        else:
+                            x = X[l][j]
+                        samples_input[l][k] = t * x + (1 - t) * self.data[l][rind]
+                        samples_delta[l][k] = x - self.data[l][rind]
 
                 # compute the gradients at all the sample points
                 find = model_output_ranks[j,i]
-                grad = self.run(self.gradient(find), self.model_inputs, samples_input)
+                grads = []
+                for b in range(0, nsamples, self.batch_size):
+                    batch = [samples_input[l][b:min(b+self.batch_size,nsamples)] for l in range(len(X))]
+                    grads.append(self.run(self.gradient(find), self.model_inputs, batch))
+                grad = [np.concatenate([g[l] for g in grads], 0) for l in range(len(X))]
 
                 # assign the attributions to the right part of the output arrays
                 for l in range(len(X)):
@@ -197,29 +208,31 @@ class GradientExplainer(object):
                     phis[l][j] = samples.mean(0)
                     phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
 
+                # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
                 # regression model with priors of the coefficents equal to the estimated variances for each
                 # value (note that 1e-6 is designed to increase the weight of the sample and so closely
                 # match the correct sum)
-                phis_sum = np.sum([phis[l][j].sum() for l in range(len(X))])
-                phi_vars_s = np.stack([phi_vars[l][j] for l in range(len(X))], 0).flatten()
-                if self.multi_output:
-                    sum_error = model_output_values[j,find] - phis_sum - self.expected_value[find]
-                else:
-                    sum_error = model_output_values[j] - phis_sum - self.expected_value
+                if False and self.local_smoothing == 0: # disabled right now to make sure it doesn't mask problems
+                    phis_sum = np.sum([phis[l][j].sum() for l in range(len(X))])
+                    phi_vars_s = np.stack([phi_vars[l][j] for l in range(len(X))], 0).flatten()
+                    if self.multi_output:
+                        sum_error = model_output_values[j,find] - phis_sum - self.expected_value[find]
+                    else:
+                        sum_error = model_output_values[j] - phis_sum - self.expected_value
 
-                # this is a ridge regression with one sample of all ones with sum_error as the label
-                # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
-                # Sherman-Morrison formula
-                v = (phi_vars_s / phi_vars_s.max()) * 1e6
-                adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
+                    # this is a ridge regression with one sample of all ones with sum_error as the label
+                    # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                    # Sherman-Morrison formula
+                    v = (phi_vars_s / phi_vars_s.max()) * 1e6
+                    adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
 
-                # add the adjustment to the output so the sum matches
-                offset = 0
-                for l in range(len(X)):
-                    s = np.prod(phis[l][j].shape)
-                    phis[l][j] += adj[offset:offset+s].reshape(phis[l][j].shape)
-                    offset += s
+                    # add the adjustment to the output so the sum matches
+                    offset = 0
+                    for l in range(len(X)):
+                        s = np.prod(phis[l][j].shape)
+                        phis[l][j] += adj[offset:offset+s].reshape(phis[l][j].shape)
+                        offset += s
 
             output_phis.append(phis[0] if not self.multi_input else phis)
         if not self.multi_output:

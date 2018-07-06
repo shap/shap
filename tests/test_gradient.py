@@ -72,13 +72,15 @@ def test_tf_keras_mnist_cnn():
               validation_data=(x_test[:1000,:], y_test[:1000,:]))
 
     # explain by passing the tensorflow inputs and outputs
-    inds = np.random.choice(x_train.shape[0], 200, replace=False)
+    np.random.seed(0)
+    inds = np.random.choice(x_train.shape[0], 20, replace=False)
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
-    shap_values = e.shap_values(x_test[:1], nsamples=100)
+    shap_values = e.shap_values(x_test[:1], nsamples=500)
 
     sess = tf.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds,:,:]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    assert np.abs(sums - diff).sum() < 1e-4, "Sum of SHAP values does not match difference!"
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % d
