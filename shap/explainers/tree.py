@@ -172,6 +172,7 @@ class TreeExplainer:
                 pool = multiprocessing.Pool()
                 phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
                 pool.close()
+                pool.join()
             else:
                 phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
 
@@ -231,6 +232,7 @@ class TreeExplainer:
                     pool = multiprocessing.Pool()
                     phi = np.stack(pool.map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
                     pool.close()
+                    pool.join()
                 else:
                     phi = np.stack(map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
 
