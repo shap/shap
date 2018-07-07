@@ -6,6 +6,7 @@ shap.egg-info
 /dist
 /shap/cached_data
 notebooks/local_scratch
-docs
+docs/local
+docs/_build
 .ipynb_checkpoints
 .eggs
