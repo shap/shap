@@ -5,6 +5,9 @@ try:
     import tensorflow as tf
     from tensorflow.python.framework import ops
     from tensorflow.python.ops import nn_grad
+    from distutils.version import LooseVersion
+    if LooseVersion(tf.__version__) < LooseVersion("1.8.0"):
+        warnings.warn("Your TensorFlow version is older than 1.8.0 and not supported.")
 except ImportError:
     pass
 except:
@@ -14,6 +17,8 @@ except:
 keras = None
 try:
     import keras
+    if LooseVersion(tf.__version__) < LooseVersion("2.2.0"):
+        warnings.warn("Your Keras version is older than 2.2.0 and not supported.")
 except ImportError:
     pass
 except:
@@ -84,6 +89,9 @@ class DeepExplainer(object):
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
+            self.model_inputs = model.layers[0].input
+            self.model_output = model.layers[-1].output
+        elif str(type(model)).endswith("keras.models.Sequential'>"):
             self.model_inputs = model.layers[0].input
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
