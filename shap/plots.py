@@ -867,7 +867,10 @@ def image_plot(shap_values, x, labels=None):
             assert len(labels.shape) == 1, "Labels must be a vector for single output shap_values."
 
     # plot our explanations
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=(3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)))
+    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
+    if fig_size[0] > 20:
+        fig_size *= 20 / fig_size[0]
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
     if len(axes.shape) == 1:
         axes = axes.reshape(1,axes.size)
     for row in range(x.shape[0]):
@@ -888,9 +891,10 @@ def image_plot(shap_values, x, labels=None):
         axes[row,0].imshow(x_curr, cmap=pl.get_cmap('gray'))
         axes[row,0].axis('off')
         if len(shap_values[0][row].shape) == 2:
-            max_val = np.max([np.abs(shap_values[i]).max() for i in range(len(shap_values))])
+            abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
-            max_val = np.max([np.abs(shap_values[i].sum(-1)).max() for i in range(len(shap_values))])
+            abs_vals = np.stack([np.abs(shap_values[i].sum(-1)) for i in range(len(shap_values))], 0).flatten()
+        max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
                 axes[row,i+1].set_title(labels[row,i])
@@ -898,7 +902,7 @@ def image_plot(shap_values, x, labels=None):
             axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(0, sv.shape[0], sv.shape[1], 0))
             im = axes[row,i+1].imshow(sv, cmap=red_transparent_blue, vmin=-max_val, vmax=max_val)
             axes[row,i+1].axis('off')
-    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=60)
+    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0]/0.2)
     cb.outline.set_visible(False)
     pl.show()
 

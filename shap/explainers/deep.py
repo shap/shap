@@ -82,10 +82,15 @@ class DeepExplainer(object):
             operations given in the first argument.
         """
 
-        warnings.warn("shap.DeepExplainer is in an alpha state, use at your own risk!")
-
-        self.model_inputs = model[0]
-        self.model_output = model[1]
+        # determine the model inputs and outputs
+        if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
+            self.model_inputs = model.layers[0].input
+            self.model_output = model.layers[-1].output
+        elif str(type(model)).endswith("tuple'>"):
+            self.model_inputs = model[0]
+            self.model_output = model[1]
+        else:
+            assert False, str(type(model)) + " is not currently a supported model type!"
         assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
@@ -282,47 +287,29 @@ class DeepExplainer(object):
         delta_in0 = xin0 - rin0
         dup0 = [2] + [1 for i in delta_in0.shape[1:]]
 
-        delta_in0_dup = tf.tile(delta_in0, dup0)
-
         # Division with two varying inputs can be handled by using the direct SHAP values
         if op.type == "RealDiv":
-
             if self.num_variable_inputs(op) == 1:
                 return self.orig_grads[op.type](op, grad)
             else:
-                print()
-                # print("op.inputs[0].shape", op.inputs[0].shape)
-                # print("op.inputs[1].shape", op.inputs[1].shape)
-
                 xin1,rin1 = tf.split(op.inputs[1], 2)
                 delta_in1 = xin1 - rin1
                 out10 = xin0 / rin1
                 out01 = rin0 / xin1
                 out11,out00 = xout,rout
-
                 out0 = 0.5 * (out11 - out01 + out10 - out00)
                 out0 = grad * tf.tile(out0 / delta_in0, dup0)
                 out1 = 0.5 * (out11 - out10 + out01 - out00)
                 out1 = grad * tf.tile(out1 / delta_in1, dup0)
 
-
-                # print("out1.shape", out1.shape)
-                # print("delta_in1.shape", delta_in1.shape)
-                # print("out0.shape", out0.shape)
-                # print("delta_in0.shape", delta_in0.shape)
-
-                # see if due to broadcasting out gradient shapes don't match our input shapes
+                # see if due to broadcasting our gradient shapes don't match our input shapes
                 if out1.shape != delta_in1.shape:
                     broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
                     out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
                 elif out0.shape != delta_in0.shape:
                     broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
                     out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
-                # print("grad.shape", out0.shape)
-                # print("out1.shape", out1.shape)
-                # print("out0.shape", out0.shape)
-                # print("a", (grad * tf.tile(out0 / delta_in0, dup0)).shape)
-                # print("b", (grad * tf.tile(out1 / delta_in1, dup0)).shape)
+
                 return [out0, out1]
 
         # The max pool operation sends credit to both the r max element and the x max element
@@ -339,32 +326,19 @@ class DeepExplainer(object):
 
         # Just decompose softmax into its components and recurse, we can handle all of them :)
         # we assume the 'axis' is the last dimension because the TF codebase swaps the 'axis' to
-        # the last dim before the softmax op if 'axis' is not already the last dim
+        # the last dim before the softmax op if 'axis' is not already the last dimself.
+        # We also don't subtract the max before tf.exp for numerical stability since that might
+        # mess up the attributions and it seems like TensorFlow doesn't define softmax that way
+        # (according to the docs)
         elif op.type == "Softmax":
-            offset_in = op.inputs[0]# - tf.reduce_max(op.inputs[0], axis=-1, keepdims=True)
-            evals = tf.exp(offset_in)
-            print()
-            # note that we take the gradients with respect to the offset input since we know that
-            # the constant offset will cancel in the softmax but our max pooling approximate
-            # attributions might not capture that
-            print("evals.shape", evals.shape)
-            out = evals / tf.reduce_sum(evals, axis=-1, keepdims=True)
-            print("out.shape", out.shape)
-            print("offset_in.shape", offset_in.shape)
-            print("grad.shape", offset_in.shape)
-            rs = tf.reduce_sum(evals, axis=-1, keepdims=True)
-            print("rs.shape", rs.shape)
-            div = evals / tf.reduce_sum(evals, axis=-1, keepdims=True)
-            print("div.shape", div.shape)
-            g = tf.gradients(div, offset_in)
-            print(len(g))
-            print("g[0].shape", g[0].shape)
-            return grad * tf.gradients(evals / tf.reduce_sum(evals, axis=-1, keepdims=True), offset_in)[0]
+            offset_in = op.inputs[0]
+            evals = tf.exp(offset_in, name="custom_exp")
+            return tf.gradients(evals / tf.reduce_sum(evals, axis=-1, keepdims=True), offset_in, grad_ys=grad)[0]
 
         # all non-linear one-to-one mappings (like activation functions)
         else:
             return tf.where(
-                tf.abs(delta_in0_dup) < 1e-6,
+                tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
                 self.orig_grads[op.type](op, grad),
                 grad * tf.tile((xout - rout) / delta_in0, dup0)
             )

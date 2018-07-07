@@ -73,9 +73,9 @@ def test_tf_keras_mnist_cnn():
 
     # explain by passing the tensorflow inputs and outputs
     np.random.seed(0)
-    inds = np.random.choice(x_train.shape[0], 20, replace=False)
-    e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
-    shap_values = e.shap_values(x_test[:1], nsamples=500)
+    inds = np.random.choice(x_train.shape[0], 10, replace=False)
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
+    shap_values = e.shap_values(x_test[:1])
 
     sess = tf.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
@@ -83,4 +83,4 @@ def test_tf_keras_mnist_cnn():
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % d
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
