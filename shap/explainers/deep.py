@@ -1,29 +1,8 @@
 import numpy as np
 import warnings
-
-try:
-    import tensorflow as tf
-    from tensorflow.python.framework import ops
-    from tensorflow.python.ops import nn_grad
-    from distutils.version import LooseVersion
-    if LooseVersion(tf.__version__) < LooseVersion("1.8.0"):
-        warnings.warn("Your TensorFlow version is older than 1.8.0 and not supported.")
-except ImportError:
-    pass
-except:
-    print("tensorflow is installed...but failed to load!")
-    pass
-
+from distutils.version import LooseVersion
 keras = None
-try:
-    import keras
-    if LooseVersion(tf.__version__) < LooseVersion("2.2.0"):
-        warnings.warn("Your Keras version is older than 2.2.0 and not supported.")
-except ImportError:
-    pass
-except:
-    print("keras is installed...but failed to load!")
-    pass
+tf = None
 
 
 class DeepExplainer(object):
@@ -86,6 +65,22 @@ class DeepExplainer(object):
             over all these samples for each explanation. The data passed here must match the input
             operations given in the first argument.
         """
+
+        # try and import keras and tensorflow
+        global tf, tf_ops
+        if tf is None:
+            import tensorflow as tf
+            from tensorflow.python.framework import ops as tf_ops
+            if LooseVersion(tf.__version__) < LooseVersion("1.8.0"):
+                warnings.warn("Your TensorFlow version is older than 1.8.0 and not supported.")
+        global keras
+        if keras is None:
+            try:
+                import keras
+                if LooseVersion(keras.__version__) < LooseVersion("2.2.0"):
+                    warnings.warn("Your Keras version is older than 2.2.0 and not supported.")
+            except:
+                pass
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
@@ -180,7 +175,7 @@ class DeepExplainer(object):
 
             # replace the gradients for all the non-linear activations
             self.orig_grads = {}
-            reg = ops._gradient_registry._registry # hack our way in to the registry (TODO: find an API for this)
+            reg = tf_ops._gradient_registry._registry # hack our way in to the registry (TODO: find an API for this)
             for n in DeepExplainer.nonlinearities:
                 self.orig_grads[n] = reg[n]["type"]
                 reg[n]["type"] = self.custom_grad

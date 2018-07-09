@@ -5,7 +5,7 @@
 
 .. image:: artwork/shap_diagram.png
    :width: 400px
-   :align: middle
+   :align: center
 
 SHAP (SHapley Additive exPlanations) is a unified approach to explain the output of any machine
 learning model. SHAP connects game theory with local explanations, uniting several previous

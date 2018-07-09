@@ -1,25 +1,8 @@
 import numpy as np
 import warnings
-
-try:
-    import tensorflow as tf
-    from tensorflow.python.framework import ops
-    from tensorflow.python.ops import nn_grad
-except ImportError:
-    pass
-except:
-    print("tensorflow is installed...but failed to load!")
-    pass
-
+from distutils.version import LooseVersion
 keras = None
-try:
-    import keras
-except ImportError:
-    pass
-except:
-    print("keras is installed...but failed to load!")
-    pass
-
+tf = None
 
 class GradientExplainer(object):
     """ Explains a model using expected gradients (an extension of integrated gradients).
@@ -55,6 +38,20 @@ class GradientExplainer(object):
             over these samples. The data passed here must match the input operations given in the
             first argument.
         """
+
+        # try and import keras and tensorflow
+        global tf, keras
+        if tf is None:
+            import tensorflow as tf
+            if LooseVersion(tf.__version__) < LooseVersion("1.8.0"):
+                warnings.warn("Your TensorFlow version is older than 1.8.0 and not supported.")
+        if keras is None:
+            try:
+                import keras
+                if LooseVersion(keras.__version__) < LooseVersion("2.2.0"):
+                    warnings.warn("Your Keras version is older than 2.2.0 and not supported.")
+            except:
+                pass
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
