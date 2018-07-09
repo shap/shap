@@ -80,9 +80,20 @@ shap.summary_plot(shap_values, X)
   <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot.png" />
 </p>
 
+We can also just take the mean absolute value of the SHAP values for each feature to get a standard bar plot (particularly useful for multi-class outputs):
+
+```python
+shap.summary_plot(shap_values, X, plot_type="bar")
+```
+
+<p align="center">
+  <img width="470" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot_bar.png" />
+</p>
+
+
 ## Deep learning example (TensorFlow/Keras models)
 
-Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the [SHAP NIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions). The implementation here differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into the excellent DeepLIFT python package. Currently both TensorFlow models and Keras models using the TensorFlow backend are supported:
+Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the SHAP NIPS paper. The implementation here differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into DeepLIFT. Currently both TensorFlow models and Keras models using the TensorFlow backend are supported:
 
 ```python
 # ...include code from https://github.com/keras-team/keras/blob/master/examples/mnist_cnn.py
