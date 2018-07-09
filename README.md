@@ -104,7 +104,7 @@ import numpy as np
 # select a set of background examples to take an expectation over
 background = x_train[np.random.choice(x_train.shape[0], 100, replace=False)]
 
-# explain predictions of the model on three images
+# explain predictions of the model on four images
 e = shap.DeepExplainer(model, background)
 # ...or pass tensors directly
 # e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), background)
@@ -118,7 +118,7 @@ shap.image_plot(shap_values, -x_test[1:5])
   <img width="820" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/mnist_image_plot.png" />
 </p>
 
-The plot above explains ten outputs (digits 0-9) for three different images. Red pixels increase the model's output while blue pixels decrease the output. The sum of the SHAP values equals the difference between the expected model output (averaged over the background dataset) and the current model output. Note that for the 'zero' image the blank middle is important, while for the 'four' image the lack of a connection on top makes it a four instead of a nine.
+The plot above explains ten outputs (digits 0-9) for four different images. Red pixels increase the model's output while blue pixels decrease the output. The input images are shown on the left, and as nearly transparent grayscale backings behind each of the explanations. The sum of the SHAP values equals the difference between the expected model output (averaged over the background dataset) and the current model output. Note that for the 'zero' image the blank middle is important, while for the 'four' image the lack of a connection on top makes it a four instead of a nine.
 
 ## Model agnostic SVM example
 
