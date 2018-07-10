@@ -155,7 +155,7 @@ class TreeExplainer:
         if len(X.shape) == 1:
             self._current_X = X.reshape(1,X.shape[0])
             self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
-            phi = self.c_tree_shap_ind(0)
+            phi = self._tree_shap_ind(0)
 
             if self.n_outputs == 1:
                 return phi[0, :, 0]
