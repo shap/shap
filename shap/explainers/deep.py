@@ -20,7 +20,8 @@ class DeepExplainer(object):
 
     # these are the supported non-linear components
     nonlinearities = [
-        "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax"
+        "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax",
+        "Mul", "ClipByValue"
     ]
 
     # these are the components that are linear no matter how they are used. All linear
@@ -28,7 +29,9 @@ class DeepExplainer(object):
     # linear in terms of the model inputs.
     guaranteed_linearities = [
         "Identity", "Reshape", "Shape", "StridedSlice", "Squeeze", "Pack", "ExpandDims",
-        "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum"
+        "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "GatherV2", "Transpose", 
+        "TensorArrayScatterV3", "Enter", "Tile", "TensorArrayReadV3", "NextIteration",
+        "TensorArrayWriteV3", "Exit"
     ]
 
     # these involve products and so are linear if only one of the terms in the product depends
@@ -41,7 +44,7 @@ class DeepExplainer(object):
     # don't depend on the input values (for example they just depend on the shape).
     # We include StopGradient to allow attributions to stop when gradients also stop.
     dependence_breakers = [
-        "Shape", "RandomUniform", "StopGradient"
+        "Shape", "RandomUniform", "StopGradient", "ZerosLike"
     ]
 
     def __init__(self, model, data, session=None):
@@ -87,6 +90,9 @@ class DeepExplainer(object):
             self.model_inputs = model.layers[0].input
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.models.Sequential'>"):
+            self.model_inputs = model.layers[0].input
+            self.model_output = model.layers[-1].output
+        elif str(type(model)).endswith("keras.engine.training.Model"):
             self.model_inputs = model.layers[0].input
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
@@ -152,6 +158,12 @@ class DeepExplainer(object):
                     # this first check is because I don't see in the API that the second input is always the flag
                     assert len(op.inputs[1].shape) == 0, "The second switch input does seem to be the flag?"
                     assert op.inputs[1].op not in self.between_ops, "A Switch control depending on the input is not supported!"
+                elif op.type == "ClipByValue":
+                    # Check if our thresholds (clip_value_min and clip_value_max respectively) 
+                    # are in the correct position in the input 
+                    assert len(op.inputs[1].shape) == 0 and len(op.inputs[2].shape) == 0
+                    # Thresholds that depend on input are not supported!
+                    assert op.inputs[1].op not in self.between_ops and op.inputs[2].op not in self.between_ops
                 else:
                     assert False, op.type + " is not known to be either linear or a supported non-linearity!"
 
@@ -284,19 +296,23 @@ class DeepExplainer(object):
         return self.session.run(out, feed_dict)
 
     def custom_grad(self, op, grad):
-        xin0,rin0 = tf.split(op.inputs[0], 2)
-        xout,rout = tf.split(op.outputs[0], 2)
-
-        delta_in0 = xin0 - rin0
-        dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+        if not op.type == "RealDiv" and not op.type == "Mul":
+            xin0,rin0 = tf.split(op.inputs[0], 2)
+            xout,rout = tf.split(op.outputs[0], 2)
+            delta_in0 = xin0 - rin0
+            dup0 = [2] + [1 for i in delta_in0.shape[1:]]
 
         # Division with two varying inputs can be handled by using the direct SHAP values
         if op.type == "RealDiv":
             if self.num_variable_inputs(op) == 1:
                 return self.orig_grads[op.type](op, grad)
             else:
+                xout,rout = tf.split(op.outputs[0], 2)
+                xin0,rin0 = tf.split(op.inputs[0], 2)
                 xin1,rin1 = tf.split(op.inputs[1], 2)
+                delta_in0 = xin0 - rin0
                 delta_in1 = xin1 - rin1
+                dup0 = [2] + [1 for i in delta_in0.shape[1:]]
                 out10 = xin0 / rin1
                 out01 = rin0 / xin1
                 out11,out00 = xout,rout
@@ -304,15 +320,59 @@ class DeepExplainer(object):
                 out0 = grad * tf.tile(out0 / delta_in0, dup0)
                 out1 = 0.5 * (out11 - out10 + out01 - out00)
                 out1 = grad * tf.tile(out1 / delta_in1, dup0)
-
+                                
                 # see if due to broadcasting our gradient shapes don't match our input shapes
-                if out1.shape != delta_in1.shape:
+#                 if out1.shape != delta_in1.shape:
+                if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
                     broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
                     out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
-                elif out0.shape != delta_in0.shape:
+#                 elif out0.shape != delta_in0.shape:
+                elif (np.any(np.array(out0.shape) != np.array(delta_in0.shape))):
                     broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
                     out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
 
+                # Avoid divide by zero nans
+                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7, 
+                                0 * tf.tile(delta_in0,dup0), out0)
+                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0))<1e-7, 
+                                0 * tf.tile(delta_in1,dup0), out1)
+                
+                return [out0, out1]
+
+        elif op.type == "Mul":
+            if self.num_variable_inputs(op) == 1:
+                return self.orig_grads[op.type](op, grad)
+            else:
+                xout,rout = tf.split(op.outputs[0], 2)
+                xin0,rin0 = tf.split(op.inputs[0], 2)
+                xin1,rin1 = tf.split(op.inputs[1], 2)
+                delta_in0 = xin0 - rin0
+                delta_in1 = xin1 - rin1
+                dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+                out10 = xin0 * rin1
+                out01 = rin0 * xin1
+                out11,out00 = xout,rout
+                out0 = 0.5 * (out11 - out01 + out10 - out00)
+                out0 = grad * tf.tile(out0 / delta_in0, dup0)
+                out1 = 0.5 * (out11 - out10 + out01 - out00)
+                out1 = grad * tf.tile(out1 / delta_in1, dup0)
+
+                # see if due to broadcasting our gradient shapes don't match our input shapes
+#                 if out1.shape != delta_in1.shape:
+                if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
+                    broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
+                    out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
+#                 elif out0.shape != delta_in0.shape:
+                elif (np.any(np.array(out0.shape) != np.array(delta_in0.shape))):
+                    broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
+                    out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
+
+                # Avoid divide by zero nans
+                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7, 
+                                0 * tf.tile(delta_in0,dup0), out0)
+                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0))<1e-7, 
+                                0 * tf.tile(delta_in1,dup0), out1)
+                
                 return [out0, out1]
 
         # The max pool operation sends credit to both the r max element and the x max element
@@ -337,6 +397,17 @@ class DeepExplainer(object):
             offset_in = op.inputs[0]
             evals = tf.exp(offset_in, name="custom_exp")
             return tf.gradients(evals / tf.reduce_sum(evals, axis=-1, keepdims=True), offset_in, grad_ys=grad)[0]
+
+        # Same as other non-linear mappings (aside from additional inputs)
+        elif op.type == "ClipByValue": 
+
+            orig_grad = self.orig_grads[op.type](op, grad)
+
+            return [tf.where(
+                tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
+                orig_grad[0], grad * tf.tile((xout - rout) / delta_in0, dup0)
+            ), orig_grad[1], orig_grad[2]]
+
 
         # all non-linear one-to-one mappings (like activation functions)
         else:
