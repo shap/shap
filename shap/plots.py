@@ -331,7 +331,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     """
 
     multi_class = False
-    if str(type(shap_values)).endswith("list'>"):
+    if isinstance(shap_values, list):
         multi_class = True
         plot_type = "bar" # only type supported for now
     else:
@@ -346,7 +346,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         if feature_names is None:
             feature_names = features.columns
         features = features.values
-    elif str(type(features)) == "<class 'list'>":
+    elif isinstance(features, list):
         if feature_names is None:
             feature_names = features
         features = None
@@ -726,7 +726,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
-    elif str(type(features)) == "list":
+    elif isinstance(features, list):
         if feature_names is None:
             feature_names = features
         features = None

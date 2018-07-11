@@ -48,6 +48,7 @@ class TreeExplainer:
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
+        self.base_offset = 0.0
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
@@ -63,6 +64,17 @@ class TreeExplainer:
             self.less_than_or_equal = True
         elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
+            self.less_than_or_equal = True
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
+
+            # currently we only support the mean estimator
+            if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
+                self.base_offset = model.init_.mean
+            else:
+                assert False, "Unsupported init model type: " + str(type(gb_model.init_))
+
+            scale = len(model.estimators_) * model.learning_rate
+            self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
             self.less_than_or_equal = True
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
@@ -243,6 +255,7 @@ class TreeExplainer:
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
+        phi[-1, :] = self.base_offset * self.tree_limit
         for t in range(self.tree_limit):
             self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi)
         phi /= self.tree_limit
@@ -293,7 +306,7 @@ class Tree:
             self.values
         )
 
-    def __init__(self, tree, normalize=False, scaling=0):
+    def __init__(self, tree, normalize=False, scaling=1.0):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
@@ -304,6 +317,7 @@ class Tree:
                 self.values = (tree.value[:,0,:].T / tree.value[:,0,:].sum(1)).T
             else:
                 self.values = tree.value[:,0,:]
+            self.values = self.values * scaling
 
 
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
