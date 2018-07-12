@@ -92,7 +92,7 @@ class DeepExplainer(object):
         elif str(type(model)).endswith("keras.models.Sequential'>"):
             self.model_inputs = model.layers[0].input
             self.model_output = model.layers[-1].output
-        elif str(type(model)).endswith("keras.engine.training.Model"):
+        elif str(type(model)).endswith("keras.engine.training.Model'>"):
             self.model_inputs = model.layers[0].input
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
