@@ -29,7 +29,7 @@ class DeepExplainer(object):
     # linear in terms of the model inputs.
     guaranteed_linearities = [
         "Identity", "Reshape", "Shape", "StridedSlice", "Squeeze", "Pack", "ExpandDims",
-        "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "GatherV2", "Transpose", 
+        "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "GatherV2", "Transpose",
         "TensorArrayScatterV3", "Enter", "Tile", "TensorArrayReadV3", "NextIteration",
         "TensorArrayWriteV3", "Exit"
     ]
@@ -159,8 +159,8 @@ class DeepExplainer(object):
                     assert len(op.inputs[1].shape) == 0, "The second switch input does seem to be the flag?"
                     assert op.inputs[1].op not in self.between_ops, "A Switch control depending on the input is not supported!"
                 elif op.type == "ClipByValue":
-                    # Check if our thresholds (clip_value_min and clip_value_max respectively) 
-                    # are in the correct position in the input 
+                    # Check if our thresholds (clip_value_min and clip_value_max respectively)
+                    # are in the correct position in the input
                     assert len(op.inputs[1].shape) == 0 and len(op.inputs[2].shape) == 0
                     # Thresholds that depend on input are not supported!
                     assert op.inputs[1].op not in self.between_ops and op.inputs[2].op not in self.between_ops
@@ -320,7 +320,7 @@ class DeepExplainer(object):
                 out0 = grad * tf.tile(out0 / delta_in0, dup0)
                 out1 = 0.5 * (out11 - out10 + out01 - out00)
                 out1 = grad * tf.tile(out1 / delta_in1, dup0)
-                                
+
                 # see if due to broadcasting our gradient shapes don't match our input shapes
 #                 if out1.shape != delta_in1.shape:
                 if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
@@ -332,11 +332,11 @@ class DeepExplainer(object):
                     out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
 
                 # Avoid divide by zero nans
-                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7, 
+                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7,
                                 0 * tf.tile(delta_in0,dup0), out0)
-                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0))<1e-7, 
+                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0))<1e-7,
                                 0 * tf.tile(delta_in1,dup0), out1)
-                
+
                 return [out0, out1]
 
         elif op.type == "Mul":
@@ -358,21 +358,19 @@ class DeepExplainer(object):
                 out1 = grad * tf.tile(out1 / delta_in1, dup0)
 
                 # see if due to broadcasting our gradient shapes don't match our input shapes
-#                 if out1.shape != delta_in1.shape:
-                if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
+                if np.any(np.array(out1.shape) != np.array(delta_in1.shape)):
                     broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
                     out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
-#                 elif out0.shape != delta_in0.shape:
-                elif (np.any(np.array(out0.shape) != np.array(delta_in0.shape))):
+                elif np.any(np.array(out0.shape) != np.array(delta_in0.shape)):
                     broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
                     out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
 
                 # Avoid divide by zero nans
-                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7, 
+                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7,
                                 0 * tf.tile(delta_in0,dup0), out0)
-                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0))<1e-7, 
+                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0)) < 1e-7,
                                 0 * tf.tile(delta_in1,dup0), out1)
-                
+
                 return [out0, out1]
 
         # The max pool operation sends credit to both the r max element and the x max element
@@ -399,7 +397,7 @@ class DeepExplainer(object):
             return tf.gradients(evals / tf.reduce_sum(evals, axis=-1, keepdims=True), offset_in, grad_ys=grad)[0]
 
         # Same as other non-linear mappings (aside from additional inputs)
-        elif op.type == "ClipByValue": 
+        elif op.type == "ClipByValue":
 
             orig_grad = self.orig_grads[op.type](op, grad)
 
