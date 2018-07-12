@@ -76,8 +76,8 @@ def adult(display=False):
 
 
 def nhanesi(display=False):
-    X = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_X.csv"))
-    y = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/notebooks/data/NHANESI_subset_y.csv"))["y"]
+    X = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/data/NHANESI_subset_X.csv"))
+    y = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/data/NHANESI_subset_y.csv"))["y"]
     X_display = X.copy()
     X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
     if display:
