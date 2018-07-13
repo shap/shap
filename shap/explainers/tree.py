@@ -158,9 +158,9 @@ class TreeExplainer:
             phi = self._tree_shap_ind(0)
 
             if self.n_outputs == 1:
-                return phi[0, :, 0]
+                return phi[:, 0]
             else:
-                return [phi[0, :, i] for i in range(self.n_outputs)]
+                return [phi[:, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
