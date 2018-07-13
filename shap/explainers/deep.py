@@ -21,7 +21,7 @@ class DeepExplainer(object):
     # these are the supported non-linear components
     nonlinearities = [
         "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax",
-        "Mul", "ClipByValue"
+        "Mul", "ClipByValue", "GatherV2"
     ]
 
     # these are the components that are linear no matter how they are used. All linear
@@ -29,7 +29,7 @@ class DeepExplainer(object):
     # linear in terms of the model inputs.
     guaranteed_linearities = [
         "Identity", "Reshape", "Shape", "StridedSlice", "Squeeze", "Pack", "ExpandDims",
-        "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "GatherV2", "Transpose",
+        "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "Transpose",
         "TensorArrayScatterV3", "Enter", "Tile", "TensorArrayReadV3", "NextIteration",
         "TensorArrayWriteV3", "Exit"
     ]
@@ -69,7 +69,7 @@ class DeepExplainer(object):
             operations given in the first argument.
         """
 
-        warnings.warn("DeepExplainer is brand new, if you run into issues please post a github issue!")
+        warnings.warn("DeepExplainer is brand new (July 2018), if you run into problems please post a github issue!")
 
         # try and import keras and tensorflow
         global tf, tf_ops
@@ -166,6 +166,8 @@ class DeepExplainer(object):
                     assert len(op.inputs[1].shape) == 0 and len(op.inputs[2].shape) == 0
                     # Thresholds that depend on input are not supported!
                     assert op.inputs[1].op not in self.between_ops and op.inputs[2].op not in self.between_ops
+                elif op.type == "GatherV2":
+                    assert self.num_variable_inputs(op) == 1, "GatherV2 can only have one varying input!"
                 else:
                     assert False, op.type + " is not known to be either linear or a supported non-linearity!"
 
@@ -374,6 +376,29 @@ class DeepExplainer(object):
                                 0 * tf.tile(delta_in1,dup0), out1)
 
                 return [out0, out1]
+
+        elif op.type == "GatherV2": # used for embedding layers
+            params = op.inputs[0]
+            indices = op.inputs[1]
+            axis = op.inputs[2]
+            if indices.op in self.between_ops:
+                assert len(indices.shape) == 2, "Only scalar indices supported right now in GatherV2!"
+
+                xin1,rin1 = tf.split(tf.to_float(op.inputs[1]), 2)
+                xout,rout = tf.split(op.outputs[0], 2)
+                dup_in1 = [2] + [1 for i in xin1.shape[1:]]
+                dup_out = [2] + [1 for i in xout.shape[1:]]
+                delta_in1_t = tf.tile(xin1 - rin1, dup_in1)
+                out_sum = tf.reduce_sum(grad * tf.tile(xout - rout, dup_out), list(range(len(indices.shape), len(grad.shape))))
+                return [None, tf.where(
+                    tf.abs(delta_in1_t) < 1e-6,
+                    tf.zeros_like(delta_in1_t),
+                    out_sum / delta_in1_t
+                ), None]
+            elif params.op in self.between_ops:
+                return self.orig_grads[op.type](op, grad) # linear in this case
+            else:
+                assert False, "Axis not yet supported to be varying for GatherV2!"
 
         # The max pool operation sends credit to both the r max element and the x max element
         elif op.type == "MaxPool":
