@@ -69,6 +69,8 @@ class DeepExplainer(object):
             operations given in the first argument.
         """
 
+        warnings.warn("DeepExplainer is brand new, if you run into issues please post a github issue!")
+
         # try and import keras and tensorflow
         global tf, tf_ops
         if tf is None:
