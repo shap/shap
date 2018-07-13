@@ -18,10 +18,10 @@ class DeepExplainer(object):
     inspired by the gradient based implementation approach proposed by Ancona et al, ICLR 2018.
     """
 
-    # these are the supported non-linear components
+    # these are the supported (potentially) non-linear components
     nonlinearities = [
         "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax",
-        "Mul", "ClipByValue", "GatherV2"
+        "Mul", "ClipByValue", "GatherV2", "ConcatV2"
     ]
 
     # these are the components that are linear no matter how they are used. All linear
@@ -31,7 +31,7 @@ class DeepExplainer(object):
         "Identity", "Reshape", "Shape", "StridedSlice", "Squeeze", "Pack", "ExpandDims",
         "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "Transpose",
         "TensorArrayScatterV3", "Enter", "Tile", "TensorArrayReadV3", "NextIteration",
-        "TensorArrayWriteV3", "Exit"
+        "TensorArrayWriteV3", "Exit", "Transpose"
     ]
 
     # these involve products and so are linear if only one of the terms in the product depends
@@ -69,8 +69,6 @@ class DeepExplainer(object):
             operations given in the first argument.
         """
 
-        warnings.warn("DeepExplainer is brand new (July 2018), if you run into problems please post a github issue!")
-
         # try and import keras and tensorflow
         global tf, tf_ops
         if tf is None:
@@ -89,13 +87,13 @@ class DeepExplainer(object):
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.models.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.engine.training.Model'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
             self.model_inputs = model[0]
@@ -110,9 +108,10 @@ class DeepExplainer(object):
 
         # check if we have multiple inputs
         self.multi_input = True
-        if type(self.model_inputs) != list:
+        if type(self.model_inputs) != list or len(self.model_inputs) == 1:
             self.multi_input = False
-            self.model_inputs = [self.model_inputs]
+            if type(self.model_inputs) != list:
+                self.model_inputs = [self.model_inputs]
         if type(data) != list:
             data = [data]
 
@@ -139,7 +138,6 @@ class DeepExplainer(object):
 
         # check to make sure we have no unsupported operations in the graph between our
         # inputs and outputs, and save all the non-linearities
-        self.nonlinear_ops = []
         back_ops = tf.contrib.graph_editor.get_backward_walk_ops(
             [self.model_output],
             within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
@@ -148,6 +146,7 @@ class DeepExplainer(object):
             self.model_inputs, within_ops=back_ops,
             within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
         )
+        self.nonlinear_ops = []
         for op in self.between_ops:
             if len(op.inputs) > 0 and not op.name.startswith('gradients'):
                 if op.type in DeepExplainer.nonlinearities:
@@ -242,8 +241,10 @@ class DeepExplainer(object):
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
-            X = [X]
+            if type(X) == list and len(X) != 1:
+                assert False, "Expected a single tensor as model input!"
+            elif type(X) != list:
+                X = [X]
         else:
             assert type(X) == list, "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
@@ -300,14 +301,13 @@ class DeepExplainer(object):
         return self.session.run(out, feed_dict)
 
     def custom_grad(self, op, grad):
-        if not op.type == "RealDiv" and not op.type == "Mul":
-            xin0,rin0 = tf.split(op.inputs[0], 2)
-            xout,rout = tf.split(op.outputs[0], 2)
-            delta_in0 = xin0 - rin0
-            dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+
+        # If this op is not between the input and output then don't worry about changing it's backprop
+        if not op in self.between_ops:
+            return self.orig_grads[op.type](op, grad)
 
         # Division with two varying inputs can be handled by using the direct SHAP values
-        if op.type == "RealDiv":
+        if op.type == "RealDiv" or op.type == "Mul":
             if self.num_variable_inputs(op) == 1:
                 return self.orig_grads[op.type](op, grad)
             else:
@@ -317,8 +317,12 @@ class DeepExplainer(object):
                 delta_in0 = xin0 - rin0
                 delta_in1 = xin1 - rin1
                 dup0 = [2] + [1 for i in delta_in0.shape[1:]]
-                out10 = xin0 / rin1
-                out01 = rin0 / xin1
+                if op.type == "RealDiv":
+                    out10 = xin0 / rin1
+                    out01 = rin0 / xin1
+                else:
+                    out10 = xin0 * rin1
+                    out01 = rin0 * xin1
                 out11,out00 = xout,rout
                 out0 = 0.5 * (out11 - out01 + out10 - out00)
                 out0 = grad * tf.tile(out0 / delta_in0, dup0)
@@ -326,57 +330,21 @@ class DeepExplainer(object):
                 out1 = grad * tf.tile(out1 / delta_in1, dup0)
 
                 # see if due to broadcasting our gradient shapes don't match our input shapes
-#                 if out1.shape != delta_in1.shape:
                 if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
                     broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
                     out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
-#                 elif out0.shape != delta_in0.shape:
                 elif (np.any(np.array(out0.shape) != np.array(delta_in0.shape))):
                     broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
                     out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
 
                 # Avoid divide by zero nans
-                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7,
-                                0 * tf.tile(delta_in0,dup0), out0)
-                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0))<1e-7,
-                                0 * tf.tile(delta_in1,dup0), out1)
+                out0 = tf.where(tf.abs(tf.tile(delta_in0, dup0)) < 1e-7, tf.zeros_like(out0), out0)
+                out1 = tf.where(tf.abs(tf.tile(delta_in1, dup0)) < 1e-7, tf.zeros_like(out1), out1)
 
                 return [out0, out1]
-
-        elif op.type == "Mul":
-            if self.num_variable_inputs(op) == 1:
-                return self.orig_grads[op.type](op, grad)
-            else:
-                xout,rout = tf.split(op.outputs[0], 2)
-                xin0,rin0 = tf.split(op.inputs[0], 2)
-                xin1,rin1 = tf.split(op.inputs[1], 2)
-                delta_in0 = xin0 - rin0
-                delta_in1 = xin1 - rin1
-                dup0 = [2] + [1 for i in delta_in0.shape[1:]]
-                out10 = xin0 * rin1
-                out01 = rin0 * xin1
-                out11,out00 = xout,rout
-                out0 = 0.5 * (out11 - out01 + out10 - out00)
-                out0 = grad * tf.tile(out0 / delta_in0, dup0)
-                out1 = 0.5 * (out11 - out10 + out01 - out00)
-                out1 = grad * tf.tile(out1 / delta_in1, dup0)
-
-                # see if due to broadcasting our gradient shapes don't match our input shapes
-                if np.any(np.array(out1.shape) != np.array(delta_in1.shape)):
-                    broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
-                    out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
-                elif np.any(np.array(out0.shape) != np.array(delta_in0.shape)):
-                    broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
-                    out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
-
-                # Avoid divide by zero nans
-                out0 = tf.where(tf.abs(tf.tile(delta_in0,dup0)) < 1e-7,
-                                0 * tf.tile(delta_in0,dup0), out0)
-                out1 = tf.where(tf.abs(tf.tile(delta_in1,dup0)) < 1e-7,
-                                0 * tf.tile(delta_in1,dup0), out1)
-
-                return [out0, out1]
-
+        elif op.type == "ConcatV2":
+            assert not op.inputs[-1] in self.between_ops, "The axis input for ConcatV2 is not allowed to depend on the model input!"
+            return self.orig_grads[op.type](op, grad)
         elif op.type == "GatherV2": # used for embedding layers
             params = op.inputs[0]
             indices = op.inputs[1]
@@ -402,13 +370,17 @@ class DeepExplainer(object):
 
         # The max pool operation sends credit to both the r max element and the x max element
         elif op.type == "MaxPool":
+            xin0,rin0 = tf.split(op.inputs[0], 2)
+            xout,rout = tf.split(op.outputs[0], 2)
+            delta_in0 = xin0 - rin0
+            dup0 = [2] + [1 for i in delta_in0.shape[1:]]
             cross_max = tf.maximum(xout, rout)
             diffs = tf.concat([cross_max - rout, xout - cross_max], 0)
             xmax_pos,rmax_pos = tf.split(self.orig_grads[op.type](op, grad * diffs), 2)
 
             return tf.tile(tf.where(
                 tf.abs(delta_in0) < 1e-7,
-                delta_in0 * 0,
+                tf.zeros_like(delta_in0),
                 (xmax_pos + rmax_pos) / delta_in0
             ), dup0)
 
@@ -425,21 +397,24 @@ class DeepExplainer(object):
 
         # Same as other non-linear mappings (aside from additional inputs)
         elif op.type == "ClipByValue":
-
+            xin0,rin0 = tf.split(op.inputs[0], 2)
+            xout,rout = tf.split(op.outputs[0], 2)
+            delta_in0 = xin0 - rin0
+            dup0 = [2] + [1 for i in delta_in0.shape[1:]]
             orig_grad = self.orig_grads[op.type](op, grad)
-
             return [tf.where(
                 tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
                 orig_grad[0], grad * tf.tile((xout - rout) / delta_in0, dup0)
             ), orig_grad[1], orig_grad[2]]
 
-
         # all non-linear one-to-one mappings (like activation functions)
         else:
+            xin0,rin0 = tf.split(op.inputs[0], 2)
+            xout,rout = tf.split(op.outputs[0], 2)
+            delta_in0 = xin0 - rin0
+            dup0 = [2] + [1 for i in delta_in0.shape[1:]]
             return tf.where(
                 tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
                 self.orig_grads[op.type](op, grad),
                 grad * tf.tile((xout - rout) / delta_in0, dup0)
             )
-
-        #return self.orig_grads[op.type](op, grad)
