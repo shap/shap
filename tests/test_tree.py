@@ -195,3 +195,17 @@ def test_sum_match_random_forest():
     predicted = clf.predict_proba(X_test)
     shap_values = shap.TreeExplainer(clf).shap_values(X_test)
     assert np.abs(shap_values[0].sum(1) - predicted[:,0]).max() < 1e-6, "SHAP values don't sum to model output!"
+
+def test_single_row_random_forest():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import RandomForestClassifier
+    import sklearn
+
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+    predicted = clf.predict_proba(X_test)
+    shap_values = shap.TreeExplainer(clf).shap_values(X_test.iloc[0,:])
+    assert np.abs(shap_values.sum(1) - predicted[0,0]) < 1e-6, "SHAP values don't sum to model output!"

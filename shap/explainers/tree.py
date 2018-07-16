@@ -49,6 +49,7 @@ class TreeExplainer:
         self.model_type = "internal"
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
         self.base_offset = 0.0
+        self.expected_value = None
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
@@ -142,11 +143,14 @@ class TreeExplainer:
             assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
 
+        # note we pull off the last column and keep it as our expected_value
         if phi is not None:
             if len(phi.shape) == 3:
-                return [phi[:, i, :] for i in range(phi.shape[1])]
+                self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
+                return [phi[:, i, :-1] for i in range(phi.shape[1])]
             else:
-                return phi
+                self.expected_value = phi[0, -1]
+                return phi[:, :-1]
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
@@ -169,10 +173,13 @@ class TreeExplainer:
             self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
             phi = self._tree_shap_ind(0)
 
+            # note we pull off the last column and keep it as our expected_value
             if self.n_outputs == 1:
-                return phi[0, :, 0]
+                self.expected_value = phi[0, -1, 0]
+                return phi[0, :-1, 0]
             else:
-                return [phi[0, :, i] for i in range(self.n_outputs)]
+                self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+                return [phi[0, :-1, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
@@ -188,10 +195,13 @@ class TreeExplainer:
             else:
                 phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
 
+            # note we pull off the last column and keep it as our expected_value
             if self.n_outputs == 1:
-                return phi[:, :, 0]
+                self.expected_value = phi[0, -1, 0]
+                return phi[:, :-1, 0]
             else:
-                return [phi[:, :, i] for i in range(self.n_outputs)]
+                self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+                return [phi[:, :-1, i] for i in range(self.n_outputs)]
 
     def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
 
@@ -202,10 +212,14 @@ class TreeExplainer:
             if tree_limit==-1:
                 tree_limit=0
             phi = self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
+
+            # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
-                return [phi[:, i, :, :] for i in range(phi.shape[1])]
+                self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
+                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
             else:
-                return phi
+                self.expected_value = phi[0, -1, -1]
+                return phi[:, :-1, :-1]
         else:
 
             if str(type(X)).endswith("pandas.core.series.Series'>"):
@@ -218,7 +232,7 @@ class TreeExplainer:
 
             self.n_outputs = self.trees[0].values.shape[1]
 
-            if tree_limit<0 or tree_limit>len(self.trees):
+            if tree_limit < 0 or tree_limit > len(self.trees):
                 self.tree_limit = len(self.trees)
             else:
                 self.tree_limit = tree_limit
@@ -229,10 +243,14 @@ class TreeExplainer:
                 self._current_X = X.reshape(1,X.shape[0])
                 self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
                 phi = self._tree_shap_ind_interactions(0)
+
+                # note we pull off the last column and keep it as our expected_value
                 if self.n_outputs == 1:
-                    return phi[0, :, :, 0]
+                    self.expected_value = phi[0, -1, -1, 0]
+                    return phi[0, :-1, :-1, 0]
                 else:
-                    return [phi[0, :, :, i] for i in range(self.n_outputs)]
+                    self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
+                    return [phi[0, :-1, :-1, i] for i in range(self.n_outputs)]
 
             elif len(X.shape) == 2:
                 x_missing = np.zeros(X.shape[1], dtype=np.bool)
@@ -248,10 +266,13 @@ class TreeExplainer:
                 else:
                     phi = np.stack(map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
 
+                # note we pull off the last column and keep it as our expected_value
                 if self.n_outputs == 1:
-                    return phi[:, :, :, 0]
+                    self.expected_value = phi[0, -1, -1, 0]
+                    return phi[:, :-1, :-1, 0]
                 else:
-                    return [phi[:, :, :, i] for i in range(self.n_outputs)]
+                    self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
+                    return [phi[:, :-1, :-1, i] for i in range(self.n_outputs)]
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))

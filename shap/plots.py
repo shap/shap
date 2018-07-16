@@ -133,7 +133,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         display_features = features
 
     if feature_names is None:
-        feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
+        feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
 
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
@@ -177,9 +177,10 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             pl.show()
         return
 
-    assert shap_values.shape[0] == features.shape[
-        0], "'shap_values' and 'features' values must have the same number of rows!"
-    assert shap_values.shape[1] == features.shape[1] + 1, "'shap_values' must have one more column than 'features'!"
+    assert shap_values.shape[0] == features.shape[0], \
+        "'shap_values' and 'features' values must have the same number of rows!"
+    assert shap_values.shape[1] == features.shape[1], \
+        "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
     xv = features[:, ind]
@@ -354,7 +355,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         feature_names = features
         features = None
 
-    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1]) - 1
+    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
 
     if feature_names is None:
         feature_names = [labels['FEATURE'] % str(i) for i in range(num_features)]
@@ -366,7 +367,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         else:
             max_display = min(len(feature_names), max_display)
 
-        sort_inds = np.argsort(-np.abs(shap_values[:, :-1, :-1].sum(1)).sum(0))
+        sort_inds = np.argsort(-np.abs(shap_values.sum(1)).sum(0))
 
         # get plotting limits
         delta = 1.0 / (shap_values.shape[1] ** 2)
@@ -423,9 +424,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if sort:
         # order features by the sum of their effect magnitudes
         if multi_class:
-            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=0), axis=0)[:-1])
+            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=0), axis=0))
         else:
-            feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0)[:-1])
+            feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
         feature_order = feature_order[-min(max_display, len(feature_order)):]
     else:
         feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
@@ -568,7 +569,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         num_x_points = 200
         bins = np.linspace(0, features.shape[0], layered_violin_max_num_bins + 1).round(0).astype(
             'int')  # the indices of the feature data corresponding to each bin
-        shap_min, shap_max = np.min(shap_values[:, :-1]), np.max(shap_values[:, :-1])
+        shap_min, shap_max = np.min(shap_values), np.max(shap_values)
         x_points = np.linspace(shap_min, shap_max, num_x_points)
 
         # loop through each feature and plot:
@@ -706,9 +707,20 @@ def visualize(shap_values, features=None, feature_names=None, out_names=None, da
     return force_plot(shap_values, features, feature_names, out_names, link)
 
 
-def force_plot(shap_values, features=None, feature_names=None, out_names=None, link="identity",
+def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
                plot_cmap="RdBu"):
     """ Visualize the given SHAP values with an additive force layout. """
+
+    # auto unwrap the base_value
+    if type(base_value) == np.ndarray and len(base_value) == 1:
+        base_value = base_value[0]
+
+    if type(base_value) == np.ndarray or type(base_value) == list:
+        raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
+                        "It looks like you are using the old convention of passing shap_values as " \
+                        "the first parameter. Try shap.force_plot(explainer.expected_value, " \
+                        "shap_values) instead.")
+
 
     assert not type(shap_values) == list, "The shap_values arg looks looks multi output, try shap_values[i]."
 
@@ -742,17 +754,25 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
 
     if shap_values.shape[0] == 1:
         if feature_names is None:
-            feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
+            feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
         if features is None:
             features = ["" for _ in range(len(feature_names))]
         if type(features) == np.ndarray:
             features = features.flatten()
 
+        # check that the shape of the shap_values and features match
+        if len(features) != shap_values.shape[1]:
+            msg = "Length of features is not equal to the length of shap_values!"
+            if len(features) == shap_values.shape[1] - 1:
+                msg += " You might be using an old format shap_values array with the base value " \
+                       "as the last column. In this case just pass the array without the last column."
+            raise Exception(msg)
+
         instance = Instance(np.zeros((1, len(feature_names))), features)
         e = AdditiveExplanation(
-            shap_values[0, -1],
-            np.sum(shap_values[0, :]),
-            shap_values[0, :-1],
+            base_value,
+            np.sum(shap_values[0, :]) + base_value,
+            shap_values[0, :],
             None,
             instance,
             link,
@@ -768,7 +788,7 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
         exps = []
         for i in range(shap_values.shape[0]):
             if feature_names is None:
-                feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1] - 1)]
+                feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
@@ -776,9 +796,9 @@ def force_plot(shap_values, features=None, feature_names=None, out_names=None, l
 
             instance = Instance(np.ones((1, len(feature_names))), display_features)
             e = AdditiveExplanation(
-                shap_values[i, -1],
-                np.sum(shap_values[i, :]),
-                shap_values[i, :-1],
+                base_value,
+                np.sum(shap_values[i, :]) + base_value,
+                shap_values[i, :],
                 None,
                 instance,
                 link,
