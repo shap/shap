@@ -10,12 +10,10 @@ def test_null_model_small():
     e = explainer.explain(np.ones((1, 4)))
     assert np.sum(np.abs(e.effects)) < 1e-8
 
-
 def test_null_model():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)), nsamples=100)
     e = explainer.explain(np.ones((1, 10)))
     assert np.sum(np.abs(e.effects)) < 1e-8
-
 
 def test_front_page_model_agnostic():
     import sklearn
@@ -35,7 +33,7 @@ def test_front_page_model_agnostic():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(shap_values[0][0, :], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
 
 def test_kernel_shap_with_dataframe():
     from sklearn.linear_model import LinearRegression
@@ -55,4 +53,3 @@ def test_kernel_shap_with_dataframe():
 
     explainer = shap.KernelExplainer(linear_model.predict, df_X)
     shap_values = explainer.shap_values(df_X)
-

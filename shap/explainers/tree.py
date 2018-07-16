@@ -178,7 +178,7 @@ class TreeExplainer:
                 self.expected_value = phi[-1, 0]
                 return phi[:-1, 0]
             else:
-                self.expected_value = [phi[-1, i] for i in range(phi.shape[2])]
+                self.expected_value = [phi[-1, i] for i in range(phi.shape[1])]
                 return [phi[:-1, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
@@ -249,7 +249,7 @@ class TreeExplainer:
                     self.expected_value = phi[-1, -1, 0]
                     return phi[:-1, :-1, 0]
                 else:
-                    self.expected_value = [phi[-1, -1, i] for i in range(phi.shape[3])]
+                    self.expected_value = [phi[-1, -1, i] for i in range(phi.shape[2])]
                     return [phi[:-1, :-1, i] for i in range(self.n_outputs)]
 
             elif len(X.shape) == 2:

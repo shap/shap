@@ -49,10 +49,10 @@ def test_tf_keras_mnist_cnn():
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
+    model.add(Conv2D(8, kernel_size=(3, 3),
                      activation='relu',
                      input_shape=input_shape))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(16, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
@@ -84,3 +84,52 @@ def test_tf_keras_mnist_cnn():
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+
+def test_keras_imdb_lstm():
+    """ Basic LSTM example using keras
+    """
+
+    try:
+        import keras
+        import numpy as np
+        import tensorflow as tf
+        from keras.datasets import imdb
+        from keras.models import Sequential
+        from keras.layers import Dense
+        from keras.layers import LSTM
+        from keras.layers.embeddings import Embedding
+        from keras.preprocessing import sequence
+    except Exception as e:
+        print("Skipping test_keras_imdb_lstm!")
+        return
+    import shap
+
+    # load the data from keras
+    np.random.seed(7)
+    max_features = 1000
+    (X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=max_features)
+    X_train = sequence.pad_sequences(X_train, maxlen=100)
+    X_test = sequence.pad_sequences(X_test, maxlen=100)
+
+    # create the model. note that this is model is very small to make the test
+    # run quick and we don't care about accuracy here
+    mod = Sequential()
+    mod.add(Embedding(max_features, 8))
+    mod.add(LSTM(10, dropout=0.2, recurrent_dropout=0.2))
+    mod.add(Dense(1, activation='sigmoid'))
+    mod.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+    # select the background and test samples
+    inds = np.random.choice(X_train.shape[0], 3, replace=False)
+    background = X_train[inds]
+    testx = X_test[10:11]
+
+    # explain a prediction and make sure it sums to the difference between the average output
+    # over the background samples and the current output
+    e = shap.DeepExplainer((mod.layers[0].input, mod.layers[-1].input), background)
+    shap_values = e.shap_values(testx)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    sess = tf.keras.backend.get_session()
+    diff = sess.run(mod.layers[-1].input, feed_dict={mod.layers[0].input: testx})[0,:] - \
+        sess.run(mod.layers[-1].input, feed_dict={mod.layers[0].input: background}).mean(0)
+    assert np.allclose(sums, diff, atol=1e-06), "Sum of SHAP values does not match difference!"

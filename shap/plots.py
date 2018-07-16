@@ -715,11 +715,12 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
     if type(base_value) == np.ndarray and len(base_value) == 1:
         base_value = base_value[0]
 
-    if type(base_value) == np.ndarray or type(base_value) == list:
-        raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
-                        "It looks like you are using the old convention of passing shap_values as " \
-                        "the first parameter. Try shap.force_plot(explainer.expected_value, " \
-                        "shap_values) instead.")
+    if (type(base_value) == np.ndarray or type(base_value) == list):
+        if type(shap_values) != list or len(shap_values) != len(base_value):
+            raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
+                            "Try shap.force_plot(explainer.expected_value, shap_values) or " \
+                            "for multi-output models try " \
+                            "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
 
 
     assert not type(shap_values) == list, "The shap_values arg looks looks multi output, try shap_values[i]."

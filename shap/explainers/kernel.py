@@ -182,14 +182,14 @@ class KernelExplainer(object):
                 outs = [np.zeros(s[0]) for j in range(s[1])]
                 for j in range(s[1]):
                     outs[j] = explanation.effects[:, j]
-                    assert self.expected_value[j] == explanation.base_value[j]
+                    assert abs(self.link.f(self.expected_value[j]) - explanation.base_value[j]) < 1e-6
                 return outs
 
             # single-output
             else:
                 out = np.zeros(s[0])
                 out[:] = explanation.effects
-                assert self.expected_value == explanation.base_value
+                assert abs(self.link.f(self.expected_value) - explanation.base_value) < 1e-6
                 return out
 
         # explain the whole dataset
@@ -208,7 +208,7 @@ class KernelExplainer(object):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i].effects[:, j]
-                        assert self.expected_value[j] == explanations[i].base_value[j]
+                        assert abs(self.link.f(self.expected_value[j]) - explanations[i].base_value[j]) < 1e-6
                 return outs
 
             # single-output
@@ -216,7 +216,7 @@ class KernelExplainer(object):
                 out = np.zeros((X.shape[0], s[0]))
                 for i in range(X.shape[0]):
                     out[i] = explanations[i].effects
-                    assert self.expected_value == explanations[i].base_value
+                    assert abs(self.link.f(self.expected_value) - explanations[i].base_value) < 1e-6
                 return out
 
     def explain(self, incoming_instance, **kwargs):

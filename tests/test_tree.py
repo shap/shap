@@ -20,14 +20,15 @@ def test_front_page_xgboost():
     X, y = shap.datasets.boston()
     model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
-    # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
 
     # visualize the first prediction's explaination
-    shap.force_plot(shap_values[0, :], X.iloc[0, :])
+    shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
 
     # visualize the training set predictions
-    shap.force_plot(shap_values, X)
+    shap.force_plot(explainer.expected_value, shap_values, X)
 
     # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
     shap.dependence_plot(5, shap_values, X, show=False)
@@ -48,14 +49,15 @@ def test_front_page_sklearn():
     model = sklearn.ensemble.RandomForestRegressor(n_estimators=100)
     model.fit(X, y)
 
-    # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
 
     # visualize the first prediction's explaination
-    shap.force_plot(shap_values[0, :], X.iloc[0, :])
+    shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
 
     # visualize the training set predictions
-    shap.force_plot(shap_values, X)
+    shap.force_plot(explainer.expected_value, shap_values, X)
 
     # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
     shap.dependence_plot(5, shap_values, X, show=False)
@@ -169,18 +171,20 @@ def test_sklearn_interaction():
     import sklearn
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import RandomForestClassifier
-    X,y = shap.datasets.iris()
+
+    # train a simple sklean RF model on the iris dataset
+    X, y = shap.datasets.iris()
     X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
     rforest = RandomForestClassifier(n_estimators=100, max_depth=None, min_samples_split=2, random_state=0)
     model = rforest.fit(X_train, Y_train)
+
+    # verify symmetry of the interaction values (this typically breaks if anything is wrong)
     interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
     for i in range(len(interaction_vals)):
         for j in range(len(interaction_vals[i])):
             for k in range(len(interaction_vals[i][j])):
                 for l in range(len(interaction_vals[i][j][k])):
-                    assert abs(interaction_vals[i][j][k][l]-interaction_vals[i][j][l][k])<0.0000001
-            if j<len(interaction_vals[i])-1:
-                assert abs(interaction_vals[i][j][len(interaction_vals[i][j])-1][len(interaction_vals[i][j])-1]-interaction_vals[i][j+1][len(interaction_vals[i][j])-1][len(interaction_vals[i][j])-1])<0.0000001
+                    assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 0.0000001
 
 def test_sum_match_random_forest():
     import shap
@@ -193,8 +197,10 @@ def test_sum_match_random_forest():
     clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     predicted = clf.predict_proba(X_test)
-    shap_values = shap.TreeExplainer(clf).shap_values(X_test)
-    assert np.abs(shap_values[0].sum(1) - predicted[:,0]).max() < 1e-6, "SHAP values don't sum to model output!"
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test)
+    assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-6, \
+        "SHAP values don't sum to model output!"
 
 def test_single_row_random_forest():
     import shap
@@ -207,5 +213,7 @@ def test_single_row_random_forest():
     clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     predicted = clf.predict_proba(X_test)
-    shap_values = shap.TreeExplainer(clf).shap_values(X_test.iloc[0,:])
-    assert np.abs(shap_values.sum(1) - predicted[0,0]) < 1e-6, "SHAP values don't sum to model output!"
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test.iloc[0,:])
+    assert np.abs(shap_values[0].sum() + ex.expected_value[0] - predicted[0,0]) < 1e-6, \
+        "SHAP values don't sum to model output!"

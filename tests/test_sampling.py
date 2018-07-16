@@ -35,4 +35,4 @@ def test_front_page_model_agnostic():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(shap_values[0][0, :], X_test.iloc[0, :])
+    shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :])
