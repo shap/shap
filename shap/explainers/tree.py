@@ -258,7 +258,8 @@ class TreeExplainer:
                 self._current_x_missing = x_missing
 
                 # Only python 3 can serialize a method to send to another process
-                if sys.version_info[0] >= 3:
+                # TODO: LightGBM models are attached to this object and this seems to cause pool.map to hang
+                if sys.version_info[0] >= 3 and self.model_type != "lightgbm":
                     pool = multiprocessing.Pool()
                     phi = np.stack(pool.map(self._tree_shap_ind_interactions, range(X.shape[0])), 0)
                     pool.close()
@@ -340,17 +341,17 @@ class Tree:
                 self.values = tree.value[:,0,:]
             self.values = self.values * scaling
 
-
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
             self.unique_features = np.unique(self.features)
-            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features < 0))
 
             # we compute the expectations to make sure they follow the SHAP logic
             self.max_depth = _cext.compute_expectations(
                 self.children_left, self.children_right, self.node_sample_weight,
                 self.values
             )
-        elif str(type(tree)).endswith("<type 'dict'>"):
+
+        elif type(tree) == dict:
             start = tree['tree_structure']
             num_parents = tree['num_leaves']-1
             self.children_left = np.empty((2*num_parents+1), dtype=np.int32)
@@ -399,7 +400,7 @@ class Tree:
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
             self.unique_features = np.unique(self.features)
-            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features < 0))
 
             assert have_cext, "C extension was not built during install!" + str(have_cext)
             self.max_depth = _cext.compute_expectations(

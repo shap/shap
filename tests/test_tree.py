@@ -184,7 +184,27 @@ def test_sklearn_interaction():
         for j in range(len(interaction_vals[i])):
             for k in range(len(interaction_vals[i][j])):
                 for l in range(len(interaction_vals[i][j][k])):
-                    assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 0.0000001
+                    assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 1e-6
+
+def test_lightgbm_interaction():
+    try:
+        import lightgbm
+    except Exception as e:
+        print("Skipping test_lightgbm_interaction!")
+        return
+    import shap
+
+    # train XGBoost model
+    X, y = shap.datasets.boston()
+    model = lightgbm.sklearn.LGBMRegressor()
+    model.fit(X, y)
+
+    # verify symmetry of the interaction values (this typically breaks if anything is wrong)
+    interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
+    for j in range(len(interaction_vals)):
+        for k in range(len(interaction_vals[j])):
+            for l in range(len(interaction_vals[j][k])):
+                assert abs(interaction_vals[j][k][l] - interaction_vals[j][l][k]) < 1e-6
 
 def test_sum_match_random_forest():
     import shap
