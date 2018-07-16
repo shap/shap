@@ -34,10 +34,11 @@ model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
 # explain the model's predictions using SHAP values
 # (same syntax works for LightGBM, CatBoost, and scikit-learn models)
-shap_values = shap.TreeExplainer(model).shap_values(X)
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X)
 
 # visualize the first prediction's explanation
-shap.force_plot(shap_values[0,:], X.iloc[0,:])
+shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:])
 ```
 
 <p align="center">
@@ -50,7 +51,7 @@ If we take many explanations such as the one shown above, rotate them 90 degrees
 
 ```python
 # visualize the training set predictions
-shap.force_plot(shap_values, X)
+shap.force_plot(explainer.expected_value, shap_values, X)
 ```
 
 <p align="center">
@@ -80,7 +81,7 @@ shap.summary_plot(shap_values, X)
   <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot.png" />
 </p>
 
-We can also just take the mean absolute value of the SHAP values for each feature to get a standard bar plot (particularly useful for multi-class outputs):
+We can also just take the mean absolute value of the SHAP values for each feature to get a standard bar plot (produces stacked bars for multi-class outputs):
 
 ```python
 shap.summary_plot(shap_values, X, plot_type="bar")
@@ -142,7 +143,7 @@ explainer = shap.KernelExplainer(svm.predict_proba, X_train, link="logit")
 shap_values = explainer.shap_values(X_test, nsamples=100)
 
 # plot the SHAP values for the Setosa output of the first instance
-shap.force_plot(shap_values[0][0,:], X_test.iloc[0,:], link="logit")
+shap.force_plot(explainer.expected_value[0], shap_values[0][0,:], X_test.iloc[0,:], link="logit")
 ```
 <p align="center">
   <img width="810" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/iris_instance.png" />
@@ -154,7 +155,7 @@ If we take many explanations such as the one shown above, rotate them 90 degrees
 
 ```python
 # plot the SHAP values for the Setosa output of all instances
-shap.force_plot(shap_values[0], X_test, link="logit")
+shap.force_plot(explainer.expected_value[0], shap_values[0], X_test, link="logit")
 ```
 <p align="center">
   <img width="813" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/iris_dataset.png" />
