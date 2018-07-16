@@ -175,11 +175,11 @@ class TreeExplainer:
 
             # note we pull off the last column and keep it as our expected_value
             if self.n_outputs == 1:
-                self.expected_value = phi[0, -1, 0]
-                return phi[0, :-1, 0]
+                self.expected_value = phi[-1, 0]
+                return phi[:-1, 0]
             else:
-                self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
-                return [phi[0, :-1, i] for i in range(self.n_outputs)]
+                self.expected_value = [phi[-1, i] for i in range(phi.shape[2])]
+                return [phi[:-1, i] for i in range(self.n_outputs)]
 
         elif len(X.shape) == 2:
             x_missing = np.zeros(X.shape[1], dtype=np.bool)
@@ -246,11 +246,11 @@ class TreeExplainer:
 
                 # note we pull off the last column and keep it as our expected_value
                 if self.n_outputs == 1:
-                    self.expected_value = phi[0, -1, -1, 0]
-                    return phi[0, :-1, :-1, 0]
+                    self.expected_value = phi[-1, -1, 0]
+                    return phi[:-1, :-1, 0]
                 else:
-                    self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
-                    return [phi[0, :-1, :-1, i] for i in range(self.n_outputs)]
+                    self.expected_value = [phi[-1, -1, i] for i in range(phi.shape[3])]
+                    return [phi[:-1, :-1, i] for i in range(self.n_outputs)]
 
             elif len(X.shape) == 2:
                 x_missing = np.zeros(X.shape[1], dtype=np.bool)
