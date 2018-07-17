@@ -29,7 +29,7 @@ test_script:
   # Workaround required to ensure setup.py finds the .pypirc under Windows
   - set HOME=%USERPROFILE%
 
-  - %PYTHON%\\python.exe setup.py bdist_wheel upload
+  - "%PYTHON%\\python.exe setup.py bdist_wheel upload"
   # Put your test command here.
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
