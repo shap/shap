@@ -46,7 +46,7 @@ def adult(display=False):
         ("Hours per week", "float32"), ("Country", "category"), ("Target", "category")
     ]
     raw_data = pd.read_csv(
-        cache("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"),
+        cache("https://github.com/slundberg/shap/raw/master/data/adult.data"),
         names=[d[0] for d in dtypes],
         na_values="?",
         dtype=dict(dtypes)
