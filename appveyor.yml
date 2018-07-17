@@ -7,7 +7,6 @@ environment:
     # The list here is complete (excluding Python 2.6, which
     # isn't covered by this document) at the time of writing.
 
-    - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
 
@@ -18,43 +17,31 @@ install:
 build: off
 
 test_script:
-  - echo [distutils]                                  > %USERPROFILE%\\.pypirc
-  - echo index-servers =                             >> %USERPROFILE%\\.pypirc
-  - echo     pypi                                    >> %USERPROFILE%\\.pypirc
-  - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
-  - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
-  - echo username=rigbots                            >> %USERPROFILE%\\.pypirc
-  - echo password=%PYPIPASSWORD%                     >> %USERPROFILE%\\.pypirc
-
-  # Workaround required to ensure setup.py finds the .pypirc under Windows
-  - set HOME=%USERPROFILE%
-
-  - "%PYTHON%\\python.exe setup.py bdist_wheel upload"
   # Put your test command here.
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
   # to put the Python version you want to use on PATH.
-  #- "%PYTHON%\\python.exe setup.py test"
+  - "%PYTHON%\\python.exe setup.py test"
 
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory
   - path: dist\*
 
-# on_success:
-#   # Specify account details for PyPI
-#   - echo [distutils]                                  > %USERPROFILE%\\.pypirc
-#   - echo index-servers =                             >> %USERPROFILE%\\.pypirc
-#   - echo     pypi                                    >> %USERPROFILE%\\.pypirc
-#   - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
-#   - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
-#   - echo username=rigbots                            >> %USERPROFILE%\\.pypirc
-#   - echo password=%PYPIPASSWORD%                     >> %USERPROFILE%\\.pypirc
-#
-#   # Workaround required to ensure setup.py finds the .pypirc under Windows
-#   - set HOME=%USERPROFILE%
-#
-#   # Deploy a wheel (only actually do this for tags). NB That breaking this line
-#   # with Unix line-endings causes the windows command interpreter to barf so
-#   # this is given as one-line to make this script less fragile when edited on
-#   # other OSes.
-#   - if "%APPVEYOR_REPO_TAG%"=="true" ( %PYTHON%\\python.exe setup.py bdist_wheel upload ) else ( echo "Not deploying because not a tagged commit." )
+on_success:
+  # Specify account details for PyPI
+  - echo [distutils]                                  > %USERPROFILE%\\.pypirc
+  - echo index-servers =                             >> %USERPROFILE%\\.pypirc
+  - echo     pypi                                    >> %USERPROFILE%\\.pypirc
+  - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
+  - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
+  - echo username=shap_poster                        >> %USERPROFILE%\\.pypirc
+  - echo password=%PYPIPASSWORD%                     >> %USERPROFILE%\\.pypirc
+
+  # Workaround required to ensure setup.py finds the .pypirc under Windows
+  - set HOME=%USERPROFILE%
+
+  # Deploy a wheel (only actually do this for tags). NB That breaking this line
+  # with Unix line-endings causes the windows command interpreter to barf so
+  # this is given as one-line to make this script less fragile when edited on
+  # other OSes.
+  - if "%APPVEYOR_REPO_TAG%"=="true" ( %PYTHON%\\python.exe setup.py bdist_wheel upload ) else ( echo "Not deploying because not a tagged commit." )
