@@ -14,30 +14,47 @@ environment:
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install twine"
 
 build: off
 
 test_script:
+  - echo [distutils]                                  > %USERPROFILE%\\.pypirc
+  - echo index-servers =                             >> %USERPROFILE%\\.pypirc
+  - echo     pypi                                    >> %USERPROFILE%\\.pypirc
+  - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
+  - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
+  - echo username=rigbots                            >> %USERPROFILE%\\.pypirc
+  - echo password=%PYPIPASSWORD%                     >> %USERPROFILE%\\.pypirc
+
+  # Workaround required to ensure setup.py finds the .pypirc under Windows
+  - set HOME=%USERPROFILE%
+
+  - %PYTHON%\\python.exe setup.py bdist_wheel upload
   # Put your test command here.
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
   # to put the Python version you want to use on PATH.
-  - "%PYTHON%\\python.exe setup.py test"
-
-after_test:
-  # This step builds your wheels.
-  # You need to use %PYTHON% to get the correct interpreter
-  - "%PYTHON%\\python.exe setup.py bdist_wheel"
-  - ps: "ls dist"
+  #- "%PYTHON%\\python.exe setup.py test"
 
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory
   - path: dist\*
 
-#on_success:
-#  You can use this step to upload your artifacts to a public website.
-#  See Appveyor's documentation for more details. Or you can simply
-#  access your wheels from the Appveyor "artifacts" tab for your build.
-deploy_script:
-  - if "%APPVEYOR_REPO_TAG%"=="true" ( twine upload -u shap_poster -p tF7KYQMmr --skip-existing dist/* ) else ( echo "Not deploying because not a tagged commit.")
+# on_success:
+#   # Specify account details for PyPI
+#   - echo [distutils]                                  > %USERPROFILE%\\.pypirc
+#   - echo index-servers =                             >> %USERPROFILE%\\.pypirc
+#   - echo     pypi                                    >> %USERPROFILE%\\.pypirc
+#   - echo [pypi]                                      >> %USERPROFILE%\\.pypirc
+#   - echo repository=https://pypi.python.org/pypi     >> %USERPROFILE%\\.pypirc
+#   - echo username=rigbots                            >> %USERPROFILE%\\.pypirc
+#   - echo password=%PYPIPASSWORD%                     >> %USERPROFILE%\\.pypirc
+#
+#   # Workaround required to ensure setup.py finds the .pypirc under Windows
+#   - set HOME=%USERPROFILE%
+#
+#   # Deploy a wheel (only actually do this for tags). NB That breaking this line
+#   # with Unix line-endings causes the windows command interpreter to barf so
+#   # this is given as one-line to make this script less fragile when edited on
+#   # other OSes.
+#   - if "%APPVEYOR_REPO_TAG%"=="true" ( %PYTHON%\\python.exe setup.py bdist_wheel upload ) else ( echo "Not deploying because not a tagged commit." )
