@@ -1,6 +1,7 @@
 import numpy as np
 import multiprocessing
 import sys
+from .explainer import Explainer
 
 have_cext = False
 try:
@@ -37,7 +38,7 @@ except:
     pass
 
 
-class TreeExplainer:
+class TreeExplainer(Explainer):
     """Uses the Tree SHAP method to explain the output of ensemble tree models.
 
     Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles

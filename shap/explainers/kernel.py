@@ -11,6 +11,7 @@ import itertools
 from sklearn.linear_model import LassoLarsIC, Lasso
 from sklearn.cluster import KMeans
 from tqdm import tqdm
+from .explainer import Explainer
 
 log = logging.getLogger('shap')
 
@@ -51,7 +52,7 @@ def kmeans(X, k, round_values=True):
     return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
 
 
-class KernelExplainer(object):
+class KernelExplainer(Explainer):
     """Uses the Kernel SHAP method to explain the output of any function.
 
     Kernel SHAP is a method that uses a special weighted linear regression

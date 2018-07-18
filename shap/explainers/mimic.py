@@ -1,6 +1,7 @@
 import numpy as np
 import multiprocessing
 import sys
+from .explainer import Explainer
 
 try:
     import xgboost
@@ -10,7 +11,7 @@ except:
     print("xgboost is installed...but failed to load!")
     pass
 
-class MimicExplainer:
+class MimicExplainer(Explainer):
     """Fits a mimic model to the original model and then explains predictions using the mimic model.
 
     Tree SHAP allows for very fast SHAP value explainations of flexible gradient boosted decision
@@ -22,6 +23,24 @@ class MimicExplainer:
     the future we could include other mimic model types given enough demand/help. Finally, we would
     like to note that this explainer is vaugely inspired by https://arxiv.org/abs/1802.07814 where
     they learn an explainer that can be applied to any input.
+
+
+    Parameters
+    ----------
+    model : function or iml.Model
+        User supplied function that takes a matrix of samples (# samples x # features) and
+        computes a the output of the model for those samples. The output can be a vector
+        (# samples) or a matrix (# samples x # model outputs).
+
+    data : numpy.array or pandas.DataFrame or iml.DenseData
+        The background dataset to use for integrating out features. To determine the impact
+        of a feature, that feature is set to "missing" and the change in the model output
+        is observed. Since most models aren't designed to handle arbitrary missing data at test
+        time, we simulate "missing" by replacing the feature with the values it takes in the
+        background dataset. So if the background dataset is a simple sample of all zeros, then
+        we would approximate a feature being missing by setting it to zero. For small problems
+        this background datset can be the whole training set, but for larger problems consider
+        using a single reference value or using the kmeans function to summarize the dataset.
     """
 
     def __init__(self, model, data, mimic_model="xgboost", mimic_model_params={}):
@@ -50,7 +69,6 @@ class MimicExplainer:
         self._train_mimic_model()
 
     def _train_mimic_model(self):
-
         if self.mimic_model_type == "xgboost":
             self.mimic_model = xgboost.train(self.mimic_model_params, xgboost.DMatrix(data.data))
 

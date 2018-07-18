@@ -111,7 +111,7 @@ class GradientExplainer(Explainer):
             self.gradients[i] = tf.gradients(out, self.model_inputs)
         return self.gradients[i]
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=500, ranked_outputs=None, output_rank_order="max"):
         """ Return the values for the model applied to X.
 
         Parameters

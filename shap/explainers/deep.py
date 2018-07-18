@@ -1,11 +1,12 @@
 import numpy as np
 import warnings
+from .explainer import Explainer
 from distutils.version import LooseVersion
 keras = None
 tf = None
 
 
-class DeepExplainer(object):
+class DeepExplainer(Explainer):
     """ Meant to approximate SHAP values for deep learning models.
 
     This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we

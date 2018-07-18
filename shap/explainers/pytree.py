@@ -5,6 +5,7 @@ module which uses a compiled C++ implmentation.
 """
 import numpy as np
 #import numba
+from .explainer import Explainer
 
 try:
     import xgboost
@@ -16,7 +17,7 @@ try:
 except ImportError:
     pass
 
-class TreeExplainer:
+class TreeExplainer(Explainer):
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
 
