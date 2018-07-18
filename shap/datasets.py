@@ -8,6 +8,22 @@ try:
 except ImportError:
     from urllib import urlretrieve
 
+def imagenet50(display=False, resolution=224):
+    """ This is a set of 50 images representative of ImageNet images.
+
+    This dataset was collected by randomly finding a working ImageNet link and then pasting the
+    original ImageNet image into Google image search restricted to images licensed for reuse. A
+    similar image (now with rights to reuse) was downloaded as a rough replacment for the original
+    ImageNet image. The point is to have a random sample of ImageNet for use as a background
+    distribution for explaining models trained on ImageNet data.
+
+    Note that because the images are only rough replacements the labels might no longer be correct.
+    """
+
+    prefix = "https://github.com/slundberg/shap/raw/master/data/imagenet50_"
+    X = np.load(cache(prefix + "%sx%s.npy" % (resolution, resolution))).astype(np.float32)
+    y = np.loadtxt(cache(prefix + "labels.csv"))
+    return X, y
 
 def boston(display=False):
     """ Return the boston housing data in a nice package. """
@@ -95,6 +111,6 @@ def cache(url, file_name=None):
 
     file_path = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
-        urlretrieve(url, os.path.join(data_dir, file_name))
+        urlretrieve(url, file_path)
 
     return file_path
