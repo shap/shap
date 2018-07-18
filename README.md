@@ -17,7 +17,7 @@
 pip install shap
 ```
 
-## Tree ensemble example (XGBoost/LightGBM/CatBoost/scikit-learn models)
+## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn models)
 
 While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, and *scikit-learn* tree models:
 
@@ -92,9 +92,9 @@ shap.summary_plot(shap_values, X, plot_type="bar")
 </p>
 
 
-## Deep learning MNIST example with DeepExplainer (TensorFlow/Keras models)
+## Deep learning example with DeepExplainer (TensorFlow/Keras models)
 
-Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the SHAP NIPS paper. The implementation here (`shap.DeepExplainer`) differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into DeepLIFT. Currently both TensorFlow models and Keras models using the TensorFlow backend are supported:
+Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the SHAP NIPS paper. The implementation here differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into DeepLIFT. Currently both TensorFlow models and Keras models using the TensorFlow backend are supported:
 
 ```python
 # ...include code from https://github.com/keras-team/keras/blob/master/examples/mnist_cnn.py
@@ -122,7 +122,7 @@ shap.image_plot(shap_values, -x_test[1:5])
 The plot above explains ten outputs (digits 0-9) for four different images. Red pixels increase the model's output while blue pixels decrease the output. The input images are shown on the left, and as nearly transparent grayscale backings behind each of the explanations. The sum of the SHAP values equals the difference between the expected model output (averaged over the background dataset) and the current model output. Note that for the 'zero' image the blank middle is important, while for the 'four' image the lack of a connection on top makes it a four instead of a nine.
 
 
-## Deep learning ImageNet example with GradientExplainer (TensorFlow/Keras models)
+## Deep learning example with GradientExplainer (TensorFlow/Keras models)
 
 Expected gradients combines ideas from [Integrated Gradients](https://arxiv.org/abs/1703.01365), SHAP, and [SmoothGrad](https://arxiv.org/abs/1706.03825) into a single expected value equation. This allows an entire dataset to be used as the background distribution (as opposed to a single reference value) and allows local smoothing. If the model is approximately linear between each background data sample and the current input to be explained, and we assume the input features are independent then expected gradients will compute approximate SHAP values. In the example below we have explained how the 7th intermediate layer of the VGG16 ImageNet model impacts the output probabilities.
 
@@ -149,7 +149,11 @@ with open(fname) as f:
 def map2layer(x, layer):
     feed_dict = dict(zip([model.layers[0].input], [preprocess_input(x.copy())]))
     return K.get_session().run(model.layers[layer].input, feed_dict)
-e = shap.GradientExplainer((model.layers[7].input, model.layers[-1].output), map2layer(preprocess_input(X.copy()), 7))
+e = shap.GradientExplainer(
+    (model.layers[7].input, model.layers[-1].output),
+    map2layer(X, 7),
+    local_smoothing=0 # std dev of smoothing noise
+)
 shap_values,indexes = e.shap_values(map2layer(to_explain, 7), ranked_outputs=2)
 
 # get the names for the classes
@@ -160,10 +164,12 @@ shap.image_plot(shap_values, to_explain, index_names)
 ```
 
 <p align="center">
-  <img width="620" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/gradient_imagenet_plot.png" />
+  <img width="500" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/gradient_imagenet_plot.png" />
 </p>
 
-## Model agnostic SVM example
+Predictions for two input images are explained in the plot above. Red pixels represent positive SHAP values that increase the probability of the class, while blue pixels represent negative SHAP values the reduce the probability of the class. By using `ranked_outputs=2` we explain only the two most likely classes for each input (this spares us from explaining all 1,000 classes).
+
+## Model agnostic example with KernelExplainer (explains any function)
 
 Kernel SHAP uses a specially-weighted local linear regression to estimate SHAP values for any model. Below is a simple example for explaining a multi-class SVM on the classic iris dataset.
 
@@ -215,15 +221,25 @@ SHAP interaction values are a generalization of SHAP values to higher order inte
 
 The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the tree examples use the fast and exact Tree SHAP algorithm, the others use the model agnostic Kernel SHAP algorithm.
 
+### TreeExplainer
+
 - [**NHANES survival model with XGBoost and SHAP interaction values**](https://slundberg.github.io/shap/notebooks/NHANES%20I%20Survival%20Model.html) - Using mortality data from 20 years of followup this notebook demonstrates how to use XGBoost and `shap` to uncover complex risk factor relationships.
 
 - [**Census income classification with LightGBM**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification%20with%20LightGBM.html) - Using the standard adult census income dataset, this notebook trains a gradient boosting tree model with LightGBM and then explains predictions using `shap`.
 
+- [**League of Legends Win Prediction with XGBoost**](https://slundberg.github.io/shap/notebooks/League%20of%20Legends%20Win%20Prediction%20with%20XGBoost.html) - Using a Kaggle dataset of 180,000 ranked matches from League of Legends we train and explain a gradient boosting tree model with XGBoost to predict if a player will win their match.
+
+### DeepExplainer
+
 - [**MNIST Digit classification with Keras**](https://slundberg.github.io/shap/notebooks/Front%20Page%20DeepExplainer%20MNIST%20Example.html) - Using the MNIST handwriting recognition dataset, this notebook trains a neural network with Keras and then explains predictions using `shap`. 
 
-- [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification%20with%20scikit-learn.html) - Using the standard adult census income dataset, this notebook trains a k-nearest neighbors classifier using scikit-learn and then explains predictions using `shap`.
+### GradientExplainer
 
-- [**League of Legends Win Prediction with XGBoost**](https://slundberg.github.io/shap/notebooks/League%20of%20Legends%20Win%20Prediction%20with%20XGBoost.html) - Using a Kaggle dataset of 180,000 ranked matches from League of Legends we train and explain a gradient boosting tree model with XGBoost to predict if a player will win their match.
+- [**Explain an Intermediate Layer of VGG16 on ImageNet**](https://slundberg.github.io/shap/notebooks/gradient_explainer/Explain%20an%20Intermediate%20Layer%20of%20VGG16%20on%20ImageNet.html) - This notebook demonstrates how to explain the output of a pre-trained VGG16 ImageNet model using an internal convolutional layer.
+
+### KernelExplainer
+
+- [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification%20with%20scikit-learn.html) - Using the standard adult census income dataset, this notebook trains a k-nearest neighbors classifier using scikit-learn and then explains predictions using `shap`.
 
 - [**ImageNet VGG16 Model with Keras**](https://slundberg.github.io/shap/notebooks/ImageNet%20VGG16%20Model%20with%20Keras.html) - Explain the classic VGG16 convolutional nerual network's predictions for an image. This works by applying the model agnostic Kernel SHAP method to a super-pixel segmented image.
 
