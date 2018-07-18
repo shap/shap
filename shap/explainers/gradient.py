@@ -1,10 +1,11 @@
 import numpy as np
 import warnings
+from .explainer import Explainer
 from distutils.version import LooseVersion
 keras = None
 tf = None
 
-class GradientExplainer(object):
+class GradientExplainer(Explainer):
     """ Explains a model using expected gradients (an extension of integrated gradients).
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
@@ -43,13 +44,13 @@ class GradientExplainer(object):
         global tf, keras
         if tf is None:
             import tensorflow as tf
-            if LooseVersion(tf.__version__) < LooseVersion("1.8.0"):
-                warnings.warn("Your TensorFlow version is older than 1.8.0 and not supported.")
+            if LooseVersion(tf.__version__) < LooseVersion("1.4.0"):
+                warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         if keras is None:
             try:
                 import keras
-                if LooseVersion(keras.__version__) < LooseVersion("2.2.0"):
-                    warnings.warn("Your Keras version is older than 2.2.0 and not supported.")
+                if LooseVersion(keras.__version__) < LooseVersion("2.1.0"):
+                    warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
             except:
                 pass
 
