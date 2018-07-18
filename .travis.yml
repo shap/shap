@@ -1,15 +1,20 @@
 language: python
 python:
-  - "2.7"
-  - "3.6"
-# command to install dependencies
+- '2.7'
+- '3.6'
+- '3.7'
 install:
-  - pip install .
-
-# command to run tests
+- pip install .
 script: python setup.py nosetests
-
-before_script: # configure a headless display to test plot generation
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
+before_script:
+- export DISPLAY=:99.0
+- sh -e /etc/init.d/xvfb start
+- sleep 3
+deploy:
+  provider: pypi
+  user: shap_poster
+  password:
+    secure: pImO/N+qSzFx8PESxK4HviJV/w7/TtK1DZmVXh/jkZcmv3xcvCafBQ3kVxY1kInh5TqFjTtTnRDcbEwsv/4GtpbGrstt8qbT4v19oV08wDxTRdvdVBpJbMZJp8NX0osuxpEV+G3OXHSeJSEqVzvK/ryufnJdOxqUcPFoTWDJfUKE++EbleSn9l29rHdehQmGqyvI83SdI0OPCLysFvqwJ6YoEAJZdJ3twq2kgodcWGTyS8swmxwAx905VHs7pGcqZx+jGyHcP/10MRT3nKMiYwveFYP9R+NW9nqtw9Kx32dDsp6DIU1dzkTvtZsTMzy2PElGD3qeU5iu/k1GQyKRpscDI6MKmNa55iDAVc3QYUd66gmACgOEoLTak4MSuUKULkVJp6uu3o0yIheffuLz3B5orzU+M405unYZPf5An7+oRmRKBFJQ/BdQ3mlZ/opNx1qEXrKu1rmJdRe6wM3tXWXAmH6VZN7MbO9MTi8w+hT8NUrXXo4iXwelEcA09Q70YU5+af06QyC1xStdZbblPPNDP8pzEdmpnI1ryDQZ4ZFkfihVkkVkAUxdou0nehWfz8hE0yKOBn/sphjgunHYTnFZURM8RFHnbgEgX9X6k168UkkEzakmyKtpXTo8swER9/mOGUbZmMplzc/eNX7LxWYhUyL8JsbCFXhZqCAbosk=
+  on:
+    tags: true
+  distributions: "sdist bdist_wheel"

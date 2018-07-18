@@ -1,4 +1,6 @@
 environment:
+  PYPIPASSWORD:
+    secure: bHtyMeea0zyeczBWXTsHBA==
 
   matrix:
 
