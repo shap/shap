@@ -219,9 +219,11 @@ SHAP interaction values are a generalization of SHAP values to higher order inte
 
 ## Sample notebooks
 
-The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself. Note that the tree examples use the fast and exact Tree SHAP algorithm, the others use the model agnostic Kernel SHAP algorithm.
+The notebooks below demonstrate different use cases for SHAP. Look inside the notebooks directory of the repository if you want to try playing with the original notebooks yourself.
 
 ### TreeExplainer
+
+An implementation of Tree SHAP, a fast and exact algorithm to compute SHAP values for trees and ensembles of trees.
 
 - [**NHANES survival model with XGBoost and SHAP interaction values**](https://slundberg.github.io/shap/notebooks/NHANES%20I%20Survival%20Model.html) - Using mortality data from 20 years of followup this notebook demonstrates how to use XGBoost and `shap` to uncover complex risk factor relationships.
 
@@ -231,13 +233,19 @@ The notebooks below demonstrate different use cases for SHAP. Look inside the no
 
 ### DeepExplainer
 
+An implementation of Deep SHAP, a faster (but only approximate) algorithm to compute SHAP values for deep learning models that is based on connections between SHAP and the DeepLIFT algorithm.
+
 - [**MNIST Digit classification with Keras**](https://slundberg.github.io/shap/notebooks/Front%20Page%20DeepExplainer%20MNIST%20Example.html) - Using the MNIST handwriting recognition dataset, this notebook trains a neural network with Keras and then explains predictions using `shap`. 
 
 ### GradientExplainer
 
+An implementation of expected gradients to approximate SHAP values for deep learning models. It is based on connections between SHAP and the Integrated Gradients algorithm. GradientExplainer is slower than DeepExplainer and makes different approximation assumptions.
+
 - [**Explain an Intermediate Layer of VGG16 on ImageNet**](https://slundberg.github.io/shap/notebooks/gradient_explainer/Explain%20an%20Intermediate%20Layer%20of%20VGG16%20on%20ImageNet.html) - This notebook demonstrates how to explain the output of a pre-trained VGG16 ImageNet model using an internal convolutional layer.
 
 ### KernelExplainer
+
+An implementation of Kernel SHAP, a model agnostic method to estimate SHAP values for any model. Because it makes not assumptions about the model type, KernelExplainer is slower than the other model type specific algorithms.
 
 - [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification%20with%20scikit-learn.html) - Using the standard adult census income dataset, this notebook trains a k-nearest neighbors classifier using scikit-learn and then explains predictions using `shap`.
 
@@ -245,7 +253,7 @@ The notebooks below demonstrate different use cases for SHAP. Look inside the no
 
 - [**Iris classification**](https://slundberg.github.io/shap/notebooks/Iris%20classification%20with%20scikit-learn.html) - A basic demonstration using the popular iris species dataset. It explains predictions from six different models in scikit-learn using `shap`.
 
-### Methods Unified by SHAP
+## Methods Unified by SHAP
 
 1. *LIME:* Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should i trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. ACM, 2016.
 
