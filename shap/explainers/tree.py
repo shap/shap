@@ -121,10 +121,10 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        For a models with a single output this returns a matrix of SHAP values
-        (# samples x # features + 1). The last column is the base value of the model, which is
-        the expected value of the model applied to the background dataset. This causes each row to
-        sum to the model output for that sample. For models with vector outputs this returns a list
+        For models with a single output this returns a matrix of SHAP values
+        (# samples x # features). Each row sums to the difference between the model output for that
+        sample and the expected value of the model output (which is stored as expected_value
+        attribute of the explainer). For models with vector outputs this returns a list
         of such matrices, one for each output.
         """
 

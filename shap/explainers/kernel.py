@@ -150,10 +150,10 @@ class KernelExplainer(Explainer):
 
         Returns
         -------
-        For a models with a single output this returns a matrix of SHAP values
-        (# samples x # features + 1). The last column is the base value of the model, which is
-        the expected value of the model applied to the background dataset. This causes each row to
-        sum to the model output for that sample. For models with vector outputs this returns a list
+        For models with a single output this returns a matrix of SHAP values
+        (# samples x # features). Each row sums to the difference between the model output for that
+        sample and the expected value of the model output (which is stored as expected_value
+        attribute of the explainer). For models with vector outputs this returns a list
         of such matrices, one for each output.
         """
 
@@ -384,8 +384,8 @@ class KernelExplainer(Explainer):
         varying = np.zeros(len(self.data.groups))
         for i in range(0, len(self.data.groups)):
             inds = self.data.groups[i]
-            num_matches = sum(np.abs(x[0, inds] - self.data.data[:, inds]) < 1e-7, 0)
-            varying[i] = sum(num_matches != len(inds) * self.data.data.shape[0])
+            num_mismatches = np.sum(np.abs(x[0, inds] - self.data.data[:, inds]) > 1e-7)
+            varying[i] = num_mismatches > 0
         return np.nonzero(varying)[0]
 
     def allocate(self):
