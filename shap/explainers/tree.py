@@ -51,6 +51,7 @@ class TreeExplainer(Explainer):
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
         self.base_offset = 0.0
         self.expected_value = None
+        self.trees = None
 
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
@@ -90,18 +91,12 @@ class TreeExplainer(Explainer):
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             self.model_type = "lightgbm"
             self.model = model
-            tree_info = self.model.dump_model()["tree_info"]
-            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             self.model_type = "lightgbm"
             self.model = model.booster_
-            tree_info = self.model.dump_model()["tree_info"]
-            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
             self.model_type = "lightgbm"
             self.model = model.booster_
-            tree_info = self.model.dump_model()["tree_info"]
-            self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
         elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
             self.model_type = "catboost"
             self.trees = model
@@ -222,6 +217,11 @@ class TreeExplainer(Explainer):
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
         else:
+
+            # lazy build of the trees for lightgbm since we only need them for interaction values right now
+            if self.model_type == "lightgbm" and self.trees is None:
+                tree_info = self.model.dump_model()["tree_info"]
+                self.trees = [Tree(e, scaling=len(tree_info)) for e in tree_info]
 
             if str(type(X)).endswith("pandas.core.series.Series'>"):
                 X = X.values
