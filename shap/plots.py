@@ -358,7 +358,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
 
     if feature_names is None:
-        feature_names = [labels['FEATURE'] % str(i) for i in range(num_features)]
+        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
 
     # plotting SHAP interaction values
     if not multi_class and len(shap_values.shape) == 3:
@@ -382,7 +382,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
         summary_plot(
-            proj_shap_values, features[:, sort_inds],
+            proj_shap_values, features[:, sort_inds] if features is not None else None,
             feature_names=feature_names[sort_inds],
             sort=False, show=False, color_bar=False,
             auto_size_plot=False,
@@ -399,9 +399,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
             summary_plot(
-                proj_shap_values, features[:, sort_inds],
+                proj_shap_values, features[:, sort_inds] if features is not None else None,
                 sort=False,
-                feature_names=["" for i in range(features.shape[1])],
+                feature_names=["" for i in range(len(feature_names))],
                 show=False,
                 color_bar=False,
                 auto_size_plot=False,
@@ -409,7 +409,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             )
             pl.xlim((slow, shigh))
             pl.xlabel("")
-            if i == max_display // 2:
+            if i == min(len(sort_inds), max_display) // 2:
                 pl.xlabel(labels['INTERACTION_VALUE'])
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)

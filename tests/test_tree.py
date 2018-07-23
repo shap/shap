@@ -140,7 +140,7 @@ def test_lightgbm():
 
     # train XGBoost model
     X, y = shap.datasets.boston()
-    model = lightgbm.sklearn.LGBMRegressor()
+    model = lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
@@ -185,6 +185,9 @@ def test_sklearn_interaction():
             for k in range(len(interaction_vals[i][j])):
                 for l in range(len(interaction_vals[i][j][k])):
                     assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 1e-6
+
+    # ensure the interaction plot works
+    shap.summary_plot(interaction_vals[0], X, show=False)
 
 def test_lightgbm_interaction():
     try:
