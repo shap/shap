@@ -379,7 +379,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
         pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
         pl.subplot(1, max_display, 1)
-        proj_shap_values = shap_values[:, sort_inds[0], np.hstack((sort_inds, len(sort_inds)))]
+        proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
         summary_plot(
             proj_shap_values, features[:, sort_inds],
@@ -395,7 +395,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         for i in range(1, min(len(sort_inds), max_display)):
             ind = sort_inds[i]
             pl.subplot(1, max_display, i + 1)
-            proj_shap_values = shap_values[:, ind, np.hstack((sort_inds, len(sort_inds)))]
+            proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
             summary_plot(
