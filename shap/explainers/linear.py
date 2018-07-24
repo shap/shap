@@ -68,7 +68,7 @@ class LinearExplainer(Explainer):
         # if needed, estimate the transform matrices
         if feature_dependence == "correlation":
             mean_transform, x_transform = self._estimate_transforms(nsamples)
-            self.mean_transformed = mean_transform @ self.mean
+            self.mean_transformed = np.matmul(mean_transform, self.mean)
             self.x_transform = x_transform
         elif feature_dependence == "interventional":
             if nsamples != 1000:
@@ -109,9 +109,9 @@ class LinearExplainer(Explainer):
 
                 # compute the new cov_inv_SiSi from cov_inv_SS
                 d = cov_Si[i,:-1].T
-                t = cov_inv_SS @ d
+                t = np.matmul(cov_inv_SS, d)
                 Z = cov[i, i]
-                u = Z - t.T @ d
+                u = Z - np.matmul(t.T, d)
                 cov_inv_SiSi = np.zeros((j+1, j+1))
                 if j > 0:
                     cov_inv_SiSi[:-1, :-1] = cov_inv_SS + np.outer(t, t) / u
@@ -122,11 +122,11 @@ class LinearExplainer(Explainer):
                 mean_transform[i, i] += self.coef[i]
 
                 # + coef @ R(Sui)
-                coef_R_Si = self.coef[inds[j+1:]] @ (cov_Si @ cov_inv_SiSi)[inds[j+1:]]
+                coef_R_Si = np.matmul(self.coef[inds[j+1:]], np.matmul(cov_Si, cov_inv_SiSi)[inds[j+1:]])
                 mean_transform[i, inds[:j+1]] += coef_R_Si
 
                 # - coef @ R(S)
-                coef_R_S = self.coef[inds[j:]] @ (cov_S @ cov_inv_SS)[inds[j:]]
+                coef_R_S = np.matmul(self.coef[inds[j:]], np.matmul(cov_S, cov_inv_SS)[inds[j:]])
                 mean_transform[i, inds[:j]] -= coef_R_S
 
                 # - coef @ (Q(Sui) - Q(S))
@@ -172,6 +172,6 @@ class LinearExplainer(Explainer):
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         if self.feature_dependence == "correlation":
-            return X @ self.x_transform.T - self.mean_transformed
+            return np.matmul(X, self.x_transform.T) - self.mean_transformed
         elif self.feature_dependence == "interventional":
             return self.coef * (X - self.mean)

@@ -3,6 +3,7 @@ import shap
 
 
 def test_tied_pair():
+    np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
@@ -11,6 +12,7 @@ def test_tied_pair():
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_tied_triple():
+    np.random.seed(0)
     beta = np.array([0, 1, 0, 0])
     mu = 1*np.ones(4)
     Sigma = np.array([[1, 0.999999, 0.999999, 0], [0.999999, 1, 0.999999, 0], [0.999999, 0.999999, 1, 0], [0, 0, 0, 1]])
