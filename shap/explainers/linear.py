@@ -59,11 +59,13 @@ class LinearExplainer(Explainer):
         if type(data) == tuple and len(data) == 2:
             self.mean = data[0]
             self.cov = data[1]
-        elif data is None and feature_dependence == "correlation":
-            raise Exception("A background data distriubtion must be provided when feature_dependence='correlation'!")
         elif str(type(data)).endswith("'numpy.ndarray'>"):
             self.mean = data.mean(0)
             self.cov = np.cov(data, rowvar=False)
+        elif data is None:
+            raise Exception("A background data distribution must be provided!")
+
+        self.expected_value = np.dot(self.coef, self.mean) + self.intercept
 
         # if needed, estimate the transform matrices
         if feature_dependence == "correlation":
@@ -162,10 +164,6 @@ class LinearExplainer(Explainer):
         if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.values
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
-            if self.keep_index:
-                index_value = X.index.values
-                index_name = X.index.name
-                column_name = list(X.columns)
             X = X.values
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
