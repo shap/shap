@@ -2,7 +2,7 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
 
 # to publish use:
-# > python setup.py sdist upload
+# > python setup.py sdist bdist_wheel upload
 # which depends on ~/.pypirc
 
 # Extend the default build_ext class to bootstrap numpy installation
@@ -41,7 +41,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
 
     setup(
         name='shap',
-        version='0.20.2',
+        version='0.21.0',
         description='A unified approach to explain the output of any machine learning model.',
         long_description=long_description,
         long_description_content_type="text/markdown",
