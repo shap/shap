@@ -50,5 +50,5 @@ def test_kernel_shap_with_dataframe():
     linear_model = LinearRegression()
     linear_model.fit(df_X, df_y)
 
-    explainer = shap.KernelExplainer(linear_model.predict, df_X)
+    explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     shap_values = explainer.shap_values(df_X)
