@@ -111,7 +111,7 @@ class TreeExplainer(Explainer):
 
         Parameters
         ----------
-        X : numpy.array or pandas.DataFrame
+        X : numpy.array, pandas.DataFrame or catboost.Pool (for catboost)
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
         Returns
@@ -137,7 +137,9 @@ class TreeExplainer(Explainer):
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
             assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
-            phi = self.trees.get_feature_importance(data=catboost.Pool(X), fstr_type='ShapValues')
+            if type(X) != catboost.Pool:
+                X = catboost.Pool(X)
+            phi = self.trees.get_feature_importance(data=X, fstr_type='ShapValues')
 
         # note we pull off the last column and keep it as our expected_value
         if phi is not None:
