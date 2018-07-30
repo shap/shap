@@ -22,7 +22,7 @@ class DeepExplainer(Explainer):
     # these are the supported (potentially) non-linear components
     nonlinearities = [
         "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax",
-        "Mul", "ClipByValue", "GatherV2", "ConcatV2"
+        "Mul", "ClipByValue", "GatherV2", "ConcatV2", "ReverseV2"
     ]
 
     # these are the components that are linear no matter how they are used. All linear
@@ -169,7 +169,9 @@ class DeepExplainer(Explainer):
                 elif op.type == "GatherV2":
                     assert self.num_variable_inputs(op) == 1, "GatherV2 can only have one varying input!"
                 else:
-                    assert False, op.type + " is not known to be either linear or a supported non-linearity!"
+                    assert False, op.type + " is not known to be either linear or a supported non-linearity! " + \
+                                  "Please post this as a GitHub issue so " + op.type + " can potentially be " + \
+                                  "included in the list of supported ops."
 
         if not self.multi_output:
             self.phi_symbolics = [None]
@@ -345,6 +347,9 @@ class DeepExplainer(Explainer):
                 return [out0, out1]
         elif op.type == "ConcatV2":
             assert not op.inputs[-1] in self.between_ops, "The axis input for ConcatV2 is not allowed to depend on the model input!"
+            return self.orig_grads[op.type](op, grad)
+        elif op.type == "ReverseV2":
+            assert not op.inputs[-1] in self.between_ops, "The axis input for ReverseV2 is not allowed to depend on the model input!"
             return self.orig_grads[op.type](op, grad)
         elif op.type == "GatherV2": # used for embedding layers
             params = op.inputs[0]
