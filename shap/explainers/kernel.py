@@ -119,7 +119,7 @@ class KernelExplainer(Explainer):
         else:
             model_null = self.model.f(self.data.data)
         if isinstance(model_null, (pd.DataFrame, pd.Series)):
-            model_null = model_null.values
+            model_null = np.squeeze(model_null.values)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.fnull
 
@@ -237,7 +237,7 @@ class KernelExplainer(Explainer):
         else:
             model_out = self.model.f(instance.x)
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
-            model_out = model_out.values[0]
+            model_out = model_out.values
         self.fx = model_out[0]
 
         if not self.vector_out:
