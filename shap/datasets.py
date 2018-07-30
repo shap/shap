@@ -153,18 +153,18 @@ def corrgroups60(display=False):
         C[i,i+1] = C[i+1,i] = 0.99
         C[i,i+2] = C[i+2,i] = 0.99
         C[i+1,i+2] = C[i+2,i+1] = 0.99
-    f = lambda X: X @ beta
+    f = lambda X: np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
     X_start = np.random.randn(N, M)
     X_centered = X_start - X_start.mean(0)
-    Sigma = (X_centered.T @ X_centered) / X_centered.shape[0]
+    Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
     W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
-    X_white = X_centered @ W.T
-    assert np.linalg.norm(np.corrcoef((X_centered @ W.T).T) - np.eye(M)) < 1e-6 # ensure this decorrelates the data
+    X_white = np.matmul(X_centered, W.T)
+    assert np.linalg.norm(np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6 # ensure this decorrelates the data
 
     # create the final data
-    X_final = X_white @ np.linalg.cholesky(C).T
+    X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
     X = X_final
     y = f(X) + np.random.randn(N) * 1e-2
 
