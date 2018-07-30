@@ -106,13 +106,20 @@ class TreeExplainer(Explainer):
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-    def shap_values(self, X, tree_limit=-1, **kwargs):
+    def shap_values(self, X, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
         X : numpy.array or pandas.DataFrame
             A matrix of samples (# samples x # features) on which to explain the model's output.
+
+        tree_limit : int
+            Limit the number of trees used by the model. By default -1 means no limit.
+
+        approximate : bool
+            Run a faster approximate version of Tree SHAP (proposed by Saabas). Only supported for
+            XGBoost models right now.
 
         Returns
         -------
@@ -130,7 +137,7 @@ class TreeExplainer(Explainer):
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True)
+            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True, approx_contribs=approximate)
         elif self.model_type == "lightgbm":
             phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
