@@ -389,7 +389,8 @@ class KernelExplainer(Explainer):
         return np.nonzero(varying)[0]
 
     def allocate(self):
-        self.synth_data = np.zeros((self.nsamples * self.N, self.P))
+        #self.synth_data = np.zeros((self.nsamples * self.N, self.P))
+        self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
         self.maskMatrix = np.zeros((self.nsamples, self.M))
         self.kernelWeights = np.zeros(self.nsamples)
         self.y = np.zeros((self.nsamples * self.N, self.D))
@@ -398,19 +399,14 @@ class KernelExplainer(Explainer):
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
         if self.keep_index:
-            self.synth_data_index = [None] * (self.nsamples * self.N)
+            self.synth_data_index = np.tile(self.data.index_value, self.nsamples)
 
     def addsample(self, x, m, w):
         offset = self.nsamplesAdded * self.N
-        for i in range(self.N):
-            if self.keep_index:
-                self.synth_data_index[offset+i] = self.data.index_value[i]
-            for j in range(self.M):
-                for k in self.varyingFeatureGroups[j]:
-                    if m[j] == 1.0:
-                        self.synth_data[offset + i, k] = x[0, k]
-                    else:
-                        self.synth_data[offset + i, k] = self.data.data[i, k]
+        for j in range(self.M):
+            for k in self.varyingFeatureGroups[j]:
+                if m[j] == 1.0:
+                    self.synth_data[offset:offset+self.N, k] = x[0, k]
 
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
