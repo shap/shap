@@ -8,6 +8,8 @@ try:
 except ImportError:
     from urllib import urlretrieve
 
+github_data_url = "https://github.com/slundberg/shap/raw/master/data/"
+
 def imagenet50(display=False, resolution=224):
     """ This is a set of 50 images representative of ImageNet images.
 
@@ -20,7 +22,7 @@ def imagenet50(display=False, resolution=224):
     Note that because the images are only rough replacements the labels might no longer be correct.
     """
 
-    prefix = "https://github.com/slundberg/shap/raw/master/data/imagenet50_"
+    prefix = github_data_url + "imagenet50_"
     X = np.load(cache(prefix + "%sx%s.npy" % (resolution, resolution))).astype(np.float32)
     y = np.loadtxt(cache(prefix + "labels.csv"))
     return X, y
@@ -32,6 +34,29 @@ def boston(display=False):
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
     return df, d.target
 
+def communitiesandcrime(display=False):
+    """ Predict total number of non-violent crimes per 100K popuation.
+
+    This dataset is from the classic UCI Machine Learning repository:
+    https://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
+    """
+
+    raw_data = pd.read_csv(
+        cache(github_data_url + "CommViolPredUnnormalizedData.txt"),
+        na_values="?"
+    )
+
+    # find the indices where the total violent crimes are known
+    valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:,-2])))[0]
+    y = np.array(raw_data.iloc[valid_inds,-2], dtype=np.float)
+
+    # extract the predictive features and convert to float
+    #X = np.array(raw_data.iloc[valid_inds,5:-18])
+    #X[X == '?'] = np.nan
+    #X = X.astype(np.float)
+    X = raw_data.iloc[valid_inds,5:-18]#pd.DataFrame(X, raw_data=data.columns[5:-18])
+
+    return X, y
 
 def diabetes(display=False):
     """ Return the diabetes housing data in a nice package. """
@@ -62,7 +87,7 @@ def adult(display=False):
         ("Hours per week", "float32"), ("Country", "category"), ("Target", "category")
     ]
     raw_data = pd.read_csv(
-        cache("https://github.com/slundberg/shap/raw/master/data/adult.data"),
+        cache(github_data_url + "adult.data"),
         names=[d[0] for d in dtypes],
         na_values="?",
         dtype=dict(dtypes)
@@ -92,14 +117,61 @@ def adult(display=False):
 
 
 def nhanesi(display=False):
-    X = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/data/NHANESI_subset_X.csv"))
-    y = pd.read_csv(cache("https://github.com/slundberg/shap/raw/master/data/NHANESI_subset_y.csv"))["y"]
+    """ A nicely packages version of NHANES I data with surivival times as labels.
+    """
+    X = pd.read_csv(cache(github_data_url + "NHANESI_subset_X.csv"))
+    y = pd.read_csv(cache(github_data_url + "NHANESI_subset_y.csv"))["y"]
     X_display = X.copy()
     X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
     if display:
         return X_display, np.array(y)
     else:
         return X, np.array(y)
+
+
+def corrgroups60(display=False):
+    """ A simulated dataset with tight correlations among distinct groups of features.
+    """
+
+    # set a constant seed
+    old_seed = np.random.seed()
+    np.random.seed(0)
+
+    # generate dataset with known correlation
+    N = 1000
+    M = 60
+
+    # set one coefficent from each group of 3 to 1
+    beta = np.zeros(M)
+    beta[0:30:3] = 1
+
+    # build a correlation matrix with groups of 3 tightly correlated features
+    x = np.ones(M)
+    mu = np.zeros(M)
+    C = np.eye(M)
+    for i in range(0,30,3):
+        C[i,i+1] = C[i+1,i] = 0.99
+        C[i,i+2] = C[i+2,i] = 0.99
+        C[i+1,i+2] = C[i+2,i+1] = 0.99
+    f = lambda X: X @ beta
+
+    # Make sure the sample correlation is a perfect match
+    X_start = np.random.randn(N, M)
+    X_centered = X_start - X_start.mean(0)
+    Sigma = (X_centered.T @ X_centered) / X_centered.shape[0]
+    W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
+    X_white = X_centered @ W.T
+    assert np.linalg.norm(np.corrcoef((X_centered @ W.T).T) - np.eye(M)) < 1e-6 # ensure this decorrelates the data
+
+    # create the final data
+    X_final = X_white @ np.linalg.cholesky(C).T
+    X = X_final
+    y = f(X) + np.random.randn(N) * 1e-2
+
+    # restore the previous numpy random seed
+    np.random.seed(old_seed)
+
+    return pd.DataFrame(X), y
 
 
 def cache(url, file_name=None):
