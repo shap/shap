@@ -1,4 +1,5 @@
 from ..explainer import Explainer
+import numpy as np
 
 class CoefficentExplainer(Explainer):
     """ Simply returns the model coefficents as the feature attributions.
@@ -7,8 +8,8 @@ class CoefficentExplainer(Explainer):
     meaningful way.
     """
     def __init__(self, model):
-        assert hasattr(self.model, "coef_"), "The passed model does not have a coef_ attribute!"
+        assert hasattr(model, "coef_"), "The passed model does not have a coef_ attribute!"
         self.model = model
 
     def attributions(self, X):
-        return self.model.coef_ * np.ones(X.shape)
+        return np.tile(self.model.coef_, (X.shape[0], 1))

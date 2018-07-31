@@ -50,11 +50,10 @@ def communitiesandcrime(display=False):
     valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:,-2])))[0]
     y = np.array(raw_data.iloc[valid_inds,-2], dtype=np.float)
 
-    # extract the predictive features and convert to float
-    #X = np.array(raw_data.iloc[valid_inds,5:-18])
-    #X[X == '?'] = np.nan
-    #X = X.astype(np.float)
-    X = raw_data.iloc[valid_inds,5:-18]#pd.DataFrame(X, raw_data=data.columns[5:-18])
+    # extract the predictive features and remove columns with missing values
+    X = raw_data.iloc[valid_inds,5:-18]
+    valid_cols = np.where(np.isnan(X.values).sum(0) == 0)[0]
+    X = X.iloc[:,valid_cols]
 
     return X, y
 

@@ -139,10 +139,12 @@ class TreeExplainer(Explainer):
                 tree_limit = 0
             phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True, approx_contribs=approximate)
         elif self.model_type == "lightgbm":
+            assert not approximate, "approximate=True is not supported for LightGBM models!"
             phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
             if phi.shape[1] != X.shape[1] + 1:
                 phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
         elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
+            assert not approximate, "approximate=True is not supported for CatBoost models!"
             assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             if type(X) != catboost.Pool:
                 X = catboost.Pool(X)
@@ -165,6 +167,8 @@ class TreeExplainer(Explainer):
 
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
+
+        self.approximate = approximate
 
         if tree_limit<0 or tree_limit>len(self.trees):
             self.tree_limit = len(self.trees)
@@ -288,8 +292,12 @@ class TreeExplainer(Explainer):
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
         phi[-1, :] = self.base_offset * self.tree_limit
-        for t in range(self.tree_limit):
-            self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi)
+        if self.approximate: # only used to mimic Saabas for comparisons right now
+            for t in range(self.tree_limit):
+                self.approximate_tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi)
+        else:
+            for t in range(self.tree_limit):
+                self.tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi)
         phi /= self.tree_limit
         return phi
 
@@ -318,6 +326,28 @@ class TreeExplainer(Explainer):
             tree.thresholds, tree.values, tree.node_sample_weight,
             x, x_missing, phi, condition, condition_feature, self.less_than_or_equal
         )
+
+    def approximate_tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
+        """ This is a simple approximation equivelent to the Saabas method.
+
+        It is actually slow because it is in python, but that's fine right now since it is just used
+        for benchmark comparisons with Saabas. It would need to be added to tree_shap.h as C++ if we
+        wanted it to be high speed.
+
+        x_missing, condition, and condition_feature are currently not used
+        """
+
+        def recurse(node):
+            i = tree.features[node]
+            if i < 0: return
+            if x[i] < tree.thresholds[node]:
+                child = tree.children_left[node]
+            else:
+                child = tree.children_right[node]
+            phi[i] += tree.values[child] - tree.values[node]
+            recurse(child)
+
+        recurse(0)
 
 
 class Tree:

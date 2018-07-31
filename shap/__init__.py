@@ -14,3 +14,5 @@ from .plots import visualize, plot, summary_plot, joint_plot, interaction_plot, 
 from iml.visualizers import initjs, SimpleListVisualizer, SimpleListVisualizer, AdditiveForceVisualizer, \
     AdditiveForceArrayVisualizer
 from . import datasets
+from . import benchmark
+from .explainers import other

@@ -69,10 +69,10 @@ blue_rgba = np.array([30, 136, 229, 255]) / 255
 blue_rgb = np.array([30, 136, 229]) / 255
 red_rgb = np.array([255, 13, 87]) / 255
 
-default_colors = []
+default_blue_colors = []
 tmp = blue_rgba.copy()
 for i in range(10):
-    default_colors.append(tmp.copy())
+    default_blue_colors.append(tmp.copy())
     if tmp[-1] > 0.1:
         tmp[-1] *= 0.7
 
@@ -652,7 +652,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             #print("np.min(i, len(default_colors)-1)", min(i, len(default_colors)-1))
             pl.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
-                color=default_colors[min(i, len(default_colors)-1)], label=class_names[ind]
+                color=default_blue_colors[min(i, len(default_blue_colors)-1)], label=class_names[ind]
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
