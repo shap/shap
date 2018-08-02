@@ -2,6 +2,7 @@ from ..common import convert_to_instance, convert_to_model, match_instance_to_da
 from scipy.special import binom
 import numpy as np
 import pandas as pd
+import scipy as sp
 import logging
 import copy
 import itertools
@@ -155,16 +156,19 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
+        x_type = str(type(X))
+        if x_type.endswith("pandas.core.series.Series'>"):
             X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        elif x_type.endswith("'pandas.core.frame.DataFrame'>"):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values
 
-        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        csr_type = "scipy.sparse.csr.csr_matrix'>"
+        arr_type = "'numpy.ndarray'>"
+        assert x_type.endswith(arr_type) or x_type.endswith(csr_type), "Unknown instance type: " + x_type
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
@@ -370,7 +374,13 @@ class KernelExplainer(Explainer):
         varying = np.zeros(len(self.data.groups))
         for i in range(0, len(self.data.groups)):
             inds = self.data.groups[i]
-            num_mismatches = np.sum(np.abs(x[0, inds] - self.data.data[:, inds]) > 1e-7)
+            x_group = x[0, inds]
+            if sp.sparse.issparse(x_group):
+                if i not in x.nonzero()[1]:
+                    varying[i] = False
+                    continue
+                x_group = x_group.todense()
+            num_mismatches = np.sum(np.abs(x_group - self.data.data[:, inds]) > 1e-7)
             varying[i] = num_mismatches > 0
         return np.nonzero(varying)[0]
 
