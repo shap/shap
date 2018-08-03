@@ -22,7 +22,8 @@ class DeepExplainer(Explainer):
     # these are the supported (potentially) non-linear components
     nonlinearities = [
         "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax",
-        "Mul", "ClipByValue", "GatherV2", "ConcatV2", "ReverseV2", "Pad"
+        "Mul", "ClipByValue", "GatherV2", "ConcatV2", "ReverseV2", "Pad", "SquaredDifference",
+        "Rsqrt"
     ]
 
     # these are the components that are linear no matter how they are used. All linear
@@ -32,7 +33,7 @@ class DeepExplainer(Explainer):
         "Identity", "Reshape", "Shape", "StridedSlice", "Squeeze", "Pack", "ExpandDims",
         "BiasAdd", "Unpack", "Add", "Merge", "Sub", "Sum", "Cast", "Transpose",
         "TensorArrayScatterV3", "Enter", "Tile", "TensorArrayReadV3", "NextIteration",
-        "TensorArrayWriteV3", "Exit", "Transpose"
+        "TensorArrayWriteV3", "Exit", "Transpose", "Mean"
     ]
 
     # these involve products and so are linear if only one of the terms in the product depends
@@ -48,7 +49,7 @@ class DeepExplainer(Explainer):
         "Shape", "RandomUniform", "StopGradient", "ZerosLike"
     ]
 
-    def __init__(self, model, data, session=None):
+    def __init__(self, model, data, session=None, learning_phase_flags=None):
         """ An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -128,25 +129,42 @@ class DeepExplainer(Explainer):
                 session = tf.keras.backend.get_session()
         self.session = tf.get_default_session() if session is None else session
 
-        # see if there is a keras operation we need to save
-        self.keras_phase_placeholder = None
-        for op in self.session.graph.get_operations():
-            if 'keras_learning_phase' in op.name:
-                self.keras_phase_placeholder = op.outputs[0]
+        # if no learning phase operation flags were given we go looking for them
+        # ...this will catch the one that keras uses
+        if learning_phase_flags is None:
+            self.learning_phase_ops = []
+            for op in self.session.graph.get_operations():
+                if 'learning_phase' in op.name and op.type == "Const" and len(op.outputs[0].shape) == 0:
+                    if op.outputs[0].dtype == tf.bool:
+                        self.learning_phase_ops.append(op)
+            self.learning_phase_flags = [op.outputs[0] for op in self.learning_phase_ops]
+        else:
+            self.learning_phase_ops = [t.op for t in learning_phase_flags]
 
         # save the expected output of the model
         self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         # check to make sure we have no unsupported operations in the graph between our
         # inputs and outputs, and save all the non-linearities
-        back_ops = tf.contrib.graph_editor.get_backward_walk_ops(
-            [self.model_output],
-            within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
+        tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops)
+        back_ops = backward_walk_ops(
+            [self.model_output.op], tensor_blacklist,
+            DeepExplainer.dependence_breakers
         )
-        self.between_ops = tf.contrib.graph_editor.get_forward_walk_ops(
-            self.model_inputs, within_ops=back_ops,
-            within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
+        self.between_ops = forward_walk_ops(
+            [op for input in self.model_inputs for op in input.consumers()],
+            tensor_blacklist, DeepExplainer.dependence_breakers,
+            within_ops=back_ops
         )
+
+        # back_ops = tf.contrib.graph_editor.get_backward_walk_ops(
+        #     [self.model_output],
+        #     within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
+        # )
+        # self.between_ops = tf.contrib.graph_editor.get_forward_walk_ops(
+        #     self.model_inputs, within_ops=back_ops,
+        #     within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
+        # )
         self.nonlinear_ops = []
         for op in self.between_ops:
             if len(op.inputs) > 0 and not op.name.startswith('gradients'):
@@ -299,8 +317,8 @@ class DeepExplainer(Explainer):
 
     def run(self, out, model_inputs, X):
         feed_dict = dict(zip(model_inputs, X))
-        if self.keras_phase_placeholder is not None:
-            feed_dict[self.keras_phase_placeholder] = 0
+        for t in self.learning_phase_flags:
+            feed_dict[t] = False
         return self.session.run(out, feed_dict)
 
     def custom_grad(self, op, grad):
@@ -427,3 +445,49 @@ class DeepExplainer(Explainer):
                 self.orig_grads[op.type](op, grad),
                 grad * tf.tile((xout - rout) / delta_in0, dup0)
             )
+
+
+def tensors_blocked_by_false(ops):
+    blocked = []
+    def recurse(op):
+        if op.type == "Switch":
+            blocked.append(op.outputs[1]) # the true path is blocked since we assume the ops we trace are False
+        else:
+            for out in op.outputs:
+                for c in out.consumers():
+                    recurse(c)
+    for op in ops:
+        recurse(op)
+
+    return blocked
+
+def backward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist):
+    found_ops = []
+    op_stack = [op for op in start_ops]
+    def recurse():
+        op = op_stack.pop()
+        if op.type not in op_type_blacklist and op not in found_ops:
+            found_ops.append(op)
+            for input in op.inputs:
+                if input not in tensor_blacklist:
+                    op_stack.append(input.op)
+        if len(op_stack) > 0:
+            recurse()
+    recurse()
+    return found_ops
+
+def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops):
+    found_ops = []
+    op_stack = [op for op in start_ops]
+    def recurse():
+        op = op_stack.pop()
+        if op.type not in op_type_blacklist and op in within_ops and op not in found_ops:
+            found_ops.append(op)
+            for out in op.outputs:
+                if out not in tensor_blacklist:
+                    for c in out.consumers():
+                        op_stack.append(c)
+        if len(op_stack) > 0:
+            recurse()
+    recurse()
+    return found_ops
