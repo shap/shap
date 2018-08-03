@@ -156,16 +156,16 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        x_type = str(type(X))
-        if x_type.endswith("pandas.core.series.Series'>"):
+        
+        if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.values
-        elif x_type.endswith("'pandas.core.frame.DataFrame'>"):
+        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values
-
+        x_type = str(type(X))
         csr_type = "scipy.sparse.csr.csr_matrix'>"
         arr_type = "'numpy.ndarray'>"
         assert x_type.endswith(arr_type) or x_type.endswith(csr_type), "Unknown instance type: " + x_type

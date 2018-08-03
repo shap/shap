@@ -52,3 +52,16 @@ def test_kernel_shap_with_dataframe():
 
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     shap_values = explainer.shap_values(df_X)
+
+def test_kernel_shap_with_csr():
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LinearRegression
+    import shap
+
+    X, y = shap.datasets.a1a()
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    linear_model = LinearRegression()
+    linear_model.fit(x_train, y_train)
+
+    explainer = shap.KernelExplainer(linear_model.predict, x_train, keep_index=True)
+    shap_values = explainer.shap_values(x_test)
