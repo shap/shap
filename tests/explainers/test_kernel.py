@@ -59,9 +59,10 @@ def test_kernel_shap_with_csr():
     import shap
 
     X, y = shap.datasets.a1a()
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.02, random_state=0)
     linear_model = LinearRegression()
     linear_model.fit(x_train, y_train)
 
-    explainer = shap.KernelExplainer(linear_model.predict, x_train, keep_index=True)
+    summary = shap.kmeans(x_train, k=10, round_values=False)
+    explainer = shap.KernelExplainer(linear_model.predict, summary)
     shap_values = explainer.shap_values(x_test)
