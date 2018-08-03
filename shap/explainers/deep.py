@@ -22,7 +22,7 @@ class DeepExplainer(Explainer):
     # these are the supported (potentially) non-linear components
     nonlinearities = [
         "Relu", "Elu", "Sigmoid", "Tanh", "Softplus", "MaxPool", "Exp", "RealDiv", "Softmax",
-        "Mul", "ClipByValue", "GatherV2", "ConcatV2", "ReverseV2"
+        "Mul", "ClipByValue", "GatherV2", "ConcatV2", "ReverseV2", "Pad"
     ]
 
     # these are the components that are linear no matter how they are used. All linear
@@ -350,6 +350,9 @@ class DeepExplainer(Explainer):
             return self.orig_grads[op.type](op, grad)
         elif op.type == "ReverseV2":
             assert not op.inputs[-1] in self.between_ops, "The axis input for ReverseV2 is not allowed to depend on the model input!"
+            return self.orig_grads[op.type](op, grad)
+        elif op.type == "Pad":
+            assert not op.inputs[-1] in self.between_ops, "The paddings input for Pad is not allowed to depend on the model input!"
             return self.orig_grads[op.type](op, grad)
         elif op.type == "GatherV2": # used for embedding layers
             params = op.inputs[0]
