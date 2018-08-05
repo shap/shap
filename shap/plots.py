@@ -329,6 +329,11 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     plot_type : "dot" (default) or "violin"
         What type of summary plot to produce
+
+    show : `True` (default) or `False`
+        If `True`, display the plot in the notebook or interactive session. If `False`, return
+        the pyplot object without showing it, allowing the user to modify the plot and/or
+        write it to a png file, for example.
     """
 
     multi_class = False
@@ -692,6 +697,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+    else:
+        return pl.gcf()
 
 
 def visualize(shap_values, features=None, feature_names=None, out_names=None, data=None,
