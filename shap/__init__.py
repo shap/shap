@@ -11,5 +11,5 @@ from .plots.dependence import dependence_plot
 from .plots.force import force_plot, initjs
 from .plots.image import image_plot
 from . import datasets
-from . import benchmark
+import benchmark
 from .explainers import other
