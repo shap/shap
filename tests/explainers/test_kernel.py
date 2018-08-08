@@ -7,12 +7,12 @@ import shap
 def test_null_model_small():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
     e = explainer.explain(np.ones((1, 4)))
-    assert np.sum(np.abs(e.effects)) < 1e-8
+    assert np.sum(np.abs(e)) < 1e-8
 
-def test_null_model():
+def test_null_mosdel():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)), nsamples=100)
     e = explainer.explain(np.ones((1, 10)))
-    assert np.sum(np.abs(e.effects)) < 1e-8
+    assert np.sum(np.abs(e)) < 1e-8
 
 def test_front_page_model_agnostic():
     import sklearn

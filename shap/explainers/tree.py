@@ -41,9 +41,9 @@ except:
 class TreeExplainer(Explainer):
     """Uses the Tree SHAP method to explain the output of ensemble tree models.
 
-    Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles
-    of trees. It depends on fast C++ implementations either inside the package or in the
-    compiled C extention.
+    Tree SHAP is a fast and exact (assuming the trees capture the input feature depndencies) method
+    to estimate SHAP values for tree models and ensembles of trees. It depends on fast C++
+    implementations either inside the externel model package or in the local compiled C extention.
     """
 
     def __init__(self, model, **kwargs):
@@ -53,6 +53,7 @@ class TreeExplainer(Explainer):
         self.expected_value = None
         self.trees = None
 
+        # parse all the different possible supported model types
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
             self.less_than_or_equal = True

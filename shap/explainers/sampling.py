@@ -138,8 +138,7 @@ class SamplingExplainer(KernelExplainer):
         if phi.shape[1] == 1:
             phi = phi[:,0]
 
-        return AdditiveExplanation(self.fnull, model_out, phi, np.zeros(len(phi)), instance, self.link,
-                                   self.model, self.data)
+        return phi
 
     def sampling_estimate(self, j, f, x, X, nsamples=10):
         assert nsamples % 2 == 0, "nsamples must be divisible by 2!"

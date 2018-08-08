@@ -1,5 +1,5 @@
 from iml.common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index
-from iml.explanations import AdditiveExplanation
+#from iml.explanations import AdditiveExplanation
 from iml.links import convert_to_link, IdentityLink
 from iml.datatypes import convert_to_data, DenseData
 from scipy.special import binom
@@ -178,19 +178,17 @@ class KernelExplainer(Explainer):
             explanation = self.explain(data, **kwargs)
 
             # vector-output
-            s = explanation.effects.shape
+            s = explanation.shape
             if len(s) == 2:
                 outs = [np.zeros(s[0]) for j in range(s[1])]
                 for j in range(s[1]):
-                    outs[j] = explanation.effects[:, j]
-                    assert abs(self.link.f(self.expected_value[j]) - explanation.base_value[j]) < 1e-6
+                    outs[j] = explanation[:, j]
                 return outs
 
             # single-output
             else:
                 out = np.zeros(s[0])
-                out[:] = explanation.effects
-                assert abs(self.link.f(self.expected_value) - explanation.base_value) < 1e-6
+                out[:] = explanation
                 return out
 
         # explain the whole dataset
@@ -203,21 +201,19 @@ class KernelExplainer(Explainer):
                 explanations.append(self.explain(data, **kwargs))
 
             # vector-output
-            s = explanations[0].effects.shape
+            s = explanations[0].shape
             if len(s) == 2:
                 outs = [np.zeros((X.shape[0], s[0])) for j in range(s[1])]
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
-                        outs[j][i] = explanations[i].effects[:, j]
-                        assert abs(self.link.f(self.expected_value[j]) - explanations[i].base_value[j]) < 1e-6
+                        outs[j][i] = explanations[i][:, j]
                 return outs
 
             # single-output
             else:
                 out = np.zeros((X.shape[0], s[0]))
                 for i in range(X.shape[0]):
-                    out[i] = explanations[i].effects
-                    assert abs(self.link.f(self.expected_value) - explanations[i].base_value) < 1e-6
+                    out[i] = explanations[i]
                 return out
 
     def explain(self, incoming_instance, **kwargs):
@@ -371,14 +367,7 @@ class KernelExplainer(Explainer):
             phi = np.squeeze(phi, axis=1)
             phi_var = np.squeeze(phi_var, axis=1)
 
-        # return the Shapley values along with variances of the estimates
-        # note that if features were eliminated by l1 regression their
-        # variance will be 0, even though they are not perfectly known
-        return AdditiveExplanation(
-            self.link.f(self.fnull if self.vector_out else self.fnull[0]),
-            self.link.f(self.fx if self.vector_out else self.fx[0]),
-            phi, phi_var, instance, self.link, self.model, self.data
-        )
+        return phi
 
     def varying_groups(self, x):
         varying = np.zeros(len(self.data.groups))

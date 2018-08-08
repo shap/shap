@@ -41,7 +41,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
 
     setup(
         name='shap',
-        version='0.21.0',
+        version='0.22.0',
         description='A unified approach to explain the output of any machine learning model.',
         long_description=long_description,
         long_description_content_type="text/markdown",
@@ -49,10 +49,11 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         author='Scott Lundberg',
         author_email='slund1@cs.washington.edu',
         license='MIT',
-        packages=['shap', 'shap.explainers'],
+        packages=['shap', 'shap.explainers', 'shap.plots'],
+        package_data={'shap': ['plots/resources/*']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'iml>=0.6.2', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', ''],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', ''],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
