@@ -171,11 +171,10 @@ def ensure_not_numpy(x):
         return x
 
 def verify_valid_cmap(cmap):
-    assert (isinstance(cmap,str)
-                or isinstance(cmap,list)
-     ),"Plot color map must be string or list!"
+    assert (isinstance(cmap, str) or isinstance(cmap, list)
+        ),"Plot color map must be string or list! not: " + str(type(cmap)) + " - " + str(cmap)
     if isinstance(cmap,list):
-        assert (len(cmap) > 1),"Color map must be at least two colors."
+        assert (len(cmap) > 1), "Color map must be at least two colors."
         _rgbstring = re.compile(r'#[a-fA-F0-9]{6}$')
         for color in cmap:
              assert(bool(_rgbstring.match(color))),"Invalid color found in CMAP."
