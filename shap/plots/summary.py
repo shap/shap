@@ -341,22 +341,16 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     elif multi_class and plot_type == "bar":
         if class_names is None:
             class_names = ["Class "+str(i) for i in range(len(shap_values))]
-        #print("feature_order", feature_order)
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         left_pos = np.zeros(len(feature_inds))
-        #print("feature_inds", feature_inds)
 
         class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
         for i,ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
-            #print("global_shap_values", global_shap_values)
-
-            #print("default_colors", default_colors)
-            #print("np.min(i, len(default_colors)-1)", min(i, len(default_colors)-1))
             pl.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
-                color=default_blue_colors[min(i, len(default_blue_colors)-1)], label=class_names[ind]
+                color=colors.default_blue_colors[min(i, len(colors.default_blue_colors)-1)], label=class_names[ind]
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
