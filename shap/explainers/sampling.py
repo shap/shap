@@ -1,8 +1,4 @@
-from iml.common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index
-from iml.explanations import AdditiveExplanation
-from iml.links import convert_to_link, IdentityLink
-from iml.datatypes import convert_to_data, DenseData
-from iml.explanations import AdditiveExplanation
+from ..common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData
 from .kernel import KernelExplainer
 import numpy as np
 import pandas as pd
