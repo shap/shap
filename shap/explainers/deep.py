@@ -166,10 +166,12 @@ class DeepExplainer(Explainer):
         #     within_ops_fn=lambda op: op.type not in DeepExplainer.dependence_breakers
         # )
         self.nonlinear_ops = []
+        self.used_nonlinearity_types = {}
         for op in self.between_ops:
             if len(op.inputs) > 0 and not op.name.startswith('gradients'):
                 if op.type in DeepExplainer.nonlinearities:
                     self.nonlinear_ops.append(op)
+                    self.used_nonlinearity_types[op.type] = True
                 elif op.type in DeepExplainer.guaranteed_linearities:
                     pass
                 elif op.type in DeepExplainer.single_input_linearities:
@@ -213,8 +215,11 @@ class DeepExplainer(Explainer):
             self.orig_grads = {}
             reg = tf_ops._gradient_registry._registry # hack our way in to the registry (TODO: find an API for this)
             for n in DeepExplainer.nonlinearities:
-                self.orig_grads[n] = reg[n]["type"]
-                reg[n]["type"] = self.custom_grad
+                if n in reg:
+                    self.orig_grads[n] = reg[n]["type"]
+                    reg[n]["type"] = self.custom_grad
+                elif n in self.used_nonlinearity_types:
+                    raise Exception(n + " was used in the model but is not in the gradient registry!")
 
             # define the computation graph for the attribution values using custom a gradient-like computation
             try:
@@ -224,7 +229,8 @@ class DeepExplainer(Explainer):
             # restore the original gradient definitions
             finally:
                 for n in DeepExplainer.nonlinearities:
-                    reg[n]["type"] = self.orig_grads[n]
+                    if n in reg:
+                        reg[n]["type"] = self.orig_grads[n]
 
         return self.phi_symbolics[i]
 
