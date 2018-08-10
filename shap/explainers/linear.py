@@ -195,16 +195,18 @@ class LinearExplainer(Explainer):
 
 def connected_components(C):
     components = -np.ones(C.shape[0], dtype=np.int)
+    count = -1
     for i in range(C.shape[0]):
+        found_group = False
         for j in range(C.shape[0]):
             if components[j] < 0 and np.abs(2*C[i,j] - C[i,i] - C[j,j]) < 1e-8:
-                components[j] = i
+                if not found_group:
+                    count += 1
+                    found_group = True
+                components[j] = count
                 
     proj = np.zeros((len(np.unique(components)), C.shape[0]))
     proj[0, 0] = 1
-    count = 0
     for i in range(1,C.shape[0]):
-        if components[i] != components[i-1]:
-            count += 1
-        proj[count, i] = 1
+        proj[components[i], i] = 1
     return (proj.T / proj.sum(1)).T, proj

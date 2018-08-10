@@ -45,7 +45,7 @@ def test_perfect_colinear():
     import numpy as np
 
     X,y = shap.datasets.boston()
-    X.iloc[:,0] = X.iloc[:,1] # test duplicated features
+    X.iloc[:,0] = X.iloc[:,4] # test duplicated features
     X.iloc[:,3] = 0 # test null features
     model = LinearRegression()
     model.fit(X, y)
