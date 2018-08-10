@@ -78,10 +78,15 @@ class LinearExplainer(Explainer):
         self.coef = self.coef[self.valid_inds]
 
         # group perfectly redundant variables together
-        self.avg_proj,sum_proj = connected_components(self.cov)
+        self.avg_proj,sum_proj = duplicate_components(self.cov)
         self.cov = np.matmul(np.matmul(self.avg_proj, self.cov), self.avg_proj.T)
         self.mean = np.matmul(self.avg_proj, self.mean)
         self.coef = np.matmul(sum_proj, self.coef)
+
+        # if we still have some multi-colinearity present then we just add regularization...
+        e,_ = np.linalg.eig(self.cov)
+        if e.min() < 1e-7:
+            self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
 
         # if needed, estimate the transform matrices
         if feature_dependence == "correlation":
@@ -193,7 +198,9 @@ class LinearExplainer(Explainer):
         full_phi[:,self.valid_inds] = phi
         return full_phi
 
-def connected_components(C):
+def duplicate_components(C):
+    D = np.diag(1/np.sqrt(np.diag(C)))
+    C = np.matmul(np.matmul(D, C), D)
     components = -np.ones(C.shape[0], dtype=np.int)
     count = -1
     for i in range(C.shape[0]):
