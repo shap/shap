@@ -38,3 +38,17 @@ def test_sklearn_linear():
     explainer = shap.LinearExplainer(model, X)
     assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
     shap_values = explainer.shap_values(X)
+
+def test_perfect_colinear():
+    import shap
+    from sklearn.linear_model import LinearRegression
+    import numpy as np
+
+    X,y = shap.datasets.boston()
+    X.iloc[:,0] = X.iloc[:,1] # test duplicated features
+    X.iloc[:,3] = 0 # test null features
+    model = LinearRegression()
+    model.fit(X, y)
+    explainer = shap.LinearExplainer(model, X)
+    shap_values = explainer.shap_values(X)
+    assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7

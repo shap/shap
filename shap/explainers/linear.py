@@ -52,7 +52,6 @@ class LinearExplainer(Explainer):
             else:
                 self.coef = model.coef_
                 self.intercept = model.intercept_
-
         else:
             raise Exception("An unknown model type was passed: " + str(type(model)))
 
@@ -71,6 +70,18 @@ class LinearExplainer(Explainer):
             raise Exception("A background data distribution must be provided!")
 
         self.expected_value = np.dot(self.coef, self.mean) + self.intercept
+
+        self.M = len(self.mean)
+        self.valid_inds = np.where(np.diag(self.cov) > 1e-8)[0]
+        self.mean = self.mean[self.valid_inds]
+        self.cov = self.cov[:,self.valid_inds][self.valid_inds,:]
+        self.coef = self.coef[self.valid_inds]
+
+        # group perfectly redundant variables together
+        self.avg_proj,sum_proj = connected_components(self.cov)
+        self.cov = np.matmul(np.matmul(self.avg_proj, self.cov), self.avg_proj.T)
+        self.mean = np.matmul(self.avg_proj, self.mean)
+        self.coef = np.matmul(sum_proj, self.coef)
 
         # if needed, estimate the transform matrices
         if feature_dependence == "correlation":
@@ -93,8 +104,6 @@ class LinearExplainer(Explainer):
         TODO: Do a brute force enumeration when # feature subsets is less than nsamples. This could
               happen through a recursive method that uses the same block matrix inversion as below.
         """
-        coef = self.coef
-        cov = self.cov
         M = len(self.coef)
 
         mean_transform = np.zeros((M,M))
@@ -117,7 +126,7 @@ class LinearExplainer(Explainer):
                 # compute the new cov_inv_SiSi from cov_inv_SS
                 d = cov_Si[i,:-1].T
                 t = np.matmul(cov_inv_SS, d)
-                Z = cov[i, i]
+                Z = self.cov[i, i]
                 u = Z - np.matmul(t.T, d)
                 cov_inv_SiSi = np.zeros((j+1, j+1))
                 if j > 0:
@@ -175,6 +184,27 @@ class LinearExplainer(Explainer):
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         if self.feature_dependence == "correlation":
-            return np.matmul(X, self.x_transform.T) - self.mean_transformed
+            phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
         elif self.feature_dependence == "interventional":
-            return self.coef * (X - self.mean)
+            phi = self.coef * (np.matmul(X[:,self.valid_inds], self.avg_proj.T) - self.mean)
+        
+        phi = np.matmul(phi, self.avg_proj)
+        full_phi = np.zeros(((phi.shape[0], self.M)))
+        full_phi[:,self.valid_inds] = phi
+        return full_phi
+
+def connected_components(C):
+    components = -np.ones(C.shape[0], dtype=np.int)
+    for i in range(C.shape[0]):
+        for j in range(C.shape[0]):
+            if components[j] < 0 and np.abs(2*C[i,j] - C[i,i] - C[j,j]) < 1e-8:
+                components[j] = i
+                
+    proj = np.zeros((len(np.unique(components)), C.shape[0]))
+    proj[0, 0] = 1
+    count = 0
+    for i in range(1,C.shape[0]):
+        if components[i] != components[i-1]:
+            count += 1
+        proj[count, i] = 1
+    return (proj.T / proj.sum(1)).T, proj
