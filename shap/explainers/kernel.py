@@ -388,7 +388,7 @@ class KernelExplainer(Explainer):
                 inds = self.data.groups[i]
                 x_group = x[0, inds]
                 if sp.sparse.issparse(x_group):
-                    if i not in x.nonzero()[1]:
+                    if all(j not in x.nonzero()[1] for j in inds):
                         varying[i] = False
                         continue
                     x_group = x_group.todense()
