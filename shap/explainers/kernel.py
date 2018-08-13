@@ -226,10 +226,18 @@ class KernelExplainer(Explainer):
         # current value then we know it doesn't impact the model
         self.varyingInds = self.varying_groups(instance.x)
         if self.data.groups is None:
-            self.varyingFeatureGroups = [[i] for i in self.varyingInds]
+            self.varyingFeatureGroups = np.array([i for i in self.varyingInds])
+            self.M = self.varyingFeatureGroups.shape[0]
         else:
             self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
-        self.M = len(self.varyingFeatureGroups)
+            self.M = len(self.varyingFeatureGroups)
+            groups = self.data.groups
+            # convert to numpy array as it is much faster if not jagged array (all groups of same length)
+            if self.varyingFeatureGroups and all(len(groups[i]) == len(groups[0]) for i in self.varyingInds):
+                self.varyingFeatureGroups = np.array(self.varyingFeatureGroups)
+                # further performance optimization in case each group has a single value
+                if self.varyingFeatureGroups.shape[1] == 1:
+                    self.varyingFeatureGroups = self.varyingFeatureGroups.flatten()
 
         # find f(x)
         if self.keep_index:
@@ -437,11 +445,21 @@ class KernelExplainer(Explainer):
 
     def addsample(self, x, m, w):
         offset = self.nsamplesAdded * self.N
-        for j in range(self.M):
-            for k in self.varyingFeatureGroups[j]:
-                if m[j] == 1.0:
-                    self.synth_data[offset:offset+self.N, k] = x[0, k]
-
+        if isinstance(self.varyingFeatureGroups, (list,)):
+            for j in range(self.M):
+                for k in self.varyingFeatureGroups[j]:
+                    if m[j] == 1.0:
+                        self.synth_data[offset:offset+self.N, k] = x[0, k]
+        else:
+            # for non-jagged numpy array we can significantly boost performance
+            mask = m == 1.0
+            groups = self.varyingFeatureGroups[mask]
+            if len(groups.shape) == 2:
+                for group in groups:
+                    self.synth_data[offset:offset+self.N, group] = x[0, group]
+            else:
+                # further performance optimization in case each group has a single feature
+                self.synth_data[offset:offset+self.N, groups] = x[0, groups]
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1
