@@ -1,5 +1,6 @@
 import matplotlib
 import numpy as np
+import scipy as sp
 matplotlib.use('Agg')
 import shap
 
@@ -53,7 +54,7 @@ def test_kernel_shap_with_dataframe():
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     shap_values = explainer.shap_values(df_X)
 
-def test_kernel_shap_with_csr():
+def test_kernel_shap_with_a1a_csr():
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     import shap
@@ -65,4 +66,36 @@ def test_kernel_shap_with_csr():
 
     summary = shap.kmeans(x_train, k=10, round_values=False)
     explainer = shap.KernelExplainer(linear_model.predict, summary)
+    shap_values = explainer.shap_values(x_test)
+
+def test_kernel_shap_with_high_dim_csr():
+    # verifies we can run on very sparse data produced from feature hashing
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LinearRegression
+    import shap
+    remove = ('headers', 'footers', 'quotes')
+    categories = [
+        'alt.atheism',
+        'talk.religion.misc',
+        'comp.graphics',
+        'sci.space',
+    ]
+    from sklearn.datasets import fetch_20newsgroups
+    ngroups = fetch_20newsgroups(subset='train', categories=categories,
+                        shuffle=True, random_state=42,
+                        remove=remove)
+    x_train, x_test, y_train, y_validation = train_test_split(ngroups.data, ngroups.target,
+                                                                    test_size=0.001, random_state=42)
+    from sklearn.feature_extraction.text import HashingVectorizer
+    vectorizer = HashingVectorizer(stop_words='english', alternate_sign=False,
+                                n_features=2**16)
+    x_train = vectorizer.transform(x_train)
+    x_test = vectorizer.transform(x_test)
+    # Fit a linear regression model
+    linear_model = LinearRegression()
+    linear_model.fit(x_train, y_train)
+    rows, cols = x_train.shape
+    shape = 1, cols
+    background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
+    explainer = shap.KernelExplainer(linear_model.predict, background)
     shap_values = explainer.shap_values(x_test)
