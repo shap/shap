@@ -94,7 +94,7 @@ shap.summary_plot(shap_values, X, plot_type="bar")
 
 ## Deep learning example with DeepExplainer (TensorFlow/Keras models)
 
-Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the SHAP NIPS paper. The implementation here differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into DeepLIFT. Currently both TensorFlow models and Keras models using the TensorFlow backend are supported:
+Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the SHAP NIPS paper. The implementation here differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into DeepLIFT. Currently both TensorFlow models and Keras models using the TensorFlow backend are supported (**Note that DeepExplainer is new this summer and we are still working out issues as we find them, so consider it an alpha release.**):
 
 ```python
 # ...include code from https://github.com/keras-team/keras/blob/master/examples/mnist_cnn.py
@@ -124,7 +124,7 @@ The plot above explains ten outputs (digits 0-9) for four different images. Red 
 
 ## Deep learning example with GradientExplainer (TensorFlow/Keras models)
 
-Expected gradients combines ideas from [Integrated Gradients](https://arxiv.org/abs/1703.01365), SHAP, and [SmoothGrad](https://arxiv.org/abs/1706.03825) into a single expected value equation. This allows an entire dataset to be used as the background distribution (as opposed to a single reference value) and allows local smoothing. If the model is approximately linear between each background data sample and the current input to be explained, and we assume the input features are independent then expected gradients will compute approximate SHAP values. In the example below we have explained how the 7th intermediate layer of the VGG16 ImageNet model impacts the output probabilities.
+Expected gradients combines ideas from [Integrated Gradients](https://arxiv.org/abs/1703.01365), SHAP, and [SmoothGrad](https://arxiv.org/abs/1706.03825) into a single expected value equation. This allows an entire dataset to be used as the background distribution (as opposed to a single reference value) and allows local smoothing. If we approximate the model with a linear function between each background data sample and the current input to be explained, and we assume the input features are independent then expected gradients will compute approximate SHAP values. In the example below we have explained how the 7th intermediate layer of the VGG16 ImageNet model impacts the output probabilities.
 
 ```python
 from keras.applications.vgg16 import VGG16
