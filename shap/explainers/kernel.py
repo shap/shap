@@ -1,7 +1,8 @@
-from ..common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData
+from ..common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
 from scipy.special import binom
 import numpy as np
 import pandas as pd
+import scipy as sp
 import logging
 import copy
 import itertools
@@ -45,7 +46,6 @@ def kmeans(X, k, round_values=True):
             for j in range(X.shape[1]):
                 ind = np.argmin(np.abs(X[:,j] - kmeans.cluster_centers_[i,j]))
                 kmeans.cluster_centers_[i,j] = X[ind,j]
-
     return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
 
 
@@ -65,7 +65,7 @@ class KernelExplainer(Explainer):
         computes a the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
-    data : numpy.array or pandas.DataFrame or iml.DenseData
+    data : numpy.array or pandas.DataFrame or iml.DenseData or scipy.sparse.csr.csr_matrix
         The background dataset to use for integrating out features. To determine the impact
         of a feature, that feature is set to "missing" and the change in the model output
         is observed. Since most models aren't designed to handle arbitrary missing data at test
@@ -94,8 +94,9 @@ class KernelExplainer(Explainer):
         match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations
-        assert isinstance(self.data, DenseData), "Shap explainer only supports the DenseData input currently."
-        assert not self.data.transposed, "Shap explainer does not support transposed DenseData currently."
+        assert isinstance(self.data, DenseData) or isinstance(self.data, SparseData), \
+               "Shap explainer only supports the DenseData and SparseData input currently."
+        assert not self.data.transposed, "Shap explainer does not support transposed DenseData or SparseData currently."
 
         # warn users about large background data sets
         if len(self.data.weights) > 100:
@@ -134,7 +135,7 @@ class KernelExplainer(Explainer):
 
         Parameters
         ----------
-        X : numpy.array or pandas.DataFrame
+        X : numpy.array or pandas.DataFrame or scipy.sparse.csr.csr_matrix
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
         nsamples : "auto" or int
@@ -155,6 +156,7 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
+        
         if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.values
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
@@ -163,8 +165,10 @@ class KernelExplainer(Explainer):
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values
-
-        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        x_type = str(type(X))
+        csr_type = "scipy.sparse.csr.csr_matrix'>"
+        arr_type = "'numpy.ndarray'>"
+        assert x_type.endswith(arr_type) or x_type.endswith(csr_type), "Unknown instance type: " + x_type
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
@@ -221,8 +225,19 @@ class KernelExplainer(Explainer):
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model
         self.varyingInds = self.varying_groups(instance.x)
-        self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
-        self.M = len(self.varyingFeatureGroups)
+        if self.data.groups is None:
+            self.varyingFeatureGroups = np.array([i for i in self.varyingInds])
+            self.M = self.varyingFeatureGroups.shape[0]
+        else:
+            self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
+            self.M = len(self.varyingFeatureGroups)
+            groups = self.data.groups
+            # convert to numpy array as it is much faster if not jagged array (all groups of same length)
+            if self.varyingFeatureGroups and all(len(groups[i]) == len(groups[0]) for i in self.varyingInds):
+                self.varyingFeatureGroups = np.array(self.varyingFeatureGroups)
+                # further performance optimization in case each group has a single value
+                if self.varyingFeatureGroups.shape[1] == 1:
+                    self.varyingFeatureGroups = self.varyingFeatureGroups.flatten()
 
         # find f(x)
         if self.keep_index:
@@ -238,13 +253,13 @@ class KernelExplainer(Explainer):
 
         # if no features vary then there no feature has an effect
         if self.M == 0:
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((self.data.groups_size, self.D))
+            phi_var = np.zeros((self.data.groups_size, self.D))
 
         # if only one feature varies then it has all the effect
         elif self.M == 1:
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((self.data.groups_size, self.D))
+            phi_var = np.zeros((self.data.groups_size, self.D))
             diff = self.link.f(self.fx) - self.link.f(self.fnull)
             for d in range(self.D):
                 phi[self.varyingInds[0],d] = diff[d]
@@ -353,8 +368,8 @@ class KernelExplainer(Explainer):
             self.run()
 
             # solve then expand the feature importance (Shapley value) vector to contain the non-varying features
-            phi = np.zeros((len(self.data.groups), self.D))
-            phi_var = np.zeros((len(self.data.groups), self.D))
+            phi = np.zeros((self.data.groups_size, self.D))
+            phi_var = np.zeros((self.data.groups_size, self.D))
             for d in range(self.D):
                 vphi, vphi_var = self.solve(self.nsamples / self.max_samples, d)
                 phi[self.varyingInds, d] = vphi
@@ -367,16 +382,57 @@ class KernelExplainer(Explainer):
         return phi
 
     def varying_groups(self, x):
-        varying = np.zeros(len(self.data.groups))
-        for i in range(0, len(self.data.groups)):
-            inds = self.data.groups[i]
-            num_mismatches = np.sum(np.abs(x[0, inds] - self.data.data[:, inds]) > 1e-7)
-            varying[i] = num_mismatches > 0
-        return np.nonzero(varying)[0]
+        if not sp.sparse.issparse(x):
+            varying = np.zeros(self.data.groups_size)
+            for i in range(0, self.data.groups_size):
+                inds = self.data.groups[i]
+                x_group = x[0, inds]
+                if sp.sparse.issparse(x_group):
+                    if all(j not in x.nonzero()[1] for j in inds):
+                        varying[i] = False
+                        continue
+                    x_group = x_group.todense()
+                num_mismatches = np.sum(np.abs(x_group - self.data.data[:, inds]) > 1e-7)
+                varying[i] = num_mismatches > 0
+            return np.nonzero(varying)[0]
+        else:
+            varying_indices = []
+            # go over all nonzero columns in background and evaluation data
+            # if both background and evaluation are zero, the column does not vary
+            varying_indices = np.unique(np.union1d(self.data.data.nonzero()[1], x.nonzero()[1]))
+            remove_unvarying_indices = []
+            for i in range(0, len(varying_indices)):
+                # now verify the nonzero values do vary
+                data_rows = self.data.data[:, [i]]
+                nonzero_rows = data_rows.nonzero()[0]
+                if nonzero_rows:
+                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows] - x[0, [i]][0, 0]) > 1e-7)
+                    if num_mismatches > 0:
+                        remove_unvarying_indices.append(i)
+            mask = np.ones(len(varying_indices), dtype=bool)
+            mask[remove_unvarying_indices] = False
+            varying_indices = varying_indices[mask]
+            return varying_indices
 
     def allocate(self):
-        #self.synth_data = np.zeros((self.nsamples * self.N, self.P))
-        self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
+        if sp.sparse.issparse(self.data.data):
+            shape = self.data.data.shape
+            nnz = self.data.data.nnz
+            rows, cols = shape
+            rows *= self.nsamples
+            shape = rows, cols
+            if nnz == 0:
+                self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype)
+            else:
+                data = self.data.data.data
+                indices = self.data.data.indices
+                new_indptr = np.arange(0, rows * nnz + 1, nnz)
+                new_data = np.tile(data, rows)
+                new_indices = np.tile(indices, rows)
+                self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape)
+        else:
+            self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
+        
         self.maskMatrix = np.zeros((self.nsamples, self.M))
         self.kernelWeights = np.zeros(self.nsamples)
         self.y = np.zeros((self.nsamples * self.N, self.D))
@@ -389,11 +445,21 @@ class KernelExplainer(Explainer):
 
     def addsample(self, x, m, w):
         offset = self.nsamplesAdded * self.N
-        for j in range(self.M):
-            for k in self.varyingFeatureGroups[j]:
-                if m[j] == 1.0:
-                    self.synth_data[offset:offset+self.N, k] = x[0, k]
-
+        if isinstance(self.varyingFeatureGroups, (list,)):
+            for j in range(self.M):
+                for k in self.varyingFeatureGroups[j]:
+                    if m[j] == 1.0:
+                        self.synth_data[offset:offset+self.N, k] = x[0, k]
+        else:
+            # for non-jagged numpy array we can significantly boost performance
+            mask = m == 1.0
+            groups = self.varyingFeatureGroups[mask]
+            if len(groups.shape) == 2:
+                for group in groups:
+                    self.synth_data[offset:offset+self.N, group] = x[0, group]
+            else:
+                # further performance optimization in case each group has a single feature
+                self.synth_data[offset:offset+self.N, groups] = x[0, groups]
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1
@@ -411,8 +477,6 @@ class KernelExplainer(Explainer):
         modelOut = self.model.f(data)
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
-        # if len(modelOut.shape) > 1:
-        #     raise ValueError("The supplied model function should output a vector not a matrix!")
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output

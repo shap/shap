@@ -173,6 +173,14 @@ def corrgroups60(display=False):
     return pd.DataFrame(X), y
 
 
+def a1a():
+    """ A sparse dataset in scipy csr matrix format.
+    """
+    # todo change this back to github data url once checked in
+    tmp_data_url = 'https://raw.githubusercontent.com/imatiach-msft/shap/eada98f882dad1553612109771c79a3e0f426195/data/'
+    return sklearn.datasets.load_svmlight_file(cache(tmp_data_url + 'a1a.svmlight'))
+
+
 def cache(url, file_name=None):
     if file_name is None:
         file_name = os.path.basename(url)

@@ -85,6 +85,18 @@ class Data:
         pass
 
 
+class SparseData(Data):
+    def __init__(self, data, *args):
+        num_samples = data.shape[0]
+        self.weights = np.ones(num_samples)
+        self.weights /= np.sum(self.weights)
+        self.transposed = False
+        self.groups = None
+        self.group_names = None
+        self.groups_size = data.shape[1]
+        self.data = data
+
+
 class DenseData(Data):
     def __init__(self, data, group_names, *args):
         self.groups = args[0] if len(args) > 0 and args[0] != None else [np.array([i]) for i in range(len(group_names))]
@@ -108,6 +120,7 @@ class DenseData(Data):
         self.transposed = t
         self.group_names = group_names
         self.data = data
+        self.groups_size = len(self.groups)
 
 
 class DenseDataWithIndex(DenseData):
@@ -136,6 +149,8 @@ def convert_to_data(val, keep_index=False):
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
         else:
             return DenseData(val.values, list(val.columns))
+    elif str(type(val)).endswith("scipy.sparse.csr.csr_matrix'>"):
+        return SparseData(val)
     else:
         assert False, "Unknown type passed as data object: "+str(type(val))
 
