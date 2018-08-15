@@ -37,7 +37,7 @@ def test_sklearn_linear():
     # explain the model's predictions using SHAP values
     explainer = shap.LinearExplainer(model, X)
     assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
-    shap_values = explainer.shap_values(X)
+    explainer.shap_values(X)
 
 def test_perfect_colinear():
     import shap

@@ -8,12 +8,12 @@ def test_tf_keras_mnist_cnn():
     """
 
     try:
+        from tensorflow import keras
+        from tensorflow.keras.models import Sequential
+        from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
+        from tensorflow.keras.layers import Conv2D, MaxPooling2D
+        from tensorflow.keras import backend as K
         import tensorflow as tf
-        from tensorflow.python import keras
-        from tensorflow.python.keras.models import Sequential
-        from tensorflow.python.keras.layers import Dense, Dropout, Flatten, Activation
-        from tensorflow.python.keras.layers import Conv2D, MaxPooling2D
-        from tensorflow.python.keras import backend as K
     except Exception as e:
         print("Skipping test_tf_keras_mnist_cnn!")
         return
