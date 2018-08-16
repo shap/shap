@@ -339,22 +339,19 @@ def tensors_blocked_by_false(ops):
 def backward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist):
     found_ops = []
     op_stack = [op for op in start_ops]
-    def recurse():
+    while len(op_stack) > 0:
         op = op_stack.pop()
         if op.type not in op_type_blacklist and op not in found_ops:
             found_ops.append(op)
             for input in op.inputs:
                 if input not in tensor_blacklist:
                     op_stack.append(input.op)
-        if len(op_stack) > 0:
-            recurse()
-    recurse()
     return found_ops
 
 def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops):
     found_ops = []
     op_stack = [op for op in start_ops]
-    def recurse():
+    while len(op_stack) > 0:
         op = op_stack.pop()
         if op.type not in op_type_blacklist and op in within_ops and op not in found_ops:
             found_ops.append(op)
@@ -362,9 +359,6 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
                 if out not in tensor_blacklist:
                     for c in out.consumers():
                         op_stack.append(c)
-        if len(op_stack) > 0:
-            recurse()
-    recurse()
     return found_ops
 
 
@@ -534,18 +528,6 @@ def linearity_1d_handler(input_ind, explainer, op, *grads):
 def passthrough(explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
-    # zero out gradients that are not between the inputs and the outputs we are explaining
-    # out = explainer.orig_grads[op.type](op, *grads)
-    # var = explainer._variable_inputs(op)
-    # if type(out) != tuple and type(out) != list: # see if we got only a single element
-    #     masked_out = out if var[0] else None
-    # else:
-    #     masked_out = [None for i in range(len(out))]
-    #     for i,v in enumerate(var):
-    #         if v:
-    #             masked_out[i] = out[i]
-    # return masked_out
-
 def break_dependence(explainer, op, *grads):
     """ This function name is used to break attribution dependence in the graph traversal.
      
@@ -610,13 +592,13 @@ op_handlers["Max"] = nonlinearity_1d(0)
 
 # ops that are nonlinear and allow two inputs to vary
 op_handlers["SquaredDifference"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: (x - y) * (x - y))
-op_handlers["Minimum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.minimum(x, y))
-op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.maximum(x, y))
+op_handlers["Minimum"] = nonlinearity_1d_nonlinearity_2d(0, 1, tf.minimum)
+op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(0, 1, tf.maximum)
 
 # ops that allow up to two inputs to vary are are linear when only one input varies
 op_handlers["Mul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x * y)
 op_handlers["RealDiv"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x / y)
-op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmul(x, y))
+op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, tf.matmul)
 
 # ops that need their own custom attribution functions
 op_handlers["GatherV2"] = gather
