@@ -89,7 +89,6 @@ def test_keras_imdb_lstm():
     """
 
     try:
-        import keras
         import numpy as np
         import tensorflow as tf
         from keras.datasets import imdb
@@ -106,7 +105,7 @@ def test_keras_imdb_lstm():
     # load the data from keras
     np.random.seed(7)
     max_features = 1000
-    (X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=max_features)
+    (X_train, _), (X_test, _) = imdb.load_data(num_words=max_features)
     X_train = sequence.pad_sequences(X_train, maxlen=100)
     X_test = sequence.pad_sequences(X_test, maxlen=100)
 

@@ -211,26 +211,26 @@ class GradientExplainer(Explainer):
                 # regression model with priors of the coefficents equal to the estimated variances for each
                 # value (note that 1e-6 is designed to increase the weight of the sample and so closely
                 # match the correct sum)
-                if False and self.local_smoothing == 0: # disabled right now to make sure it doesn't mask problems
-                    phis_sum = np.sum([phis[l][j].sum() for l in range(len(X))])
-                    phi_vars_s = np.stack([phi_vars[l][j] for l in range(len(X))], 0).flatten()
-                    if self.multi_output:
-                        sum_error = model_output_values[j,find] - phis_sum - self.expected_value[find]
-                    else:
-                        sum_error = model_output_values[j] - phis_sum - self.expected_value
+                # if False and self.local_smoothing == 0: # disabled right now to make sure it doesn't mask problems
+                #     phis_sum = np.sum([phis[l][j].sum() for l in range(len(X))])
+                #     phi_vars_s = np.stack([phi_vars[l][j] for l in range(len(X))], 0).flatten()
+                #     if self.multi_output:
+                #         sum_error = model_output_values[j,find] - phis_sum - self.expected_value[find]
+                #     else:
+                #         sum_error = model_output_values[j] - phis_sum - self.expected_value
 
-                    # this is a ridge regression with one sample of all ones with sum_error as the label
-                    # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
-                    # Sherman-Morrison formula
-                    v = (phi_vars_s / phi_vars_s.max()) * 1e6
-                    adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
+                #     # this is a ridge regression with one sample of all ones with sum_error as the label
+                #     # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                #     # Sherman-Morrison formula
+                #     v = (phi_vars_s / phi_vars_s.max()) * 1e6
+                #     adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
 
-                    # add the adjustment to the output so the sum matches
-                    offset = 0
-                    for l in range(len(X)):
-                        s = np.prod(phis[l][j].shape)
-                        phis[l][j] += adj[offset:offset+s].reshape(phis[l][j].shape)
-                        offset += s
+                #     # add the adjustment to the output so the sum matches
+                #     offset = 0
+                #     for l in range(len(X)):
+                #         s = np.prod(phis[l][j].shape)
+                #         phis[l][j] += adj[offset:offset+s].reshape(phis[l][j].shape)
+                #         offset += s
 
             output_phis.append(phis[0] if not self.multi_input else phis)
         if not self.multi_output:

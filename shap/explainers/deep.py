@@ -57,6 +57,12 @@ class DeepExplainer(Explainer):
             
         """
 
+        warnings.warn(
+            "Please keep in mind DeepExplainer is brand new, and we are still developing it and working on " +
+            "characterizing/testing it on large networks. This means you should keep an eye out for odd " +
+            "behavior. Post any issues you run into on github."
+        )
+
         # try and import keras and tensorflow
         global tf, tf_ops, tf_gradients_impl
         if tf is None:
@@ -575,6 +581,7 @@ op_handlers["Exp"] = nonlinearity_1d(0)
 op_handlers["ClipByValue"] = nonlinearity_1d(0)
 op_handlers["Rsqrt"] = nonlinearity_1d(0)
 op_handlers["Square"] = nonlinearity_1d(0)
+op_handlers["Max"] = nonlinearity_1d(0)
 
 # ops that are nonlinear and allow two inputs to vary
 op_handlers["SquaredDifference"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: (x - y) * (x - y))
@@ -590,3 +597,10 @@ op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmu
 op_handlers["GatherV2"] = gather
 op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
+
+
+# TODO items
+# TensorArrayGatherV3
+# Max
+# TensorArraySizeV3
+# Range
