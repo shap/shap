@@ -64,11 +64,11 @@ def test_kernel_shap_with_a1a_csr():
     linear_model = LinearRegression()
     linear_model.fit(x_train, y_train)
 
-    rows, cols = x_train.shape
+    _, cols = x_train.shape
     shape = 1, cols
     background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
     explainer = shap.KernelExplainer(linear_model.predict, background)
-    shap_values = explainer.shap_values(x_test)
+    explainer.shap_values(x_test)
 
 def test_kernel_shap_with_high_dim_csr():
     # verifies we can run on very sparse data produced from feature hashing
