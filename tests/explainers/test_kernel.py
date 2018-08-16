@@ -10,7 +10,7 @@ def test_null_model_small():
     e = explainer.explain(np.ones((1, 4)))
     assert np.sum(np.abs(e)) < 1e-8
 
-def test_null_mosdel():
+def test_null_model():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)), nsamples=100)
     e = explainer.explain(np.ones((1, 10)))
     assert np.sum(np.abs(e)) < 1e-8

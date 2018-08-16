@@ -57,11 +57,11 @@ class DeepExplainer(Explainer):
             
         """
 
-        warnings.warn(
-            "Please keep in mind DeepExplainer is brand new, and we are still developing it and working on " +
-            "characterizing/testing it on large networks. This means you should keep an eye out for odd " +
-            "behavior. Post any issues you run into on github."
-        )
+        # warnings.warn(
+        #     "Please keep in mind DeepExplainer is brand new, and we are still developing it and working on " +
+        #     "characterizing/testing it on large networks. This means you should keep an eye out for odd " +
+        #     "behavior. Post any issues you run into on github."
+        # )
 
         # try and import keras and tensorflow
         global tf, tf_ops, tf_gradients_impl
@@ -377,14 +377,26 @@ def softmax(explainer, op, *grads):
     mess up the attributions and it seems like TensorFlow doesn't define softmax that way
     (according to the docs)
     """
-    offset_in = op.inputs[0]
-    evals = tf.exp(offset_in, name="custom_exp")
+    in0 = op.inputs[0]
+    in0_max = tf.reduce_max(in0, axis=-1, keepdims=True, name="in0_max")
+    in0_centered = in0 - in0_max
+    evals = tf.exp(in0_centered, name="custom_exp")
     rsum = tf.reduce_sum(evals, axis=-1, keepdims=True)
     div = evals / rsum
-    explainer.between_ops.extend([evals.op, rsum.op, div.op]) # mark these as in-between the inputs and outputs
-    out = tf.gradients(div, offset_in, grad_ys=grads[0])[0]
-    del explainer.between_ops[-3:]
-    return out
+    explainer.between_ops.extend([evals.op, rsum.op, div.op, in0_centered.op]) # mark these as in-between the inputs and outputs
+    out = tf.gradients(div, in0_centered, grad_ys=grads[0])[0]
+    del explainer.between_ops[-4:]
+
+    # rescale to account for our shift by in0_max (which we did for numerical stability)
+    xin0,rin0 = tf.split(in0, 2)
+    xin0_centered,rin0_centered = tf.split(in0_centered, 2)
+    delta_in0 = xin0 - rin0
+    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    return tf.where(
+        tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
+        out,
+        out * tf.tile((xin0_centered - rin0_centered) / delta_in0, dup0)
+    )
 
 def maxpool(explainer, op, *grads):
     xin0,rin0 = tf.split(op.inputs[0], 2)
@@ -522,6 +534,18 @@ def linearity_1d_handler(input_ind, explainer, op, *grads):
 def passthrough(explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
+    # zero out gradients that are not between the inputs and the outputs we are explaining
+    # out = explainer.orig_grads[op.type](op, *grads)
+    # var = explainer._variable_inputs(op)
+    # if type(out) != tuple and type(out) != list: # see if we got only a single element
+    #     masked_out = out if var[0] else None
+    # else:
+    #     masked_out = [None for i in range(len(out))]
+    #     for i,v in enumerate(var):
+    #         if v:
+    #             masked_out[i] = out[i]
+    # return masked_out
+
 def break_dependence(explainer, op, *grads):
     """ This function name is used to break attribution dependence in the graph traversal.
      
@@ -560,6 +584,7 @@ op_handlers["TensorArrayWriteV3"] = passthrough
 op_handlers["Shape"] = break_dependence
 op_handlers["RandomUniform"] = break_dependence
 op_handlers["ZerosLike"] = break_dependence
+#op_handlers["StopGradient"] = break_dependence # this allows us to stop attributions when we want to (like softmax re-centering)
 
 # ops that are linear and only allow a single input to vary
 op_handlers["Reshape"] = linearity_1d(0)
