@@ -27,9 +27,6 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
             Extension('shap._cext', sources=['shap/_cext.cc'])
         )
 
-    with open("README.md", "r") as fh:
-        long_description = fh.read()
-
     if test_xgboost and test_lightgbm:
         tests_require = ['nose', 'xgboost', 'lightgbm']
     elif test_xgboost:
@@ -43,7 +40,10 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         name='shap',
         version='0.23.1',
         description='A unified approach to explain the output of any machine learning model.',
-        long_description=long_description,
+        long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain the output of " + \
+                         "any machine learning model. SHAP connects game theory with local explanations, uniting " + \
+                         "several previous methods and representing the only possible consistent and locally accurate " + \
+                         "additive feature attribution method based on expectations.",
         long_description_content_type="text/markdown",
         url='http://github.com/slundberg/shap',
         author='Scott Lundberg',
