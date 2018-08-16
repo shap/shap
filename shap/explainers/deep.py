@@ -592,13 +592,13 @@ op_handlers["Max"] = nonlinearity_1d(0)
 
 # ops that are nonlinear and allow two inputs to vary
 op_handlers["SquaredDifference"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: (x - y) * (x - y))
-op_handlers["Minimum"] = nonlinearity_1d_nonlinearity_2d(0, 1, tf.minimum)
-op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(0, 1, tf.maximum)
+op_handlers["Minimum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.minimum(x, y))
+op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.maximum(x, y))
 
 # ops that allow up to two inputs to vary are are linear when only one input varies
 op_handlers["Mul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x * y)
 op_handlers["RealDiv"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x / y)
-op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, tf.matmul)
+op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmul(x, y))
 
 # ops that need their own custom attribution functions
 op_handlers["GatherV2"] = gather
