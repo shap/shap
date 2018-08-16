@@ -13,13 +13,13 @@
 
 ## Install
 
-SHAP can be installed via `pip`:
+SHAP can be installed from [PyPI](https://pypi.org/project/shap)
 
 ```
 pip install shap
 ```
 
-SHAP can also be installed via `conda` through [conda-forge](https://anaconda.org/conda-forge/shap):
+or [conda-forge](https://anaconda.org/conda-forge/shap)
 
 ```
 conda install -c conda-forge shap 
