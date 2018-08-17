@@ -141,7 +141,8 @@ err_msg = """
   <b>Visualization omitted, Javascript library not loaded!</b><br>
   Have you run `initjs()` in this notebook? If this notebook was from another
   user you must also trust this notebook (File -> Trust notebook). If you are viewing
-  this notebook on github the Javascript has been stripped for security.
+  this notebook on github the Javascript has been stripped for security. If you are using
+  JupyterLab this error is because a JupyterLab extension has not yet been written.
 </div>"""
 
 
