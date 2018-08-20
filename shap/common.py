@@ -60,23 +60,23 @@ def convert_to_model(val):
 
 def match_model_to_data(model, data):
     assert isinstance(model, Model), "model must be of type Model!"
+    
+    try:
+        if isinstance(data, DenseDataWithIndex):
+            out_val = model.f(data.convert_to_df())
+        else:
+            out_val = model.f(data.data)
+    except:
+        print("Provided model function fails when applied to the provided data set.")
+        raise
 
-    if isinstance(data, DenseData):
-        try:
-            if isinstance(data, DenseDataWithIndex):
-                out_val = model.f(data.convert_to_df())
-            else:
-                out_val = model.f(data.data)
-        except:
-            print("Provided model function fails when applied to the provided data set.")
-            raise
-
-        if model.out_names is None:
-            if len(out_val.shape) == 1:
-                model.out_names = ["output value"]
-            else:
-                model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
-
+    if model.out_names is None:
+        if len(out_val.shape) == 1:
+            model.out_names = ["output value"]
+        else:
+            model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
+    
+    return out_val
 
 
 

@@ -91,7 +91,7 @@ class KernelExplainer(Explainer):
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
         self.data = convert_to_data(data, keep_index=self.keep_index)
-        match_model_to_data(self.model, self.data)
+        model_null = match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations
         assert isinstance(self.data, DenseData) or isinstance(self.data, SparseData), \
@@ -112,10 +112,6 @@ class KernelExplainer(Explainer):
         self.nsamplesRun = 0
 
         # find E_x[f(x)]
-        if self.keep_index:
-            model_null = self.model.f(self.data.convert_to_df())
-        else:
-            model_null = self.model.f(self.data.data)
         if isinstance(model_null, (pd.DataFrame, pd.Series)):
             model_null = np.squeeze(model_null.values)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
@@ -156,7 +152,6 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        
         if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.values
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
@@ -310,7 +305,7 @@ class KernelExplainer(Explainer):
                 log.debug("nsubsets = {0}".format(nsubsets))
                 log.debug("self.nsamples*weight_vector[subset_size-1] = {0}".format(
                     num_samples_left * remaining_weight_vector[subset_size - 1]))
-                log.debug("self.nsamples*weight_vector[subset_size-1/nsubsets = {0}".format(
+                log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {0}".format(
                     num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
 
                 # see if we have enough samples to enumerate all subsets of this size
@@ -344,7 +339,9 @@ class KernelExplainer(Explainer):
                 rand_sample_weight = weight_left / samples_left
                 log.info("weight_left = {0}".format(weight_left))
                 log.info("rand_sample_weight = {0}".format(rand_sample_weight))
-                remaining_weight_vector = weight_vector[num_full_subsets:]
+                remaining_weight_vector = copy.copy(weight_vector)
+                remaining_weight_vector[:num_paired_subset_sizes] /= 2 # because we draw two samples each below
+                remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
                 log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
@@ -353,12 +350,13 @@ class KernelExplainer(Explainer):
                     mask[:] = 0.0
                     np.random.shuffle(group_inds)
                     ind = np.random.choice(ind_set, 1, p=remaining_weight_vector)[0]
-                    mask[group_inds[:ind + num_full_subsets + 1]] = 1.0
+                    subset_size = ind + num_full_subsets + 1
+                    mask[group_inds[:subset_size]] = 1.0
                     samples_left -= 1
                     self.addsample(instance.x, mask, rand_sample_weight)
 
                     # add the compliment sample
-                    if samples_left > 0:
+                    if samples_left > 0 and subset_size <= num_paired_subset_sizes:
                         mask -= 1.0
                         mask[:] = np.abs(mask)
                         self.addsample(instance.x, mask, rand_sample_weight)
