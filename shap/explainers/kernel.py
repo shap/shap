@@ -346,21 +346,36 @@ class KernelExplainer(Explainer):
                 log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
                 log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
                 ind_set = np.arange(len(remaining_weight_vector))
+                used_masks = {}
                 while samples_left > 0:
                     mask[:] = 0.0
                     np.random.shuffle(group_inds)
                     ind = np.random.choice(ind_set, 1, p=remaining_weight_vector)[0]
                     subset_size = ind + num_full_subsets + 1
                     mask[group_inds[:subset_size]] = 1.0
-                    samples_left -= 1
-                    self.addsample(instance.x, mask, rand_sample_weight)
+
+                    # only add the sample if we have not seen it before
+                    mask_tuple = tuple(mask)
+                    if mask_tuple not in used_masks:
+                        used_masks[mask_tuple] = self.nsamplesAdded
+                        samples_left -= 1
+                        self.addsample(instance.x, mask, rand_sample_weight)
+                    else:
+                        self.kernelWeights[used_masks[mask_tuple]] += rand_sample_weight
 
                     # add the compliment sample
                     if samples_left > 0 and subset_size <= num_paired_subset_sizes:
                         mask -= 1.0
                         mask[:] = np.abs(mask)
-                        self.addsample(instance.x, mask, rand_sample_weight)
-                        samples_left -= 1
+
+                        # only add the sample if we have not seen it before
+                        mask_tuple = tuple(mask)
+                        if mask_tuple not in used_masks:
+                            used_masks[mask_tuple] = self.nsamplesAdded
+                            samples_left -= 1
+                            self.addsample(instance.x, mask, rand_sample_weight)
+                        else:
+                            self.kernelWeights[used_masks[mask_tuple]] += rand_sample_weight
 
             # execute the model on the synthetic samples we have created
             self.run()
