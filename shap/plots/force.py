@@ -8,11 +8,14 @@ import string
 import json
 import random
 from IPython.core.display import display, HTML
+from IPython import get_ipython
 import base64
 import numpy as np
 import scipy.cluster
 import collections
 import warnings
+import re
+from . import labels
 from ..common import convert_to_link, Instance, Model, Data, DenseData, Link
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
