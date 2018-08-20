@@ -12,6 +12,7 @@ import base64
 import numpy as np
 import scipy.cluster
 import collections
+import warnings
 from ..common import convert_to_link, Instance, Model, Data, DenseData, Link
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
