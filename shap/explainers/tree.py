@@ -51,8 +51,10 @@ class TreeExplainer(Explainer):
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
         self.base_offset = 0.0
         self.expected_value = None
-        self.trees = None
-        self.customized_tree = kwargs.get('customized_tree', False)
+        self.trees = kwargs.get('trees', None)
+
+        if self.trees is not None:
+            return
 
         # parse all the different possible supported model types
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
@@ -105,7 +107,7 @@ class TreeExplainer(Explainer):
         elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
             self.model_type = "catboost"
             self.trees = model
-        elif not self.customized_tree:
+        else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
     def shap_values(self, X, tree_limit=-1, approximate=False):
