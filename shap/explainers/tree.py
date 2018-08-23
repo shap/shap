@@ -75,7 +75,7 @@ class TreeExplainer(Explainer):
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
                 self.base_offset = model.init_.mean
             else:
-                assert False, "Unsupported init model type: " + str(type(gb_model.init_))
+                assert False, "Unsupported init model type: " + str(type(model.init_))
 
             scale = len(model.estimators_) * model.learning_rate
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
@@ -87,7 +87,7 @@ class TreeExplainer(Explainer):
                 self.base_offset = model.init_.prior
                 print('base_offset =', self.base_offset)
             else:
-                assert False, "Unsupported init model type: " + str(type(gb_model.init_))
+                assert False, "Unsupported init model type: " + str(type(model.init_))
 
             scale = len(model.estimators_) * model.learning_rate
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
