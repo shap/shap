@@ -80,6 +80,18 @@ class TreeExplainer(Explainer):
             scale = len(model.estimators_) * model.learning_rate
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
             self.less_than_or_equal = True
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
+            
+            # currently we only support the logs odds estimator
+            if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
+                self.base_offset = model.init_.prior
+                print('base_offset =', self.base_offset)
+            else:
+                assert False, "Unsupported init model type: " + str(type(gb_model.init_))
+
+            scale = len(model.estimators_) * model.learning_rate
+            self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
+            self.less_than_or_equal = True
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
             self.trees = model
@@ -292,6 +304,7 @@ class TreeExplainer(Explainer):
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
+        print(self.base_offset)
         phi[-1, :] = self.base_offset * self.tree_limit
         if self.approximate: # only used to mimic Saabas for comparisons right now
             for t in range(self.tree_limit):
