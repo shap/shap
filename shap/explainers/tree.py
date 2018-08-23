@@ -303,7 +303,6 @@ class TreeExplainer(Explainer):
 
     def _tree_shap_ind(self, i):
         phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
-        print(self.base_offset)
         phi[-1, :] = self.base_offset * self.tree_limit
         if self.approximate: # only used to mimic Saabas for comparisons right now
             for t in range(self.tree_limit):
