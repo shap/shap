@@ -54,13 +54,13 @@ def test_kernel_shap_with_dataframe():
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     shap_values = explainer.shap_values(df_X)
 
-def test_kernel_shap_with_a1a_csr():
+def test_kernel_shap_with_a1a_sparse():
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     import shap
 
     X, y = shap.datasets.a1a()
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.02, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=0)
     linear_model = LinearRegression()
     linear_model.fit(x_train, y_train)
 
@@ -70,7 +70,7 @@ def test_kernel_shap_with_a1a_csr():
     explainer = shap.KernelExplainer(linear_model.predict, background)
     explainer.shap_values(x_test)
 
-def test_kernel_shap_with_high_dim_csr():
+def test_kernel_shap_with_high_dim_sparse():
     # verifies we can run on very sparse data produced from feature hashing
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
@@ -87,7 +87,7 @@ def test_kernel_shap_with_high_dim_csr():
                         shuffle=True, random_state=42,
                         remove=remove)
     x_train, x_test, y_train, y_validation = train_test_split(ngroups.data, ngroups.target,
-                                                                    test_size=0.001, random_state=42)
+                                                                    test_size=0.01, random_state=42)
     from sklearn.feature_extraction.text import HashingVectorizer
     vectorizer = HashingVectorizer(stop_words='english', alternate_sign=False,
                                 n_features=2**16)

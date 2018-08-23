@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 import numpy as np
+import scipy as sp
 
 
 class Instance:
@@ -149,7 +150,9 @@ def convert_to_data(val, keep_index=False):
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
         else:
             return DenseData(val.values, list(val.columns))
-    elif str(type(val)).endswith("scipy.sparse.csr.csr_matrix'>"):
+    elif sp.sparse.issparse(val):
+        if not sp.sparse.isspmatrix_csr(val):
+            val = val.tocsr()
         return SparseData(val)
     else:
         assert False, "Unknown type passed as data object: "+str(type(val))

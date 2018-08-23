@@ -65,15 +65,17 @@ class KernelExplainer(Explainer):
         computes a the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
-    data : numpy.array or pandas.DataFrame or iml.DenseData or scipy.sparse.csr.csr_matrix
+    data : numpy.array or pandas.DataFrame or iml.DenseData or any scipy.sparse matrix
         The background dataset to use for integrating out features. To determine the impact
         of a feature, that feature is set to "missing" and the change in the model output
         is observed. Since most models aren't designed to handle arbitrary missing data at test
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
         we would approximate a feature being missing by setting it to zero. For small problems
-        this background datset can be the whole training set, but for larger problems consider
+        this background dataset can be the whole training set, but for larger problems consider
         using a single reference value or using the kmeans function to summarize the dataset.
+        Note: for sparse case we accept any sparse matrix but convert to lil format for
+        performance. 
 
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
@@ -131,7 +133,7 @@ class KernelExplainer(Explainer):
 
         Parameters
         ----------
-        X : numpy.array or pandas.DataFrame or scipy.sparse.csr.csr_matrix
+        X : numpy.array or pandas.DataFrame or any scipy.sparse matrix
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
         nsamples : "auto" or int
@@ -160,10 +162,13 @@ class KernelExplainer(Explainer):
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values
+        
         x_type = str(type(X))
-        csr_type = "scipy.sparse.csr.csr_matrix'>"
         arr_type = "'numpy.ndarray'>"
-        assert x_type.endswith(arr_type) or x_type.endswith(csr_type), "Unknown instance type: " + x_type
+        # if sparse, convert to lil for performance
+        if sp.sparse.issparse(X) and not sp.sparse.isspmatrix_lil(X):
+            X = X.tolil()
+        assert x_type.endswith(arr_type) or sp.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
@@ -429,20 +434,22 @@ class KernelExplainer(Explainer):
 
     def allocate(self):
         if sp.sparse.issparse(self.data.data):
+            # We tile the sparse matrix in csr format but convert it to lil
+            # for performance when adding samples
             shape = self.data.data.shape
             nnz = self.data.data.nnz
             rows, cols = shape
             rows *= self.nsamples
             shape = rows, cols
             if nnz == 0:
-                self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype)
+                self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
             else:
                 data = self.data.data.data
                 indices = self.data.data.indices
                 new_indptr = np.arange(0, rows * nnz + 1, nnz)
                 new_data = np.tile(data, rows)
                 new_indices = np.tile(indices, rows)
-                self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape)
+                self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
         else:
             self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
         
