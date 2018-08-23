@@ -85,7 +85,6 @@ class TreeExplainer(Explainer):
             # currently we only support the logs odds estimator
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
                 self.base_offset = model.init_.prior
-                print('base_offset =', self.base_offset)
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
 
