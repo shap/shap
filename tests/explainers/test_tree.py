@@ -239,3 +239,37 @@ def test_single_row_random_forest():
     shap_values = ex.shap_values(X_test.iloc[0,:])
     assert np.abs(shap_values[0].sum() + ex.expected_value[0] - predicted[0,0]) < 1e-6, \
         "SHAP values don't sum to model output!"
+
+def test_sum_match_gradient_boosting():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import GradientBoostingClassifier
+    import sklearn
+    
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = GradientBoostingClassifier(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+    
+    # Use decision function to get prediction before it is mapped to a probability
+    predicted = clf.decision_function(X_test)
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test)
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+        "SHAP values don't sum to model output!"
+
+def test_single_row_gradient_boosting():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import GradientBoostingClassifier
+    import sklearn
+    
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = GradientBoostingClassifier(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+    predicted = clf.decision_function(X_test)
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test.iloc[0,:])
+    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
+        "SHAP values don't sum to model output!"
