@@ -363,23 +363,6 @@ class TreeExplainer(Explainer):
 
 
 class Tree:
-    def __init__(self, children_left, children_right, children_default, feature, threshold, value, node_sample_weight):
-        self.children_left = children_left.astype(np.int32)
-        self.children_right = children_right.astype(np.int32)
-        self.children_default = children_default.astype(np.int32)
-        self.features = feature.astype(np.int32)
-        self.thresholds = threshold
-        self.values = value
-        self.node_sample_weight = node_sample_weight
-        self.unique_features = np.unique(self.features)
-        self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
-        # we compute the expectations to make sure they follow the SHAP logic
-        assert have_cext, "C extension was not built during install!"
-        self.max_depth = _cext.compute_expectations(
-            self.children_left, self.children_right, self.node_sample_weight,
-            self.values
-        )
-
     def __init__(self, tree, normalize=False, scaling=1.0):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
@@ -403,7 +386,24 @@ class Tree:
                 self.values
             )
 
-        elif type(tree) == dict:
+        elif type(tree) == dict and 'children_left' in tree:
+            self.children_left = tree["children_left"].astype(np.int32)
+            self.children_right = tree["children_right"].astype(np.int32)
+            self.children_default = tree["children_default"].astype(np.int32)
+            self.features = tree["feature"].astype(np.int32)
+            self.thresholds = tree["threshold"]
+            self.values = tree["value"]
+            self.node_sample_weight = tree["node_sample_weight"]
+            self.unique_features = np.unique(self.features)
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+            # we compute the expectations to make sure they follow the SHAP logic
+            assert have_cext, "C extension was not built during install!"
+            self.max_depth = _cext.compute_expectations(
+                self.children_left, self.children_right, self.node_sample_weight,
+                self.values
+            )
+
+        elif type(tree) == dict and 'tree_structure' in tree:
             start = tree['tree_structure']
             num_parents = tree['num_leaves']-1
             self.children_left = np.empty((2*num_parents+1), dtype=np.int32)
