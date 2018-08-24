@@ -75,7 +75,18 @@ class TreeExplainer(Explainer):
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
                 self.base_offset = model.init_.mean
             else:
-                assert False, "Unsupported init model type: " + str(type(gb_model.init_))
+                assert False, "Unsupported init model type: " + str(type(model.init_))
+
+            scale = len(model.estimators_) * model.learning_rate
+            self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
+            self.less_than_or_equal = True
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
+            
+            # currently we only support the logs odds estimator
+            if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
+                self.base_offset = model.init_.prior
+            else:
+                assert False, "Unsupported init model type: " + str(type(model.init_))
 
             scale = len(model.estimators_) * model.learning_rate
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
