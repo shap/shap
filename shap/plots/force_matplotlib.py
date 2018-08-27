@@ -7,30 +7,25 @@ from matplotlib.patches import PathPatch
 import matplotlib
 
 
-def draw_bars(out_value, features, width_separators, width_bar):
+def draw_bars(out_value, features, feature_type, width_separators, width_bar):
     """Draw the bars and separators."""
     rectangle_list = []
     separator_list = []
     
-    val = out_value
-    if (float(features[0][0]) >= 0) | (len(features) == 0):
-        feature_type = 'positive'
-    else:
-        feature_type = 'negative'
-    
+    pre_val = out_value
     for index, features in zip(range(len(features)), features):
         if feature_type == 'positive':
-            left_bound = val - float(features[0])
-            right_bound = val
-            val = left_bound
+            left_bound = float(features[0])
+            right_bound = pre_val
+            pre_val = left_bound
             
             separator_indent = np.abs(width_separators)
             separator_pos = left_bound
             colors = ['#FF0D57', '#FFC3D5']
         else:
-            left_bound = val
-            right_bound = val + np.abs(float(features[0]))
-            val = right_bound
+            left_bound = pre_val
+            right_bound = float(features[0])
+            pre_val = right_bound
             
             separator_indent = - np.abs(width_separators)
             separator_pos = right_bound
@@ -77,15 +72,9 @@ def draw_bars(out_value, features, width_separators, width_bar):
     return rectangle_list, separator_list
 
 
-def draw_labels(fig, ax, out_value, features, total_effect=0, min_perc=0.05):
+def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_effect=0, min_perc=0.05):
     start_text = out_value
-    val = out_value
-    
-    # Get feature type
-    if (float(features[0][0]) >= 0) | (len(features) == 0):
-        feature_type = 'positive'
-    else:
-        feature_type = 'negative'
+    pre_val = out_value
     
     # Define variables specific to positive and negative effect features
     if feature_type == 'positive':
@@ -99,23 +88,26 @@ def draw_labels(fig, ax, out_value, features, total_effect=0, min_perc=0.05):
     
     # Draw initial line
     if feature_type == 'positive':
-        x, y = np.array([[val, val], [0, -0.18]])
+        x, y = np.array([[pre_val, pre_val], [0, -0.18]])
         line = lines.Line2D(x, y, lw=1., alpha=0.5, color=colors[0])
         line.set_clip_on(False)
         ax.add_line(line)
-        start_text = val
+        start_text = pre_val
     
     box_end = out_value
-    
+    val = out_value
     for feature in features:
         # Exclude all labels that do not contribute at least 10% to the total
-        if np.abs(float(feature[0])) < min_perc * np.abs(total_effect):
-            continue
+        feature_contribution = np.abs(float(feature[0]) - pre_val) / np.abs(total_effect)
+        if feature_contribution < min_perc:
+            break
         
-        val = val - sign * np.abs(float(feature[0]))
+        # Compute value for current feature
+        val = float(feature[0])
         
+        # Draw labels
         text = feature[2] + ' = ' + feature[1]
-        text_out_val = plt.text(start_text - sign * np.abs(start_text) * 0.01,
+        text_out_val = plt.text(start_text - sign * offset_text,
                                 -0.15, text,
                                 fontsize=12, color=colors[0],
                                 horizontalalignment=alignement)
@@ -147,17 +139,21 @@ def draw_labels(fig, ax, out_value, features, total_effect=0, min_perc=0.05):
             box_end = val
 
         else:
-            box_end = box_end_ - sign * np.abs(box_end_) * 0.01
+            box_end = box_end_ - sign * offset_text
             x, y = np.array([[val, box_end, box_end],
                              [0, -0.08, -0.18]])
             line = lines.Line2D(x, y, lw=1., alpha=0.5, color=colors[0])
             line.set_clip_on(False)
             ax.add_line(line)
             start_text = box_end
+        
+        # Update previous value
+        pre_val = float(feature[0])
+            
     
-    # Create shadding
+    # Create line for labels
     extent_shading = [out_value, box_end, 0, -0.31]
-    path = [[out_value, 0], [val, 0], [box_end, -0.08],
+    path = [[out_value, 0], [pre_val, 0], [box_end, -0.08],
             [box_end, -0.2], [out_value, -0.2],
             [out_value, 0]]
     
@@ -165,6 +161,15 @@ def draw_labels(fig, ax, out_value, features, total_effect=0, min_perc=0.05):
     patch = PathPatch(path, facecolor='none', edgecolor='none')
     ax.add_patch(patch) 
     
+    # Extend axis if needed
+    lower_lim, upper_lim = ax.get_xlim()
+    if (box_end < lower_lim):
+        ax.set_xlim(box_end, upper_lim)
+    
+    if (box_end > upper_lim):
+        ax.set_xlim(lower_lim, box_end)
+        
+    # Create shading
     if feature_type == 'positive':
         colors = np.array([(255, 13, 87), (255, 255, 255)]) / 255.
     else:
@@ -180,6 +185,7 @@ def draw_labels(fig, ax, out_value, features, total_effect=0, min_perc=0.05):
     im.set_clip_path(patch)
     
     return fig, ax
+
 
 def format_data(data):
     """Format data."""
@@ -198,145 +204,63 @@ def format_data(data):
                              for x in data['features'].keys() if data['features'][x]['effect'] >= 0])
     pos_features = np.array(sorted(pos_features, key=lambda x: float(x[0]), reverse=True))
     
-    # Convert using the link function
+    # Define link function
     if data['link'] == 'identity':
-        pass
+        convert_func = lambda x: x
     elif data['link'] == 'logit':
-        # Convert ouput value
-        
-        # Scale of total effect:
-        
-        for i in neg_features:
-            pass
-    else:
-        assert False, 'ERROR: Unrecognized link function: ' + str(data['link'])
-    return neg_features, pos_features
-
-
-def draw_additive_plot(data, figsize, show):
-    """Draw additive plot."""
-    # Turn off interactive plot
-    if show == False:
-        plt.ioff()
-    
-    # Format data
-    neg_features, pos_features = format_data(data)
-    
-    # Compute overall metrics
-    total_neg = np.sum(neg_features[:, 0].astype(float))
-    total_pos = np.sum(pos_features[:, 0].astype(float))
-    
-    base_value = data['baseValue']
-    out_value = data['outValue']
-    
-    # Define plots
-    fig, ax = plt.subplots(figsize=figsize)
-    
-    # Compute axis limit
-    ax.set_ylim(-0.5, 0.15)
-    padding = np.max([np.abs(total_pos) * 0.2,
-                      np.abs(total_neg) * 0.2])
-
-    ax.set_xlim(min(out_value - np.abs(total_pos), base_value) - padding,
-                max(out_value + np.abs(total_neg), base_value) + padding)
-
-    plt.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False,
-                    labeltop=True, labelbottom=False)
-    plt.locator_params(axis='x', nbins=12)
-
-    for key, spine in zip(plt.gca().spines.keys(), plt.gca().spines.values()):
-        if key != 'top':
-            spine.set_visible(False)
-
-    # Define width of bar
-    width_bar = 0.1
-    width_separators = (ax.get_xlim()[1] - ax.get_xlim()[0]) / 200
-    
-    # Create bar for negative shap values
-    rectangle_list, separator_list = draw_bars(out_value, neg_features,
-                                               width_separators, width_bar)
-    for i in rectangle_list:
-        ax.add_patch(i)
-    
-    for i in separator_list:
-        ax.add_patch(i)
-    
-    # Create bar for positive shap values
-    rectangle_list, separator_list = draw_bars(out_value, pos_features,
-                                               width_separators, width_bar)
-    for i in rectangle_list:
-        ax.add_patch(i)
-    
-    for i in separator_list:
-        ax.add_patch(i)
-
-    # higher lower legend
-    plt.text(out_value - np.abs(out_value) * 0.02, 0.405, 'higher',
-             fontsize=13, color='#FF0D57',
-             horizontalalignment='right')
-
-    plt.text(out_value + np.abs(out_value) * 0.02, 0.405, 'lower',
-             fontsize=13, color='#1E88E5',
-             horizontalalignment='left')
-
-    plt.text(out_value, 0.4, r'$\leftarrow$',
-             fontsize=13, color='#1E88E5',
-             horizontalalignment='center')
-
-    plt.text(out_value, 0.425, r'$\rightarrow$',
-             fontsize=13, color='#FF0D57',
-             horizontalalignment='center')
-    
-    # Add labels
-    total_effect = np.abs(total_neg) + total_pos
-    fig, ax = draw_labels(fig, ax, out_value, neg_features,
-                          total_effect, min_perc=0.05)
-    
-    fig, ax = draw_labels(fig, ax, out_value, pos_features,
-                          total_effect, min_perc=0.05)
-    
-    # Convert value to the ones displayed
-    if data['link'] == 'identity':
-        out_value_display = out_value
-        base_value_display = base_value
-        
-    elif data['link'] == 'logit':
-        out_value_display = 1 / (1 + np.exp(-out_value))
-        base_value_display = 1 / (1 + np.exp(-base_value))
-        
-        tick_labels = ax.get_xticklabels()
-        current_tick_labels = []
-        for i in tick_labels:
-            tick_label = i.get_text()
-            new_tick_label = round(1 / (1 + np.exp(-float(tick_label))), 4)
-            
-            current_tick_labels += [new_tick_label]
-        ax.set_xticklabels(current_tick_labels, fontdict=None, minor=False)
-        
+        convert_func = lambda x: 1 / (1 + np.exp(-x))
     else:
         assert False, "ERROR: Unrecognized link function: " + str(data['link'])
+    
+    # Convert negative feature values to plot values
+    neg_val = data['outValue']
+    for i in neg_features:
+        val = float(i[0])
+        neg_val = neg_val + np.abs(val)
+        i[0] = convert_func(neg_val)
+    total_neg = np.max(neg_features[:, 0].astype(float)) - \
+                np.min(neg_features[:, 0].astype(float))
+    
+    # Convert positive feature values to plot values
+    pos_val = data['outValue']
+    for i in pos_features:
+        val = float(i[0])
+        pos_val = pos_val - np.abs(val)
+        i[0] = convert_func(pos_val)
         
+    total_pos = np.max(pos_features[:, 0].astype(float)) - \
+                np.min(pos_features[:, 0].astype(float))
+    
+    # Convert output value and base value
+    data['outValue'] = convert_func(data['outValue'])
+    data['baseValue'] = convert_func(data['baseValue'])
+    
+    return neg_features, total_neg, pos_features, total_pos
+
+
+def draw_output_element(out_name, out_value, ax):
     # Add output value
     x, y = np.array([[out_value, out_value], [0, 0.24]])
     line = lines.Line2D(x, y, lw=2., color='#F2F2F2')
     line.set_clip_on(False)
     ax.add_line(line)
-
+    
     font0 = FontProperties()
     font = font0.copy()
     font.set_weight('bold')
-    text_out_val = plt.text(out_value, 0.25, '{0:.2f}'.format(out_value_display),
+    text_out_val = plt.text(out_value, 0.25, '{0:.2f}'.format(out_value),
                             fontproperties=font,
                             fontsize=14,
                             horizontalalignment='center')
     text_out_val.set_bbox(dict(facecolor='white', edgecolor='white'))
     
-    text_out_val = plt.text(out_value, 0.33, data['outNames'][0],
+    text_out_val = plt.text(out_value, 0.33, out_name,
                             fontsize=12, alpha=0.5,
                             horizontalalignment='center')
     text_out_val.set_bbox(dict(facecolor='white', edgecolor='white'))
 
-    # Add label for base value
+
+def draw_base_element(base_value, ax):
     x, y = np.array([[base_value, base_value], [0.13, 0.25]])
     line = lines.Line2D(x, y, lw=2., color='#F2F2F2')
     line.set_clip_on(False)
@@ -346,6 +270,104 @@ def draw_additive_plot(data, figsize, show):
                             fontsize=12, alpha=0.5,
                             horizontalalignment='center')
     text_out_val.set_bbox(dict(facecolor='white', edgecolor='white'))
+
+
+def draw_higher_lower_element(out_value, offset_text):
+    plt.text(out_value - offset_text, 0.405, 'higher',
+             fontsize=13, color='#FF0D57',
+             horizontalalignment='right')
+
+    plt.text(out_value + offset_text, 0.405, 'lower',
+             fontsize=13, color='#1E88E5',
+             horizontalalignment='left')
+    
+    plt.text(out_value, 0.4, r'$\leftarrow$',
+             fontsize=13, color='#1E88E5',
+             horizontalalignment='center')
+    
+    plt.text(out_value, 0.425, r'$\rightarrow$',
+             fontsize=13, color='#FF0D57',
+             horizontalalignment='center')
+
+
+def update_axis_limits(ax, total_pos, pos_features, total_neg,
+                       neg_features, base_value):
+    ax.set_ylim(-0.5, 0.15)
+    padding = np.max([np.abs(total_pos) * 0.2,
+                      np.abs(total_neg) * 0.2])
+    
+    ax.set_xlim(min(np.min(pos_features[:, 0].astype(float)), base_value) - padding,
+                max(np.max(neg_features[:, 0].astype(float)), base_value) + padding)
+
+    plt.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False,
+                    labeltop=True, labelbottom=False)
+    plt.locator_params(axis='x', nbins=12)
+
+    for key, spine in zip(plt.gca().spines.keys(), plt.gca().spines.values()):
+        if key != 'top':
+            spine.set_visible(False)
+
+
+def draw_additive_plot(data, figsize, show):
+    """Draw additive plot."""
+    # Turn off interactive plot
+    if show == False:
+        plt.ioff()
+    
+    # Format data
+    neg_features, total_neg, pos_features, total_pos = format_data(data)
+    
+    # Compute overall metrics
+    base_value = data['baseValue']
+    out_value = data['outValue']
+    offset_text = (np.abs(total_neg) + np.abs(total_pos)) * 0.04
+    
+    # Define plots
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Compute axis limit
+    update_axis_limits(ax, total_pos, pos_features, total_neg,
+                       neg_features, base_value)
+    
+    # Define width of bar
+    width_bar = 0.1
+    width_separators = (ax.get_xlim()[1] - ax.get_xlim()[0]) / 200
+    
+    # Create bar for negative shap values
+    rectangle_list, separator_list = draw_bars(out_value, neg_features, 'negative',
+                                               width_separators, width_bar)
+    for i in rectangle_list:
+        ax.add_patch(i)
+    
+    for i in separator_list:
+        ax.add_patch(i)
+    
+    # Create bar for positive shap values
+    rectangle_list, separator_list = draw_bars(out_value, pos_features, 'positive',
+                                               width_separators, width_bar)
+    for i in rectangle_list:
+        ax.add_patch(i)
+    
+    for i in separator_list:
+        ax.add_patch(i)
+
+    # Add labels
+    total_effect = np.abs(total_neg) + total_pos
+    fig, ax = draw_labels(fig, ax, out_value, neg_features, 'negative',
+                          offset_text, total_effect, min_perc=0.05)
+    
+    fig, ax = draw_labels(fig, ax, out_value, pos_features, 'positive',
+                          offset_text, total_effect, min_perc=0.05)
+    
+    # higher lower legend
+    draw_higher_lower_element(out_value, offset_text)
+    
+    # Add label for base value
+    draw_base_element(base_value, ax)
+    
+    # Add output label
+    out_names = data['outNames'][0]
+    draw_output_element(out_names, out_value, ax)
     
     if show:
         plt.show()
