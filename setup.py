@@ -1,9 +1,25 @@
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
+import os
+import re
+import codecs
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload
 # which depends on ~/.pypirc
+
+here = os.path.abspath(os.path.dirname(__file__))
+
+def read(*parts):
+    with codecs.open(os.path.join(here, *parts), 'r') as fp:
+        return fp.read()
+
+def find_version(*file_paths):
+    version_file = read(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
 
 # Extend the default build_ext class to bootstrap numpy installation
 # that are needed to build C extensions.
@@ -38,7 +54,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
 
     setup(
         name='shap',
-        version='0.24.0',
+        version=find_version("shap", "__init__.py"),
         description='A unified approach to explain the output of any machine learning model.',
         long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain the output of " + \
                          "any machine learning model. SHAP connects game theory with local explanations, uniting " + \

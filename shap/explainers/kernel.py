@@ -298,7 +298,7 @@ class KernelExplainer(Explainer):
             # given nsamples*remaining_weight_vector[subset_size]
             num_full_subsets = 0
             num_samples_left = self.nsamples
-            group_inds = np.arange(self.M, dtype='int64')
+            group_inds = np.arange(self.M, dtype='int64') 
             mask = np.zeros(self.M)
             remaining_weight_vector = copy.copy(weight_vector)
             for subset_size in range(1, num_subset_sizes + 1):
@@ -337,50 +337,56 @@ class KernelExplainer(Explainer):
             log.info("num_full_subsets = {0}".format(num_full_subsets))
 
             # add random samples from what is left of the subset space
+            nfixed_samples = self.nsamplesAdded
             samples_left = self.nsamples - self.nsamplesAdded
             log.debug("samples_left = {0}".format(samples_left))
             if num_full_subsets != num_subset_sizes:
-                weight_left = np.sum(weight_vector[num_full_subsets:])
-                rand_sample_weight = weight_left / samples_left
-                log.info("weight_left = {0}".format(weight_left))
-                log.info("rand_sample_weight = {0}".format(rand_sample_weight))
                 remaining_weight_vector = copy.copy(weight_vector)
                 remaining_weight_vector[:num_paired_subset_sizes] /= 2 # because we draw two samples each below
                 remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
                 log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
-                ind_set = np.arange(len(remaining_weight_vector))
+                ind_set = np.random.choice(len(remaining_weight_vector), samples_left, p=remaining_weight_vector)
+                ind_set_pos = 0
                 used_masks = {}
                 while samples_left > 0:
-                    mask[:] = 0.0
-                    np.random.shuffle(group_inds)
-                    ind = np.random.choice(ind_set, 1, p=remaining_weight_vector)[0]
+                    mask.fill(0.0)
+                    ind = ind_set[ind_set_pos] # we call np.random.choice once to save time and then just read it here
+                    ind_set_pos += 1
                     subset_size = ind + num_full_subsets + 1
-                    mask[group_inds[:subset_size]] = 1.0
+                    mask[np.random.permutation(self.M)[:subset_size]] = 1.0
 
-                    # only add the sample if we have not seen it before
+                    # only add the sample if we have not seen it before, otherwise just
+                    # increment a previous sample's weight
                     mask_tuple = tuple(mask)
+                    new_sample = False
                     if mask_tuple not in used_masks:
+                        new_sample = True
                         used_masks[mask_tuple] = self.nsamplesAdded
                         samples_left -= 1
-                        self.addsample(instance.x, mask, rand_sample_weight)
+                        self.addsample(instance.x, mask, 1.0)
                     else:
-                        self.kernelWeights[used_masks[mask_tuple]] += rand_sample_weight
+                        self.kernelWeights[used_masks[mask_tuple]] += 1.0
 
                     # add the compliment sample
                     if samples_left > 0 and subset_size <= num_paired_subset_sizes:
-                        mask -= 1.0
-                        mask[:] = np.abs(mask)
+                        mask[:] = np.abs(mask - 1)
 
-                        # only add the sample if we have not seen it before
-                        mask_tuple = tuple(mask)
-                        if mask_tuple not in used_masks:
-                            used_masks[mask_tuple] = self.nsamplesAdded
+                        # only add the sample if we have not seen it before, otherwise just
+                        # increment a previous sample's weight
+                        if new_sample:
                             samples_left -= 1
-                            self.addsample(instance.x, mask, rand_sample_weight)
+                            self.addsample(instance.x, mask, 1.0)
                         else:
-                            self.kernelWeights[used_masks[mask_tuple]] += rand_sample_weight
+                            # we know the compliment sample is the next one after the original sample, so + 1
+                            self.kernelWeights[used_masks[mask_tuple] + 1] += 1.0
+
+                # normalize the kernel weights for the random samples to equal the weight left after
+                # the fixed enumerated samples have been already counted
+                weight_left = np.sum(weight_vector[num_full_subsets:])
+                log.info("weight_left = {0}".format(weight_left))
+                self.kernelWeights[nfixed_samples:] *= weight_left / self.kernelWeights[nfixed_samples:].sum()
 
             # execute the model on the synthetic samples we have created
             self.run()

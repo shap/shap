@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+from tqdm import tqdm
 from .explainer import Explainer
 
 class LinearExplainer(Explainer):
@@ -114,7 +115,7 @@ class LinearExplainer(Explainer):
         mean_transform = np.zeros((M,M))
         x_transform = np.zeros((M,M))
         inds = np.arange(M, dtype=np.int)
-        for _ in range(nsamples):
+        for _ in tqdm(range(nsamples), "Estimating transforms"):
             np.random.shuffle(inds)
             cov_inv_SiSi = np.zeros((0,0))
             cov_Si = np.zeros((M,0))
