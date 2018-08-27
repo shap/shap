@@ -1,9 +1,11 @@
 from ..explainer import Explainer
 import numpy as np
-import lime
-import lime.lime_tabular
+try:
+    import lime
+    import lime.lime_tabular    
+except ImportError:
+    pass
 
-import numpy as np
 class LimeTabularExplainer(Explainer):
     """ Simply wrap of lime.lime_tabular.LimeTabularExplainer into the common shap interface.
     """
