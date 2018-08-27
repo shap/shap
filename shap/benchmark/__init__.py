@@ -1,9 +1,8 @@
 from . import metrics
 from . import scorers
 from . import methods
-from .. import datasets
-import numpy as np
-import sklearn
+from . import models
+from . import run
 
 from .scorers import consistency_guarantees
 from .scorers import local_accuracy
@@ -20,3 +19,5 @@ from .scorers import batch_remove_absolute_r2
 from .scorers import batch_keep_absolute_r2
 
 from .plots import plot_curve
+
+from .run import run_test
