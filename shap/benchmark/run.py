@@ -50,8 +50,9 @@ def run_test(dataset_name, model_name, methods_set_name, scorer_name, use_cache=
         print(cache_id.replace("__", " ") + " ...")
         sys.stdout.flush()
         start = time.time()
+        X,y = getattr(datasets, dataset_name)()
         score = getattr(scorers, scorer_name)(
-            *getattr(datasets, dataset_name)(),
+            X, y,
             getattr(models, model_name),
             getattr(methods, methods_set_name)
         )
