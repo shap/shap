@@ -2,6 +2,7 @@ from . import metrics
 from . import scorers
 from . import methods
 from . import models
+from . import datasets
 from . import run
 
 from .scorers import consistency_guarantees
@@ -20,4 +21,4 @@ from .scorers import batch_keep_absolute_r2
 
 from .plots import plot_curve
 
-from .run import run_test
+from .run import run_test, run_tests
