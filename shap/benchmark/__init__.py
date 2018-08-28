@@ -2,7 +2,7 @@ from . import metrics
 from . import scorers
 from . import methods
 from . import models
-from . import datasets
+from .. import datasets
 from . import run
 
 from .scorers import consistency_guarantees
