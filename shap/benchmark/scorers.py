@@ -27,7 +27,7 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "tree_gain": 0.0,
         "tree_shap": 1.0,
         "mean_abs_tree_shap": 1.0,
-        "lime_tabular_regression_1000": 1.0
+        "lime_tabular_regression_1000": 0.8
     }
     
     return None, guarantees[method_name]

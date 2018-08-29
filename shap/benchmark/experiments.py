@@ -12,8 +12,7 @@ import time
 import subprocess
 from multiprocessing import Pool
 import itertools
-from shap.benchmark.methods import linear_regress
-from shap.benchmark.methods import tree_regress
+from shap.benchmark.methods import linear_regress, tree_regress, deep_regress
 
 all_scorers = [
     "runtime",
@@ -37,6 +36,7 @@ _experiments += [["corrgroups60", "ridge", m, s] for s in all_scorers for m in l
 _experiments += [["corrgroups60", "decision_tree", m, s] for s in all_scorers for m in tree_regress]
 _experiments += [["corrgroups60", "random_forest", m, s] for s in all_scorers for m in tree_regress]
 _experiments += [["corrgroups60", "gbm", m, s] for s in all_scorers for m in tree_regress]
+_experiments += [["corrgroups60", "ffnn", m, s] for s in all_scorers for m in deep_regress]
 
 def experiments(dataset=None, model=None, method=None, scorer=None):
     for experiment in _experiments:

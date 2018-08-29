@@ -108,3 +108,12 @@ tree_regress = [
     "lime_tabular_regression_1000"
     #"sampling_shap_100"
 ]
+
+deep_regress = [
+    # NEED deepexplainer
+    # NEED gradientexplainer
+    "random",
+    "kernel_shap_1000_meanref",
+    "sampling_shap_1000",
+    #"lime_tabular_regression_1000"
+]
