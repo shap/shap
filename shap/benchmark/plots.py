@@ -1,5 +1,5 @@
 import numpy as np
-from .tests import run_tests
+from .experiments import run_experiments
 from ..plots import colors
 from . import models
 from . import methods
@@ -213,8 +213,7 @@ def plot_grids(dataset, model_names):
 
     scores = []
     for model in model_names:
-
-        scores.extend(run_tests(dataset=dataset, model=model))
+        scores.extend(run_experiments(dataset=dataset, model=model))
     
     out = "" # background: rgb(30, 136, 229)
     out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>"

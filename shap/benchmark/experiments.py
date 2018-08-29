@@ -31,27 +31,27 @@ all_scorers = [
     "batch_remove_absolute_r2"
 ]
 
-_tests = []
-_tests += [["corrgroups60", "lasso", m, s] for s in all_scorers for m in linear_regress]
-_tests += [["corrgroups60", "ridge", m, s] for s in all_scorers for m in linear_regress]
-_tests += [["corrgroups60", "decision_tree", m, s] for s in all_scorers for m in tree_regress]
-_tests += [["corrgroups60", "random_forest", m, s] for s in all_scorers for m in tree_regress]
-_tests += [["corrgroups60", "gbm", m, s] for s in all_scorers for m in tree_regress]
+_experiments = []
+_experiments += [["corrgroups60", "lasso", m, s] for s in all_scorers for m in linear_regress]
+_experiments += [["corrgroups60", "ridge", m, s] for s in all_scorers for m in linear_regress]
+_experiments += [["corrgroups60", "decision_tree", m, s] for s in all_scorers for m in tree_regress]
+_experiments += [["corrgroups60", "random_forest", m, s] for s in all_scorers for m in tree_regress]
+_experiments += [["corrgroups60", "gbm", m, s] for s in all_scorers for m in tree_regress]
 
-def tests(dataset=None, model=None, method=None, scorer=None):
-    for test in _tests:
-        if dataset is not None and dataset != test[0]:
+def experiments(dataset=None, model=None, method=None, scorer=None):
+    for experiment in _experiments:
+        if dataset is not None and dataset != experiment[0]:
             continue
-        if model is not None and model != test[1]:
+        if model is not None and model != experiment[1]:
             continue
-        if method is not None and method != test[2]:
+        if method is not None and method != experiment[2]:
             continue
-        if scorer is not None and scorer != test[3]:
+        if scorer is not None and scorer != experiment[3]:
             continue
-        yield test
+        yield experiment
 
-def run_test(test, use_cache=True, cache_dir="/tmp"):
-    dataset_name, model_name, method_name, scorer_name = test
+def run_experiment(experiment, use_cache=True, cache_dir="/tmp"):
+    dataset_name, model_name, method_name, scorer_name = experiment
 
     # see if we have a cached version
     cache_id = "v" + "__".join([__version__, dataset_name, model_name, method_name, scorer_name])
@@ -80,15 +80,15 @@ def run_test(test, use_cache=True, cache_dir="/tmp"):
     return score
         
 
-def run_tests_helper(args):
-    test, cache_dir = args
-    return run_test(test, cache_dir=cache_dir)
+def run_experiments_helper(args):
+    experiment, cache_dir = args
+    return run_experiment(experiment, cache_dir=cache_dir)
 
-def run_tests(dataset=None, model=None, method=None, scorer=None, cache_dir="/tmp", nworkers=1):
-    tests_arr = list(tests(dataset=dataset, model=model, method=method, scorer=scorer))
+def run_experiments(dataset=None, model=None, method=None, scorer=None, cache_dir="/tmp", nworkers=1):
+    experiments_arr = list(experiments(dataset=dataset, model=model, method=method, scorer=scorer))
     if nworkers == 1:
-        out = list(map(run_tests_helper, zip(tests_arr, itertools.repeat(cache_dir))))
+        out = list(map(run_experiments_helper, zip(experiments_arr, itertools.repeat(cache_dir))))
     else:
         with Pool(nworkers) as pool:
-            out = pool.map(run_tests_helper, zip(tests_arr, itertools.repeat(cache_dir)))
-    return list(zip(tests_arr, out))
+            out = pool.map(run_experiments_helper, zip(experiments_arr, itertools.repeat(cache_dir)))
+    return list(zip(experiments_arr, out))

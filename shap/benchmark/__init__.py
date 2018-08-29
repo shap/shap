@@ -20,5 +20,5 @@ from .scorers import batch_keep_absolute_r2
 
 from .plots import plot_curve, plot_grids
 
-from .tests import run_test, run_tests
-from .tests import tests
+from .experiments import run_experiment, run_experiments
+from .experiments import experiments
