@@ -17,9 +17,10 @@ import warnings
 import re
 from . import labels
 from ..common import convert_to_link, Instance, Model, Data, DenseData, Link
+from ..plots.force_matplotlib import draw_additive_plot
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
-               plot_cmap="RdBu"):
+               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3)):
     """ Visualize the given SHAP values with an additive force layout. """
 
     # auto unwrap the base_value
@@ -91,8 +92,9 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             Model(None, out_names),
             DenseData(np.zeros((1, len(feature_names))), list(feature_names))
         )
-        return visualize(e, plot_cmap)
-
+        
+        return visualize(e, plot_cmap, matplotlib, figsize=figsize, show=show)
+        
     else:
         if shap_values.shape[0] > 3000:
             warnings.warn("shap.force_plot is slow many thousands of rows, try subsampling your data.")
@@ -118,7 +120,9 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
                 DenseData(np.ones((1, len(feature_names))), list(feature_names))
             )
             exps.append(e)
+        
         return visualize(exps, plot_cmap=plot_cmap)
+            
 
 class Explanation:
     def __init__(self):
@@ -186,14 +190,23 @@ def verify_valid_cmap(cmap):
 
     return cmap
 
-def visualize(e, plot_cmap="RdBu"):
+def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True):
     plot_cmap = verify_valid_cmap(plot_cmap)
     if isinstance(e, AdditiveExplanation):
-        return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).html()
+        if matplotlib:
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show)
+        else:
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).html()
     elif isinstance(e, Explanation):
-        return SimpleListVisualizer(e).html()
+        if matplotlib:
+            assert False, "Matplotlib plot is only supported for additive explanations"
+        else:
+            return SimpleListVisualizer(e).html()
     elif isinstance(e, collections.Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
-        return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap).html()
+        if matplotlib:
+            assert False, "Matplotlib plot is only supported for additive explanations"
+        else:
+            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap).html()
     else:
         assert False, "visualize() can only display Explanation objects (or arrays of them)!"
 
@@ -275,7 +288,12 @@ class AdditiveForceVisualizer:
     document.getElementById('{id}')
   );
 </script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator()))
-
+    
+    def matplotlib(self, figsize, show):
+        fig = draw_additive_plot(self.data, figsize=figsize, show=show)
+        
+        return fig
+        
 
 class AdditiveForceArrayVisualizer:
     def __init__(self, arr, plot_cmap="RdBu"):
