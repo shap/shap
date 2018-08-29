@@ -3,7 +3,6 @@ from . import scorers
 from . import methods
 from . import models
 from .. import datasets
-from . import run
 
 from .scorers import consistency_guarantees
 from .scorers import local_accuracy
@@ -19,6 +18,7 @@ from .scorers import mask_keep_negative
 from .scorers import batch_remove_absolute_r2
 from .scorers import batch_keep_absolute_r2
 
-from .plots import plot_curve
+from .plots import plot_curve, plot_grids
 
-from .run import run_test, run_tests
+from .tests import run_test, run_tests
+from .tests import tests

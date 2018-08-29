@@ -3,6 +3,7 @@ from .. import KernelExplainer
 from .. import SamplingExplainer
 from ..explainers import other
 from . import metrics
+from . import methods
 import sklearn
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -10,7 +11,7 @@ import copy
 import functools
 import time
 
-def consistency_guarantees(X, y, model_generator, methods):
+def consistency_guarantees(X, y, model_generator, method_name):
     # 1.0 - perfect consistency
     # 0.8 - guarantees depend on sampling
     # 0.6 - guarantees depend on approximation
@@ -23,14 +24,15 @@ def consistency_guarantees(X, y, model_generator, methods):
         "sampling_shap_1000": 0.8,
         "random": 0.0,
         "saabas": 0.0,
-        "tree_gini": 0.0,
+        "tree_gain": 0.0,
         "tree_shap": 1.0,
-        "mean_abs_tree_shap": 1.0
+        "mean_abs_tree_shap": 1.0,
+        "lime_tabular_regression_1000": 1.0
     }
     
-    return "consistency_guarantees", [], [[m[0], guarantees[m[0]]] for m in methods]
+    return None, guarantees[method_name]
 
-def local_accuracy(X, y, model_generator, methods):
+def local_accuracy(X, y, model_generator, method_name):
     def score_map(true, pred):
         """ Converts local accuracy from % of standard deviation to numerical scores for coloring.
         """
@@ -58,9 +60,9 @@ def local_accuracy(X, y, model_generator, methods):
             X_train, y_train, X_test, y_test, attr_function(X_test),
             model_generator, score_map
         )
-    return "local_accuracy", [], score_methods(X, y, [], model_generator, score_function, methods)
+    return None, score_method(X, y, None, model_generator, score_function, method_name)
 
-def runtime(X, y, model_generator, methods):
+def runtime(X, y, model_generator, method_name):
 
     old_seed = np.random.seed()
     np.random.seed(3293)
@@ -68,56 +70,53 @@ def runtime(X, y, model_generator, methods):
     # average the method scores over several train/test splits
     method_reps = []
     for i in range(1):
-        X_train, X_test, y_train, _ = train_test_split(X, y, test_size=0.1, random_state=i)
+        X_train, X_test, y_train, _ = train_test_split(toarray(X), y, test_size=0.1, random_state=i)
 
         # define the model we are going to explain
         model = model_generator()
         model.fit(X_train, y_train)
 
         # evaluate each method
-        vals = []
-        for m in methods:
-            start = time.time()
-            explainer = m[1](model, X_train)
-            build_time = time.time() - start
+        start = time.time()
+        explainer = getattr(methods, method_name)(model, X_train)
+        build_time = time.time() - start
 
-            start = time.time()
-            explainer(X_test)
-            explain_time = time.time() - start
+        start = time.time()
+        explainer(X_test)
+        explain_time = time.time() - start
 
-            # we always normalize the explain time as though we were explaining 1000 samples
-            # even if to reduce the runtime of the benchmark we do less (like just 100)
-            vals.append([m[0], build_time + explain_time * 1000.0 / X_test.shape[0]])
-        method_reps.append(vals)
+        # we always normalize the explain time as though we were explaining 1000 samples
+        # even if to reduce the runtime of the benchmark we do less (like just 100)
+        method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
     np.random.seed(old_seed)
 
-    return "runtime", [], average_methods(method_reps)
+    return None, np.mean(method_reps)
 
-def remove_positive(X, y, model_generator, methods, num_fcounts=11):
-    return ("remove_positive",) + run_metric(metrics.remove, X, y, model_generator, methods, 1, num_fcounts)
+def remove_positive(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.remove, X, y, model_generator, method_name, 1, num_fcounts)
 
-def remove_negative(X, y, model_generator, methods, num_fcounts=11):
-    return ("remove_negative",) + run_metric(metrics.remove, X, y, model_generator, methods, -1, num_fcounts)
+def remove_negative(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.remove, X, y, model_generator, method_name, -1, num_fcounts)
 
-def mask_remove_positive(X, y, model_generator, methods, num_fcounts=11):
-    return ("mask_remove_positive",) + run_metric(metrics.mask_remove, X, y, model_generator, methods, 1, num_fcounts)
+def mask_remove_positive(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.mask_remove, X, y, model_generator, method_name, 1, num_fcounts)
 
-def mask_remove_negative(X, y, model_generator, methods, num_fcounts=11):
-    return ("mask_remove_negative",) + run_metric(metrics.mask_remove, X, y, model_generator, methods, -1, num_fcounts)
+def mask_remove_negative(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.mask_remove, X, y, model_generator, method_name, -1, num_fcounts)
 
-def keep_positive(X, y, model_generator, methods, num_fcounts=11):
-    return ("keep_positive",) + run_metric(metrics.keep, X, y, model_generator, methods, 1, num_fcounts)
+def keep_positive(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.keep, X, y, model_generator, method_name, 1, num_fcounts)
 
-def keep_negative(X, y, model_generator, methods, num_fcounts=11):
-    return ("keep_negative",) + run_metric(metrics.keep, X, y, model_generator, methods, -1, num_fcounts)
+def keep_negative(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.keep, X, y, model_generator, method_name, -1, num_fcounts)
 
-def mask_keep_positive(X, y, model_generator, methods, num_fcounts=11):
-    return ("mask_keep_positive",) + run_metric(metrics.mask_keep, X, y, model_generator, methods, 1, num_fcounts)
+def mask_keep_positive(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.mask_keep, X, y, model_generator, method_name, 1, num_fcounts)
 
-def mask_keep_negative(X, y, model_generator, methods, num_fcounts=11):
-    return ("mask_keep_negative",) + run_metric(metrics.mask_keep, X, y, model_generator, methods, -1, num_fcounts)
+def mask_keep_negative(X, y, model_generator, method_name, num_fcounts=11):
+    return run_metric(metrics.mask_keep, X, y, model_generator, method_name, -1, num_fcounts)
 
-def run_metric(metric, X, y, model_generator, methods, attribution_sign, num_fcounts):
+def run_metric(metric, X, y, model_generator, method_name, attribution_sign, num_fcounts):
     def metric_function(true, pred):
         return np.mean(pred)
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function):
@@ -129,15 +128,15 @@ def run_metric(metric, X, y, model_generator, methods, attribution_sign, num_fco
             model_generator, metric_function
         )
     fcounts = intspace(0, X.shape[1], num_fcounts)
-    return fcounts, score_methods(X, y, fcounts, model_generator, score_function, methods)
+    return fcounts, score_method(X, y, fcounts, model_generator, score_function, method_name)
 
-def batch_remove_absolute_r2(X, y, model_generator, methods, num_fcounts=11):
-    return ("batch_remove_absolute_r2",) + run_batch_abs_metric(metrics.batch_remove, X, y, model_generator, methods, sklearn.metrics.r2_score, num_fcounts)
+def batch_remove_absolute_r2(X, y, model_generator, method_name, num_fcounts=11):
+    return run_batch_abs_metric(metrics.batch_remove, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
 
-def batch_keep_absolute_r2(X, y, model_generator, methods, num_fcounts=11):
-    return ("batch_keep_absolute_r2",) + run_batch_abs_metric(metrics.batch_keep, X, y, model_generator, methods, sklearn.metrics.r2_score, num_fcounts)
+def batch_keep_absolute_r2(X, y, model_generator, method_name, num_fcounts=11):
+    return run_batch_abs_metric(metrics.batch_keep, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
 
-def run_batch_abs_metric(metric, X, y, model_generator, methods, loss, num_fcounts):
+def run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function):
         A_train = np.abs(attr_function(X_train))
         nkeep_train = (np.ones(len(y_train)) * fcount).astype(np.int)
@@ -150,11 +149,11 @@ def run_batch_abs_metric(metric, X, y, model_generator, methods, loss, num_fcoun
             model_generator, loss
         )
     fcounts = intspace(0, X.shape[1], num_fcounts)
-    return fcounts, score_methods(X, y, fcounts, model_generator, score_function, methods)
+    return fcounts, score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 
-def score_methods(X, y, fcounts, model_generator, score_function, methods):
-    """ Test a set of explanation methods.
+def score_method(X, y, fcounts, model_generator, score_function, method_name):
+    """ Test an explanation method.
     """
 
     old_seed = np.random.seed()
@@ -163,7 +162,7 @@ def score_methods(X, y, fcounts, model_generator, score_function, methods):
     # average the method scores over several train/test splits
     method_reps = []
     for i in range(1):
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=i)
+        X_train, X_test, y_train, y_test = train_test_split(toarray(X), y, test_size=0.1, random_state=i)
 
         # define the model we are going to explain
         model = model_generator()
@@ -171,7 +170,7 @@ def score_methods(X, y, fcounts, model_generator, score_function, methods):
 
         def score(attr_function):
             cached_attr_function = lambda X: check_cache(attr_function, X)
-            if len(fcounts) == 0:
+            if fcounts is None:
                 return score_function(X_train, X_test, y_train, y_test, cached_attr_function)
             else:
                 scores = []
@@ -179,20 +178,11 @@ def score_methods(X, y, fcounts, model_generator, score_function, methods):
                     scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function))
                 return np.array(scores)
 
-        # evaluate each method
-        method_reps.append([[m[0], score(m[1](model, X_train))] for m in methods])
+        # evaluate the method
+        method_reps.append(score(getattr(methods, method_name)(model, X_train)))
+
     np.random.seed(old_seed)
-    return average_methods(method_reps)
-
-def average_methods(method_reps):
-    methods = copy.deepcopy(method_reps[0])
-    for rep in method_reps[1:]:
-        for i in range(len(rep)):
-            methods[i][1] += rep[i][1]
-    for i in range(len(methods)):
-        methods[i][1] /= len(method_reps)
-
-    return methods
+    return np.array(method_reps).mean(0)
 
 
 # used to memoize explainer functions so we don't waste time re-explaining the same object
@@ -220,3 +210,10 @@ def check_cache(f, X):
 
 def intspace(start, end, count):
     return np.unique(np.round(np.linspace(start, end, count)).astype(np.int))
+
+def toarray(X):
+    """ Converts DataFrames to numpy arrays.
+    """
+    if hasattr(X, "values"):
+        X = X.values
+    return X

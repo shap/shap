@@ -1,8 +1,8 @@
 from ..explainer import Explainer
 import numpy as np
 
-class TreeGiniExplainer(Explainer):
-    """ Simply returns the global gini feature importances for tree models.
+class TreeGainExplainer(Explainer):
+    """ Simply returns the global gain/gini feature importances for tree models.
 
     This is only for benchmark comparisons and is not meant to approximate SHAP values.
     """
@@ -10,6 +10,8 @@ class TreeGiniExplainer(Explainer):
         if str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
             pass
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+            pass
+        elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
             pass
         else:
             raise Exception("The passed model is not yet supported by TreeGiniExplainer: " + str(type(model)))

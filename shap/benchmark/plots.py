@@ -1,4 +1,8 @@
 import numpy as np
+from .tests import run_tests
+from ..plots import colors
+from . import models
+from . import methods
 import sklearn
 try:
     import matplotlib.pyplot as pl
@@ -90,11 +94,20 @@ labels = {
     "saabas": {
         "title": "Saabas"
     },
-    "tree_gini": {
+    "tree_gain": {
         "title": "Gain/Gini Importance"
     },
     "mean_abs_tree_shap": {
         "title": "mean(|Tree SHAP|)"
+    },
+    "lasso_regression": {
+        "title": "Lasso Regression"
+    },
+    "ridge_regression": {
+        "title": "Ridge Regression"
+    },
+    "gbm_regression": {
+        "title": "Gradient Boosting Regression"
     }
 }
 
@@ -143,3 +156,94 @@ def plot_curve(metric, fcounts, method_scores, cmap=benchmark_color_map):
     ahandles, alabels = pl.gca().get_legend_handles_labels()
     pl.legend(reversed(ahandles), reversed(alabels))
     return pl.gcf()
+
+def make_grid(scores, dataset, model):
+    color_vals = {}
+    for (_,_,method,metric),(fcounts,score) in filter(lambda x: x[0][0] == dataset and x[0][1] == model, scores):
+        if metric not in color_vals:
+            color_vals[metric] = {}
+
+        if metric in negated_metrics:
+            score = -score
+        elif metric in one_minus_metrics:
+            score = 1 - score
+
+        if fcounts is None:
+            color_vals[metric][method] = score
+        else:
+            auc = sklearn.metrics.auc(fcounts, score) / fcounts[-1]
+            color_vals[metric][method] = auc
+    
+    col_keys = list(color_vals.keys())
+    row_keys = list(set([v for k in col_keys for v in color_vals[k].keys()]))
+    
+    data = -28567 * np.ones((len(row_keys), len(col_keys)))
+    
+    for i in range(len(row_keys)):
+        for j in range(len(col_keys)):
+            data[i,j] = color_vals[col_keys[j]][row_keys[i]]
+            
+    assert np.sum(data == -28567) == 0, "There are missing data values!"
+            
+    data = (data - data.min(0)) / (data.max(0) - data.min(0))
+    
+    # sort by performans
+    inds = np.argsort(-data.mean(1))
+    row_keys = [row_keys[i] for i in inds]
+    data = data[inds,:]
+    
+    return row_keys, col_keys, data
+
+from matplotlib.colors import LinearSegmentedColormap
+red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
+    'red': ((0.0, 198./255, 198./255),
+            (1.0, 5./255, 5./255)),
+
+    'green': ((0.0, 34./255, 34./255),
+              (1.0, 198./255, 198./255)),
+
+    'blue': ((0.0, 5./255, 5./255),
+             (1.0, 24./255, 24./255)),
+
+    'alpha': ((0.0, 1, 1),
+              (1.0, 1, 1))
+})
+from IPython.core.display import HTML
+def plot_grids(dataset, model_names):
+
+    scores = []
+    for model in model_names:
+
+        scores.extend(run_tests(dataset=dataset, model=model))
+    
+    out = "" # background: rgb(30, 136, 229)
+    out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>"
+    out += "<div style='height: 1px; background: #ddd;'></div>"
+    #out += "<div style='height: 7px; background-image: linear-gradient(to right, rgb(30, 136, 229), rgb(255, 13, 87));'></div>"
+    out += "<table style='border-width: 1px; font-size: 14px; margin-left: 40px'>"
+    for ind,model in enumerate(model_names):
+        row_keys, col_keys, data = make_grid(scores, dataset, model)
+        
+        model_title = getattr(models, dataset+"__"+model).__doc__.split("\n")[0].strip()
+
+        if ind == 0:
+            out += "<tr><td style='background: #fff'></td></td>"
+            for j in range(data.shape[1]):
+                metric_title = labels[col_keys[j]]["title"]
+                out += "<td style='width: 40px; background: #fff'><div style='margin-bottom: -5px; white-space: nowrap; transform: rotate(-45deg); transform-origin: left top 0; width: 1.5em; margin-top: 8em'>" + metric_title + "</div></td>"
+            out += "</tr>"
+        out += "<tr><td style='background: #fff'></td><td colspan='%d' style='background: #fff; font-weight: bold; text-align: center'>%s</td></tr>" % (data.shape[1], model_title)
+        for i in range(data.shape[0]):
+            out += "<tr>"
+#             if i == 0:
+#                 out += "<td rowspan='%d' style='background: #fff; text-align: center; white-space: nowrap; vertical-align: middle; '><div style='font-weight: bold; transform: rotate(-90deg); transform-origin: left top 0; width: 1.5em; margin-top: 8em'>%s</div></td>" % (data.shape[0], model_name)
+            method_title = getattr(methods, row_keys[i]).__doc__.split("\n")[0].strip()
+            out += "<td style='background: #ffffff' title='shap.LinearExplainer(model)'>" + method_title + "</td>"
+            for j in range(data.shape[1]):
+                out += "<td style='width: 40px; height: 40px; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(data[i,j])[:-1])) + "'></td>"
+            out += "</tr>"
+            
+        out += "<tr><td colspan='%d' style='background: #fff'></td>" % (data.shape[1] + 1)
+    out += "</table>"
+    
+    return HTML(out)
