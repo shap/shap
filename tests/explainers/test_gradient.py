@@ -83,3 +83,94 @@ def test_tf_keras_mnist_cnn():
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+def test_pytorch_mnist_cnn():
+    """The same test as above, but for pytorch
+    """
+    try:
+        import torch, torchvision
+        from torchvision import datasets, transforms
+        from torch import nn
+        from torch.nn import functional as F
+    except Exception as e:
+        print("Skipping test_pytorch_mnist_cnn!")
+        return
+    import shap
+
+    batch_size=128
+
+    train_loader = torch.utils.data.DataLoader(
+        datasets.MNIST('mnist_data', train=True, download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=64, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(
+        datasets.MNIST('mnist_data', train=False, download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=64, shuffle=True)
+
+    class Net(nn.Module):
+        def __init__(self):
+            super(Net, self).__init__()
+            self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+            self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+            self.conv2_drop = nn.Dropout2d()
+            self.fc1 = nn.Linear(320, 50)
+            self.fc2 = nn.Linear(50, 10)
+
+        def forward(self, x):
+            x = F.relu(F.max_pool2d(self.conv1(x), 2))
+            x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+            x = x.view(-1, 320)
+            x = F.relu(self.fc1(x))
+            x = F.dropout(x, training=self.training)
+            x = self.fc2(x)
+            return F.log_softmax(x, dim=1)
+
+    model = Net()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+
+    def train(model, device, train_loader, optimizer, epoch, cutoff=1000):
+        model.train()
+        num_examples = 0
+        for batch_idx, (data, target) in enumerate(train_loader):
+            num_examples += target.shape[0]
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.nll_loss(output, target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 10 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), loss.item()))
+            if num_examples > cutoff:
+                break
+
+    device = torch.device('cpu')
+    train(model, device, train_loader, optimizer, 1)
+
+    next_x, next_y = next(iter(train_loader))
+    np.random.seed(0)
+    inds = np.random.choice(next_x.shape[0], 20, replace=False)
+
+    e = shap.PyTorchGradientExplainer(model, next_x[inds, :, :, :])
+    test_x, test_y = next(iter(test_loader))
+    shap_values = e.shap_values(test_x[:1], nsamples=1000)
+
+    model.eval()
+    with torch.no_grad():
+        diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).mean(0).detach().numpy()
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+
+if __name__ == '__main__':
+    test_pytorch_mnist_cnn()
