@@ -1,5 +1,6 @@
 import matplotlib
 import numpy as np
+import shutil
 matplotlib.use('Agg')
 import shap
 
@@ -84,6 +85,7 @@ def test_tf_keras_mnist_cnn():
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
+
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
@@ -98,21 +100,22 @@ def test_pytorch_mnist_cnn():
     import shap
 
     batch_size=128
+    root_dir = 'mnist_data'
 
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('mnist_data', train=True, download=True,
+        datasets.MNIST(root_dir, train=True, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
                        ])),
-        batch_size=64, shuffle=True)
+        batch_size=batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('mnist_data', train=False, download=True,
+        datasets.MNIST(root_dir, train=False, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
                        ])),
-        batch_size=64, shuffle=True)
+        batch_size=batch_size, shuffle=True)
 
     class Net(nn.Module):
         def __init__(self):
@@ -135,7 +138,7 @@ def test_pytorch_mnist_cnn():
     model = Net()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-    def train(model, device, train_loader, optimizer, epoch, cutoff=1000):
+    def train(model, device, train_loader, optimizer, epoch, cutoff=2000):
         model.train()
         num_examples = 0
         for batch_idx, (data, target) in enumerate(train_loader):
@@ -159,18 +162,17 @@ def test_pytorch_mnist_cnn():
     next_x, next_y = next(iter(train_loader))
     np.random.seed(0)
     inds = np.random.choice(next_x.shape[0], 20, replace=False)
-
-    e = shap.PyTorchGradientExplainer(model, next_x[inds, :, :, :])
+    e = shap.GradientExplainer(model, next_x[inds, :, :, :], framework='pytorch')
     test_x, test_y = next(iter(test_loader))
     shap_values = e.shap_values(test_x[:1], nsamples=1000)
 
     model.eval()
+    model.zero_grad()
     with torch.no_grad():
-        diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).mean(0).detach().numpy()
+        diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
-
-if __name__ == '__main__':
-    test_pytorch_mnist_cnn()
+    # clean up
+    shutil.rmtree(root_dir)

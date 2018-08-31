@@ -7,7 +7,6 @@ from .explainers.sampling import SamplingExplainer
 from .explainers.tree import TreeExplainer, Tree
 from .explainers.deep import DeepExplainer
 from .explainers.gradient import GradientExplainer
-from .explainers.gradient_pytorch import PyTorchGradientExplainer
 from .explainers.linear import LinearExplainer
 from .plots.summary import summary_plot
 from .plots.dependence import dependence_plot
