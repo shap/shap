@@ -321,10 +321,11 @@ class _PyTorchGradientExplainer(Explainer):
             assert type(X) == list, "Expected a list of model inputs!"
         # assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
-        # rank and determine the model outputs that we will explain
-        with torch.no_grad():
-            model_output_values = self.model(*X)
         if ranked_outputs is not None and self.multi_output:
+            # rank and determine the model outputs that we will explain
+            with torch.no_grad():
+                model_output_values = self.model(*X)
+
             if output_rank_order == "max":
                 _, model_output_ranks = torch.sort(model_output_values, descending=True)
             elif output_rank_order == "min":
