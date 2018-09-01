@@ -1,5 +1,6 @@
 import sklearn
 import sklearn.ensemble
+import gc
 
 
 # This models are all tuned for the corrgroups60 dataset
@@ -30,17 +31,22 @@ def corrgroups60__gbm():
     import xgboost
     return xgboost.XGBRegressor(random_state=0)
 
-class KerasParamWrap(object):
-    """ A simple wrapper that allows us to set keras `fit` parameters in the constructor.
+class KerasWrap(object):
+    """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
     """
     def __init__(self, model, epochs, flatten_output=False):
         self.model = model
         self.epochs = epochs
         self.flatten_output = flatten_output
-    
-    def fit(self, X, y, verbose=0):
-        return self.model.fit(X, y, epochs=self.epochs, verbose=verbose)
+        self.init_weights = None
         
+    def fit(self, X, y, verbose=0):
+        if self.init_weights is None:
+            self.init_weights = self.model.get_weights()
+        else:
+            self.model.set_weights(self.init_weights)
+        return self.model.fit(X, y, epochs=self.epochs, verbose=verbose)
+
     def predict(self, X):
         if self.flatten_output:
             return self.model.predict(X).flatten()
@@ -63,5 +69,5 @@ def corrgroups60__ffnn():
                 loss='mean_squared_error',
                 metrics=['mean_squared_error'])
 
-    return KerasParamWrap(model, 100, flatten_output=True)
+    return KerasWrap(model, 100, flatten_output=True)
 

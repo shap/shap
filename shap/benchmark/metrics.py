@@ -1,4 +1,7 @@
 import numpy as np
+from tqdm import tqdm
+import gc
+
 
 _remove_cache = {}
 def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
@@ -27,6 +30,9 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
     # how many features to mask
     assert X_train.shape[1] == X_test.shape[1]
 
+    # this is the model we will retrain many times
+    model_masked = model_generator()
+
     # mask nmask top features and re-train the model for each test explanation
     X_train_tmp = np.zeros(X_train.shape)
     X_test_tmp = np.zeros(X_test.shape)
@@ -34,7 +40,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
     tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
     last_nmask = _remove_cache.get("nmask", None)
     last_yp_masked_test = _remove_cache.get("yp_masked_test", None)
-    for i in range(len(y_test)):
+    for i in tqdm(range(len(y_test)), "Retraining for the 'remove' metric"):
         if cache_match and last_nmask[i] == nmask[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nmask[i] == 0:
@@ -48,7 +54,6 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
             X_test_tmp[i,ordering[:nmask[i]]] = X_train[:,ordering[:nmask[i]]].mean()
 
             # retrain the model and make a prediction
-            model_masked = model_generator()
             model_masked.fit(X_train_tmp, y_train)
             yp_masked_test[i] = model_masked.predict(X_test_tmp[i:i+1])[0]
 
@@ -144,6 +149,9 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
     # how many features to mask
     assert X_train.shape[1] == X_test.shape[1]
 
+    # this is the model we will retrain many times
+    model_masked = model_generator()
+
     # keep nkeep top features and re-train the model for each test explanation
     X_train_tmp = np.zeros(X_train.shape)
     X_test_tmp = np.zeros(X_test.shape)
@@ -151,7 +159,7 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
     tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
     last_nkeep = _keep_cache.get("nkeep", None)
     last_yp_masked_test = _keep_cache.get("yp_masked_test", None)
-    for i in range(len(y_test)):
+    for i in tqdm(range(len(y_test)), "Retraining for the 'keep' metric"):
         if cache_match and last_nkeep[i] == nkeep[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nkeep[i] == attr_test.shape[1]:
@@ -166,7 +174,6 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
             X_test_tmp[i,ordering[nkeep[i]:]] = X_train[:,ordering[nkeep[i]:]].mean()
 
             # retrain the model and make a prediction
-            model_masked = model_generator()
             model_masked.fit(X_train_tmp, y_train)
             yp_masked_test[i] = model_masked.predict(X_test_tmp[i:i+1])[0]
 

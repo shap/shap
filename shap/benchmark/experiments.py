@@ -19,7 +19,7 @@ try:
     from queue import Queue
 except ImportError:
     from Queue import Queue
-from threading import Thread
+from threading import Thread, Lock
 
 
 all_scorers = [
@@ -145,18 +145,37 @@ nexperiments = 0
 total_sent = 0
 total_done = 0
 total_failed = 0
+worker_lock = Lock()
 def __thread_worker(q, host):
     global total_sent, total_done
     hostname, python_binary = host.split(":")
     while True:
         experiment = q.get()
-        total_sent += 1
-        #print("%d/%d tasks sent" % (total_sent, nexperiments))
+
+        # record how many we have sent off for executation
+        worker_lock.acquire()
+        try:
+            total_sent += 1
+            __print_status()
+        finally:
+            worker_lock.release()
+        
         __run_remote_experiment(experiment, hostname, python_binary=python_binary)
-        total_done += 1
-        print("task %d of %d done (%d failed)" % (total_done, nexperiments, total_failed))
-        sys.stdout.flush()
+        
+        # record how many are finished
+        worker_lock.acquire()
+        try:
+            total_done += 1
+            __print_status()
+        finally:
+            worker_lock.release()
+        
         q.task_done()
+
+def __print_status():
+    print("Benchmark task %d of %d done (%d failed, %d running)" % (total_done, nexperiments, total_failed, total_sent - total_done), end="\r")
+    sys.stdout.flush()
+
 
 def run_remote_experiments(experiments, thread_hosts):
     """ Use ssh to run the experiments on remote machines in parallel.
@@ -170,15 +189,19 @@ def run_remote_experiments(experiments, thread_hosts):
         Each host has the format "host_name:path_to_python_binary" and can appear multiple times
         in the list (one for each parallel execution you want on that machine).
     """
-    print("ASDf")
+    
     # first we kill any remaining workers from previous runs
     # note we don't check_call because pkill kills our ssh call as well
     thread_hosts = copy.copy(thread_hosts)
     random.shuffle(thread_hosts)
     for host in set(thread_hosts):
         hostname,_ = host.split(":")
-        subprocess.call(["ssh", hostname, "pkill -f shap.benchmark.run_experiment"])
-    print("ASDf")
+        try:
+            subprocess.run(["ssh", hostname, "pkill -f shap.benchmark.run_experiment"], timeout=15)
+        except subprocess.TimeoutExpired:
+            print("Failed to connect to", hostname, "after 15 seconds! Exiting.")
+            return
+    
     global nexperiments
     experiments = copy.copy(list(experiments))
     random.shuffle(experiments) # this way all the hard experiments don't get put on one machine
@@ -212,8 +235,8 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
 
     # run the benchmark on the remote machine
     #start = time.time()
-    cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+" -c \"import shap; shap.benchmark.run_experiment(['%s', '%s', '%s', '%s'], cache_dir='%s')\" &> /dev/null" % (
-        dataset_name, model_name, method_name, scorer_name, cache_dir
+    cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+" -c \"import shap; shap.benchmark.run_experiment(['%s', '%s', '%s', '%s'], cache_dir='%s')\" &> %s/%s.output" % (
+        dataset_name, model_name, method_name, scorer_name, cache_dir, cache_dir, cache_id
     )
     try:
         subprocess.check_output(["ssh", remote, cmd])

@@ -6,7 +6,7 @@ from .. import DeepExplainer
 from .. import GradientExplainer
 from .. import kmeans
 from ..explainers import other
-from .models import KerasParamWrap
+from .models import KerasWrap
 import numpy as np
 
 
@@ -68,7 +68,7 @@ def lime_tabular_regression_1000(model, data):
 def deep_shap(model, data):
     """ Deep SHAP (DeepLIFT)
     """
-    if isinstance(model, KerasParamWrap):
+    if isinstance(model, KerasWrap):
         model = model.model
     explainer = DeepExplainer(model, kmeans(data, 1).data)
     def f(X):
@@ -83,7 +83,7 @@ def deep_shap(model, data):
 def expected_gradients(model, data):
     """ Expected Gradients
     """
-    if isinstance(model, KerasParamWrap):
+    if isinstance(model, KerasWrap):
         model = model.model
     explainer = GradientExplainer(model, data)
     def f(X):
