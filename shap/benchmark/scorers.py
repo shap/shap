@@ -27,7 +27,9 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "tree_gain": 0.0,
         "tree_shap": 1.0,
         "mean_abs_tree_shap": 1.0,
-        "lime_tabular_regression_1000": 0.8
+        "lime_tabular_regression_1000": 0.8,
+        "deep_shap": 0.6,
+        "expected_gradients": 0.8
     }
     
     return None, guarantees[method_name]
@@ -36,7 +38,10 @@ def local_accuracy(X, y, model_generator, method_name):
     def score_map(true, pred):
         """ Converts local accuracy from % of standard deviation to numerical scores for coloring.
         """
+        
         v = min(1.0, np.std(pred - true) / (np.std(true) + 1e-8))
+        # print(pred - true)
+        # print(v)
         if v < 1e-6:
             return 1.0
         elif v < 0.01:
@@ -55,10 +60,10 @@ def local_accuracy(X, y, model_generator, method_name):
             return 0.1
         else:
             return 0.0
-    def score_function(X_train, X_test, y_train, y_test, attr_function):
+    def score_function(X_train, X_test, y_train, y_test, attr_function, trained_model):
         return metrics.local_accuracy(
             X_train, y_train, X_test, y_test, attr_function(X_test),
-            model_generator, score_map
+            model_generator, score_map, trained_model
         )
     return None, score_method(X, y, None, model_generator, score_function, method_name)
 
@@ -119,13 +124,13 @@ def mask_keep_negative(X, y, model_generator, method_name, num_fcounts=11):
 def run_metric(metric, X, y, model_generator, method_name, attribution_sign, num_fcounts):
     def metric_function(true, pred):
         return np.mean(pred)
-    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function):
+    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
         A = attribution_sign * attr_function(X_test)
         nmask = np.ones(len(y_test)) * fcount
         nmask = np.minimum(nmask, np.array(A > 0).sum(1)).astype(np.int)
         return metric(
             nmask, X_train, y_train, X_test, y_test, A,
-            model_generator, metric_function
+            model_generator, metric_function, trained_model
         )
     fcounts = intspace(0, X.shape[1], num_fcounts)
     return fcounts, score_method(X, y, fcounts, model_generator, score_function, method_name)
@@ -137,7 +142,7 @@ def batch_keep_absolute_r2(X, y, model_generator, method_name, num_fcounts=11):
     return run_batch_abs_metric(metrics.batch_keep, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
 
 def run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
-    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function):
+    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
         A_train = np.abs(attr_function(X_train))
         nkeep_train = (np.ones(len(y_train)) * fcount).astype(np.int)
         #nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(np.int)
@@ -171,11 +176,11 @@ def score_method(X, y, fcounts, model_generator, score_function, method_name):
         def score(attr_function):
             cached_attr_function = lambda X: check_cache(attr_function, X)
             if fcounts is None:
-                return score_function(X_train, X_test, y_train, y_test, cached_attr_function)
+                return score_function(X_train, X_test, y_train, y_test, cached_attr_function, model)
             else:
                 scores = []
                 for f in fcounts:
-                    scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function))
+                    scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function, model))
                 return np.array(scores)
 
         # evaluate the method

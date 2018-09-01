@@ -31,8 +31,8 @@ def boston(display=False):
     """ Return the boston housing data in a nice package. """
 
     d = sklearn.datasets.load_boston()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names)
-    return df, d.target
+    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
+    return df, d.target # pylint: disable=E1101
 
 def communitiesandcrime(display=False):
     """ Predict total number of non-violent crimes per 100K popuation.
@@ -61,19 +61,19 @@ def diabetes(display=False):
     """ Return the diabetes housing data in a nice package. """
 
     d = sklearn.datasets.load_diabetes()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names)
-    return df, d.target
+    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
+    return df, d.target # pylint: disable=E1101
 
 
 def iris(display=False):
     """ Return the classic iris data in a nice package. """
 
     d = sklearn.datasets.load_iris()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names)
+    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
     if display:
-        return df, [d.target_names[v] for v in d.target]
+        return df, [d.target_names[v] for v in d.target] # pylint: disable=E1101
     else:
-        return df, d.target
+        return df, d.target # pylint: disable=E1101
 
 
 def adult(display=False):
@@ -145,8 +145,6 @@ def corrgroups60(display=False):
     beta[0:30:3] = 1
 
     # build a correlation matrix with groups of 3 tightly correlated features
-    x = np.ones(M)
-    mu = np.zeros(M)
     C = np.eye(M)
     for i in range(0,30,3):
         C[i,i+1] = C[i+1,i] = 0.99

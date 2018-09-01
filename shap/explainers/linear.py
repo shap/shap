@@ -103,7 +103,7 @@ class LinearExplainer(Explainer):
     def _estimate_transforms(self, nsamples):
         """ Uses block matrix inversion identities to quickly estimate transforms.
 
-        After a bit of matrix math we can isolate a transoform matrix (# features x # features)
+        After a bit of matrix math we can isolate a transform matrix (# features x # features)
         that is independent of any sample we are explaining. It is the result of averaging over
         all feature permutations, but we just use a fixed number of samples to estimate the value.
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 _remove_cache = {}
-def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric):
+def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
     """ The model is retrained for each test sample with the important features set to a constant.
 
     If you want to know how important a set of features is you can ask how the model would be
@@ -27,11 +27,6 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
     # how many features to mask
     assert X_train.shape[1] == X_test.shape[1]
 
-    # train a model without masking if we have entries that need it
-    if np.any(nmask == 0):
-        model = model_generator()
-        model.fit(X_train, y_train)
-
     # mask nmask top features and re-train the model for each test explanation
     X_train_tmp = np.zeros(X_train.shape)
     X_test_tmp = np.zeros(X_test.shape)
@@ -43,7 +38,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
         if cache_match and last_nmask[i] == nmask[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nmask[i] == 0:
-            yp_masked_test[i] = model.predict(X_test[i:i+1])[0]
+            yp_masked_test[i] = trained_model.predict(X_test[i:i+1])[0]
         else:
             # mask out the most important features for this test instance
             X_train_tmp[:] = X_train
@@ -65,7 +60,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
 
     return metric(y_test, yp_masked_test)
 
-def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric):
+def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
     """ Each test sample is masked by setting the important features to a constant.
     """
 
@@ -73,9 +68,6 @@ def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
 
     # how many features to mask
     assert X_train.shape[1] == X_test.shape[1]
-
-    model = model_generator()
-    model.fit(X_train, y_train)
 
     # mask nmask top features for each test explanation
     X_test_tmp = X_test.copy()
@@ -86,7 +78,7 @@ def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             X_test_tmp[i,ordering[:nmask[i]]] = mean_vals[ordering[:nmask[i]]]
     
-    yp_masked_test = model.predict(X_test_tmp)
+    yp_masked_test = trained_model.predict(X_test_tmp)
 
     return metric(y_test, yp_masked_test)
 
@@ -126,7 +118,7 @@ def batch_remove(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr
     return metric(y_test, yp_test_masked)
 
 _keep_cache = {}
-def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric):
+def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
     """ The model is retrained for each test sample with the non-important features set to a constant.
 
     If you want to know how important a set of features is you can ask how the model would be
@@ -152,11 +144,6 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
     # how many features to mask
     assert X_train.shape[1] == X_test.shape[1]
 
-    # train a model without masking if we have entries that need it
-    if np.any(nkeep == attr_test.shape[1]):
-        model = model_generator()
-        model.fit(X_train, y_train)
-
     # keep nkeep top features and re-train the model for each test explanation
     X_train_tmp = np.zeros(X_train.shape)
     X_test_tmp = np.zeros(X_test.shape)
@@ -168,7 +155,7 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
         if cache_match and last_nkeep[i] == nkeep[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nkeep[i] == attr_test.shape[1]:
-            yp_masked_test[i] = model.predict(X_test[i:i+1])[0]
+            yp_masked_test[i] = trained_model.predict(X_test[i:i+1])[0]
         else:
 
             # mask out the most important features for this test instance
@@ -191,7 +178,7 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
 
     return metric(y_test, yp_masked_test)
 
-def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric):
+def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
     """ The model is retrained for each test sample with the non-important features set to a constant.
     """
 
@@ -199,9 +186,6 @@ def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
 
     # how many features to mask
     assert X_train.shape[1] == X_test.shape[1]
-
-    model = model_generator()
-    model.fit(X_train, y_train)
 
     # keep nkeep top features for each test explanation
     X_test_tmp = X_test.copy()
@@ -213,7 +197,7 @@ def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             X_test_tmp[i,ordering[nkeep[i]:]] = mean_vals[ordering[nkeep[i]:]]
 
-    yp_masked_test = model.predict(X_test_tmp)
+    yp_masked_test = trained_model.predict(X_test_tmp)
 
     return metric(y_test, yp_masked_test)
 
@@ -252,7 +236,7 @@ def batch_keep(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_t
 
     return metric(y_test, yp_test_masked)
 
-def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator, metric):
+def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
     """ The how well do the features plus a constant base rate sum up to the model output.
     """
 
@@ -262,9 +246,7 @@ def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator,
     assert X_train.shape[1] == X_test.shape[1]
 
     # keep nkeep top features and re-train the model for each test explanation
-    model = model_generator()
-    model.fit(X_train, y_train)
-    yp_test = model.predict(X_test)
+    yp_test = trained_model.predict(X_test)
 
     return metric(yp_test, attr_test.sum(1))
 
