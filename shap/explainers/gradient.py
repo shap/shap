@@ -20,7 +20,7 @@ class GradientExplainer(Explainer):
     difference between the expected model output and the current output.
     """
 
-    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0, framework='tensorflow'):
+    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
         """ An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -50,6 +50,23 @@ class GradientExplainer(Explainer):
             over these samples. The data passed here must match the input operations given in the
             first argument.
         """
+
+        # first, we need to find the framework
+        if type(model) is tuple:
+            a, b = model
+            try:
+                a.named_parameters()
+                framework = 'pytorch'
+            except:
+                framework = 'tensorflow'
+        else:
+            try:
+                model.named_parameters()
+                framework = 'pytorch'
+            except:
+                framework = 'tensorflow'
+
+
         if framework == 'tensorflow':
             self.explainer = _TFGradientExplainer(model, data, session, batch_size, local_smoothing)
         elif framework == 'pytorch':

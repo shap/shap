@@ -162,7 +162,7 @@ def test_pytorch_mnist_cnn():
     next_x, next_y = next(iter(train_loader))
     np.random.seed(0)
     inds = np.random.choice(next_x.shape[0], 20, replace=False)
-    e = shap.GradientExplainer(model, next_x[inds, :, :, :], framework='pytorch')
+    e = shap.GradientExplainer(model, next_x[inds, :, :, :])
     test_x, test_y = next(iter(test_loader))
     shap_values = e.shap_values(test_x[:1], nsamples=1000)
 
