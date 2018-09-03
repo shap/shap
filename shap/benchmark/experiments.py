@@ -1,6 +1,6 @@
 from __future__ import print_function
 from .. import datasets
-from . import scorers
+from . import metrics
 from . import models
 from . import methods
 from .. import __version__
@@ -22,7 +22,7 @@ except ImportError:
 from threading import Thread, Lock
 
 
-all_scorers = [
+all_metrics = [
     "runtime",
     "local_accuracy",
     "consistency_guarantees",
@@ -78,14 +78,14 @@ deep_regress_methods = [
 ]
 
 _experiments = []
-_experiments += [["corrgroups60", "lasso", m, s] for s in all_scorers for m in linear_regress_methods]
-_experiments += [["corrgroups60", "ridge", m, s] for s in all_scorers for m in linear_regress_methods]
-_experiments += [["corrgroups60", "decision_tree", m, s] for s in all_scorers for m in tree_regress_methods]
-_experiments += [["corrgroups60", "random_forest", m, s] for s in all_scorers for m in tree_regress_methods]
-_experiments += [["corrgroups60", "gbm", m, s] for s in all_scorers for m in tree_regress_methods]
-_experiments += [["corrgroups60", "ffnn", m, s] for s in all_scorers for m in deep_regress_methods]
+_experiments += [["corrgroups60", "lasso", m, s] for s in all_metrics for m in linear_regress_methods]
+_experiments += [["corrgroups60", "ridge", m, s] for s in all_metrics for m in linear_regress_methods]
+_experiments += [["corrgroups60", "decision_tree", m, s] for s in all_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "random_forest", m, s] for s in all_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "gbm", m, s] for s in all_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "ffnn", m, s] for s in all_metrics for m in deep_regress_methods]
 
-def experiments(dataset=None, model=None, method=None, scorer=None):
+def experiments(dataset=None, model=None, method=None, metric=None):
     for experiment in _experiments:
         if dataset is not None and dataset != experiment[0]:
             continue
@@ -93,12 +93,12 @@ def experiments(dataset=None, model=None, method=None, scorer=None):
             continue
         if method is not None and method != experiment[2]:
             continue
-        if scorer is not None and scorer != experiment[3]:
+        if metric is not None and metric != experiment[3]:
             continue
         yield experiment
 
 def run_experiment(experiment, use_cache=True, cache_dir="/tmp"):
-    dataset_name, model_name, method_name, scorer_name = experiment
+    dataset_name, model_name, method_name, metric_name = experiment
 
     # see if we have a cached version
     cache_id = __gen_cache_id(experiment)
@@ -113,7 +113,7 @@ def run_experiment(experiment, use_cache=True, cache_dir="/tmp"):
     sys.stdout.flush()
     start = time.time()
     X,y = getattr(datasets, dataset_name)()
-    score = getattr(scorers, scorer_name)(
+    score = getattr(metrics, metric_name)(
         X, y,
         getattr(models, dataset_name+"__"+model_name),
         method_name
@@ -131,8 +131,8 @@ def run_experiments_helper(args):
     experiment, cache_dir = args
     return run_experiment(experiment, cache_dir=cache_dir)
 
-def run_experiments(dataset=None, model=None, method=None, scorer=None, cache_dir="/tmp", nworkers=1):
-    experiments_arr = list(experiments(dataset=dataset, model=model, method=method, scorer=scorer))
+def run_experiments(dataset=None, model=None, method=None, metric=None, cache_dir="/tmp", nworkers=1):
+    experiments_arr = list(experiments(dataset=dataset, model=model, method=method, metric=metric))
     if nworkers == 1:
         out = list(map(run_experiments_helper, zip(experiments_arr, itertools.repeat(cache_dir))))
     else:
@@ -221,7 +221,7 @@ def run_remote_experiments(experiments, thread_hosts):
 
 def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary="python"):
     global total_failed
-    dataset_name, model_name, method_name, scorer_name = experiment
+    dataset_name, model_name, method_name, metric_name = experiment
 
     # see if we have a cached version
     cache_id = __gen_cache_id(experiment)
@@ -236,7 +236,7 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
     # run the benchmark on the remote machine
     #start = time.time()
     cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+" -c \"import shap; shap.benchmark.run_experiment(['%s', '%s', '%s', '%s'], cache_dir='%s')\" &> %s/%s.output" % (
-        dataset_name, model_name, method_name, scorer_name, cache_dir, cache_dir, cache_id
+        dataset_name, model_name, method_name, metric_name, cache_dir, cache_dir, cache_id
     )
     try:
         subprocess.check_output(["ssh", remote, cmd])
@@ -258,5 +258,5 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
         raise Exception("Remote benchmark call finished but no local file was found!")
 
 def __gen_cache_id(experiment):
-    dataset_name, model_name, method_name, scorer_name = experiment
-    return "v" + "__".join([__version__, dataset_name, model_name, method_name, scorer_name])
+    dataset_name, model_name, method_name, metric_name = experiment
+    return "v" + "__".join([__version__, dataset_name, model_name, method_name, metric_name])

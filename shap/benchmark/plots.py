@@ -112,14 +112,14 @@ labels = {
 }
 
 benchmark_color_map = {
-    "Tree SHAP": "#1E88E5",
-    "Linear SHAP (corr)": "#1E88E5",
-    "Linear SHAP (ind)": "#ff0d57",
-    "Coef": "#13B755",
-    "Random": "#999999",
-    "Const Random": "#666666",
-    "Kernel SHAP 1000 mean ref.": "#7C52FF",
-    "Kernel SHAP 100 mean ref.": "#7C52FF"
+    "tree_shap": "#1E88E5",
+    "deep_shap": "#1E88E5",
+    "linear_shap_corr": "#1E88E5",
+    "linear_shap_ind": "#ff0d57",
+    "coef": "#13B755",
+    "random": "#999999",
+    "const_random": "#666666",
+    "kernel_shap_1000_meanref": "#7C52FF"
 }
 
 negated_metrics = [
