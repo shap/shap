@@ -316,7 +316,7 @@ class _PyTorchGradientExplainer(Explainer):
         # for consistency, the method signature calls for data as the model input.
         # However, within this class, self.model_inputs is the input (i.e. the data passed by the user)
         # and self.data is the background data for the layer we want to assign importances to. If this layer is
-        # the input, then self.data = self.input_data
+        # the input, then self.data = self.model_inputs
         self.model_inputs = data
         self.batch_size = batch_size
         self.local_smoothing = local_smoothing
@@ -488,7 +488,8 @@ class _PyTorchGradientExplainer(Explainer):
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
-        # remove the handles, if they were added
+        # cleanup: remove the handles, if they were added
+        # remove any attributes added to the model by the hooks
         if self.grad_handle is not None:
             self.grad_handle.remove()
             self.input_handle.remove()
