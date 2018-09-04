@@ -332,7 +332,7 @@ class _PyTorchGradientExplainer(Explainer):
             self.layer = layer
 
             # now, if we are taking an interim layer, the 'data' is going to be the input
-            # of the interim layer; we will capture this using the forward hook
+            # of the interim layer; we will capture this using a forward hook
             with torch.no_grad():
                 _ = model(*data)
                 interim_inputs = self.layer.target_input
@@ -419,7 +419,9 @@ class _PyTorchGradientExplainer(Explainer):
         # compute the attributions
         X_batches = X[0].shape[0]
         output_phis = []
-        samples_input = [torch.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
+        # samples_input = input to the model
+        # samples_delta = (x - x') for the input being explained - may be an interim input
+        samples_input = [torch.zeros((nsamples,) + X[l].shape[1:], device=X[l].device) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples, ) + self.data[l].shape[1:]) for l in range(len(self.data))]
         rseed = np.random.randint(0, 1e6)
         for i in range(model_output_ranks.shape[1]):
@@ -427,6 +429,7 @@ class _PyTorchGradientExplainer(Explainer):
             phis = []
             phi_vars = []
             for k in range(len(self.data)):
+                # for each of the inputs being explained - may be an interim input
                 phis.append(np.zeros((X_batches,) + self.data[k].shape[1:]))
                 phi_vars.append(np.zeros((X_batches, ) + self.data[k].shape[1:]))
             for j in range(X[0].shape[0]):
@@ -436,7 +439,9 @@ class _PyTorchGradientExplainer(Explainer):
                     t = np.random.uniform()
                     for l in range(len(X)):
                         if self.local_smoothing > 0:
-                            x = torch.tensor(X[l][j]) + torch.Tensor(X[l][j].shape).normal_() * self.local_smoothing
+                            # local smoothing is added to the base input, unlike in the TF gradient explainer
+                            x = torch.tensor(X[l][j]) + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
+                                * self.local_smoothing
                         else:
                             x = torch.tensor(X[l][j])
                         samples_input[l][k] = torch.tensor(t * x + (1 - t) * torch.tensor(self.model_inputs[l][rind]))
