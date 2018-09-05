@@ -116,16 +116,27 @@ def adult(display=False):
 
 
 def nhanesi(display=False):
-    """ A nicely packages version of NHANES I data with surivival times as labels.
+    """ A nicely packaged version of NHANES I data with surivival times as labels.
     """
     X = pd.read_csv(cache(github_data_url + "NHANESI_subset_X.csv"))
     y = pd.read_csv(cache(github_data_url + "NHANESI_subset_y.csv"))["y"]
-    X_display = X.copy()
-    X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
     if display:
+        X_display = X.copy()
+        X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
         return X_display, np.array(y)
     else:
         return X, np.array(y)
+
+def cric(display=False):
+    """ A nicely packaged version of CRIC data with progression to ESRD within 4 years as the label.
+    """
+    X = pd.read_csv(cache(github_data_url + "CRIC_4yearESRD_imputed_X.csv"))
+    y = np.loadtxt(cache(github_data_url + "CRIC_4yearESRD_imputed_y.csv"))
+    if display:
+        X_display = X.copy()
+        return X_display, y
+    else:
+        return X, y
 
 
 def corrgroups60(display=False):
@@ -183,7 +194,7 @@ def cache(url, file_name=None):
     data_dir = os.path.join(os.path.dirname(__file__), "cached_data")
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
-
+    
     file_path = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
         urlretrieve(url, file_path)

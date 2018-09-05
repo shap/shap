@@ -15,8 +15,10 @@ from .metrics import mask_remove_positive
 from .metrics import mask_remove_negative
 from .metrics import mask_keep_positive
 from .metrics import mask_keep_negative
-from .metrics import batch_remove_absolute_r2
-from .metrics import batch_keep_absolute_r2
+from .metrics import batch_remove_absolute__r2
+from .metrics import batch_keep_absolute__r2
+from .metrics import batch_remove_absolute__roc_auc
+from .metrics import batch_keep_absolute__roc_auc
 
 from .plots import plot_curve, plot_grids
 

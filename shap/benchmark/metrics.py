@@ -97,28 +97,28 @@ def runtime(X, y, model_generator, method_name):
 
     return None, np.mean(method_reps)
 
-def remove_positive(X, y, model_generator, method_name, num_fcounts=21):
+def remove_positive(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.remove, X, y, model_generator, method_name, 1, num_fcounts)
 
-def remove_negative(X, y, model_generator, method_name, num_fcounts=21):
+def remove_negative(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.remove, X, y, model_generator, method_name, -1, num_fcounts)
 
-def mask_remove_positive(X, y, model_generator, method_name, num_fcounts=21):
+def mask_remove_positive(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.mask_remove, X, y, model_generator, method_name, 1, num_fcounts)
 
-def mask_remove_negative(X, y, model_generator, method_name, num_fcounts=21):
+def mask_remove_negative(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.mask_remove, X, y, model_generator, method_name, -1, num_fcounts)
 
-def keep_positive(X, y, model_generator, method_name, num_fcounts=21):
+def keep_positive(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.keep, X, y, model_generator, method_name, 1, num_fcounts)
 
-def keep_negative(X, y, model_generator, method_name, num_fcounts=21):
+def keep_negative(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.keep, X, y, model_generator, method_name, -1, num_fcounts)
 
-def mask_keep_positive(X, y, model_generator, method_name, num_fcounts=21):
+def mask_keep_positive(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.mask_keep, X, y, model_generator, method_name, 1, num_fcounts)
 
-def mask_keep_negative(X, y, model_generator, method_name, num_fcounts=21):
+def mask_keep_negative(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.mask_keep, X, y, model_generator, method_name, -1, num_fcounts)
 
 def __run_measure(measure, X, y, model_generator, method_name, attribution_sign, num_fcounts):
@@ -135,11 +135,17 @@ def __run_measure(measure, X, y, model_generator, method_name, attribution_sign,
     fcounts = __intspace(0, X.shape[1], num_fcounts)
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
-def batch_remove_absolute_r2(X, y, model_generator, method_name, num_fcounts=21):
+def batch_remove_absolute__r2(X, y, model_generator, method_name, num_fcounts=11):
     return __run_batch_abs_metric(measures.batch_remove, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
 
-def batch_keep_absolute_r2(X, y, model_generator, method_name, num_fcounts=21):
+def batch_keep_absolute__r2(X, y, model_generator, method_name, num_fcounts=11):
     return __run_batch_abs_metric(measures.batch_keep, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
+
+def batch_remove_absolute__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    return __run_batch_abs_metric(measures.batch_remove, X, y, model_generator, method_name, sklearn.metrics.roc_auc_score, num_fcounts)
+
+def batch_keep_absolute__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    return __run_batch_abs_metric(measures.batch_keep, X, y, model_generator, method_name, sklearn.metrics.roc_auc_score, num_fcounts)
 
 def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
@@ -166,7 +172,7 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name):
 
     # average the method scores over several train/test splits
     method_reps = []
-    for i in range(3):
+    for i in range(1):
         X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=0.1, random_state=i)
 
         # define the model we are going to explain

@@ -15,6 +15,7 @@ from multiprocessing import Pool
 import itertools
 import copy
 import random
+import time
 try:
     from queue import Queue
 except ImportError:
@@ -22,7 +23,7 @@ except ImportError:
 from threading import Thread, Lock
 
 
-all_metrics = [
+regression_metrics = [
     "runtime",
     "local_accuracy",
     "consistency_guarantees",
@@ -30,15 +31,44 @@ all_metrics = [
     "mask_keep_negative",
     "keep_positive",
     "keep_negative",
-    "batch_keep_absolute_r2",
+    "batch_keep_absolute__r2",
     "mask_remove_positive",
     "mask_remove_negative",
     "remove_positive",
     "remove_negative",
-    "batch_remove_absolute_r2"
+    "batch_remove_absolute__r2"
+]
+
+binary_classification_metrics = [
+    "runtime",
+    "local_accuracy",
+    "consistency_guarantees",
+    "mask_keep_positive",
+    "mask_keep_negative",
+    "keep_positive",
+    "keep_negative",
+    "batch_keep_absolute__roc_auc",
+    "mask_remove_positive",
+    "mask_remove_negative",
+    "remove_positive",
+    "remove_negative",
+    "batch_remove_absolute__roc_auc"
 ]
 
 linear_regress_methods = [
+    "linear_shap_corr",
+    "linear_shap_ind",
+    "coef",
+    "random",
+    "kernel_shap_1000_meanref",
+    #"kernel_shap_100_meanref",
+    #"sampling_shap_10000",
+    "sampling_shap_1000",
+    #"lime_tabular_regression_1000"
+    #"sampling_shap_100"
+]
+
+linear_classify_methods = [
     # NEED LIME
     "linear_shap_corr",
     "linear_shap_ind",
@@ -68,6 +98,22 @@ tree_regress_methods = [
     #"sampling_shap_100"
 ]
 
+tree_classify_methods = [
+    # NEED tree_shap_ind
+    # NEED split_count?
+    "tree_shap",
+    "saabas",
+    "random",
+    "tree_gain",
+    "kernel_shap_1000_meanref",
+    "mean_abs_tree_shap",
+    #"kernel_shap_100_meanref",
+    #"sampling_shap_10000",
+    "sampling_shap_1000",
+    #"lime_tabular_regression_1000"
+    #"sampling_shap_100"
+]
+
 deep_regress_methods = [
     "deep_shap",
     "expected_gradients",
@@ -78,12 +124,19 @@ deep_regress_methods = [
 ]
 
 _experiments = []
-_experiments += [["corrgroups60", "lasso", m, s] for s in all_metrics for m in linear_regress_methods]
-_experiments += [["corrgroups60", "ridge", m, s] for s in all_metrics for m in linear_regress_methods]
-_experiments += [["corrgroups60", "decision_tree", m, s] for s in all_metrics for m in tree_regress_methods]
-_experiments += [["corrgroups60", "random_forest", m, s] for s in all_metrics for m in tree_regress_methods]
-_experiments += [["corrgroups60", "gbm", m, s] for s in all_metrics for m in tree_regress_methods]
-_experiments += [["corrgroups60", "ffnn", m, s] for s in all_metrics for m in deep_regress_methods]
+_experiments += [["corrgroups60", "lasso", m, s] for s in regression_metrics for m in linear_regress_methods]
+_experiments += [["corrgroups60", "ridge", m, s] for s in regression_metrics for m in linear_regress_methods]
+_experiments += [["corrgroups60", "decision_tree", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "random_forest", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
+
+_experiments += [["cric", "lasso", m, s] for s in binary_classification_metrics for m in linear_classify_methods]
+_experiments += [["cric", "ridge", m, s] for s in binary_classification_metrics for m in linear_classify_methods]
+_experiments += [["cric", "decision_tree", m, s] for s in binary_classification_metrics for m in tree_regress_methods]
+_experiments += [["cric", "random_forest", m, s] for s in binary_classification_metrics for m in tree_regress_methods]
+_experiments += [["cric", "gbm", m, s] for s in binary_classification_metrics for m in tree_regress_methods]
+#_experiments += [["cric", "ffnn", m, s] for s in binary_classification_metrics for m in deep_regress_methods]
 
 def experiments(dataset=None, model=None, method=None, metric=None):
     for experiment in _experiments:
@@ -145,12 +198,37 @@ nexperiments = 0
 total_sent = 0
 total_done = 0
 total_failed = 0
+host_records = {}
 worker_lock = Lock()
+ssh_conn_per_min_limit = 5
 def __thread_worker(q, host):
     global total_sent, total_done
     hostname, python_binary = host.split(":")
     while True:
         experiment = q.get()
+
+        # make sure we are not sending too many ssh connections to the host
+        while True:
+            all_clear = False
+
+            worker_lock.acquire()
+            try:
+                if hostname not in host_records:
+                    host_records[hostname] = []
+                
+                if len(host_records[hostname]) < ssh_conn_per_min_limit:
+                    all_clear = True
+                elif time.time() - host_records[hostname][-ssh_conn_per_min_limit] > 60:
+                    all_clear = True
+            finally:
+                worker_lock.release()
+            
+            # if we are clear to send a new ssh connection then break
+            if all_clear:
+                break
+
+            # if we are not clear then we sleep and try again
+            time.sleep(5)
 
         # record how many we have sent off for executation
         worker_lock.acquire()
@@ -177,7 +255,7 @@ def __print_status():
     sys.stdout.flush()
 
 
-def run_remote_experiments(experiments, thread_hosts):
+def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
     """ Use ssh to run the experiments on remote machines in parallel.
 
     Parameters

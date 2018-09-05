@@ -4,6 +4,8 @@ from ..plots import colors
 from . import models
 from . import methods
 import sklearn
+import io
+import base64
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -60,16 +62,27 @@ labels = {
         "xlabel": "Max fraction of features kept",
         "ylabel": "Negative mean model output"
     },
-    "batch_remove_absolute_r2": {
+    "batch_remove_absolute__r2": {
         "title": "Batch Remove Absolute",
         "xlabel": "Fraction of features removed",
         "ylabel": "1 - R^2"
     },
-    "batch_keep_absolute_r2": {
+    "batch_keep_absolute__r2": {
         "title": "Batch Keep Absolute",
         "xlabel": "Fraction of features kept",
         "ylabel": "R^2"
     },
+    "batch_remove_absolute__roc_auc": {
+        "title": "Batch Remove Absolute",
+        "xlabel": "Fraction of features removed",
+        "ylabel": "1 - ROC AUC"
+    },
+    "batch_keep_absolute__roc_auc": {
+        "title": "Batch Keep Absolute",
+        "xlabel": "Fraction of features kept",
+        "ylabel": "ROC AUC"
+    },
+    
     "linear_shap_corr": {
         "title": "Linear SHAP (corr)"
     },
@@ -131,21 +144,26 @@ negated_metrics = [
 ]
 
 one_minus_metrics = [
-    "batch_remove_absolute_r2"
+    "batch_remove_absolute__r2",
+    "batch_remove_absolute__roc_auc"
 ]
 
-def plot_curve(metric, fcounts, method_scores, cmap=benchmark_color_map):
-    methods = []
-    for (name,scores) in method_scores:
+def plot_curve(dataset, model, metric, cmap=benchmark_color_map):
+    experiments = run_experiments(dataset=dataset, model=model, metric=metric)
+    pl.figure()
+    method_arr = []
+    for (name,(fcounts,scores)) in experiments:
+        _,_,method,_ = name
         if metric in negated_metrics:
             scores = -scores
         elif metric in one_minus_metrics:
             scores = 1 - scores
         auc = sklearn.metrics.auc(fcounts, scores) / fcounts[-1]
-        methods.append((auc, name, scores))
-    for (auc,name,scores) in sorted(methods):
-        l = "{:6.3f} - ".format(auc) + labels[name]
-        pl.plot(fcounts / fcounts[-1], scores, label=l, color=cmap.get(name, "#000000"), linewidth=2)
+        method_arr.append((auc, method, scores))
+    for (auc,method,scores) in sorted(method_arr):
+        method_title = getattr(methods, method).__doc__.split("\n")[0].strip()
+        l = "{:6.3f} - ".format(auc) + method_title
+        pl.plot(fcounts / fcounts[-1], scores, label=l, color=cmap.get(method, "#000000"), linewidth=2)
     pl.xlabel(labels[metric]["xlabel"])
     pl.ylabel(labels[metric]["ylabel"])
     pl.title(labels[metric]["title"])
@@ -215,13 +233,31 @@ def plot_grids(dataset, model_names):
     for model in model_names:
         scores.extend(run_experiments(dataset=dataset, model=model))
     
+    prefix = ""
     out = "" # background: rgb(30, 136, 229)
+    
     out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>"
     out += "<div style='height: 1px; background: #ddd;'></div>"
     #out += "<div style='height: 7px; background-image: linear-gradient(to right, rgb(30, 136, 229), rgb(255, 13, 87));'></div>"
     out += "<table style='border-width: 1px; font-size: 14px; margin-left: 40px'>"
     for ind,model in enumerate(model_names):
         row_keys, col_keys, data = make_grid(scores, dataset, model)
+#         print(data)
+#         print(colors.red_blue_solid(0.))
+#         print(colors.red_blue_solid(1.))
+#         return
+        for metric in col_keys:
+            if metric not in ["local_accuracy", "runtime", "consistency_guarantees"]:
+                plot_curve(dataset, model, metric)
+                buf = io.BytesIO()
+                pl.savefig(buf, format = 'png')
+                pl.close()
+                buf.seek(0)
+                data_uri = base64.b64encode(buf.read()).decode('utf-8').replace('\n', '')
+                plot_id = "plot__"+dataset+"__"+model+"__"+metric
+                prefix += "<div onclick='document.getElementById(\"%s\").style.display = \"none\"' style='display: none; position: fixed; z-index: 10000; left: 0px; right: 0px; top: 0px; bottom: 0px; background: rgba(255,255,255,0.5);' id='%s'>" % (plot_id, plot_id)
+                prefix += "<img style='margin-left: auto; margin-right: auto; margin-top: 200px;' src='data:image/png;base64,%s'>" % data_uri
+                prefix += "</div>"
         
         model_title = getattr(models, dataset+"__"+model).__doc__.split("\n")[0].strip()
 
@@ -239,10 +275,15 @@ def plot_grids(dataset, model_names):
             method_title = getattr(methods, row_keys[i]).__doc__.split("\n")[0].strip()
             out += "<td style='background: #ffffff' title='shap.LinearExplainer(model)'>" + method_title + "</td>"
             for j in range(data.shape[1]):
-                out += "<td style='width: 40px; height: 40px; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(data[i,j])[:-1])) + "'></td>"
-            out += "</tr>"
+                plot_id = "plot__"+dataset+"__"+model+"__"+col_keys[j]
+                out += "<td onclick='document.getElementById(\"%s\").style.display = \"block\"' style='padding: 0px; padding-left: 0px; padding-right: 0px; border-left: 0px solid #999; width: 42px; height: 34px; background-color: #fff'>" % plot_id
+                #out += "<div style='opacity: "+str(2*(max(1-data[i,j], data[i,j])-0.5))+"; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(0. if data[i,j] < 0.5 else 1.)[:-1])) + "; height: "+str((30*max(1-data[i,j], data[i,j])))+"px; margin-left: auto; margin-right: auto; width:"+str((30*max(1-data[i,j], data[i,j])))+"px'></div>"
+                out += "<div style='opacity: "+str(1)+"; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(2*(data[i,j]-0.5))[:-1])) + "; height: "+str((30*data[i,j]))+"px; margin-left: auto; margin-right: auto; width:"+str((30*data[i,j]))+"px'></div>"
+                #out += "<div style='float: left; background-color: #eee; height: 10px; width: "+str((40*(1-data[i,j])))+"px'></div>"
+                out += "</td>"
+            out += "</tr>" # 
             
         out += "<tr><td colspan='%d' style='background: #fff'></td>" % (data.shape[1] + 1)
     out += "</table>"
     
-    return HTML(out)
+    return HTML(prefix + out)
