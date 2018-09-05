@@ -20,7 +20,7 @@ class GradientExplainer(Explainer):
     difference between the expected model output and the current output.
     """
 
-    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0, framework='tensorflow'):
+    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
         """ An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -35,10 +35,13 @@ class GradientExplainer(Explainer):
              A pair of TensorFlow operations (or a list and an op) that specifies the input and
             output of the model to be explained. Note that SHAP values are specific to a single
             output value, so the output tf.Operation should be a single dimensional output (,1).
-                if framework == 'pytorch', an nn.Module object
-            An nn.Module object which takes as input a tensor (or list of tensors) of shape
-            data, and a single dimensional output
 
+            if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
+                where both are nn.Module objects
+            The model is an nn.Module object which takes as input a tensor (or list of tensors) of
+            shape data, and returns a single dimensional output.
+            If the input is a tuple, the returned shap values will be for the input of the
+            layer argument. layer must be a layer in the model, i.e. model.conv2
 
         data :
             if framework == 'tensorflow': [numpy.array] or [pandas.DataFrame]
@@ -47,6 +50,23 @@ class GradientExplainer(Explainer):
             over these samples. The data passed here must match the input operations given in the
             first argument.
         """
+
+        # first, we need to find the framework
+        if type(model) is tuple:
+            a, b = model
+            try:
+                a.named_parameters()
+                framework = 'pytorch'
+            except:
+                framework = 'tensorflow'
+        else:
+            try:
+                model.named_parameters()
+                framework = 'pytorch'
+            except:
+                framework = 'tensorflow'
+
+
         if framework == 'tensorflow':
             self.explainer = _TFGradientExplainer(model, data, session, batch_size, local_smoothing)
         elif framework == 'pytorch':
@@ -286,7 +306,6 @@ class _PyTorchGradientExplainer(Explainer):
             if LooseVersion(torch.__version__) < LooseVersion("0.4"):
                 warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
-        self.model = model.eval()
         # check if we have multiple inputs
         self.multi_input = False
         if type(data) == list:
@@ -294,13 +313,40 @@ class _PyTorchGradientExplainer(Explainer):
         if type(data) != list:
             data = [data]
 
-        self.data = data
+        # for consistency, the method signature calls for data as the model input.
+        # However, within this class, self.model_inputs is the input (i.e. the data passed by the user)
+        # and self.data is the background data for the layer we want to assign importances to. If this layer is
+        # the input, then self.data = self.model_inputs
+        self.model_inputs = data
         self.batch_size = batch_size
         self.local_smoothing = local_smoothing
 
-        # this is wrong; multi output is multi class output
+        self.layer = None
+        self.input_handle = None
+        self.interim = False
+        if type(model) == tuple:
+            self.interim = True
+            model, layer = model
+            model = model.eval()
+            self.add_handles(layer)
+            self.layer = layer
+
+            # now, if we are taking an interim layer, the 'data' is going to be the input
+            # of the interim layer; we will capture this using a forward hook
+            with torch.no_grad():
+                _ = model(*data)
+                interim_inputs = self.layer.target_input
+                if type(interim_inputs) is tuple:
+                    # this should always be true, but just to be safe
+                    self.data = [torch.tensor(i) for i in interim_inputs]
+                else:
+                    self.data = [torch.tensor(interim_inputs)]
+        else:
+            self.data = data
+        self.model = model.eval()
+
         multi_output = False
-        outputs = self.model(*self.data)
+        outputs = self.model(*self.model_inputs)
         if outputs.shape[1] > 1:
             multi_output = True
         self.multi_output = multi_output
@@ -315,23 +361,42 @@ class _PyTorchGradientExplainer(Explainer):
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
         selected = [val for val in outputs[:, idx]]
-        grads = [torch.autograd.grad(selected, x_batch)[0] for x_batch in X]
+        if self.input_handle is not None:
+            interim_inputs = self.layer.target_input
+            grads = [torch.autograd.grad(selected, input)[0].cpu().numpy() for input in interim_inputs]
+            del self.layer.target_input
+        else:
+            grads = [torch.autograd.grad(selected, x)[0].cpu().numpy() for x in X]
         return grads
 
+    @staticmethod
+    def get_interim_input(self, input, output):
+        try:
+            del self.target_input
+        except AttributeError:
+            pass
+        setattr(self, 'target_input', input)
+
+    def add_handles(self, layer):
+        input_handle = layer.register_forward_hook(self.get_interim_input)
+        self.input_handle = input_handle
+
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+
+        # X ~ self.model_input
+        # X_data ~ self.data
+
         # check if we have multiple inputs
         if not self.multi_input:
             assert type(X) != list, "Expected a single tensor model input!"
             X = [X]
         else:
             assert type(X) == list, "Expected a list of model inputs!"
-        # assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         if ranked_outputs is not None and self.multi_output:
-            # rank and determine the model outputs that we will explain
             with torch.no_grad():
                 model_output_values = self.model(*X)
-
+            # rank and determine the model outputs that we will explain
             if output_rank_order == "max":
                 _, model_output_ranks = torch.sort(model_output_values, descending=True)
             elif output_rank_order == "min":
@@ -345,18 +410,28 @@ class _PyTorchGradientExplainer(Explainer):
             model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *
                                   torch.arange(0, len(self.gradients)).int())
 
+        # if a cleanup happened, we need to add the handles back
+        # this allows shap_values to be called multiple times, but the model to be
+        # 'clean' at the end of each run for other uses
+        if self.input_handle is None and self.interim is True:
+            self.add_handles(self.layer)
+
         # compute the attributions
+        X_batches = X[0].shape[0]
         output_phis = []
-        samples_input = [torch.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
-        samples_delta = [torch.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
+        # samples_input = input to the model
+        # samples_delta = (x - x') for the input being explained - may be an interim input
+        samples_input = [torch.zeros((nsamples,) + X[l].shape[1:], device=X[l].device) for l in range(len(X))]
+        samples_delta = [np.zeros((nsamples, ) + self.data[l].shape[1:]) for l in range(len(self.data))]
         rseed = np.random.randint(0, 1e6)
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed)  # so we get the same noise patterns for each output class
             phis = []
             phi_vars = []
-            for k in range(len(X)):
-                phis.append(torch.zeros(X[k].shape))
-                phi_vars.append(torch.zeros(X[k].shape))
+            for k in range(len(self.data)):
+                # for each of the inputs being explained - may be an interim input
+                phis.append(np.zeros((X_batches,) + self.data[k].shape[1:]))
+                phi_vars.append(np.zeros((X_batches, ) + self.data[k].shape[1:]))
             for j in range(X[0].shape[0]):
                 # fill in the samples arrays
                 for k in range(nsamples):
@@ -364,26 +439,48 @@ class _PyTorchGradientExplainer(Explainer):
                     t = np.random.uniform()
                     for l in range(len(X)):
                         if self.local_smoothing > 0:
-                            x = torch.tensor(X[l][j]) + torch.Tensor(X[l][j].shape).normal_() * self.local_smoothing
+                            # local smoothing is added to the base input, unlike in the TF gradient explainer
+                            x = torch.tensor(X[l][j]) + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
+                                * self.local_smoothing
                         else:
                             x = torch.tensor(X[l][j])
-                        samples_input[l][k] = torch.tensor(t * x + (1 - t) * torch.tensor(self.data[l][rind]))
-                        samples_delta[l][k] = torch.tensor(x - torch.tensor(self.data[l][rind]))
+                        samples_input[l][k] = torch.tensor(t * x + (1 - t) * torch.tensor(self.model_inputs[l][rind]))
+                        if self.input_handle is None:
+                            samples_delta[l][k] = (x - torch.tensor(self.data[l][rind])).cpu().numpy()
+
+                    if self.interim is True:
+                        with torch.no_grad():
+                            _ = self.model(*[samples_input[l][k].unsqueeze(0) for l in range(len(X))])
+                            interim_inputs = self.layer.target_input
+                            del self.layer.target_input
+                            if type(interim_inputs) is tuple:
+                                if type(interim_inputs) is tuple:
+                                    # this should always be true, but just to be safe
+                                    for l in range(len(interim_inputs)):
+                                        samples_delta[l][k] = interim_inputs[l].cpu().numpy()
+                                else:
+                                    samples_delta[0][k] = interim_inputs.cpu().numpy()
 
                 # compute the gradients at all the sample points
                 find = model_output_ranks[j, i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [samples_input[l][b:min(b+self.batch_size,nsamples)] for l in range(len(X))]
+                    batch = [torch.tensor(samples_input[l][b:min(b+self.batch_size,nsamples)]) for l in range(len(X))]
                     grads.append(self.gradient(find, batch))
-                grad = [torch.cat([g[l] for g in grads], 0) for l in range(len(X))]
+                grad = [np.concatenate([g[l] for g in grads], 0) for l in range(len(self.data))]
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
+                for l in range(len(self.data)):
                     samples = grad[l] * samples_delta[l]
                     phis[l][j] = samples.mean(0)
                     phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
 
-            output_phis.append(phis[0] if not self.multi_input else phis)
+            output_phis.append(phis[0] if len(self.data) == 1 else phis)
+        # cleanup: remove the handles, if they were added
+        if self.input_handle is not None:
+            self.input_handle.remove()
+            self.input_handle = None
+            # note: the target input attribute is deleted in the loop
+
         if not self.multi_output:
             return output_phis[0]
         elif ranked_outputs is not None:
