@@ -21,20 +21,17 @@ class PyTorchDeepExplainer(Explainer):
             self.multi_input = True
         if type(data) != list:
             data = [data]
-        # for consistency, the method signature calls for data as the model input.
-        # However, within this class, self.model_inputs is the input (i.e. the data passed by the user)
-        # and self.data is the background data for the layer we want to assign importances to. If this layer is
-        # the input, then self.data = self.model_inputs
-        self.model_inputs = data
+        self.data = data
         self.layer = None
         self.input_handle = None
         self.interim = False
+        self.interim_inputs_shape = None
         if type(model) == tuple:
             self.interim = True
             model, layer = model
             model = model.eval()
-            self.add_target_handle(layer)
             self.layer = layer
+            self.add_target_handle(self.layer)
 
             # now, if we are taking an interim layer, the 'data' is going to be the input
             # of the interim layer; we will capture this using a forward hook
@@ -43,28 +40,53 @@ class PyTorchDeepExplainer(Explainer):
                 interim_inputs = self.layer.target_input
                 if type(interim_inputs) is tuple:
                     # this should always be true, but just to be safe
-                    self.data = [torch.tensor(i) for i in interim_inputs]
-                else:
-                    self.data = [torch.tensor(interim_inputs)]
-        else:
-            self.data = data
+                    self.interim_inputs_shape = [i.shape for i in interim_inputs]
+            self.target_handle.remove()
+            del self.layer.target_input
         self.model = model.eval()
 
-        # now, get the expected model mean and outputs
-        # note that this will also conveniently add all the reference values
         self.multi_output = False
         with torch.no_grad():
             outputs = model(*data)
-            self.expected_value = outputs.mean(0)
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
-        if self.interim:
-            self.target_handle.remove()
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(self.get_target_input)
         self.target_handle = input_handle
+
+    def add_handles(self, model, forward_handle, backward_handle):
+        """
+        Add handles to all non-container layers in the model.
+        Recursively for non-container layers
+        """
+        handles_list = []
+        for child in model.children():
+            if 'nn.modules.container' in str(type(child)):
+                handles_list.extend(self.add_handles(child, forward_handle, backward_handle))
+            else:
+                handles_list.append(child.register_forward_hook(forward_handle))
+                handles_list.append(child.register_backward_hook(backward_handle))
+        return handles_list
+
+    def remove_attributes(self, model):
+        """
+        Removes the x and y attributes which were added by the forward handles
+        Recursively searches for non-container layers
+        """
+        for child in model.children():
+            if 'nn.modules.container' in str(type(child)):
+                self.remove_attributes(child)
+            else:
+                try:
+                    del child.x
+                except AttributeError:
+                    pass
+                try:
+                    del child.y
+                except AttributeError:
+                    pass
 
     @staticmethod
     def get_target_input(module, input, output):
@@ -90,7 +112,6 @@ class PyTorchDeepExplainer(Explainer):
             setattr(module, 'x', tuple(i.detach() for i in input))
         else:
             setattr(module, 'x', input.detach())
-
         try:
             del module.y
         except AttributeError:
@@ -116,13 +137,14 @@ class PyTorchDeepExplainer(Explainer):
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
         selected = [val for val in outputs[:, idx]]
-        if self.input_handle is not None:
+        if self.interim:
             interim_inputs = self.layer.target_input
             grads = [torch.autograd.grad(selected, input)[0].cpu().numpy() for input in interim_inputs]
             del self.layer.target_input
+            return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
             grads = [torch.autograd.grad(selected, x)[0].cpu().numpy() for x in X]
-        return grads
+            return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
 
@@ -154,40 +176,49 @@ class PyTorchDeepExplainer(Explainer):
                                   torch.arange(0, self.num_outputs).int())
 
         # add the gradient handles
-        gradient_handles = []
-        interim_handles = []
-        for child in self.model.children():
-            if 'nn.modules.container' in str(type(child)):
-                for subchild in child.children():
-                    interim_handles.append(subchild.register_forward_hook(self.add_interim_values))
-                    gradient_handles.append(subchild.register_backward_hook(self.deeplift_grad))
-            else:
-                interim_handles.append(child.register_forward_hook(self.add_interim_values ))
-                gradient_handles.append(child.register_backward_hook(self.deeplift_grad))
+        handles = self.add_handles(self.model, self.add_interim_values, self.deeplift_grad)
+        if self.interim:
+            self.add_target_handle(self.layer)
 
         # compute the attributions
         output_phis = []
         for i in range(model_output_ranks.shape[1]):
             phis = []
-            for k in range(len(X)):
-                phis.append(np.zeros(X[k].shape))
+            if self.interim:
+                for k in range(len(self.interim_inputs_shape)):
+                    phis.append(np.zeros((X[0].shape[0], ) + self.interim_inputs_shape[k][1: ]))
+            else:
+                for k in range(len(X)):
+                    phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
                 # tile the inputs to line up with the background data samples
                 tiled_X = [X[l][j:j + 1].repeat(
                                    (self.data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape) - 1)])) for l
                            in range(len(X))]
-                joint_x = [torch.cat((tiled_X[l], self.model_inputs[l]), dim=0) for l in range(len(X))]
+                joint_x = [torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.gradient(feature_ind, joint_x)
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
-                    phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (X[l][j: j + 1] - self.data[l])).mean(0)
+                if self.interim:
+                    sample_phis, output = sample_phis
+                    x, data = [], []
+                    for i in range(len(output)):
+                        x_temp, data_temp = np.split(output[i], 2)
+                        x.append(x_temp)
+                        data.append(data_temp)
+                    for l in range(len(self.interim_inputs_shape)):
+                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
+                else:
+                    for l in range(len(X)):
+                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (X[l][j: j + 1] - self.data[l])).mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
-        for handle in gradient_handles:
+        for handle in handles:
             handle.remove()
-        # TODO remove all attributes given to the modules
+        self.remove_attributes(self.model)
+        if self.interim:
+            self.target_handle.remove()
 
         if not self.multi_output:
             return output_phis[0]
@@ -199,18 +230,23 @@ class PyTorchDeepExplainer(Explainer):
 
 def passthrough(module, grad_input, grad_output):
     """No change made to gradients"""
+    del module.x
+    del module.y
     return grad_input
 
 
 def maxpool(module, grad_input, grad_output):
-
     pool_to_unpool = {
         'MaxPool1d': torch.nn.functional.max_unpool1d,
         'MaxPool2d': torch.nn.functional.max_unpool2d,
-        'MaxPool3d': torch.nn.functional.max_unpool1d
+        'MaxPool3d': torch.nn.functional.max_unpool3d
     }
-    x, ref_input = torch.chunk(module.x[0], 2)
-    delta_in = x - ref_input
+    pool_to_function = {
+        'MaxPool1d': torch.nn.functional.max_pool1d,
+        'MaxPool2d': torch.nn.functional.max_pool2d,
+        'MaxPool3d': torch.nn.functional.max_pool3d
+    }
+    delta_in = module.x[0][: int(module.x[0].shape[0] / 2)] - module.x[0][int(module.x[0].shape[0] / 2):]
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # we also need to check if the output is a tuple
     if type(module.y) is tuple:
@@ -219,24 +255,23 @@ def maxpool(module, grad_input, grad_output):
         y, ref_output = torch.chunk(module.y, 2)
 
     cross_max = torch.where(y > ref_output, y, ref_output)
-
     diffs = torch.cat([cross_max - ref_output, y - cross_max], 0)
 
     # all of this just to unpool the outputs
-    temp_module = getattr(torch.nn, module.__class__.__name__)(
-        module.kernel_size, module.stride, module.padding, module.dilation,
-        return_indices=True, ceil_mode=module.ceil_mode)
-    _, indices = temp_module(module.x[0])
-
-    unpooled = pool_to_unpool[module.__class__.__name__](
-        grad_output[0] * diffs, indices, module.kernel_size, module.stride,
-        module.padding, delta_in.shape)
-    xmax_pos, rmax_pos = torch.chunk(unpooled, 2)
-    # handles numerical instabilities where delta_in is very small by
-    # just taking the gradient in those cases
+    with torch.no_grad():
+        _, indices = pool_to_function[module.__class__.__name__](
+            module.x[0], module.kernel_size, module.stride, module.padding,
+            module.dilation, module.ceil_mode, True)
+        xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
+            grad_output[0] * diffs, indices, module.kernel_size, module.stride,
+            module.padding, delta_in.shape), 2)
     grads = [None for _ in grad_input]
+    o = (xmax_pos + rmax_pos) / delta_in
     grads[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
-                           (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
+                           o).repeat(dup0)
+    # delete the attributes
+    del module.x
+    del module.y
     return tuple(grads)
 
 
@@ -244,6 +279,9 @@ def linear_1d(module, grad_input, grad_output):
     for i in range(len(module.x)):
         if i != 0 and type(module.y) is tuple:
             assert module.x[i] == module.y[i], "Only the 0th input may vary!"
+    # delete the attributes
+    del module.x
+    del module.y
     return grad_input
 
 
@@ -252,28 +290,33 @@ def nonlinear_1d(module, grad_input, grad_output):
     for i in range(len(module.x)):
         if i != 0 and type(module.y) is tuple:
             assert module.x[i] == module.y[i], "Only the 0th input may vary!"
-
     # we also need to check if the output is a tuple
     if type(module.y) is tuple:
-        y, ref_output = torch.chunk(module.y[0], 2)
+        delta_out = module.y[0][: int(module.y[0].shape[0] / 2)] - module.y[0][int(module.y[0].shape[0] / 2):]
     else:
-        y, ref_output = torch.chunk(module.y, 2)
+        delta_out = module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2):]
 
-    x, ref_input = torch.chunk(module.x[0], 2)
-    delta_in = x - ref_input
+    delta_in = module.x[0][: int(module.x[0].shape[0] / 2)] - module.x[0][int(module.x[0].shape[0] / 2):]
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # handles numerical instabilities where delta_in is very small by
     # just taking the gradient in those cases
     grads = [None for _ in grad_input]
     grads[0] = torch.where(torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0],
-                           grad_output[0] * ((y - ref_output) / delta_in).repeat(dup0))
+                           grad_output[0] * (delta_out / delta_in).repeat(dup0))
+
+    # delete the attributes
+    del module.x
+    del module.y
     return tuple(grads)
 
 
 op_handler = {}
 
 # passthrough ops, where we make no change to the gradient
+op_handler['Dropout3d'] = passthrough
 op_handler['Dropout2d'] = passthrough
+op_handler['Dropout'] = passthrough
+op_handler['AlphaDropout'] = passthrough
 
 op_handler['Conv2d'] = linear_1d
 op_handler['Linear'] = linear_1d

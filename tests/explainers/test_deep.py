@@ -170,7 +170,7 @@ def test_pytorch_mnist_cnn():
     class Net(nn.Module):
         def __init__(self):
             super(Net, self).__init__()
-
+            # Testing several different activations
             self.conv_layers = nn.Sequential(
                 nn.Conv2d(1, 10, kernel_size=5),
                 nn.MaxPool2d(2),
@@ -184,7 +184,7 @@ def test_pytorch_mnist_cnn():
                 nn.ReLU(),
                 nn.Linear(50, 10),
                 nn.ELU(),
-                nn.Softmax()
+                nn.Softmax(dim=1)
             )
 
         def forward(self, x):
