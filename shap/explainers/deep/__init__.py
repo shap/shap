@@ -16,6 +16,49 @@ class DeepExplainer(Explainer):
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
+        """ An explainer object for a differentiable model using a given background dataset.
+
+        Note that the complexity of the method scales linearly with the number of background data
+        samples. Passing the entire training dataset as `data` will give very accurate expected
+        values, but be unreasonably expensive. The variance of the expectation estimates scale by
+        roughly 1/sqrt(N) for N background data samples. So 100 samples will give a good estimate,
+        and 1000 samples a very good estimate of the expected values.
+
+        Parameters
+        ----------
+        model : if framework == 'tensorflow', (input : [tf.Operation], output : tf.Operation)
+             A pair of TensorFlow operations (or a list and an op) that specifies the input and
+            output of the model to be explained. Note that SHAP values are specific to a single
+            output value, so the output tf.Operation should be a single dimensional output (,1).
+
+            if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
+                where both are nn.Module objects
+            The model is an nn.Module object which takes as input a tensor (or list of tensors) of
+            shape data, and returns a single dimensional output.
+            If the input is a tuple, the returned shap values will be for the input of the
+            layer argument. layer must be a layer in the model, i.e. model.conv2
+
+        data :
+            if framework == 'tensorflow': [numpy.array] or [pandas.DataFrame]
+            if framework == 'pytorch': [torch.tensor]
+            The background dataset to use for integrating out features. GradientExplainer integrates
+            over these samples. The data passed here must match the input operations given in the
+            first argument.
+
+        if framework == 'tensorflow':
+
+        session : None or tensorflow.Session
+            The TensorFlow session that has the model we are explaining. If None is passed then
+            we do our best to find the right session, first looking for a keras session, then
+            falling back to the default TensorFlow session.
+
+        learning_phase_flags : None or list of tensors
+            If you have your own custom learning phase flags pass them here. When explaining a prediction
+            we need to ensure we are not in training mode, since this changes the behavior of ops like
+            batch norm or dropout. If None is passed then we look for tensors in the graph that look like
+            learning phase flags (this works for Keras models). Note that we assume all the flags should
+            have a value of False during predictions (and hence explanations).
+        """
         # first, we need to find the framework
         if type(model) is tuple:
             a, b = model
@@ -41,7 +84,9 @@ class DeepExplainer(Explainer):
 
         Parameters
         ----------
-        X : list, numpy.array, or pandas.DataFrame
+        X : list,
+            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
 

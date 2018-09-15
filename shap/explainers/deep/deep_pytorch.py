@@ -33,7 +33,7 @@ class PyTorchDeepExplainer(Explainer):
             self.layer = layer
             self.add_target_handle(self.layer)
 
-            # now, if we are taking an interim layer, the 'data' is going to be the input
+            # if we are taking an interim layer, the 'data' is going to be the input
             # of the interim layer; we will capture this using a forward hook
             with torch.no_grad():
                 _ = model(*data)
@@ -41,6 +41,8 @@ class PyTorchDeepExplainer(Explainer):
                 if type(interim_inputs) is tuple:
                     # this should always be true, but just to be safe
                     self.interim_inputs_shape = [i.shape for i in interim_inputs]
+                else:
+                    self.interim_inputs_shape = [interim_inputs.shape]
             self.target_handle.remove()
             del self.layer.target_input
         self.model = model.eval()
@@ -101,33 +103,49 @@ class PyTorchDeepExplainer(Explainer):
 
     @staticmethod
     def add_interim_values(module, input, output):
-        """Saves interim tensors detached from the graph.
+        """If necessary, saves interim tensors detached from the graph.
         Used to calculate multipliers
         """
         try:
             del module.x
         except AttributeError:
             pass
-        if type(input) is tuple:
-            setattr(module, 'x', tuple(i.detach() for i in input))
-        else:
-            setattr(module, 'x', input.detach())
         try:
             del module.y
         except AttributeError:
             pass
-        if type(output) is tuple:
-            setattr(module, 'y', tuple(o.detach() for o in output))
-        else:
-            setattr(module, 'y', output.detach())
+        module_type = module.__class__.__name__
+        if module_type in op_handler:
+            func_name = op_handler[module_type].__name__
+            # First, check for cases where we don't need to save the x and y tensors
+            if func_name == 'passthrough':
+                pass
+            else:
+                # check only the 0th input varies
+                for i in range(len(input)):
+                    if i != 0 and type(output) is tuple:
+                        assert input[i] == output[i], "Only the 0th input may vary!"
+                # if a new method is added, it must be added here too. This ensures tensors
+                # are only saved if necessary
+                if func_name in ['maxpool', 'nonlinear_1d']:
+                    # only save tensors if necessary
+                    if type(input) is tuple:
+                        setattr(module, 'x', input[0].detach())
+                    else:
+                        setattr(module, 'x', input.detach())
+                    if type(output) is tuple:
+                        setattr(module, 'y', output[0].detach())
+                    else:
+                        setattr(module, 'y', output.detach())
 
     @staticmethod
     def deeplift_grad(module, grad_input, grad_output):
         # first, get the module type
-        type = module.__class__.__name__
-        # first, check its not a container
-        if type in op_handler:
-            return op_handler[type](module, grad_input, grad_output)
+        module_type = module.__class__.__name__
+        # first, check the module is supported
+        if module_type in op_handler:
+            if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
+                return op_handler[module_type](module, grad_input, grad_output)
         else:
             print('Warning: unrecognized nn.Module: {}'.format(type))
             return grad_input
@@ -230,9 +248,7 @@ class PyTorchDeepExplainer(Explainer):
 
 def passthrough(module, grad_input, grad_output):
     """No change made to gradients"""
-    del module.x
-    del module.y
-    return grad_input
+    return None
 
 
 def maxpool(module, grad_input, grad_output):
@@ -246,57 +262,39 @@ def maxpool(module, grad_input, grad_output):
         'MaxPool2d': torch.nn.functional.max_pool2d,
         'MaxPool3d': torch.nn.functional.max_pool3d
     }
-    delta_in = module.x[0][: int(module.x[0].shape[0] / 2)] - module.x[0][int(module.x[0].shape[0] / 2):]
+    delta_in = module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2):]
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # we also need to check if the output is a tuple
-    if type(module.y) is tuple:
-        y, ref_output = torch.chunk(module.y[0], 2)
-    else:
-        y, ref_output = torch.chunk(module.y, 2)
-
-    cross_max = torch.where(y > ref_output, y, ref_output)
+    y, ref_output = torch.chunk(module.y, 2)
+    cross_max = torch.max(y, ref_output)
     diffs = torch.cat([cross_max - ref_output, y - cross_max], 0)
 
     # all of this just to unpool the outputs
     with torch.no_grad():
         _, indices = pool_to_function[module.__class__.__name__](
-            module.x[0], module.kernel_size, module.stride, module.padding,
+            module.x, module.kernel_size, module.stride, module.padding,
             module.dilation, module.ceil_mode, True)
         xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
             grad_output[0] * diffs, indices, module.kernel_size, module.stride,
             module.padding, delta_in.shape), 2)
-    grads = [None for _ in grad_input]
-    o = (xmax_pos + rmax_pos) / delta_in
-    grads[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
-                           o).repeat(dup0)
+    grad_input = [None for _ in grad_input]
+    grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
+                           (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
     # delete the attributes
     del module.x
     del module.y
-    return tuple(grads)
+    return tuple(grad_input)
 
 
 def linear_1d(module, grad_input, grad_output):
-    for i in range(len(module.x)):
-        if i != 0 and type(module.y) is tuple:
-            assert module.x[i] == module.y[i], "Only the 0th input may vary!"
-    # delete the attributes
-    del module.x
-    del module.y
-    return grad_input
+    """No change made to gradients."""
+    return None
 
 
 def nonlinear_1d(module, grad_input, grad_output):
-    # check only the 0th input varies
-    for i in range(len(module.x)):
-        if i != 0 and type(module.y) is tuple:
-            assert module.x[i] == module.y[i], "Only the 0th input may vary!"
-    # we also need to check if the output is a tuple
-    if type(module.y) is tuple:
-        delta_out = module.y[0][: int(module.y[0].shape[0] / 2)] - module.y[0][int(module.y[0].shape[0] / 2):]
-    else:
-        delta_out = module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2):]
+    delta_out = module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2):]
 
-    delta_in = module.x[0][: int(module.x[0].shape[0] / 2)] - module.x[0][int(module.x[0].shape[0] / 2):]
+    delta_in = module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2):]
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # handles numerical instabilities where delta_in is very small by
     # just taking the gradient in those cases
