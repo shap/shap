@@ -93,6 +93,8 @@ class SamplingExplainer(KernelExplainer):
                 phi[ind,:],phi_var[ind,:] = self.sampling_estimate(ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i])
 
             # optimally allocate samples according to the variance
+            if phi_var.sum() == 0:
+                phi_var += 1 # spread samples uniformally if we found no variability
             phi_var /= phi_var.sum()
             nsamples_each2 = (phi_var[self.varyingInds,:].mean(1) * round2_samples).astype(np.int)
             for i in range(len(nsamples_each2)):

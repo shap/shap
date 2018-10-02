@@ -96,6 +96,9 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
         return visualize(e, plot_cmap, matplotlib, figsize=figsize, show=show)
         
     else:
+        if matplotlib:
+            raise Exception("matplotlib = True is not yet supported for force plots with multiple samples!")
+        
         if shap_values.shape[0] > 3000:
             warnings.warn("shap.force_plot is slow many thousands of rows, try subsampling your data.")
 
