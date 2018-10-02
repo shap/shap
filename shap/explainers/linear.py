@@ -78,19 +78,20 @@ class LinearExplainer(Explainer):
         self.cov = self.cov[:,self.valid_inds][self.valid_inds,:]
         self.coef = self.coef[self.valid_inds]
 
-        # group perfectly redundant variables together
-        self.avg_proj,sum_proj = duplicate_components(self.cov)
-        self.cov = np.matmul(np.matmul(self.avg_proj, self.cov), self.avg_proj.T)
-        self.mean = np.matmul(self.avg_proj, self.mean)
-        self.coef = np.matmul(sum_proj, self.coef)
-
-        # if we still have some multi-colinearity present then we just add regularization...
-        e,_ = np.linalg.eig(self.cov)
-        if e.min() < 1e-7:
-            self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
-
         # if needed, estimate the transform matrices
         if feature_dependence == "correlation":
+
+            # group perfectly redundant variables together
+            self.avg_proj,sum_proj = duplicate_components(self.cov)
+            self.cov = np.matmul(np.matmul(self.avg_proj, self.cov), self.avg_proj.T)
+            self.mean = np.matmul(self.avg_proj, self.mean)
+            self.coef = np.matmul(sum_proj, self.coef)
+
+            # if we still have some multi-colinearity present then we just add regularization...
+            e,_ = np.linalg.eig(self.cov)
+            if e.min() < 1e-7:
+                self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
+
             mean_transform, x_transform = self._estimate_transforms(nsamples)
             self.mean_transformed = np.matmul(mean_transform, self.mean)
             self.x_transform = x_transform
@@ -191,10 +192,10 @@ class LinearExplainer(Explainer):
 
         if self.feature_dependence == "correlation":
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
+            phi = np.matmul(phi, self.avg_proj)
         elif self.feature_dependence == "interventional":
-            phi = self.coef * (np.matmul(X[:,self.valid_inds], self.avg_proj.T) - self.mean)
+            phi = self.coef * (X[:,self.valid_inds] - self.mean)        
         
-        phi = np.matmul(phi, self.avg_proj)
         full_phi = np.zeros(((phi.shape[0], self.M)))
         full_phi[:,self.valid_inds] = phi
         return full_phi
