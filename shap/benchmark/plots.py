@@ -14,73 +14,88 @@ except ImportError:
 
 labels = {
     "consistency_guarantees": {
-        "title": "Consistency Guarantees"
+        "title": "Consistency Guarantees",
+        "sort_order": 3
     },
     "local_accuracy": {
-        "title": "Local Accuracy"
+        "title": "Local Accuracy",
+        "sort_order": 2
     },
     "runtime": {
-        "title": "Runtime"
+        "title": "Runtime",
+        "sort_order": 1
     },
     "remove_positive": {
         "title": "Remove Positive",
         "xlabel": "Max fraction of features removed",
-        "ylabel": "Negative mean model output"
+        "ylabel": "Negative mean model output",
+        "sort_order": 11
     },
     "mask_remove_positive": {
         "title": "Mask Remove Positive",
         "xlabel": "Max fraction of features removed",
-        "ylabel": "Negative mean model output"
+        "ylabel": "Negative mean model output",
+        "sort_order": 9
     },
     "remove_negative": {
         "title": "Remove Negative",
         "xlabel": "Max fraction of features removed",
-        "ylabel": "Mean model output"
+        "ylabel": "Mean model output",
+        "sort_order": 12
     },
     "mask_remove_negative": {
         "title": "Mask Remove Negative",
         "xlabel": "Max fraction of features removed",
-        "ylabel": "Mean model output"
+        "ylabel": "Mean model output",
+        "sort_order": 10
     },
     "keep_positive": {
         "title": "Keep Positive",
         "xlabel": "Max fraction of features kept",
-        "ylabel": "Mean model output"
+        "ylabel": "Mean model output",
+        "sort_order": 6
     },
     "mask_keep_positive": {
         "title": "Mask Keep Positive",
         "xlabel": "Max fraction of features kept",
-        "ylabel": "Mean model output"
+        "ylabel": "Mean model output",
+        "sort_order": 4
     },
     "keep_negative": {
         "title": "Keep Negative",
         "xlabel": "Max fraction of features kept",
-        "ylabel": "Negative mean model output"
+        "ylabel": "Negative mean model output",
+        "sort_order": 7
     },
     "mask_keep_negative": {
         "title": "Mask Keep Negative",
         "xlabel": "Max fraction of features kept",
-        "ylabel": "Negative mean model output"
+        "ylabel": "Negative mean model output",
+        "sort_order": 5
     },
     "batch_remove_absolute__r2": {
         "title": "Batch Remove Absolute",
         "xlabel": "Fraction of features removed",
-        "ylabel": "1 - R^2"
+        "ylabel": "1 - R^2",
+        "sort_order": 13
     },
     "batch_keep_absolute__r2": {
         "title": "Batch Keep Absolute",
         "xlabel": "Fraction of features kept",
-        "ylabel": "R^2"
+        "ylabel": "R^2",
+        "sort_order": 8
     },
     "batch_remove_absolute__roc_auc": {
         "title": "Batch Remove Absolute",
         "xlabel": "Fraction of features removed",
-        "ylabel": "1 - ROC AUC"
+        "ylabel": "1 - ROC AUC",
+        "sort_order": 13
     },
     "batch_keep_absolute__roc_auc": {
         "title": "Batch Keep Absolute",
         "xlabel": "Fraction of features kept",
-        "ylabel": "ROC AUC"
+        "ylabel": "ROC AUC",
+        "sort_order": 8
     },
     
     "linear_shap_corr": {
@@ -192,7 +207,7 @@ def make_grid(scores, dataset, model):
             auc = sklearn.metrics.auc(fcounts, score) / fcounts[-1]
             color_vals[metric][method] = auc
     
-    col_keys = list(color_vals.keys())
+    col_keys = sorted(list(color_vals.keys()), key=lambda v: labels[v]["sort_order"])
     row_keys = list(set([v for k in col_keys for v in color_vals[k].keys()]))
     
     data = -28567 * np.ones((len(row_keys), len(col_keys)))
@@ -203,7 +218,7 @@ def make_grid(scores, dataset, model):
             
     assert np.sum(data == -28567) == 0, "There are missing data values!"
             
-    data = (data - data.min(0)) / (data.max(0) - data.min(0))
+    data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
     
     # sort by performans
     inds = np.argsort(-data.mean(1))

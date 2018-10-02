@@ -75,7 +75,7 @@ def runtime(X, y, model_generator, method_name):
     # average the method scores over several train/test splits
     method_reps = []
     for i in range(1):
-        X_train, X_test, y_train, _ = train_test_split(__toarray(X), y, test_size=0.1, random_state=i)
+        X_train, X_test, y_train, _ = train_test_split(__toarray(X), y, test_size=100, random_state=i)
 
         # define the model we are going to explain
         model = model_generator()
@@ -125,14 +125,14 @@ def __run_measure(measure, X, y, model_generator, method_name, attribution_sign,
     def summary_function(true, pred):
         return np.mean(pred)
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
-        A = attribution_sign * attr_function(X_test)
+        A = attribution_sign * __strip_list(attr_function(X_test))
         nmask = np.ones(len(y_test)) * fcount
         nmask = np.minimum(nmask, np.array(A > 0).sum(1)).astype(np.int)
         return measure(
             nmask, X_train, y_train, X_test, y_test, A,
             model_generator, summary_function, trained_model
         )
-    fcounts = __intspace(0, X.shape[1], num_fcounts)
+    fcounts = __intlogspace(0, X.shape[1], num_fcounts)
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 def batch_remove_absolute__r2(X, y, model_generator, method_name, num_fcounts=11):
@@ -149,17 +149,17 @@ def batch_keep_absolute__roc_auc(X, y, model_generator, method_name, num_fcounts
 
 def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
-        A_train = np.abs(attr_function(X_train))
+        A_train = np.abs(__strip_list(attr_function(X_train)))
         nkeep_train = (np.ones(len(y_train)) * fcount).astype(np.int)
         #nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(np.int)
-        A_test = np.abs(attr_function(X_test))
+        A_test = np.abs(__strip_list(attr_function(X_test)))
         nkeep_test = (np.ones(len(y_test)) * fcount).astype(np.int)
         #nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(np.int)
         return metric(
             nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test,
             model_generator, loss
         )
-    fcounts = __intspace(0, X.shape[1], num_fcounts)
+    fcounts = __intlogspace(0, X.shape[1], num_fcounts)
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 
@@ -172,8 +172,8 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name):
 
     # average the method scores over several train/test splits
     method_reps = []
-    for i in range(1):
-        X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=0.1, random_state=i)
+    for i in range(3):
+        X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=100, random_state=i)
 
         # define the model we are going to explain
         model = model_generator()
@@ -219,8 +219,8 @@ def __check_cache(f, X):
         __cache0 = f(X)
         return __cache0
 
-def __intspace(start, end, count):
-    return np.unique(np.round(np.linspace(start, end, count)).astype(np.int))
+def __intlogspace(start, end, count):
+    return np.unique(np.round(start + (end-start) * (np.logspace(0, 1, count, endpoint=True) - 1) / 9).astype(np.int))
 
 def __toarray(X):
     """ Converts DataFrames to numpy arrays.
@@ -228,3 +228,11 @@ def __toarray(X):
     if hasattr(X, "values"):
         X = X.values
     return X
+
+def __strip_list(attrs):
+    """ This assumes that if you have a list of outputs you just want the second one (the second class).
+    """
+    if isinstance(attrs, list):
+        return attrs[1]
+    else:
+        return attrs

@@ -48,7 +48,13 @@ def tree_shap(model, data):
 def mean_abs_tree_shap(model, data):
     """ mean(|Tree SHAP|)
     """
-    return lambda X: np.tile(np.abs(TreeExplainer(model).shap_values(X)).mean(0), (X.shape[0], 1))
+    def f(X):
+        v = TreeExplainer(model).shap_values(X)
+        if isinstance(v, list):
+            return [np.tile(np.abs(sv).mean(0), (X.shape[0], 1)) for sv in v]
+        else:
+            return np.tile(np.abs(v).mean(0), (X.shape[0], 1))
+    return f
 
 def saabas(model, data):
     """ Saabas
