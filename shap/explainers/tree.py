@@ -51,9 +51,11 @@ class TreeExplainer(Explainer):
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
         self.base_offset = 0.0
         self.expected_value = None
-        self.trees = kwargs.get('trees', None)
-
-        if self.trees is not None:
+        self.trees = None
+        
+        # see if the passed model is alerady a list of our Tree objects (in which case no init setup is needed)
+        if isinstance(model, list) and isinstance(model[0], Tree):
+            self.trees = model
             return
 
         # parse all the different possible supported model types
