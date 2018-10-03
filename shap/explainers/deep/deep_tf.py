@@ -1,22 +1,15 @@
 import numpy as np
 import warnings
-from .explainer import Explainer
+from shap.explainers.explainer import Explainer
 from distutils.version import LooseVersion
 keras = None
 tf = None
 tf_ops = None
 tf_gradients_impl = None
 
-class DeepExplainer(Explainer):
-    """ Meant to approximate SHAP values for deep learning models.
-
-    This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we
-    approximate the conditional expectations of SHAP values using a selection of background samples.
-    Lundberg and Lee, NIPS 2017 showed that the per node attribution rules in DeepLIFT (Shrikumar,
-    Greenside, and Kundaje, arXiv 2017) can be chosen to approximate Shapley values. By integrating
-    over many backgound samples DeepExplainer estimates approximate SHAP values such that they sum
-    up to the difference between the expected model output on the passed background samples and the
-    current model output (f(x) - E[f(x)]). Using tf.gradients to implement the backgropagation was
+class TFDeepExplainer(Explainer):
+    """
+    Using tf.gradients to implement the backgropagation was
     inspired by the gradient based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
@@ -191,7 +184,6 @@ class DeepExplainer(Explainer):
                         reg[n]["type"] = self.custom_grad
                 elif n in self.used_types:
                     raise Exception(n + " was used in the model but is not in the gradient registry!")
-            
             # In TensorFlow 1.10 they started pruning out nodes that they think can't be backpropped
             # unfortunately that includes the index of embedding layers so we disable that check here
             if hasattr(tf_gradients_impl, "_IsBackpropagatable"):
@@ -213,40 +205,9 @@ class DeepExplainer(Explainer):
                 for n in op_handlers:
                     if n in reg:
                         reg[n]["type"] = self.orig_grads[n]
-        
         return self.phi_symbolics[i]
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
-        """ Return approximate SHAP values for the model applied to the data given by X.
-
-        Parameters
-        ----------
-        X : list, numpy.array, or pandas.DataFrame
-            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
-            explain the model's output.
-
-        ranked_outputs : None or int
-            If ranked_outputs is None then we explain all the outputs in a multi-output model. If
-            ranked_outputs is a positive integer then we only explain that many of the top model
-            outputs (where "top" is determined by output_rank_order). Note that this causes a pair
-            of values to be returned (shap_values, indexes), where shap_values is a list of numpy
-            arrays for each of the output ranks, and indexes is a matrix that indicates for each sample
-            which output indexes were choses as "top".
-
-        output_rank_order : "max", "min", or "max_abs"
-            How to order the model outputs when using ranked_outputs, either by maximum, minimum, or
-            maximum absolute value.
-
-        Returns
-        -------
-        For a models with a single output this returns a tensor of SHAP values with the same shape
-        as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
-        which are the same shape as X. If ranked_outputs is None then this list of tensors matches
-        the number of model outputs. If ranked_outputs is a positive integer a pair is returned
-        (shap_values, indexes), where shap_values is a list of tensors with a length of
-        ranked_outputs, and indexes is a matrix that indicates for each sample which output indexes
-        were chosen as "top".
-        """
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -280,13 +241,10 @@ class DeepExplainer(Explainer):
             for k in range(len(X)):
                 phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
-
                 # tile the inputs to line up with the background data samples
                 tiled_X = [np.tile(X[l][j:j+1], (self.data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
-
                 # we use the first sample for the current sample and the rest for the references
                 joint_input = [np.concatenate([tiled_X[l], self.data[l]], 0) for l in range(len(X))]
-
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
@@ -400,7 +358,6 @@ def maxpool(explainer, op, *grads):
     cross_max = tf.maximum(xout, rout)
     diffs = tf.concat([cross_max - rout, xout - cross_max], 0)
     xmax_pos,rmax_pos = tf.split(explainer.orig_grads[op.type](op, grads[0] * diffs), 2)
-
     return tf.tile(tf.where(
         tf.abs(delta_in0) < 1e-7,
         tf.zeros_like(delta_in0),
@@ -522,7 +479,6 @@ def linearity_1d_handler(input_ind, explainer, op, *grads):
     for i in range(len(op.inputs)):
         if i != input_ind:
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
-    
     return explainer.orig_grads[op.type](op, *grads)
 
 def passthrough(explainer, op, *grads):

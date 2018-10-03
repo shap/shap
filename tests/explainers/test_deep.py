@@ -1,7 +1,9 @@
 import matplotlib
 import numpy as np
+import shutil
 matplotlib.use('Agg')
 import shap
+
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
@@ -84,6 +86,7 @@ def test_tf_keras_mnist_cnn():
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
 
+
 def test_keras_imdb_lstm():
     """ Basic LSTM example using keras
     """
@@ -131,3 +134,105 @@ def test_keras_imdb_lstm():
     diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0,:] - \
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-06), "Sum of SHAP values does not match difference!"
+
+
+def test_pytorch_mnist_cnn():
+    """The same test as above, but for pytorch
+    """
+    try:
+        import torch, torchvision
+        from torchvision import datasets, transforms
+        from torch import nn
+        from torch.nn import functional as F
+    except Exception as e:
+        print("Skipping test_pytorch_mnist_cnn!")
+        return
+    import shap
+
+    batch_size = 128
+    root_dir = 'mnist_data'
+
+    train_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(root_dir, train=True, download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(root_dir, train=False, download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=batch_size, shuffle=True)
+
+    class Net(nn.Module):
+        def __init__(self):
+            super(Net, self).__init__()
+            # Testing several different activations
+            self.conv_layers = nn.Sequential(
+                nn.Conv2d(1, 10, kernel_size=5),
+                nn.MaxPool2d(2),
+                nn.Tanh(),
+                nn.Conv2d(10, 20, kernel_size=5),
+                nn.MaxPool2d(2),
+                nn.Softplus(),
+            )
+            self.fc_layers = nn.Sequential(
+                nn.Linear(320, 50),
+                nn.ReLU(),
+                nn.Linear(50, 10),
+                nn.ELU(),
+                nn.Softmax(dim=1)
+            )
+
+        def forward(self, x):
+            x = self.conv_layers(x)
+            x = x.view(-1, 320)
+            x = self.fc_layers(x)
+            return x
+
+    model = Net()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+
+    def train(model, device, train_loader, optimizer, epoch, cutoff=2000):
+        model.train()
+        num_examples = 0
+        for batch_idx, (data, target) in enumerate(train_loader):
+            num_examples += target.shape[0]
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.mse_loss(output, torch.eye(10)[target])
+            # loss = F.nll_loss(output, target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 10 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), loss.item()))
+            if num_examples > cutoff:
+                break
+
+    device = torch.device('cpu')
+    train(model, device, train_loader, optimizer, 1)
+
+    next_x, next_y = next(iter(train_loader))
+    np.random.seed(0)
+    inds = np.random.choice(next_x.shape[0], 20, replace=False)
+    e = shap.DeepExplainer(model, next_x[inds, :, :, :])
+    test_x, test_y = next(iter(test_loader))
+    shap_values = e.shap_values(test_x[:1])
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
+            d / np.abs(diff).sum())
+
+    # clean up
+    shutil.rmtree(root_dir)
