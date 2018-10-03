@@ -218,8 +218,11 @@ def format_data(data):
         val = float(i[0])
         neg_val = neg_val + np.abs(val)
         i[0] = convert_func(neg_val)
-    total_neg = np.max(neg_features[:, 0].astype(float)) - \
-                np.min(neg_features[:, 0].astype(float))
+    if len(neg_features) > 0:
+        total_neg = np.max(neg_features[:, 0].astype(float)) - \
+                    np.min(neg_features[:, 0].astype(float))
+    else:
+        total_neg = 0
     
     # Convert positive feature values to plot values
     pos_val = data['outValue']
@@ -228,8 +231,11 @@ def format_data(data):
         pos_val = pos_val - np.abs(val)
         i[0] = convert_func(pos_val)
         
-    total_pos = np.max(pos_features[:, 0].astype(float)) - \
-                np.min(pos_features[:, 0].astype(float))
+    if len(pos_features) > 0:
+        total_pos = np.max(pos_features[:, 0].astype(float)) - \
+                    np.min(pos_features[:, 0].astype(float))
+    else:
+        total_pos = 0
     
     # Convert output value and base value
     data['outValue'] = convert_func(data['outValue'])
@@ -296,8 +302,15 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg,
     padding = np.max([np.abs(total_pos) * 0.2,
                       np.abs(total_neg) * 0.2])
     
-    ax.set_xlim(min(np.min(pos_features[:, 0].astype(float)), base_value) - padding,
-                max(np.max(neg_features[:, 0].astype(float)), base_value) + padding)
+    if len(pos_features) > 0:
+        min_x = min(np.min(pos_features[:, 0].astype(float)), base_value) - padding
+    else:
+        min_x = 0
+    if len(neg_features) > 0:
+        max_x = max(np.max(neg_features[:, 0].astype(float)), base_value) + padding
+    else:
+        max_x = 0
+    ax.set_xlim(min_x, max_x)
 
     plt.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False,
                     labeltop=True, labelbottom=False)
