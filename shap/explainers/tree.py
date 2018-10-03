@@ -52,6 +52,11 @@ class TreeExplainer(Explainer):
         self.base_offset = 0.0
         self.expected_value = None
         self.trees = None
+        
+        # see if the passed model is alerady a list of our Tree objects (in which case no init setup is needed)
+        if isinstance(model, list) and isinstance(model[0], Tree):
+            self.trees = model
+            return
 
         # parse all the different possible supported model types
         if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
