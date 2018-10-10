@@ -41,7 +41,7 @@ except:
 class TreeExplainer(Explainer):
     """Uses the Tree SHAP method to explain the output of ensemble tree models.
 
-    Tree SHAP is a fast and exact (assuming the trees capture the input feature depndencies) method
+    Tree SHAP is a fast and exact (assuming the trees capture the input feature dependencies) method
     to estimate SHAP values for tree models and ensembles of trees. It depends on fast C++
     implementations either inside the externel model package or in the local compiled C extention.
     """
