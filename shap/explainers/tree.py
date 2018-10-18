@@ -46,12 +46,22 @@ class TreeExplainer(Explainer):
     implementations either inside the externel model package or in the local compiled C extention.
     """
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model, direct = False, output_type = "margin", 
+                 ref_X = None, **kwargs):
+        """ 
+        Parameters
+        ----------
+        model : Several sklearn, xgboost, lightbgm, and catboost models are supported.
+        direct : Denotes to directly generate Trees from the xgboost booster model.
+        output_type : Can be "margin", "mse", "logistic", or "logloss".
+        """        
         self.model_type = "internal"
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
         self.base_offset = 0.0
         self.expected_value = None
         self.trees = None
+        self.model = None
+        self.output_type = output_type
         
         # see if the passed model is alerady a list of our Tree objects (in which case no init setup is needed)
         if isinstance(model, list) and isinstance(model[0], Tree):
@@ -97,8 +107,17 @@ class TreeExplainer(Explainer):
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
             self.less_than_or_equal = True
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
-            self.model_type = "xgboost"
-            self.trees = model
+            if (not direct):
+                self.model_type = "xgboost"
+                self.trees = model
+            else:
+                self.model_type = "trees"
+                self.model = model
+                self.trees = self.gen_trees(model)
+                assert not ref_X is None, "Need to provide a reference set"
+                self.ref_X = ref_X
+                xgb_ref = xgboost.DMatrix(self.ref_X)
+                self.ref_margin_pred = self.model.predict(xgb_ref,output_margin=True)
         elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
             self.model_type = "xgboost"
             self.trees = model.get_booster()
@@ -365,6 +384,150 @@ class TreeExplainer(Explainer):
             recurse(child)
 
         recurse(0)
+
+    def gen_trees(self, model):
+        """ Directly create trees given an XGB model
+
+        Parameters
+        ----------
+        model : An xgboost model.
+
+        Returns
+        -------
+        Returns a list of trees for future explanation.
+        """
+        assert str(type(model)).endswith("xgboost.core.Booster'>")
+        model_type = "xgboost"
+        xgb_trees = model.get_dump(with_stats = True)
+        scale = len(xgb_trees)
+        trees = []
+        for xgb_tree in xgb_trees:
+            nodes = [t.lstrip() for t in xgb_tree[:-1].split("\n")]
+            nodes_dict = {}
+            for n in nodes: nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
+            trees.append(self.create_tree(nodes_dict,scale))
+        return(trees)
+
+    def create_tree(self, nodes_dict, scale):
+        """ Creates a tree given a dictionary representation of a tree.
+
+        Parameters
+        -------
+        nodes_dict : A dictionary that contains a single tree.  For example:
+        {0: '[f1<0] yes=1,no=2,missing=1,gain=4500,cover=2000',
+         1: '[f0<0] yes=3,no=4,missing=3,gain=1000,cover=1000',
+         2: '[f0<0] yes=5,no=6,missing=5,gain=1000,cover=1000',
+         3: 'leaf=0.5,cover=500',
+         4: 'leaf=2.5,cover=500',
+         5: 'leaf=-2.5,cover=500',
+         6: 'leaf=-0.5,cover=500'}
+
+        Returns
+        -------
+        A Tree object.
+        """
+        m = max(nodes_dict.keys())+1
+        children_left = -1*np.ones(m,dtype="int32")
+        children_right = -1*np.ones(m,dtype="int32")
+        children_default = -1*np.ones(m,dtype="int32")
+        features = -2*np.ones(m,dtype="int32")
+        thresholds = -1*np.ones(m,dtype="float64")
+        values = 1*np.ones(m,dtype="float64")
+        node_sample_weights = np.zeros(m,dtype="float64")
+        values_lst = list(nodes_dict.values())
+        keys_lst = list(nodes_dict.keys())
+        for i in range(0,len(keys_lst)):
+            value = values_lst[i]
+            key = keys_lst[i]
+            if ("leaf" in value):
+                # Extract values
+                val = float(value.split("leaf=")[1].split(",")[0])
+                node_sample_weight = float(value.split("cover=")[1])
+                # Append to lists
+                values[key] = val
+                node_sample_weights[key] = node_sample_weight
+            else:
+                c_left = int(value.split("yes=")[1].split(",")[0])
+                c_right = int(value.split("no=")[1].split(",")[0])
+                c_default = int(value.split("missing=")[1].split(",")[0])
+                feat_thres = value.split(" ")[0]
+                if ("<" in feat_thres):
+                    feature = int(feat_thres.split("<")[0][2:])
+                    threshold = float(feat_thres.split("<")[1][:-1])
+                if ("=" in feat_thres):
+                    feature = int(feat_thres.split("=")[0][2:])
+                    threshold = float(feat_thres.split("=")[1][:-1])
+                node_sample_weight = float(value.split("cover=")[1].split(",")[0])
+                children_left[key] = c_left
+                children_right[key] = c_right
+                children_default[key] = c_default
+                features[key] = feature
+                thresholds[key] = threshold
+                node_sample_weights[key] = node_sample_weight
+        tree_dict = {"children_left":children_left, "children_right":children_right,
+                     "children_default":children_default, "feature":features,
+                     "threshold":thresholds, "value":values[:,np.newaxis],
+                     "node_sample_weight":node_sample_weights}
+        return(Tree(tree_dict))
+
+    def independent_treeshap(self,x,y=None):
+        """ Recursively calculate Shapley values for a single reference.
+
+        Parameters
+        -------
+        tree : Current tree object.
+        x : Current sample.
+
+        Returns
+        -------
+        The one reference Shapley value for all features.
+        """
+        assert have_cext, "C extension was not built during install!"
+        feats = range(0,self.ref_X.shape[1])
+        phi_final = []
+        for tree in self.trees:
+            phi = []
+            for j in range(self.ref_X.shape[0]):
+                r = self.ref_X[j,:]
+                out_contribs = np.zeros(x.shape)
+                _cext.tree_shap_indep(
+                    tree.max_depth, tree.children_left, tree.children_right, 
+                    tree.features, tree.thresholds, tree.values, x, r, out_contribs
+                )
+                phi.append(out_contribs)
+            phi_final.append(phi)
+        phi = np.array(phi_final).sum(0) # Sum across trees
+        # Compute rescale
+        if self.output_type == "mse" or self.output_type == "logloss":
+            assert not y is None, "Need to provide true label y"
+        self.expected_value = self.ref_margin_pred.mean()
+        if not self.output_type == "margin":
+            margin_pred = self.model.predict(xgboost.DMatrix(x[np.newaxis,:]),output_margin=True)
+            if self.output_type == "mse":
+                ref_transform_pred = mse(y,self.ref_margin_pred)
+                transform_pred = mse(y,margin_pred)
+            elif self.output_type == "logistic":
+                ref_transform_pred = sigmoid(self.ref_margin_pred)
+                transform_pred = sigmoid(margin_pred)
+            elif self.output_type == "logloss":
+                ref_transform_pred = log_loss(y,sigmoid(self.ref_margin_pred))
+                transform_pred = log_loss(y,sigmoid(margin_pred))
+            self.expected_value = ref_transform_pred.mean()
+            num = transform_pred - ref_transform_pred
+            den = margin_pred - self.ref_margin_pred
+            rescale = np.divide(num, den, out=np.zeros_like(num), where=den!=0)
+            phi = phi * rescale[:,np.newaxis]
+        return(phi)
+   
+# Supported non-linear transforms
+def sigmoid(x):
+    return(1/(1+np.exp(-x)))
+
+def log_loss(yt,yp):
+    return(-(yt*np.log(yp) + (1 - yt)*np.log(1 - yp)))
+
+def mse(yt,yp):
+    return(np.square(yt-yp))
 
 
 class Tree:
