@@ -46,14 +46,14 @@ class TreeExplainer(Explainer):
     implementations either inside the externel model package or in the local compiled C extention.
     """
 
-    def __init__(self, model, direct = False, output_type = "margin", 
-                 ref_X = None, **kwargs):
+    def __init__(self, model, feature_dependence = "per_tree_dependent", 
+                 model_output = "margin", ref_X = None, **kwargs):
         """ 
         Parameters
         ----------
         model : Several sklearn, xgboost, lightbgm, and catboost models are supported.
-        direct : Denotes to directly generate Trees from the xgboost booster model.
-        output_type : Can be "margin", "mse", "logistic", or "logloss".
+        feature_dependence : Can be "per_tree_dependent" or "independent".
+        model_output : Can be "margin", "mse", "logistic", or "logloss".
         """        
         self.model_type = "internal"
         self.less_than_or_equal = False # are threshold comparisons < or <= for this model
@@ -61,7 +61,8 @@ class TreeExplainer(Explainer):
         self.expected_value = None
         self.trees = None
         self.model = None
-        self.output_type = output_type
+        self.model_output = model_output
+        self.feature_dependence = feature_dependence
         
         # see if the passed model is alerady a list of our Tree objects (in which case no init setup is needed)
         if isinstance(model, list) and isinstance(model[0], Tree):
@@ -107,10 +108,11 @@ class TreeExplainer(Explainer):
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
             self.less_than_or_equal = True
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
-            if (not direct):
+            if self.feature_dependence == "per_tree_dependent":
                 self.model_type = "xgboost"
                 self.trees = model
-            else:
+                assert model_output == "margin", "Currently feature_dependence only explains margins"
+            elif self.feature_dependence == "independent":
                 self.model_type = "trees"
                 self.model = model
                 self.trees = self.gen_trees(model)
@@ -142,7 +144,7 @@ class TreeExplainer(Explainer):
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-    def shap_values(self, X, tree_limit=-1, approximate=False):
+    def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -167,86 +169,93 @@ class TreeExplainer(Explainer):
         """
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
-        phi = None
-        if self.model_type == "xgboost":
-            if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
-                X = xgboost.DMatrix(X)
-            if tree_limit == -1:
-                tree_limit = 0
-            phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True, approx_contribs=approximate)
-        elif self.model_type == "lightgbm":
-            assert not approximate, "approximate=True is not supported for LightGBM models!"
-            phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
-            if phi.shape[1] != X.shape[1] + 1:
-                phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
-        elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
-            assert not approximate, "approximate=True is not supported for CatBoost models!"
-            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
-            if type(X) != catboost.Pool:
-                X = catboost.Pool(X)
-            phi = self.trees.get_feature_importance(data=X, fstr_type='ShapValues')
-
-        # note we pull off the last column and keep it as our expected_value
-        if phi is not None:
-            if len(phi.shape) == 3:
-                self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
-                return [phi[:, i, :-1] for i in range(phi.shape[1])]
-            else:
-                self.expected_value = phi[0, -1]
-                return phi[:, :-1]
-
-        # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
-            X = X.values
-
-        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
-
-        self.approximate = approximate
-
-        if tree_limit<0 or tree_limit>len(self.trees):
-            self.tree_limit = len(self.trees)
-        else:
-            self.tree_limit = tree_limit
-
-        self.n_outputs = self.trees[0].values.shape[1]
-        # single instance
-        if len(X.shape) == 1:
-            self._current_X = X.reshape(1,X.shape[0])
-            self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
-            phi = self._tree_shap_ind(0)
+        if self.feature_dependence == "per_tree_dependent":
+            phi = None
+            if self.model_type == "xgboost":
+                if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
+                    X = xgboost.DMatrix(X)
+                if tree_limit == -1:
+                    tree_limit = 0
+                phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True, approx_contribs=approximate)
+            elif self.model_type == "lightgbm":
+                assert not approximate, "approximate=True is not supported for LightGBM models!"
+                phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
+                if phi.shape[1] != X.shape[1] + 1:
+                    phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
+            elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
+                assert not approximate, "approximate=True is not supported for CatBoost models!"
+                assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+                if type(X) != catboost.Pool:
+                    X = catboost.Pool(X)
+                phi = self.trees.get_feature_importance(data=X, fstr_type='ShapValues')
 
             # note we pull off the last column and keep it as our expected_value
-            if self.n_outputs == 1:
-                self.expected_value = phi[-1, 0]
-                return phi[:-1, 0]
-            else:
-                self.expected_value = [phi[-1, i] for i in range(phi.shape[1])]
-                return [phi[:-1, i] for i in range(self.n_outputs)]
+            if phi is not None:
+                if len(phi.shape) == 3:
+                    self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
+                    return [phi[:, i, :-1] for i in range(phi.shape[1])]
+                else:
+                    self.expected_value = phi[0, -1]
+                    return phi[:, :-1]
 
-        elif len(X.shape) == 2:
-            x_missing = np.zeros(X.shape[1], dtype=np.bool)
-            self._current_X = X
-            self._current_x_missing = x_missing
+            # convert dataframes
+            if str(type(X)).endswith("pandas.core.series.Series'>"):
+                X = X.values
+            elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+                X = X.values
 
-            # Only python 3 can serialize a method to send to another process
-            if sys.version_info[0] >= 3:
-                pool = multiprocessing.Pool()
-                phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
-                pool.close()
-                pool.join()
-            else:
-                phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
+            assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+            assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
-            # note we pull off the last column and keep it as our expected_value
-            if self.n_outputs == 1:
-                self.expected_value = phi[0, -1, 0]
-                return phi[:, :-1, 0]
+            self.approximate = approximate
+
+            if tree_limit<0 or tree_limit>len(self.trees):
+                self.tree_limit = len(self.trees)
             else:
-                self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
-                return [phi[:, :-1, i] for i in range(self.n_outputs)]
+                self.tree_limit = tree_limit
+
+            self.n_outputs = self.trees[0].values.shape[1]
+            # single instance
+            if len(X.shape) == 1:
+                self._current_X = X.reshape(1,X.shape[0])
+                self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
+                phi = self._tree_shap_ind(0)
+
+                # note we pull off the last column and keep it as our expected_value
+                if self.n_outputs == 1:
+                    self.expected_value = phi[-1, 0]
+                    return phi[:-1, 0]
+                else:
+                    self.expected_value = [phi[-1, i] for i in range(phi.shape[1])]
+                    return [phi[:-1, i] for i in range(self.n_outputs)]
+
+            elif len(X.shape) == 2:
+                x_missing = np.zeros(X.shape[1], dtype=np.bool)
+                self._current_X = X
+                self._current_x_missing = x_missing
+
+                # Only python 3 can serialize a method to send to another process
+                if sys.version_info[0] >= 3:
+                    pool = multiprocessing.Pool()
+                    phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
+                    pool.close()
+                    pool.join()
+                else:
+                    phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
+
+                # note we pull off the last column and keep it as our expected_value
+                if self.n_outputs == 1:
+                    self.expected_value = phi[0, -1, 0]
+                    return phi[:, :-1, 0]
+                else:
+                    self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+                    return [phi[:, :-1, i] for i in range(self.n_outputs)]
+        # Independence between features
+        elif self.feature_dependence == "independent":
+            phi_lst = []
+            for x_ind in range(0,X.shape[0]):
+                phi_lst.append(self.independent_treeshap(X[x_ind,:],y=y).mean(0))
+            return(np.array(phi_lst))
 
     def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
 
@@ -386,7 +395,7 @@ class TreeExplainer(Explainer):
         recurse(0)
 
     def gen_trees(self, model):
-        """ Directly create trees given an XGB model
+        """ Create trees given an XGB model
 
         Parameters
         ----------
@@ -498,18 +507,18 @@ class TreeExplainer(Explainer):
             phi_final.append(phi)
         phi = np.array(phi_final).sum(0) # Sum across trees
         # Compute rescale
-        if self.output_type == "mse" or self.output_type == "logloss":
+        if self.model_output == "mse" or self.model_output == "logloss":
             assert not y is None, "Need to provide true label y"
         self.expected_value = self.ref_margin_pred.mean()
-        if not self.output_type == "margin":
+        if not self.model_output == "margin":
             margin_pred = self.model.predict(xgboost.DMatrix(x[np.newaxis,:]),output_margin=True)
-            if self.output_type == "mse":
+            if self.model_output == "mse":
                 ref_transform_pred = mse(y,self.ref_margin_pred)
                 transform_pred = mse(y,margin_pred)
-            elif self.output_type == "logistic":
+            elif self.model_output == "logistic":
                 ref_transform_pred = sigmoid(self.ref_margin_pred)
                 transform_pred = sigmoid(margin_pred)
-            elif self.output_type == "logloss":
+            elif self.model_output == "logloss":
                 ref_transform_pred = log_loss(y,sigmoid(self.ref_margin_pred))
                 transform_pred = log_loss(y,sigmoid(margin_pred))
             self.expected_value = ref_transform_pred.mean()

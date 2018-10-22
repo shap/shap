@@ -308,9 +308,16 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
   }
   int node_stack[max_depth];
   int ns_ctr = 0;
-  signed short feat_hist[num_feats] = {0};
-  float pos_lst[num_nodes] = {0};
-  float neg_lst[num_nodes] = {0};
+//   signed short feat_hist[num_feats] = {0};
+//   float pos_lst[num_nodes] = {0};
+//   float neg_lst[num_nodes] = {0};
+  signed short *feat_hist = new signed short[num_feats];
+  std::fill_n(feat_hist, num_feats, 0);
+  float *pos_lst = new float[num_nodes];
+  std::fill_n(pos_lst, num_nodes, 0);
+  float *neg_lst = new float[num_nodes];
+  std::fill_n(neg_lst, num_nodes, 0);
+    
   int node = 0, feat, cl, cr, pnode, pfeat = -1, pcl, pcr;
   tfloat thres, pthres;
   bool from_x, from_r;
@@ -608,5 +615,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
   if (DEBUG) {
     myfile.close();
   }
+  delete[] feat_hist;
+  delete[] pos_lst;
+  delete[] neg_lst;
 }
 
