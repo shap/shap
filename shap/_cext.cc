@@ -4,8 +4,6 @@
 #include <numpy/arrayobject.h>
 #include "tree_shap.h"
 #include <iostream>
-#include <fstream>
-using namespace std;
 
 typedef double tfloat;
 
