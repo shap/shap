@@ -306,7 +306,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     myfile.open ("/homes/gws/hughchen/shap/out.txt",fstream::app);
     myfile << "Entering tree_shap_indep\n";
   }
-  int node_stack[max_depth];
+  int *node_stack = new int[max_depth];
   int ns_ctr = 0;
 //   signed short feat_hist[num_feats] = {0};
 //   float pos_lst[num_nodes] = {0};
