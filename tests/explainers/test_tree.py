@@ -45,25 +45,29 @@ def test_front_page_sklearn():
 
     # train model
     X, y = shap.datasets.boston()
-    model = sklearn.ensemble.RandomForestRegressor(n_estimators=100)
-    model.fit(X, y)
+    models = [
+        sklearn.ensemble.RandomForestRegressor(n_estimators=100),
+        sklearn.ensemble.ExtraTreesRegressor(n_estimators=100),
+    ]
+    for model in models:
+        model.fit(X, y)
 
-    # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
+        # explain the model's predictions using SHAP values
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
 
-    # visualize the first prediction's explaination
-    shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
+        # visualize the first prediction's explaination
+        shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
 
-    # visualize the training set predictions
-    shap.force_plot(explainer.expected_value, shap_values, X)
+        # visualize the training set predictions
+        shap.force_plot(explainer.expected_value, shap_values, X)
 
-    # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
-    shap.dependence_plot(5, shap_values, X, show=False)
-    shap.dependence_plot("RM", shap_values, X, show=False)
+        # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
+        shap.dependence_plot(5, shap_values, X, show=False)
+        shap.dependence_plot("RM", shap_values, X, show=False)
 
-    # summarize the effects of all the features
-    shap.summary_plot(shap_values, X, show=False)
+        # summarize the effects of all the features
+        shap.summary_plot(shap_values, X, show=False)
 
 def test_xgboost_multiclass():
     try:
@@ -223,6 +227,22 @@ def test_sum_match_random_forest():
     shap_values = ex.shap_values(X_test)
     assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-6, \
         "SHAP values don't sum to model output!"
+    
+def test_sum_match_extra_trees():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import ExtraTreesRegressor
+    import sklearn
+
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+    predicted = clf.predict(X_test)
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test)
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+        "SHAP values don't sum to model output!"
 
 def test_single_row_random_forest():
     import shap
@@ -246,11 +266,11 @@ def test_sum_match_gradient_boosting():
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import GradientBoostingClassifier
     import sklearn
-    
+
     X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = GradientBoostingClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
-    
+
     # Use decision function to get prediction before it is mapped to a probability
     predicted = clf.decision_function(X_test)
     ex = shap.TreeExplainer(clf)
@@ -264,7 +284,7 @@ def test_single_row_gradient_boosting():
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import GradientBoostingClassifier
     import sklearn
-    
+
     X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = GradientBoostingClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
