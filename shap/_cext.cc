@@ -7,12 +7,15 @@
 
 typedef double tfloat;
 
+// Have a treeshapdependent and a treeshapindependent
 static PyObject *_cext_tree_shap(PyObject *self, PyObject *args);
 static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args);
+static PyObject *_cext_tree_shap_indep(PyObject *self, PyObject *args);
 
 static PyMethodDef module_methods[] = {
   {"tree_shap", _cext_tree_shap, METH_VARARGS, "C implementation of Tree SHAP."},
   {"compute_expectations", _cext_compute_expectations, METH_VARARGS, "Compute expectations of internal nodes."},
+  {"tree_shap_indep", _cext_tree_shap_indep, METH_VARARGS, "C implementation of Independent Tree SHAP."},
   {NULL, NULL, 0, NULL}
 };
 
@@ -58,7 +61,7 @@ static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args)
   PyObject *children_right_obj;
   PyObject *node_sample_weight_obj;
   PyObject *values_obj;
-
+    
   /* Parse the input tuple */
   if (!PyArg_ParseTuple(
     args, "OOOO", &children_left_obj, &children_right_obj, &node_sample_weight_obj, &values_obj
@@ -193,6 +196,85 @@ static PyObject *_cext_tree_shap(PyObject *self, PyObject *args)
   Py_XDECREF(node_sample_weight_array);
   Py_XDECREF(x_array);
   Py_XDECREF(x_missing_array);
+  Py_XDECREF(out_contribs_array);
+
+  /* Build the output tuple */
+  PyObject *ret = Py_BuildValue("d", (double)values[0]);
+  return ret;
+}
+
+static PyObject *_cext_tree_shap_indep(PyObject *self, PyObject *args)
+{
+  int max_depth;
+  PyObject *children_left_obj;
+  PyObject *children_right_obj;
+  PyObject *features_obj;
+  PyObject *thresholds_obj;
+  PyObject *values_obj;
+  PyObject *x_obj;
+  PyObject *r_obj;
+  PyObject *out_contribs_obj;
+
+  /* Parse the input tuple */
+  if (!PyArg_ParseTuple(
+    args, "iOOOOOOOO", &max_depth, &children_left_obj, &children_right_obj, 
+    &features_obj, &thresholds_obj, &values_obj, &x_obj, &r_obj, &out_contribs_obj
+  )) return NULL;
+
+  /* Interpret the input objects as numpy arrays. */
+  PyArrayObject *children_left_array = (PyArrayObject*)PyArray_FROM_OTF(children_left_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *children_right_array = (PyArrayObject*)PyArray_FROM_OTF(children_right_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *features_array = (PyArrayObject*)PyArray_FROM_OTF(features_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *thresholds_array = (PyArrayObject*)PyArray_FROM_OTF(thresholds_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *values_array = (PyArrayObject*)PyArray_FROM_OTF(values_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *x_array = (PyArrayObject*)PyArray_FROM_OTF(x_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *r_array = (PyArrayObject*)PyArray_FROM_OTF(r_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *out_contribs_array = (PyArrayObject*)PyArray_FROM_OTF(out_contribs_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+
+  /* If that didn't work, throw an exception. */
+  if (children_left_array == NULL || children_right_array == NULL || 
+      features_array == NULL || thresholds_array == NULL || values_array == NULL || 
+      x_array == NULL || out_contribs_array == NULL) {
+    Py_XDECREF(children_left_array);
+    Py_XDECREF(children_right_array);
+    Py_XDECREF(features_array);
+    Py_XDECREF(thresholds_array);
+    Py_XDECREF(values_array);
+    Py_XDECREF(x_array);
+    Py_XDECREF(r_array);
+    Py_XDECREF(out_contribs_array);
+    return NULL;
+  }
+
+  // number of features
+  const unsigned num_feats = PyArray_DIM(x_array, 0);
+
+  // number of nodes
+  const unsigned num_nodes = PyArray_DIM(features_array, 0);
+
+  // Get pointers to the data as C-types
+  int *children_left = (int*)PyArray_DATA(children_left_array);
+  int *children_right = (int*)PyArray_DATA(children_right_array);
+  int *features = (int*)PyArray_DATA(features_array);
+  tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
+  tfloat *values = (tfloat*)PyArray_DATA(values_array);
+  tfloat *x = (tfloat*)PyArray_DATA(x_array);
+  tfloat *r = (tfloat*)PyArray_DATA(r_array);
+  tfloat *out_contribs = (tfloat*)PyArray_DATA(out_contribs_array);
+
+  tree_shap_indep(
+    max_depth, num_feats, num_nodes, children_left, children_right, 
+    features, thresholds, values, x, r, out_contribs
+  );
+
+  // clean up the created python objects
+  Py_XDECREF(children_left_array);
+  Py_XDECREF(children_right_array);
+  Py_XDECREF(features_array);
+  Py_XDECREF(thresholds_array);
+  Py_XDECREF(values_array);
+  Py_XDECREF(x_array);
+  Py_XDECREF(r_array);
   Py_XDECREF(out_contribs_array);
 
   /* Build the output tuple */
