@@ -46,13 +46,13 @@ class TreeExplainer(Explainer):
     implementations either inside the externel model package or in the local compiled C extention.
     """
 
-    def __init__(self, model, feature_dependence = "per_tree_path_dependence", 
+    def __init__(self, model, feature_dependence = "tree_path_dependence", 
                  model_output = "margin", ref_X = None, **kwargs):
         """ 
         Parameters
         ----------
         model : Several sklearn, xgboost, lightbgm, and catboost models are supported.
-        feature_dependence : Can be "per_tree_path_dependence" or "independent".
+        feature_dependence : Can be "tree_path_dependence" or "independent".
         model_output : Can be "margin", "mse", "logistic", or "logloss".
         """        
         self.model_type = "internal"
@@ -108,7 +108,7 @@ class TreeExplainer(Explainer):
             self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
             self.less_than_or_equal = True
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
-            if self.feature_dependence == "per_tree_path_dependenceg":
+            if self.feature_dependence == "tree_path_dependence":
                 self.model_type = "xgboost"
                 self.trees = model
                 assert model_output == "margin", "Currently feature_dependence only explains margins"
@@ -169,7 +169,7 @@ class TreeExplainer(Explainer):
         """
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
-        if self.feature_dependence == "per_tree_dependent":
+        if self.feature_dependence == "tree_path_dependence":
             phi = None
             if self.model_type == "xgboost":
                 if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
