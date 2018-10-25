@@ -295,11 +295,13 @@ inline float calc_weight(const int N, const int M) {
   return(1.0/(N*bin_coeff(N-1,M)));
 }
 
-inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats, 
-                            const unsigned num_nodes, const int *children_left, 
-                            const int *children_right, const int *features, 
-                            const tfloat *thresholds, const tfloat *values, 
-                            const tfloat *x, const tfloat *r, tfloat *out_contribs) {
+inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
+                            const unsigned num_nodes, const int *children_left,
+                            const int *children_right, const int *children_default,
+                            const int *features, const tfloat *thresholds,
+                            const tfloat *values, const tfloat *x,
+                            const bool *x_missing, const tfloat *r,
+                            const bool *r_missing, tfloat *out_contribs) {
   const bool DEBUG = false;
   ofstream myfile;
   if (DEBUG) {
@@ -308,27 +310,26 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
   }
   int *node_stack = new int[max_depth];
   int ns_ctr = 0;
-//   signed short feat_hist[num_feats] = {0};
-//   float pos_lst[num_nodes] = {0};
-//   float neg_lst[num_nodes] = {0};
   signed short *feat_hist = new signed short[num_feats];
   std::fill_n(feat_hist, num_feats, 0);
   float *pos_lst = new float[num_nodes];
   std::fill_n(pos_lst, num_nodes, 0);
   float *neg_lst = new float[num_nodes];
   std::fill_n(neg_lst, num_nodes, 0);
-    
-  int node = 0, feat, cl, cr, pnode, pfeat = -1, pcl, pcr;
+
+  int node = 0, feat, cl, cr, cd, pnode, pfeat = -1, pcl, pcr, pcd;
+  int next_xnode = -1, next_rnode = -1, pnext_xnode = -1, pnext_rnode = -1;
+  int next_node = -1, from_child = -1;
   tfloat thres, pthres;
   bool from_x, from_r;
   float pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
   unsigned M = 0, N = 0;
-  int next_node = -1, from_child = -1;
-  
+
   feat = features[node];
   thres = thresholds[node];
-  cr = children_right[node];
   cl = children_left[node];
+  cr = children_right[node];
+  cd = children_default[node];
 
   if (DEBUG) {
     myfile << "\nNode: " << node << "\n";
@@ -336,20 +337,34 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     myfile << "thres: " << thres << "\n";
   }
 
-  // Check if x and r go the same way
-  if ((x[feat] <= thres) && (r[feat] <= thres)) {
-    next_node = cl;
-  } else if ((x[feat] > thres) && (r[feat] > thres)) {
-    next_node = cr;
+  if (x_missing[feat]) {
+    next_xnode = cd;
+  } else if (x[feat] > thres) {
+    next_xnode = cr;
+  } else if (x[feat] <= thres) {
+    next_xnode = cl;
   }
-  
+
+  if (r_missing[feat]) {
+    next_rnode = cd;
+  } else if (r[feat] > thres) {
+    next_rnode = cr;
+  } else if (r[feat] <= thres) {
+    next_rnode = cl;
+  }
+
+  // Check if x and r go the same way
+  if (next_xnode == next_rnode) {
+    next_node = next_xnode;
+  }
+
   // If not, go left
   if (next_node == -1) {
     next_node = cl;
-    if ((r[feat] <= thres) && (x[feat] > thres)) {
+    if (next_rnode == next_node) { // rpath
       N = N+1;
       feat_hist[feat] -= 1;
-    } else if ((x[feat] <= thres) && (r[feat] > thres)) {
+    } else if (next_xnode == next_node) { // xpath
       M = M+1;
       N = N+1;
       feat_hist[feat] += 1;
@@ -361,8 +376,25 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     node = next_node;
     feat = features[node];
     thres = thresholds[node];
-    cr = children_right[node];
     cl = children_left[node];
+    cr = children_right[node];
+    cd = children_default[node];
+
+    if (x_missing[feat]) {
+      next_xnode = cd;
+    } else if (x[feat] > thres) {
+      next_xnode = cr;
+    } else if (x[feat] <= thres) {
+      next_xnode = cl;
+    }
+
+    if (r_missing[feat]) {
+      next_rnode = cd;
+    } else if (r[feat] > thres) {
+      next_rnode = cr;
+    } else if (r[feat] <= thres) {
+      next_rnode = cl;
+    }
 
     // Get parent information
     pnode = -2;
@@ -373,14 +405,32 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
       pnode = node_stack[ns_ctr-1];
       pfeat = features[pnode];
       pthres = thresholds[pnode];
-      pcr = children_right[pnode];       
       pcl = children_left[pnode];
+      pcr = children_right[pnode];
+      pcd = children_default[pnode];
+
+      if (x_missing[pfeat]) {
+        pnext_xnode = pcd;
+      } else if (x[pfeat] > pthres) {
+        pnext_xnode = pcr;
+      } else if (x[pfeat] <= pthres) {
+        pnext_xnode = pcl;
+      }
+
+      if (r_missing[pfeat]) {
+        pnext_rnode = pcd;
+      } else if (r[pfeat] > pthres) {
+        pnext_rnode = pcr;
+      } else if (r[pfeat] <= pthres) {
+        pnext_rnode = pcl;
+      }
+
       if (node == pcl) {
-        from_x = x[pfeat] <= pthres;
-        from_r = r[pfeat] <= pthres;
+        from_x = pnext_xnode == pcl;
+        from_r = pnext_rnode == pcl;
       } else if (node == pcr) {
-        from_x = x[pfeat] > pthres;
-        from_r = r[pfeat] > pthres;
+        from_x = pnext_xnode == pcr;
+        from_r = pnext_rnode == pcr;
       }
     }
     if (DEBUG) {
@@ -416,8 +466,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
       if (feat_hist[pfeat] > 0) {
         feat_hist[pfeat] -= 1;
       } else if (feat_hist[pfeat] < 0) {
-        feat_hist[pfeat] += 1;  
-      }   
+        feat_hist[pfeat] += 1;
+      }
       if (feat_hist[pfeat] == 0) {
         if (from_x && !from_r) {
           N = N-1;
@@ -428,7 +478,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
       }
       continue;
     }
-   
+
     // Arriving at node from parent
     if (from_child == -1) {
       if (DEBUG) {
@@ -437,36 +487,26 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
       node_stack[ns_ctr] = node;
       ns_ctr += 1;
       next_node = -1;
-    
+
       if (DEBUG) {
         myfile << "feat_hist[feat]" << feat_hist[feat] << "\n";
       }
       // Feature is set upstream
       if (feat_hist[feat] > 0) {
-        if (x[feat] <= thres) {
-          next_node = cl;
-        } else {
-          next_node = cr;
-        }
+        next_node = next_xnode;
         feat_hist[feat] += 1;
       } else if (feat_hist[feat] < 0) {
-        if (r[feat] <= thres) {
-          next_node = cl;
-        } else {
-          next_node = cr;
-        }
+        next_node = next_rnode;
         feat_hist[feat] -= 1;
       }
 
       // x and r go the same way
       if (next_node == -1) {
-        if ((x[feat] <= thres) && (r[feat] <= thres)) {
-          next_node = cl;
-        } else if ((x[feat] > thres) && (r[feat] > thres)) {
-          next_node = cr;
+        if (next_xnode == next_rnode) {
+          next_node = next_xnode;
         }
       }
-    
+
       // Go down one path
       if (next_node != -1) {
         continue;
@@ -474,10 +514,10 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 
       // Go down both paths, but go left first
       next_node = cl;
-      if ((r[feat] <= thres) && (x[feat] > thres)) {
+      if (next_rnode == next_node) {
         N = N+1;
         feat_hist[feat] -= 1;
-      } else if ((x[feat] <= thres) && (r[feat] > thres)) {
+      } else if (next_xnode == next_node) {
         M = M+1;
         N = N+1;
         feat_hist[feat] += 1;
@@ -485,7 +525,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
       from_child = -1;
       continue;
     }
-      
+
     // Arriving at node from child
     if (from_child != -1) {
       if (DEBUG) {
@@ -493,19 +533,14 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
       }
       next_node = -1;
       // Check if we should unroll immediately
-      if ((x[feat] <= thres) && (r[feat] <= thres)) {
-        next_node = pnode;
-      } else if ((x[feat] > thres) && (r[feat] > thres)) {
-        next_node = pnode;
-      }
-      if (feat_hist[feat] != 0) {
+      if ((next_rnode == next_xnode) || (feat_hist[feat] != 0)) {
         next_node = pnode;
       }
 
       // Came from a single path, so unroll
-      if (next_node != -1) { 
+      if (next_node != -1) {
         if (DEBUG) {
-          myfile << "Came from a single path, so unroll\n";   
+          myfile << "Came from a single path, so unroll\n";
         }
         // At the root node
         if (node == 0) {
@@ -525,7 +560,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         if (feat_hist[pfeat] > 0) {
           feat_hist[pfeat] -= 1;
         } else if (feat_hist[pfeat] < 0) {
-          feat_hist[pfeat] += 1;  
+          feat_hist[pfeat] += 1;
         }
         if (feat_hist[pfeat] == 0) {
           if (from_x && !from_r) {
@@ -544,11 +579,11 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         node_stack[ns_ctr] = node;
         ns_ctr += 1;
         next_node = cr;
-        if ((r[feat] <= thres) && (x[feat] > thres)) {
+        if (next_xnode == next_node) {
           M = M+1;
           N = N+1;
           feat_hist[feat] += 1;
-        } else if ((x[feat] <= thres) && (r[feat] > thres)) {
+        } else if (next_rnode == next_node) {
           N = N+1;
           feat_hist[feat] -= 1;
         }
@@ -563,12 +598,12 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         neg_x = 0;
         pos_r = 0;
         neg_r = 0;
-        if ((r[feat] <= thres) && (x[feat] > thres)) {
+        if ((next_xnode == cr) && (next_rnode == cl)) {
           pos_x = pos_lst[cr];
           neg_x = neg_lst[cr];
           pos_r = pos_lst[cl];
           neg_r = neg_lst[cl];
-        } else if ((x[feat] <= thres) && (r[feat] > thres)) {
+        } else if ((next_xnode == cl) && (next_rnode == cr)) {
           pos_x = pos_lst[cl];
           neg_x = neg_lst[cl];
           pos_r = pos_lst[cr];
@@ -588,17 +623,17 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         if (node == 0) {
           break;
         }
-          
+
         // Pop
         ns_ctr -= 1;
         next_node = node_stack[ns_ctr];
         from_child = node;
-          
+
         // Unwind
         if (feat_hist[pfeat] > 0) {
           feat_hist[pfeat] -= 1;
         } else if (feat_hist[pfeat] < 0) {
-          feat_hist[pfeat] += 1;  
+          feat_hist[pfeat] += 1;
         }
         if (feat_hist[pfeat] == 0) {
           if (from_x && !from_r) {
@@ -619,4 +654,3 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
   delete[] pos_lst;
   delete[] neg_lst;
 }
-
