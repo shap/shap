@@ -28,7 +28,7 @@ def test_single_tree_compare_with_kernel_shap():
     for i in range(5):
         x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
 
-        expl = shap.TreeExplainer(model, feature_dependence="independent", ref_X=X)
+        expl = shap.TreeExplainer(model, X, feature_dependence="independent")
         f = lambda inp : model.predict(xgb.DMatrix(inp))
         expl_kern = shap.KernelExplainer(f, X)
 
@@ -64,7 +64,7 @@ def test_several_trees():
     # Compare for five random samples
     for i in range(5):
         x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
-        expl = shap.TreeExplainer(model, feature_dependence="independent", ref_X=X)
+        expl = shap.TreeExplainer(model, X, feature_dependence="independent")
         itshap = expl.shap_values(x)
         assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
         "SHAP values don't sum to model output!"
@@ -105,7 +105,7 @@ def test_single_tree_nonlinear_transformations():
     pred = model.predict(Xd,output_margin=True) # In margin space (log odds)
     trans_pred = model.predict(Xd) # In probability space
 
-    expl = shap.TreeExplainer(model, feature_dependence="independent", ref_X=X)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent")
     f = lambda inp : model.predict(xgb.DMatrix(inp), output_margin=True)
     expl_kern = shap.KernelExplainer(f, X)
 
@@ -117,19 +117,19 @@ def test_single_tree_nonlinear_transformations():
     assert np.allclose(itshap, kshap), \
     "Independent Tree SHAP doesn't match Kernel SHAP on explaining margin!"
 
-    expl = shap.TreeExplainer(model, feature_dependence="independent", model_output="logistic", ref_X=X)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logistic")
     itshap = expl.shap_values(x)
     assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), \
     "SHAP values don't sum to model output on explaining logistic!"
 
-    expl = shap.TreeExplainer(model, feature_dependence="independent", model_output="logloss", ref_X=X, ref_y=y)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logloss", ref_y=y)
     itshap = expl.shap_values(x,y=y[x_ind])
     margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
     currpred = log_loss(y[x_ind],sigmoid(margin_pred))
     assert np.allclose(itshap.sum(), currpred - expl.expected_value), \
     "SHAP values don't sum to model output on explaining logloss!"
 
-    expl = shap.TreeExplainer(model, feature_dependence="independent", model_output="mse", ref_X=X, ref_y=y)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="mse", ref_y=y)
     itshap = expl.shap_values(x,y=y[x_ind])
     margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
     currpred = mse(y[x_ind],margin_pred)
