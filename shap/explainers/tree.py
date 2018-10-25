@@ -47,7 +47,7 @@ class TreeExplainer(Explainer):
     """
 
     def __init__(self, model, feature_dependence = "tree_path_dependence", 
-                 model_output = "margin", ref_X = None, **kwargs):
+                 model_output = "margin", data = None, **kwargs):
         """ 
         Parameters
         ----------
@@ -116,9 +116,9 @@ class TreeExplainer(Explainer):
                 self.model_type = "trees"
                 self.model = model
                 self.trees = self.gen_trees(model)
-                assert not ref_X is None, "Need to provide a reference set"
-                self.ref_X = ref_X
-                xgb_ref = xgboost.DMatrix(self.ref_X)
+                assert not data is None, "Need to provide a reference set"
+                self.data = data
+                xgb_ref = xgboost.DMatrix(self.data)
                 self.ref_margin_pred = self.model.predict(xgb_ref,output_margin=True)
         elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
             self.model_type = "xgboost"
@@ -492,12 +492,12 @@ class TreeExplainer(Explainer):
         The one reference Shapley value for all features.
         """
         assert have_cext, "C extension was not built during install!"
-        feats = range(0,self.ref_X.shape[1])
+        feats = range(0, self.data.shape[1])
         phi_final = []
         for tree in self.trees:
             phi = []
-            for j in range(self.ref_X.shape[0]):
-                r = self.ref_X[j,:]
+            for j in range(self.data.shape[0]):
+                r = self.data[j,:]
                 out_contribs = np.zeros(x.shape)
                 _cext.tree_shap_indep(
                     tree.max_depth, tree.children_left, tree.children_right, 
