@@ -494,14 +494,14 @@ class TreeExplainer(Explainer):
         The one reference Shapley value for all features.
         """
         assert have_cext, "C extension was not built during install!"
-        x_missing = np.zeros(x.shape, dtype=np.bool)
+        x_missing = np.isnan(x)
         feats = range(0, self.data.shape[1])
         phi_final = []
         for tree in self.trees:
             phi = []
             for j in range(self.data.shape[0]):
                 r = self.data[j,:]
-                r_missing = np.zeros(r.shape, dtype=np.bool)
+                r_missing = np.isnan(r)
                 out_contribs = np.zeros(x.shape)
                 _cext.tree_shap_indep(
                     tree.max_depth, tree.children_left, tree.children_right, 
