@@ -122,14 +122,14 @@ def test_single_tree_nonlinear_transformations():
     assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), \
     "SHAP values don't sum to model output on explaining logistic!"
 
-    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logloss", ref_y=y)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logloss")
     itshap = expl.shap_values(x,y=y[x_ind])
     margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
     currpred = log_loss(y[x_ind],sigmoid(margin_pred))
     assert np.allclose(itshap.sum(), currpred - expl.expected_value), \
     "SHAP values don't sum to model output on explaining logloss!"
 
-    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="mse", ref_y=y)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="mse")
     itshap = expl.shap_values(x,y=y[x_ind])
     margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
     currpred = mse(y[x_ind],margin_pred)
