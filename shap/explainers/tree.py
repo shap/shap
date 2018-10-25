@@ -46,8 +46,7 @@ class TreeExplainer(Explainer):
     implementations either inside the externel model package or in the local compiled C extention.
     """
 
-    def __init__(self, model, feature_dependence = "tree_path_dependence", 
-                 model_output = "margin", data = None, **kwargs):
+    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependence", **kwargs):
         """ 
         Parameters
         ----------
