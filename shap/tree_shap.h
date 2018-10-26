@@ -76,19 +76,19 @@ inline tfloat unwound_path_sum(const PathElement *unique_path, unsigned unique_d
   const tfloat zero_fraction = unique_path[path_index].zero_fraction;
   tfloat next_one_portion = unique_path[unique_depth].pweight;
   tfloat total = 0;
-  for (int i = unique_depth - 1; i >= 0; --i) {
-    if (one_fraction != 0) {
-      const tfloat tmp = next_one_portion * (unique_depth + 1)
-                            / static_cast<tfloat>((i + 1) * one_fraction);
+  
+  if (one_fraction != 0) {
+    for (int i = unique_depth - 1; i >= 0; --i) {
+      const tfloat tmp = next_one_portion / static_cast<tfloat>((i + 1) * one_fraction);
       total += tmp;
-      next_one_portion = unique_path[i].pweight - tmp * zero_fraction * ((unique_depth - i)
-                         / static_cast<tfloat>(unique_depth + 1));
-    } else {
-      total += (unique_path[i].pweight / zero_fraction) / ((unique_depth - i)
-               / static_cast<tfloat>(unique_depth + 1));
+      next_one_portion = unique_path[i].pweight - tmp * zero_fraction * (unique_depth - i);
+    }
+  } else {
+    for (int i = unique_depth - 1; i >= 0; --i) {
+      total += unique_path[i].pweight / (zero_fraction * (unique_depth - i));
     }
   }
-  return total;
+  return total * (unique_depth + 1);
 }
 
 // recursive computation of SHAP values for a decision tree
