@@ -433,7 +433,11 @@ class AdditiveForceArrayVisualizer extends React.Component {
       each(explanations, (e, i) => (e.xmap = i));
     } else if (xsort === "original sample ordering") {
       explanations = sortBy(this.props.explanations, x => x.origInd);
-      each(explanations, (e, i) => (e.xmap = i));
+      if ( this.props.xticks==="None" ) {
+        each(explanations, (e, i) => (e.xmap = i));
+      } else {
+        each(explanations, (e, i) => (e.xmap = this.props.xticks[i]));
+      }
     } else {
       let ind = findKey(this.props.featureNames, x => x === xsort);
       each(this.props.explanations, (e, i) => (e.xmap = e.features[ind].value));
@@ -897,7 +901,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
 }
 
 AdditiveForceArrayVisualizer.defaultProps = {
-  plot_cmap: "RdBu"
+  plot_cmap: "GnPR",
+  xticks: "None"
 };
 
 export default AdditiveForceArrayVisualizer;
