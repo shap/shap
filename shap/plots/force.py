@@ -325,7 +325,7 @@ class AdditiveForceArrayVisualizer:
             "featureNames": arr[0].data.group_names,
             "explanations": [],
             "plot_cmap": plot_cmap,
-            "xticks": list(xticks),
+            "xticks": list(xticks) if hasattr(xticks, '__iter__') else "None",
         }
         for (ind,e) in enumerate(arr):
             self.data["explanations"].append({
