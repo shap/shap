@@ -901,7 +901,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 }
 
 AdditiveForceArrayVisualizer.defaultProps = {
-  plot_cmap: "GnPR",
+  plot_cmap: "RdBu",
   xticks: "None"
 };
 
