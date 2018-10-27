@@ -276,12 +276,57 @@ static PyObject *_cext_tree_shap_indep(PyObject *self, PyObject *args)
   tfloat *r = (tfloat*)PyArray_DATA(r_array);
   bool *r_missing = (bool*)PyArray_DATA(r_missing_array);
   tfloat *out_contribs = (tfloat*)PyArray_DATA(out_contribs_array);
+    
+  // Preallocating things    
+  Node *mytree = new Node[num_nodes];
+  for (unsigned i = 0; i < num_nodes; ++i) {
+    mytree[i].cl = children_left[i];
+    mytree[i].cr = children_right[i];
+    mytree[i].cd = children_default[i];
+    if (i == 0) {
+      mytree[i].pnode = 0;
+    }
+    if (children_left[i] >= 0) {
+      mytree[children_left[i]].pnode = i;
+      mytree[children_left[i]].pfeat = features[i];
+    }
+    if (children_right[i] >= 0) {
+      mytree[children_right[i]].pnode = i;
+      mytree[children_right[i]].pfeat = features[i];
+    }
 
+    mytree[i].thres = thresholds[i];
+    mytree[i].value = values[i];
+    mytree[i].feat = features[i];
+  }
+    
+  float *pos_lst = new float[num_nodes];
+  float *neg_lst = new float[num_nodes];
+  int *node_stack = new int[(unsigned) max_depth];
+  signed short *feat_hist = new signed short[num_feats];
+  float *memoized_weights = new float[30*30];
+  for (int n = 0; n < 30; ++n) {
+    for (int m = 0; m < 30; ++m) {
+      memoized_weights[n+30*m] = calc_weight(n, m);
+    }
+  }
+
+//   tree_shap_indep(
+//     max_depth, num_feats, num_nodes, children_left, children_right, 
+//     children_default, features, thresholds, values, x, x_missing, 
+//     r, r_missing, out_contribs
+//   );
   tree_shap_indep(
-    max_depth, num_feats, num_nodes, children_left, children_right, 
-    children_default, features, thresholds, values, x, x_missing, 
-    r, r_missing, out_contribs
+      max_depth, num_feats, num_nodes, x, x_missing, r, r_missing, 
+      out_contribs, pos_lst, neg_lst, feat_hist, memoized_weights, 
+      node_stack, mytree
   );
+  delete[] mytree;
+  delete[] pos_lst;
+  delete[] neg_lst;
+  delete[] node_stack;
+  delete[] feat_hist;
+  delete[] memoized_weights;
 
   // clean up the created python objects
   Py_XDECREF(children_left_array);
