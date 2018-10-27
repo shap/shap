@@ -311,11 +311,6 @@ static PyObject *_cext_tree_shap_indep(PyObject *self, PyObject *args)
     }
   }
 
-//   tree_shap_indep(
-//     max_depth, num_feats, num_nodes, children_left, children_right, 
-//     children_default, features, thresholds, values, x, x_missing, 
-//     r, r_missing, out_contribs
-//   );
   tree_shap_indep(
       max_depth, num_feats, num_nodes, x, x_missing, r, r_missing, 
       out_contribs, pos_lst, neg_lst, feat_hist, memoized_weights, 
