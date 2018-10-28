@@ -278,6 +278,15 @@ inline void tree_shap(const unsigned M, const unsigned num_outputs, const unsign
 
 // Independent Tree SHAP functions below here
 // ------------------------------------------
+struct Node {
+    short cl, cr, cd, pnode, feat, pfeat; // uint_16
+    float thres, value;
+    char from_flag;
+};
+
+#define FROM_NEITHER 0
+#define FROM_X_NOT_R 1
+#define FROM_R_NOT_X 2
 
 // https://www.geeksforgeeks.org/space-and-time-efficient-binomial-coefficient/
 inline int bin_coeff(int n, int k) { 
@@ -295,328 +304,346 @@ inline float calc_weight(const int N, const int M) {
   return(1.0/(N*bin_coeff(N-1,M)));
 }
 
-inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats, 
-                            const unsigned num_nodes, const int *children_left, 
-                            const int *children_right, const int *features, 
-                            const tfloat *thresholds, const tfloat *values, 
-                            const tfloat *x, const tfloat *r, tfloat *out_contribs) {
-  const bool DEBUG = false;
-  ofstream myfile;
-  if (DEBUG) {
-    myfile.open ("/homes/gws/hughchen/shap/out.txt",fstream::app);
-    myfile << "Entering tree_shap_indep\n";
-  }
-  int *node_stack = new int[max_depth];
-  int ns_ctr = 0;
-//   signed short feat_hist[num_feats] = {0};
-//   float pos_lst[num_nodes] = {0};
-//   float neg_lst[num_nodes] = {0};
-  signed short *feat_hist = new signed short[num_feats];
-  std::fill_n(feat_hist, num_feats, 0);
-  float *pos_lst = new float[num_nodes];
-  std::fill_n(pos_lst, num_nodes, 0);
-  float *neg_lst = new float[num_nodes];
-  std::fill_n(neg_lst, num_nodes, 0);
-    
-  int node = 0, feat, cl, cr, pnode, pfeat = -1, pcl, pcr;
-  tfloat thres, pthres;
-  bool from_x, from_r;
-  float pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
-  unsigned M = 0, N = 0;
-  int next_node = -1, from_child = -1;
-  
-  feat = features[node];
-  thres = thresholds[node];
-  cr = children_right[node];
-  cl = children_left[node];
-
-  if (DEBUG) {
-    myfile << "\nNode: " << node << "\n";
-    myfile << "x[feat]: " << x[feat] << ", r[feat]: " << r[feat] << "\n";
-    myfile << "thres: " << thres << "\n";
-  }
-
-  // Check if x and r go the same way
-  if ((x[feat] <= thres) && (r[feat] <= thres)) {
-    next_node = cl;
-  } else if ((x[feat] > thres) && (r[feat] > thres)) {
-    next_node = cr;
-  }
-  
-  // If not, go left
-  if (next_node == -1) {
-    next_node = cl;
-    if ((r[feat] <= thres) && (x[feat] > thres)) {
-      N = N+1;
-      feat_hist[feat] -= 1;
-    } else if ((x[feat] <= thres) && (r[feat] > thres)) {
-      M = M+1;
-      N = N+1;
-      feat_hist[feat] += 1;
+inline float calc_weight2(const int N, const int M, float *memoized_weights) {
+    if ((N < 30) && (M < 30)) {
+        return(memoized_weights[N+30*M]);
+    } else {
+        return(1.0/(N*bin_coeff(N-1,M)));
     }
-  }
-  node_stack[ns_ctr] = node;
-  ns_ctr += 1;
-  while (true) {
-    node = next_node;
-    feat = features[node];
-    thres = thresholds[node];
-    cr = children_right[node];
-    cl = children_left[node];
-
-    // Get parent information
-    pnode = -2;
-    from_x = false;
-    from_r = false;
-    // Don't do this for the root
-    if (node != 0) {
-      pnode = node_stack[ns_ctr-1];
-      pfeat = features[pnode];
-      pthres = thresholds[pnode];
-      pcr = children_right[pnode];       
-      pcl = children_left[pnode];
-      if (node == pcl) {
-        from_x = x[pfeat] <= pthres;
-        from_r = r[pfeat] <= pthres;
-      } else if (node == pcr) {
-        from_x = x[pfeat] > pthres;
-        from_r = r[pfeat] > pthres;
-      }
-    }
-    if (DEBUG) {
-      myfile << "\nNode: " << node << "\n";
-      myfile << "N: " << N << ", M: " << M << "\n";
-      myfile << "x[feat]: " << x[feat] << ", r[feat]: " << r[feat] << "\n";
-      myfile << "thres: " << thres << "\n";
-    }
-
-    // At a leaf
-    if ((cl < 0) && (cr < 0)) {
-      if (DEBUG) {
-        myfile << "At a leaf\n";
-      }
-      // Currently assuming a single output
-      if (N != 0) {
-        if (M != 0) {
-          pos_lst[node] = values[node]*calc_weight(N,M-1);
-        }
-        if (M != N) {
-          neg_lst[node] = -values[node]*calc_weight(N,M);
-        }
-      }
-      if (DEBUG) {
-        myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
-        myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
-      }
-      // Pop from node_stack
-      ns_ctr -= 1;
-      next_node = node_stack[ns_ctr];
-      from_child = node;
-      // Unwind
-      if (feat_hist[pfeat] > 0) {
-        feat_hist[pfeat] -= 1;
-      } else if (feat_hist[pfeat] < 0) {
-        feat_hist[pfeat] += 1;  
-      }   
-      if (feat_hist[pfeat] == 0) {
-        if (from_x && !from_r) {
-          N = N-1;
-          M = M-1;
-        } else if (!from_x && from_r) {
-          N = N-1;
-        }
-      }
-      continue;
-    }
-   
-    // Arriving at node from parent
-    if (from_child == -1) {
-      if (DEBUG) {
-        myfile << "Arriving at node from parent\n";
-      }
-      node_stack[ns_ctr] = node;
-      ns_ctr += 1;
-      next_node = -1;
-    
-      if (DEBUG) {
-        myfile << "feat_hist[feat]" << feat_hist[feat] << "\n";
-      }
-      // Feature is set upstream
-      if (feat_hist[feat] > 0) {
-        if (x[feat] <= thres) {
-          next_node = cl;
-        } else {
-          next_node = cr;
-        }
-        feat_hist[feat] += 1;
-      } else if (feat_hist[feat] < 0) {
-        if (r[feat] <= thres) {
-          next_node = cl;
-        } else {
-          next_node = cr;
-        }
-        feat_hist[feat] -= 1;
-      }
-
-      // x and r go the same way
-      if (next_node == -1) {
-        if ((x[feat] <= thres) && (r[feat] <= thres)) {
-          next_node = cl;
-        } else if ((x[feat] > thres) && (r[feat] > thres)) {
-          next_node = cr;
-        }
-      }
-    
-      // Go down one path
-      if (next_node != -1) {
-        continue;
-      }
-
-      // Go down both paths, but go left first
-      next_node = cl;
-      if ((r[feat] <= thres) && (x[feat] > thres)) {
-        N = N+1;
-        feat_hist[feat] -= 1;
-      } else if ((x[feat] <= thres) && (r[feat] > thres)) {
-        M = M+1;
-        N = N+1;
-        feat_hist[feat] += 1;
-      }
-      from_child = -1;
-      continue;
-    }
-      
-    // Arriving at node from child
-    if (from_child != -1) {
-      if (DEBUG) {
-        myfile << "Arriving at node from child\n";
-      }
-      next_node = -1;
-      // Check if we should unroll immediately
-      if ((x[feat] <= thres) && (r[feat] <= thres)) {
-        next_node = pnode;
-      } else if ((x[feat] > thres) && (r[feat] > thres)) {
-        next_node = pnode;
-      }
-      if (feat_hist[feat] != 0) {
-        next_node = pnode;
-      }
-
-      // Came from a single path, so unroll
-      if (next_node != -1) { 
-        if (DEBUG) {
-          myfile << "Came from a single path, so unroll\n";   
-        }
-        // At the root node
-        if (node == 0) {
-          break;
-        }
-        // Update and unroll
-        pos_lst[node] = pos_lst[from_child];
-        neg_lst[node] = neg_lst[from_child];
-        if (DEBUG) {
-          myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
-          myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
-        }
-        from_child = node;
-        ns_ctr -= 1;
-
-        // Unwind
-        if (feat_hist[pfeat] > 0) {
-          feat_hist[pfeat] -= 1;
-        } else if (feat_hist[pfeat] < 0) {
-          feat_hist[pfeat] += 1;  
-        }
-        if (feat_hist[pfeat] == 0) {
-          if (from_x && !from_r) {
-            N = N-1;
-            M = M-1;
-          } else if (!from_x && from_r) {
-            N = N-1;
-          }
-        }
-        continue;
-      // Go right - Arriving from the left child
-      } else if (from_child == cl) {
-        if (DEBUG) {
-          myfile << "Go right - Arriving from the left child\n";
-        }
-        node_stack[ns_ctr] = node;
-        ns_ctr += 1;
-        next_node = cr;
-        if ((r[feat] <= thres) && (x[feat] > thres)) {
-          M = M+1;
-          N = N+1;
-          feat_hist[feat] += 1;
-        } else if ((x[feat] <= thres) && (r[feat] > thres)) {
-          N = N+1;
-          feat_hist[feat] -= 1;
-        }
-        from_child = -1;
-        continue;
-      // Compute stuff and unroll - Arriving from the right child
-      } else if (from_child == cr) {
-        if (DEBUG) {
-          myfile << "Compute stuff and unroll - Arriving from the right child\n";
-        }
-        pos_x = 0;
-        neg_x = 0;
-        pos_r = 0;
-        neg_r = 0;
-        if ((r[feat] <= thres) && (x[feat] > thres)) {
-          pos_x = pos_lst[cr];
-          neg_x = neg_lst[cr];
-          pos_r = pos_lst[cl];
-          neg_r = neg_lst[cl];
-        } else if ((x[feat] <= thres) && (r[feat] > thres)) {
-          pos_x = pos_lst[cl];
-          neg_x = neg_lst[cl];
-          pos_r = pos_lst[cr];
-          neg_r = neg_lst[cr];
-        }
-        // out_contribs needs to have been initialized as all zeros
-        out_contribs[feat] += pos_x + neg_r;
-        pos_lst[node] = pos_x + pos_r;
-        neg_lst[node] = neg_x + neg_r;
-        if (DEBUG) {
-          myfile << "out_contribs[feat]: " << out_contribs[feat] << "\n";
-          myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
-          myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
-        }
-
-        // Check if at root
-        if (node == 0) {
-          break;
-        }
-          
-        // Pop
-        ns_ctr -= 1;
-        next_node = node_stack[ns_ctr];
-        from_child = node;
-          
-        // Unwind
-        if (feat_hist[pfeat] > 0) {
-          feat_hist[pfeat] -= 1;
-        } else if (feat_hist[pfeat] < 0) {
-          feat_hist[pfeat] += 1;  
-        }
-        if (feat_hist[pfeat] == 0) {
-          if (from_x && !from_r) {
-            N = N-1;
-            M = M-1;
-          } else if (!from_x && from_r) {
-            N = N-1;
-          }
-        }
-        continue;
-      }
-    }
-  }
-  if (DEBUG) {
-    myfile.close();
-  }
-  delete[] feat_hist;
-  delete[] pos_lst;
-  delete[] neg_lst;
 }
 
+inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
+                            const unsigned num_nodes, const tfloat *x,
+                            const bool *x_missing, const tfloat *r,
+                            const bool *r_missing, tfloat *out_contribs,
+                            float *pos_lst, float *neg_lst, signed short *feat_hist,
+                            float *memoized_weights, int *node_stack, Node *mytree) {
+
+//     const bool DEBUG = true;
+//     ofstream myfile;
+//     if (DEBUG) {
+//       myfile.open ("/homes/gws/hughchen/shap/out.txt",fstream::app);
+//       myfile << "Entering tree_shap_indep\n";
+//     }
+    int ns_ctr = 0;
+    std::fill_n(feat_hist, num_feats, 0);
+    short node = 0, feat, cl, cr, cd, pnode, pfeat = -1;
+    short next_xnode = -1, next_rnode = -1;
+    short next_node = -1, from_child = -1;
+    float thres, pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
+    char from_flag;
+    unsigned M = 0, N = 0;
+    
+    Node curr_node = mytree[node];
+    feat = curr_node.feat;
+    thres = curr_node.thres;
+    cl = curr_node.cl;
+    cr = curr_node.cr;
+    cd = curr_node.cd;
+    
+//     if (DEBUG) {
+//       myfile << "\nNode: " << node << "\n";
+//       myfile << "x[feat]: " << x[feat] << ", r[feat]: " << r[feat] << "\n";
+//       myfile << "thres: " << thres << "\n";
+//     }
+    
+    if (x_missing[feat]) {
+        next_xnode = cd;
+    } else if (x[feat] > thres) {
+        next_xnode = cr;
+    } else if (x[feat] <= thres) {
+        next_xnode = cl;
+    }
+    
+    if (r_missing[feat]) {
+        next_rnode = cd;
+    } else if (r[feat] > thres) {
+        next_rnode = cr;
+    } else if (r[feat] <= thres) {
+        next_rnode = cl;
+    }
+    
+    if (next_xnode != next_rnode) {
+        mytree[next_xnode].from_flag = FROM_X_NOT_R;
+        mytree[next_rnode].from_flag = FROM_R_NOT_X;
+    } else {
+        mytree[next_xnode].from_flag = FROM_NEITHER;
+    }
+    
+    // Check if x and r go the same way
+    if (next_xnode == next_rnode) {
+        next_node = next_xnode;
+    }
+    
+    // If not, go left
+    if (next_node < 0) {
+        next_node = cl;
+        if (next_rnode == next_node) { // rpath
+            N = N+1;
+            feat_hist[feat] -= 1;
+        } else if (next_xnode == next_node) { // xpath
+            M = M+1;
+            N = N+1;
+            feat_hist[feat] += 1;
+        }
+    }
+    node_stack[ns_ctr] = node;
+    ns_ctr += 1;
+    while (true) {
+        node = next_node;
+        curr_node = mytree[node];
+        feat = curr_node.feat;
+        thres = curr_node.thres;
+        cl = curr_node.cl;
+        cr = curr_node.cr;
+        cd = curr_node.cd;
+        pnode = curr_node.pnode;
+        pfeat = curr_node.pfeat;
+        from_flag = curr_node.from_flag;
+
+        const bool x_right = x[feat] > thres;
+        const bool r_right = r[feat] > thres;
+
+        if (x_missing[feat]) {
+            next_xnode = cd;
+        } else if (x_right) {
+            next_xnode = cr;
+        } else if (!x_right) {
+            next_xnode = cl;
+        }
+        
+        if (r_missing[feat]) {
+            next_rnode = cd;
+        } else if (r_right) {
+            next_rnode = cr;
+        } else if (!r_right) {
+            next_rnode = cl;
+        }
+
+        if (next_xnode != next_rnode) {
+            mytree[next_xnode].from_flag = FROM_X_NOT_R;
+            mytree[next_rnode].from_flag = FROM_R_NOT_X;
+        } else {
+            mytree[next_xnode].from_flag = FROM_NEITHER;
+        }
+        
+//         if (DEBUG) {
+//           myfile << "\nNode: " << node << "\n";
+//           myfile << "N: " << N << ", M: " << M << "\n";
+//           myfile << "from_flag==FROM_X_NOT_R: " << (from_flag==FROM_X_NOT_R) << "\n";
+//           myfile << "from_flag==FROM_R_NOT_X: " << (from_flag==FROM_R_NOT_X) << "\n";
+//           myfile << "from_flag==FROM_NEITHER: " << (from_flag==FROM_NEITHER) << "\n";
+//           myfile << "feat_hist[feat]: " << feat_hist[feat] << "\n";
+//         }
+        
+        // At a leaf
+        if ((cl < 0) && (cr < 0)) {
+            //      if (DEBUG) {
+            //        myfile << "At a leaf\n";
+            //      }
+            // Currently assuming a single output
+            if (N != 0) {
+                if (M != 0) {
+                    pos_lst[node] = mytree[node].value*calc_weight2(N,M-1,memoized_weights);
+                }
+                if (M != N) {
+                    neg_lst[node] = -mytree[node].value*calc_weight2(N,M,memoized_weights);
+                }
+            }
+//             if (DEBUG) {
+//               myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
+//               myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
+//             }
+            // Pop from node_stack
+            ns_ctr -= 1;
+            next_node = node_stack[ns_ctr];
+            from_child = node;
+            // Unwind
+            if (feat_hist[pfeat] > 0) {
+                feat_hist[pfeat] -= 1;
+            } else if (feat_hist[pfeat] < 0) {
+                feat_hist[pfeat] += 1;
+            }
+            if (feat_hist[pfeat] == 0) {
+                if (from_flag == FROM_X_NOT_R) {
+                    N = N-1;
+                    M = M-1;
+                } else if (from_flag == FROM_R_NOT_X) {
+                    N = N-1;
+                }
+            }
+            continue;
+        }
+        
+        // Arriving at node from parent
+        if (from_child == -1) {
+            //      if (DEBUG) {
+            //        myfile << "Arriving at node from parent\n";
+            //      }
+            node_stack[ns_ctr] = node;
+            ns_ctr += 1;
+            next_node = -1;
+            
+            //      if (DEBUG) {
+            //        myfile << "feat_hist[feat]" << feat_hist[feat] << "\n";
+            //      }
+            // Feature is set upstream
+            if (feat_hist[feat] > 0) {
+                next_node = next_xnode;
+                feat_hist[feat] += 1;
+            } else if (feat_hist[feat] < 0) {
+                next_node = next_rnode;
+                feat_hist[feat] -= 1;
+            }
+            
+            // x and r go the same way
+            if (next_node < 0) {
+                if (next_xnode == next_rnode) {
+                    next_node = next_xnode;
+                }
+            }
+            
+            // Go down one path
+            if (next_node >= 0) {
+                continue;
+            }
+            
+            // Go down both paths, but go left first
+            next_node = cl;
+            if (next_rnode == next_node) {
+                N = N+1;
+                feat_hist[feat] -= 1;
+            } else if (next_xnode == next_node) {
+                M = M+1;
+                N = N+1;
+                feat_hist[feat] += 1;
+            }
+            from_child = -1;
+            continue;
+        }
+        
+        // Arriving at node from child
+        if (from_child != -1) {
+//             if (DEBUG) {
+//               myfile << "Arriving at node from child\n";
+//             }
+            next_node = -1;
+            // Check if we should unroll immediately
+            if ((next_rnode == next_xnode) || (feat_hist[feat] != 0)) {
+                next_node = pnode;
+            }
+            
+            // Came from a single path, so unroll
+            if (next_node >= 0) {
+//                 if (DEBUG) {
+//                   myfile << "Came from a single path, so unroll\n";
+//                 }
+                // At the root node
+                if (node == 0) {
+                    break;
+                }
+                // Update and unroll
+                pos_lst[node] = pos_lst[from_child];
+                neg_lst[node] = neg_lst[from_child];
+//                 if (DEBUG) {
+//                   myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
+//                   myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
+//                 }
+                from_child = node;
+                ns_ctr -= 1;
+                
+                // Unwind
+                if (feat_hist[pfeat] > 0) {
+                    feat_hist[pfeat] -= 1;
+                } else if (feat_hist[pfeat] < 0) {
+                    feat_hist[pfeat] += 1;
+                }
+                if (feat_hist[pfeat] == 0) {
+                    if (from_flag == FROM_X_NOT_R) {
+                        N = N-1;
+                        M = M-1;
+                    } else if (from_flag == FROM_R_NOT_X) {
+                        N = N-1;
+                    }
+                }
+                continue;
+                // Go right - Arriving from the left child
+            } else if (from_child == cl) {
+//                 if (DEBUG) {
+//                   myfile << "Go right - Arriving from the left child\n";
+//                 }
+                node_stack[ns_ctr] = node;
+                ns_ctr += 1;
+                next_node = cr;
+                if (next_xnode == next_node) {
+                    M = M+1;
+                    N = N+1;
+                    feat_hist[feat] += 1;
+                } else if (next_rnode == next_node) {
+                    N = N+1;
+                    feat_hist[feat] -= 1;
+                }
+                from_child = -1;
+                continue;
+                // Compute stuff and unroll - Arriving from the right child
+            } else if (from_child == cr) {
+//                 if (DEBUG) {
+//                   myfile << "Compute stuff and unroll - Arriving from the right child\n";
+//                 }
+                pos_x = 0;
+                neg_x = 0;
+                pos_r = 0;
+                neg_r = 0;
+                if ((next_xnode == cr) && (next_rnode == cl)) {
+                    pos_x = pos_lst[cr];
+                    neg_x = neg_lst[cr];
+                    pos_r = pos_lst[cl];
+                    neg_r = neg_lst[cl];
+                } else if ((next_xnode == cl) && (next_rnode == cr)) {
+                    pos_x = pos_lst[cl];
+                    neg_x = neg_lst[cl];
+                    pos_r = pos_lst[cr];
+                    neg_r = neg_lst[cr];
+                }
+                // out_contribs needs to have been initialized as all zeros
+                out_contribs[feat] += pos_x + neg_r;
+                pos_lst[node] = pos_x + pos_r;
+                neg_lst[node] = neg_x + neg_r;
+//                 if (DEBUG) {
+//                   myfile << "out_contribs[feat]: " << out_contribs[feat] << "\n";
+//                   myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
+//                   myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
+//                 }
+                
+                // Check if at root
+                if (node == 0) {
+                    break;
+                }
+                
+                // Pop
+                ns_ctr -= 1;
+                next_node = node_stack[ns_ctr];
+                from_child = node;
+                
+                // Unwind
+                if (feat_hist[pfeat] > 0) {
+                    feat_hist[pfeat] -= 1;
+                } else if (feat_hist[pfeat] < 0) {
+                    feat_hist[pfeat] += 1;
+                }
+                if (feat_hist[pfeat] == 0) {
+                    if (from_flag == FROM_X_NOT_R) {
+                        N = N-1;
+                        M = M-1;
+                    } else if (from_flag == FROM_R_NOT_X) {
+                        N = N-1;
+                    }
+                }
+                continue;
+            }
+        }
+    }
+    //  if (DEBUG) {
+    //    myfile.close();
+    //  }
+}
