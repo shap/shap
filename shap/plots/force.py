@@ -159,9 +159,12 @@ err_msg = """
 
 def initjs():
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
-    bundle_data = io.open(bundle_path, encoding="utf-8").read()
+    with io.open(bundle_path, encoding="utf-8") as f:
+        bundle_data = f.read()
     logo_path = os.path.join(os.path.split(__file__)[0], "resources", "logoSmallGray.png")
-    logo_data = base64.b64encode(open(logo_path, "rb").read()).decode('utf-8')
+    with open(logo_path, "rb") as f:
+        logo_data = f.read()
+    logo_data = base64.b64encode(logo_data).decode('utf-8')
     display(HTML(
         "<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>".format(logo_data=logo_data) +
         "<script>{bundle_data}</script>".format(bundle_data=bundle_data)
