@@ -112,8 +112,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
     // create our axes
     let defaultFormat = format(",.4");
     if ( this.props.xticks != null ) {
-      this.parseTime = timeParse(this.props.dt_format);
-      this.formatTime = timeFormat(this.props.dt_format);
+      this.parseTime = timeParse(this.props.ts_fmt);
+      this.formatTime = timeFormat(this.props.ts_fmt);
 
       function condFormat(x) {
         if (typeof(x) == "object") {
@@ -934,7 +934,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 AdditiveForceArrayVisualizer.defaultProps = {
   plot_cmap: "RdBu",
   xticks: null,
-  dt_format: "%Y-%m-%d"
+  ts_fmt: "%Y-%m-%d"
 };
 
 export default AdditiveForceArrayVisualizer;
