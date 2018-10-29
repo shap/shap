@@ -1,6 +1,6 @@
 import React from "react";
 import { select, selectAll, mouse } from "d3-selection";
-import { scaleLinear, scalePoint, scaleTime } from "d3-scale";
+import { scaleLinear, scaleTime } from "d3-scale";
 import { extent } from "d3-array";
 import { format } from "d3-format";
 import { timeFormat, timeParse } from "d3-time-format";
