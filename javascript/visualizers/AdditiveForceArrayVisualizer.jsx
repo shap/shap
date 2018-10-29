@@ -1,8 +1,9 @@
 import React from "react";
 import { select, selectAll, mouse } from "d3-selection";
-import { scaleLinear } from "d3-scale";
+import { scaleLinear, scalePoint, scaleTime } from "d3-scale";
 import { extent } from "d3-array";
 import { format } from "d3-format";
+import { timeFormat, timeParse } from "d3-time-format";
 import { axisBottom, axisLeft } from "d3-axis";
 import { line } from "d3-shape";
 import { hsl } from "d3-color";
@@ -109,20 +110,39 @@ class AdditiveForceArrayVisualizer extends React.Component {
     this.brighterColors = [1.45, 1.6].map((v, i) => this.colors[i].brighter(v));
 
     // create our axes
-    this.tickFormat = format(",.4");
+    let defaultFormat = format(",.4");
+    if ( this.props.xticks != null ) {
+      this.parseTime = timeParse(this.props.dt_format);
+      this.formatTime = timeFormat(this.props.dt_format);
+
+      function condFormat(x) {
+        if (typeof(x) == "object") {
+          return this.formatTime(x);
+	} else {
+	  return defaultFormat(x);
+	};
+      }
+
+      this.xtickFormat = condFormat;
+
+    } else {
+      this.xtickFormat = defaultFormat;
+    }
     this.xscale = scaleLinear();
     this.xaxis = axisBottom()
       .scale(this.xscale)
       .tickSizeInner(4)
       .tickSizeOuter(0)
-      .tickFormat(d => this.tickFormat(d))
+      .tickFormat(d => this.xtickFormat(d))
       .tickPadding(-18);
+
+    this.ytickFormat = defaultFormat;
     this.yscale = scaleLinear();
     this.yaxis = axisLeft()
       .scale(this.yscale)
       .tickSizeInner(4)
       .tickSizeOuter(0)
-      .tickFormat(d => this.tickFormat(this.invLinkFunction(d)))
+      .tickFormat(d => this.ytickFormat(this.invLinkFunction(d)))
       .tickPadding(2);
 
     this.xlabel.node().onchange = () => this.internalDraw();
@@ -187,11 +207,11 @@ class AdditiveForceArrayVisualizer extends React.Component {
       this.hoverx
         .attr("x", nearestExp.xmapScaled)
         .attr("y", this.topOffset - 5)
-        .text(this.tickFormat(nearestExp.xmap));
+        .text(this.xtickFormat(nearestExp.xmap));
       this.hoverxOutline
         .attr("x", nearestExp.xmapScaled)
         .attr("y", this.topOffset - 5)
-        .text(this.tickFormat(nearestExp.xmap));
+        .text(this.xtickFormat(nearestExp.xmap));
       this.hoverxTitle
         .attr("x", nearestExp.xmapScaled)
         .attr("y", this.topOffset - 18)
@@ -201,11 +221,11 @@ class AdditiveForceArrayVisualizer extends React.Component {
       this.hovery
         .attr("x", this.leftOffset - 6)
         .attr("y", nearestExp.joinPointy)
-        .text(this.tickFormat(this.invLinkFunction(nearestExp.joinPoint)));
+        .text(this.ytickFormat(this.invLinkFunction(nearestExp.joinPoint)));
       this.hoveryOutline
         .attr("x", this.leftOffset - 6)
         .attr("y", nearestExp.joinPointy)
-        .text(this.tickFormat(this.invLinkFunction(nearestExp.joinPoint)));
+        .text(this.ytickFormat(this.invLinkFunction(nearestExp.joinPoint)));
 
       let P = this.props.featureNames.length;
 
@@ -242,7 +262,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
         let valString = "";
         if (d.value !== null && d.value !== undefined) {
           valString =
-            " = " + (isNaN(d.value) ? d.value : this.tickFormat(d.value));
+            " = " + (isNaN(d.value) ? d.value : this.ytickFormat(d.value));
         }
         if (nearestExp.count > 1) {
           return "mean(" + this.props.featureNames[d.ind] + ")" + valString;
@@ -425,6 +445,17 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
     let explanations;
     let xsort = this.xlabel.node().value;
+
+
+    // Set scaleTime if time ticks provided for original ordering
+    if ((xsort === "original sample ordering") && (this.props.xticks != null))  {
+	    this.xscale = scaleTime();
+    } else {
+	    this.xscale = scaleLinear();
+    }
+    this.xaxis.scale(this.xscale);
+
+
     if (xsort === "sample order by similarity") {
       explanations = sortBy(this.props.explanations, x => x.simIndex);
       each(explanations, (e, i) => (e.xmap = i));
@@ -433,10 +464,10 @@ class AdditiveForceArrayVisualizer extends React.Component {
       each(explanations, (e, i) => (e.xmap = i));
     } else if (xsort === "original sample ordering") {
       explanations = sortBy(this.props.explanations, x => x.origInd);
-      if ( this.props.xticks==="None" ) {
-        each(explanations, (e, i) => (e.xmap = i));
+      if (this.props.xticks != null)  {
+        each(explanations, (e, i) => (e.xmap = this.parseTime(this.props.xticks[i])));
       } else {
-        each(explanations, (e, i) => (e.xmap = this.props.xticks[i]));
+        each(explanations, (e, i) => (e.xmap = i));
       }
     } else {
       let ind = findKey(this.props.featureNames, x => x === xsort);
@@ -902,7 +933,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
 AdditiveForceArrayVisualizer.defaultProps = {
   plot_cmap: "RdBu",
-  xticks: "None"
+  xticks: null,
+  dt_format: "%Y-%m-%d"
 };
 
 export default AdditiveForceArrayVisualizer;
