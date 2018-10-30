@@ -12,7 +12,12 @@ from IPython import get_ipython
 import base64
 import numpy as np
 import scipy.cluster
-import collections
+import sys
+if sys.version_info[0] >= 3:
+  from collections.abc import Sequence
+else:
+  from collections import Sequence
+
 import warnings
 import re
 from . import labels
@@ -205,7 +210,7 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True):
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
             return SimpleListVisualizer(e).html()
-    elif isinstance(e, collections.abc.Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
+    elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
         if matplotlib:
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
@@ -220,7 +225,7 @@ try:
     svg_formatter.for_type(Explanation, lambda x: visualize(x).data)
     old_list_formatter = svg_formatter.for_type(list)
     def try_list_display(e):
-        if isinstance(e, collections.abc.Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
+        if isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
             return visualize(e).data
         else:
             return str(e) if old_list_formatter is None else old_list_formatter(e)
