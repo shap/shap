@@ -397,6 +397,10 @@ class AdditiveForceArrayVisualizer extends React.Component {
       "sample order by output value",
       "original sample ordering"
     ].concat(this.singleValueFeatures.map(i => this.props.featureNames[i]));
+    if (this.props.xticks != null)  {
+      options.unshift("sample order by key");
+    }
+    
     let xLabelOptions = this.xlabel.selectAll("option").data(options);
     xLabelOptions
       .enter()
@@ -448,7 +452,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
 
     // Set scaleTime if time ticks provided for original ordering
-    if ((xsort === "original sample ordering") && (this.props.xticks != null))  {
+    let isTimeScale = ((xsort === "sample order by key") && (this.props.xticks != null));
+    if (isTimeScale)  {
 	    this.xscale = scaleTime();
     } else {
 	    this.xscale = scaleLinear();
@@ -464,11 +469,11 @@ class AdditiveForceArrayVisualizer extends React.Component {
       each(explanations, (e, i) => (e.xmap = i));
     } else if (xsort === "original sample ordering") {
       explanations = sortBy(this.props.explanations, x => x.origInd);
-      if (this.props.xticks != null)  {
-        each(explanations, (e, i) => (e.xmap = this.parseTime(this.props.xticks[i])));
-      } else {
-        each(explanations, (e, i) => (e.xmap = i));
-      }
+      each(explanations, (e, i) => (e.xmap = i));
+    } else if (xsort === "sample order by key") {
+      explanations = this.props.explanations;
+      each(explanations, (e, i) => (e.xmap = this.parseTime(this.props.xticks[i])));
+      explanations = sortBy(explanations, e => e.xmap);
     } else {
       let ind = findKey(this.props.featureNames, x => x === xsort);
       each(this.props.explanations, (e, i) => (e.xmap = e.features[ind].value));
