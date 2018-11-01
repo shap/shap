@@ -20,7 +20,7 @@ from ..common import convert_to_link, Instance, Model, Data, DenseData, Link
 from ..plots.force_matplotlib import draw_additive_plot
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
-               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), xticks=None, ts_fmt=None):
+               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ts_fmt=None):
     """ Visualize the given SHAP values with an additive force layout. """
 
     # auto unwrap the base_value
@@ -124,7 +124,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             )
             exps.append(e)
         
-        return visualize(exps, plot_cmap=plot_cmap, xticks=xticks, ts_fmt=ts_fmt)
+        return visualize(exps, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ts_fmt=ts_fmt)
             
 
 class Explanation:
@@ -193,7 +193,7 @@ def verify_valid_cmap(cmap):
 
     return cmap
 
-def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, xticks=None, ts_fmt=None):
+def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, ordering_keys=None, ts_fmt=None):
     plot_cmap = verify_valid_cmap(plot_cmap)
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
@@ -209,7 +209,7 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, 
         if matplotlib:
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
-            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, xticks=xticks, ts_fmt=ts_fmt).html()
+            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ts_fmt=ts_fmt).html()
     else:
         assert False, "visualize() can only display Explanation objects (or arrays of them)!"
 
@@ -299,7 +299,7 @@ class AdditiveForceVisualizer:
         
 
 class AdditiveForceArrayVisualizer:
-    def __init__(self, arr, plot_cmap="RdBu", xticks=None, ts_fmt=None):
+    def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ts_fmt=None):
         assert isinstance(arr[0], AdditiveExplanation), \
             "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
 
@@ -325,7 +325,7 @@ class AdditiveForceArrayVisualizer:
             "featureNames": arr[0].data.group_names,
             "explanations": [],
             "plot_cmap": plot_cmap,
-            "xticks": list(xticks) if hasattr(xticks, '__iter__') else None,
+            "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, '__iter__') else None,
             "ts_fmt": ts_fmt,
         }
         for (ind,e) in enumerate(arr):
