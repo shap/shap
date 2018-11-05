@@ -111,7 +111,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
     // create our axes
     let defaultFormat = format(",.4");
-    if ( this.props.ordering_keys != null ) {
+    if ((this.props.ordering_keys != null) && (this.props.ts_fmt != null)) {
       this.parseTime = timeParse(this.props.ts_fmt);
       this.formatTime = timeFormat(this.props.ts_fmt);
 
@@ -126,6 +126,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
       this.xtickFormat = condFormat;
 
     } else {
+      this.parseTime = null;
+      this.formatTime = null;
       this.xtickFormat = defaultFormat;
     }
     this.xscale = scaleLinear();
@@ -452,7 +454,8 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
 
     // Set scaleTime if time ticks provided for original ordering
-    let isTimeScale = ((xsort === "sample order by key") && (this.props.ordering_keys != null));
+    let isTimeScale = ((xsort === "sample order by key") && 
+		       (this.props.ts_fmt != null));
     if (isTimeScale)  {
 	    this.xscale = scaleTime();
     } else {
@@ -472,7 +475,11 @@ class AdditiveForceArrayVisualizer extends React.Component {
       each(explanations, (e, i) => (e.xmap = i));
     } else if (xsort === "sample order by key") {
       explanations = this.props.explanations;
-      each(explanations, (e, i) => (e.xmap = this.parseTime(this.props.ordering_keys[i])));
+      if (isTimeScale) {
+        each(explanations, (e, i) => (e.xmap = this.parseTime(this.props.ordering_keys[i])));
+      } else {
+        each(explanations, (e, i) => (e.xmap = this.props.ordering_keys[i]));
+      }
       explanations = sortBy(explanations, e => e.xmap);
     } else {
       let ind = findKey(this.props.featureNames, x => x === xsort);
@@ -939,7 +946,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 AdditiveForceArrayVisualizer.defaultProps = {
   plot_cmap: "RdBu",
   ordering_keys: null,
-  ts_fmt: "%Y-%m-%d"
+  ts_fmt: null
 };
 
 export default AdditiveForceArrayVisualizer;
