@@ -111,9 +111,9 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
     // create our axes
     let defaultFormat = format(",.4");
-    if ((this.props.ordering_keys != null) && (this.props.ts_fmt != null)) {
-      this.parseTime = timeParse(this.props.ts_fmt);
-      this.formatTime = timeFormat(this.props.ts_fmt);
+    if ((this.props.ordering_keys != null) && (this.props.ordering_keys_time_format != null)) {
+      this.parseTime = timeParse(this.props.ordering_keys_time_format);
+      this.formatTime = timeFormat(this.props.ordering_keys_time_format);
 
       function condFormat(x) {
         if (typeof(x) == "object") {
@@ -455,7 +455,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
     // Set scaleTime if time ticks provided for original ordering
     let isTimeScale = ((xsort === "sample order by key") && 
-		       (this.props.ts_fmt != null));
+		       (this.props.ordering_keys_time_format != null));
     if (isTimeScale)  {
 	    this.xscale = scaleTime();
     } else {
@@ -946,7 +946,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
 AdditiveForceArrayVisualizer.defaultProps = {
   plot_cmap: "RdBu",
   ordering_keys: null,
-  ts_fmt: null
+  ordering_keys_time_format: null
 };
 
 export default AdditiveForceArrayVisualizer;
