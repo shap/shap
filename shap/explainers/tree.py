@@ -1,7 +1,11 @@
 import numpy as np
 import multiprocessing
 import sys
+import json
+import os
 from .explainer import Explainer
+
+null_path = "/dev/null" if os.path.exists("/dev/null") else "nul"
 
 have_cext = False
 try:
@@ -39,112 +43,171 @@ except:
 
 
 class TreeExplainer(Explainer):
-    """Uses the Tree SHAP method to explain the output of ensemble tree models.
+    """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
-    Tree SHAP is a fast and exact (assuming the trees capture the input feature dependencies) method
-    to estimate SHAP values for tree models and ensembles of trees. It depends on fast C++
-    implementations either inside the externel model package or in the local compiled C extention.
+    Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles of trees,
+    under several different possible assumptions about feature dependence. It depends on fast C++
+    implementations either inside an externel model package or in the local compiled C extention.
+
+    Parameters
+    ----------
+    model : model object
+        The tree based machine learning model that we want to explain. XGBoost, LightGBM, CatBoost,
+        and most tree-based scikit-learn models are supported.
+
+    data : numpy.array or pandas.DataFrame
+        The background dataset to use for integrating out features. This argument is optional when
+        feature_dependence="tree_path_dependent", since in that case we can use the number of training
+        samples that went down each tree path as our background dataset (this is recorded in the model object).
+
+    feature_dependence : "independent", "tree_path_dependent", or "global_path_dependent"
+        Since SHAP values rely on conditional expectations we need to decide how to handle correlated
+        (or otherwise dependent) input features. We have two options: 1) We can be "true to the data" and
+        account for correlated features by only evaluating the model on samples that match the background
+        dataset. This ensures we don't ever evaluate the model's behavior on unrealistic data. The
+        limitation of this approach is that we might not be able to fully distiguish which of two tightly
+        correlated features the model depends on (so credit we would get shared between them). 2) We can
+        be "true to the model" by breaking the dependence between input features so we can always tell exactly
+        which input feature a model depends on even if they are tightly correlated. The downside of this apporach
+        is that we end up observing the behavior of the model on unrealistic inputs that won't exist in the training
+        or test data. To do (1) use "global_path_dependent", to do (2) use "independent", for a compromise that
+        only ensures account for feature correlation within each tree (and not between trees) use
+        "tree_path_dependent". Note that none of these options are a perfect computation of
+        conditional expectations since that would require knowing the full (typically unknown) data generating
+        distribution.
+    
+    model_output : "margin", "probability", or "log_loss"
+        What output of the model should be explained. If "margin" then we explain the raw output of the
+        trees, which varies by model (for binary classification in XGBoost this is the log odds ratio).
+        If "probability" then we explain the output of the model transformed into probability space
+        (note that this means the SHAP values now sum to the probability output of the model). If "log_loss"
+        then we explain the log base e of the model loss function, so that the SHAP values sum up to the
+        log loss of the model for each sample. This is helpful for measuring model performance by each feature.
     """
 
-    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependence", **kwargs):
-        """ 
-        Parameters
-        ----------
-        model : Several sklearn, xgboost, lightbgm, and catboost models are supported.
-        feature_dependence : Can be "tree_path_dependence" or "independent".
-        model_output : Can be "margin", "mse", "logistic", or "logloss".
-        """        
-        self.model_type = "internal"
-        self.less_than_or_equal = False # are threshold comparisons < or <= for this model
-        self.base_offset = 0.0
-        self.expected_value = None
-        self.trees = None
-        self.model = None
+    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependent"):
+        self.model = TreeEnsemble(model)
+        if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
+            self.data = data.values
+        else:
+            self.data = data
+        self.data_missing = None if data is None else np.isnan(data)
         self.model_output = model_output
         self.feature_dependence = feature_dependence
-        
-        # see if the passed model is alerady a list of our Tree objects (in which case no init setup is needed)
-        if isinstance(model, list) and isinstance(model[0], Tree):
-            self.trees = model
-            return
+        self.expected_value = None
 
-        # parse all the different possible supported model types
-        if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
-            self.trees = [Tree(e.tree_) for e in model.estimators_]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesRegressor'>"):
-            self.trees = [Tree(e.tree_) for e in model.estimators_]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
-            self.trees = [Tree(model.tree_)]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
-            self.trees = [Tree(model.tree_)]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
-            self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
-            self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
+        self.feature_dependence_codes = {
+            "independent": 0,
+            "tree_path_dependent": 1,
+            "global_path_dependent": 2
+        }
+        assert feature_dependence in self.feature_dependence_codes, "Invalid feature_dependence option!"
 
-            # currently we only support the mean estimator
-            if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
-                self.base_offset = model.init_.mean
-            else:
-                assert False, "Unsupported init model type: " + str(type(model.init_))
+        self.model_output_codes = {
+            "margin": 0,
+            "probability": 1,
+            "log_loss": 2
+        }
+        assert model_output in self.model_output_codes, "Invalid model_output option!"
 
-            scale = len(model.estimators_) * model.learning_rate
-            self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
+        # check for unsupported combinations of feature_dependence and model_outputs
+        if feature_dependence == "tree_path_dependent":
+            assert model_output == "margin", "Only margin model_output is supported for feature_dependence=\"tree_path_dependent\""
+        else:   
+            assert data is not None, "A background dataset must be provided unless you are using feature_dependence=\"tree_path_dependent\"!"
+        # # see if the passed model is alerady a list of our Tree objects (in which case no init setup is needed)
+        # if isinstance(model, list) and isinstance(model[0], Tree):
+        #     self.trees = model
+        #     return
+
+        # # parse all the different possible supported model types
+        # if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+        #     self.trees = [Tree(e.tree_) for e in model.estimators_]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesRegressor'>"):
+        #     self.trees = [Tree(e.tree_) for e in model.estimators_]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
+        #     self.trees = [Tree(model.tree_)]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
+        #     self.trees = [Tree(model.tree_)]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
+        #     self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
+        #     self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
+
+        #     # currently we only support the mean estimator
+        #     if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
+        #         self.base_offset = model.init_.mean
+        #     else:
+        #         assert False, "Unsupported init model type: " + str(type(model.init_))
+
+        #     scale = len(model.estimators_) * model.learning_rate
+        #     self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
             
-            # currently we only support the logs odds estimator
-            if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
-                self.base_offset = model.init_.prior
-            else:
-                assert False, "Unsupported init model type: " + str(type(model.init_))
+        #     # currently we only support the logs odds estimator
+        #     if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
+        #         self.base_offset = model.init_.prior
+        #     else:
+        #         assert False, "Unsupported init model type: " + str(type(model.init_))
 
-            scale = len(model.estimators_) * model.learning_rate
-            self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
-            self.less_than_or_equal = True
-        elif str(type(model)).endswith("xgboost.core.Booster'>"):
-            if self.feature_dependence == "tree_path_dependence":
-                self.model_type = "xgboost"
-                self.trees = model
-                assert model_output == "margin", "Currently feature_dependence only explains margins"
-            elif self.feature_dependence == "independent":
-                self.model_type = "trees"
-                self.model = model
-                self.trees = self.gen_trees(model)
-                assert not data is None, "Need to provide a reference set"
-                self.data = data
-                xgb_ref = xgboost.DMatrix(self.data)
-                self.ref_margin_pred = self.model.predict(xgb_ref,output_margin=True)
-        elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
-            self.model_type = "xgboost"
-            self.trees = model.get_booster()
-        elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
-            self.model_type = "xgboost"
-            self.trees = model.get_booster()
-        elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
-            self.model_type = "lightgbm"
-            self.model = model
-        elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
-            self.model_type = "lightgbm"
-            self.model = model.booster_
-        elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
-            self.model_type = "lightgbm"
-            self.model = model.booster_
-        elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
-            self.model_type = "catboost"
-            self.trees = model
-        elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
-            self.model_type = "catboost"
-            self.trees = model
-        else:
-            raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
+        #     scale = len(model.estimators_) * model.learning_rate
+        #     self.trees = [Tree(e.tree_, scaling=scale) for e in model.estimators_[:,0]]
+        #     self.less_than_or_equal = True
+        # elif str(type(model)).endswith("xgboost.core.Booster'>"):
+        #     if self.feature_dependence == "tree_path_dependence":
+        #         self.model_type = "xgboost"
+        #         self.trees = model
+        #         assert model_output == "margin", "Currently feature_dependence only explains margins"
+        #     elif self.feature_dependence == "independent":
+        #         self.model_type = "trees"
+        #         self.model = model
+        #         json_trees = self.model.get_dump(with_stats=True, dump_format="json")
+        #         self.trees = [Tree(json.loads(t), scaling=len(json_trees)) for t in json_trees]
+        #         assert not data is None, "A background set must be provided!"
+        #         xgb_ref = xgboost.DMatrix(self.data)
+        #         self.ref_margin_pred = self.model.predict(xgb_ref, output_margin=True)
+        # elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
+        #     self.model_type = "xgboost"
+        #     self.trees = model.get_booster()
+        # elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
+        #     if self.feature_dependence == "tree_path_dependence":
+        #         self.model_type = "xgboost"
+        #         self.trees = model.get_booster()
+        #         assert model_output == "margin", "Currently feature_dependence='tree_path_dependence' only explains margins"
+        #     elif self.feature_dependence == "independent":
+        #         #assert LooseVersion(xgboost.__version__) >= LooseVersion('0.8'), "feature_dependence=\"independent\" only works with xgboost versions later than 0.8!"
+        #         self.model_type = "trees"
+        #         self.model = model.get_booster()
+        #         json_trees = self.model.get_dump(with_stats=True, dump_format="json")
+        #         self.trees = [Tree(json.loads(t), scaling=len(json_trees)) for t in json_trees]
+        #         assert not data is None, "A background set must be provided!"
+        #         xgb_ref = xgboost.DMatrix(self.data)
+        #         self.ref_margin_pred = self.model.predict(xgb_ref, output_margin=True)
+        # elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
+        #     self.model_type = "lightgbm"
+        #     self.model = model
+        # elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
+        #     self.model_type = "lightgbm"
+        #     self.model = model.booster_
+        # elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
+        #     self.model_type = "lightgbm"
+        #     self.model = model.booster_
+        # elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
+        #     self.model_type = "catboost"
+        #     self.trees = model
+        # elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
+        #     self.model_type = "catboost"
+        #     self.trees = model
+        # else:
+        #     raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
     def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
@@ -153,6 +216,9 @@ class TreeExplainer(Explainer):
         ----------
         X : numpy.array, pandas.DataFrame or catboost.Pool (for catboost)
             A matrix of samples (# samples x # features) on which to explain the model's output.
+
+        y : numpy.array
+            An array of label values for each sample. Used when explaining loss functions.
 
         tree_limit : int
             Limit the number of trees used by the model. By default -1 means no limit.
@@ -171,25 +237,27 @@ class TreeExplainer(Explainer):
         """
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
-        if self.feature_dependence == "tree_path_dependence":
+        print(self.model.model_type)
+        print(self.feature_dependence)
+        if self.feature_dependence == "tree_path_dependentaaa" and self.model.model_type != "internal":
             phi = None
-            if self.model_type == "xgboost":
+            if self.model.model_type == "xgboost":
                 if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                     X = xgboost.DMatrix(X)
                 if tree_limit == -1:
                     tree_limit = 0
-                phi = self.trees.predict(X, ntree_limit=tree_limit, pred_contribs=True, approx_contribs=approximate)
-            elif self.model_type == "lightgbm":
+                phi = self.model.original_model.predict(X, ntree_limit=tree_limit, pred_contribs=True, approx_contribs=approximate)
+            elif self.model.model_type == "lightgbm":
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
-                phi = self.model.predict(X, num_iteration=tree_limit, pred_contrib=True)
+                phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 if phi.shape[1] != X.shape[1] + 1:
                     phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
-            elif self.model_type == "catboost": # thanks to the CatBoost team for implementing this...
+            elif self.model.model_type == "catboost": # thanks to the CatBoost team for implementing this...
                 assert not approximate, "approximate=True is not supported for CatBoost models!"
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 if type(X) != catboost.Pool:
                     X = catboost.Pool(X)
-                phi = self.trees.get_feature_importance(data=X, fstr_type='ShapValues')
+                phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
 
             # note we pull off the last column and keep it as our expected_value
             if phi is not None:
@@ -200,64 +268,99 @@ class TreeExplainer(Explainer):
                     self.expected_value = phi[0, -1]
                     return phi[:, :-1]
 
-            # convert dataframes
-            if str(type(X)).endswith("pandas.core.series.Series'>"):
-                X = X.values
-            elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
-                X = X.values
+        # convert dataframes
+        if str(type(X)).endswith("pandas.core.series.Series'>"):
+            X = X.values
+        elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+            X = X.values
+        flat_output = False
+        if len(X.shape) == 1:
+            flat_output = True
+            X = X.reshape(1, X.shape[0])
+        X_missing = np.isnan(X, dtype=np.bool)
+        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
-            assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-            assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
+        if tree_limit < 0 or tree_limit > len(self.model.values.shape[0]):
+            tree_limit = self.model.values.shape[0]
 
-            self.approximate = approximate
+        phi = np.zeros((X.shape[0], X.shape[1]+1, self.model.n_outputs))
+        _cext.dense_tree_shap(
+            self.model.children_left, self.model.children_right, self.model.children_default,
+            self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
+            self.model.less_than_or_equal, self.model.max_depth,
+            X, X_missing, y, self.data, self.data_missing, tree_limit, self.model.base_offset,
+            phi, self.feature_dependence_codes[self.feature_dependence],
+            self.model_output_codes[self.model_output]
+        )
 
-            if tree_limit<0 or tree_limit>len(self.trees):
-                self.tree_limit = len(self.trees)
+        # note we pull off the last column and keep it as our expected_value
+        if self.model.n_outputs == 1:
+            self.expected_value = phi[0, -1, 0]
+            if flat_output:
+                return phi[0, :-1, 0]
             else:
-                self.tree_limit = tree_limit
+                return phi[:, :-1, 0]
+        else:
+            self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+            if flat_output:
+                return [phi[0, :-1, i] for i in range(self.model.n_outputs)]
+            else:
+                return [phi[:, :-1, i] for i in range(self.model.n_outputs)]
 
-            self.n_outputs = self.trees[0].values.shape[1]
-            # single instance
-            if len(X.shape) == 1:
-                self._current_X = X.reshape(1,X.shape[0])
-                self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
-                phi = self._tree_shap_ind(0)
+        # save tmp variables to the object instead of trying to pass them in the
+        # multiprocessing pool
+        # self._current_tree_limit = tree_limit
+        # self._current_approximate = approximate
 
-                # note we pull off the last column and keep it as our expected_value
-                if self.n_outputs == 1:
-                    self.expected_value = phi[-1, 0]
-                    return phi[:-1, 0]
-                else:
-                    self.expected_value = [phi[-1, i] for i in range(phi.shape[1])]
-                    return [phi[:-1, i] for i in range(self.n_outputs)]
+        # if self.feature_dependence == "tree_path_dependence":
 
-            elif len(X.shape) == 2:
-                x_missing = np.zeros(X.shape[1], dtype=np.bool)
-                self._current_X = X
-                self._current_x_missing = x_missing
+        #     self.
 
-                # Only python 3 can serialize a method to send to another process
-                if sys.version_info[0] >= 3:
-                    pool = multiprocessing.Pool()
-                    phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
-                    pool.close()
-                    pool.join()
-                else:
-                    phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
+        #     # single instance
+        #     if len(X.shape) == 1:
+        #         self._current_X = X.reshape(1, X.shape[0])
+        #         self._current_x_missing = np.zeros(X.shape[0], dtype=np.bool)
+        #         phi = self._tree_shap_ind(0)
 
-                # note we pull off the last column and keep it as our expected_value
-                if self.n_outputs == 1:
-                    self.expected_value = phi[0, -1, 0]
-                    return phi[:, :-1, 0]
-                else:
-                    self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
-                    return [phi[:, :-1, i] for i in range(self.n_outputs)]
-        # Independence between features
-        elif self.feature_dependence == "independent":
-            phi_lst = []
-            for x_ind in range(0,X.shape[0]):
-                phi_lst.append(self.independent_treeshap(X[x_ind,:],y=y).mean(0))
-            return(np.array(phi_lst))
+        #         # note we pull off the last column and keep it as our expected_value
+        #         if self.n_outputs == 1:
+        #             self.expected_value = phi[-1, 0]
+        #             return phi[:-1, 0]
+        #         else:
+        #             self.expected_value = [phi[-1, i] for i in range(phi.shape[1])]
+        #             return [phi[:-1, i] for i in range(self.n_outputs)]
+
+        #     elif len(X.shape) == 2:
+        #         self._current_X = X
+        #         self._current_x_missing = np.zeros(X.shape[1], dtype=np.bool)
+
+        #         # Only python 3 can serialize a method to send to another process
+        #         if sys.version_info[0] >= 3:
+        #             pool = multiprocessing.Pool()
+        #             phi = np.stack(pool.map(self._tree_shap_ind, range(X.shape[0])), 0)
+        #             pool.close()
+        #             pool.join()
+        #         else:
+        #             phi = np.stack(map(self._tree_shap_ind, range(X.shape[0])), 0)
+
+        #         # note we pull off the last column and keep it as our expected_value
+        #         if self.n_outputs == 1:
+        #             self.expected_value = phi[0, -1, 0]
+        #             return phi[:, :-1, 0]
+        #         else:
+        #             self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+        #             return [phi[:, :-1, i] for i in range(self.n_outputs)]
+        
+        # # Independence between features
+        # elif self.feature_dependence == "independent":
+        #     phi_lst = []
+        #     for x_ind in range(0,X.shape[0]):
+        #         phi_lst.append(self.independent_treeshap(X[x_ind,:],y=y).mean(0))
+        #     return np.array(phi_lst)
+        
+        # else:
+        #     raise Exception("Unknown feature_dependence type:" + str(self.feature_dependence))
 
     def shap_interaction_values(self, X, tree_limit=-1, **kwargs):
 
@@ -337,8 +440,8 @@ class TreeExplainer(Explainer):
                     return [phi[:, :-1, :-1, i] for i in range(self.n_outputs)]
 
     def _tree_shap_ind(self, i):
-        phi = np.zeros((self._current_X.shape[1] + 1, self.n_outputs))
-        phi[-1, :] = self.base_offset * self.tree_limit
+        phi = np.zeros((self._current_X.shape[1] + 1, self.model.n_outputs))
+        phi[-1, :] = self.model.base_offset * self.tree_limit
         if self.approximate: # only used to mimic Saabas for comparisons right now
             for t in range(self.tree_limit):
                 self.approximate_tree_shap(self.trees[t], self._current_X[i,:], self._current_x_missing, phi)
@@ -396,90 +499,90 @@ class TreeExplainer(Explainer):
 
         recurse(0)
 
-    def gen_trees(self, model):
-        """ Create trees given an XGB model
+    # def gen_trees(self, model):
+    #     """ Create trees given an XGB model
 
-        Parameters
-        ----------
-        model : An xgboost model.
+    #     Parameters
+    #     ----------
+    #     model : An xgboost model.
 
-        Returns
-        -------
-        Returns a list of trees for future explanation.
-        """
-        assert str(type(model)).endswith("xgboost.core.Booster'>")
-        model_type = "xgboost"
-        xgb_trees = model.get_dump(with_stats = True)
-        scale = len(xgb_trees)
-        trees = []
-        for xgb_tree in xgb_trees:
-            nodes = [t.lstrip() for t in xgb_tree[:-1].split("\n")]
-            nodes_dict = {}
-            for n in nodes: nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
-            trees.append(self.create_tree(nodes_dict,scale))
-        return(trees)
+    #     Returns
+    #     -------
+    #     Returns a list of trees for future explanation.
+    #     """
+    #     assert str(type(model)).endswith("xgboost.core.Booster'>"), str(type(model))
+    #     model_type = "xgboost"
+    #     xgb_trees = model.get_dump(with_stats = True)
+    #     scale = len(xgb_trees)
+    #     trees = []
+    #     for xgb_tree in xgb_trees:
+    #         nodes = [t.lstrip() for t in xgb_tree[:-1].split("\n")]
+    #         nodes_dict = {}
+    #         for n in nodes: nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
+    #         trees.append(self.create_tree(nodes_dict,scale))
+    #     return(trees)
 
-    def create_tree(self, nodes_dict, scale):
-        """ Creates a tree given a dictionary representation of a tree.
+    # def create_tree(self, nodes_dict, scale):
+    #     """ Creates a tree given a dictionary representation of a tree.
 
-        Parameters
-        -------
-        nodes_dict : A dictionary that contains a single tree.  For example:
-        {0: '[f1<0] yes=1,no=2,missing=1,gain=4500,cover=2000',
-         1: '[f0<0] yes=3,no=4,missing=3,gain=1000,cover=1000',
-         2: '[f0<0] yes=5,no=6,missing=5,gain=1000,cover=1000',
-         3: 'leaf=0.5,cover=500',
-         4: 'leaf=2.5,cover=500',
-         5: 'leaf=-2.5,cover=500',
-         6: 'leaf=-0.5,cover=500'}
+    #     Parameters
+    #     -------
+    #     nodes_dict : A dictionary that contains a single tree.  For example:
+    #     {0: '[f1<0] yes=1,no=2,missing=1,gain=4500,cover=2000',
+    #      1: '[f0<0] yes=3,no=4,missing=3,gain=1000,cover=1000',
+    #      2: '[f0<0] yes=5,no=6,missing=5,gain=1000,cover=1000',
+    #      3: 'leaf=0.5,cover=500',
+    #      4: 'leaf=2.5,cover=500',
+    #      5: 'leaf=-2.5,cover=500',
+    #      6: 'leaf=-0.5,cover=500'}
 
-        Returns
-        -------
-        A Tree object.
-        """
-        m = max(nodes_dict.keys())+1
-        children_left = -1*np.ones(m,dtype="int32")
-        children_right = -1*np.ones(m,dtype="int32")
-        children_default = -1*np.ones(m,dtype="int32")
-        features = -2*np.ones(m,dtype="int32")
-        thresholds = -1*np.ones(m,dtype="float64")
-        values = 1*np.ones(m,dtype="float64")
-        node_sample_weights = np.zeros(m,dtype="float64")
-        values_lst = list(nodes_dict.values())
-        keys_lst = list(nodes_dict.keys())
-        for i in range(0,len(keys_lst)):
-            value = values_lst[i]
-            key = keys_lst[i]
-            if ("leaf" in value):
-                # Extract values
-                val = float(value.split("leaf=")[1].split(",")[0])
-                node_sample_weight = float(value.split("cover=")[1])
-                # Append to lists
-                values[key] = val
-                node_sample_weights[key] = node_sample_weight
-            else:
-                c_left = int(value.split("yes=")[1].split(",")[0])
-                c_right = int(value.split("no=")[1].split(",")[0])
-                c_default = int(value.split("missing=")[1].split(",")[0])
-                feat_thres = value.split(" ")[0]
-                if ("<" in feat_thres):
-                    feature = int(feat_thres.split("<")[0][2:])
-                    threshold = float(feat_thres.split("<")[1][:-1])
-                if ("=" in feat_thres):
-                    feature = int(feat_thres.split("=")[0][2:])
-                    threshold = float(feat_thres.split("=")[1][:-1])
-                node_sample_weight = float(value.split("cover=")[1].split(",")[0])
-                children_left[key] = c_left
-                children_right[key] = c_right
-                children_default[key] = c_default
-                features[key] = feature
-                thresholds[key] = threshold
-                node_sample_weights[key] = node_sample_weight
-        tree_dict = {"children_left":children_left, "children_right":children_right,
-                     "children_default":children_default, "feature":features,
-                     "threshold":thresholds, "value":values[:,np.newaxis],
-                     "node_sample_weight":node_sample_weights}
-        return(Tree(tree_dict))
+    #     Returns
+    #     -------
+    #     A Tree object.
+    #     """
+    #     m = max(nodes_dict.keys())+1
+    #     children_left = -1*np.ones(m,dtype="int32")
+    #     children_right = -1*np.ones(m,dtype="int32")
+    #     children_default = -1*np.ones(m,dtype="int32")
+    #     features = -2*np.ones(m,dtype="int32")
+    #     thresholds = -1*np.ones(m,dtype="float64")
+    #     values = 1*np.ones(m,dtype="float64")
+    #     node_sample_weight = np.zeros(m,dtype="float64")
+    #     values_lst = list(nodes_dict.values())
+    #     keys_lst = list(nodes_dict.keys())
+    #     for i in range(0,len(keys_lst)):
+    #         value = values_lst[i]
+    #         key = keys_lst[i]
+    #         if ("leaf" in value):
+    #             # Extract values
+    #             val = float(value.split("leaf=")[1].split(",")[0])
+    #             node_sample_weight = float(value.split("cover=")[1])
+    #             # Append to lists
+    #             values[key] = val
+    #             node_sample_weight[key] = node_sample_weight
+    #         else:
+    #             c_left = int(value.split("yes=")[1].split(",")[0])
+    #             c_right = int(value.split("no=")[1].split(",")[0])
+    #             c_default = int(value.split("missing=")[1].split(",")[0])
+    #             feat_thres = value.split(" ")[0]
+    #             if ("<" in feat_thres):
+    #                 feature = int(feat_thres.split("<")[0][2:])
+    #                 threshold = float(feat_thres.split("<")[1][:-1])
+    #             if ("=" in feat_thres):
+    #                 feature = int(feat_thres.split("=")[0][2:])
+    #                 threshold = float(feat_thres.split("=")[1][:-1])
+    #             node_sample_weight = float(value.split("cover=")[1].split(",")[0])
+    #             children_left[key] = c_left
+    #             children_right[key] = c_right
+    #             children_default[key] = c_default
+    #             features[key] = feature
+    #             thresholds[key] = threshold
+    #             node_sample_weight[key] = node_sample_weight
+    #     tree_dict = {"children_left":children_left, "children_right":children_right,
+    #                  "children_default":children_default, "feature":features,
+    #                  "threshold":thresholds, "value":values[:,np.newaxis],
+    #                  "node_sample_weight":node_sample_weight}
+    #     return(Tree(tree_dict))
 
     def independent_treeshap(self,x,y=None):
         """ Recursively calculate Shapley values for a single reference.
@@ -544,7 +647,147 @@ def mse(yt,yp):
     return(np.square(yt-yp))
 
 
+class TreeEnsemble:
+    """ An ensemble of decision trees.
+
+    This object provides a common interface to many different types of models.
+    """
+
+    def __init__(self, model):
+        self.model_type = "internel"
+        self.trees = None
+        self.less_than_or_equal = True
+        self.base_offset = 0
+        self.objective = "squared_error"
+        self.transform = "identity"
+
+        if type(model) == list and type(model[0]) == Tree:
+            self.trees = model
+        elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, scaling=scaling) for e in model.estimators_]
+        elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesRegressor'>"):
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, scaling=scaling) for e in model.estimators_]
+        elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
+            self.trees = [Tree(model.tree_)]
+        elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
+            self.trees = [Tree(model.tree_)]
+        elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
+        elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
+
+            # currently we only support the mean estimator
+            if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
+                self.base_offset = model.init_.mean
+            else:
+                assert False, "Unsupported init model type: " + str(type(model.init_))
+
+            self.trees = [Tree(e.tree_, scaling=model.learning_rate) for e in model.estimators_[:,0]]
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
+            
+            # currently we only support the logs odds estimator
+            if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
+                self.base_offset = model.init_.prior
+            else:
+                assert False, "Unsupported init model type: " + str(type(model.init_))
+
+            self.trees = [Tree(e.tree_, scaling=model.learning_rate) for e in model.estimators_[:,0]]
+        elif str(type(model)).endswith("xgboost.core.Booster'>"):
+            self.original_model = model
+            self.model_type = "xgboost"
+            json_trees = self.original_model.get_dump(fmap=null_path, with_stats=True, dump_format="json")
+            self.trees = [Tree(json.loads(t)) for t in json_trees]
+            self.less_than_or_equal = False
+        elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
+            self.model_type = "xgboost"
+            self.original_model = model.get_booster()
+            self.base_offset = model.base_score
+            json_trees = self.original_model.get_dump(fmap=null_path, with_stats=True, dump_format="json")
+            self.trees = [Tree(json.loads(t)) for t in json_trees]
+            self.less_than_or_equal = False
+        elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
+            self.original_model = model.get_booster()
+            self.model_type = "xgboost"
+            self.base_offset = model.base_score
+            json_trees = self.original_model.get_dump(fmap=null_path, with_stats=True, dump_format="json")
+            self.trees = [Tree(json.loads(t)) for t in json_trees]
+            self.less_than_or_equal = False
+        elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
+            self.model_type = "lightgbm"
+            self.original_model = model
+            tree_info = self.original_model.dump_model()["tree_info"]
+            self.trees = [Tree(e) for e in tree_info]
+        elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
+            self.model_type = "lightgbm"
+            self.original_model = model.booster_
+            tree_info = self.original_model.dump_model()["tree_info"]
+            self.trees = [Tree(e) for e in tree_info]
+        elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
+            self.model_type = "lightgbm"
+            self.original_model = model.booster_
+            tree_info = self.original_model.dump_model()["tree_info"]
+            self.trees = [Tree(e) for e in tree_info]
+        elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):
+            self.model_type = "catboost"
+            self.original_model = model
+        elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
+            self.model_type = "catboost"
+            self.original_model = model
+        else:
+            raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
+        
+        # build a dense numpy version of all the tree objects
+        if self.trees is not None:
+            max_nodes = np.max([len(t.values) for t in self.trees])
+            assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, "All trees in the ensemble must have the same output dimension!"
+            ntrees = len(self.trees)
+            self.n_outputs = self.trees[0].values.shape[1]
+
+            # important to be -1 in unused sections!! This way we can tell which entries are valid.
+            self.children_left = -np.ones((ntrees, max_nodes), dtype=np.int32)
+            self.children_right = -np.ones((ntrees, max_nodes), dtype=np.int32)
+            self.children_default = -np.ones((ntrees, max_nodes), dtype=np.int32)
+            self.features = -np.ones((ntrees, max_nodes), dtype=np.int32)
+
+            self.thresholds = np.zeros((ntrees, max_nodes), dtype=np.float64)
+            self.values = np.zeros((ntrees, max_nodes, self.trees[0].values.shape[1]), dtype=np.float64)
+            self.node_sample_weight = np.zeros((ntrees, max_nodes), dtype=np.float64)
+            print(len(self.trees), ntrees, self.children_left.shape)
+            for i in range(ntrees):
+                l = len(self.trees[i].features)
+                self.children_left[i,:l] = self.trees[i].children_left
+                self.children_right[i,:l] = self.trees[i].children_right
+                self.children_default[i,:l] = self.trees[i].children_default
+                self.features[i,:l] = self.trees[i].features
+                self.thresholds[i,:l] = self.trees[i].thresholds
+                self.values[i,:l,:] = self.trees[i].values
+                self.node_sample_weight[i,:l] = self.trees[i].node_sample_weight
+            
+            self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
+            self.num_unique_features = np.array([len(t.unique_features) for t in self.trees], dtype=np.int32)
+            self.unique_features = np.array(self.num_unique_features.sum(), dtype=np.int32)
+            self.max_depth = np.max([t.max_depth for t in self.trees])
+
+    def predict(self, X):
+        """ A consistent interface to make predictions from this model.
+        """
+
+        if self.model_type == "internal":
+            pass # need to write a C++ predict function that we can call here
+        elif self.model_type == "xgboost":
+            self.original_model.predict(X, output_margin=True)
+
+
 class Tree:
+    """ A single decision tree.
+
+    The primary point of this object is to parse many different tree types into a common format.
+    """
     def __init__(self, tree, normalize=False, scaling=1.0):
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             self.children_left = tree.children_left.astype(np.int32)
@@ -574,7 +817,7 @@ class Tree:
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["feature"].astype(np.int32)
             self.thresholds = tree["threshold"]
-            self.values = tree["value"]
+            self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
             self.unique_features = np.unique(self.features)
             self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
@@ -641,3 +884,111 @@ class Tree:
                 self.children_left, self.children_right, self.node_sample_weight,
                 self.values
             )
+        
+        elif type(tree) == dict and 'nodeid' in tree:
+            """ Directly create tree given the JSON dump (with stats) of a XGBoost model.
+            """
+
+            def max_id(node):
+                if "children" in node:
+                    return max(node["nodeid"], *[max_id(n) for n in node["children"]])
+                else:
+                    return node["nodeid"]
+            
+            m = max_id(tree) + 1
+            self.children_left = -np.ones(m, dtype=np.int32)
+            self.children_right = -np.ones(m, dtype=np.int32)
+            self.children_default = -np.ones(m, dtype=np.int32)
+            self.features = np.empty(m, dtype=np.int32)
+            self.thresholds = np.empty(m, dtype=np.float64)
+            self.values = np.zeros((m, 1), dtype=np.float64)
+            self.node_sample_weight = np.empty(m, dtype=np.float64)
+
+            def extract_data(node, tree):
+                i = node["nodeid"]
+                tree.node_sample_weight[i] = node["cover"]
+
+                if "children" in node:
+                    tree.children_left[i] = node["yes"]
+                    tree.children_right[i] = node["no"]
+                    tree.children_default[i] = node["missing"]
+                    tree.features[i] = node["split"]
+                    tree.thresholds[i] = node["split_condition"]
+
+                    for n in node["children"]:
+                        extract_data(n, tree)
+                elif "leaf" in node:
+                    tree.values[i] = node["leaf"] * scaling
+
+            extract_data(tree, self)
+
+            self.unique_features = np.unique(self.features)
+            self.unique_features = np.delete(self.unique_features, np.where(self.unique_features==-1))
+            # we compute the expectations to make sure they follow the SHAP logic
+            assert have_cext, "C extension was not built during install!"
+            self.max_depth = _cext.compute_expectations(
+                self.children_left, self.children_right, self.node_sample_weight,
+                self.values
+            )
+    
+        elif type(tree) == str:
+            """ Build a tree from a text dump (with stats) of xgboost.
+            """
+
+            nodes = [t.lstrip() for t in tree[:-1].split("\n")]
+            nodes_dict = {}
+            for n in nodes: nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
+            m = max(nodes_dict.keys())+1
+            children_left = -1*np.ones(m,dtype="int32")
+            children_right = -1*np.ones(m,dtype="int32")
+            children_default = -1*np.ones(m,dtype="int32")
+            features = -2*np.ones(m,dtype="int32")
+            thresholds = -1*np.ones(m,dtype="float64")
+            values = 1*np.ones(m,dtype="float64")
+            node_sample_weight = np.zeros(m,dtype="float64")
+            values_lst = list(nodes_dict.values())
+            keys_lst = list(nodes_dict.keys())
+            for i in range(0,len(keys_lst)):
+                value = values_lst[i]
+                key = keys_lst[i]
+                if ("leaf" in value):
+                    # Extract values
+                    val = float(value.split("leaf=")[1].split(",")[0])
+                    node_sample_weight = float(value.split("cover=")[1])
+                    # Append to lists
+                    values[key] = val
+                    node_sample_weight[key] = node_sample_weight
+                else:
+                    c_left = int(value.split("yes=")[1].split(",")[0])
+                    c_right = int(value.split("no=")[1].split(",")[0])
+                    c_default = int(value.split("missing=")[1].split(",")[0])
+                    feat_thres = value.split(" ")[0]
+                    if ("<" in feat_thres):
+                        feature = int(feat_thres.split("<")[0][2:])
+                        threshold = float(feat_thres.split("<")[1][:-1])
+                    if ("=" in feat_thres):
+                        feature = int(feat_thres.split("=")[0][2:])
+                        threshold = float(feat_thres.split("=")[1][:-1])
+                    node_sample_weight = float(value.split("cover=")[1].split(",")[0])
+                    children_left[key] = c_left
+                    children_right[key] = c_right
+                    children_default[key] = c_default
+                    features[key] = feature
+                    thresholds[key] = threshold
+                    node_sample_weight[key] = node_sample_weight
+            
+            self.children_left = children_left
+            self.children_right = children_right
+            self.children_default = children_default
+            self.features = features
+            self.thresholds = thresholds
+            self.values = values[:,np.newaxis] * scaling
+            self.node_sample_weight = node_sample_weight
+
+            assert have_cext, "C extension was not built during install!" + str(have_cext)
+            self.max_depth = _cext.compute_expectations(
+                self.children_left, self.children_right, self.node_sample_weight,
+                self.values
+            )
+        else:
+            raise Exception("Unknown input to Tree constructor!")
