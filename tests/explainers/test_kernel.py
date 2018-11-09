@@ -54,7 +54,7 @@ def test_kernel_shap_with_dataframe():
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     shap_values = explainer.shap_values(df_X)
 
-def test_kernel_shap_with_a1a_sparse():
+def test_kernel_shap_with_a1a_sparse_zero_background():
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     import shap
@@ -69,6 +69,37 @@ def test_kernel_shap_with_a1a_sparse():
     background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
     explainer = shap.KernelExplainer(linear_model.predict, background)
     explainer.shap_values(x_test)
+
+def test_kernel_shap_with_a1a_sparse_nonzero_background():
+    np.set_printoptions(threshold=np.nan)
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LinearRegression
+    from sklearn.utils.sparsefuncs import csc_median_axis_0
+    import shap
+
+    X, y = shap.datasets.a1a()
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.01, random_state=0)
+    linear_model = LinearRegression()
+    linear_model.fit(x_train, y_train)
+    # Calculate median of background data
+    median_dense = csc_median_axis_0(x_train.tocsc())
+    median = sp.sparse.csr_matrix(median_dense)
+    explainer = shap.KernelExplainer(linear_model.predict, median)
+    shap_values = explainer.shap_values(x_test)
+    # Compare to dense results
+    x_train_dense = x_train.toarray()
+
+    def dense_to_sparse_predict(data):
+        sparse_data = sp.sparse.csr_matrix(data)
+        return linear_model.predict(sparse_data)
+
+    explainer_dense = shap.KernelExplainer(linear_model.predict, median_dense.reshape((1, len(median_dense))))
+    x_test_dense = x_test.toarray()
+    shap_values_dense = explainer_dense.shap_values(x_test_dense)
+    # Validate sparse and dense result is the same
+    # Note: The default tolerance is almost always fine, but in one out of every
+    # 20 runs or so it fails so decreasing it by two orders of magnitude from the default
+    assert(np.allclose(shap_values, shap_values_dense, rtol=1e-02, atol=1e-04))
 
 def test_kernel_shap_with_high_dim_sparse():
     # verifies we can run on very sparse data produced from feature hashing
