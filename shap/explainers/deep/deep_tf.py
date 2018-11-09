@@ -475,9 +475,21 @@ def linearity_1d(input_ind):
     return handler
 
 def linearity_1d_handler(input_ind, explainer, op, *grads):
-    # make sure only the given input varies
+    # make sure only the given input varies (negative means only that input cannot vary, and is measured from the end of the list)
     for i in range(len(op.inputs)):
         if i != input_ind:
+            assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
+    return explainer.orig_grads[op.type](op, *grads)
+
+def linearity_with_excluded(input_inds):
+    def handler(explainer, op, *grads):
+        return linearity_with_excluded_handler(input_inds, explainer, op, *grads)
+    return handler
+
+def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
+    # make sure the given inputs don't vary (negative is measured from the end of the list)
+    for i in range(len(op.inputs)):
+        if i in input_inds or i - len(op.inputs) in input_inds:
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
     return explainer.orig_grads[op.type](op, *grads)
 
@@ -528,7 +540,7 @@ op_handlers["ZerosLike"] = break_dependence
 op_handlers["Reshape"] = linearity_1d(0)
 op_handlers["Pad"] = linearity_1d(0)
 op_handlers["ReverseV2"] = linearity_1d(0)
-op_handlers["ConcatV2"] = linearity_1d(0)
+op_handlers["ConcatV2"] = linearity_with_excluded([-1])
 op_handlers["Conv2D"] = linearity_1d(0)
 op_handlers["Switch"] = linearity_1d(0)
 op_handlers["AvgPool"] = linearity_1d(0)
