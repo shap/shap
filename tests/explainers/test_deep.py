@@ -236,3 +236,69 @@ def test_pytorch_mnist_cnn():
 
     # clean up
     shutil.rmtree(root_dir)
+
+
+def test_pytorch_regression():
+    """Testing regressions (i.e. single outputs)
+    """
+    try:
+        import torch
+        from torch import nn
+        from torch.nn import functional as F
+        from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
+        from sklearn.datasets import load_boston
+    except Exception as e:
+        print("Skipping test_pytorch_regression!")
+        return
+    import shap
+
+    X, y = load_boston(return_X_y=True)
+    num_features = X.shape[1]
+    data = TensorDataset(torch.tensor(X).float(),
+                         torch.tensor(y).float())
+    loader = DataLoader(data, batch_size=128)
+
+    class Net(nn.Module):
+        def __init__(self, num_features):
+            super(Net, self).__init__()
+            self.linear = nn.Linear(num_features, 1)
+
+        def forward(self, X):
+            return self.linear(X)
+    model = Net(num_features)
+    optimizer = torch.optim.Adam(model.parameters())
+
+    def train(model, device, train_loader, optimizer, epoch):
+        model.train()
+        num_examples = 0
+        for batch_idx, (data, target) in enumerate(train_loader):
+            num_examples += target.shape[0]
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.mse_loss(output.squeeze(1), target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 2 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), loss.item()))
+
+    device = torch.device('cpu')
+    train(model, device, loader, optimizer, 1)
+
+    next_x, next_y = next(iter(loader))
+    np.random.seed(0)
+    inds = np.random.choice(next_x.shape[0], 20, replace=False)
+    e = shap.DeepExplainer(model, next_x[inds, :])
+    test_x, test_y = next(iter(loader))
+    shap_values = e.shap_values(test_x[:1])
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        diff = (model(test_x[:1]) - model(next_x[inds, :])).detach().numpy().mean(0)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
+            d / np.abs(diff).sum())
