@@ -31,11 +31,11 @@ class TFDeepExplainer(Explainer):
             are specific to a single output value, so you get an explanation for each element of
             the output tensor (which must be a flat rank one vector).
 
-        data : [numpy.array] or [pandas.DataFrame]
+        data : [numpy.array] or [pandas.DataFrame] or function
             The background dataset to use for integrating out features. DeepExplainer integrates
             over all these samples for each explanation. The data passed here must match the input
-            operations given to the model.
-
+            operations given to the model. If a function is supplied, it must be a function that
+            takes a particular input example and generates the background dataset for that example
         session : None or tensorflow.Session
             The TensorFlow session that has the model we are explaining. If None is passed then
             we do our best to find the right session, first looking for a keras session, then
@@ -100,7 +100,7 @@ class TFDeepExplainer(Explainer):
             self.multi_input = False
             if type(self.model_inputs) != list:
                 self.model_inputs = [self.model_inputs]
-        if type(data) != list:
+        if type(data) != list and (hasattr(data, '__call__')==False):
             data = [data]
         self.data = data
         
@@ -130,7 +130,11 @@ class TFDeepExplainer(Explainer):
             self.learning_phase_ops = [t.op for t in learning_phase_flags]
 
         # save the expected output of the model
-        self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+        # if self.data is a function, set self.expected_value to None
+        if (hasattr(self.data, '__call__')):
+            self.expected_value = None
+        else:
+            self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         # find all the operations in the graph between our inputs and outputs
         tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops) # don't follow learning phase branches
@@ -241,17 +245,23 @@ class TFDeepExplainer(Explainer):
             for k in range(len(X)):
                 phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
+                if (hasattr(self.data, '__call__')):
+                    bg_data = self.data([X[l][j] for l in range(len(X))])
+                    if type(bg_data) != list:
+                        bg_data = [bg_data]
+                else:
+                    bg_data = self.data
                 # tile the inputs to line up with the background data samples
-                tiled_X = [np.tile(X[l][j:j+1], (self.data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
+                tiled_X = [np.tile(X[l][j:j+1], (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
                 # we use the first sample for the current sample and the rest for the references
-                joint_input = [np.concatenate([tiled_X[l], self.data[l]], 0) for l in range(len(X))]
+                joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
                 for l in range(len(X)):
-                    phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (X[l][j] - self.data[l])).mean(0)
+                    phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
         if not self.multi_output:
