@@ -10,7 +10,7 @@ from . import colors
 # TODO: remove color argument / use color argument
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto", color="#1E88E5", axis_color="#333333",
-                    dot_size=16, alpha=1, title=None, show=True):
+                    dot_size=16, noise=0, alpha=1, title=None, show=True):
     """
     Create a SHAP dependence plot, colored by an interaction feature.
 
@@ -33,6 +33,10 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     interaction_index : "auto", None, or int
         The index of the feature used to color the plot.
+        
+    noise : float (0 - 1)
+        Adds random noise to feature values if feature has less than 20 unique values.
+        May increase plot readability when feature is non-continuous.
     """
 
     # convert from DataFrames if we got any
@@ -138,6 +142,15 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if categorical_interaction and clow != chigh:
         bounds = np.linspace(clow, chigh, chigh - clow + 2)
         color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N)
+        
+    # optionally add noise if feature has less than 20 unique values
+    if (noise > 0) and (len(set(xv)) < 20):
+        if noise > 1: noise = 1
+        xvals = list(set(xv))
+        smallest_diff = np.min([xvals[i] - xvals[i-1] for i in range(1, len(xvals))])
+        noise_amount = noise * smallest_diff
+        for i in range(len(xv)):
+            xv[i] += (np.random.ranf(size=1)[0] * noise_amount) - (noise_amount/2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     if interaction_index is not None:
