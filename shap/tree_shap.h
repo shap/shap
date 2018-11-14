@@ -10,6 +10,7 @@
 #include <fstream>
 #include <stdio.h> 
 #include <cmath>
+#include <ctime>
 using namespace std;
 
 typedef double tfloat;
@@ -949,6 +950,25 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 }
 
 
+inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i, unsigned total_count) {
+    const tfloat elapsed_seconds = difftime(time(NULL), start_time);
+    
+    if (elapsed_seconds > 10 && elapsed_seconds - last_print > 0.5) {
+        const tfloat fraction = static_cast<tfloat>(i) / total_count;
+        const double total_seconds = elapsed_seconds / fraction;
+        last_print = elapsed_seconds;
+        
+        PySys_WriteStderr(
+            "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
+            fraction * 100, int(round(fraction*20)), "===================",
+            20-int(round(fraction*20)), "                   ",
+            i, total_count,
+            int(elapsed_seconds/60), int(elapsed_seconds) % 60,
+            int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60
+        );
+    }
+}
+
 /**
  * Runs Tree SHAP with feature independence assumptions on dense data.
  */
@@ -1003,18 +1023,20 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
         }
     }
 
-    
-
     // compute the explanations for each sample
     tfloat *instance_out_contribs;
     tfloat rescale_factor = 1.0;
     tfloat margin_x = 0;
     tfloat margin_r = 0;
+    time_t start_time = time(NULL);
+    tfloat last_print = 0;
     for (unsigned i = 0; i < data.num_X; ++i) {
         const tfloat *x = data.X + i * data.M;
         const bool *x_missing = data.X_missing + i * data.M;
         instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
         const tfloat y_i = data.y == NULL ? 0 : data.y[i];
+
+        print_progress_bar(last_print, start_time, i, data.num_X);
 
         // compute the model's margin output for x
         if (transform != NULL) {
@@ -1030,17 +1052,16 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
             const bool *r_missing = data.R_missing + j * data.M;
             std::fill_n(tmp_out_contribs, (data.M + 1) * trees.num_outputs, 0);
 
-            for (unsigned k = 0; k < trees.tree_limit; ++k) {
-
-                // compute the model's margin output for r
-                if (transform != NULL) {
-                    margin_r = trees.base_offset;
-                    for (unsigned k = 0; k < trees.tree_limit; ++k) {
-                        // transforms are only supported for single output trees right now
-                        margin_r += tree_predict(k, trees, r, r_missing)[0];
-                    }
+            // compute the model's margin output for r
+            if (transform != NULL) {
+                margin_r = trees.base_offset;
+                for (unsigned k = 0; k < trees.tree_limit; ++k) {
+                    // transforms are only supported for single output trees right now
+                    margin_r += tree_predict(k, trees, r, r_missing)[0];
                 }
+            }
 
+            for (unsigned k = 0; k < trees.tree_limit; ++k) {
                 tree_shap_indep(
                     trees.max_depth, data.M, trees.max_nodes, x, x_missing, r, r_missing, 
                     tmp_out_contribs, pos_lst, neg_lst, feat_hist, memoized_weights, 
