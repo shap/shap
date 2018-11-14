@@ -12,6 +12,7 @@ from .plots.summary import summary_plot
 from .plots.dependence import dependence_plot
 from .plots.force import force_plot, initjs
 from .plots.image import image_plot
+from .plots.monitoring import monitoring_plot
 from . import datasets
 from . import benchmark
 from .explainers import other
