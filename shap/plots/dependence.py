@@ -146,7 +146,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # optionally add jitter to feature values
     if x_jitter > 0:
         if x_jitter > 1: x_jitter = 1
-        xvals = list(set(xv))
+        xvals = np.unique(xv)
         smallest_diff = np.min(np.diff(np.sort(xvals)))
         jitter_amount = x_jitter * smallest_diff
         for i in range(len(xv)):
