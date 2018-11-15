@@ -147,7 +147,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if (noise > 0) and (len(set(xv)) < 20):
         if noise > 1: noise = 1
         xvals = list(set(xv))
-        smallest_diff = np.min([xvals[i] - xvals[i-1] for i in range(1, len(xvals))])
+        smallest_diff = np.min(np.diff(np.sort(xvals)))
         noise_amount = noise * smallest_diff
         for i in range(len(xv)):
             xv[i] += (np.random.ranf(size=1)[0] * noise_amount) - (noise_amount/2)
