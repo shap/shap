@@ -144,7 +144,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N)
         
     # optionally add jitter to feature values
-    if (x_jitter > 0) and (len(set(xv)) < 20):
+    if x_jitter > 0:
         if x_jitter > 1: x_jitter = 1
         xvals = list(set(xv))
         smallest_diff = np.min(np.diff(np.sort(xvals)))
