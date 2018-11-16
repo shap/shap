@@ -6,8 +6,6 @@ import os
 from distutils.version import LooseVersion
 from .explainer import Explainer
 
-null_path = "/dev/null" if os.path.exists("/dev/null") else "nul"
-
 have_cext = False
 try:
     from .. import _cext
@@ -875,7 +873,7 @@ class TreeEnsemble:
             self.original_model = model
             self.base_offset = None
             self.model_type = "xgboost"
-            json_trees = self.original_model.get_dump(fmap=null_path, with_stats=True, dump_format="json")
+            json_trees = self.original_model.get_dump(fmap=os.devnull, with_stats=True, dump_format="json")
             self.trees = [Tree(json.loads(t)) for t in json_trees]
             less_than_or_equal = False
             if model.attr("objective") is not None:
@@ -885,7 +883,7 @@ class TreeEnsemble:
             self.model_type = "xgboost"
             self.original_model = model.get_booster()
             self.base_offset = None
-            json_trees = self.original_model.get_dump(fmap=null_path, with_stats=True, dump_format="json")
+            json_trees = self.original_model.get_dump(fmap=os.devnull, with_stats=True, dump_format="json")
             self.trees = [Tree(json.loads(t)) for t in json_trees]
             less_than_or_equal = False
             self.objective = objective_name_map.get(model.objective, None)
@@ -894,7 +892,7 @@ class TreeEnsemble:
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             self.base_offset = None
-            json_trees = self.original_model.get_dump(fmap=null_path, with_stats=True, dump_format="json")
+            json_trees = self.original_model.get_dump(fmap=os.devnull, with_stats=True, dump_format="json")
             self.trees = [Tree(json.loads(t)) for t in json_trees]
             less_than_or_equal = False
             self.objective = objective_name_map.get(model.objective, None)
