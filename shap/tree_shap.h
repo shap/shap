@@ -11,6 +11,7 @@
 #include <stdio.h> 
 #include <cmath>
 #include <ctime>
+#include <alloca.h>
 using namespace std;
 
 typedef double tfloat;
@@ -423,7 +424,8 @@ unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEnsemble 
                                      const unsigned num_background_data_inds, unsigned num_data_inds,
                                      unsigned M, unsigned row = 0, unsigned i = 0, unsigned pos = 0,
                                      tfloat *leaf_value = NULL) {
-    tfloat new_leaf_value[trees.num_outputs];
+    //tfloat new_leaf_value[trees.num_outputs];
+    tfloat *new_leaf_value = (tfloat *) alloca(sizeof(tfloat) * trees.num_outputs); // allocate on the stack
     unsigned row_offset = row * trees.max_nodes;
   
     // we have hit a terminal leaf!!!
@@ -966,6 +968,13 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
             int(elapsed_seconds/60), int(elapsed_seconds) % 60,
             int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60
         );
+
+        // Get handle to python stderr file and flush it (https://mail.python.org/pipermail/python-list/2004-November/294912.html)
+        PyObject *pyStderr = PySys_GetObject("stderr");
+        if (pyStderr) {
+            PyObject *result = PyObject_CallMethod(pyStderr, "flush", NULL);
+            Py_XDECREF(result);
+        }
     }
 }
 
