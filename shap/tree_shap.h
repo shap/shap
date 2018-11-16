@@ -11,7 +11,11 @@
 #include <stdio.h> 
 #include <cmath>
 #include <ctime>
-#include <alloca.h>
+#if defined(_WIN32) || defined(WIN32)
+    #include <malloc.h>
+#else
+    #include <alloca.h>
+#endif
 using namespace std;
 
 typedef double tfloat;
