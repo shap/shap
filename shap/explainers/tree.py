@@ -873,7 +873,7 @@ class TreeEnsemble:
             self.original_model = model
             self.base_offset = None
             self.model_type = "xgboost"
-            json_trees = self.original_model.get_dump(fmap=os.devnull, with_stats=True, dump_format="json")
+            json_trees = get_xgboost_json(self.original_model)
             self.trees = [Tree(json.loads(t)) for t in json_trees]
             less_than_or_equal = False
             if model.attr("objective") is not None:
@@ -883,7 +883,7 @@ class TreeEnsemble:
             self.model_type = "xgboost"
             self.original_model = model.get_booster()
             self.base_offset = None
-            json_trees = self.original_model.get_dump(fmap=os.devnull, with_stats=True, dump_format="json")
+            json_trees = get_xgboost_json(self.original_model)
             self.trees = [Tree(json.loads(t)) for t in json_trees]
             less_than_or_equal = False
             self.objective = objective_name_map.get(model.objective, None)
@@ -892,7 +892,7 @@ class TreeEnsemble:
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             self.base_offset = None
-            json_trees = self.original_model.get_dump(fmap=os.devnull, with_stats=True, dump_format="json")
+            json_trees = get_xgboost_json(self.original_model)
             self.trees = [Tree(json.loads(t)) for t in json_trees]
             less_than_or_equal = False
             self.objective = objective_name_map.get(model.objective, None)
@@ -1227,3 +1227,13 @@ class Tree:
             )
         else:
             raise Exception("Unknown input to Tree constructor!")
+
+
+def get_xgboost_json(model):
+    """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
+    """
+    fnames = model.feature_names
+    model.feature_names = None
+    json_trees = model.get_dump(with_stats=True, dump_format="json")
+    model.feature_names = fnames
+    return json_trees
