@@ -426,12 +426,14 @@ class KernelExplainer(Explainer):
             varying_indices = np.unique(np.union1d(self.data.data.nonzero()[1], x.nonzero()[1]))
             remove_unvarying_indices = []
             for i in range(0, len(varying_indices)):
+                varying_index = varying_indices[i]
                 # now verify the nonzero values do vary
-                data_rows = self.data.data[:, [i]]
+                data_rows = self.data.data[:, [varying_index]]
                 nonzero_rows = data_rows.nonzero()[0]
-                if nonzero_rows:
-                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows] - x[0, [i]][0, 0]) > 1e-7)
-                    if num_mismatches > 0:
+
+                if nonzero_rows.size > 0:
+                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows].toarray() - x[0, [varying_index]][0, 0]) > 1e-7)
+                    if num_mismatches == 0:
                         remove_unvarying_indices.append(i)
             mask = np.ones(len(varying_indices), dtype=bool)
             mask[remove_unvarying_indices] = False

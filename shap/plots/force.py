@@ -12,7 +12,12 @@ from IPython import get_ipython
 import base64
 import numpy as np
 import scipy.cluster
-import collections
+import sys
+if sys.version_info[0] >= 3:
+  from collections.abc import Sequence
+else:
+  from collections import Sequence
+
 import warnings
 import re
 from . import labels
@@ -20,7 +25,7 @@ from ..common import convert_to_link, Instance, Model, Data, DenseData, Link
 from ..plots.force_matplotlib import draw_additive_plot
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
-               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3)):
+               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None):
     """ Visualize the given SHAP values with an additive force layout. """
 
     # auto unwrap the base_value
@@ -124,7 +129,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             )
             exps.append(e)
         
-        return visualize(exps, plot_cmap=plot_cmap)
+        return visualize(exps, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format)
             
 
 class Explanation:
@@ -159,9 +164,12 @@ err_msg = """
 
 def initjs():
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
-    bundle_data = io.open(bundle_path, encoding="utf-8").read()
+    with io.open(bundle_path, encoding="utf-8") as f:
+        bundle_data = f.read()
     logo_path = os.path.join(os.path.split(__file__)[0], "resources", "logoSmallGray.png")
-    logo_data = base64.b64encode(open(logo_path, "rb").read()).decode('utf-8')
+    with open(logo_path, "rb") as f:
+        logo_data = f.read()
+    logo_data = base64.b64encode(logo_data).decode('utf-8')
     display(HTML(
         "<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>".format(logo_data=logo_data) +
         "<script>{bundle_data}</script>".format(bundle_data=bundle_data)
@@ -193,7 +201,7 @@ def verify_valid_cmap(cmap):
 
     return cmap
 
-def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True):
+def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, ordering_keys=None, ordering_keys_time_format=None):
     plot_cmap = verify_valid_cmap(plot_cmap)
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
@@ -205,11 +213,11 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True):
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
             return SimpleListVisualizer(e).html()
-    elif isinstance(e, collections.Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
+    elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
         if matplotlib:
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
-            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap).html()
+            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format).html()
     else:
         assert False, "visualize() can only display Explanation objects (or arrays of them)!"
 
@@ -220,7 +228,7 @@ try:
     svg_formatter.for_type(Explanation, lambda x: visualize(x).data)
     old_list_formatter = svg_formatter.for_type(list)
     def try_list_display(e):
-        if isinstance(e, collections.Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
+        if isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
             return visualize(e).data
         else:
             return str(e) if old_list_formatter is None else old_list_formatter(e)
@@ -299,7 +307,7 @@ class AdditiveForceVisualizer:
         
 
 class AdditiveForceArrayVisualizer:
-    def __init__(self, arr, plot_cmap="RdBu"):
+    def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
         assert isinstance(arr[0], AdditiveExplanation), \
             "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
 
@@ -324,7 +332,9 @@ class AdditiveForceArrayVisualizer:
             "link": arr[0].link.__str__(),
             "featureNames": arr[0].data.group_names,
             "explanations": [],
-            "plot_cmap": plot_cmap
+            "plot_cmap": plot_cmap,
+            "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, '__iter__') else None,
+            "ordering_keys_time_format": ordering_keys_time_format,
         }
         for (ind,e) in enumerate(arr):
             self.data["explanations"].append({

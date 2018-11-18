@@ -26,6 +26,7 @@ class PyTorchDeepExplainer(Explainer):
         self.input_handle = None
         self.interim = False
         self.interim_inputs_shape = None
+        self.expected_value = None  # to keep the DeepExplainer base happy
         if type(model) == tuple:
             self.interim = True
             model, layer = model
@@ -48,6 +49,7 @@ class PyTorchDeepExplainer(Explainer):
         self.model = model.eval()
 
         self.multi_output = False
+        self.num_outputs = 1
         with torch.no_grad():
             outputs = model(*data)
             if outputs.shape[1] > 1:

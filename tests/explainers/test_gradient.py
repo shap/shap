@@ -75,7 +75,7 @@ def test_tf_keras_mnist_cnn():
     np.random.seed(0)
     inds = np.random.choice(x_train.shape[0], 20, replace=False)
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
-    shap_values = e.shap_values(x_test[:1], nsamples=1000)
+    shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
     sess = tf.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \

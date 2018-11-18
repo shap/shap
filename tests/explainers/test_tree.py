@@ -136,7 +136,7 @@ def test_sklearn_decision_tree_multiclass():
 def test_lightgbm():
     try:
         import lightgbm
-    except Exception as e:
+    except:
         print("Skipping test_lightgbm!")
         return
     import shap
@@ -152,7 +152,7 @@ def test_lightgbm():
 def test_lightgbm_multiclass():
     try:
         import lightgbm
-    except Exception as e:
+    except:
         print("Skipping test_lightgbm_multiclass!")
         return
     import shap
@@ -293,3 +293,214 @@ def test_single_row_gradient_boosting():
     shap_values = ex.shap_values(X_test.iloc[0,:])
     assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
         "SHAP values don't sum to model output!"
+
+def test_single_tree_compare_with_kernel_shap():
+    """ Compare with Kernel SHAP, which makes the same independence assumptions
+    as Independent Tree SHAP.  Namely, they both assume independence between the 
+    set being conditioned on, and the remainder set.
+    """
+    try:
+        import xgboost
+    except Exception as e:
+        print("Skipping test_single_tree_compare_with_kernel_shap!")
+        return
+    np.random.seed(10)
+
+    n = 1000
+    X = np.random.normal(size=(n,7))
+    b = np.array([-2,1,3,5,2,20,-5])
+    y = np.matmul(X,b)
+    max_depth = 6
+
+    # train a model with single tree
+    Xd = xgboost.DMatrix(X, label=y)
+    model = xgboost.train({'eta':1, 
+                       'max_depth':max_depth, 
+                       'base_score': 0, 
+                       "lambda": 0}, 
+                      Xd, 1)
+    ypred = model.predict(Xd)
+
+    # Compare for five random samples
+    for i in range(5):
+        x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
+
+        expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+        f = lambda inp : model.predict(xgboost.DMatrix(inp))
+        expl_kern = shap.KernelExplainer(f, X)
+
+        itshap = expl.shap_values(x)
+        kshap = expl_kern.shap_values(x, nsamples=150)
+        assert np.allclose(itshap,kshap), \
+        "Kernel SHAP doesn't match Independent Tree SHAP!"
+        assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
+        "SHAP values don't sum to model output!"    
+
+def test_several_trees():
+    """ Make sure Independent Tree SHAP sums up to the correct value for
+    larger models (20 trees).
+    """    
+    try:
+        import xgboost
+    except:
+        print("Skipping test_several_trees!")
+        return
+    np.random.seed(10)
+
+    n = 1000
+    X = np.random.normal(size=(n,7))
+    b = np.array([-2,1,3,5,2,20,-5])
+    y = np.matmul(X,b)
+    max_depth = 6
+
+    # train a model with single tree
+    Xd = xgboost.DMatrix(X, label=y)
+    model = xgboost.train({'eta':1, 
+                       'max_depth':max_depth, 
+                       'base_score': 0, 
+                       "lambda": 0}, 
+                      Xd, 20)
+    ypred = model.predict(Xd)
+
+    # Compare for five random samples
+    for i in range(5):
+        x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
+        expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+        itshap = expl.shap_values(x)
+        assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
+        "SHAP values don't sum to model output!"
+        
+def test_single_tree_nonlinear_transformations():
+    """ Make sure Independent Tree SHAP single trees with non-linear
+    transformations.
+    """
+    # Supported non-linear transforms
+    def sigmoid(x):
+        return(1/(1+np.exp(-x)))
+
+    def log_loss(yt,yp):
+        return(-(yt*np.log(yp) + (1 - yt)*np.log(1 - yp)))
+
+    def mse(yt,yp):
+        return(np.square(yt-yp))
+
+    try:
+        import xgboost
+    except:
+        print("Skipping test_several_trees!")
+        return
+
+    np.random.seed(10)
+
+    n = 1000
+    X = np.random.normal(size=(n,7))
+    b = np.array([-2,1,3,5,2,20,-5])
+    y = np.matmul(X,b)
+    y = y + abs(min(y))
+    y = np.random.binomial(n=1,p=y/max(y))
+    max_depth = 6
+
+    # train a model with single tree
+    Xd = xgboost.DMatrix(X, label=y)
+    model = xgboost.train({'eta':1, 
+                       'max_depth':max_depth, 
+                       'base_score': y.mean(), 
+                       "lambda": 0,
+                       "objective": "binary:logistic"}, 
+                      Xd, 1)
+    pred = model.predict(Xd,output_margin=True) # In margin space (log odds)
+    trans_pred = model.predict(Xd) # In probability space
+
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+    f = lambda inp : model.predict(xgboost.DMatrix(inp), output_margin=True)
+    expl_kern = shap.KernelExplainer(f, X)
+
+    x_ind = 0; x = X[x_ind:x_ind+1,:]
+    itshap = expl.shap_values(x)
+    kshap = expl_kern.shap_values(x, nsamples=300)
+    assert np.allclose(itshap.sum() + expl.expected_value, pred[x_ind]), \
+    "SHAP values don't sum to model output on explaining margin!"
+    assert np.allclose(itshap, kshap), \
+    "Independent Tree SHAP doesn't match Kernel SHAP on explaining margin!"
+
+    model.set_attr(objective="binary:logistic")
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="probability")
+    itshap = expl.shap_values(x)
+    assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), \
+    "SHAP values don't sum to model output on explaining logistic!"
+
+    
+    # expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logloss")
+    # itshap = expl.shap_values(x,y=y[x_ind])
+    # margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
+    # currpred = log_loss(y[x_ind],sigmoid(margin_pred))
+    # assert np.allclose(itshap.sum(), currpred - expl.expected_value), \
+    # "SHAP values don't sum to model output on explaining logloss!"
+
+def test_xgboost_classifier_independent_margin():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_several_trees!")
+        return
+    
+    # train XGBoost model
+    np.random.seed(10)
+    n = 1000
+    X = np.random.normal(size=(n,7))
+    b = np.array([-2,1,3,5,2,20,-5])
+    y = np.matmul(X,b)
+    y = y + abs(min(y))
+    y = np.random.binomial(n=1,p=y/max(y))
+
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    e = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="margin")
+    shap_values = e.shap_values(X)
+
+    assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
+
+def test_xgboost_classifier_independent_probability():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_several_trees!")
+        return
+    
+    # train XGBoost model
+    np.random.seed(10)
+    n = 1000
+    X = np.random.normal(size=(n,7))
+    b = np.array([-2,1,3,5,2,20,-5])
+    y = np.matmul(X,b)
+    y = y + abs(min(y))
+    y = np.random.binomial(n=1,p=y/max(y))
+
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    e = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="probability")
+    shap_values = e.shap_values(X)
+
+    assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:,1])
+
+def test_front_page_xgboost_global_path_dependent():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_front_page_xgboost!")
+        return
+
+    # train XGBoost model
+    X, y = shap.datasets.boston()
+    model = xgboost.XGBRegressor()
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model, X, feature_dependence="global_path_dependent")
+    shap_values = explainer.shap_values(X)
+
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))

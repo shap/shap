@@ -302,7 +302,7 @@ def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, u
     for i in range(unique_depth - 1, -1, -1):
         if one_fraction != 0.:
             tmp = next_one_portion * (unique_depth + 1.) / ((i + 1.) * one_fraction)
-            total += tmp;
+            total += tmp
             next_one_portion = pweights[i] - tmp * zero_fraction * ((unique_depth - i) / (unique_depth + 1.))
         else:
             total += (pweights[i] / zero_fraction) / ((unique_depth - i) / (unique_depth + 1.))
@@ -434,7 +434,7 @@ def tree_shap_recursive(children_left, children_right, children_default, feature
         hot_condition_fraction = condition_fraction
         cold_condition_fraction = condition_fraction
         if condition > 0 and split_index == condition_feature:
-            cold_condition_fraction = 0.;
+            cold_condition_fraction = 0.
             unique_depth -= 1
         elif condition < 0 and split_index == condition_feature:
             hot_condition_fraction *= hot_zero_fraction
