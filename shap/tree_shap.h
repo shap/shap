@@ -196,6 +196,61 @@ inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const Exp
     }
 }
 
+inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const ExplanationDataset &data) {
+    unsigned curr_node = 0;
+    unsigned next_node = 0;
+    while (true) {
+        
+        // we hit a leaf and are done
+        if (tree.children_left[curr_node] < 0) return;
+        
+        // otherwise we are at an internal node and need to recurse
+        const unsigned feature = tree.features[curr_node];
+        if (data.X_missing[feature]) {
+            next_node = tree.children_default[curr_node];
+        } else if (data.X[feature] <= tree.thresholds[curr_node]) {
+            next_node = tree.children_left[curr_node];
+        } else {
+            next_node = tree.children_right[curr_node];
+        }
+
+        // assign credit to this feature as the difference in values at the current node vs. the next node
+        for (unsigned i = 0; i < tree.num_outputs; ++i) {
+            std::cout << feature << " " << tree.values[curr_node * tree.num_outputs + i] << " - " << tree.values[next_node * tree.num_outputs + i] << "\n";
+            out[feature * tree.num_outputs + i] += tree.values[next_node * tree.num_outputs + i] - tree.values[curr_node * tree.num_outputs + i];
+        }
+
+        curr_node = next_node;
+    }
+}
+
+/**
+ * This runs Tree SHAP with a per tree path conditional dependence assumption.
+ */
+void dense_tree_saabas(tfloat *out_contribs, const TreeEnsemble& trees, const ExplanationDataset &data) {
+    tfloat *instance_out_contribs;
+    TreeEnsemble tree;
+    ExplanationDataset instance;
+
+    // build explanation for each sample
+    for (unsigned i = 0; i < data.num_X; ++i) {
+        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        data.get_x_instance(instance, i);
+
+        // aggregate the effect of explaining each tree
+        // (this works because of the linearity property of Shapley values)
+        for (unsigned j = 0; j < trees.tree_limit; ++j) {
+            trees.get_tree(tree, j);
+            tree_saabas(instance_out_contribs, tree, instance);
+        }
+
+        // apply the base offset to the bias term
+        for (unsigned j = 0; j < trees.num_outputs; ++j) {
+            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset;
+        }
+    }
+}
+
 inline tfloat logistic_transform(const tfloat margin, const tfloat y) {
     return 1 / (1 + exp(-margin));
 }
