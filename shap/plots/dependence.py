@@ -10,7 +10,7 @@ from . import colors
 # TODO: remove color argument / use color argument
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto", color="#1E88E5", axis_color="#333333",
-                    dot_size=16, alpha=1, title=None, show=True):
+                    dot_size=16, x_jitter=0, alpha=1, title=None, show=True):
     """
     Create a SHAP dependence plot, colored by an interaction feature.
 
@@ -33,6 +33,10 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     interaction_index : "auto", None, or int
         The index of the feature used to color the plot.
+        
+    x_jitter : float (0 - 1)
+        Adds random jitter to feature values. 
+        May increase plot readability when feature is non-continuous.
     """
 
     # convert from DataFrames if we got any
@@ -138,6 +142,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if categorical_interaction and clow != chigh:
         bounds = np.linspace(clow, chigh, chigh - clow + 2)
         color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N)
+        
+    # optionally add jitter to feature values
+    if x_jitter > 0:
+        if x_jitter > 1: x_jitter = 1
+        xvals = np.unique(xv)
+        smallest_diff = np.min(np.diff(np.sort(xvals)))
+        jitter_amount = x_jitter * smallest_diff
+        xv += (np.random.ranf(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     if interaction_index is not None:
