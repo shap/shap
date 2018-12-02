@@ -416,7 +416,10 @@ class KernelExplainer(Explainer):
                         varying[i] = False
                         continue
                     x_group = x_group.todense()
-                num_mismatches = np.sum(np.abs(x_group - self.data.data[:, inds]) > 1e-7)
+                if type(x_group[0]) is str: 
+                    num_mismatches = np.sum(x_group[0] == self.data.data[:, inds])
+                else:
+                    num_mismatches = np.sum(np.abs(x_group - self.data.data[:, inds]) > 1e-7)
                 varying[i] = num_mismatches > 0
             return np.nonzero(varying)[0]
         else:
