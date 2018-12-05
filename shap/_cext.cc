@@ -127,13 +127,14 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     int model_output;
     double base_offset;
     bool interactions;
+    bool model_stack;
   
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
-        args, "OOOOOOOiOOOOOidOiib", &children_left_obj, &children_right_obj, &children_default_obj,
+        args, "OOOOOOOiOOOOOidOiibb", &children_left_obj, &children_right_obj, &children_default_obj,
         &features_obj, &thresholds_obj, &values_obj, &node_sample_weights_obj,
         &max_depth, &X_obj, &X_missing_obj, &y_obj, &R_obj, &R_missing_obj, &tree_limit, &base_offset,
-        &out_contribs_obj, &feature_dependence, &model_output, &interactions
+        &out_contribs_obj, &feature_dependence, &model_output, &interactions, &model_stack
     )) return NULL;
 
     /* Interpret the input objects as numpy arrays. */
@@ -209,7 +210,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, R, R_missing, num_X, M, num_R);
 
-    dense_tree_shap(trees, data, out_contribs, feature_dependence, model_output, interactions);
+    dense_tree_shap(trees, data, out_contribs, feature_dependence, model_output, interactions, model_stack);
 
     // clean up the created python objects 
     Py_XDECREF(children_left_array);

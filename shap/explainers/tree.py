@@ -87,7 +87,8 @@ class TreeExplainer(Explainer):
         Currently the probability and log_loss options are only supported when feature_dependence="independent".
     """
 
-    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependent"):
+    def __init__(self, model, data = None, model_output = "margin", 
+                 feature_dependence = "tree_path_dependent", model_stack = False):
         self.model = TreeEnsemble(model)
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             self.data = data.values
@@ -97,6 +98,7 @@ class TreeExplainer(Explainer):
         self.model_output = model_output
         self.feature_dependence = feature_dependence
         self.expected_value = None
+        self.model_stack = model_stack
 
         assert feature_dependence in feature_dependence_codes, "Invalid feature_dependence option!"
 
@@ -235,14 +237,18 @@ class TreeExplainer(Explainer):
 
         # run the core algorithm using the C extension
         assert_import("cext")
-        phi = np.zeros((X.shape[0], X.shape[1]+1, self.model.n_outputs))
+        if not self.model_stack:
+            phi = np.zeros((X.shape[0], X.shape[1]+1, self.model.n_outputs))
+        else:
+            # In this case, we are doing independent tree shap
+            phi = np.zeros((X.shape[0], X.shape[1]+1, self.model.n_outputs, self.data.shape[0]))
         if not approximate:
             _cext.dense_tree_shap(
                 self.model.children_left, self.model.children_right, self.model.children_default,
                 self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
                 self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
                 self.model.base_offset, phi, feature_dependence_codes[self.feature_dependence],
-                output_transform_codes[transform], False
+                output_transform_codes[transform], False, self.model_stack
             )
         else:
             _cext.dense_tree_saabas(

@@ -294,7 +294,7 @@ def test_single_row_gradient_boosting():
     assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
         "SHAP values don't sum to model output!"
 
-def test_single_tree_compare_with_kernel_shap():
+def test_single_tree_compare_indep_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the 
     set being conditioned on, and the remainder set.
@@ -336,7 +336,7 @@ def test_single_tree_compare_with_kernel_shap():
         assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
         "SHAP values don't sum to model output!"    
 
-def test_several_trees():
+def test_several_trees_indep():
     """ Make sure Independent Tree SHAP sums up to the correct value for
     larger models (20 trees).
     """    
@@ -466,7 +466,7 @@ def test_xgboost_classifier_independent_probability():
     try:
         import xgboost
     except:
-        print("Skipping test_several_trees!")
+        print("Skipping test_xgboost_classifier_independent_probability!")
         return
     
     # train XGBoost model
@@ -491,7 +491,7 @@ def test_front_page_xgboost_global_path_dependent():
     try:
         import xgboost
     except:
-        print("Skipping test_front_page_xgboost!")
+        print("Skipping test_front_page_xgboost_global_path_dependent!")
         return
 
     # train XGBoost model
@@ -504,3 +504,33 @@ def test_front_page_xgboost_global_path_dependent():
     shap_values = explainer.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
+    
+def test_model_stack_indep():
+    """ Make sure that model stacking matches the default independent tree shap.
+    """    
+    try:
+        import xgboost
+    except:
+        print("Skipping test_model_stack_indep!")
+        return
+
+    np.random.seed(10)
+    X = np.random.normal(size=(1000,7))
+    b = np.array([-2,1,3,5,2,20,-5])
+    y = np.matmul(X,b)
+    max_depth = 6
+
+    # train a model with single tree
+    Xd = xgboost.DMatrix(X, label=y)
+    model = xgboost.train({'eta':1, 'max_depth':max_depth, 'base_score': 0, "lambda": 0}, Xd, 1)
+    expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+    expl_ms = shap.TreeExplainer(model, X, feature_dependence="independent", model_stack = True)
+
+    for i in range(0,5):
+        x_ind = np.random.choice(X.shape[1])
+        x = X[x_ind:x_ind+2,:]
+        itshap = expl.shap_values(x)
+        itshap_ms = expl_ms.shap_values(x)
+        assert itshap.shape == (2, 7)
+        assert itshap_ms.shape == (2, 7, 1000)
+        assert np.allclose(itshap, itshap_ms.mean(2))

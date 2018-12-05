@@ -663,7 +663,7 @@ inline int bin_coeff(int n, int k) {
 
 
 inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
-                            const unsigned num_nodes, const tfloat *x,
+                            const unsigned num_nodes, const bool model_stack, const tfloat *x,
                             const bool *x_missing, const tfloat *r,
                             const bool *r_missing, tfloat *out_contribs,
                             float *pos_lst, float *neg_lst, signed short *feat_hist,
@@ -1041,7 +1041,8 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
  * Runs Tree SHAP with feature independence assumptions on dense data.
  */
 void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data,
-                       tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
+                       tfloat *out_contribs, tfloat transform(const tfloat, const tfloat),
+                       bool model_stack) {
 
     // this code is not ready for multi-valued trees yet
     if (trees.num_outputs > 1) {
@@ -1098,10 +1099,17 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
     tfloat margin_r = 0;
     time_t start_time = time(NULL);
     tfloat last_print = 0;
+    unsigned inst_len = (data.M + 1) * trees.num_outputs;
+    unsigned instance_offset = 0;
+    unsigned instance_factor = 1;
+    if (model_stack) {
+        inst_len = data.num_R * inst_len;
+        instance_factor = data.num_R;
+    }    
     for (unsigned i = 0; i < data.num_X; ++i) {
         const tfloat *x = data.X + i * data.M;
         const bool *x_missing = data.X_missing + i * data.M;
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + i * inst_len;
         const tfloat y_i = data.y == NULL ? 0 : data.y[i];
 
         print_progress_bar(last_print, start_time, i, data.num_X);
@@ -1131,7 +1139,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
 
             for (unsigned k = 0; k < trees.tree_limit; ++k) {
                 tree_shap_indep(
-                    trees.max_depth, data.M, trees.max_nodes, x, x_missing, r, r_missing, 
+                    trees.max_depth, data.M, trees.max_nodes, model_stack, x, x_missing, r, r_missing, 
                     tmp_out_contribs, pos_lst, neg_lst, feat_hist, memoized_weights, 
                     node_stack, node_trees + k * trees.max_nodes
                 );
@@ -1151,20 +1159,26 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
             // add the effect of the current reference to our running total
             // this is where we can do per reference scaling for non-linear transformations
             // note that transforms are only supported for single output trees right now
-            for (unsigned k = 0; k < data.M * trees.num_outputs; ++k) {
-                instance_out_contribs[k] += tmp_out_contribs[k] * rescale_factor;
+            if (model_stack) {
+                instance_offset = j;
             }
-
+            
+            for (unsigned k = 0; k < data.M * trees.num_outputs; ++k) {
+                instance_out_contribs[instance_offset+instance_factor*k] += tmp_out_contribs[k] * rescale_factor;
+            }
             // Add the base offset
             if (transform != NULL) {
                 for (unsigned k = data.M; k < data.M + trees.num_outputs; ++k) {
-                    instance_out_contribs[k] += (*transform)(trees.base_offset + tmp_out_contribs[k], 0);
+                    instance_out_contribs[instance_offset+instance_factor*k] += \
+                        (*transform)(trees.base_offset + tmp_out_contribs[k], 0);
                 }
             } else {
                 for (unsigned k = data.M; k < data.M + trees.num_outputs; ++k) {
-                    instance_out_contribs[k] += trees.base_offset + tmp_out_contribs[k];
+                    instance_out_contribs[instance_offset+instance_factor*k] += \
+                        trees.base_offset + tmp_out_contribs[k];
                 }
-            }
+            }            
+            
         }
 
         // average the results over all the references.
@@ -1358,7 +1372,8 @@ void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDat
  * The main method for computing Tree SHAP on model using dense data.
  */
 void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, tfloat *out_contribs,
-                     const int feature_dependence, unsigned model_transform, bool interactions) {
+                     const int feature_dependence, unsigned model_transform, bool interactions,
+                     bool model_stack) {
 
     // see what transform (if any) we have
     tfloat (* transform)(const tfloat margin, const tfloat y) = NULL;
@@ -1381,7 +1396,7 @@ void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, 
         case FEATURE_DEPENDENCE::independent:
             if (interactions) {
                 std::cerr << "FEATURE_DEPENDENCE::independent does not support interactions!\n";
-            } else dense_independent(trees, data, out_contribs, transform);
+            } else dense_independent(trees, data, out_contribs, transform, model_stack);
             return;
         
         case FEATURE_DEPENDENCE::tree_path_dependent:
