@@ -345,7 +345,7 @@ class TreeExplainer(Explainer):
             self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
             self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
             self.model.base_offset, phi, feature_dependence_codes[self.feature_dependence],
-            output_transform_codes[transform], True
+            output_transform_codes[transform], True, self.model_stack
         )
 
         # note we pull off the last column and keep it as our expected_value
