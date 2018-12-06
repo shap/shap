@@ -151,9 +151,10 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             xvals = xvals.astype(np.float)
             xvals = xvals[~np.isnan(xvals)]
         xvals = np.unique(xvals)
-        smallest_diff = np.min(np.diff(np.sort(xvals)))
-        jitter_amount = x_jitter * smallest_diff
-        xv += (np.random.ranf(size = len(xv))*jitter_amount) - (jitter_amount/2)
+        if len(xvals) >= 2:
+            smallest_diff = np.min(np.diff(np.sort(xvals)))
+            jitter_amount = x_jitter * smallest_diff
+            xv += (np.random.ranf(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     if interaction_index is not None:
