@@ -44,7 +44,12 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     # default color:
     if color is None:
-        color = "coolwarm" if plot_type == 'layered_violin' else "#1E88E5" #"#ff0052"
+        if plot_type == 'layered_violin':
+            color = "coolwarm"
+        elif multi_class:
+            color = lambda i: colors.default_blue_colors[min(i, len(colors.default_blue_colors)-1)]
+        else:
+            color = "#1E88E5" #"#ff0052"
 
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -350,7 +355,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             global_shap_values = np.abs(shap_values[ind]).mean(0)
             pl.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
-                color=colors.default_blue_colors[min(i, len(colors.default_blue_colors)-1)], label=class_names[ind]
+                color=color(i), label=class_names[ind]
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
