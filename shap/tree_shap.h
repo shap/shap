@@ -273,13 +273,9 @@ inline void extend_path(PathElement *unique_path, unsigned unique_depth,
     unique_path[unique_depth].one_fraction = one_fraction;
     unique_path[unique_depth].pweight = (unique_depth == 0 ? 1.0f : 0.0f);
     for (int i = unique_depth - 1; i >= 0; i--) {
-        // std::cout << "unique_path[i].pweight 6 " << unique_path[i].pweight << "\n";
-        // std::cout << "one_fraction 6 " << one_fraction << "\n";
-        unique_path[i + 1].pweight += one_fraction * (unique_path[i].pweight * (i + 1))
+        unique_path[i + 1].pweight += one_fraction * unique_path[i].pweight * (i + 1)
                                       / static_cast<tfloat>(unique_depth + 1);
-        
-        // std::cout << "zero_fraction 6 " << zero_fraction << "\n";
-        unique_path[i].pweight = zero_fraction * (unique_path[i].pweight * (unique_depth - i))
+        unique_path[i].pweight = zero_fraction * unique_path[i].pweight * (unique_depth - i)
                                  / static_cast<tfloat>(unique_depth + 1);
     }
 }
@@ -290,58 +286,16 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
     const tfloat zero_fraction = unique_path[path_index].zero_fraction;
     tfloat next_one_portion = unique_path[unique_depth].pweight;
 
-    // for (int i = unique_depth - 1; i >= 0; --i) {
-    //     if (one_fraction != 0) {
-    //         const tfloat tmp = unique_path[i].pweight;
-    //         // std::cout << "next_one_portion3 " << next_one_portion << "\n";
-    //         // std::cout << "one_fraction4 " << one_fraction << "\n";
-    //         unique_path[i].pweight = next_one_portion * (unique_depth + 1)
-    //                                  / static_cast<tfloat>((i + 1) * one_fraction);
-    //         // std::cout << "zero_fraction5 " << zero_fraction << "\n";
-    //         next_one_portion = tmp - unique_path[i].pweight * zero_fraction * (unique_depth - i)
-    //                            / static_cast<tfloat>(unique_depth + 1);
-    //     } else {
-    //         // std::cout << "1unique_path[i].pweight " << unique_path[i].pweight << std::endl;
-            
-    //         // std::cout << "zero_fraction6 " << zero_fraction << "\n";
-    //         unique_path[i].pweight = (unique_path[i].pweight * (unique_depth + 1))
-    //                                  / static_cast<tfloat>(zero_fraction * (unique_depth - i));
-    //     }
-    // }
-
-    
-    if (one_fraction != 0) {
-        for (int i = unique_depth - 1; i >= 0; --i) {
+    for (int i = unique_depth - 1; i >= 0; --i) {
+        if (one_fraction != 0) {
             const tfloat tmp = unique_path[i].pweight;
-            // std::cout << "next_one_portion3 " << next_one_portion << "\n";
-            // std::cout << "one_fraction4 " << one_fraction << "\n";
             unique_path[i].pweight = next_one_portion * (unique_depth + 1)
-                                        / static_cast<tfloat>((i + 1) * one_fraction);
-            // std::cout << "zero_fraction5 " << zero_fraction << "\n";
+                                     / static_cast<tfloat>((i + 1) * one_fraction);
             next_one_portion = tmp - unique_path[i].pweight * zero_fraction * (unique_depth - i)
-                                / static_cast<tfloat>(unique_depth + 1);
-
-                                
-        }
-    } else {
-        for (int i = unique_depth - 1; i >= 0; --i) {
-            // std::cout << "1unique_path[i].pweight " << unique_path[i].pweight << std::endl;
-            
-            // std::cout << "zero_fraction6 " << zero_fraction << "\n";
-            if (zero_fraction < 1e-3) {
-                std::cout << "smalll zero_fraction" << zero_fraction << "\n";
-                std::cout << "unique_depth " << unique_depth << " " << i << "\n";
-            }
-            if (unique_path[i].pweight < 1e-3 || unique_path[i].pweight > 1e+3) {
-                std::cout << "1unique_path[i].pweight " << unique_path[i].pweight << "\n";
-                std::cout << "smalll zero_fraction" << zero_fraction << "\n";
-                std::cout << "unique_depth " << unique_depth << " " << i << "\n";
-            }
-            //unique_path[i].pweight *= (unique_depth + 1) / (zero_fraction * (unique_depth - i));
-            unique_path[i].pweight *= (static_cast<tfloat>(unique_depth + 1) / (unique_depth - i)) / zero_fraction;
-
-            //unique_path[i].pweight = (unique_path[i].pweight * (unique_depth + 1))
-             //                           / static_cast<tfloat>(zero_fraction * (unique_depth - i));
+                               / static_cast<tfloat>(unique_depth + 1);
+        } else {
+            unique_path[i].pweight = (unique_path[i].pweight * (unique_depth + 1))
+                                     / static_cast<tfloat>(zero_fraction * (unique_depth - i));
         }
     }
 
@@ -360,43 +314,17 @@ inline tfloat unwound_path_sum(const PathElement *unique_path, unsigned unique_d
     const tfloat zero_fraction = unique_path[path_index].zero_fraction;
     tfloat next_one_portion = unique_path[unique_depth].pweight;
     tfloat total = 0;
-    // std::cout << "\nunwound_path_sum:\n";
+
     if (one_fraction != 0) {
-        // if (one_fraction < 1e-3) {
-        //     std::cout << "1one_fraction is small: " << one_fraction << "\n";
-        // }
-        // if (zero_fraction < 1e-3) {
-        //     std::cout << "1zero_fraction is small: " << zero_fraction << "\n";
-        // }
         for (int i = unique_depth - 1; i >= 0; --i) {
             const tfloat tmp = next_one_portion / static_cast<tfloat>((i + 1) * one_fraction);
-            //if (tmp > 100) {
-            // std::cout << "next_one_portion " << next_one_portion << "\n";
-            // std::cout << "one_fraction " << one_fraction << "\n";
-            // std::cout << "zero_fraction " << zero_fraction << "\n";
-            // std::cout << "2unique_path[i].pweight " << unique_path[i].pweight << "\n";
-            // std::cout << "2tmp " << tmp << "\n";
-            // std::cout << "(unique_depth, i) " << unique_depth << ", " << i << "\n";
-            // if (zero_fraction < 1e-3) {
-            //     std::cout << "unique_path[i].pweight " << unique_path[i].pweight << "\n";
-            //     std::cout << "tmp * zero_fraction * (unique_depth - i) " << (tmp * zero_fraction * (unique_depth - i)) << "\n";
-            // }
             total += tmp;
             next_one_portion = unique_path[i].pweight - tmp * zero_fraction * (unique_depth - i);
         }
-        return total * (unique_depth + 1);
-    } else if (zero_fraction != 0) {
-        // if (zero_fraction < 1e-3) {
-        //     std::cout << "2zero_fraction is small: " << zero_fraction << "\n";
-        // }
+    } else {
         for (int i = unique_depth - 1; i >= 0; --i) {
-            // if (zero_fraction < 1e-3) {
-            //     std::cout << "unique_path[i].pweight " << unique_path[i].pweight << "\n";
-            // }
-            total += unique_path[i].pweight * ((static_cast<tfloat>(unique_depth + 1) / (unique_depth - i)) / zero_fraction);
+            total += unique_path[i].pweight / (zero_fraction * (unique_depth - i));
         }
-        //total /= zero_fraction;
-        return total;
     }
     return total * (unique_depth + 1);
 }
@@ -435,13 +363,6 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
             const unsigned phi_offset = el.feature_index * num_outputs;
             const unsigned values_offset = node_index * num_outputs;
             const tfloat scale = w * (el.one_fraction - el.zero_fraction) * condition_fraction;
-            // if (w > 1) {
-            //     std::cout << "w " << w << "\n";
-            //     std::cout << "el.one_fraction " << el.one_fraction << "\n";
-            //     std::cout << "el.zero_fraction " << el.zero_fraction << "\n";
-            //     std::cout << "condition_fraction " << condition_fraction << "\n";
-            //     return;
-            // }
             for (unsigned j = 0; j < num_outputs; ++j) {
                 phi[phi_offset + j] += scale * values[values_offset + j];
             }
@@ -461,9 +382,6 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
         const unsigned cold_index = (static_cast<int>(hot_index) == children_left[node_index] ?
                                         children_right[node_index] : children_left[node_index]);
         const tfloat w = node_sample_weight[node_index];
-        // if (w < 1e-4) {
-        //     std::cout << "w is small: " << w << "\n";
-        // }
         const tfloat hot_zero_fraction = node_sample_weight[hot_index] / w;
         const tfloat cold_zero_fraction = node_sample_weight[cold_index] / w;
         tfloat incoming_zero_fraction = 1;
