@@ -158,7 +158,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     if interaction_index is not None:
-        pl.scatter(xv, s, s=dot_size, linewidth=0, c=features[:, interaction_index], cmap=colors.red_blue,
+
+        # plot the nan values seperately as grey
+        values = features[:, interaction_index]
+        nan_mask = np.isnan(values)
+        pl.scatter(xv[nan_mask], s[nan_mask], s=dot_size, linewidth=0, color="#777777",
+                   alpha=alpha, norm=color_norm, rasterized=len(xv) > 500)
+        
+        pl.scatter(xv[np.invert(nan_mask)], s[np.invert(nan_mask)], s=dot_size, linewidth=0, c=values[np.invert(nan_mask)], cmap=colors.red_blue,
                    alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
     else:
         pl.scatter(xv, s, s=dot_size, linewidth=0, color="#1E88E5",
