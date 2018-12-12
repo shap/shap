@@ -419,11 +419,13 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"):
 
-            # currently we only support the mean estimator
+            # currently we only support the mean and quantile estimators
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
                 self.base_offset = model.init_.mean
+            elif str(type(model.init_)).endswith("ensemble.gradient_boosting.QuantileEstimator'>"):
+                self.base_offset = model.init_.quantile
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
 
