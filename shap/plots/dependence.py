@@ -102,7 +102,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    xv = features[:, ind]
+    xv = features[:, ind].astype(np.float64)
     xd = display_features[:, ind]
     s = shap_values[:, ind]
     if type(xd[0]) == str:
@@ -159,18 +159,19 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     if interaction_index is not None:
 
-        # plot the nan values seperately as grey
-        values = features[:, interaction_index]
-        nan_mask = np.isnan(values)
-        pl.scatter(xv[nan_mask], s[nan_mask], s=dot_size, linewidth=0, color="#777777",
+        # plot the nan values in the interaction feature as grey
+        cvals = features[:, interaction_index].astype(np.float64)
+        cvals_nans = np.isnan(cvals)
+        pl.scatter(xv[cvals_nans], s[cvals_nans], s=dot_size, linewidth=0, color="#777777",
                    alpha=alpha, norm=color_norm, rasterized=len(xv) > 500)
         
-        pl.scatter(xv[np.invert(nan_mask)], s[np.invert(nan_mask)], s=dot_size, linewidth=0, c=values[np.invert(nan_mask)], cmap=colors.red_blue,
+        
+        pl.scatter(xv[np.invert(cvals_nans)], s[np.invert(cvals_nans)], s=dot_size, linewidth=0, c=cvals[np.invert(cvals_nans)], cmap=colors.red_blue,
                    alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
     else:
         pl.scatter(xv, s, s=dot_size, linewidth=0, color="#1E88E5",
                    alpha=alpha, rasterized=len(xv) > 500)
-
+    
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
         if type(cd[0]) == str:
@@ -191,6 +192,12 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         cb.outline.set_visible(False)
         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
         cb.ax.set_aspect((bbox.height - 0.7) * 20)
+
+    # plot any nan feature values as tick marks along the y-axis
+    xv_nans = np.isnan(xv)
+    xlim = pl.xlim()
+    pl.scatter(xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1, linewidth=2, color="#777777")
+    pl.xlim(*xlim)
 
     # make the plot more readable
     if interaction_index != ind:
