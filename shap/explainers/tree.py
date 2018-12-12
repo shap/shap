@@ -421,7 +421,7 @@ class TreeEnsemble:
             self.tree_output = "probability"
         elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"):
 
-            # currently we only support the mean and quanitle estimators
+            # currently we only support the mean and quantile estimators
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
                 self.base_offset = model.init_.mean
             elif str(type(model.init_)).endswith("ensemble.gradient_boosting.QuantileEstimator'>"):
