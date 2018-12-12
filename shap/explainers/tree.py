@@ -818,4 +818,8 @@ def get_xgboost_json(model):
     model.feature_names = None
     json_trees = model.get_dump(with_stats=True, dump_format="json")
     model.feature_names = fnames
+
+    # this fixes a bug where XGBoost can return invalid JSON
+    json_trees = [t.replace(": inf,", ": 1000000000000.0,") for t in json_trees]
+
     return json_trees

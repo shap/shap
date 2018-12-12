@@ -5,8 +5,6 @@
 #include "tree_shap.h"
 #include <iostream>
 
-typedef double tfloat;
-
 static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args);
 static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args);
 static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args);
