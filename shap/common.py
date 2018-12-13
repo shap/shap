@@ -2,6 +2,7 @@ import re
 import pandas as pd
 import numpy as np
 import scipy as sp
+from scipy.spatial.distance import pdist
 
 
 class Instance:
@@ -197,3 +198,38 @@ def convert_to_link(val):
         return LogitLink()
     else:
         assert False, "Passed link object must be a subclass of iml.Link"
+
+
+def hclust_order(X, metric="sqeuclidean"):
+    """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
+    """
+    
+    # compute a hierarchical clustering
+    D = sp.spatial.distance.pdist(X, metric)
+    cluster_matrix = sp.cluster.hierarchy.complete(D)
+    
+    # merge clusters, rotating them to make the end points match as best we can
+    sets = [[i] for i in range(X.shape[0])]
+    for i in range(cluster_matrix.shape[0]):
+        s1 = sets[int(cluster_matrix[i,0])]
+        s2 = sets[int(cluster_matrix[i,1])]
+        
+        # compute distances between the end points of the lists
+        d_s1_s2 = pdist(np.vstack([X[s1[-1],:], X[s2[0],:]]), metric)[0]
+        d_s2_s1 = pdist(np.vstack([X[s1[0],:], X[s2[-1],:]]), metric)[0]
+        d_s1r_s2 = pdist(np.vstack([X[s1[0],:], X[s2[0],:]]), metric)[0]
+        d_s1_s2r = pdist(np.vstack([X[s1[-1],:], X[s2[-1],:]]), metric)[0]
+
+        # concatenete the lists in the way the minimizes the difference between
+        # the samples at the junction
+        best = min(d_s1_s2, d_s2_s1, d_s1r_s2, d_s1_s2r)
+        if best == d_s1_s2:
+            sets.append(s1 + s2)
+        elif best == d_s2_s1:
+            sets.append(s2 + s1)
+        elif best == d_s1r_s2:
+            sets.append(list(reversed(s1)) + s2)
+        else:
+            sets.append(s1 + list(reversed(s2)))
+    
+    return sets[-1]
