@@ -419,11 +419,13 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"):
 
-            # currently we only support the mean estimator
+            # currently we only support the mean and quantile estimators
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
                 self.base_offset = model.init_.mean
+            elif str(type(model.init_)).endswith("ensemble.gradient_boosting.QuantileEstimator'>"):
+                self.base_offset = model.init_.quantile
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
 
@@ -816,4 +818,8 @@ def get_xgboost_json(model):
     model.feature_names = None
     json_trees = model.get_dump(with_stats=True, dump_format="json")
     model.feature_names = fnames
+
+    # this fixes a bug where XGBoost can return invalid JSON
+    json_trees = [t.replace(": inf,", ": 1000000000000.0,") for t in json_trees]
+
     return json_trees
