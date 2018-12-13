@@ -200,7 +200,7 @@ def convert_to_link(val):
         assert False, "Passed link object must be a subclass of iml.Link"
 
 
-def hclust_order(X, metric="sqeuclidean"):
+def hclust_ordering(X, metric="sqeuclidean"):
     """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
     """
     
@@ -233,3 +233,59 @@ def hclust_order(X, metric="sqeuclidean"):
             sets.append(s1 + list(reversed(s2)))
     
     return sets[-1]
+
+
+def convert_name(ind, shap_values, feature_names):
+    if type(ind) == str:
+        nzinds = np.where(np.array(feature_names) == ind)[0]
+        if len(nzinds) == 0:
+            # we allow rank based indexing using the format "rank(int)"
+            if ind.startswith("rank("):
+                return np.argsort(-np.abs(shap_values).mean(0))[int(ind[5:-1])]
+            else:
+                print("Could not find feature named: " + ind)
+                return None
+        else:
+            return nzinds[0]
+    else:
+        return ind
+
+
+def approximate_interactions(index, shap_values, X, feature_names=None):
+    """ Order other features by how much interaction they seem to have with the feature at the given index.
+
+    This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
+    index values for SHAP see the interaction_contribs option implemented in XGBoost.
+    """
+
+    # convert from DataFrames if we got any
+    if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        if feature_names is None:
+            feature_names = X.columns
+        X = X.values
+
+    index = convert_name(index, shap_values, feature_names)
+
+    if X.shape[0] > 10000:
+        a = np.arange(X.shape[0])
+        np.random.shuffle(a)
+        inds = a[:10000]
+    else:
+        inds = np.arange(X.shape[0])
+
+    x = X[inds, index]
+    srt = np.argsort(x)
+    shap_ref = shap_values[inds, index]
+    shap_ref = shap_ref[srt]
+    inc = max(min(int(len(x) / 10.0), 50), 1)
+    interactions = []
+    for i in range(X.shape[1]):
+        val_other = X[inds, i][srt].astype(np.float)
+        v = 0.0
+        if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
+            for j in range(0, len(x), inc):
+                if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
+                    v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
+        interactions.append(v)
+
+    return np.argsort(-np.abs(interactions))

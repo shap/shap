@@ -1,6 +1,6 @@
 # flake8: noqa
 
-__version__ = '0.26.0'
+__version__ = '0.27.0'
 
 from .explainers.kernel import KernelExplainer, kmeans
 from .explainers.sampling import SamplingExplainer
@@ -13,6 +13,8 @@ from .plots.dependence import dependence_plot
 from .plots.force import force_plot, initjs
 from .plots.image import image_plot
 from .plots.monitoring import monitoring_plot
+from .plots.embedding import embedding_plot
 from . import datasets
 from . import benchmark
 from .explainers import other
+from .common import approximate_interactions, hclust_ordering
