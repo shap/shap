@@ -9,11 +9,13 @@ typedef double tfloat;
 
 static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args);
 static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args);
+static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args);
 static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args);
 
 static PyMethodDef module_methods[] = {
     {"dense_tree_shap", _cext_dense_tree_shap, METH_VARARGS, "C implementation of Tree SHAP for dense."},
     {"dense_tree_predict", _cext_dense_tree_predict, METH_VARARGS, "C implementation of tree predictions."},
+    {"dense_tree_saabas", _cext_dense_tree_saabas, METH_VARARGS, "C implementation of Saabas (rough fast approximation to Tree SHAP)."},
     {"compute_expectations", _cext_compute_expectations, METH_VARARGS, "Compute expectations of internal nodes."},
     {NULL, NULL, 0, NULL}
 };
@@ -317,6 +319,109 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
 
     dense_tree_predict(out_pred, trees, data);
+
+    // clean up the created python objects 
+    Py_XDECREF(children_left_array);
+    Py_XDECREF(children_right_array);
+    Py_XDECREF(children_default_array);
+    Py_XDECREF(features_array);
+    Py_XDECREF(thresholds_array);
+    Py_XDECREF(values_array);
+    Py_XDECREF(X_array);
+    Py_XDECREF(X_missing_array);
+    if (y_array != NULL) Py_XDECREF(y_array);
+    Py_XDECREF(out_pred_array);
+
+    /* Build the output tuple */
+    PyObject *ret = Py_BuildValue("d", (double)values[0]);
+    return ret;
+}
+
+
+static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
+{
+    PyObject *children_left_obj;
+    PyObject *children_right_obj;
+    PyObject *children_default_obj;
+    PyObject *features_obj;
+    PyObject *thresholds_obj;
+    PyObject *values_obj;
+    int max_depth;
+    int tree_limit;
+    double base_offset;
+    int model_output;
+    PyObject *X_obj;
+    PyObject *X_missing_obj;
+    PyObject *y_obj;
+    PyObject *out_pred_obj;
+    
+  
+    /* Parse the input tuple */
+    if (!PyArg_ParseTuple(
+        args, "OOOOOOiidiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
+        &features_obj, &thresholds_obj, &values_obj, &max_depth, &tree_limit, &base_offset, &model_output,
+        &X_obj, &X_missing_obj, &y_obj, &out_pred_obj
+    )) return NULL;
+
+    /* Interpret the input objects as numpy arrays. */
+    PyArrayObject *children_left_array = (PyArrayObject*)PyArray_FROM_OTF(children_left_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *children_right_array = (PyArrayObject*)PyArray_FROM_OTF(children_right_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *children_default_array = (PyArrayObject*)PyArray_FROM_OTF(children_default_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *features_array = (PyArrayObject*)PyArray_FROM_OTF(features_obj, NPY_INT, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *thresholds_array = (PyArrayObject*)PyArray_FROM_OTF(thresholds_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *values_array = (PyArrayObject*)PyArray_FROM_OTF(values_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *X_array = (PyArrayObject*)PyArray_FROM_OTF(X_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *X_missing_array = (PyArrayObject*)PyArray_FROM_OTF(X_missing_obj, NPY_BOOL, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *y_array = NULL;
+    if (y_obj != Py_None) y_array = (PyArrayObject*)PyArray_FROM_OTF(y_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    PyArrayObject *out_pred_array = (PyArrayObject*)PyArray_FROM_OTF(out_pred_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+
+    /* If that didn't work, throw an exception. Note that R and y are optional. */
+    if (children_left_array == NULL || children_right_array == NULL ||
+        children_default_array == NULL || features_array == NULL || thresholds_array == NULL ||
+        values_array == NULL || X_array == NULL ||
+        X_missing_array == NULL || out_pred_array == NULL) {
+        Py_XDECREF(children_left_array);
+        Py_XDECREF(children_right_array);
+        Py_XDECREF(children_default_array);
+        Py_XDECREF(features_array);
+        Py_XDECREF(thresholds_array);
+        Py_XDECREF(values_array);
+        Py_XDECREF(X_array);
+        Py_XDECREF(X_missing_array);
+        if (y_array != NULL) Py_XDECREF(y_array);
+        Py_XDECREF(out_pred_array);
+        return NULL;
+    }
+
+    const unsigned num_X = PyArray_DIM(X_array, 0);
+    const unsigned M = PyArray_DIM(X_array, 1);
+    const unsigned max_nodes = PyArray_DIM(values_array, 1);
+    const unsigned num_outputs = PyArray_DIM(values_array, 2);
+
+    // Get pointers to the data as C-types
+    int *children_left = (int*)PyArray_DATA(children_left_array);
+    int *children_right = (int*)PyArray_DATA(children_right_array);
+    int *children_default = (int*)PyArray_DATA(children_default_array);
+    int *features = (int*)PyArray_DATA(features_array);
+    tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
+    tfloat *values = (tfloat*)PyArray_DATA(values_array);
+    tfloat *X = (tfloat*)PyArray_DATA(X_array);
+    bool *X_missing = (bool*)PyArray_DATA(X_missing_array);
+    tfloat *y = NULL;
+    if (y_array != NULL) y = (tfloat*)PyArray_DATA(y_array);
+    tfloat *out_pred = (tfloat*)PyArray_DATA(out_pred_array);
+
+    // these are just wrapper objects for all the pointers and numbers associated with
+    // the ensemble tree model and the datset we are explaing
+    TreeEnsemble trees = TreeEnsemble(
+        children_left, children_right, children_default, features, thresholds, values,
+        NULL, max_depth, tree_limit, base_offset,
+        max_nodes, num_outputs
+    );
+    ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
+
+    dense_tree_saabas(out_pred, trees, data);
 
     // clean up the created python objects 
     Py_XDECREF(children_left_array);
