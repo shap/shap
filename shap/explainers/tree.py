@@ -156,8 +156,6 @@ class TreeExplainer(Explainer):
         attribute of the explainer when it is constant). For models with vector outputs this returns
         a list of such matrices, one for each output.
         """
-        self.model_stack = model_stack
-
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
         if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal":
             phi = None
@@ -242,7 +240,7 @@ class TreeExplainer(Explainer):
 
         # run the core algorithm using the C extension
         assert_import("cext")
-        if not self.model_stack:
+        if not model_stack:
             phi = np.zeros((X.shape[0], X.shape[1]+1, self.model.n_outputs))
         else:
             # In this case, we are doing independent tree shap
@@ -253,7 +251,7 @@ class TreeExplainer(Explainer):
                 self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
                 self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
                 self.model.base_offset, phi, feature_dependence_codes[self.feature_dependence],
-                output_transform_codes[transform], False, self.model_stack
+                output_transform_codes[transform], False, model_stack
             )
         else:
             _cext.dense_tree_saabas(
@@ -277,7 +275,7 @@ class TreeExplainer(Explainer):
             else:
                 return [phi[:, :-1, i] for i in range(self.model.n_outputs)]
 
-    def shap_interaction_values(self, X, y=None, tree_limit=-1):
+    def shap_interaction_values(self, X, y=None, tree_limit=-1, model_stack = False):
         """ Estimate the SHAP interaction values for a set of samples.
 
         Parameters
@@ -350,7 +348,7 @@ class TreeExplainer(Explainer):
             self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
             self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
             self.model.base_offset, phi, feature_dependence_codes[self.feature_dependence],
-            output_transform_codes[transform], True, self.model_stack
+            output_transform_codes[transform], True, model_stack
         )
 
         # note we pull off the last column and keep it as our expected_value
