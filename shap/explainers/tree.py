@@ -813,7 +813,7 @@ class Tree:
         else:
             raise Exception("Unknown input to Tree constructor!")
 
-
+ 
 def get_xgboost_json(model):
     """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
     """
@@ -824,5 +824,6 @@ def get_xgboost_json(model):
 
     # this fixes a bug where XGBoost can return invalid JSON
     json_trees = [t.replace(": inf,", ": 1000000000000.0,") for t in json_trees]
+    json_trees = [t.replace(": -inf,", ": -1000000000000.0,") for t in json_trees]
 
     return json_trees
