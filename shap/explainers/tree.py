@@ -122,9 +122,11 @@ class TreeExplainer(Explainer):
             assert LooseVersion(xgboost.__version__) >= LooseVersion('0.81'), \
                 "A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!"
         
-        proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
-        self.expected_value = (self.model.values[:,0].T * proportions).T.sum(0)
-
+        # compute the expected value if we have a parsed tree for the cext
+        if hasattr(self.model, "node_sample_weight"):
+            proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
+            self.expected_value = (self.model.values[:,0].T * proportions).T.sum(0)
+        
     def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
 
