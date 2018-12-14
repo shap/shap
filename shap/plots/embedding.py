@@ -9,7 +9,7 @@ from . import labels
 from . import colors
 from ..common import convert_name
 
-def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0):
+def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
     """ Use the SHAP values as an embedding which we project to 2D for visualization.
 
     Parameters
@@ -21,16 +21,15 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
         SHAP value over all the samples).
 
     shap_values : numpy.array
-        Matrix of SHAP values (# samples x # features). It can also be a pre-projected
-        array that has already been reduced to 2D, in which case the method argument
-        will be ignored and the provided projection will be used directly.
+        Matrix of SHAP values (# samples x # features).
 
     feature_names : None or list
         The names of the features in the shap_values array.
 
-    method : "pca"
-        How to reduce the dimensions of the shap_values to 2D. Currently only "pca" is
-        supported.
+    method : "pca" or numpy.array
+        How to reduce the dimensions of the shap_values to 2D. If "pca" then the 2D
+        PCA projection of shap_values is used. If a numpy array then is should be
+        (# samples x 2) and represent the embedding of that values. 
 
     alpha : float
         The transparency of the data points (between 0 and 1). This can be useful to the
@@ -43,14 +42,13 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
     ind = convert_name(ind, shap_values, feature_names)
     
     # see if we need to compute the embedding
-    if shap_values.shape[1] != 2:
-        if method == "pca":
-            pca = sklearn.decomposition.PCA(2)
-            embedding_values = pca.fit_transform(shap_values)
-        else:
-            print("Unsupported embedding method:", method)
+    if method == "pca":
+        pca = sklearn.decomposition.PCA(2)
+        embedding_values = pca.fit_transform(shap_values)
+    elif type(method) == np.array and method.shape[1] == 2:
+        embedding_values = method
     else:
-        embedding_values = shap_values
+        print("Unsupported embedding method:", method)
 
     pl.scatter(
         embedding_values[:,0], embedding_values[:,1], c=shap_values[:,ind],
@@ -67,5 +65,6 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 10)
     cb.set_alpha(1)
-    pl.show()
+    if show:
+        pl.show()
     

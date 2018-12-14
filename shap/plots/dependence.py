@@ -226,7 +226,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     xlim = pl.xlim()
     pl.scatter(
         xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
-        linewidth=2, color="#777777", alpha=alpha
+        linewidth=2, c=cvals[xv_nans], cmap=colors.red_blue, alpha=alpha
     )
     pl.xlim(*xlim)
 

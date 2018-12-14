@@ -286,6 +286,16 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
             for j in range(0, len(x), inc):
                 if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
                     v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
-        interactions.append(v)
+        val_v = v
+
+        val_other = np.isnan(X[inds, i][srt])
+        v = 0.0
+        if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
+            for j in range(0, len(x), inc):
+                if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
+                    v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
+        nan_v = v
+
+        interactions.append(max(val_v, nan_v))
 
     return np.argsort(-np.abs(interactions))
