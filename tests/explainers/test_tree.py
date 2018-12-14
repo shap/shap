@@ -531,6 +531,8 @@ def test_model_stack_indep():
         x = X[x_ind:x_ind+2,:]
         itshap = expl.shap_values(x)
         itshap_ms = expl_ms.shap_values(x)
+        assert expl_ms.expected_value.shape == (1000,)
+        assert np.allclose(expl.expected_value, expl_ms.expected_value.mean())
         assert itshap.shape == (2, 7)
         assert itshap_ms.shape == (2, 7, 1000)
         assert np.allclose(itshap, itshap_ms.mean(2))
