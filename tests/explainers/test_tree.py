@@ -260,7 +260,7 @@ def test_single_row_random_forest():
     assert np.abs(shap_values[0].sum() + ex.expected_value[0] - predicted[0,0]) < 1e-6, \
         "SHAP values don't sum to model output!"
 
-def test_sum_match_gradient_boosting():
+def test_sum_match_gradient_boosting_classifier():
     import shap
     import numpy as np
     from sklearn.model_selection import train_test_split
@@ -278,7 +278,7 @@ def test_sum_match_gradient_boosting():
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
         "SHAP values don't sum to model output!"
 
-def test_single_row_gradient_boosting():
+def test_single_row_gradient_boosting_classifier():
     import shap
     import numpy as np
     from sklearn.model_selection import train_test_split
@@ -294,7 +294,41 @@ def test_single_row_gradient_boosting():
     assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
         "SHAP values don't sum to model output!"
 
-def test_single_tree_compare_indep_with_kernel_shap():
+def test_sum_match_gradient_boosting_regressor():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import GradientBoostingRegressor
+    import sklearn
+
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = GradientBoostingRegressor(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+
+    predicted = clf.predict(X_test)
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test)
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+        "SHAP values don't sum to model output!"
+
+def test_single_row_gradient_boosting_regressor():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import GradientBoostingRegressor
+    import sklearn
+
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    clf = GradientBoostingRegressor(random_state=202, n_estimators=10, max_depth=10)
+    clf.fit(X_train, Y_train)
+    
+    predicted = clf.predict(X_test)
+    ex = shap.TreeExplainer(clf)
+    shap_values = ex.shap_values(X_test.iloc[0,:])
+    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
+        "SHAP values don't sum to model output!"
+
+def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the 
     set being conditioned on, and the remainder set.
@@ -531,6 +565,8 @@ def test_model_stack_indep():
         x = X[x_ind:x_ind+2,:]
         itshap = expl.shap_values(x)
         itshap_ms = expl_ms.shap_values(x)
+        assert expl_ms.expected_value.shape == (1000,)
+        assert np.allclose(expl.expected_value, expl_ms.expected_value.mean())
         assert itshap.shape == (2, 7)
         assert itshap_ms.shape == (2, 7, 1000)
         assert np.allclose(itshap, itshap_ms.mean(2))

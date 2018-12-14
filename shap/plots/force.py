@@ -21,7 +21,7 @@ else:
 import warnings
 import re
 from . import labels
-from ..common import convert_to_link, Instance, Model, Data, DenseData, Link
+from ..common import convert_to_link, Instance, Model, Data, DenseData, Link, hclust_ordering
 from ..plots.force_matplotlib import draw_additive_plot
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
@@ -313,10 +313,7 @@ class AdditiveForceArrayVisualizer:
 
         # order the samples by their position in a hierarchical clustering
         if all([e.model.f == arr[1].model.f for e in arr]):
-            #m = np.vstack([e.effects for e in arr])
-            D = scipy.spatial.distance.pdist(np.vstack([e.effects for e in arr]), 'sqeuclidean')
-            #D = np.vstack([np.sum((m - m[i,:])**2, 1) for i in range(m.shape[0])])
-            clustOrder = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.complete(D))
+            clustOrder = hclust_ordering(np.vstack([e.effects for e in arr]))
         else:
             assert False, "Tried to visualize an array of explanations from different models!"
 
