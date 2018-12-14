@@ -1182,8 +1182,10 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
         }
 
         // average the results over all the references.
-        for (unsigned j = 0; j < (data.M + 1) * trees.num_outputs; ++j) {
-            instance_out_contribs[j] /= data.num_R;
+        if (!model_stack) {
+            for (unsigned j = 0; j < (data.M + 1) * trees.num_outputs; ++j) {
+                instance_out_contribs[j] /= data.num_R;
+            }
         }
 
         // apply the base offset to the bias term
