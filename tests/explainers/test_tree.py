@@ -541,6 +541,7 @@ def test_front_page_xgboost_global_path_dependent():
     
 def test_model_stack_indep():
     """ Make sure that model stacking matches the default independent tree shap.
+    Additionally make sure that the expected value is updated correctly.
     """    
     try:
         import xgboost
@@ -558,15 +559,19 @@ def test_model_stack_indep():
     Xd = xgboost.DMatrix(X, label=y)
     model = xgboost.train({'eta':1, 'max_depth':max_depth, 'base_score': 0, "lambda": 0}, Xd, 1)
     expl = shap.TreeExplainer(model, X, feature_dependence="independent")
-    expl_ms = shap.TreeExplainer(model, X, feature_dependence="independent", model_stack = True)
 
     for i in range(0,5):
         x_ind = np.random.choice(X.shape[1])
         x = X[x_ind:x_ind+2,:]
         itshap = expl.shap_values(x)
-        itshap_ms = expl_ms.shap_values(x)
-        assert expl_ms.expected_value.shape == (1000,)
-        assert np.allclose(expl.expected_value, expl_ms.expected_value.mean())
+        ev = expl.expected_value
+        itshap_ms = expl.shap_values(x, model_stack = True)
+        ev_ms = expl.expected_value
+        expl.shap_values(x)
+        ev2 = expl.expected_value
+        assert ev_ms.shape == (1000,)
+        assert np.allclose(ev, ev_ms.mean())
+        assert np.allclose(ev, ev2)
         assert itshap.shape == (2, 7)
         assert itshap_ms.shape == (2, 7, 1000)
         assert np.allclose(itshap, itshap_ms.mean(2))

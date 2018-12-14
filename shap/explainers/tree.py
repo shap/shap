@@ -88,7 +88,7 @@ class TreeExplainer(Explainer):
     """
 
     def __init__(self, model, data = None, model_output = "margin", 
-                 feature_dependence = "tree_path_dependent", model_stack = False):
+                 feature_dependence = "tree_path_dependent"):
         self.model = TreeEnsemble(model)
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             self.data = data.values
@@ -98,7 +98,6 @@ class TreeExplainer(Explainer):
         self.model_output = model_output
         self.feature_dependence = feature_dependence
         self.expected_value = None
-        self.model_stack = model_stack
 
         assert feature_dependence in feature_dependence_codes, "Invalid feature_dependence option!"
 
@@ -123,11 +122,8 @@ class TreeExplainer(Explainer):
             assert_import("xgboost")
             assert LooseVersion(xgboost.__version__) >= LooseVersion('0.81'), \
                 "A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!"
-        
-        proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
-        self.expected_value = (self.model.values[:,0].T * proportions).T.sum(0)
 
-    def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
+    def shap_values(self, X, y=None, tree_limit=-1, approximate=False, model_stack = False):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -155,6 +151,7 @@ class TreeExplainer(Explainer):
         attribute of the explainer when it is constant). For models with vector outputs this returns
         a list of such matrices, one for each output.
         """
+        self.model_stack = model_stack
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
         if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal":
@@ -428,13 +425,11 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"):
+        elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"): # TODO: add unit test for this case
 
-            # currently we only support the mean and quantile estimators
+            # currently we only support the mean estimator
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
                 self.base_offset = model.init_.mean
-            elif str(type(model.init_)).endswith("ensemble.gradient_boosting.QuantileEstimator'>"):
-                self.base_offset = model.init_.quantile
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
 
@@ -819,7 +814,7 @@ class Tree:
         else:
             raise Exception("Unknown input to Tree constructor!")
 
- 
+
 def get_xgboost_json(model):
     """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
     """
@@ -827,9 +822,4 @@ def get_xgboost_json(model):
     model.feature_names = None
     json_trees = model.get_dump(with_stats=True, dump_format="json")
     model.feature_names = fnames
-
-    # this fixes a bug where XGBoost can return invalid JSON
-    json_trees = [t.replace(": inf,", ": 1000000000000.0,") for t in json_trees]
-    json_trees = [t.replace(": -inf,", ": -1000000000000.0,") for t in json_trees]
-
     return json_trees
