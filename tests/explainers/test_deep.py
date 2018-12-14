@@ -135,7 +135,49 @@ def test_keras_imdb_lstm():
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-06), "Sum of SHAP values does not match difference!"
 
+    
+def test_model_stack_keras_xgb():
+    try:
+        import xgboost
+        from keras.models import Sequential, load_model
+        from keras.layers import Dense, LSTM, Dropout, Activation
+    except Exception as e:
+        print("Skipping test_model_stack_keras_xgb!")
+        return
+    import shap
+    np.random.seed(10)
+    model = Sequential()
+    model.add(Dense(64, activation='relu', input_dim=5))
+    model.add(Dropout(0.5))
+    model.add(Dense(10, activation='softmax'))
+    # Encountered an error where I needed to set learning phase before, so I will leave this here
+    # from keras import backend as K
+    # K.set_learning_phase(0)
+    X = np.random.normal(size=(100,5))
+    y = np.random.normal(size=(100,1))
+    X_embed = model.predict(X)
+    tree_model = xgboost.train({'eta':1, 'silent':1, 'base_score': 0, }, xgboost.DMatrix(X_embed, label=y), 10)
+    tree_expl = shap.TreeExplainer(tree_model, X_embed, feature_dependence="independent")
 
+    for i in range(0,2):
+        x_ind = np.random.choice(X_embed.shape[1])
+        x_embed = X_embed[x_ind:x_ind+1]
+        x = X[x_ind:x_ind+1]
+        # Obtain single reference shap values for tree
+        itshap_ms = tree_expl.shap_values(x_embed, model_stack = True)
+        # Rescale shap values to get gradient
+        tree_phi = np.transpose(itshap_ms[0])
+        model_stack_ref_grad = np.divide(tree_phi, X_embed[x_ind] - X_embed, 
+                                         out=np.zeros_like(tree_phi), 
+                                         where=(X_embed[x_ind] - X_embed)!=0)
+        # Make sure intermediary attributions sum up correctly
+        y = tree_model.predict(xgboost.DMatrix(x_embed))
+        assert np.allclose(itshap_ms.mean(2).sum(), y - tree_expl.expected_value.mean())
+        # Make sure stacked attributions sum up correctly
+        e = shap.DeepExplainer(model, X)
+        phi_final = np.array(e.shap_values(x, model_stack_ref_grad=model_stack_ref_grad))[:,0,:]
+        assert np.allclose(itshap_ms.mean(2).sum(), phi_final.sum(0).sum(), atol = .0001)
+    
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
