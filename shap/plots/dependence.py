@@ -153,7 +153,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # discritize colors for categorical features
     color_norm = None
     if categorical_interaction and clow != chigh:
-        bounds = np.linspace(clow, chigh, chigh - clow + 2)
+        bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
         color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N)
         
     # optionally add jitter to feature values
