@@ -123,7 +123,7 @@ class TreeExplainer(Explainer):
                 "A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!"
         
         proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
-        self.expected_value = (self.model.values[:,0] * proportions).sum()
+        self.expected_value = (self.model.values[:,0].T * proportions).T.sum(0)
 
     def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
