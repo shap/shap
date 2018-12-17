@@ -216,7 +216,6 @@ inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const Explanation
 
         // assign credit to this feature as the difference in values at the current node vs. the next node
         for (unsigned i = 0; i < tree.num_outputs; ++i) {
-            std::cout << feature << " " << tree.values[curr_node * tree.num_outputs + i] << " - " << tree.values[next_node * tree.num_outputs + i] << "\n";
             out[feature * tree.num_outputs + i] += tree.values[next_node * tree.num_outputs + i] - tree.values[curr_node * tree.num_outputs + i];
         }
 

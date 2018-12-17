@@ -10,22 +10,22 @@ import_errors = {}
 
 try:
     from .. import _cext
-except Exception as e:
+except ImportError as e:
     import_errors["cext"] = "C extension was not built during install!", e
 
 try:
     import xgboost
-except Exception as e:
+except ImportError as e:
     import_errors["xgboost"] = "XGBoost could not be imported!", e
 
 try:
     import lightgbm
-except Exception as e:
+except ImportError as e:
     import_errors["lightgbm"] = "LightGBM could not be imported!", e
 
 try:
     import catboost
-except Exception as e:
+except ImportError as e:
     import_errors["catboost"] = "CatBoost could not be imported!", e
 
 def assert_import(package_name):
