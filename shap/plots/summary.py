@@ -123,6 +123,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
         pl.subplots_adjust(hspace=0, wspace=0.1)
+        pl.tight_layout()
         if show:
             pl.show()
         return
@@ -393,6 +394,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
     else:
         pl.xlabel(labels['VALUE'], fontsize=13)
+    pl.tight_layout()
     if show:
         pl.show()
 
