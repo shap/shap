@@ -132,13 +132,13 @@ class PyTorchDeepExplainer(Explainer):
                 if func_name in ['maxpool', 'nonlinear_1d']:
                     # only save tensors if necessary
                     if type(input) is tuple:
-                        setattr(module, 'x', input[0].detach())
+                        setattr(module, 'x', torch.nn.Parameter(input[0].detach()))
                     else:
-                        setattr(module, 'x', input.detach())
+                        setattr(module, 'x', torch.nn.Parameter(input.detach()))
                     if type(output) is tuple:
-                        setattr(module, 'y', output[0].detach())
+                        setattr(module, 'y', torch.nn.Parameter(output[0].detach()))
                     else:
-                        setattr(module, 'y', output.detach())
+                        setattr(module, 'y', torch.nn.Parameter(output.detach()))
 
     @staticmethod
     def deeplift_grad(module, grad_input, grad_output):
@@ -228,10 +228,10 @@ class PyTorchDeepExplainer(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
+                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:])* (x[l] - data[l])).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (X[l][j: j + 1] - self.data[l])).mean(0)
+                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]) * (X[l][j: j + 1] - self.data[l])).mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
