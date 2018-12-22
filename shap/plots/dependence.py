@@ -224,10 +224,16 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # plot any nan feature values as tick marks along the y-axis
     xv_nans = np.isnan(xv)
     xlim = pl.xlim()
-    pl.scatter(
-        xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
-        linewidth=2, c=cvals[xv_nans], cmap=colors.red_blue, alpha=alpha
-    )
+    if interaction_index is not None:
+        pl.scatter(
+            xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
+            linewidth=2, c=cvals[xv_nans], cmap=colors.red_blue, alpha=alpha
+        )
+    else:
+        pl.scatter(
+            xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
+            linewidth=2, color="#1E88E5", alpha=alpha
+        )
     pl.xlim(*xlim)
 
     # make the plot more readable

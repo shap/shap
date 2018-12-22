@@ -242,6 +242,11 @@ def convert_name(ind, shap_values, feature_names):
             # we allow rank based indexing using the format "rank(int)"
             if ind.startswith("rank("):
                 return np.argsort(-np.abs(shap_values).mean(0))[int(ind[5:-1])]
+
+            # we allow the sum of all the SHAP values to be specified with "sum()"
+            # assuming here that the calling method can deal with this case
+            elif ind == "sum()": 
+                return "sum()"
             else:
                 print("Could not find feature named: " + ind)
                 return None

@@ -34,6 +34,19 @@ def boston(display=False):
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
     return df, d.target # pylint: disable=E1101
 
+def imdb(display=False):
+    """ Return the clssic IMDB sentiment analysis training data in a nice package.
+
+    Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
+    Paper to cite when using the data is: http://www.aclweb.org/anthology/P11-1015
+    """
+
+    with open(cache(github_data_url + "imdb_train.txt")) as f:
+        data = f.readlines()
+    y = np.ones(25000, dtype=np.bool)
+    y[:12500] = 0
+    return data, y
+
 def communitiesandcrime(display=False):
     """ Predict total number of non-violent crimes per 100K popuation.
 

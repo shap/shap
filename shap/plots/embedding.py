@@ -18,7 +18,8 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
         If this is an int it is the index of the feature to use to color the embedding.
         If this is a string it is either the name of the feature, or it can have the
         form "rank(int)" to specify the feature with that rank (ordered by mean absolute
-        SHAP value over all the samples).
+        SHAP value over all the samples), or "sum()" to mean the sum of all the SHAP values,
+        which is the model's output (minus it's expected value).
 
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
@@ -40,24 +41,30 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
         feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
     
     ind = convert_name(ind, shap_values, feature_names)
+    if ind == "sum()":
+        cvals = shap_values.sum(1)
+        fname = "sum(SHAP values)"
+    else:
+        cvals = shap_values[:,ind]
+        fname = feature_names[ind]
     
     # see if we need to compute the embedding
-    if method == "pca":
+    if type(method) == str and method == "pca":
         pca = sklearn.decomposition.PCA(2)
         embedding_values = pca.fit_transform(shap_values)
-    elif type(method) == np.array and method.shape[1] == 2:
+    elif hasattr(method, "shape") and method.shape[1] == 2:
         embedding_values = method
     else:
         print("Unsupported embedding method:", method)
 
     pl.scatter(
-        embedding_values[:,0], embedding_values[:,1], c=shap_values[:,ind],
+        embedding_values[:,0], embedding_values[:,1], c=cvals,
         cmap=colors.red_blue_solid, alpha=alpha, linewidth=0
     )
     pl.axis("off")
     #pl.title(feature_names[ind])
     cb = pl.colorbar()
-    cb.set_label("SHAP value for\n"+feature_names[ind], size=13)
+    cb.set_label("SHAP value for\n"+fname, size=13)
     cb.outline.set_visible(False)
     
     
@@ -67,4 +74,3 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
     cb.set_alpha(1)
     if show:
         pl.show()
-    

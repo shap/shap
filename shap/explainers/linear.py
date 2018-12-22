@@ -26,17 +26,26 @@ class LinearExplainer(Explainer):
     nsamples : int
         Number of samples to use when estimating the transformation matrix used to account for
         feature correlations.
-    feature_dependence : "correlation" (default) or "interventional"
+    feature_dependence : "independent" (default) or "correlation"
         There are two ways we might want to compute SHAP values, either the full conditional SHAP
-        values or the interventional SHAP values. For interventional SHAP values we break any
-        dependence structure in the model and so uncover how the model would behave if we
+        values or the independent SHAP values. For independent SHAP values we break any
+        dependence structure between features in the model and so uncover how the model would behave if we
         intervened and changed some of the inputs. For the full conditional SHAP values we respect
         the correlations among the input features, so if the model depends on one input but that
-        input is correlated with another input, then both get some credit for the model's behavior.
+        input is correlated with another input, then both get some credit for the model's behavior. The
+        independent option stays "true to the model" meaning it will only give credit to features that are
+        actually used by the model, while the correlation option stays "true to the data" in the sense that
+        it only considers how the model would behave when respecting the correlations in the input data. 
     """
 
-    def __init__(self, model, data, nsamples=1000, feature_dependence="correlation"):
+    def __init__(self, model, data, nsamples=1000, feature_dependence=None):
         self.nsamples = nsamples
+        if feature_dependence == "interventional":
+            warnings.warn('The option feature_dependence="interventional" is has been renamed to feature_dependence="independent"!')
+            feature_dependence = "independent"
+        elif feature_dependence is None:
+            warnings.warn('The default value for feature_dependence has been changed to "independent"!')
+            feature_dependence = "independent"
         self.feature_dependence = feature_dependence
 
         # raw coefficents
@@ -64,22 +73,22 @@ class LinearExplainer(Explainer):
         if type(data) == tuple and len(data) == 2:
             self.mean = data[0]
             self.cov = data[1]
-        elif str(type(data)).endswith("'numpy.ndarray'>"):
-            self.mean = data.mean(0)
-            self.cov = np.cov(data, rowvar=False)
         elif data is None:
             raise Exception("A background data distribution must be provided!")
-
+        else:
+            self.mean = np.array(np.mean(data, 0)).flatten() # assumes it is an array
+            if feature_dependence == "correlation":
+                self.cov = np.cov(data, rowvar=False)
+        #print(self.coef, self.mean.flatten(), self.intercept)
         self.expected_value = np.dot(self.coef, self.mean) + self.intercept
-
         self.M = len(self.mean)
-        self.valid_inds = np.where(np.diag(self.cov) > 1e-8)[0]
-        self.mean = self.mean[self.valid_inds]
-        self.cov = self.cov[:,self.valid_inds][self.valid_inds,:]
-        self.coef = self.coef[self.valid_inds]
 
         # if needed, estimate the transform matrices
         if feature_dependence == "correlation":
+            self.valid_inds = np.where(np.diag(self.cov) > 1e-8)[0]
+            self.mean = self.mean[self.valid_inds]
+            self.cov = self.cov[:,self.valid_inds][self.valid_inds,:]
+            self.coef = self.coef[self.valid_inds]
 
             # group perfectly redundant variables together
             self.avg_proj,sum_proj = duplicate_components(self.cov)
@@ -95,9 +104,9 @@ class LinearExplainer(Explainer):
             mean_transform, x_transform = self._estimate_transforms(nsamples)
             self.mean_transformed = np.matmul(mean_transform, self.mean)
             self.x_transform = x_transform
-        elif feature_dependence == "interventional":
+        elif feature_dependence == "independent":
             if nsamples != 1000:
-                warnings.warn("Setting nsamples has no effect when feature_dependence = 'interventional'!")
+                warnings.warn("Setting nsamples has no effect when feature_dependence = 'independent'!")
         else:
             raise Exception("Unknown type of feature_dependence provided: " + feature_dependence)
 
@@ -187,18 +196,20 @@ class LinearExplainer(Explainer):
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
             X = X.values
 
-        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         if self.feature_dependence == "correlation":
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
-        elif self.feature_dependence == "interventional":
-            phi = self.coef * (X[:,self.valid_inds] - self.mean)        
-        
-        full_phi = np.zeros(((phi.shape[0], self.M)))
-        full_phi[:,self.valid_inds] = phi
-        return full_phi
+
+            full_phi = np.zeros(((phi.shape[0], self.M)))
+            full_phi[:,self.valid_inds] = phi
+
+            return full_phi
+
+        elif self.feature_dependence == "independent":
+            return np.array(X - self.mean) * self.coef
 
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))
