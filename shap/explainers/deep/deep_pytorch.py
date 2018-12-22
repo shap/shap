@@ -228,7 +228,7 @@ class PyTorchDeepExplainer(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:])* (x[l] - data[l])).mean(0)
+                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:]* (x[l] - data[l])).mean(0)
                 else:
                     for l in range(len(X)):
                         phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]) * (X[l][j: j + 1] - self.data[l])).mean(0)
