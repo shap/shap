@@ -1,6 +1,6 @@
 # flake8: noqa
 
-__version__ = '0.27.0'
+__version__ = '0.27.1'
 
 from .explainers.kernel import KernelExplainer, kmeans
 from .explainers.sampling import SamplingExplainer

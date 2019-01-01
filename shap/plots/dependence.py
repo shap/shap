@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 try:
     import matplotlib.pyplot as pl
     import matplotlib
@@ -115,9 +116,11 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    xv = features[:, ind].astype(np.float64)
-    xd = display_features[:, ind]
-    s = shap_values[:, ind]
+    oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
+    np.random.shuffle(oinds)
+    xv = features[oinds, ind].astype(np.float64)
+    xd = display_features[oinds, ind]
+    s = shap_values[oinds, ind]
     if type(xd[0]) == str:
         name_map = {}
         for i in range(len(xv)):
@@ -173,14 +176,19 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if interaction_index is not None:
 
         # plot the nan values in the interaction feature as grey
-        cvals = features[:, interaction_index].astype(np.float64)
-        cvals_nans = np.isnan(cvals)
-        pl.scatter(xv[cvals_nans], s[cvals_nans], s=dot_size, linewidth=0, color="#777777",
-                   alpha=alpha, norm=color_norm, rasterized=len(xv) > 500)
-        
-        
-        pl.scatter(xv[np.invert(cvals_nans)], s[np.invert(cvals_nans)], s=dot_size, linewidth=0, c=cvals[np.invert(cvals_nans)], cmap=colors.red_blue,
-                   alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
+        cvals = features[oinds, interaction_index].astype(np.float64)
+        cvals_imp = cvals.copy()
+        cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
+        cvals[cvals_imp > chigh] = chigh
+        cvals[cvals_imp < clow] = clow
+        xv_nan = np.isnan(xv)
+        xv_notnan = np.invert(xv_nan)
+        p = pl.scatter(
+            xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals_imp[xv_notnan],
+            cmap=colors.red_blue_solid, alpha=alpha, vmin=clow, vmax=chigh,
+            norm=color_norm, rasterized=len(xv) > 500
+        )
+        p.set_array(cvals[xv_notnan])
     else:
         pl.scatter(xv, s, s=dot_size, linewidth=0, color="#1E88E5",
                    alpha=alpha, rasterized=len(xv) > 500)
@@ -222,16 +230,17 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         pl.xlim(xmin, xmax)
 
     # plot any nan feature values as tick marks along the y-axis
-    xv_nans = np.isnan(xv)
     xlim = pl.xlim()
     if interaction_index is not None:
-        pl.scatter(
-            xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
-            linewidth=2, c=cvals[xv_nans], cmap=colors.red_blue, alpha=alpha
+        p = pl.scatter(
+            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+            linewidth=2, c=cvals_imp[xv_nan], cmap=colors.red_blue_solid, alpha=alpha,
+            vmin=clow, vmax=chigh
         )
+        p.set_array(cvals[xv_nan])
     else:
         pl.scatter(
-            xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
+            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
             linewidth=2, color="#1E88E5", alpha=alpha
         )
     pl.xlim(*xlim)
@@ -255,4 +264,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if type(xd[0]) == str:
         pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical', fontsize=11)
     if show:
-        pl.show()
+        with warnings.catch_warnings(): # ignore expected matplotlib warnings
+            warnings.simplefilter("ignore", RuntimeWarning)
+            pl.show()
