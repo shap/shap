@@ -14,3 +14,4 @@ shap/_cext.cpython-36m-darwin.so
 shap/_cext.cpython-35m-darwin.so
 javascript/build/*
 .vscode
+shap/_cext.so
