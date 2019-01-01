@@ -134,6 +134,8 @@ class TFDeepExplainer(Explainer):
         if (hasattr(self.data, '__call__')):
             self.expected_value = None
         else:
+            if self.data[0].shape[0] > 5000:
+                warnings.warn("You have provided over 5k background samples! For better performance consider using smaller random sample.")
             self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         # find all the operations in the graph between our inputs and outputs
