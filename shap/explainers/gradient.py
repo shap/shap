@@ -338,9 +338,9 @@ class _PyTorchGradientExplainer(Explainer):
                 interim_inputs = self.layer.target_input
                 if type(interim_inputs) is tuple:
                     # this should always be true, but just to be safe
-                    self.data = [torch.tensor(i) for i in interim_inputs]
+                    self.data = [i.clone().detach() for i in interim_inputs]
                 else:
-                    self.data = [torch.tensor(interim_inputs)]
+                    self.data = [interim_inputs.clone().detach()]
         else:
             self.data = data
         self.model = model.eval()
@@ -440,13 +440,14 @@ class _PyTorchGradientExplainer(Explainer):
                     for l in range(len(X)):
                         if self.local_smoothing > 0:
                             # local smoothing is added to the base input, unlike in the TF gradient explainer
-                            x = torch.tensor(X[l][j]) + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
+                            x = X[l][j].clone().detach() + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
                                 * self.local_smoothing
                         else:
-                            x = torch.tensor(X[l][j])
-                        samples_input[l][k] = torch.tensor(t * x + (1 - t) * torch.tensor(self.model_inputs[l][rind]))
+                            x = X[l][j].clone().detach()
+                        samples_input[l][k] = (t * x + (1 - t) * (self.model_inputs[l][rind]).clone().detach()).\
+                            clone().detach()
                         if self.input_handle is None:
-                            samples_delta[l][k] = (x - torch.tensor(self.data[l][rind])).cpu().numpy()
+                            samples_delta[l][k] = (x - (self.data[l][rind]).clone().detach()).cpu().numpy()
 
                     if self.interim is True:
                         with torch.no_grad():
@@ -465,7 +466,7 @@ class _PyTorchGradientExplainer(Explainer):
                 find = model_output_ranks[j, i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [torch.tensor(samples_input[l][b:min(b+self.batch_size,nsamples)]) for l in range(len(X))]
+                    batch = [samples_input[l][b:min(b+self.batch_size,nsamples)].clone().detach() for l in range(len(X))]
                     grads.append(self.gradient(find, batch))
                 grad = [np.concatenate([g[l] for g in grads], 0) for l in range(len(self.data))]
                 # assign the attributions to the right part of the output arrays
