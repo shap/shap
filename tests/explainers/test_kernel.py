@@ -71,7 +71,7 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
     explainer.shap_values(x_test)
 
 def test_kernel_shap_with_a1a_sparse_nonzero_background():
-    np.set_printoptions(threshold=np.nan)
+    np.set_printoptions(threshold=100000)
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     from sklearn.utils.sparsefuncs import csc_median_axis_0

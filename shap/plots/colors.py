@@ -23,6 +23,7 @@ try:
                   (0.5, 0.3, 0.3),
                   (1.0, 1, 1))
     })
+    #red_blue.set_bad("#777777")
 
     red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
         'red': ((0.0, 30./255, 30./255),
@@ -38,6 +39,9 @@ try:
                   (0.5, 1, 1),
                   (1.0, 1, 1))
     })
+    red_blue_solid.set_bad("#777777", 1.0)
+    red_blue_solid.set_over("#777777", 1.0)
+    red_blue_solid.set_under("#777777", 1.0) # "under" is incorrectly used instead of "bad" in the scatter plot
 
     colors = []
     for l in np.linspace(1, 0, 100):

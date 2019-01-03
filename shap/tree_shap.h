@@ -1020,8 +1020,8 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
         
         PySys_WriteStderr(
             "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
-            fraction * 100, int(round(fraction*20)), "===================",
-            20-int(round(fraction*20)), "                   ",
+            fraction * 100, int(0.5 + fraction*20), "===================",
+            20-int(0.5 + fraction*20), "                   ",
             i, total_count,
             int(elapsed_seconds/60), int(elapsed_seconds) % 60,
             int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60

@@ -41,9 +41,11 @@ class DeepExplainer(Explainer):
         data :
             if framework == 'tensorflow': [numpy.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
-            The background dataset to use for integrating out features. GradientExplainer integrates
+            The background dataset to use for integrating out features. DeepExplainer integrates
             over these samples. The data passed here must match the input operations given in the
-            first argument.
+            first argument. Note that since these samples are integrated over for each sample you
+            should only something like 100 or 1000 random background samples, not the whole training
+            dataset.
 
         if framework == 'tensorflow':
 
