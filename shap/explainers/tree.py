@@ -411,7 +411,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
-            self.trees = [Tree(model.tree_)]
+            self.trees = [Tree(model.tree_, normalize=True)]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
