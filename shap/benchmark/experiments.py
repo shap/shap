@@ -105,11 +105,11 @@ tree_classify_methods = [
     "saabas",
     "random",
     "tree_gain",
-    ##"kernel_shap_1000_meanref",
+    "kernel_shap_1000_meanref",
     "mean_abs_tree_shap",
     #"kernel_shap_100_meanref",
     #"sampling_shap_10000",
-    ##"sampling_shap_1000",
+    "sampling_shap_1000",
     #"lime_tabular_regression_1000"
     #"sampling_shap_100"
 ]
@@ -209,7 +209,7 @@ total_done = 0
 total_failed = 0
 host_records = {}
 worker_lock = Lock()
-ssh_conn_per_min_limit = 100
+ssh_conn_per_min_limit = 0 # set as an argument to run_remote_experiments
 def __thread_worker(q, host):
     global total_sent, total_done
     hostname, python_binary = host.split(":")
@@ -276,7 +276,7 @@ def __print_status():
     sys.stdout.flush()
 
 
-def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
+def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
     """ Use ssh to run the experiments on remote machines in parallel.
 
     Parameters
@@ -287,7 +287,13 @@ def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
     thread_hosts : list of strings
         Each host has the format "host_name:path_to_python_binary" and can appear multiple times
         in the list (one for each parallel execution you want on that machine).
+
+    rate_limit : int
+        How many ssh connections we make per minute to each host (to avoid throttling issues).
     """
+
+    global ssh_conn_per_min_limit
+    ssh_conn_per_min_limit = rate_limit
     
     # first we kill any remaining workers from previous runs
     # note we don't check_call because pkill kills our ssh call as well
@@ -301,10 +307,14 @@ def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
             print("Failed to connect to", hostname, "after 15 seconds! Exiting.")
             return
     
-    global nexperiments
     experiments = copy.copy(list(experiments))
     random.shuffle(experiments) # this way all the hard experiments don't get put on one machine
+    global nexperiments, total_sent, total_done, total_failed, host_records
     nexperiments = len(experiments)
+    total_sent = 0
+    total_done = 0
+    total_failed = 0
+    host_records = {}
 
     q = Queue()
 

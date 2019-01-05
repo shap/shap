@@ -13,12 +13,12 @@ import numpy as np
 def linear_shap_corr(model, data):
     """ Linear SHAP (corr 1000)
     """
-    return LinearExplainer(model, data, nsamples=1000).shap_values
+    return LinearExplainer(model, data, feature_dependence="correlation", nsamples=1000).shap_values
 
 def linear_shap_ind(model, data):
     """ Linear SHAP (ind)
     """
-    return LinearExplainer(model, data, feature_dependence="interventional").shap_values
+    return LinearExplainer(model, data, feature_dependence="independent").shap_values
 
 def coef(model, data):
     """ Coefficents
