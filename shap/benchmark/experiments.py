@@ -46,12 +46,12 @@ binary_classification_metrics = [
     "mask_keep_positive",
     "mask_keep_negative",
     "keep_positive",
-    #"keep_negative",
+    "keep_negative",
     "batch_keep_absolute__roc_auc",
     "mask_remove_positive",
     "mask_remove_negative",
     "remove_positive",
-    #"remove_negative",
+    "remove_negative",
     "batch_remove_absolute__roc_auc"
 ]
 
