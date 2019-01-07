@@ -26,7 +26,7 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "saabas": 0.0,
         "tree_gain": 0.0,
         "tree_shap_tree_path_dependent": 1.0,
-        "tree_shap_independent": 1.0,
+        "tree_shap_independent_100": 1.0,
         "mean_abs_tree_shap": 1.0,
         "lime_tabular_regression_1000": 0.8,
         "deep_shap": 0.6,
