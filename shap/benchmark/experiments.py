@@ -85,7 +85,8 @@ linear_classify_methods = [
 tree_regress_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
-    "tree_shap",
+    "tree_shap_tree_path_dependent",
+    "tree_shap_independent_100",
     "saabas",
     "random",
     "tree_gain",
@@ -101,7 +102,8 @@ tree_regress_methods = [
 tree_classify_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
-    "tree_shap",
+    "tree_shap_tree_path_dependent",
+    "tree_shap_independent_100",
     "saabas",
     "random",
     "tree_gain",

@@ -8,7 +8,7 @@ from .. import kmeans
 from ..explainers import other
 from .models import KerasWrap
 import numpy as np
-
+import sklearn
 
 def linear_shap_corr(model, data):
     """ Linear SHAP (corr 1000)
@@ -40,10 +40,16 @@ def sampling_shap_1000(model, data):
     """
     return lambda X: SamplingExplainer(model.predict, data).shap_values(X, nsamples=1000)
 
-def tree_shap(model, data):
-    """ Tree SHAP
+def tree_shap_tree_path_dependent(model, data):
+    """ Tree SHAP (path dependent)
     """
-    return TreeExplainer(model).shap_values
+    return TreeExplainer(model, feature_dependence="tree_path_dependent").shap_values
+
+def tree_shap_independent_100(model, data):
+    """ Tree SHAP (independent with 100 background samples)
+    """
+    data100 = sklearn.utils.resample(data, replace=False, n_samples=100, random_state=0)
+    return TreeExplainer(model, data100, feature_dependence="independent").shap_values
 
 def mean_abs_tree_shap(model, data):
     """ mean(|Tree SHAP|)
