@@ -233,7 +233,7 @@ class TreeExplainer(Explainer):
             if self.model.model_type == "xgboost":
                 assert_import("xgboost")
                 self.model.base_offset = 0
-                orig_pred = self.model.original_model.predict(xgboost.DMatrix(orig_X), output_margin=True)
+                orig_pred = self.model.original_model.predict(xgboost.DMatrix(orig_X), output_margin=True, validate_features=False)
                 self.model.base_offset = orig_pred[0] - self.model.predict(X)[0]
             else:
                 raise Exception("Unable to determine the base offset of " + self.model.model_type + " models!")
