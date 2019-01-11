@@ -488,8 +488,11 @@ class TreeEnsemble:
                 self.trees = [Tree(e) for e in tree_info]
             except:
                 self.trees = None # we get here because the cext can't handle categorical splits yet
-            self.objective = objective_name_map.get(model._Booster__name_inner_eval[0], None)
-            self.tree_output = tree_output_name_map.get(model._Booster__name_inner_eval[0], None)
+            try:
+                self.objective = objective_name_map.get(model._Booster__name_inner_eval[0], None)
+                self.tree_output = tree_output_name_map.get(model._Booster__name_inner_eval[0], None)
+            except:
+                pass
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"

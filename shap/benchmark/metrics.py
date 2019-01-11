@@ -128,7 +128,7 @@ def __run_measure(measure, X, y, model_generator, method_name, attribution_sign,
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
         A = attribution_sign * __strip_list(attr_function(X_test))
         nmask = np.ones(len(y_test)) * fcount
-        nmask = np.minimum(nmask, np.array(A > 0).sum(1)).astype(np.int)
+        nmask = np.minimum(nmask, np.array(A >= 0).sum(1)).astype(np.int)
         return measure(
             nmask, X_train, y_train, X_test, y_test, A,
             model_generator, summary_function, trained_model
