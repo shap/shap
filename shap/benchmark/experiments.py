@@ -142,6 +142,13 @@ _experiments += [["corrgroups60", "random_forest", m, s] for s in regression_met
 _experiments += [["corrgroups60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
 _experiments += [["corrgroups60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
 
+_experiments += [["independentlinear60", "lasso", m, s] for s in regression_metrics for m in linear_regress_methods]
+_experiments += [["independentlinear60", "ridge", m, s] for s in regression_metrics for m in linear_regress_methods]
+_experiments += [["independentlinear60", "decision_tree", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "random_forest", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
+
 _experiments += [["cric", "lasso", m, s] for s in binary_classification_metrics for m in linear_classify_methods]
 _experiments += [["cric", "ridge", m, s] for s in binary_classification_metrics for m in linear_classify_methods]
 _experiments += [["cric", "decision_tree", m, s] for s in binary_classification_metrics for m in tree_classify_methods]

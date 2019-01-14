@@ -76,6 +76,51 @@ def corrgroups60__ffnn():
     return KerasWrap(model, 30, flatten_output=True)
 
 
+def independentlinear60__lasso():
+    """ Lasso Regression
+    """
+    return sklearn.linear_model.Lasso(alpha=0.1)
+
+def independentlinear60__ridge():
+    """ Ridge Regression
+    """
+    return sklearn.linear_model.Ridge(alpha=1.0)
+
+def independentlinear60__decision_tree():
+    """ Decision Tree
+    """
+    return sklearn.tree.DecisionTreeRegressor(random_state=0)
+
+def independentlinear60__random_forest():
+    """ Random Forest
+    """
+    return sklearn.ensemble.RandomForestRegressor(random_state=0)
+
+def independentlinear60__gbm():
+    """ Gradient Boosting Machines
+    """
+    import xgboost
+    return xgboost.XGBRegressor(n_jobs=8, random_state=0)
+
+def independentlinear60__ffnn():
+    """ 4-Layer Neural Network
+    """
+    from keras.models import Sequential
+    from keras.layers import Dense
+
+    model = Sequential()
+    model.add(Dense(32, activation='relu', input_dim=60))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dense(1))
+
+    model.compile(optimizer='adam',
+                loss='mean_squared_error',
+                metrics=['mean_squared_error'])
+
+    return KerasWrap(model, 30, flatten_output=True)
+
+
 def cric__lasso():
     """ Lasso Regression
     """
