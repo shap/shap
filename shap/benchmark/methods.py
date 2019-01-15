@@ -45,10 +45,10 @@ def tree_shap_tree_path_dependent(model, data):
     """
     return TreeExplainer(model, feature_dependence="tree_path_dependent").shap_values
 
-def tree_shap_independent_100(model, data):
-    """ Tree SHAP (independent with 100 background samples)
+def tree_shap_independent_1000(model, data):
+    """ Tree SHAP (independent)
     """
-    data100 = sklearn.utils.resample(data, replace=False, n_samples=100, random_state=0)
+    data100 = sklearn.utils.resample(data, replace=False, n_samples=1000, random_state=0)
     return TreeExplainer(model, data100, feature_dependence="independent").shap_values
 
 def mean_abs_tree_shap(model, data):

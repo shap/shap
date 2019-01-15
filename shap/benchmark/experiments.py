@@ -86,7 +86,7 @@ tree_regress_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
     "tree_shap_tree_path_dependent",
-    "tree_shap_independent_100",
+    "tree_shap_independent_1000",
     "saabas",
     "random",
     "tree_gain",
@@ -103,7 +103,7 @@ tree_classify_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
     "tree_shap_tree_path_dependent",
-    "tree_shap_independent_100",
+    "tree_shap_independent_1000",
     "saabas",
     "random",
     "tree_gain",
