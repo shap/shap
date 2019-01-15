@@ -5,34 +5,27 @@ import json
 import os
 from distutils.version import LooseVersion
 from .explainer import Explainer
-
-import_errors = {}
+from ..common import assert_import, record_import_error
 
 try:
     from .. import _cext
 except ImportError as e:
-    import_errors["cext"] = "C extension was not built during install!", e
+    record_import_error("cext", "C extension was not built during install!", e)
 
 try:
     import xgboost
 except ImportError as e:
-    import_errors["xgboost"] = "XGBoost could not be imported!", e
+    record_import_error("xgboost", "XGBoost could not be imported!", e)
 
 try:
     import lightgbm
 except ImportError as e:
-    import_errors["lightgbm"] = "LightGBM could not be imported!", e
+    record_import_error("lightgbm", "LightGBM could not be imported!", e)
 
 try:
     import catboost
 except ImportError as e:
-    import_errors["catboost"] = "CatBoost could not be imported!", e
-
-def assert_import(package_name):
-    if package_name in import_errors:
-        msg,e = import_errors[package_name]
-        print(msg)
-        raise e
+    record_import_error("catboost", "CatBoost could not be imported!", e)
 
 output_transform_codes = {
     "identity": 0,

@@ -44,7 +44,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
         if cache_match and last_nmask[i] == nmask[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nmask[i] == 0:
-            yp_masked_test[i] = get_predictions(trained_model, X_test[i:i+1])[0]
+            yp_masked_test[i] = trained_model.predict(X_test[i:i+1])[0]
         else:
             # mask out the most important features for this test instance
             X_train_tmp[:] = X_train
@@ -55,7 +55,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
 
             # retrain the model and make a prediction
             model_masked.fit(X_train_tmp, y_train)
-            yp_masked_test[i] = get_predictions(model_masked, X_test_tmp[i:i+1])[0]
+            yp_masked_test[i] = model_masked.predict(X_test_tmp[i:i+1])[0]
 
     # save our results so the next call to us can be faster when there is redundancy
     _remove_cache["nmask"] = nmask
@@ -83,7 +83,7 @@ def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             X_test_tmp[i,ordering[:nmask[i]]] = mean_vals[ordering[:nmask[i]]]
     
-    yp_masked_test = get_predictions(trained_model, X_test_tmp)
+    yp_masked_test = trained_model.predict(X_test_tmp)
 
     return metric(y_test, yp_masked_test)
 
@@ -118,7 +118,7 @@ def batch_remove(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr
     # train the model with all the given features masked
     model_masked = model_generator()
     model_masked.fit(X_train_tmp, y_train)
-    yp_test_masked = get_predictions(model_masked, X_test_tmp)
+    yp_test_masked = model_masked.predict(X_test_tmp)
 
     return metric(y_test, yp_test_masked)
 
@@ -163,7 +163,7 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
         if cache_match and last_nkeep[i] == nkeep[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nkeep[i] == attr_test.shape[1]:
-            yp_masked_test[i] = get_predictions(trained_model, X_test[i:i+1])[0]
+            yp_masked_test[i] = trained_model.predict(X_test[i:i+1])[0]
         else:
 
             # mask out the most important features for this test instance
@@ -175,7 +175,7 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
 
             # retrain the model and make a prediction
             model_masked.fit(X_train_tmp, y_train)
-            yp_masked_test[i] = get_predictions(model_masked, X_test_tmp[i:i+1])[0]
+            yp_masked_test[i] = model_masked.predict(X_test_tmp[i:i+1])[0]
 
     # save our results so the next call to us can be faster when there is redundancy
     _keep_cache["nkeep"] = nkeep
@@ -204,7 +204,7 @@ def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             X_test_tmp[i,ordering[nkeep[i]:]] = mean_vals[ordering[nkeep[i]:]]
 
-    yp_masked_test = get_predictions(trained_model, X_test_tmp)
+    yp_masked_test = trained_model.predict(X_test_tmp)
 
     return metric(y_test, yp_masked_test)
 
@@ -239,7 +239,7 @@ def batch_keep(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_t
     # train the model with all the features not given masked
     model_masked = model_generator()
     model_masked.fit(X_train_tmp, y_train)
-    yp_test_masked = get_predictions(model_masked, X_test_tmp)
+    yp_test_masked = model_masked.predict(X_test_tmp)
 
     return metric(y_test, yp_test_masked)
 
@@ -253,7 +253,7 @@ def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator,
     assert X_train.shape[1] == X_test.shape[1]
 
     # keep nkeep top features and re-train the model for each test explanation
-    yp_test = get_predictions(trained_model, X_test)
+    yp_test = trained_model.predict(X_test)
 
     return metric(yp_test, strip_list(attr_test).sum(1))
 
@@ -276,11 +276,3 @@ def strip_list(attrs):
         return attrs[1]
     else:
         return attrs
-
-def get_predictions(model, X):
-    if hasattr(model, "predict_proba"):
-        return model.predict_proba(X)[:,1]
-        # v = model.predict_log_proba(X)
-        # return v[:,1] - v[:,0] # return the log odds (can't because some model have -inf)
-    else:
-        return model.predict(X)
