@@ -117,8 +117,8 @@ class TreeExplainer(Explainer):
         
         # compute the expected value if we have a parsed tree for the cext
         if hasattr(self.model, "node_sample_weight"):
-            proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
-            self.expected_value = (self.model.values[:,0].T * proportions).T.sum(0)
+            #proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
+            self.expected_value = self.model.values[:,0].sum(0) #(self.model.values[:,0].T * proportions).T.sum(0)
         
     def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
@@ -192,8 +192,8 @@ class TreeExplainer(Explainer):
         if len(X.shape) == 1:
             flat_output = True
             X = X.reshape(1, X.shape[0])
-        if X.dtype != np.float64 and X.dtype != np.float32:
-            X = X.astype(np.float64)
+        if X.dtype != self.model.dtype:
+            X = X.astype(self.model.dtype)
         X_missing = np.isnan(X, dtype=np.bool)
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
@@ -320,8 +320,8 @@ class TreeExplainer(Explainer):
         if len(X.shape) == 1:
             flat_output = True
             X = X.reshape(1, X.shape[0])
-        if X.dtype != np.float64 and X.dtype != np.float32:
-            X = X.astype(np.float64)
+        if X.dtype != self.model.dtype:
+            X = X.astype(self.model.dtype)
         X_missing = np.isnan(X, dtype=np.bool)
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
@@ -368,6 +368,7 @@ class TreeEnsemble:
         self.base_offset = 0
         self.objective = None # what we explain when explaining the loss of the model
         self.tree_output = None # what are the units of the values in the leaves of the trees
+        self.dtype = np.float64 # for sklearn we need to use np.float32 to always get exact matches to their predictions
 
         # we use names like keras
         objective_name_map = {
@@ -390,34 +391,41 @@ class TreeEnsemble:
         if type(model) == list and type(model[0]) == Tree:
             self.trees = model
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+            self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [Tree(e.tree_, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesRegressor'>"):
+            self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [Tree(e.tree_, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
+            self.dtype = np.float32
             self.trees = [Tree(model.tree_)]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.tree.tree.DecisionTreeClassifier'>"):
+            self.dtype = np.float32
             self.trees = [Tree(model.tree_, normalize=True)]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
+            self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
         elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesClassifier'>"): # TODO: add unit test for this case
+            self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
         elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingRegressor'>"):
+            self.dtype = np.float32
 
             # currently we only support the mean and quantile estimators
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.MeanEstimator'>"):
@@ -431,6 +439,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
+            self.dtype = np.float32
             
             # currently we only support the logs odds estimator
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
@@ -538,9 +547,9 @@ class TreeEnsemble:
             self.children_default = -np.ones((ntrees, max_nodes), dtype=np.int32)
             self.features = -np.ones((ntrees, max_nodes), dtype=np.int32)
 
-            self.thresholds = np.zeros((ntrees, max_nodes), dtype=np.float64)
-            self.values = np.zeros((ntrees, max_nodes, self.trees[0].values.shape[1]), dtype=np.float64)
-            self.node_sample_weight = np.zeros((ntrees, max_nodes), dtype=np.float64)
+            self.thresholds = np.zeros((ntrees, max_nodes), dtype=self.dtype)
+            self.values = np.zeros((ntrees, max_nodes, self.trees[0].values.shape[1]), dtype=self.dtype)
+            self.node_sample_weight = np.zeros((ntrees, max_nodes), dtype=self.dtype)
             
             for i in range(ntrees):
                 l = len(self.trees[i].features)
@@ -572,13 +581,13 @@ class TreeEnsemble:
         if len(X.shape) == 1:
             flat_output = True
             X = X.reshape(1, X.shape[0])
-        if X.dtype != np.float64 and X.dtype != np.float32:
-            X = X.astype(np.float64)
+        if X.dtype != self.dtype:
+            X = X.astype(self.dtype)
         X_missing = np.isnan(X, dtype=np.bool)
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
-        if tree_limit < 0 or tree_limit > len(self.values.shape[0]):
+        if tree_limit < 0 or tree_limit > self.values.shape[0]:
             tree_limit = self.values.shape[0]
 
         transform = "identity"

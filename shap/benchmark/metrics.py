@@ -26,7 +26,7 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "saabas": 0.0,
         "tree_gain": 0.0,
         "tree_shap_tree_path_dependent": 1.0,
-        "tree_shap_independent_100": 1.0,
+        "tree_shap_independent_1000": 1.0,
         "mean_abs_tree_shap": 1.0,
         "lime_tabular_regression_1000": 0.8,
         "deep_shap": 0.6,
@@ -41,8 +41,6 @@ def local_accuracy(X, y, model_generator, method_name):
         """
         
         v = min(1.0, np.std(pred - true) / (np.std(true) + 1e-8))
-        # print(pred - true)
-        # print(v)
         if v < 1e-6:
             return 1.0
         elif v < 0.01:

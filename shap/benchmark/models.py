@@ -131,7 +131,7 @@ def cric__lasso():
     model = sklearn.linear_model.LogisticRegression(penalty="l1", C=0.002)
 
     # we want to explain the raw probability outputs of the trees
-    model.predict = lambda X: model.predict_proba(X)[:,1]
+    model.predict = lambda X: model.predict_proba(X)[:,0]
     
     return model
 
@@ -141,7 +141,7 @@ def cric__ridge():
     model = sklearn.linear_model.LogisticRegression(penalty="l2")
 
     # we want to explain the raw probability outputs of the trees
-    model.predict = lambda X: model.predict_proba(X)[:,1]
+    model.predict = lambda X: model.predict_proba(X)[:,0]
     
     return model
 
@@ -151,7 +151,7 @@ def cric__decision_tree():
     model = sklearn.tree.DecisionTreeClassifier(random_state=0)
 
     # we want to explain the raw probability outputs of the trees
-    model.predict = lambda X: model.predict_proba(X)[:,1]
+    model.predict = lambda X: model.predict_proba(X)[:,0]
     
     return model
 
@@ -161,7 +161,7 @@ def cric__random_forest():
     model = sklearn.ensemble.RandomForestClassifier(100, random_state=0)
 
     # we want to explain the raw probability outputs of the trees
-    model.predict = lambda X: model.predict_proba(X)[:,1]
+    model.predict = lambda X: model.predict_proba(X)[:,0]
     
     return model
 
