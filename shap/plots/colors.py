@@ -2,78 +2,125 @@
 """
 
 import numpy as np
+import skimage.color
 
 try:
     import matplotlib.pyplot as pl
     import matplotlib
     from matplotlib.colors import LinearSegmentedColormap
-    from matplotlib.ticker import MaxNLocator
 
-    red_blue = LinearSegmentedColormap('red_blue', { # #1E88E5 -> #ff0052
-        'red': ((0.0, 30./255, 30./255),
-                (1.0, 255./255, 255./255)),
+    def lch2rgb(x):
+        return skimage.color.lab2rgb(skimage.color.lch2lab([[x]]))[0][0]
 
-        'green': ((0.0, 136./255, 136./255),
-                  (1.0, 13./255, 13./255)),
+    # define our colors using Lch
+    # note that we intentionally vary the lightness during interpolation so as to better
+    # enable the eye to see patterns (since patterns are most easily recognized through
+    # lightness variability)
+    blue_lch = [54., 70., 4.6588]
+    l_mid = 40.
+    red_lch = [54., 90., 0.35470565 + 2* np.pi]
+    gray_lch = [55., 0., 0.]
+    blue_rgb = lch2rgb(blue_lch)
+    red_rgb = lch2rgb(red_lch)
+    gray_rgb = lch2rgb(gray_lch)
 
-        'blue': ((0.0, 229./255, 229./255),
-                 (1.0, 87./255, 87./255)),
+    # define a perceptually uniform color scale using the Lch color space
+    reds = []
+    greens = []
+    blues = []
+    alphas = []
+    nsteps = 100
+    l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps/2)) + list(np.linspace(l_mid, red_lch[0], nsteps/2))
+    c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
+    h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
+    for pos,l,c,h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals):
+        lch = [l, c, h]
+        rgb = lch2rgb(lch)
+        reds.append((pos, rgb[0], rgb[0]))
+        greens.append((pos, rgb[1], rgb[1]))
+        blues.append((pos, rgb[2], rgb[2]))
+        alphas.append((pos, 1.0, 1.0))
 
-        'alpha': ((0.0, 1, 1),
-                  (0.5, 0.3, 0.3),
-                  (1.0, 1, 1))
+    red_blue = LinearSegmentedColormap('red_blue', {
+        "red": reds,
+        "green": greens,
+        "blue": blues,
+        "alpha": alphas
     })
-    #red_blue.set_bad("#777777")
+    red_blue.set_bad(gray_rgb, 1.0)
+    red_blue.set_over(gray_rgb, 1.0)
+    red_blue.set_under(gray_rgb, 1.0) # "under" is incorrectly used instead of "bad" in the scatter plot
 
-    red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
-        'red': ((0.0, 30./255, 30./255),
-                (1.0, 255./255, 255./255)),
-
-        'green': ((0.0, 136./255, 136./255),
-                  (1.0, 13./255, 13./255)),
-
-        'blue': ((0.0, 229./255, 229./255),
-                 (1.0, 87./255, 87./255)),
-
-        'alpha': ((0.0, 1, 1),
-                  (0.5, 1, 1),
-                  (1.0, 1, 1))
+    red_blue_no_bounds = LinearSegmentedColormap('red_blue_no_bounds', {
+        "red": reds,
+        "green": greens,
+        "blue": blues,
+        "alpha": alphas
     })
-    red_blue_solid.set_bad("#777777", 1.0)
-    red_blue_solid.set_over("#777777", 1.0)
-    red_blue_solid.set_under("#777777", 1.0) # "under" is incorrectly used instead of "bad" in the scatter plot
 
-    colors = []
-    for l in np.linspace(1, 0, 100):
-        colors.append((30./255, 136./255, 229./255,l))
-    for l in np.linspace(0, 1, 100):
-        colors.append((255./255, 13./255, 87./255,l))
-    red_transparent_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
+    # define a circular version of the color scale for categorical coloring
+    reds = []
+    greens = []
+    blues = []
+    alphas = []
+    nsteps = 100
+    c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
+    h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
+    for pos,c,h in zip(np.linspace(0, 0.5, nsteps), c_vals, h_vals):
+        lch = [blue_lch[0], c, h]
+        rgb = lch2rgb(lch)
+        reds.append((pos, rgb[0], rgb[0]))
+        greens.append((pos, rgb[1], rgb[1]))
+        blues.append((pos, rgb[2], rgb[2]))
+        alphas.append((pos, 1.0, 1.0))
+    c_vals = np.linspace(red_lch[1], blue_lch[1], nsteps)
+    h_vals = np.linspace(red_lch[2] - 2 * np.pi, blue_lch[2], nsteps)
+    for pos,c,h in zip(np.linspace(0.5, 1, nsteps), c_vals, h_vals):
+        lch = [blue_lch[0], c, h]
+        rgb = lch2rgb(lch)
+        reds.append((pos, rgb[0], rgb[0]))
+        greens.append((pos, rgb[1], rgb[1]))
+        blues.append((pos, rgb[2], rgb[2]))
+        alphas.append((pos, 1.0, 1.0))
 
-    colors = []
-    for l in np.linspace(0, 1, 100):
-        colors.append((30./255, 136./255, 229./255,l))
-    transparent_blue = LinearSegmentedColormap.from_list("transparent_blue", colors)
+    red_blue_circle = LinearSegmentedColormap('red_blue_circle', {
+        "red": reds,
+        "green": greens,
+        "blue": blues,
+        "alpha": alphas
+    })
 
-    colors = []
-    for l in np.linspace(0, 1, 100):
-        colors.append((255./255, 13./255, 87./255,l))
-    transparent_red = LinearSegmentedColormap.from_list("transparent_red", colors)
+    # colors = []
+    # for l in np.linspace(1, 0, 100):
+    #     colors.append((30./255, 136./255, 229./255,l))
+    # for l in np.linspace(0, 1, 100):
+    #     colors.append((255./255, 13./255, 87./255,l))
+    # red_transparent_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
+
+    # colors = []
+    # for l in np.linspace(0, 1, 100):
+    #     colors.append((30./255, 136./255, 229./255,l))
+    # transparent_blue = LinearSegmentedColormap.from_list("transparent_blue", colors)
+
+    # colors = []
+    # for l in np.linspace(0, 1, 100):
+    #     colors.append((255./255, 13./255, 87./255,l))
+    # transparent_red = LinearSegmentedColormap.from_list("transparent_red", colors)
 
 
 except ImportError:
     pass
 
-default_colors = ["#1E88E5", "#ff0d57", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
+#default_colors = ["#1E88E5", "#ff0d57", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
 
 #blue_rgba = np.array([0.11764705882352941, 0.5333333333333333, 0.8980392156862745, 1.0])
-blue_rgba = np.array([30, 136, 229, 255]) / 255
-blue_rgb = np.array([30, 136, 229]) / 255
-red_rgb = np.array([255, 13, 87]) / 255
+# blue_rgba = np.array([30, 136, 229, 255]) / 255
+# blue_rgb = np.array([30, 136, 229]) / 255
+# red_rgb = np.array([255, 13, 87]) / 255
 
-default_blue_colors = []
-tmp = blue_rgba.copy()
-for i in range(10):
-    default_blue_colors.append(tmp.copy())
-    if tmp[-1] > 0.1:
-        tmp[-1] *= 0.7
+# default_blue_colors = []
+# tmp = blue_rgba.copy()
+# for i in range(10):
+#     default_blue_colors.append(tmp.copy())
+#     if tmp[-1] > 0.1:
+#         tmp[-1] *= 0.7
