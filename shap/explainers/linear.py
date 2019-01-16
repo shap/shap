@@ -209,7 +209,10 @@ class LinearExplainer(Explainer):
             return full_phi
 
         elif self.feature_dependence == "independent":
-            return np.array(X - self.mean) * self.coef
+            if len(self.coef.shape) == 1:
+                return np.array(X - self.mean) * self.coef
+            else:
+                return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
 
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))
