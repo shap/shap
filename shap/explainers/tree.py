@@ -969,7 +969,7 @@ class XGBTreeModelLoader(object):
         self.pos += size
         return val
     
-    def print(self):
+    def print_info(self):
         
         print("--- global parmeters ---")
         print("base_score =", self.base_score)
