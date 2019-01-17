@@ -3,6 +3,7 @@ import multiprocessing
 import sys
 import json
 import os
+import struct
 from distutils.version import LooseVersion
 from .explainer import Explainer
 from ..common import assert_import, record_import_error
@@ -219,17 +220,6 @@ class TreeExplainer(Explainer):
                 transform = "logistic_nlogloss"
             else:
                 raise Exception("model_output = \"logloss\" is not supported when model.objective = \"" + self.model.objective + "\"!")
-
-        # in case we couldn't get the base_offset when building the model
-        # (like from xgboost raw Booster objects)
-        if self.model.base_offset is None:
-            if self.model.model_type == "xgboost":
-                assert_import("xgboost")
-                self.model.base_offset = 0
-                orig_pred = self.model.original_model.predict(xgboost.DMatrix(orig_X), output_margin=True, validate_features=False)
-                self.model.base_offset = orig_pred[0] - self.model.predict(X)[0]
-            else:
-                raise Exception("Unable to determine the base offset of " + self.model.model_type + " models!")
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -453,31 +443,31 @@ class TreeEnsemble:
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             assert_import("xgboost")
             self.original_model = model
-            self.base_offset = None
             self.model_type = "xgboost"
-            json_trees = get_xgboost_json(self.original_model)
-            self.trees = [Tree(json.loads(t)) for t in json_trees]
+            xgb_loader = XGBTreeModelLoader(self.original_model)
+            self.trees = xgb_loader.get_trees()
+            self.base_offset = xgb_loader.base_score
             less_than_or_equal = False
-            if model.attr("objective") is not None:
-                self.objective = objective_name_map.get(model.attr("objective"), None)
-                self.tree_output = tree_output_name_map.get(model.attr("objective"), None)
+            self.objective = objective_name_map.get(xgb_loader.name_obj, None)
+            self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
         elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
             assert_import("xgboost")
+            self.dtype = np.float32
             self.model_type = "xgboost"
             self.original_model = model.get_booster()
-            self.base_offset = None
-            json_trees = get_xgboost_json(self.original_model)
-            self.trees = [Tree(json.loads(t)) for t in json_trees]
+            xgb_loader = XGBTreeModelLoader(self.original_model)
+            self.trees = xgb_loader.get_trees()
+            self.base_offset = xgb_loader.base_score
             less_than_or_equal = False
-            self.objective = objective_name_map.get(model.objective, None)
-            self.tree_output = tree_output_name_map.get(model.objective, None)
+            self.objective = objective_name_map.get(xgb_loader.name_obj, None)
+            self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
         elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
             assert_import("xgboost")
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
-            self.base_offset = None
-            json_trees = get_xgboost_json(self.original_model)
-            self.trees = [Tree(json.loads(t)) for t in json_trees]
+            xgb_loader = XGBTreeModelLoader(self.original_model)
+            self.trees = xgb_loader.get_trees()
+            self.base_offset = xgb_loader.base_score
             less_than_or_equal = False
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
@@ -563,7 +553,7 @@ class TreeEnsemble:
             
             # If we should do <= then we nudge the thresholds to make our <= work like <
             if not less_than_or_equal:
-                self.thresholds -= 1e-8
+                self.thresholds = np.nextafter(self.thresholds, -np.inf)
             
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])
@@ -573,6 +563,7 @@ class TreeEnsemble:
         """
 
         # convert dataframes
+        orig_X = X
         if str(type(X)).endswith("pandas.core.series.Series'>"):
             X = X.values
         elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
@@ -834,3 +825,168 @@ def get_xgboost_json(model):
     json_trees = [t.replace(": -inf,", ": -1000000000000.0,") for t in json_trees]
 
     return json_trees
+
+
+class XGBTreeModelLoader(object):
+    """ This loads an XGBoost model directly from a raw memory dump.
+
+    We can't use the JSON dump because due to numerical precision issues those
+    tree can actually be wrong when feature values land almost on a threshold.
+    """
+    def __init__(self, xgb_model):
+        self.buf = xgb_model.save_raw()
+        self.pos = 0
+        
+        # load the model parameters
+        self.base_score = self.read('f', 4)
+        self.num_feature = self.read('I', 4)
+        self.num_class = self.read('i', 4)
+        self.contain_extra_attrs = self.read('i', 4)
+        self.contain_eval_metrics = self.read('i', 4)
+        self.read_arr('i', 4, 29) # reserved
+        self.name_obj_len = self.read('L', 8)
+        self.name_obj = self.read_str(self.name_obj_len)
+        self.name_gbm_len = self.read('L', 8)
+        self.name_gbm = self.read_str(self.name_gbm_len)
+        
+        assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
+        
+        # load the gbtree specific parameters
+        self.num_trees = self.read('i', 4)
+        self.num_roots = self.read('i', 4)
+        self.num_feature = self.read('i', 4)
+        self.pad_32bit = self.read('i', 4)
+        self.num_pbuffer_deprecated = self.read('L', 8)
+        self.num_output_group = self.read('i', 4)
+        self.size_leaf_vector = self.read('i', 4)
+        self.read_arr('i', 4, 32) # reserved
+        
+        # load each tree
+        self.num_roots = np.zeros(self.num_trees, dtype=np.int32)
+        self.num_nodes = np.zeros(self.num_trees, dtype=np.int32)
+        self.num_deleted = np.zeros(self.num_trees, dtype=np.int32)
+        self.max_depth = np.zeros(self.num_trees, dtype=np.int32)
+        self.num_feature = np.zeros(self.num_trees, dtype=np.int32)
+        self.size_leaf_vector = np.zeros(self.num_trees, dtype=np.int32)
+        self.node_parents = []
+        self.node_cleft = []
+        self.node_cright = []
+        self.node_sindex = []
+        self.node_info = []
+        self.loss_chg = []
+        self.sum_hess = []
+        self.base_weight = []
+        self.leaf_child_cnt = []
+        for i in range(self.num_trees):
+            
+            # load the per-tree params
+            self.num_roots[i] = self.read('i', 4)
+            self.num_nodes[i] = self.read('i', 4)
+            self.num_deleted[i] = self.read('i', 4)
+            self.max_depth[i] = self.read('i', 4)
+            self.num_feature[i] = self.read('i', 4)
+            self.size_leaf_vector[i] = self.read('i', 4)
+            
+            # load the nodes
+            self.read_arr('i', 4, 31) # reserved
+            self.node_parents.append(np.zeros(self.num_nodes[i], dtype=np.int32))
+            self.node_cleft.append(np.zeros(self.num_nodes[i], dtype=np.int32))
+            self.node_cright.append(np.zeros(self.num_nodes[i], dtype=np.int32))
+            self.node_sindex.append(np.zeros(self.num_nodes[i], dtype=np.uint32))
+            self.node_info.append(np.zeros(self.num_nodes[i], dtype=np.float32))
+            for j in range(self.num_nodes[i]):
+                self.node_parents[-1][j] = self.read('i', 4)
+                self.node_cleft[-1][j] = self.read('i', 4)
+                self.node_cright[-1][j] = self.read('i', 4)
+                self.node_sindex[-1][j] = self.read('I', 4)
+                self.node_info[-1][j] = self.read('f', 4)
+#                 print("self.node_cleft[-1][%d]" % j, self.node_cleft[-1][j])
+#                 print("self.node_cright[-1][%d]" % j, self.node_cright[-1][j])
+#                 print("self.node_sindex[-1][%d]" % j, self.node_sindex[-1][j])
+#                 print("self.node_info[-1][%d]" % j, self.node_info[-1][j])
+#                 print()
+            
+            # load the stat nodes
+            self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
+            self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float32))
+            self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
+            self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=np.int))
+            for j in range(self.num_nodes[i]):
+                self.loss_chg[-1][j] = self.read('f', 4)
+                self.sum_hess[-1][j] = self.read('f', 4)
+                self.base_weight[-1][j] = self.read('f', 4)
+                self.leaf_child_cnt[-1][j] = self.read('i', 4)
+#                 print("self.loss_chg[-1][%d]" % j, self.loss_chg[-1][j])
+#                 print("self.sum_hess[-1][%d]" % j, self.sum_hess[-1][j])
+#                 print("self.base_weight[-1][%d]" % j, self.base_weight[-1][j])
+#                 print("self.leaf_child_cnt[-1][%d]" % j, self.leaf_child_cnt[-1][j])
+#                 print()
+
+    def get_trees(self):
+        shape = (self.num_trees, self.num_nodes.max())
+        self.children_default = np.zeros(shape, dtype=np.int)
+        self.features = np.zeros(shape, dtype=np.int)
+        self.thresholds = np.zeros(shape, dtype=np.float32)
+        self.values = np.zeros((shape[0], shape[1], 1), dtype=np.float32)
+        trees = []
+        for i in range(self.num_trees):
+            for j in range(self.num_nodes[i]):
+                if np.right_shift(self.node_sindex[i][j], np.uint32(31)) != 0:
+                    self.children_default[i,j] = self.node_cleft[i][j]
+                else:
+                    self.children_default[i,j] = self.node_cright[i][j]
+                self.features[i,j] = self.node_sindex[i][j] & ((np.uint32(1) << np.uint32(31)) - np.uint32(1))
+                if self.node_cleft[i][j] >= 0:
+                    self.thresholds[i,j] = self.node_info[i][j]
+                else:
+                    self.values[i,j] = self.node_info[i][j]
+
+            l = len(self.node_cleft[i])
+            trees.append(Tree({
+                "children_left": self.node_cleft[i],
+                "children_right": self.node_cright[i],
+                "children_default": self.children_default[i,:l],
+                "feature": self.features[i,:l],
+                "threshold": self.thresholds[i,:l],
+                "value": self.values[i,:l],
+                "node_sample_weight": self.sum_hess[i]
+            }))
+        return trees
+            
+    
+    def read(self, dtype, size):
+        val = struct.unpack(dtype, self.buf[self.pos:self.pos+size])[0]
+        self.pos += size
+        return val
+    
+    def read_arr(self, dtype, size, n_items):
+        val = struct.unpack("%d%s" % (n_items, dtype), self.buf[self.pos:self.pos+size*n_items])[0]
+        self.pos += size * n_items
+        return val
+    
+    def read_str(self, size):
+        val = self.buf[self.pos:self.pos+size].decode('utf-8')
+        self.pos += size
+        return val
+    
+    def print(self):
+        
+        print("--- global parmeters ---")
+        print("base_score =", self.base_score)
+        print("num_feature =", self.num_feature)
+        print("num_class =", self.num_class)
+        print("contain_extra_attrs =", self.contain_extra_attrs)
+        print("contain_eval_metrics =", self.contain_eval_metrics)
+        print("name_obj_len =", self.name_obj_len)
+        print("name_obj =", self.name_obj)
+        print("name_gbm_len =", self.name_gbm_len)
+        print("name_gbm =", self.name_gbm)
+        print()
+        print("--- gbtree specific parameters ---")
+        print("num_trees =", self.num_trees)
+        print("num_roots =", self.num_roots)
+        print("num_feature =", self.num_feature)
+        print("pad_32bit =", self.pad_32bit)
+        print("num_pbuffer_deprecated =", self.num_pbuffer_deprecated)
+        print("num_output_group =", self.num_output_group)
+        print("size_leaf_vector =", self.size_leaf_vector)
