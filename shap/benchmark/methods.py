@@ -48,8 +48,8 @@ def tree_shap_tree_path_dependent(model, data):
 def tree_shap_independent_1000(model, data):
     """ Tree SHAP (independent)
     """
-    data100 = sklearn.utils.resample(data, replace=False, n_samples=1000, random_state=0)
-    return TreeExplainer(model, data100, feature_dependence="independent").shap_values
+    data1000 = sklearn.utils.resample(data, replace=False, n_samples=1000, random_state=0)
+    return TreeExplainer(model, data1000, feature_dependence="independent").shap_values
 
 def mean_abs_tree_shap(model, data):
     """ mean(|Tree SHAP|)
