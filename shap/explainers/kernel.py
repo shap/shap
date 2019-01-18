@@ -6,6 +6,7 @@ import scipy as sp
 import logging
 import copy
 import itertools
+import warnings
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from sklearn.cluster import KMeans
 from tqdm import tqdm
@@ -141,10 +142,13 @@ class KernelExplainer(Explainer):
             lead to lower variance estimates of the SHAP values. The "auto" setting uses
             `nsamples = 2 * X.shape[1] + 2048`.
 
-        l1_reg : "aic" (default), "bic", "rank(int)", or float
+        l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
             The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). The "aic" and "bic" options use the AIC and BIC rules for regularization.
-            Using "rank(int)" selects a fix number of top features. Passing a float directly sets the
+            a debiased lasso). The auto option currently uses "aic" when less that 20% of the possible sample
+            space is enumerated, otherwise it uses no regularization. THE BEHAVIOR OF "auto" WILL CHANGE
+            in a future version to be based on num_features instead of AIC.
+            The "aic" and "bic" options use the AIC and BIC rules for regularization.
+            Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
             "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
 
         Returns
@@ -269,7 +273,7 @@ class KernelExplainer(Explainer):
 
         # if more than one feature varies then we have to do real work
         else:
-            self.l1_reg = kwargs.get("l1_reg", "aic")
+            self.l1_reg = kwargs.get("l1_reg", "auto")
 
             # pick a reasonable number of samples if the user didn't specify how many they wanted
             self.nsamples = kwargs.get("nsamples", "auto")
@@ -526,6 +530,11 @@ class KernelExplainer(Explainer):
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
         log.debug("fraction_evaluated = {0}".format(fraction_evaluated))
+        if self.l1_reg == "auto":
+            warnings.warn(
+                "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
+                "conditional use of AIC to simply \"num_features(10)\"!"
+            )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
@@ -549,9 +558,6 @@ class KernelExplainer(Explainer):
             # use a fixed regularization coeffcient
             else:
                 nonzero_inds = Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_
-            
-
-            
 
         if len(nonzero_inds) == 0:
             return np.zeros(self.M), np.ones(self.M)
