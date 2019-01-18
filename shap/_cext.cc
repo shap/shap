@@ -316,7 +316,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
 
-    dense_tree_predict(out_pred, trees, data);
+    dense_tree_predict(out_pred, trees, data, model_output);
 
     // clean up the created python objects 
     Py_XDECREF(children_left_array);

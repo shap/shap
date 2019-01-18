@@ -147,6 +147,19 @@ struct PathElement {
 };
 
 
+inline tfloat logistic_transform(const tfloat margin, const tfloat y) {
+    return 1 / (1 + exp(-margin));
+}
+
+inline tfloat logistic_nlogloss_transform(const tfloat margin, const tfloat y) {
+    return log(1 + exp(margin)) - y * margin; // y is in {0, 1}
+}
+
+inline tfloat squared_loss_transform(const tfloat margin, const tfloat y) {
+    return (margin - y) * (margin - y);
+}
+
+
 inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat *x, const bool *x_missing) {
     const unsigned offset = i * trees.max_nodes;
     unsigned node = 0;
@@ -170,10 +183,27 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
     }
 }
 
-inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const ExplanationDataset &data) {
+inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const ExplanationDataset &data, unsigned model_transform) {
     tfloat *row_out = out;
     const tfloat *x = data.X;
     const bool *x_missing = data.X_missing;
+
+    // see what transform (if any) we have
+    tfloat (* transform)(const tfloat margin, const tfloat y) = NULL;
+    switch (model_transform) {
+        case MODEL_TRANSFORM::logistic:
+            transform = logistic_transform;
+            break;
+
+        case MODEL_TRANSFORM::logistic_nlogloss:
+            transform = logistic_nlogloss_transform;
+            break;
+
+        case MODEL_TRANSFORM::squared_loss:
+            transform = squared_loss_transform;
+            break;
+    }
+
     for (unsigned i = 0; i < data.num_X; ++i) {
 
         // add the base offset
@@ -187,6 +217,13 @@ inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const Exp
 
             for (unsigned k = 0; k < trees.num_outputs; ++k) {
                 row_out[k] += leaf_value[k];
+            }
+        }
+
+        // apply any needed transform
+        if (transform != NULL) {
+            for (unsigned k = 0; k < trees.num_outputs; ++k) {
+                row_out[k] = transform(row_out[k], data.y[i]);
             }
         }
 
@@ -249,19 +286,6 @@ void dense_tree_saabas(tfloat *out_contribs, const TreeEnsemble& trees, const Ex
         }
     }
 }
-
-inline tfloat logistic_transform(const tfloat margin, const tfloat y) {
-    return 1 / (1 + exp(-margin));
-}
-
-inline tfloat logistic_nlogloss_transform(const tfloat margin, const tfloat y) {
-    return log(1 + exp(margin)) - y * margin; // y is in {0, 1}
-}
-
-inline tfloat squared_loss_transform(const tfloat margin, const tfloat y) {
-    return (margin - y) * (margin - y);
-}
-
 
 
 // extend our decision path with a fraction of one and zero extensions

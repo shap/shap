@@ -117,9 +117,17 @@ class TreeExplainer(Explainer):
                 "A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!"
         
         # compute the expected value if we have a parsed tree for the cext
-        if hasattr(self.model, "node_sample_weight"):
+        if self.model_output == "logloss":
+            self.expected_value = self.__dynamic_expected_value
+        elif hasattr(self.model, "node_sample_weight"):
             #proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
             self.expected_value = self.model.values[:,0].sum(0) #(self.model.values[:,0].T * proportions).T.sum(0)
+
+    def __dynamic_expected_value(self, y):
+        """ This computes the expected value conditioned on the given label value.
+        """
+
+        return self.model.predict(self.data, np.ones(self.data.shape[0]) * y, output=self.model_output).mean(0)
         
     def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
         """ Estimate the SHAP values for a set of samples.
@@ -201,25 +209,11 @@ class TreeExplainer(Explainer):
 
         if tree_limit < 0 or tree_limit > len(self.model.values.shape[0]):
             tree_limit = self.model.values.shape[0]
-
-        if self.model_output == "margin":
-            transform = "identity"
-        elif self.model_output == "probability":
-            if self.model.tree_output == "log_odds":
-                transform = "logistic"
-            elif self.model.tree_output == "probability":
-                transform = "identity"
-            else:
-                raise Exception("model_output = \"probability\" is not supported when model.tree_output = \"" + self.model.tree_output + "\"!")
-        elif self.model_output == "logloss":
-            assert X.shape[0] == len(y), "Labels must be provided for all samples when explaining the loss!"
-
-            if self.model.objective == "squared_error":
-                transform = "squared_loss"
-            elif self.model.objective == "binary_crossentropy":
-                transform = "logistic_nlogloss"
-            else:
-                raise Exception("model_output = \"logloss\" is not supported when model.objective = \"" + self.model.objective + "\"!")
+        
+        if self.model_output == "logloss":
+            assert y is not None, "Both samples and labels must be provided when explaining the loss (i.e. `explainer.shap_values(X, y)`)!"
+            assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
+        transform = self.model.get_transform(self.model_output)
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -242,13 +236,15 @@ class TreeExplainer(Explainer):
 
         # note we pull off the last column and keep it as our expected_value
         if self.model.n_outputs == 1:
-            self.expected_value = phi[0, -1, 0]
+            if self.model_output != "logloss":
+                self.expected_value = phi[0, -1, 0]
             if flat_output:
                 return phi[0, :-1, 0]
             else:
                 return phi[:, :-1, 0]
         else:
-            self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
+            if self.model_output != "logloss":
+                self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
                 return [phi[0, :-1, i] for i in range(self.model.n_outputs)]
             else:
@@ -558,6 +554,28 @@ class TreeEnsemble:
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])
 
+    def get_transform(self, model_output):
+        """ A consistent interface to make predictions from this model.
+        """
+        if model_output == "margin":
+            transform = "identity"
+        elif model_output == "probability":
+            if self.tree_output == "log_odds":
+                transform = "logistic"
+            elif self.tree_output == "probability":
+                transform = "identity"
+            else:
+                raise Exception("model_output = \"probability\" is not supported when model.tree_output = \"" + self.tree_output + "\"!")
+        elif model_output == "logloss":
+
+            if self.objective == "squared_error":
+                transform = "squared_loss"
+            elif self.objective == "binary_crossentropy":
+                transform = "logistic_nlogloss"
+            else:
+                raise Exception("model_output = \"logloss\" is not supported when model.objective = \"" + self.objective + "\"!")
+        return transform
+
     def predict(self, X, y=None, output="margin", tree_limit=-1):
         """ A consistent interface to make predictions from this model.
         """
@@ -581,7 +599,10 @@ class TreeEnsemble:
         if tree_limit < 0 or tree_limit > self.values.shape[0]:
             tree_limit = self.values.shape[0]
 
-        transform = "identity"
+        if output == "logloss":
+            assert y is not None, "Both samples and labels must be provided when explaining the loss (i.e. `explainer.shap_values(X, y)`)!"
+            assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
+        transform = self.get_transform(output)
 
         if True or self.model_type == "internal":
             output = np.zeros((X.shape[0], self.n_outputs))
