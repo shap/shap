@@ -270,9 +270,9 @@ def const_rand(size, seed=23980):
     return out
 
 def strip_list(attrs):
-    """ This assumes that if you have a list of outputs you just want the first one (the first class).
+    """ This assumes that if you have a list of outputs you just want the second one (the second class is the '1' class).
     """
     if isinstance(attrs, list):
-        return attrs[0]
+        return attrs[1]
     else:
         return attrs
