@@ -59,7 +59,7 @@ def embedding_plot(ind, shap_values, feature_names=None, method="pca", alpha=1.0
 
     pl.scatter(
         embedding_values[:,0], embedding_values[:,1], c=cvals,
-        cmap=colors.red_blue_solid, alpha=alpha, linewidth=0
+        cmap=colors.red_blue, alpha=alpha, linewidth=0
     )
     pl.axis("off")
     #pl.title(feature_names[ind])

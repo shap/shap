@@ -52,12 +52,61 @@ def corrgroups60__random_forest():
     return sklearn.ensemble.RandomForestRegressor(random_state=0)
 
 def corrgroups60__gbm():
-    """ Gradient Boosting Machines
+    """ Gradient Boosted Trees
     """
     import xgboost
-    return xgboost.XGBRegressor(n_jobs=8, random_state=0)
+
+    # max_depth and learning_rate were fixed then n_estimators was chosen using a train/test split
+    return xgboost.XGBRegressor(max_depth=6, n_estimators=50, learning_rate=0.1, n_jobs=8, random_state=0)
 
 def corrgroups60__ffnn():
+    """ 4-Layer Neural Network
+    """
+    from keras.models import Sequential
+    from keras.layers import Dense
+
+    model = Sequential()
+    model.add(Dense(32, activation='relu', input_dim=60))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dense(1))
+
+    model.compile(optimizer='adam',
+                loss='mean_squared_error',
+                metrics=['mean_squared_error'])
+
+    return KerasWrap(model, 30, flatten_output=True)
+
+
+def independentlinear60__lasso():
+    """ Lasso Regression
+    """
+    return sklearn.linear_model.Lasso(alpha=0.1)
+
+def independentlinear60__ridge():
+    """ Ridge Regression
+    """
+    return sklearn.linear_model.Ridge(alpha=1.0)
+
+def independentlinear60__decision_tree():
+    """ Decision Tree
+    """
+    return sklearn.tree.DecisionTreeRegressor(random_state=0)
+
+def independentlinear60__random_forest():
+    """ Random Forest
+    """
+    return sklearn.ensemble.RandomForestRegressor(random_state=0)
+
+def independentlinear60__gbm():
+    """ Gradient Boosted Trees
+    """
+    import xgboost
+
+     # max_depth and learning_rate were fixed then n_estimators was chosen using a train/test split
+    return xgboost.XGBRegressor(max_depth=6, n_estimators=100, learning_rate=0.1, n_jobs=8, random_state=0)
+
+def independentlinear60__ffnn():
     """ 4-Layer Neural Network
     """
     from keras.models import Sequential
@@ -79,28 +128,58 @@ def corrgroups60__ffnn():
 def cric__lasso():
     """ Lasso Regression
     """
-    return sklearn.linear_model.LogisticRegression(penalty="l1", C=0.002)
+    model = sklearn.linear_model.LogisticRegression(penalty="l1", C=0.002)
+
+    # we want to explain the raw probability outputs of the trees
+    model.predict = lambda X: model.predict_proba(X)[:,1]
+    
+    return model
 
 def cric__ridge():
     """ Ridge Regression
     """
-    return sklearn.linear_model.LogisticRegression(penalty="l2")
+    model = sklearn.linear_model.LogisticRegression(penalty="l2")
+
+    # we want to explain the raw probability outputs of the trees
+    model.predict = lambda X: model.predict_proba(X)[:,1]
+    
+    return model
 
 def cric__decision_tree():
     """ Decision Tree
     """
-    return sklearn.tree.DecisionTreeClassifier(random_state=0)
+    model = sklearn.tree.DecisionTreeClassifier(random_state=0)
+
+    # we want to explain the raw probability outputs of the trees
+    model.predict = lambda X: model.predict_proba(X)[:,1]
+    
+    return model
 
 def cric__random_forest():
     """ Random Forest
     """
-    return sklearn.ensemble.RandomForestClassifier(100, random_state=0)
+    model = sklearn.ensemble.RandomForestClassifier(100, random_state=0)
+
+    # we want to explain the raw probability outputs of the trees
+    model.predict = lambda X: model.predict_proba(X)[:,1]
+    
+    return model
 
 def cric__gbm():
-    """ Gradient Boosting Machines
+    """ Gradient Boosted Trees
     """
     import xgboost
-    return xgboost.XGBClassifier(n_estimators=500, learning_rate=0.01, subsample=0.2, n_jobs=8, random_state=0)
+
+    # max_depth and subsample match the params used for the full cric data in the paper
+    # learning_rate was set a bit higher to allow for faster runtimes
+    # n_estimators was chosen based on a train/test split of the data
+    model = xgboost.XGBClassifier(max_depth=5, n_estimators=400, learning_rate=0.01, subsample=0.2, n_jobs=8, random_state=0)
+    
+    # we want to explain the margin, not the transformed probability outputs
+    model.__orig_predict = model.predict
+    model.predict = lambda X: model.__orig_predict(X, output_margin=True) # pylint: disable=E1123
+
+    return model
 
 def cric__ffnn():
     """ 4-Layer Neural Network

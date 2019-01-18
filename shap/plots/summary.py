@@ -47,9 +47,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         if plot_type == 'layered_violin':
             color = "coolwarm"
         elif multi_class:
-            color = lambda i: colors.default_blue_colors[min(i, len(colors.default_blue_colors)-1)]
+            color = lambda i: colors.red_blue_circle(i/len(shap_values))
         else:
-            color = "#1E88E5" #"#ff0052"
+            color = colors.blue_rgb
 
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
@@ -251,7 +251,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                     if vmin == vmax:
                         vmin = np.min(values)
                         vmax = np.max(values)
-                pl.scatter(shaps, np.ones(shap_values.shape[0]) * pos, s=9, cmap=colors.red_blue_solid, vmin=vmin, vmax=vmax,
+                pl.scatter(shaps, np.ones(shap_values.shape[0]) * pos, s=9, cmap=colors.red_blue, vmin=vmin, vmax=vmax,
                            c=values, alpha=alpha, linewidth=0, zorder=1)
                 # smooth_values -= nxp.nanpercentile(smooth_values, 5)
                 # smooth_values /= np.nanpercentile(smooth_values, 95)
@@ -261,7 +261,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue_solid(smooth_values[i]),
+                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue(smooth_values[i]),
                                         zorder=2)
 
         else:
@@ -366,7 +366,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if color_bar and features is not None and plot_type != "bar" and \
             (plot_type != "layered_violin" or color in pl.cm.datad):
         import matplotlib.cm as cm
-        m = cm.ScalarMappable(cmap=colors.red_blue_solid if plot_type != "layered_violin" else pl.get_cmap(color))
+        m = cm.ScalarMappable(cmap=colors.red_blue if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
         cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])

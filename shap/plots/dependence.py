@@ -139,25 +139,27 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     categorical_interaction = False
 
     # get both the raw and display color values
+    color_norm = None
     if interaction_index is not None:
         cv = features[:, interaction_index]
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(features[:, interaction_index].astype(np.float), 5)
-        chigh = np.nanpercentile(features[:, interaction_index].astype(np.float), 95)
+        clow = np.nanpercentile(cv.astype(np.float), 5)
+        chigh = np.nanpercentile(cv.astype(np.float), 95)
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
                 cname_map[cd[i]] = cv[i]
             cnames = list(cname_map.keys())
             categorical_interaction = True
-        elif clow % 1 == 0 and chigh % 1 == 0 and len(set(features[:, interaction_index])) < 50:
+        elif clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
             categorical_interaction = True
 
-    # discritize colors for categorical features
-    color_norm = None
-    if categorical_interaction and clow != chigh:
-        bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
-        color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N)
+        # discritize colors for categorical features
+        if categorical_interaction and clow != chigh:
+            clow = np.nanmin(cv.astype(np.float))
+            chigh = np.nanmax(cv.astype(np.float))
+            bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
+            color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N-1)
         
     # optionally add jitter to feature values
     if x_jitter > 0:
@@ -184,8 +186,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         xv_nan = np.isnan(xv)
         xv_notnan = np.invert(xv_nan)
         p = pl.scatter(
-            xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals_imp[xv_notnan],
-            cmap=colors.red_blue_solid, alpha=alpha, vmin=clow, vmax=chigh,
+            xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+            cmap=colors.red_blue, alpha=alpha, vmin=clow, vmax=chigh,
             norm=color_norm, rasterized=len(xv) > 500
         )
         p.set_array(cvals[xv_notnan])
@@ -234,7 +236,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if interaction_index is not None:
         p = pl.scatter(
             xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, c=cvals_imp[xv_nan], cmap=colors.red_blue_solid, alpha=alpha,
+            linewidth=2, c=cvals_imp[xv_nan], cmap=colors.red_blue, alpha=alpha,
             vmin=clow, vmax=chigh
         )
         p.set_array(cvals[xv_nan])

@@ -4,6 +4,18 @@ import numpy as np
 import scipy as sp
 from scipy.spatial.distance import pdist
 
+import_errors = {}
+
+def assert_import(package_name):
+    global import_errors
+    if package_name in import_errors:
+        msg,e = import_errors[package_name]
+        print(msg)
+        raise e
+
+def record_import_error(package_name, msg, e):
+    global import_errors
+    import_errors[package_name] = (msg, e)
 
 class Instance:
     def __init__(self, x, group_display_values):

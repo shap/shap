@@ -1,10 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import lines
-from matplotlib.font_manager import FontProperties
-from matplotlib.path import Path
-from matplotlib.patches import PathPatch
-import matplotlib
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib import lines
+    from matplotlib.font_manager import FontProperties
+    from matplotlib.path import Path
+    from matplotlib.patches import PathPatch
+    import matplotlib
+except ImportError:
+    pass
 
 
 def draw_bars(out_value, features, feature_type, width_separators, width_bar):

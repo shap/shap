@@ -25,7 +25,8 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "random": 0.0,
         "saabas": 0.0,
         "tree_gain": 0.0,
-        "tree_shap": 1.0,
+        "tree_shap_tree_path_dependent": 1.0,
+        "tree_shap_independent_1000": 1.0,
         "mean_abs_tree_shap": 1.0,
         "lime_tabular_regression_1000": 0.8,
         "deep_shap": 0.6,
@@ -40,8 +41,6 @@ def local_accuracy(X, y, model_generator, method_name):
         """
         
         v = min(1.0, np.std(pred - true) / (np.std(true) + 1e-8))
-        # print(pred - true)
-        # print(v)
         if v < 1e-6:
             return 1.0
         elif v < 0.01:
@@ -127,7 +126,7 @@ def __run_measure(measure, X, y, model_generator, method_name, attribution_sign,
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
         A = attribution_sign * __strip_list(attr_function(X_test))
         nmask = np.ones(len(y_test)) * fcount
-        nmask = np.minimum(nmask, np.array(A > 0).sum(1)).astype(np.int)
+        nmask = np.minimum(nmask, np.array(A >= 0).sum(1)).astype(np.int)
         return measure(
             nmask, X_train, y_train, X_test, y_test, A,
             model_generator, summary_function, trained_model
