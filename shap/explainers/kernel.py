@@ -553,11 +553,11 @@ class KernelExplainer(Explainer):
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
-                nonzero_inds = LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_
+                nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
             
             # use a fixed regularization coeffcient
             else:
-                nonzero_inds = Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_
+                nonzero_inds = np.nonzero(Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_)[0]
 
         if len(nonzero_inds) == 0:
             return np.zeros(self.M), np.ones(self.M)
