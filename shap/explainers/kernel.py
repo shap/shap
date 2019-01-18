@@ -6,7 +6,7 @@ import scipy as sp
 import logging
 import copy
 import itertools
-from sklearn.linear_model import LassoLarsIC, Lasso
+from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 from .explainer import Explainer
@@ -138,11 +138,14 @@ class KernelExplainer(Explainer):
 
         nsamples : "auto" or int
             Number of times to re-evaluate the model when explaining each prediction. More samples
-            lead to lower variance estimates of the SHAP values.
+            lead to lower variance estimates of the SHAP values. The "auto" setting uses
+            `nsamples = 2 * X.shape[1] + 2048`.
 
-        l1_reg : "auto" or float
+        l1_reg : "aic" (default), "bic", "rank(int)", or float
             The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). Set this to zero to remove the feature selection step before estimation.
+            a debiased lasso). The "aic" and "bic" options use the AIC and BIC rules for regularization.
+            Using "rank(int)" selects a fix number of top features. Passing a float directly sets the
+            "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
 
         Returns
         -------
@@ -266,7 +269,7 @@ class KernelExplainer(Explainer):
 
         # if more than one feature varies then we have to do real work
         else:
-            self.l1_reg = kwargs.get("l1_reg", "auto")
+            self.l1_reg = kwargs.get("l1_reg", "aic")
 
             # pick a reasonable number of samples if the user didn't specify how many they wanted
             self.nsamples = kwargs.get("nsamples", "auto")
@@ -533,15 +536,22 @@ class KernelExplainer(Explainer):
             mask_aug = np.transpose(w_sqrt_aug * np.transpose(np.vstack((self.maskMatrix, self.maskMatrix - 1))))
             #var_norms = np.array([np.linalg.norm(mask_aug[:, i]) for i in range(mask_aug.shape[1])])
 
-            if self.l1_reg == "auto":
-                model = LassoLarsIC(criterion="aic")
-            elif self.l1_reg == "bic" or self.l1_reg == "aic":
-                model = LassoLarsIC(criterion=self.l1_reg)
+            # select a fixed number of top features
+            if self.l1_reg.startswith("rank("):
+                r = int(self.l1_reg[5:-1])
+                nonzero_inds = lars_path(mask_aug, eyAdj_aug, max_iter=r)[1]
+            
+            # use an adaptive regularization method
+            elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
+                c = "aic" if self.l1_reg == "auto" else self.l1_reg
+                nonzero_inds = LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_
+            
+            # use a fixed regularization coeffcient
             else:
-                model = Lasso(alpha=self.l1_reg)
+                nonzero_inds = Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_
+            
 
-            model.fit(mask_aug, eyAdj_aug)
-            nonzero_inds = np.nonzero(model.coef_)[0]
+            
 
         if len(nonzero_inds) == 0:
             return np.zeros(self.M), np.ones(self.M)
