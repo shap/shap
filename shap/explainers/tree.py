@@ -312,7 +312,7 @@ class TreeExplainer(Explainer):
         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
-        if tree_limit < 0 or tree_limit > len(self.model.values.shape[0]):
+        if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
 
         # run the core algorithm using the C extension
