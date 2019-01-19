@@ -361,17 +361,23 @@ class TreeEnsemble:
             "mse": "squared_error",
             "friedman_mse": "squared_error",
             "reg:linear": "squared_error",
+            "regression": "squared_error",
+            "regression_l2": "squared_error",
             "mae": "absolute_error",
             "gini": "binary_crossentropy",
             "entropy": "binary_crossentropy",
             "binary:logistic": "binary_crossentropy",
-            "binary_logloss": "binary_crossentropy"
+            "binary_logloss": "binary_crossentropy",
+            "binary": "binary_crossentropy"
         }
 
         tree_output_name_map = {
+            "regression": "raw_value",
+            "regression_l2": "squared_error",
             "reg:linear": "raw_value",
             "binary:logistic": "log_odds",
-            "binary_logloss": "log_odds"
+            "binary_logloss": "log_odds",
+            "binary": "log_odds"
         }
 
         if type(model) == list and type(model[0]) == Tree:
@@ -476,11 +482,10 @@ class TreeEnsemble:
                 self.trees = [Tree(e) for e in tree_info]
             except:
                 self.trees = None # we get here because the cext can't handle categorical splits yet
-            try:
-                self.objective = objective_name_map.get(model._Booster__name_inner_eval[0], None)
-                self.tree_output = tree_output_name_map.get(model._Booster__name_inner_eval[0], None)
-            except:
-                pass
+            
+            self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
+            self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
+            
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMRegressor'>"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -492,7 +497,7 @@ class TreeEnsemble:
                 self.trees = None # we get here because the cext can't handle categorical splits yet
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
-            if self.objective is None:
+            if model.objective is None:
                 self.objective = "squared_error"
                 self.tree_output = "raw_value"
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
@@ -506,7 +511,7 @@ class TreeEnsemble:
                 self.trees = None # we get here because the cext can't handle categorical splits yet
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
-            if self.objective is None:
+            if model.objective is None:
                 self.objective = "binary_crossentropy"
                 self.tree_output = "log_odds"
         elif str(type(model)).endswith("catboost.core.CatBoostRegressor'>"):

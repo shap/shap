@@ -66,7 +66,7 @@ class KernelExplainer(Explainer):
         computes a the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
-    data : numpy.array or pandas.DataFrame or iml.DenseData or any scipy.sparse matrix
+    data : numpy.array or pandas.DataFrame or shap.common.DenseData or any scipy.sparse matrix
         The background dataset to use for integrating out features. To determine the impact
         of a feature, that feature is set to "missing" and the change in the model output
         is observed. Since most models aren't designed to handle arbitrary missing data at test
