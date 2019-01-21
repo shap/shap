@@ -71,7 +71,7 @@ def communitiesandcrime(display=False):
     return X, y
 
 def diabetes(display=False):
-    """ Return the diabetes housing data in a nice package. """
+    """ Return the diabetes data in a nice package. """
 
     d = sklearn.datasets.load_diabetes()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
@@ -153,7 +153,9 @@ def cric(display=False):
 
 
 def corrgroups60(display=False):
-    """ A simulated dataset with tight correlations among distinct groups of features.
+    """ Correlated Groups 60
+    
+    A simulated dataset with tight correlations among distinct groups of features.
     """
 
     # set a constant seed
