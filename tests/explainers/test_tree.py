@@ -328,6 +328,114 @@ def test_single_row_gradient_boosting_regressor():
     assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
         "SHAP values don't sum to model output!"
 
+def test_provided_background_tree_path_dependent():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_provided_background_tree_path_dependent!")
+        return
+
+    from sklearn.model_selection import train_test_split
+    import numpy as np
+    import shap
+    np.random.seed(10)
+
+    X,y = shap.datasets.iris()
+    X = X[:100]
+    y = y[:100]
+    train_x, test_x, train_y, test_y = train_test_split(X, y, random_state=1)
+    feature_names = ["a", "b", "c", "d"]
+    dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
+    dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
+
+    params = {
+        'booster': 'gbtree',
+        'objective': 'binary:logistic',
+        'max_depth': 4,
+        'eta': 0.1,
+        'nthread': -1,
+        'silent': 1
+    }
+
+    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
+
+    explainer = shap.TreeExplainer(bst, train_x, feature_dependence="tree_path_dependent")
+    diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
+    assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
+
+def test_provided_background_independent():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_provided_background_independent!")
+        return
+
+    from sklearn.model_selection import train_test_split
+    import numpy as np
+    import shap
+    np.random.seed(10)
+
+    X,y = shap.datasets.iris()
+    X = X[:100]
+    y = y[:100]
+    train_x, test_x, train_y, test_y = train_test_split(X, y, random_state=1)
+    feature_names = ["a", "b", "c", "d"]
+    dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
+    dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
+
+    params = {
+        'booster': 'gbtree',
+        'objective': 'binary:logistic',
+        'max_depth': 4,
+        'eta': 0.1,
+        'nthread': -1,
+        'silent': 1
+    }
+
+    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
+
+    explainer = shap.TreeExplainer(bst, train_x, feature_dependence="independent")
+    diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
+    assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
+
+def test_provided_background_independent_prob_output():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_provided_background_independent_prob_output!")
+        return
+
+    from sklearn.model_selection import train_test_split
+    import numpy as np
+    import shap
+    np.random.seed(10)
+
+    X,y = shap.datasets.iris()
+    X = X[:100]
+    y = y[:100]
+    train_x, test_x, train_y, test_y = train_test_split(X, y, random_state=1)
+    feature_names = ["a", "b", "c", "d"]
+    dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
+    dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
+
+    params = {
+        'booster': 'gbtree',
+        'objective': 'binary:logistic',
+        'max_depth': 4,
+        'eta': 0.1,
+        'nthread': -1,
+        'silent': 1
+    }
+
+    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
+
+    explainer = shap.TreeExplainer(bst, train_x, feature_dependence="independent", model_output="probability")
+    diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
+    assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-6, "Bad expected_value!"
+
 def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the 
@@ -335,7 +443,7 @@ def test_single_tree_compare_with_kernel_shap():
     """
     try:
         import xgboost
-    except Exception as e:
+    except:
         print("Skipping test_single_tree_compare_with_kernel_shap!")
         return
     np.random.seed(10)

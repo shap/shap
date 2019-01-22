@@ -222,14 +222,55 @@ inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const Exp
 
         // apply any needed transform
         if (transform != NULL) {
+            const tfloat y_i = data.y == NULL ? 0 : data.y[i];
             for (unsigned k = 0; k < trees.num_outputs; ++k) {
-                row_out[k] = transform(row_out[k], data.y[i]);
+                row_out[k] = transform(row_out[k], y_i);
             }
         }
 
         x += data.M;
         x_missing += data.M;
         row_out += trees.num_outputs;
+    }
+}
+
+inline void tree_update_weights(unsigned i, TreeEnsemble &trees, const tfloat *x, const bool *x_missing) {
+    const unsigned offset = i * trees.max_nodes;
+    unsigned node = 0;
+    while (true) {
+        const unsigned pos = offset + node;
+        const unsigned feature = trees.features[pos];
+
+        // Record that a sample passed through this node
+        trees.node_sample_weights[pos] += 1.0;
+        
+        // we hit a leaf so return a pointer to the values
+        if (trees.children_left[pos] < 0) break;
+        
+        // otherwise we are at an internal node and need to recurse
+        if (x_missing[feature]) {
+            node = trees.children_default[pos];
+        } else if (x[feature] <= trees.thresholds[pos]) {
+            node = trees.children_left[pos];
+        } else {
+            node = trees.children_right[pos];
+        }
+    }
+}
+
+inline void dense_tree_update_weights(TreeEnsemble &trees, const ExplanationDataset &data) {
+    const tfloat *x = data.X;
+    const bool *x_missing = data.X_missing;
+
+    for (unsigned i = 0; i < data.num_X; ++i) {
+
+        // add the leaf values from each tree
+        for (unsigned j = 0; j < trees.tree_limit; ++j) {
+            tree_update_weights(j, trees, x, x_missing);
+        }
+
+        x += data.M;
+        x_missing += data.M;
     }
 }
 
@@ -453,7 +494,7 @@ inline void tree_shap_recursive(const unsigned num_outputs, const int *children_
 
 inline int compute_expectations(TreeEnsemble &tree, int i = 0, int depth = 0) {
     unsigned max_depth = 0;
-    
+
     if (tree.children_right[i] >= 0) {
         const unsigned li = tree.children_left[i];
         const unsigned ri = tree.children_right[i];
@@ -713,6 +754,12 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     cl = curr_node.cl;
     cr = curr_node.cr;
     cd = curr_node.cd;
+
+    // short circut when this is a stump tree (with no splits)
+    if (cl < 0) {
+        out_contribs[num_feats] += curr_node.value;
+        return;
+    }
     
 //     if (DEBUG) {
 //       myfile << "\nNode: " << node << "\n";
@@ -1044,21 +1091,21 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
         const double total_seconds = elapsed_seconds / fraction;
         last_print = elapsed_seconds;
         
-        PySys_WriteStderr(
-            "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
-            fraction * 100, int(0.5 + fraction*20), "===================",
-            20-int(0.5 + fraction*20), "                   ",
-            i, total_count,
-            int(elapsed_seconds/60), int(elapsed_seconds) % 60,
-            int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60
-        );
+        // PySys_WriteStderr(
+        //     "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
+        //     fraction * 100, int(0.5 + fraction*20), "===================",
+        //     20-int(0.5 + fraction*20), "                   ",
+        //     i, total_count,
+        //     int(elapsed_seconds/60), int(elapsed_seconds) % 60,
+        //     int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60
+        // );
 
-        // Get handle to python stderr file and flush it (https://mail.python.org/pipermail/python-list/2004-November/294912.html)
-        PyObject *pyStderr = PySys_GetObject("stderr");
-        if (pyStderr) {
-            PyObject *result = PyObject_CallMethod(pyStderr, "flush", NULL);
-            Py_XDECREF(result);
-        }
+        // // Get handle to python stderr file and flush it (https://mail.python.org/pipermail/python-list/2004-November/294912.html)
+        // PyObject *pyStderr = PySys_GetObject("stderr");
+        // if (pyStderr) {
+        //     PyObject *result = PyObject_CallMethod(pyStderr, "flush", NULL);
+        //     Py_XDECREF(result);
+        // }
     }
 }
 
