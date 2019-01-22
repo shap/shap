@@ -131,7 +131,7 @@ class TreeExplainer(Explainer):
 
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y, output=self.model_output).mean(0)
         
-    def shap_values(self, X, y=None, tree_limit=-1, approximate=False):
+    def shap_values(self, X, y=None, tree_limit=None, approximate=False):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -142,8 +142,9 @@ class TreeExplainer(Explainer):
         y : numpy.array
             An array of label values for each sample. Used when explaining loss functions.
 
-        tree_limit : int
-            Limit the number of trees used by the model. By default -1 means no limit.
+        tree_limit : None (default) or int 
+            Limit the number of trees used by the model. By default None means no use the limit of the
+            original model, and -1 means no limit.
 
         approximate : bool
             Run fast, but only roughly approximate the Tree SHAP values. This runs a method
@@ -195,6 +196,10 @@ class TreeExplainer(Explainer):
                 else:
                     self.expected_value = phi[0, -1]
                     return phi[:, :-1]
+
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # convert dataframes
         orig_X = X
@@ -260,7 +265,7 @@ class TreeExplainer(Explainer):
             else:
                 return [phi[:, :-1, i] for i in range(self.model.n_outputs)]
 
-    def shap_interaction_values(self, X, y=None, tree_limit=-1):
+    def shap_interaction_values(self, X, y=None, tree_limit=None):
         """ Estimate the SHAP interaction values for a set of samples.
 
         Parameters
@@ -271,8 +276,9 @@ class TreeExplainer(Explainer):
         y : numpy.array
             An array of label values for each sample. Used when explaining loss functions (not yet supported).
 
-        tree_limit : int
-            Limit the number of trees used by the model. By default -1 means no limit.
+        tree_limit : None (default) or int 
+            Limit the number of trees used by the model. By default None means no use the limit of the
+            original model, and -1 means no limit.
 
         Returns
         -------
@@ -306,6 +312,10 @@ class TreeExplainer(Explainer):
             else:
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
+
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
@@ -368,6 +378,7 @@ class TreeEnsemble:
         self.data = data
         self.data_missing = data_missing
         self.fully_defined_weighting = True # does the background dataset land in every leaf (making it valid for the tree_path_dependent method)
+        self.tree_limit = None # used for limiting the number of trees we use by default (like from early stopping) 
 
         # we use names like keras
         objective_name_map = {
@@ -476,6 +487,7 @@ class TreeEnsemble:
             less_than_or_equal = False
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
+            self.tree_limit = getattr(model, "best_ntree_limit", None)
         elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
             assert_import("xgboost")
             self.original_model = model.get_booster()
@@ -486,6 +498,7 @@ class TreeEnsemble:
             less_than_or_equal = False
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
+            self.tree_limit = getattr(model, "best_ntree_limit", None)
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -598,9 +611,19 @@ class TreeEnsemble:
                 raise Exception("model_output = \"logloss\" is not supported when model.objective = \"" + self.objective + "\"!")
         return transform
 
-    def predict(self, X, y=None, output="margin", tree_limit=-1):
+    def predict(self, X, y=None, output="margin", tree_limit=None):
         """ A consistent interface to make predictions from this model.
+
+        Parameters
+        ----------
+        tree_limit : None (default) or int 
+            Limit the number of trees used by the model. By default None means no use the limit of the
+            original model, and -1 means no limit.
         """
+
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
@@ -680,7 +703,7 @@ class Tree:
             self.features = tree["feature"].astype(np.int32)
             self.thresholds = tree["threshold"]
             self.values = tree["value"] * scaling
-            self.node_sample_weight = tree["node_sample_weight"].astype(np.float64)    
+            self.node_sample_weight = tree["node_sample_weight"]
 
         elif type(tree) == dict and 'tree_structure' in tree:
             start = tree['tree_structure']
