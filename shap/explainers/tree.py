@@ -161,7 +161,7 @@ class TreeExplainer(Explainer):
         """
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
-        if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal":
+        if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal" and self.data is None:
             phi = None
             if self.model.model_type == "xgboost":
                 assert_import("xgboost")
