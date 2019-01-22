@@ -161,6 +161,10 @@ class TreeExplainer(Explainer):
         a list of such matrices, one for each output.
         """
 
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
+
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
         if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal" and self.data is None:
             phi = None
@@ -196,10 +200,6 @@ class TreeExplainer(Explainer):
                 else:
                     self.expected_value = phi[0, -1]
                     return phi[:, :-1]
-
-        # see if we have a default tree_limit in place.
-        if tree_limit is None:
-            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # convert dataframes
         orig_X = X
@@ -296,6 +296,10 @@ class TreeExplainer(Explainer):
         assert self.feature_dependence == "tree_path_dependent", "Only feature_dependence = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
+
         # shortcut using the C++ version of Tree SHAP in XGBoost
         if self.model.model_type == "xgboost":
             assert_import("xgboost")
@@ -312,10 +316,6 @@ class TreeExplainer(Explainer):
             else:
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
-
-        # see if we have a default tree_limit in place.
-        if tree_limit is None:
-            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):

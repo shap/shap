@@ -17,7 +17,7 @@ def test_front_page_xgboost():
 
     # train XGBoost model
     X, y = shap.datasets.boston()
-    model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+    model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 100)
 
     # explain the model's predictions using SHAP values
     explainer = shap.TreeExplainer(model)
@@ -100,7 +100,7 @@ def test_xgboost_mixed_types():
     X,y = shap.datasets.boston()
     X["LSTAT"] = X["LSTAT"].astype(np.int64)
     X["B"] = X["B"].astype(np.bool)
-    bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 1000)
+    bst = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 1000)
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
 
