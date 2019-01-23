@@ -896,9 +896,9 @@ class XGBTreeModelLoader(object):
         self.contain_extra_attrs = self.read('i')
         self.contain_eval_metrics = self.read('i')
         self.read_arr('i', 29) # reserved
-        self.name_obj_len = self.read('L')
+        self.name_obj_len = self.read('Q')
         self.name_obj = self.read_str(self.name_obj_len)
-        self.name_gbm_len = self.read('L')
+        self.name_gbm_len = self.read('Q')
         self.name_gbm = self.read_str(self.name_gbm_len)
         
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
@@ -908,7 +908,7 @@ class XGBTreeModelLoader(object):
         self.num_roots = self.read('i')
         self.num_feature = self.read('i')
         self.pad_32bit = self.read('i')
-        self.num_pbuffer_deprecated = self.read('L')
+        self.num_pbuffer_deprecated = self.read('Q')
         self.num_output_group = self.read('i')
         self.size_leaf_vector = self.read('i')
         self.read_arr('i', 32) # reserved
