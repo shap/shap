@@ -890,28 +890,28 @@ class XGBTreeModelLoader(object):
         self.pos = 0
         
         # load the model parameters
-        self.base_score = self.read('f', 4)
-        self.num_feature = self.read('I', 4)
-        self.num_class = self.read('i', 4)
-        self.contain_extra_attrs = self.read('i', 4)
-        self.contain_eval_metrics = self.read('i', 4)
-        self.read_arr('i', 4, 29) # reserved
-        self.name_obj_len = self.read('L', 8)
+        self.base_score = self.read('f')
+        self.num_feature = self.read('I')
+        self.num_class = self.read('i')
+        self.contain_extra_attrs = self.read('i')
+        self.contain_eval_metrics = self.read('i')
+        self.read_arr('i', 29) # reserved
+        self.name_obj_len = self.read('L')
         self.name_obj = self.read_str(self.name_obj_len)
-        self.name_gbm_len = self.read('L', 8)
+        self.name_gbm_len = self.read('L')
         self.name_gbm = self.read_str(self.name_gbm_len)
         
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
         
         # load the gbtree specific parameters
-        self.num_trees = self.read('i', 4)
-        self.num_roots = self.read('i', 4)
-        self.num_feature = self.read('i', 4)
-        self.pad_32bit = self.read('i', 4)
-        self.num_pbuffer_deprecated = self.read('L', 8)
-        self.num_output_group = self.read('i', 4)
-        self.size_leaf_vector = self.read('i', 4)
-        self.read_arr('i', 4, 32) # reserved
+        self.num_trees = self.read('i')
+        self.num_roots = self.read('i')
+        self.num_feature = self.read('i')
+        self.pad_32bit = self.read('i')
+        self.num_pbuffer_deprecated = self.read('L')
+        self.num_output_group = self.read('i')
+        self.size_leaf_vector = self.read('i')
+        self.read_arr('i', 32) # reserved
         
         # load each tree
         self.num_roots = np.zeros(self.num_trees, dtype=np.int32)
@@ -932,26 +932,26 @@ class XGBTreeModelLoader(object):
         for i in range(self.num_trees):
             
             # load the per-tree params
-            self.num_roots[i] = self.read('i', 4)
-            self.num_nodes[i] = self.read('i', 4)
-            self.num_deleted[i] = self.read('i', 4)
-            self.max_depth[i] = self.read('i', 4)
-            self.num_feature[i] = self.read('i', 4)
-            self.size_leaf_vector[i] = self.read('i', 4)
+            self.num_roots[i] = self.read('i')
+            self.num_nodes[i] = self.read('i')
+            self.num_deleted[i] = self.read('i')
+            self.max_depth[i] = self.read('i')
+            self.num_feature[i] = self.read('i')
+            self.size_leaf_vector[i] = self.read('i')
             
             # load the nodes
-            self.read_arr('i', 4, 31) # reserved
+            self.read_arr('i', 31) # reserved
             self.node_parents.append(np.zeros(self.num_nodes[i], dtype=np.int32))
             self.node_cleft.append(np.zeros(self.num_nodes[i], dtype=np.int32))
             self.node_cright.append(np.zeros(self.num_nodes[i], dtype=np.int32))
             self.node_sindex.append(np.zeros(self.num_nodes[i], dtype=np.uint32))
             self.node_info.append(np.zeros(self.num_nodes[i], dtype=np.float32))
             for j in range(self.num_nodes[i]):
-                self.node_parents[-1][j] = self.read('i', 4)
-                self.node_cleft[-1][j] = self.read('i', 4)
-                self.node_cright[-1][j] = self.read('i', 4)
-                self.node_sindex[-1][j] = self.read('I', 4)
-                self.node_info[-1][j] = self.read('f', 4)
+                self.node_parents[-1][j] = self.read('i')
+                self.node_cleft[-1][j] = self.read('i')
+                self.node_cright[-1][j] = self.read('i')
+                self.node_sindex[-1][j] = self.read('I')
+                self.node_info[-1][j] = self.read('f')
 #                 print("self.node_cleft[-1][%d]" % j, self.node_cleft[-1][j])
 #                 print("self.node_cright[-1][%d]" % j, self.node_cright[-1][j])
 #                 print("self.node_sindex[-1][%d]" % j, self.node_sindex[-1][j])
@@ -964,10 +964,10 @@ class XGBTreeModelLoader(object):
             self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
             self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=np.int))
             for j in range(self.num_nodes[i]):
-                self.loss_chg[-1][j] = self.read('f', 4)
-                self.sum_hess[-1][j] = self.read('f', 4)
-                self.base_weight[-1][j] = self.read('f', 4)
-                self.leaf_child_cnt[-1][j] = self.read('i', 4)
+                self.loss_chg[-1][j] = self.read('f')
+                self.sum_hess[-1][j] = self.read('f')
+                self.base_weight[-1][j] = self.read('f')
+                self.leaf_child_cnt[-1][j] = self.read('i')
 #                 print("self.loss_chg[-1][%d]" % j, self.loss_chg[-1][j])
 #                 print("self.sum_hess[-1][%d]" % j, self.sum_hess[-1][j])
 #                 print("self.base_weight[-1][%d]" % j, self.base_weight[-1][j])
@@ -1006,14 +1006,17 @@ class XGBTreeModelLoader(object):
         return trees
             
     
-    def read(self, dtype, size):
+    def read(self, dtype):
+        size = struct.calcsize(dtype)
         val = struct.unpack(dtype, self.buf[self.pos:self.pos+size])[0]
         self.pos += size
         return val
     
-    def read_arr(self, dtype, size, n_items):
-        val = struct.unpack("%d%s" % (n_items, dtype), self.buf[self.pos:self.pos+size*n_items])[0]
-        self.pos += size * n_items
+    def read_arr(self, dtype, n_items):
+        format = "%d%s" % (n_items, dtype)
+        size = struct.calcsize(format)
+        val = struct.unpack(format, self.buf[self.pos:self.pos+size])[0]
+        self.pos += size
         return val
     
     def read_str(self, size):

@@ -1091,21 +1091,21 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
         const double total_seconds = elapsed_seconds / fraction;
         last_print = elapsed_seconds;
         
-        // PySys_WriteStderr(
-        //     "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
-        //     fraction * 100, int(0.5 + fraction*20), "===================",
-        //     20-int(0.5 + fraction*20), "                   ",
-        //     i, total_count,
-        //     int(elapsed_seconds/60), int(elapsed_seconds) % 60,
-        //     int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60
-        // );
+        PySys_WriteStderr(
+            "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
+            fraction * 100, int(0.5 + fraction*20), "===================",
+            20-int(0.5 + fraction*20), "                   ",
+            i, total_count,
+            int(elapsed_seconds/60), int(elapsed_seconds) % 60,
+            int((total_seconds - elapsed_seconds)/60), int(total_seconds - elapsed_seconds) % 60
+        );
 
-        // // Get handle to python stderr file and flush it (https://mail.python.org/pipermail/python-list/2004-November/294912.html)
-        // PyObject *pyStderr = PySys_GetObject("stderr");
-        // if (pyStderr) {
-        //     PyObject *result = PyObject_CallMethod(pyStderr, "flush", NULL);
-        //     Py_XDECREF(result);
-        // }
+        // Get handle to python stderr file and flush it (https://mail.python.org/pipermail/python-list/2004-November/294912.html)
+        PyObject *pyStderr = PySys_GetObject("stderr");
+        if (pyStderr) {
+            PyObject *result = PyObject_CallMethod(pyStderr, "flush", NULL);
+            Py_XDECREF(result);
+        }
     }
 }
 

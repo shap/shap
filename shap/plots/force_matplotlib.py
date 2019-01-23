@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 try:
     import matplotlib.pyplot as plt
     from matplotlib import lines
@@ -7,6 +8,7 @@ try:
     from matplotlib.patches import PathPatch
     import matplotlib
 except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
     pass
 
 

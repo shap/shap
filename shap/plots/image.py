@@ -1,7 +1,9 @@
 import numpy as np
+import warnings
 try:
     import matplotlib.pyplot as pl
 except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
     pass
 from . import colors
 

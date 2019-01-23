@@ -1,9 +1,11 @@
 import numpy as np
 import sklearn
+import warnings
 try:
     import matplotlib.pyplot as pl
     import matplotlib
 except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
     pass
 from . import labels
 from . import colors
