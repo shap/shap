@@ -69,6 +69,8 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
 
     if out_names is None:
         out_names = ["output value"]
+    elif type(out_names) == str:
+        out_names = [out_names]
 
     if shap_values.shape[0] == 1:
         if feature_names is None:
