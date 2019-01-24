@@ -1,7 +1,7 @@
 """ Visualize the SHAP values with additive force style layouts.
 """
 
-from __future__ import unicode_literals
+from __future__ import division, unicode_literals
 import os
 import io
 import string
