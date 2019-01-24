@@ -192,13 +192,22 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                         vmax = np.max(values)
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
+
+                # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
                 pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
                            vmax=vmax, s=16, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
+
+                # plot the non-nan values colored by the trimmed feature value
+                cvals = values[np.invert(nan_mask)].astype(np.float64)
+                cvals_imp = cvals.copy()
+                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
+                cvals[cvals_imp > vmax] = vmax
+                cvals[cvals_imp < vmin] = vmin
                 pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
                            cmap=colors.red_blue, vmin=vmin, vmax=vmax, s=16,
-                           c=values[np.invert(nan_mask)], alpha=alpha, linewidth=0,
+                           c=cvals, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
             else:
 
