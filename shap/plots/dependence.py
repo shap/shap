@@ -179,6 +179,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             xv += (np.random.ranf(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
+    xv_nan = np.isnan(xv)
+    xv_notnan = np.invert(xv_nan)
     if interaction_index is not None:
 
         # plot the nan values in the interaction feature as grey
@@ -187,8 +189,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
         cvals[cvals_imp < clow] = clow
-        xv_nan = np.isnan(xv)
-        xv_notnan = np.invert(xv_nan)
         p = pl.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
             cmap=colors.red_blue, alpha=alpha, vmin=clow, vmax=chigh,
