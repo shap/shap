@@ -177,6 +177,30 @@ def initjs():
         "<script>{bundle_data}</script>".format(bundle_data=bundle_data)
     ))
 
+def save_html(out_file, plot_html):
+    """ Save html plots to an output file.
+    """
+
+    internal_open = False
+    if type(out_file) == str:
+        out_file = open(out_file, "w")
+        internal_open = True
+    out_file.write("<html><head><script>\n")
+
+    # dump the js code
+    bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
+    with io.open(bundle_path, encoding="utf-8") as f:
+        bundle_data = f.read()
+    out_file.write(bundle_data)
+    out_file.write("</script></head><body>\n")
+
+    out_file.write(plot_html.data)
+
+    out_file.write("</body></html>\n")
+
+    if internal_open:
+        out_file.close()
+
 
 def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
     return "i"+''.join(random.choice(chars) for _ in range(size))
