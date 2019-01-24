@@ -546,8 +546,8 @@ class KernelExplainer(Explainer):
             #var_norms = np.array([np.linalg.norm(mask_aug[:, i]) for i in range(mask_aug.shape[1])])
 
             # select a fixed number of top features
-            if self.l1_reg.startswith("rank("):
-                r = int(self.l1_reg[5:-1])
+            if isinstance(self.l1_reg, str) and self.l1_reg.startswith("num_features("):
+                r = int(self.l1_reg[len("num_features("):-1])
                 nonzero_inds = lars_path(mask_aug, eyAdj_aug, max_iter=r)[1]
             
             # use an adaptive regularization method
