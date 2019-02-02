@@ -258,7 +258,7 @@ class KernelExplainer(Explainer):
         if not self.vector_out:
             self.fx = np.array([self.fx])
 
-        # if no features vary then there no feature has an effect
+        # if no features vary then no feature has an effect
         if self.M == 0:
             phi = np.zeros((self.data.groups_size, self.D))
             phi_var = np.zeros((self.data.groups_size, self.D))
@@ -354,7 +354,7 @@ class KernelExplainer(Explainer):
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
                 log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
-                ind_set = np.random.choice(len(remaining_weight_vector), samples_left, p=remaining_weight_vector)
+                ind_set = np.random.choice(len(remaining_weight_vector), 2 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
                 while samples_left > 0:
