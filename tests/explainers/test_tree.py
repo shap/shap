@@ -119,6 +119,50 @@ def test_sklearn_random_forest_multiclass():
     assert np.abs(shap_values[0][0,0] - 0.05) < 1e-3
     assert np.abs(shap_values[1][0,0] + 0.05) < 1e-3
 
+def create_binary_newsgroups_data():
+    from sklearn.datasets import fetch_20newsgroups
+
+    categories = ['alt.atheism', 'soc.religion.christian']
+    newsgroups_train = fetch_20newsgroups(subset='train', categories=categories)
+    newsgroups_test = fetch_20newsgroups(subset='test', categories=categories)
+    class_names = ['atheism', 'christian']
+    return newsgroups_train, newsgroups_test, class_names
+
+def create_random_forest_vectorizer():
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.pipeline import Pipeline
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.base import TransformerMixin
+
+    vectorizer = CountVectorizer(lowercase=False, min_df=0.0, binary=True)
+
+    class DenseTransformer(TransformerMixin):
+        def fit(self, X, y=None, **fit_params):
+            return self
+        def transform(self, X, y=None, **fit_params):
+            return X.toarray()
+
+    rf = RandomForestClassifier(n_estimators=500, random_state=777)
+    return Pipeline([('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)])
+
+def test_sklearn_random_forest_newsgroups():
+    import shap
+    from sklearn.ensemble import RandomForestClassifier
+
+    # note: this test used to fail in native TreeExplainer code due to memory corruption
+    newsgroups_train, newsgroups_test, classes = create_binary_newsgroups_data()
+    pipeline = create_random_forest_vectorizer()
+    pipeline.fit(newsgroups_train.data, newsgroups_train.target)
+    rf = pipeline.named_steps['rf']
+    vectorizer = pipeline.named_steps['vectorizer']
+    densifier = pipeline.named_steps['to_dense']
+
+    test_row = newsgroups_test.data[83:84]
+    explainer = shap.TreeExplainer(rf)
+    vec_row = vectorizer.transform(test_row)
+    dense_row = densifier.transform(vec_row)
+    explainer.shap_values(dense_row)
+
 def test_sklearn_decision_tree_multiclass():
     import shap
     from sklearn.tree import DecisionTreeClassifier

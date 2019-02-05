@@ -216,6 +216,9 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
 
     dense_tree_shap(trees, data, out_contribs, feature_dependence, model_output, interactions);
 
+    // retrieve return value before python cleanup of objects
+    tfloat ret_value = (double)values[0];
+
     // clean up the created python objects 
     Py_XDECREF(children_left_array);
     Py_XDECREF(children_right_array);
@@ -233,7 +236,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     Py_XDECREF(out_contribs_array);
 
     /* Build the output tuple */
-    PyObject *ret = Py_BuildValue("d", (double)values[0]);
+    PyObject *ret = Py_BuildValue("d", ret_value);
     return ret;
 }
 
