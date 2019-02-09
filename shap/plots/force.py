@@ -212,7 +212,7 @@ def ensure_not_numpy(x):
     elif isinstance(x, np.str):
         return str(x)
     elif isinstance(x, np.generic):
-        return float(np.asscalar(x))
+        return float(x.item())
     else:
         return x
 
