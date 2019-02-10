@@ -412,7 +412,19 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
+        elif str(type(model)).endswith("skopt.learning.forest.RandomForestRegressor'>"):
+            self.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
+            self.objective = objective_name_map.get(model.criterion, None)
+            self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.ensemble.forest.ExtraTreesRegressor'>"):
+            self.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
+            self.objective = objective_name_map.get(model.criterion, None)
+            self.tree_output = "raw_value"
+        elif str(type(model)).endswith("skopt.learning.forest.ExtraTreesRegressor'>"):
             self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
