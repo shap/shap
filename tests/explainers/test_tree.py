@@ -615,7 +615,6 @@ def test_single_tree_nonlinear_transformations():
     assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), \
     "SHAP values don't sum to model output on explaining logistic!"
 
-    
     # expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logloss")
     # itshap = expl.shap_values(x,y=y[x_ind])
     # margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
@@ -690,3 +689,37 @@ def test_front_page_xgboost_global_path_dependent():
     shap_values = explainer.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
+
+def test_skopt_rf_et():
+    try:
+        import skopt
+        import pandas as pd
+    except:
+        print("Skipping test_skopt_rf_et!")
+        return
+    
+    # Define an objective function for skopt to optimise.
+    def objective_function(x):
+        return x[0]**2 - x[1]**2 + x[1]*x[0]
+
+    # Uneven bounds to prevent "objective has been evaluated" warnings.
+    problem_bounds = [(-1e6, 3e6), (-1e6, 3e6)]
+
+    # Don't worry about "objective has been evaluated" warnings.
+    result_et = skopt.forest_minimize(objective_function, problem_bounds, n_calls = 100, base_estimator = "ET")
+    result_rf = skopt.forest_minimize(objective_function, problem_bounds, n_calls = 100, base_estimator = "RF")
+
+    et_df = pd.DataFrame(result_et.x_iters, columns = ["X0", "X1"])
+
+    # Explain the model's predictions.
+    explainer_et = shap.TreeExplainer(result_et.models[-1], et_df)
+    shap_values_et = explainer_et.shap_values(et_df)
+
+    rf_df = pd.DataFrame(result_rf.x_iters, columns = ["X0", "X1"])
+
+    # Explain the model's predictions (Random forest).
+    explainer_rf = shap.TreeExplainer(result_rf.models[-1], rf_df)
+    shap_values_rf = explainer_rf.shap_values(rf_df)
+
+    assert np.allclose(shap_values_et.sum(1) + explainer_et.expected_value, result_et.models[-1].predict(et_df))
+    assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value, result_rf.models[-1].predict(rf_df))

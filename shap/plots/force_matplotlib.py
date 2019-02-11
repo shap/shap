@@ -110,8 +110,11 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
         # Compute value for current feature
         val = float(feature[0])
         
-        # Draw labels
-        text = feature[2] + ' = ' + feature[1]
+        # Draw labels.
+        if feature[1] == "":
+            text = feature[2]
+        else:
+            text = feature[2] + ' = ' + feature[1]
         text_out_val = plt.text(start_text - sign * offset_text,
                                 -0.15, text,
                                 fontsize=12, color=colors[0],
