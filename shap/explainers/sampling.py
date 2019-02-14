@@ -68,10 +68,10 @@ class SamplingExplainer(KernelExplainer):
         else:
 
             # pick a reasonable number of samples if the user didn't specify how many they wanted
-            self.nsamples = kwargs.get("nsamples", 0)
-            assert self.nsamples % 2 == 0, "nsamples must be divisible by 2!"
-            if self.nsamples == 0:
+            self.nsamples = kwargs.get("nsamples", "auto")
+            if self.nsamples == "auto":
                 self.nsamples = 1000 * self.M
+            assert self.nsamples % 2 == 0, "nsamples must be divisible by 2!"
 
             min_samples_per_feature = kwargs.get("min_samples_per_feature", 100)
             round1_samples = self.nsamples
