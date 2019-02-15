@@ -25,7 +25,8 @@ from ..common import convert_to_link, Instance, Model, Data, DenseData, Link, hc
 from ..plots.force_matplotlib import draw_additive_plot
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
-               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None):
+               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
+               text_rotation=0):
     """ Visualize the given SHAP values with an additive force layout. """
 
     # auto unwrap the base_value
@@ -100,7 +101,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             DenseData(np.zeros((1, len(feature_names))), list(feature_names))
         )
         
-        return visualize(e, plot_cmap, matplotlib, figsize=figsize, show=show)
+        return visualize(e, plot_cmap, matplotlib, figsize=figsize, show=show, text_rotation=text_rotation)
         
     else:
         if matplotlib:
@@ -131,7 +132,13 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             )
             exps.append(e)
         
-        return visualize(exps, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format)
+        return visualize(
+                    exps, 
+                    plot_cmap=plot_cmap, 
+                    ordering_keys=ordering_keys, 
+                    ordering_keys_time_format=ordering_keys_time_format, 
+                    text_rotation=text_rotation
+                )
             
 
 class Explanation:
@@ -227,11 +234,11 @@ def verify_valid_cmap(cmap):
 
     return cmap
 
-def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, ordering_keys=None, ordering_keys_time_format=None):
+def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, ordering_keys=None, ordering_keys_time_format=None, text_rotation=0):
     plot_cmap = verify_valid_cmap(plot_cmap)
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
-            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show)
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show, text_rotation=text_rotation)
         else:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).html()
     elif isinstance(e, Explanation):
@@ -326,8 +333,8 @@ class AdditiveForceVisualizer:
   );
 </script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator()))
     
-    def matplotlib(self, figsize, show):
-        fig = draw_additive_plot(self.data, figsize=figsize, show=show)
+    def matplotlib(self, figsize, show, text_rotation):
+        fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation)
         
         return fig
         
