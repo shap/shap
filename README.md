@@ -45,7 +45,7 @@ model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 explainer = shap.TreeExplainer(model)
 shap_values = explainer.shap_values(X)
 
-# visualize the first prediction's explanation
+# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
 shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:])
 ```
 
@@ -53,7 +53,7 @@ shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:])
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_instance.png" />
 </p>
 
-If you want to use `matplotlib` backend in place of javascript, you can do so as shown below. You can also rotate the feature names using `text_rotation` parameter, if your dataset has really long feature names.
+<!--If you want to use `matplotlib` backend in place of javascript, you can do so as shown below. You can also rotate the feature names using `text_rotation` parameter, if your dataset has really long feature names.
 ```python
 %matplotlib inline
 import xgboost
@@ -81,7 +81,7 @@ shap.force_plot(
 
 <p align="center">
   <img width="811" src="https://raw.githubusercontent.com/vatsan/shap/master/docs/artwork/force_plot_matplotlib_rotate.png" />
-</p>
+</p>-->
 
 The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue (these force plots are introduced in our [Nature BME paper](https://www.nature.com/articles/s41551-018-0304-0)).
 
