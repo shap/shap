@@ -77,7 +77,7 @@ def draw_bars(out_value, features, feature_type, width_separators, width_bar):
     return rectangle_list, separator_list
 
 
-def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_effect=0, min_perc=0.05):
+def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_effect=0, min_perc=0.05, text_rotation=0):
     start_text = out_value
     pre_val = out_value
     
@@ -118,7 +118,8 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
         text_out_val = plt.text(start_text - sign * offset_text,
                                 -0.15, text,
                                 fontsize=12, color=colors[0],
-                                horizontalalignment=alignement)
+                                horizontalalignment=alignement,
+                                rotation=text_rotation)
         text_out_val.set_bbox(dict(facecolor='none', edgecolor='none'))
         
         # We need to draw the plot to be able to get the size of the
@@ -329,7 +330,7 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg,
             spine.set_visible(False)
 
 
-def draw_additive_plot(data, figsize, show):
+def draw_additive_plot(data, figsize, show, text_rotation=0):
     """Draw additive plot."""
     # Turn off interactive plot
     if show == False:
@@ -375,10 +376,10 @@ def draw_additive_plot(data, figsize, show):
     # Add labels
     total_effect = np.abs(total_neg) + total_pos
     fig, ax = draw_labels(fig, ax, out_value, neg_features, 'negative',
-                          offset_text, total_effect, min_perc=0.05)
+                          offset_text, total_effect, min_perc=0.05, text_rotation=text_rotation)
     
     fig, ax = draw_labels(fig, ax, out_value, pos_features, 'positive',
-                          offset_text, total_effect, min_perc=0.05)
+                          offset_text, total_effect, min_perc=0.05, text_rotation=text_rotation)
     
     # higher lower legend
     draw_higher_lower_element(out_value, offset_text)
