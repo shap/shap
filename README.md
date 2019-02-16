@@ -13,17 +13,13 @@
 
 ## Install
 
-SHAP can be installed from [PyPI](https://pypi.org/project/shap)
+SHAP can be installed from either [PyPI](https://pypi.org/project/shap) or [conda-forge](https://anaconda.org/conda-forge/shap):
 
-```
+<pre>
 pip install shap
-```
-
-or [conda-forge](https://anaconda.org/conda-forge/shap)
-
-```
-conda install -c conda-forge shap 
-```
+<i>or</i>
+conda install -c conda-forge shap
+</pre>
 
 ## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn models)
 
