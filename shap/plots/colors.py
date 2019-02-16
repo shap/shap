@@ -109,6 +109,9 @@ try:
         colors.append((255./255, 13./255, 87./255,l))
     transparent_red = LinearSegmentedColormap.from_list("transparent_red", colors)
 
+    old_blue_rgb = np.array([30, 136, 229]) / 255
+    old_red_rgb = np.array([255, 13, 87]) / 255
+
 
 except ImportError:
     pass
