@@ -53,13 +53,13 @@ def tree_shap_tree_path_dependent(model, data):
     """
     return TreeExplainer(model, feature_dependence="tree_path_dependent").shap_values
 
-def tree_shap_independent_1000(model, data):
+def tree_shap_independent_200(model, data):
     """ Tree SHAP (independent)
     color = red_blue_circle(0)
     linestyle = dashed
     """
-    data1000 = sklearn.utils.resample(data, replace=False, n_samples=min(1000, data.shape[0]), random_state=0)
-    return TreeExplainer(model, data1000, feature_dependence="independent").shap_values
+    data_subsample = sklearn.utils.resample(data, replace=False, n_samples=min(200, data.shape[0]), random_state=0)
+    return TreeExplainer(model, data_subsample, feature_dependence="independent").shap_values
 
 def mean_abs_tree_shap(model, data):
     """ mean(|Tree SHAP|)

@@ -27,32 +27,36 @@ regression_metrics = [
     "runtime",
     "local_accuracy",
     "consistency_guarantees",
-    "mask_keep_positive",
-    "mask_keep_negative",
-    "keep_positive",
-    "keep_negative",
-    "batch_keep_absolute__r2",
-    "mask_remove_positive",
-    "mask_remove_negative",
-    "remove_positive",
-    "remove_negative",
-    "batch_remove_absolute__r2"
+    "keep_positive_mask",
+    "keep_negative_mask",
+    "keep_absolute_mask__r2",
+    "remove_positive_mask",
+    "remove_negative_mask",
+    "remove_absolute_mask__r2",
+    "keep_positive_resample",
+    "keep_negative_resample",
+    "keep_absolute_resample__r2",
+    "remove_positive_resample",
+    "remove_negative_resample",
+    "remove_absolute_resample__r2"
 ]
 
 binary_classification_metrics = [
     "runtime",
     "local_accuracy",
     "consistency_guarantees",
-    "mask_keep_positive",
-    "mask_keep_negative",
-    "keep_positive",
-    "keep_negative",
-    "batch_keep_absolute__roc_auc",
-    "mask_remove_positive",
-    "mask_remove_negative",
-    "remove_positive",
-    "remove_negative",
-    "batch_remove_absolute__roc_auc"
+    "keep_positive_mask",
+    "keep_negative_mask",
+    "keep_absolute_mask__roc_auc",
+    "remove_positive_mask",
+    "remove_negative_mask",
+    "remove_absolute_mask__roc_auc",
+    "keep_positive_resample",
+    "keep_negative_resample",
+    "keep_absolute_resample__roc_auc",
+    "remove_positive_resample",
+    "remove_negative_resample",
+    "remove_absolute_resample__roc_auc"
 ]
 
 linear_regress_methods = [
@@ -86,7 +90,7 @@ tree_regress_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
     "tree_shap_tree_path_dependent",
-    "tree_shap_independent_1000",
+    "tree_shap_independent_200",
     "saabas",
     "random",
     "tree_gain",

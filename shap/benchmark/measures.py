@@ -1,10 +1,12 @@
 import numpy as np
 from tqdm import tqdm
 import gc
+import warnings
+import sklearn.utils
 
 
 _remove_cache = {}
-def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
+def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """ The model is retrained for each test sample with the important features set to a constant.
 
     If you want to know how important a set of features is you can ask how the model would be
@@ -16,6 +18,8 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
     to get the change in model performance when a specified fraction of the most important features
     are withheld.
     """
+
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     # see if we match the last cached call
     global _remove_cache
@@ -65,7 +69,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
 
     return metric(y_test, yp_masked_test)
 
-def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
+def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """ Each test sample is masked by setting the important features to a constant.
     """
 
@@ -76,7 +80,7 @@ def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
 
     # mask nmask top features for each test explanation
     X_test_tmp = X_test.copy()
-    tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
     mean_vals = X_train.mean(0)
     for i in range(len(y_test)):
         if nmask[i] > 0:
@@ -87,7 +91,34 @@ def mask_remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
 
     return metric(y_test, yp_masked_test)
 
-def batch_remove(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
+def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
+    """ The model is revaluated for each test sample with the important features set to resample background values.
+    """
+
+    X_train, X_test = to_array(X_train, X_test)
+
+    # how many features to mask
+    assert X_train.shape[1] == X_test.shape[1]
+
+    # how many samples to take
+    nsamples = 100
+
+    # keep nkeep top features for each test explanation
+    N,M = X_test.shape
+    X_test_tmp = np.tile(X_test, [1, nsamples]).reshape(nsamples * N, M)
+    tie_breaking_noise = const_rand(M) * 1e-6
+    inds = sklearn.utils.resample(np.arange(N), n_samples=nsamples, random_state=random_state)
+    for i in range(N):
+        if nmask[i] > 0:
+            ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
+            X_test_tmp[i*nsamples:(i+1)*nsamples, ordering[:nmask[i]]] = X_train[inds, :][:, ordering[:nmask[i]]]
+
+    yp_masked_test = trained_model.predict(X_test_tmp)
+    yp_masked_test = np.reshape(yp_masked_test, (N, nsamples)).mean(1) # take the mean output over all samples
+
+    return metric(y_test, yp_masked_test)
+
+def batch_remove_retrain(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
     """ An approximation of holdout that only retraines the model once.
 
     This is alse called ROAR (RemOve And Retrain) in work by Google. It is much more computationally
@@ -95,6 +126,8 @@ def batch_remove(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr
     and then retrains the model once, instead of retraining the model for every test sample like
     the holdout metric.
     """
+
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     X_train, X_test = to_array(X_train, X_test)
 
@@ -123,7 +156,7 @@ def batch_remove(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr
     return metric(y_test, yp_test_masked)
 
 _keep_cache = {}
-def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
+def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """ The model is retrained for each test sample with the non-important features set to a constant.
 
     If you want to know how important a set of features is you can ask how the model would be
@@ -135,6 +168,8 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
     to get the change in model performance when a specified fraction of the most important features
     are retained.
     """
+
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     # see if we match the last cached call
     global _keep_cache
@@ -185,8 +220,8 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
 
     return metric(y_test, yp_masked_test)
 
-def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
-    """ The model is retrained for each test sample with the non-important features set to a constant.
+def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
+    """ The model is revaluated for each test sample with the non-important features set to their mean.
     """
 
     X_train, X_test = to_array(X_train, X_test)
@@ -197,7 +232,7 @@ def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
     # keep nkeep top features for each test explanation
     X_test_tmp = X_test.copy()
     yp_masked_test = np.zeros(y_test.shape)
-    tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
     mean_vals = X_train.mean(0)
     for i in range(len(y_test)):
         if nkeep[i] < X_test.shape[1]:
@@ -208,7 +243,63 @@ def mask_keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
 
     return metric(y_test, yp_masked_test)
 
-def batch_keep(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
+def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
+    """ The model is revaluated for each test sample with the non-important features set to an imputed value.
+    """
+
+    X_train, X_test = to_array(X_train, X_test)
+
+    # how many features to mask
+    assert X_train.shape[1] == X_test.shape[1]
+
+    # keep nkeep top features for each test explanation
+    X_test_tmp = X_test.copy()
+    yp_masked_test = np.zeros(y_test.shape)
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
+    mean_vals = X_train.mean(0)
+    for i in range(len(y_test)):
+        if nkeep[i] < X_test.shape[1]:
+            ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
+            observe_inds = ordering[:nkeep[i]]
+            impute_inds = ordering[nkeep[i]:]
+            X_train_tmp = X_train[:,observe_inds]
+            impute_model = sklearn.linear_model.LassoLarsIC()
+            for j in impute_inds:
+                impute_model.fit(X_train_tmp, X_train[:,j])
+            X_test_tmp[i,ordering[nkeep[i]:]] = mean_vals[ordering[nkeep[i]:]]
+
+    yp_masked_test = trained_model.predict(X_test_tmp)
+
+    return metric(y_test, yp_masked_test)
+
+def keep_resample(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
+    """ The model is revaluated for each test sample with the non-important features set to resample background values.
+    """ # why broken? overwriting?
+
+    X_train, X_test = to_array(X_train, X_test)
+
+    # how many features to mask
+    assert X_train.shape[1] == X_test.shape[1]
+
+    # how many samples to take
+    nsamples = 100
+
+    # keep nkeep top features for each test explanation
+    N,M = X_test.shape
+    X_test_tmp = np.tile(X_test, [1, nsamples]).reshape(nsamples * N, M)
+    tie_breaking_noise = const_rand(M) * 1e-6
+    inds = sklearn.utils.resample(np.arange(N), n_samples=nsamples, random_state=random_state)
+    for i in range(N):
+        if nkeep[i] < M:
+            ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
+            X_test_tmp[i*nsamples:(i+1)*nsamples, ordering[nkeep[i]:]] = X_train[inds, :][:, ordering[nkeep[i]:]]
+
+    yp_masked_test = trained_model.predict(X_test_tmp)
+    yp_masked_test = np.reshape(yp_masked_test, (N, nsamples)).mean(1) # take the mean output over all samples
+
+    return metric(y_test, yp_masked_test)
+
+def batch_keep_retrain(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
     """ An approximation of keep that only retraines the model once.
 
     This is alse called KAR (Keep And Retrain) in work by Google. It is much more computationally
@@ -216,6 +307,8 @@ def batch_keep(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_t
     and then retrains the model once, instead of retraining the model for every test sample like
     the keep metric.
     """
+
+    warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     X_train, X_test = to_array(X_train, X_test)
 
@@ -268,6 +361,14 @@ def const_rand(size, seed=23980):
     out = np.random.rand(size)
     np.random.seed(old_seed)
     return out
+
+def const_shuffle(arr, seed=23980):
+    """ Shuffle an array in-place with a fixed seed.
+    """
+    old_seed = np.random.seed()
+    np.random.seed(seed)
+    np.random.shuffle(arr)
+    np.random.seed(old_seed)
 
 def strip_list(attrs):
     """ This assumes that if you have a list of outputs you just want the second one (the second class is the '1' class).

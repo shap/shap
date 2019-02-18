@@ -7,18 +7,19 @@ from .. import datasets
 from .metrics import consistency_guarantees
 from .metrics import local_accuracy
 from .metrics import runtime
-from .metrics import remove_positive
-from .metrics import remove_negative
-from .metrics import keep_positive
-from .metrics import keep_negative
-from .metrics import mask_remove_positive
-from .metrics import mask_remove_negative
-from .metrics import mask_keep_positive
-from .metrics import mask_keep_negative
-from .metrics import batch_remove_absolute__r2
-from .metrics import batch_keep_absolute__r2
-from .metrics import batch_remove_absolute__roc_auc
-from .metrics import batch_keep_absolute__roc_auc
+from .metrics import remove_positive_retrain
+from .metrics import remove_negative_retrain
+from .metrics import keep_positive_retrain
+from .metrics import keep_negative_retrain
+from .metrics import remove_positive_mask
+from .metrics import remove_negative_mask
+from .metrics import keep_positive_mask
+from .metrics import keep_negative_mask
+from .metrics import keep_positive_resample
+from .metrics import remove_absolute_mask__r2
+from .metrics import keep_absolute_mask__r2
+from .metrics import remove_absolute_mask__roc_auc
+from .metrics import keep_absolute_mask__roc_auc
 
 from .plots import plot_curve, plot_grids
 

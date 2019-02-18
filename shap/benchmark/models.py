@@ -44,12 +44,14 @@ def corrgroups60__ridge():
 def corrgroups60__decision_tree():
     """ Decision Tree
     """
-    return sklearn.tree.DecisionTreeRegressor(random_state=0)
+
+    # max_depth was chosen to minimise test error
+    return sklearn.tree.DecisionTreeRegressor(random_state=0, max_depth=6)
 
 def corrgroups60__random_forest():
     """ Random Forest
     """
-    return sklearn.ensemble.RandomForestRegressor(random_state=0)
+    return sklearn.ensemble.RandomForestRegressor(100, random_state=0)
 
 def corrgroups60__gbm():
     """ Gradient Boosted Trees
@@ -91,12 +93,14 @@ def independentlinear60__ridge():
 def independentlinear60__decision_tree():
     """ Decision Tree
     """
-    return sklearn.tree.DecisionTreeRegressor(random_state=0)
+
+    # max_depth was chosen to minimise test error
+    return sklearn.tree.DecisionTreeRegressor(random_state=0, max_depth=4)
 
 def independentlinear60__random_forest():
     """ Random Forest
     """
-    return sklearn.ensemble.RandomForestRegressor(random_state=0)
+    return sklearn.ensemble.RandomForestRegressor(100, random_state=0)
 
 def independentlinear60__gbm():
     """ Gradient Boosted Trees
@@ -148,7 +152,7 @@ def cric__ridge():
 def cric__decision_tree():
     """ Decision Tree
     """
-    model = sklearn.tree.DecisionTreeClassifier(random_state=0)
+    model = sklearn.tree.DecisionTreeClassifier(random_state=0, max_depth=4)
 
     # we want to explain the raw probability outputs of the trees
     model.predict = lambda X: model.predict_proba(X)[:,1]
