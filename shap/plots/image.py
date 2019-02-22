@@ -7,7 +7,7 @@ except ImportError:
     pass
 from . import colors
 
-def image_plot(shap_values, x, labels=None, show=True):
+def image_plot(shap_values, x, labels=None, show=True, width=20, aspect=0.2, hspace=0.2, labelpad=None):
     """ Plots SHAP values for image inputs.
     """
 
@@ -24,10 +24,12 @@ def image_plot(shap_values, x, labels=None, show=True):
         else:
             assert len(labels.shape) == 1, "Labels must be a vector for single output shap_values."
 
+    label_kwargs = {} if labelpad is None else {'pad': labelpad}
+
     # plot our explanations
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
-    if fig_size[0] > 20:
-        fig_size *= 20 / fig_size[0]
+    if fig_size[0] > width:
+        fig_size *= width / fig_size[0]
     fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
     if len(axes.shape) == 1:
         axes = axes.reshape(1,axes.size)
@@ -55,12 +57,16 @@ def image_plot(shap_values, x, labels=None, show=True):
         max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row,i+1].set_title(labels[row,i])
+                axes[row,i+1].set_title(labels[row,i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[0], sv.shape[1], -1))
             im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
             axes[row,i+1].axis('off')
-    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0]/0.2)
+    if hspace == 'auto':
+        fig.tight_layout()
+    else:
+        fig.subplots_adjust(hspace=hspace)
+    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0]/aspect)
     cb.outline.set_visible(False)
     if show:
         pl.show()
