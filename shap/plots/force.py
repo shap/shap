@@ -27,7 +27,37 @@ from ..plots.force_matplotlib import draw_additive_plot
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
                plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
                text_rotation=0):
-    """ Visualize the given SHAP values with an additive force layout. """
+    """ Visualize the given SHAP values with an additive force layout.
+    
+    Parameters
+    ----------
+    base_value : float
+        This is the reference value that the feature contributions start from. For SHAP values it should
+        be the value of explainer.expected_value.
+
+    shap_values : numpy.array
+        Matrix of SHAP values (# features) or (# samples x # features). If this is a 1D array then a single
+        force plot will be drawn, if it is a 2D array then a stacked force plot will be drawn.
+
+    features : numpy.array
+        Matrix of feature values (# features) or (# samples x # features). This provides the values of all the
+        features, and should be the same shape as the shap_values argument.
+
+    features_names : list
+        List of feature names (# features).
+
+    out_names : str
+        The name of the outout of the model (plural to support multi-output plotting in the future).
+    
+    link : "identity" or "logit"
+        The transformation used when drawing the tick mark labels. Using logit will change log-odds numbers
+        into probabilities. 
+
+    matplotlib : bool
+        Whether to use the default Javascript output, or the (less developed) matplotlib output. Using matplotlib
+        can be helpful in scenarios where rendering Javascript/HTML is inconvenient. 
+
+    """
 
     # auto unwrap the base_value
     if type(base_value) == np.ndarray and len(base_value) == 1:
@@ -108,7 +138,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             raise Exception("matplotlib = True is not yet supported for force plots with multiple samples!")
         
         if shap_values.shape[0] > 3000:
-            warnings.warn("shap.force_plot is slow many thousands of rows, try subsampling your data.")
+            warnings.warn("shap.force_plot is slow for many thousands of rows, try subsampling your data.")
 
         exps = []
         for i in range(shap_values.shape[0]):
