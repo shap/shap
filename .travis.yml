@@ -6,7 +6,7 @@ python:
   - '3.6'
 install:
   - pip install .
-  - pip install tensorflow
+  - pip install tensorflow keras
 script: python setup.py nosetests
 before_script:
   - export DISPLAY=:99.0

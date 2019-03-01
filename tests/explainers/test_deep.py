@@ -1,24 +1,34 @@
-import matplotlib
-import numpy as np
 import shutil
-matplotlib.use('Agg')
-import shap
+
+import numpy as np
+import nose
+
+
+def _skip_if_no_tensorflow():
+    try:
+        import tensorflow
+    except ImportError:
+        raise nose.SkipTest('Tensorflow not installed.')
+
+
+def _skip_if_no_pytorch():
+    try:
+        import torch
+    except ImportError:
+        raise nose.SkipTest('Pytorch not installed.')
 
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
     """
+    _skip_if_no_tensorflow()
 
-    try:
-        from tensorflow import keras
-        from tensorflow.keras.models import Sequential
-        from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
-        from tensorflow.keras.layers import Conv2D, MaxPooling2D
-        from tensorflow.keras import backend as K
-        import tensorflow as tf
-    except Exception as e:
-        print("Skipping test_tf_keras_mnist_cnn!")
-        return
+    from tensorflow import keras
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
+    from tensorflow.keras.layers import Conv2D, MaxPooling2D
+    from tensorflow.keras import backend as K
+    import tensorflow as tf
     import shap
 
     batch_size = 128
@@ -128,19 +138,16 @@ def test_tf_keras_linear():
 def test_keras_imdb_lstm():
     """ Basic LSTM example using keras
     """
+    _skip_if_no_tensorflow()
 
-    try:
-        import numpy as np
-        import tensorflow as tf
-        from keras.datasets import imdb
-        from keras.models import Sequential
-        from keras.layers import Dense
-        from keras.layers import LSTM
-        from keras.layers.embeddings import Embedding
-        from keras.preprocessing import sequence
-    except Exception as e:
-        print("Skipping test_keras_imdb_lstm!")
-        return
+    import numpy as np
+    import tensorflow as tf
+    from keras.datasets import imdb
+    from keras.models import Sequential
+    from keras.layers import Dense
+    from keras.layers import LSTM
+    from keras.layers.embeddings import Embedding
+    from keras.preprocessing import sequence
     import shap
 
     # load the data from keras
@@ -165,6 +172,7 @@ def test_keras_imdb_lstm():
 
     # explain a prediction and make sure it sums to the difference between the average output
     # over the background samples and the current output
+    tf.keras.backend.get_session().run(tf.global_variables_initializer())
     e = shap.DeepExplainer((mod.layers[0].input, mod.layers[-1].output), background)
     shap_values = e.shap_values(testx)
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
@@ -177,14 +185,12 @@ def test_keras_imdb_lstm():
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
-    try:
-        import torch, torchvision
-        from torchvision import datasets, transforms
-        from torch import nn
-        from torch.nn import functional as F
-    except Exception as e:
-        print("Skipping test_pytorch_mnist_cnn!")
-        return
+    _skip_if_no_pytorch()
+
+    import torch, torchvision
+    from torchvision import datasets, transforms
+    from torch import nn
+    from torch.nn import functional as F
     import shap
 
     def run_test(train_loader, test_loader, interim):
@@ -288,15 +294,13 @@ def test_pytorch_mnist_cnn():
 def test_pytorch_regression():
     """Testing regressions (i.e. single outputs)
     """
-    try:
-        import torch
-        from torch import nn
-        from torch.nn import functional as F
-        from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
-        from sklearn.datasets import load_boston
-    except Exception as e:
-        print("Skipping test_pytorch_regression!")
-        return
+    _skip_if_no_pytorch()
+
+    import torch
+    from torch import nn
+    from torch.nn import functional as F
+    from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
+    from sklearn.datasets import load_boston
     import shap
 
     X, y = load_boston(return_X_y=True)
