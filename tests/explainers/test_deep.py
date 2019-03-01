@@ -89,14 +89,10 @@ def test_tf_keras_mnist_cnn():
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result."""
 
-    try:
-        from tensorflow.keras.models import Model
-        from tensorflow.keras.layers import Dense, Input
-        from tensorflow.keras.optimizers import SGD
-        import tensorflow as tf
-    except Exception as e:
-        print("Skipping test_tf_keras_mnist_cnn!")
-        return
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras.optimizers import SGD
+    import tensorflow as tf
 
     np.random.seed(0)
 
