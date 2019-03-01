@@ -78,3 +78,24 @@ def test_shape_values_linear_many_features():
 
     expected = (X - X.mean(0)) * coef
     np.testing.assert_allclose(expected - values, 0, atol=0.01)
+
+def test_single_feature():
+    """ Make sure things work with a univariate linear regression.
+    """
+    import sklearn.linear_model
+
+    np.random.seed(0)
+
+    # generate linear data
+    X = np.random.normal(1, 10, size=(1000, 1))
+    y = 2 * X[:, 0] + 1 + np.random.normal(scale=0.1, size=1000)
+
+    # train linear model
+    model = sklearn.linear_model.Ridge(0.1)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X)
+    shap_values = explainer.shap_values(X)
+    assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
+    assert np.max(np.abs(explainer.expected_value + shap_values.sum(1) - model.predict(X))) < 1e-6

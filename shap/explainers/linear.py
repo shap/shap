@@ -56,7 +56,7 @@ class LinearExplainer(Explainer):
         # sklearn style model
         elif hasattr(model, "coef_") and hasattr(model, "intercept_"):
             # work around for multi-class with a single class
-            if len(model.coef_.shape) and model.coef_.shape[0] == 1:
+            if len(model.coef_.shape) > 1 and model.coef_.shape[0] == 1:
                 self.coef = model.coef_[0]
                 self.intercept = model.intercept_[0]
             else:
