@@ -105,6 +105,7 @@ def test_tf_keras_linear():
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.optimizers import SGD
     import tensorflow as tf
+    import shap
 
     np.random.seed(0)
 
