@@ -86,6 +86,56 @@ def test_tf_keras_mnist_cnn():
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
 
+def test_tf_keras_linear():
+    """Test verifying that a linear model with linear data gives the correct result."""
+
+    try:
+        from tensorflow.keras.models import Model
+        from tensorflow.keras.layers import Dense, Input
+        from tensorflow.keras.optimizers import SGD
+        import tensorflow as tf
+    except Exception as e:
+        print("Skipping test_tf_keras_mnist_cnn!")
+        return
+
+    np.random.seed(0)
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = np.random.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    inputs = Input(shape=(2,))
+    preds = Dense(1, activation='linear')(inputs)
+
+    model = Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
+    model.fit(x, y, epochs=30, shuffle=False)
+
+    # check that the weights are correct (not part of the this test per-se, but required for the test to make sense)
+    # - coefficients
+    np.testing.assert_allclose(model.layers[1].get_weights()[0].T[0], coef, rtol=0.05)
+    # - intercept
+    np.testing.assert_allclose(model.layers[1].get_weights()[1][0], 1, rtol=0.05)
+
+    # explain
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x)
+    shap_values = e.shap_values(x)
+
+    # verify that the explanation follows the equation in LinearExplainer
+
+    # shap_values[0] = [[a1, 0], [a2, 0], ...]
+    # shap_values[1] = [[0, b1], [0, b2], ...]
+    # values = [[a1, b1], [a2, b2], ...]
+    values = shap_values[0] + shap_values[1]
+
+    assert values.shape == (1000, 2)
+
+    expected = (x - x.mean(0)) * coef
+    np.testing.assert_allclose(expected - values, 0, atol=0.01)
 
 def test_keras_imdb_lstm():
     """ Basic LSTM example using keras
