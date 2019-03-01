@@ -101,7 +101,7 @@ def test_tf_keras_linear():
 
     # generate data following a linear relationship
     x = np.random.normal(1, 10, size=(1000, len(coef)))
-    y = np.dot(x, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+    y = np.dot(x, coef) + 1 + np.random.normal(scale=0.01, size=1000)
 
     # create a linear model
     inputs = Input(shape=(2,))
@@ -109,29 +109,25 @@ def test_tf_keras_linear():
 
     model = Model(inputs=inputs, outputs=preds)
     model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
-    model.fit(x, y, epochs=30, shuffle=False)
+    model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     # check that the weights are correct (not part of the this test per-se, but required for the test to make sense)
     # - coefficients
-    np.testing.assert_allclose(model.layers[1].get_weights()[0].T[0], coef, rtol=0.05)
+    np.testing.assert_allclose(model.layers[1].get_weights()[0].T[0], coef, rtol=0.01)
     # - intercept
-    np.testing.assert_allclose(model.layers[1].get_weights()[1][0], 1, rtol=0.05)
+    np.testing.assert_allclose(model.layers[1].get_weights()[1][0], 1, rtol=0.01)
 
     # explain
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x)
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
 
     # verify that the explanation follows the equation in LinearExplainer
-
-    # shap_values[0] = [[a1, 0], [a2, 0], ...]
-    # shap_values[1] = [[0, b1], [0, b2], ...]
-    # values = [[a1, b1], [a2, b2], ...]
-    values = shap_values[0] + shap_values[1]
+    values = shap_values[0] # since this is a "multi-output" model with one output
 
     assert values.shape == (1000, 2)
 
     expected = (x - x.mean(0)) * coef
-    np.testing.assert_allclose(expected - values, 0, atol=0.01)
+    np.testing.assert_allclose(expected - values, 0, atol=0.1)
 
 def test_keras_imdb_lstm():
     """ Basic LSTM example using keras
