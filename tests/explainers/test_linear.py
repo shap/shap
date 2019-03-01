@@ -53,3 +53,28 @@ def test_perfect_colinear():
     explainer = shap.LinearExplainer(model, X, feature_dependence="correlation")
     shap_values = explainer.shap_values(X)
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
+
+def test_shape_values_linear_many_features():
+    from sklearn.linear_model import Ridge
+
+    np.random.seed(0)
+
+    coef = np.array([1, 2]).T
+
+    # generate linear data
+    X = np.random.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(X, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+
+    # train linear model
+    model = Ridge(0.1)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X)
+
+    values = explainer.shap_values(X)
+
+    assert values.shape == (1000, 2)
+
+    expected = (X - X.mean(0)) * coef
+    np.testing.assert_allclose(expected - values, 0, atol=0.01)
