@@ -97,8 +97,10 @@ def test_tf_keras_mnist_cnn():
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
 
 def test_tf_keras_linear():
-    """Test verifying that a linear model with linear data gives the correct result."""
-
+    """Test verifying that a linear model with linear data gives the correct result.
+    """
+    _skip_if_no_tensorflow()
+    
     from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.optimizers import SGD
