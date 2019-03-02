@@ -7,7 +7,7 @@ python:
 install:
   - pip install .
   - pip install tensorflow keras
-  - pip3 install torch torchvision
+  - pip3 -q install torch torchvision
 script: python setup.py nosetests
 before_script:
   - export DISPLAY=:99.0
