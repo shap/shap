@@ -560,6 +560,12 @@ class TreeEnsemble:
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+        elif str(type(model)).endswith("imblearn.ensemble._forest.BalancedRandomForestClassifier'>"):
+            self.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
+            self.objective = objective_name_map.get(model.criterion, None)
+            self.tree_output = "probability"
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
         
