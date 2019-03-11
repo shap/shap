@@ -69,6 +69,63 @@ def test_front_page_sklearn():
         # summarize the effects of all the features
         shap.summary_plot(shap_values, X, show=False)
 
+def _conditional_expectation(tree, S, x):
+    tree_ind = 0
+    def R(node_ind):
+        
+        f = tree.features[tree_ind, node_ind]
+        lc = tree.children_left[tree_ind, node_ind]
+        rc = tree.children_right[tree_ind, node_ind]
+        if lc < 0:
+            return tree.values[tree_ind, node_ind]
+        elif f in S:
+            if x[f] <= tree.thresholds[tree_ind, node_ind]:
+                return R(lc)
+            else:
+                return R(rc)
+        else:
+            lw = tree.node_sample_weight[tree_ind, lc]
+            rw = tree.node_sample_weight[tree_ind, rc]
+            return (R(lc) * lw + R(rc) * rw) / (lw + rw)
+    
+    out = 0.0
+    l = tree.values.shape[0] if tree.tree_limit is None else tree.tree_limit
+    for i in range(l):
+        tree_ind = i
+        out += R(0)
+    return out
+
+def _brute_force_tree_shap(tree, x):
+    import itertools
+    import math
+    m = len(x)
+    phi = np.zeros(m)
+    for p in itertools.permutations(list(range(m))):
+        for i in range(m):
+            phi[p[i]] += _conditional_expectation(tree, p[:i+1], x) - _conditional_expectation(tree, p[:i], x)
+    return phi / math.factorial(m)
+
+def test_xgboost_direct():
+    try:
+        import xgboost
+    except Exception as e:
+        print("Skipping test_xgboost_direct!")
+        return
+    import shap
+
+    N = 100
+    M = 4
+    X = np.random.randn(N,M)
+    y = np.random.randn(N)  
+
+    model = xgboost.XGBRegressor()
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    assert np.allclose(shap_values[0,:], _brute_force_tree_shap(explainer.model, X[0,:]))
+
 def test_xgboost_multiclass():
     try:
         import xgboost
