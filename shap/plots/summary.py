@@ -8,8 +8,8 @@ import numpy as np
 from scipy.stats import gaussian_kde
 try:
     import matplotlib.pyplot as pl
-except ImportError as e:
-    warnings.warn("matplotlib could not be loaded!", e)
+except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
     pass
 from . import labels
 from . import colors
