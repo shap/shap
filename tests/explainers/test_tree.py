@@ -374,10 +374,21 @@ def test_sum_match_gradient_boosting_classifier():
 
     # Use decision function to get prediction before it is mapped to a probability
     predicted = clf.decision_function(X_test)
+
+    # check SHAP values
     ex = shap.TreeExplainer(clf)
+    initial_ex_value = ex.expected_value
     shap_values = ex.shap_values(X_test)
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
         "SHAP values don't sum to model output!"
+
+    # check initial expected value
+    assert np.abs(initial_ex_value - ex.expected_value) < 1e-6, "Inital expected value is wrong!"
+
+    # check SHAP interaction values
+    shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10,:])
+    assert np.abs(shap_interaction_values.sum(1).sum(1) + ex.expected_value - predicted[:10]).max() < 1e-6, \
+        "SHAP interaction values don't sum to model output!"
 
 def test_single_row_gradient_boosting_classifier():
     import shap

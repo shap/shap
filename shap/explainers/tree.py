@@ -122,8 +122,8 @@ class TreeExplainer(Explainer):
         elif data is not None:
             self.expected_value = self.model.predict(self.data, output=model_output).mean(0)
         elif hasattr(self.model, "node_sample_weight"):
-            #proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
-            self.expected_value = self.model.values[:,0].sum(0) #(self.model.values[:,0].T * proportions).T.sum(0)
+            self.expected_value = self.model.values[:,0].sum(0)
+            self.expected_value += self.model.base_offset
 
     def __dynamic_expected_value(self, y):
         """ This computes the expected value conditioned on the given label value.
