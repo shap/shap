@@ -43,7 +43,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
         Matrix of feature values (# features) or (# samples x # features). This provides the values of all the
         features, and should be the same shape as the shap_values argument.
 
-    features_names : list
+    feature_names : list
         List of feature names (# features).
 
     out_names : str
