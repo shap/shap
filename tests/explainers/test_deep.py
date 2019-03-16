@@ -212,6 +212,7 @@ def test_pytorch_mnist_cnn():
                 )
                 self.fc_layers = nn.Sequential(
                     nn.Linear(320, 50),
+                    nn.BatchNorm1d(50),
                     nn.ReLU(),
                     nn.Linear(50, 10),
                     nn.ELU(),
