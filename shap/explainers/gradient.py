@@ -128,13 +128,13 @@ class _TFGradientExplainer(Explainer):
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.models.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.engine.training.Model'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
             self.model_inputs = model[0]
