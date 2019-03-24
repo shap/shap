@@ -32,8 +32,8 @@ extras_require = {
     'xgboost': ['XGBoost>=v0.81'],  # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
     'lightgbm': ['lightgbm'],
     'tensorflow': ['keras>=2.1.0', 'tensorflow>=1.4.0'],
-    'torch': ['pytorch>=0.4'],
-    'torchvision': ['pytorch>=0.4', 'torchvision']
+    'torch': ['torch>=0.4'],
+    'torchvision': ['torch>=0.4', 'torchvision']
 }
 
 
