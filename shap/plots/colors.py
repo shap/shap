@@ -4,9 +4,9 @@
 from __future__ import division
 
 import numpy as np
-import skimage.color
 
 try:
+    import skimage.color
     import matplotlib.pyplot as pl
     import matplotlib
     from matplotlib.colors import LinearSegmentedColormap

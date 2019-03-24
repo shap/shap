@@ -25,11 +25,23 @@ if sys.platform == 'darwin':
         if python_target < '10.9' and current_system >= '10.9':
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
-here = os.path.abspath(os.path.dirname(__file__))
+
+# all extras that can be targeted with `pip install shap[...]`.
+extras_require = {
+    'plots': ['matplotlib', 'scikit-image', 'ipython'],
+    'xgboost': ['XGBoost>=v0.81'],  # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
+    'lightgbm': ['lightgbm'],
+    'tensorflow': ['keras>=2.1.0', 'tensorflow>=1.4.0'],
+    'torch': ['pytorch>=0.4'],
+    'torchvision': ['pytorch>=0.4', 'torchvision']
+}
+
 
 def read(*parts):
+    here = os.path.abspath(os.path.dirname(__file__))
     with codecs.open(os.path.join(here, *parts), 'r') as fp:
         return fp.read()
+
 
 def find_version(*file_paths):
     version_file = read(*file_paths)
@@ -37,6 +49,7 @@ def find_version(*file_paths):
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
+
 
 # Extend the default build_ext class to bootstrap numpy installation
 # that are needed to build C extensions.
@@ -53,21 +66,23 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
+def tests_require(use_extra=None):
+    """
+    Constructs a list of all dependencies required for testing. By default
+    returns all dependencies, but since the system may not support all dependencies, you can use
+    ``use_extra[extra] = False`` to not include dependencies from that extra to this list.
+    """
+    use_extra = use_extra or {extra: True for extra in extras_require}
+
+    return ['nose'] + [extras_require[extra] for extra in extras_require if use_extra[extra]]
+
+
+def run_setup(with_binary, use_extra):
     ext_modules = []
     if with_binary:
         ext_modules.append(
             Extension('shap._cext', sources=['shap/_cext.cc'])
         )
-
-    if test_xgboost and test_lightgbm:
-        tests_require = ['nose', 'xgboost', 'lightgbm']
-    elif test_xgboost:
-        tests_require = ['nose', 'xgboost']
-    elif test_lightgbm:
-        tests_require = ['nose', 'lightgbm']
-    else:
-        tests_require = ['nose']
 
     setup(
         name='shap',
@@ -89,37 +104,44 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', 'ipython', 'scikit-image'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm'],
+        extras_require=extras_require,
         test_suite='nose.collector',
-        tests_require=tests_require,
+        tests_require=tests_require(use_extra),
         ext_modules=ext_modules,
         zip_safe=False
     )
 
 
-def try_run_setup(**kwargs):
+def try_run_setup(with_binary, with_extras):
     """ Fails gracefully when various install steps don't work.
     """
 
     try:
-        run_setup(**kwargs)
+        run_setup(with_binary, with_extras)
     except Exception as e:
-        print(str(e))
-        if "xgboost" in str(e).lower():
-            kwargs["test_xgboost"] = False
-            print("Couldn't install XGBoost for testing!")
-            try_run_setup(**kwargs)
-        elif "lightgbm" in str(e).lower():
-            kwargs["test_lightgbm"] = False
-            print("Couldn't install LightGBM for testing!")
-            try_run_setup(**kwargs)
-        elif kwargs["with_binary"]:
-            kwargs["with_binary"] = False
-            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-            try_run_setup(**kwargs)
+        message = str(e)
+        print(message)
+
+        failing_extra = None
+        for extra, dependencies in extras_require:
+            extra_dependencies = [dependency.split('>')[0] for dependency in dependencies]
+            # hack: capture that any dependency from a given extra may arbitrarily fail to install.
+            if any(dependency in message for dependency in extra_dependencies):
+                failing_extra = extra
+
+        if failing_extra is not None:
+            with_extras[failing_extra] = False
+            print("WARNING: Extra \"%s\" skipped due to being unable to install its dependencies." % failing_extra)
+            try_run_setup(True, with_extras)
+        elif with_binary:
+            # assume that compiling the binary was the reason and try without it
+            print("WARNING: The C extension could not be compiled, sklearn tree models not tested.")
+            try_run_setup(False, with_extras)
         else:
-            print("ERROR: Failed to build!")
+            raise e
+
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
+    try_run_setup(with_binary=True, with_extras={extra: True for extra in extras_require})
