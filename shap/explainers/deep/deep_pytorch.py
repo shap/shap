@@ -318,7 +318,9 @@ op_handler['Dropout2d'] = passthrough
 op_handler['Dropout'] = passthrough
 op_handler['AlphaDropout'] = passthrough
 
+op_handler['Conv1d'] = linear_1d
 op_handler['Conv2d'] = linear_1d
+op_handler['Conv3d'] = linear_1d
 op_handler['Linear'] = linear_1d
 op_handler['AvgPool1d'] = linear_1d
 op_handler['AvgPool2d'] = linear_1d
@@ -327,6 +329,7 @@ op_handler['BatchNorm1d'] = linear_1d
 op_handler['BatchNorm2d'] = linear_1d
 op_handler['BatchNorm3d'] = linear_1d
 
+op_handler['LeakyReLU'] = nonlinear_1d
 op_handler['ReLU'] = nonlinear_1d
 op_handler['ELU'] = nonlinear_1d
 op_handler['Sigmoid'] = nonlinear_1d
