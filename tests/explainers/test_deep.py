@@ -307,6 +307,12 @@ def test_pytorch_single_output():
     from sklearn.datasets import load_boston
     import shap
 
+    # The backward hook for maxpool1d only returns gradients for
+    # the selected inputs (i.e. the maximum in a kernel). The deep explainer
+    # may assign non zero gradients to other inputs; if this is the case, the
+    # deep explainer fails. This manual seed ensures this is not one of those cases.
+    torch.manual_seed(-1)
+
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),

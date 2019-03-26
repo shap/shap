@@ -283,6 +283,7 @@ def maxpool(module, grad_input, grad_output):
     grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
                            (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
     if module.__class__.__name__ == 'MaxPool1d':
+        print("Warning: Results of DeepExplainer are unstable with MaxPool1d")
         grad_input[0] = torch.gather(grad_input[0], -1, indices).unsqueeze(1)
     # delete the attributes
     del module.x
