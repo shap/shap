@@ -189,7 +189,7 @@ class _TFGradientExplainer(Explainer):
             self.gradients[i] = tf.gradients(out, self.model_inputs)
         return self.gradients[i]
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -215,9 +215,6 @@ class _TFGradientExplainer(Explainer):
 
             if output_rank_order in ["max", "min", "max_abs"]:
                 model_output_ranks = model_output_ranks[:,:ranked_outputs]
-                # when output_rank_order == "custom" the argument ranked_output contains the output node indices
-                # of interest, i.e., model_output_ranks contains those indices already in proper format
-                # shape: 
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
@@ -225,7 +222,10 @@ class _TFGradientExplainer(Explainer):
         output_phis = []
         samples_input = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
-        rseed = np.random.randint(0,1e6)
+        # use random argument if no argument given
+        if rseed is None:
+            rseed = np.random.randint(0, 1e6)
+
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed) # so we get the same noise patterns for each output class
             phis = []
