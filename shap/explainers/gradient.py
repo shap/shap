@@ -72,7 +72,7 @@ class GradientExplainer(Explainer):
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradientExplainer(model, data, batch_size, local_smoothing)
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
         """ Return the values for the model applied to X.
 
         Parameters
