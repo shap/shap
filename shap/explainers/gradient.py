@@ -208,9 +208,16 @@ class _TFGradientExplainer(Explainer):
                 model_output_ranks = np.argsort(model_output_values)
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
+            elif output_rank_order == "custom":
+                model_output_ranks = ranked_outputs
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
-            model_output_ranks = model_output_ranks[:,:ranked_outputs]
+                assert False, "output_rank_order must be max, min, max_abs or custom!"
+
+            if output_rank_order in ["max", "min", "max_abs"]:
+                model_output_ranks = model_output_ranks[:,:ranked_outputs]
+                # when output_rank_order == "custom" the argument ranked_output contains the output node indices
+                # of interest, i.e., model_output_ranks contains those indices already in proper format
+                # shape: 
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
