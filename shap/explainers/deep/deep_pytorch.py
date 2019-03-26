@@ -278,10 +278,12 @@ def maxpool(module, grad_input, grad_output):
             module.dilation, module.ceil_mode, True)
         xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
             grad_output[0] * diffs, indices, module.kernel_size, module.stride,
-            module.padding, delta_in.shape), 2)
+            module.padding, list(module.x.shape)), 2)
     grad_input = [None for _ in grad_input]
     grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
                            (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
+    if module.__class__.__name__ == 'MaxPool1d':
+        grad_input[0] = torch.gather(grad_input[0], -1, indices).unsqueeze(1)
     # delete the attributes
     del module.x
     del module.y
