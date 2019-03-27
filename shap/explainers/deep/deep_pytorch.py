@@ -55,6 +55,7 @@ class PyTorchDeepExplainer(Explainer):
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
+                self.expected_value = outputs.mean(0).numpy()
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(self.get_target_input)
