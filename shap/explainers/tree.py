@@ -716,6 +716,8 @@ class Tree:
             self.thresholds = tree["threshold"]
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
+            self.children_left[self.children_left==0]=-1
+            self.children_right[self.children_right==0]=-1
 
         elif type(tree) == dict and 'tree_structure' in tree:
             start = tree['tree_structure']
