@@ -91,9 +91,12 @@ class GradientExplainer(Explainer):
             the output ranks, and indexes is a matrix that tells for each sample which output indexes
             were choses as "top".
 
-        output_rank_order : "max", "min", or "max_abs"
+        output_rank_order : "max", "min", "max_abs", or "custom"
             How to order the model outputs when using ranked_outputs, either by maximum, minimum, or
-            maximum absolute value.
+            maximum absolute value. If "custom" Then "ranked_outputs" contains a list of output nodes.
+
+        rseed : None or int
+            Seeding the randomness in shap value computation (background example choice and interpolation).
 
         Returns
         -------
@@ -105,7 +108,7 @@ class GradientExplainer(Explainer):
         ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
         were chosen as "top".
         """
-        return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order)
+        return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed)
 
 
 class _TFGradientExplainer(Explainer):
@@ -222,12 +225,13 @@ class _TFGradientExplainer(Explainer):
         output_phis = []
         samples_input = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
-        # use random argument if no argument given
+        # use random seed if no argument given
         if rseed is None:
             rseed = np.random.randint(0, 1e6)
 
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed) # so we get the same noise patterns for each output class
+            print(rseed)
             phis = []
             phi_vars = []
             for k in range(len(X)):
@@ -388,7 +392,7 @@ class _PyTorchGradientExplainer(Explainer):
         input_handle = layer.register_forward_hook(self.get_interim_input)
         self.input_handle = input_handle
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
 
         # X ~ self.model_input
         # X_data ~ self.data
@@ -430,7 +434,11 @@ class _PyTorchGradientExplainer(Explainer):
         # samples_delta = (x - x') for the input being explained - may be an interim input
         samples_input = [torch.zeros((nsamples,) + X[l].shape[1:], device=X[l].device) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples, ) + self.data[l].shape[1:]) for l in range(len(self.data))]
-        rseed = np.random.randint(0, 1e6)
+
+        # use random seed if no argument given
+        if rseed is None:
+            rseed = np.random.randint(0, 1e6)
+
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed)  # so we get the same noise patterns for each output class
             phis = []
