@@ -96,7 +96,8 @@ class GradientExplainer(Explainer):
             maximum absolute value. If "custom" Then "ranked_outputs" contains a list of output nodes.
 
         rseed : None or int
-            Seeding the randomness in shap value computation (background example choice and interpolation).
+            Seeding the randomness in shap value computation  (background example choice, 
+            interpolation between current and background example, smoothing).
 
         Returns
         -------
