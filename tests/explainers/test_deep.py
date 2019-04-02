@@ -212,6 +212,7 @@ def test_pytorch_mnist_cnn():
                 )
                 self.fc_layers = nn.Sequential(
                     nn.Linear(320, 50),
+                    nn.BatchNorm1d(50),
                     nn.ReLU(),
                     nn.Linear(50, 10),
                     nn.ELU(),
@@ -294,15 +295,15 @@ def test_pytorch_mnist_cnn():
     shutil.rmtree(root_dir)
 
 
-def test_pytorch_regression():
-    """Testing regressions (i.e. single outputs)
+def test_pytorch_single_output():
+    """Testing single outputs
     """
     _skip_if_no_pytorch()
 
     import torch
     from torch import nn
     from torch.nn import functional as F
-    from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
+    from torch.utils.data import TensorDataset, DataLoader
     from sklearn.datasets import load_boston
     import shap
 
@@ -316,9 +317,12 @@ def test_pytorch_regression():
         def __init__(self, num_features):
             super(Net, self).__init__()
             self.linear = nn.Linear(num_features, 1)
+            self.conv1d = nn.Conv1d(1, 1, 1)
+            self.leaky_relu = nn.LeakyReLU()
 
         def forward(self, X):
-            return self.linear(X)
+            x = self.leaky_relu(self.conv1d(X.unsqueeze(1))).squeeze(1)
+            return self.linear(x)
     model = Net(num_features)
     optimizer = torch.optim.Adam(model.parameters())
 

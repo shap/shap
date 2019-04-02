@@ -55,6 +55,7 @@ class PyTorchDeepExplainer(Explainer):
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
+            self.expected_value = outputs.mean(0).numpy()
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(self.get_target_input)
@@ -149,7 +150,7 @@ class PyTorchDeepExplainer(Explainer):
             if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
                 return op_handler[module_type](module, grad_input, grad_output)
         else:
-            print('Warning: unrecognized nn.Module: {}'.format(type))
+            print('Warning: unrecognized nn.Module: {}'.format(module_type))
             return grad_input
 
     def gradient(self, idx, inputs):
@@ -318,12 +319,18 @@ op_handler['Dropout2d'] = passthrough
 op_handler['Dropout'] = passthrough
 op_handler['AlphaDropout'] = passthrough
 
+op_handler['Conv1d'] = linear_1d
 op_handler['Conv2d'] = linear_1d
+op_handler['Conv3d'] = linear_1d
 op_handler['Linear'] = linear_1d
 op_handler['AvgPool1d'] = linear_1d
 op_handler['AvgPool2d'] = linear_1d
 op_handler['AvgPool3d'] = linear_1d
+op_handler['BatchNorm1d'] = linear_1d
+op_handler['BatchNorm2d'] = linear_1d
+op_handler['BatchNorm3d'] = linear_1d
 
+op_handler['LeakyReLU'] = nonlinear_1d
 op_handler['ReLU'] = nonlinear_1d
 op_handler['ELU'] = nonlinear_1d
 op_handler['Sigmoid'] = nonlinear_1d

@@ -72,7 +72,7 @@ class GradientExplainer(Explainer):
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradientExplainer(model, data, batch_size, local_smoothing)
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
         """ Return the values for the model applied to X.
 
         Parameters
@@ -128,13 +128,13 @@ class _TFGradientExplainer(Explainer):
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.models.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.engine.training.Model'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
             self.model_inputs = model[0]
@@ -189,7 +189,7 @@ class _TFGradientExplainer(Explainer):
             self.gradients[i] = tf.gradients(out, self.model_inputs)
         return self.gradients[i]
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -208,9 +208,13 @@ class _TFGradientExplainer(Explainer):
                 model_output_ranks = np.argsort(model_output_values)
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
+            elif output_rank_order == "custom":
+                model_output_ranks = ranked_outputs
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
-            model_output_ranks = model_output_ranks[:,:ranked_outputs]
+                assert False, "output_rank_order must be max, min, max_abs or custom!"
+
+            if output_rank_order in ["max", "min", "max_abs"]:
+                model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
@@ -218,7 +222,10 @@ class _TFGradientExplainer(Explainer):
         output_phis = []
         samples_input = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
-        rseed = np.random.randint(0,1e6)
+        # use random argument if no argument given
+        if rseed is None:
+            rseed = np.random.randint(0, 1e6)
+
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed) # so we get the same noise patterns for each output class
             phis = []
