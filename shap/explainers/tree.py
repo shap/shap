@@ -101,14 +101,9 @@ class TreeExplainer(Explainer):
             assert data is not None, "A background dataset must be provided unless you are using feature_dependence=\"tree_path_dependent\"!"
 
         if model_output != "margin":
-            if self.model.model_type == "xgboost" and self.model.objective is None:
-                msg = "When model_output is not \"margin\" then we need to know the model's objective. Unfortuneately " + \
-                      "raw XGBoost Booster objects don't expose this information. Consider using the XGBRegressor/" + \
-                      "XGBClassifier objects, or annotate the Booster object with the objective " + \
-                      "you are using, for example: xgb_model.set_attr(objective=\"binary:logistic\")."
-                raise Exception(msg)
-            elif self.model.objective is None:
-                raise Exception("Model does have a known objective! When model_output is not \"margin\" then we need to know the model's objective")
+            if self.model.objective is None and self.model.tree_output is None:
+                raise Exception("Model does have a known objective or output type! When model_output is " \
+                                "not \"margin\" then we need to know the model's objective or link function.")
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>") and model_output != "margin":
@@ -612,7 +607,7 @@ class TreeEnsemble:
             elif self.tree_output == "probability":
                 transform = "identity"
             else:
-                raise Exception("model_output = \"probability\" is not supported when model.tree_output = \"" + self.tree_output + "\"!")
+                raise Exception("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
         elif model_output == "logloss":
 
             if self.objective == "squared_error":
@@ -620,7 +615,7 @@ class TreeEnsemble:
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                raise Exception("model_output = \"logloss\" is not supported when model.objective = \"" + self.objective + "\"!")
+                raise Exception("model_output = \"logloss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         return transform
 
     def predict(self, X, y=None, output="margin", tree_limit=None):
