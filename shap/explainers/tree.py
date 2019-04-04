@@ -696,10 +696,9 @@ class Tree:
             self.children_default = self.children_left # missing values not supported in sklearn
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
+            self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])
             if normalize:
-                self.values = (tree.value[:,0,:].T / tree.value[:,0,:].sum(1)).T
-            else:
-                self.values = tree.value[:,0,:]
+                self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
 
