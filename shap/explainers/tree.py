@@ -506,6 +506,17 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
+        elif str(type(model)).endswith("xgboost.sklearn.XGBRanker'>"):
+            assert_import("xgboost")
+            self.original_model = model.get_booster()
+            self.model_type = "xgboost"
+            xgb_loader = XGBTreeModelLoader(self.original_model)
+            self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
+            self.base_offset = xgb_loader.base_score
+            less_than_or_equal = False
+            self.objective = objective_name_map.get(model.objective, None)
+            self.tree_output = tree_output_name_map.get(model.objective, None)
+            self.tree_limit = getattr(model, "best_ntree_limit", None)
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -533,6 +544,20 @@ class TreeEnsemble:
             if model.objective is None:
                 self.objective = "squared_error"
                 self.tree_output = "raw_value"
+        elif str(type(model)).endswith("lightgbm.sklearn.LGBMRanker'>"):
+            assert_import("lightgbm")
+            self.model_type = "lightgbm"
+            self.original_model = model.booster_
+            tree_info = self.original_model.dump_model()["tree_info"]
+            try:
+                self.trees = [Tree(e, data=data, data_missing=data_missing) for e in tree_info]
+            except:
+                self.trees = None # we get here because the cext can't handle categorical splits yet
+            self.objective = objective_name_map.get(model.objective, None)
+            self.tree_output = tree_output_name_map.get(model.objective, None)
+            if model.objective is None:
+                self.objective = "lambdarank"
+                self.tree_output = "ndcg"
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
