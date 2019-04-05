@@ -7,6 +7,7 @@ import struct
 from distutils.version import LooseVersion
 from .explainer import Explainer
 from ..common import assert_import, record_import_error
+import warnings
 
 try:
     from .. import _cext
@@ -531,6 +532,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.objective, None)
             self.tree_output = tree_output_name_map.get(model.objective, None)
             if model.objective is None:
+                warnings.warn('{model.objective} is not yet supported by TreeExplainer, defaulting to identity link function')
                 self.objective = "squared_error"
                 self.tree_output = "raw_value"
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
