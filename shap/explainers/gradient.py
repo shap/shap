@@ -232,7 +232,6 @@ class _TFGradientExplainer(Explainer):
 
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed) # so we get the same noise patterns for each output class
-            print(rseed)
             phis = []
             phi_vars = []
             for k in range(len(X)):
