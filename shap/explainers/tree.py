@@ -555,6 +555,10 @@ class TreeEnsemble:
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+        elif str(type(model)).endswith("catboost.core.CatBoost'>"):
+            assert_import("catboost")
+            self.model_type = "catboost"
+            self.original_model = model
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
         
