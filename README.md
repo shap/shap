@@ -26,7 +26,7 @@ conda install -c conda-forge shap
 While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, and *scikit-learn* tree models:
 
 ```python
-import xgboost
+import lightgbm as lgb
 import shap
 
 # load JS visualization code to notebook
@@ -34,7 +34,7 @@ shap.initjs()
 
 # train XGBoost model
 X,y = shap.datasets.boston()
-model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+model = lgb.train({"learning_rate": 0.01}, lgb.Dataset(X, label=y), 100)
 
 # explain the model's predictions using SHAP values
 # (same syntax works for LightGBM, CatBoost, and scikit-learn models)
