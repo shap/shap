@@ -6,7 +6,6 @@ from .. import __version__
 from . import measures
 from . import methods
 import sklearn
-from sklearn.model_selection import train_test_split
 import numpy as np
 import copy
 import functools
@@ -14,6 +13,12 @@ import time
 import hashlib
 import os
 import pickle
+
+try:
+    from sklearn.model_selection import train_test_split
+except Exception:
+    from sklearn.cross_validation import train_test_split
+
 
 def runtime(X, y, model_generator, method_name):
     """ Runtime
@@ -58,7 +63,7 @@ def local_accuracy(X, y, model_generator, method_name):
     def score_map(true, pred):
         """ Converts local accuracy from % of standard deviation to numerical scores for coloring.
         """
-        
+
         v = min(1.0, np.std(pred - true) / (np.std(true) + 1e-8))
         if v < 1e-6:
             return 1.0
@@ -111,7 +116,7 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "deep_shap": 0.6,
         "expected_gradients": 0.6
     }
-    
+
     return None, guarantees[method_name]
 
 def __mean_pred(true, pred):
@@ -190,7 +195,7 @@ def keep_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fcou
     sort_order = 12
     """
     return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
-    
+
 def keep_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
     """ Keep Positive (retrain)
     xlabel = "Max fraction of features kept"
@@ -300,11 +305,11 @@ def remove_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
 
 def __run_measure(measure, X, y, model_generator, method_name, attribution_sign, num_fcounts, summary_function):
-    
+
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
         if attribution_sign == 0:
             A = np.abs(__strip_list(attr_function(X_test)))
-        else: 
+        else:
             A = attribution_sign * __strip_list(attr_function(X_test))
         nmask = np.ones(len(y_test)) * fcount
         nmask = np.minimum(nmask, np.array(A >= 0).sum(1)).astype(np.int)
@@ -376,7 +381,7 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
 
     # average the method scores over several train/test splits
     method_reps = []
-    
+
     data_hash = hashlib.sha256(__toarray(X).flatten()).hexdigest() + hashlib.sha256(__toarray(y)).hexdigest()
     for i in range(nreps):
         X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=test_size, random_state=i)
