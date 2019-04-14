@@ -145,6 +145,14 @@ def test_xgboost_multiclass():
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
 
+def _validate_shap_values(model, x_test):
+    # explain the model's predictions using SHAP values
+    tree_explainer = shap.TreeExplainer(model)
+    shap_values = tree_explainer.shap_values(x_test)
+    expected_values = tree_explainer.expected_value
+    # validate values sum to the margin prediction of the model plus expected_value
+    assert(np.allclose(np.sum(shap_values, axis=1) + expected_values, model.predict(x_test)))
+
 def test_xgboost_ranking():
     try:
         import xgboost
@@ -161,9 +169,7 @@ def test_xgboost_ranking():
     model = xgboost.sklearn.XGBRanker(**params)
     model.fit(x_train, y_train, q_train.astype(int),
               eval_set=[(x_test, y_test)], eval_group=[q_test.astype(int)])
-
-    # explain the model's predictions using SHAP values
-    shap.TreeExplainer(model).shap_values(x_test)
+    _validate_shap_values(model, x_test)
 
 def test_xgboost_mixed_types():
     try:
@@ -303,9 +309,7 @@ def test_lightgbm_ranking():
     model.fit(x_train, y_train, group=q_train, eval_set=[(x_test, y_test)],
               eval_group=[q_test], eval_at=[1, 3], early_stopping_rounds=5, verbose=False,
               callbacks=[lightgbm.reset_parameter(learning_rate=lambda x: 0.95 ** x * 0.1)])
-
-    # explain the model's predictions using SHAP values
-    shap.TreeExplainer(model).shap_values(x_test)
+    _validate_shap_values(model, x_test)
 
 # TODO: Test tree_limit argument
 
