@@ -307,12 +307,6 @@ def test_pytorch_single_output():
     from sklearn.datasets import load_boston
     import shap
 
-    # The backward hook for maxpool1d only returns gradients for
-    # the selected inputs (i.e. the maximum in a kernel). The deep explainer
-    # may assign non zero gradients to other inputs; if this is the case, the
-    # deep explainer fails. This manual seed ensures this is not one of those cases.
-    torch.manual_seed(-1)
-
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
@@ -322,14 +316,15 @@ def test_pytorch_single_output():
     class Net(nn.Module):
         def __init__(self, num_features):
             super(Net, self).__init__()
-            self.linear = nn.Linear(num_features // 2, 1)
+            self.linear = nn.Linear(num_features // 2, 2)
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
-            self.maxpool = nn.MaxPool1d(kernel_size=2)
+            self.maxpool1 = nn.MaxPool1d(kernel_size=2)
+            self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            x = self.maxpool(self.conv1d(X.unsqueeze(1))).squeeze(1)
-            return self.linear(self.leaky_relu(x))
+            x = self.maxpool1(self.conv1d(X.unsqueeze(1))).squeeze(1)
+            return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
     model = Net(num_features)
     optimizer = torch.optim.Adam(model.parameters())
 

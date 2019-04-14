@@ -57,7 +57,7 @@ class PyTorchDeepExplainer(Explainer):
                 self.num_outputs = outputs.shape[1]
 
     def add_target_handle(self, layer):
-        input_handle = layer.register_forward_hook(self.get_target_input)
+        input_handle = layer.register_forward_hook(get_target_input)
         self.target_handle = input_handle
 
     def add_handles(self, model, forward_handle, backward_handle):
@@ -91,66 +91,6 @@ class PyTorchDeepExplainer(Explainer):
                     del child.y
                 except AttributeError:
                     pass
-
-    @staticmethod
-    def get_target_input(module, input, output):
-        """Saves the tensor - attached to its graph.
-        Used if we want to explain the interim outputs of a model
-        """
-        try:
-            del module.target_input
-        except AttributeError:
-            pass
-        setattr(module, 'target_input', input)
-
-    @staticmethod
-    def add_interim_values(module, input, output):
-        """If necessary, saves interim tensors detached from the graph.
-        Used to calculate multipliers
-        """
-        try:
-            del module.x
-        except AttributeError:
-            pass
-        try:
-            del module.y
-        except AttributeError:
-            pass
-        module_type = module.__class__.__name__
-        if module_type in op_handler:
-            func_name = op_handler[module_type].__name__
-            # First, check for cases where we don't need to save the x and y tensors
-            if func_name == 'passthrough':
-                pass
-            else:
-                # check only the 0th input varies
-                for i in range(len(input)):
-                    if i != 0 and type(output) is tuple:
-                        assert input[i] == output[i], "Only the 0th input may vary!"
-                # if a new method is added, it must be added here too. This ensures tensors
-                # are only saved if necessary
-                if func_name in ['maxpool', 'nonlinear_1d']:
-                    # only save tensors if necessary
-                    if type(input) is tuple:
-                        setattr(module, 'x', torch.nn.Parameter(input[0].detach()))
-                    else:
-                        setattr(module, 'x', torch.nn.Parameter(input.detach()))
-                    if type(output) is tuple:
-                        setattr(module, 'y', torch.nn.Parameter(output[0].detach()))
-                    else:
-                        setattr(module, 'y', torch.nn.Parameter(output.detach()))
-
-    @staticmethod
-    def deeplift_grad(module, grad_input, grad_output):
-        # first, get the module type
-        module_type = module.__class__.__name__
-        # first, check the module is supported
-        if module_type in op_handler:
-            if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
-                return op_handler[module_type](module, grad_input, grad_output)
-        else:
-            print('Warning: unrecognized nn.Module: {}'.format(module_type))
-            return grad_input
 
     def gradient(self, idx, inputs):
         self.model.zero_grad()
@@ -196,7 +136,7 @@ class PyTorchDeepExplainer(Explainer):
                                   torch.arange(0, self.num_outputs).int())
 
         # add the gradient handles
-        handles = self.add_handles(self.model, self.add_interim_values, self.deeplift_grad)
+        handles = self.add_handles(self.model, add_interim_values, deeplift_grad)
         if self.interim:
             self.add_target_handle(self.layer)
 
@@ -247,6 +187,92 @@ class PyTorchDeepExplainer(Explainer):
         else:
             return output_phis
 
+# Module hooks
+
+
+def deeplift_grad(module, grad_input, grad_output):
+    """The backward hook which computes the deeplift
+    gradient for an nn.Module
+    """
+    # first, get the module type
+    module_type = module.__class__.__name__
+    # first, check the module is supported
+    if module_type in op_handler:
+        if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
+            return op_handler[module_type](module, grad_input, grad_output)
+    else:
+        print('Warning: unrecognized nn.Module: {}'.format(module_type))
+        return grad_input
+
+
+def add_interim_values(module, input, output):
+    """The forward hook used to save interim tensors, detached
+    from the graph. Used to calculate the multipliers
+    """
+    try:
+        del module.x
+    except AttributeError:
+        pass
+    try:
+        del module.y
+    except AttributeError:
+        pass
+    module_type = module.__class__.__name__
+    if module_type in op_handler:
+        func_name = op_handler[module_type].__name__
+        # First, check for cases where we don't need to save the x and y tensors
+        if func_name == 'passthrough':
+            pass
+        else:
+            # check only the 0th input varies
+            for i in range(len(input)):
+                if i != 0 and type(output) is tuple:
+                    assert input[i] == output[i], "Only the 0th input may vary!"
+            # if a new method is added, it must be added here too. This ensures tensors
+            # are only saved if necessary
+            if func_name in ['maxpool', 'nonlinear_1d']:
+                # only save tensors if necessary
+                if type(input) is tuple:
+                    setattr(module, 'x', torch.nn.Parameter(input[0].detach()))
+                else:
+                    setattr(module, 'x', torch.nn.Parameter(input.detach()))
+                if type(output) is tuple:
+                    setattr(module, 'y', torch.nn.Parameter(output[0].detach()))
+                else:
+                    setattr(module, 'y', torch.nn.Parameter(output.detach()))
+            if module_type in failure_case_modules:
+                input[0].register_hook(deeplift_tensor_grad)
+
+
+def get_target_input(module, input, output):
+    """A forward hook which saves the tensor - attached to its graph.
+    Used if we want to explain the interim outputs of a model
+    """
+    try:
+        del module.target_input
+    except AttributeError:
+        pass
+    setattr(module, 'target_input', input)
+
+# From the documentation: "The current implementation will not have the presented behavior for
+# complex Module that perform many operations. In some failure cases, grad_input and grad_output
+# will only contain the gradients for a subset of the inputs and outputs.
+# The tensor hook below handles such failure cases (currently, MaxPool1d). In such cases, the deeplift
+# grad should still be computed, and then appended to the complex_model_gradients list. The tensor hook
+# will then retrieve the proper gradient from this list.
+
+
+failure_case_modules = ['MaxPool1d']
+
+
+def deeplift_tensor_grad(grad):
+    return_grad = complex_module_gradients[-1]
+    del complex_module_gradients[-1]
+    return return_grad
+
+
+complex_module_gradients = []
+
 
 def passthrough(module, grad_input, grad_output):
     """No change made to gradients"""
@@ -283,7 +309,7 @@ def maxpool(module, grad_input, grad_output):
     grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
                            (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
     if module.__class__.__name__ == 'MaxPool1d':
-        print("Warning: Results of DeepExplainer are unstable with MaxPool1d")
+        complex_module_gradients.append(grad_input[0])
         grad_input[0] = torch.gather(grad_input[0], -1, indices).unsqueeze(1)
     # delete the attributes
     del module.x
