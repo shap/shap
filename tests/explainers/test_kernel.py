@@ -152,3 +152,30 @@ def test_kernel_shap_with_high_dim_sparse():
     background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
     explainer = shap.KernelExplainer(linear_model.predict, background)
     shap_values = explainer.shap_values(x_test)
+
+def test_kernel_sparse_vs_dense_multirow_background():
+    import sklearn
+    import shap
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LogisticRegression
+
+    # train a logistic regression classifier
+    X_train, X_test, Y_train, _ = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+    lr = LogisticRegression(solver='lbfgs')
+    lr.fit(X_train, Y_train)
+
+    # use Kernel SHAP to explain test set predictions with dense data
+    explainer = shap.KernelExplainer(lr.predict_proba, X_train, nsamples=100, link="logit", l1_reg="rank(3)")
+    shap_values = explainer.shap_values(X_test)
+
+    X_sparse_train = sp.sparse.csr_matrix(X_train)
+    X_sparse_test = sp.sparse.csr_matrix(X_test)
+
+    lr_sparse = LogisticRegression(solver='lbfgs')
+    lr_sparse.fit(X_sparse_train, Y_train)
+
+    # use Kernel SHAP again but with sparse data
+    sparse_explainer = shap.KernelExplainer(lr.predict_proba, X_sparse_train, nsamples=100, link="logit", l1_reg="rank(3)")
+    sparse_shap_values = sparse_explainer.shap_values(X_sparse_test)
+
+    assert(np.allclose(shap_values, sparse_shap_values, rtol=1e-05, atol=1e-05))
