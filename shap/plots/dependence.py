@@ -103,7 +103,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=ind2, display_features=display_features, show=False,
-            xmin=xmin, xmax=xmin
+            xmin=xmin, xmax=xmax
         )
         if ind1 == ind2:
             pl.ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
