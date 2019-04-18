@@ -2,6 +2,7 @@ import sklearn
 import sklearn.ensemble
 import gc
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 
 class KerasWrap(object):
     """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
@@ -203,3 +204,28 @@ def cric__ffnn():
                 metrics=['accuracy'])
 
     return KerasWrap(model, 30, flatten_output=True)
+
+
+def human__decision_tree():
+    """ Decision Tree
+    """
+
+    # build data
+    N = 1000000
+    M = 3
+    X = np.zeros((N,M))
+    X.shape
+    y = np.zeros(N)
+    X[0, 0] = 1
+    y[0] = 8
+    X[1, 1] = 1
+    y[1] = 8
+    X[2, 0:2] = 1
+    y[2] = 4
+
+    # fit model
+    xor_model = sklearn.tree.DecisionTreeRegressor(max_depth=2)
+    xor_model.fit(X, y)
+
+    return xor_model
+

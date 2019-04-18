@@ -13,7 +13,7 @@ import functools
 import time
 import hashlib
 import os
-import pickle
+import dill as pickle
 
 def runtime(X, y, model_generator, method_name):
     """ Runtime
@@ -155,60 +155,6 @@ def keep_absolute_mask__roc_auc(X, y, model_generator, method_name, num_fcounts=
     """
     return __run_measure(measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-def keep_positive_resample(X, y, model_generator, method_name, num_fcounts=11):
-    """ Keep Positive (resample)
-    xlabel = "Max fraction of features kept"
-    ylabel = "Mean model output"
-    transform = "identity"
-    sort_order = 10
-    """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
-
-def keep_negative_resample(X, y, model_generator, method_name, num_fcounts=11):
-    """ Keep Negative (resample)
-    xlabel = "Max fraction of features kept"
-    ylabel = "Negative mean model output"
-    transform = "negate"
-    sort_order = 11
-    """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
-
-def keep_absolute_resample__r2(X, y, model_generator, method_name, num_fcounts=11):
-    """ Keep Absolute (resample)
-    xlabel = "Max fraction of features kept"
-    ylabel = "R^2"
-    transform = "identity"
-    sort_order = 12
-    """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
-
-def keep_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
-    """ Keep Absolute (resample)
-    xlabel = "Max fraction of features kept"
-    ylabel = "ROC AUC"
-    transform = "identity"
-    sort_order = 12
-    """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
-    
-def keep_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
-    """ Keep Positive (retrain)
-    xlabel = "Max fraction of features kept"
-    ylabel = "Mean model output"
-    transform = "identity"
-    sort_order = 6
-    """
-    return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
-
-def keep_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
-    """ Keep Negative (retrain)
-    xlabel = "Max fraction of features kept"
-    ylabel = "Negative mean model output"
-    transform = "negate"
-    sort_order = 7
-    """
-    return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
-
 def remove_positive_mask(X, y, model_generator, method_name, num_fcounts=11):
     """ Remove Positive (mask)
     xlabel = "Max fraction of features removed"
@@ -245,6 +191,42 @@ def remove_absolute_mask__roc_auc(X, y, model_generator, method_name, num_fcount
     """
     return __run_measure(measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
+def keep_positive_resample(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Positive (resample)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Mean model output"
+    transform = "identity"
+    sort_order = 10
+    """
+    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+
+def keep_negative_resample(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Negative (resample)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Negative mean model output"
+    transform = "negate"
+    sort_order = 11
+    """
+    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+
+def keep_absolute_resample__r2(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Absolute (resample)
+    xlabel = "Max fraction of features kept"
+    ylabel = "R^2"
+    transform = "identity"
+    sort_order = 12
+    """
+    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+
+def keep_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Absolute (resample)
+    xlabel = "Max fraction of features kept"
+    ylabel = "ROC AUC"
+    transform = "identity"
+    sort_order = 12
+    """
+    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    
 def remove_positive_resample(X, y, model_generator, method_name, num_fcounts=11):
     """ Remove Positive (resample)
     xlabel = "Max fraction of features removed"
@@ -280,6 +262,96 @@ def remove_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fc
     sort_order = 15
     """
     return __run_measure(measures.remove_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+
+def keep_positive_impute(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Positive (impute)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Mean model output"
+    transform = "identity"
+    sort_order = 16
+    """
+    return __run_measure(measures.keep_impute, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+
+def keep_negative_impute(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Negative (impute)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Negative mean model output"
+    transform = "negate"
+    sort_order = 17
+    """
+    return __run_measure(measures.keep_impute, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+
+def keep_absolute_impute__r2(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Absolute (impute)
+    xlabel = "Max fraction of features kept"
+    ylabel = "R^2"
+    transform = "identity"
+    sort_order = 18
+    """
+    return __run_measure(measures.keep_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+
+def keep_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Absolute (impute)
+    xlabel = "Max fraction of features kept"
+    ylabel = "ROC AUC"
+    transform = "identity"
+    sort_order = 19
+    """
+    return __run_measure(measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+
+def remove_positive_impute(X, y, model_generator, method_name, num_fcounts=11):
+    """ Remove Positive (impute)
+    xlabel = "Max fraction of features removed"
+    ylabel = "Negative mean model output"
+    transform = "negate"
+    sort_order = 7
+    """
+    return __run_measure(measures.remove_impute, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+
+def remove_negative_impute(X, y, model_generator, method_name, num_fcounts=11):
+    """ Remove Negative (impute)
+    xlabel = "Max fraction of features removed"
+    ylabel = "Mean model output"
+    transform = "identity"
+    sort_order = 8
+    """
+    return __run_measure(measures.remove_impute, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+
+def remove_absolute_impute__r2(X, y, model_generator, method_name, num_fcounts=11):
+    """ Remove Absolute (impute)
+    xlabel = "Max fraction of features removed"
+    ylabel = "1 - R^2"
+    transform = "one_minus"
+    sort_order = 9
+    """
+    return __run_measure(measures.remove_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+
+def remove_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    """ Remove Absolute (impute)
+    xlabel = "Max fraction of features removed"
+    ylabel = "1 - ROC AUC"
+    transform = "one_minus"
+    sort_order = 9
+    """
+    return __run_measure(measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+
+def keep_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Positive (retrain)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Mean model output"
+    transform = "identity"
+    sort_order = 6
+    """
+    return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+
+def keep_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Negative (retrain)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Negative mean model output"
+    transform = "negate"
+    sort_order = 7
+    """
+    return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
 
 def remove_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
     """ Remove Positive (retrain)
@@ -393,12 +465,12 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
             with open(cache_file, "wb") as f:
                 pickle.dump(model, f)
 
+        attr_key = "_".join([model_generator.__name__, method_name, str(test_size), str(nreps), str(i), data_hash])
         def score(attr_function):
             def cached_attr_function(X_inner):
-                key = "_".join([model_generator.__name__, method_name, str(test_size), str(nreps), str(i), data_hash])
-                if key not in _attribution_cache:
-                    _attribution_cache[key] = attr_function(X_inner)
-                return _attribution_cache[key]
+                if attr_key not in _attribution_cache:
+                    _attribution_cache[attr_key] = attr_function(X_inner)
+                return _attribution_cache[attr_key]
 
             #cached_attr_function = lambda X: __check_cache(attr_function, X)
             if fcounts is None:
@@ -409,8 +481,11 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
                     scores.append(score_function(f, X_train, X_test, y_train, y_test, cached_attr_function, model, i))
                 return np.array(scores)
 
-        # evaluate the method
-        method_reps.append(score(getattr(methods, method_name)(model, X_train)))
+        # evaluate the method (only building the attribution function if we need to)
+        if attr_key not in _attribution_cache:
+            method_reps.append(score(getattr(methods, method_name)(model, X_train)))
+        else:
+            method_reps.append(score(None))
 
     np.random.seed(old_seed)
     return np.array(method_reps).mean(0)
@@ -457,4 +532,299 @@ def __strip_list(attrs):
     else:
         return attrs
 
+def _fit_human(model_generator, val00, val01, val11):
+    # force the model to fit a function with almost entirely zero background   
+    N = 1000000
+    M = 3
+    X = np.zeros((N,M))
+    X.shape
+    y = np.ones(N) * val00
+    X[0:1000, 0] = 1
+    y[0:1000] = val01
+    for i in range(0,1000000,1000):
+        X[i, 1] = 1
+        y[i] = val01
+    y[0] = val11
+    model = model_generator()
+    model.fit(X, y)
+    return model
 
+def _human_and(X, model_generator, method_name, fever, cough):
+    assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
+
+    # these are from the sickness_score mturk user study experiement
+    X_test = np.zeros((100,3))
+    if not fever and not cough:
+        human_consensus = np.array([0., 0., 0.])
+        X_test[0,:] = np.array([[0., 0., 1.]])
+    elif not fever and cough:
+        human_consensus = np.array([0., 2., 0.])
+        X_test[0,:] = np.array([[0., 1., 1.]])
+    elif fever and cough:
+        human_consensus = np.array([5., 5., 0.])
+        X_test[0,:] = np.array([[1., 1., 1.]])
+            
+    # force the model to fit an XOR function with almost entirely zero background
+    model = _fit_human(model_generator, 0, 2, 10)
+
+    attr_function = getattr(methods, method_name)(model, X)
+    methods_attrs = attr_function(X_test)
+    return "human", (human_consensus, methods_attrs[0,:])
+
+def human_and_00(X, y, model_generator, method_name):
+    """ AND (false/false)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an AND operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever and cough: +6 points
+
+    transform = "identity"
+    sort_order = 0
+    """
+    return _human_and(X, model_generator, method_name, False, False)
+
+def human_and_01(X, y, model_generator, method_name):
+    """ AND (false/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an AND operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever and cough: +6 points
+
+    transform = "identity"
+    sort_order = 1
+    """
+    return _human_and(X, model_generator, method_name, False, True)
+
+def human_and_11(X, y, model_generator, method_name):
+    """ AND (true/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an AND operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever and cough: +6 points
+
+    transform = "identity"
+    sort_order = 2
+    """
+    return _human_and(X, model_generator, method_name, True, True)
+
+
+def _human_or(X, model_generator, method_name, fever, cough):
+    assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
+
+    # these are from the sickness_score mturk user study experiement
+    X_test = np.zeros((100,3))
+    if not fever and not cough:
+        human_consensus = np.array([0., 0., 0.])
+        X_test[0,:] = np.array([[0., 0., 1.]])
+    elif not fever and cough:
+        human_consensus = np.array([0., 8., 0.])
+        X_test[0,:] = np.array([[0., 1., 1.]])
+    elif fever and cough:
+        human_consensus = np.array([5., 5., 0.])
+        X_test[0,:] = np.array([[1., 1., 1.]])
+            
+    # force the model to fit an XOR function with almost entirely zero background
+    model = _fit_human(model_generator, 0, 8, 10)
+
+    attr_function = getattr(methods, method_name)(model, X)
+    methods_attrs = attr_function(X_test)
+    return "human", (human_consensus, methods_attrs[0,:])
+
+def human_or_00(X, y, model_generator, method_name):
+    """ OR (false/false)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an OR operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever or cough: +6 points
+
+    transform = "identity"
+    sort_order = 0
+    """
+    return _human_or(X, model_generator, method_name, False, False)
+
+def human_or_01(X, y, model_generator, method_name):
+    """ OR (false/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an OR operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever or cough: +6 points
+
+    transform = "identity"
+    sort_order = 1
+    """
+    return _human_or(X, model_generator, method_name, False, True)
+
+def human_or_11(X, y, model_generator, method_name):
+    """ OR (true/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an OR operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever or cough: +6 points
+
+    transform = "identity"
+    sort_order = 2
+    """
+    return _human_or(X, model_generator, method_name, True, True)
+
+
+def _human_xor(X, model_generator, method_name, fever, cough):
+    assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
+
+    # these are from the sickness_score mturk user study experiement
+    X_test = np.zeros((100,3))
+    if not fever and not cough:
+        human_consensus = np.array([0., 0., 0.])
+        X_test[0,:] = np.array([[0., 0., 1.]])
+    elif not fever and cough:
+        human_consensus = np.array([0., 8., 0.])
+        X_test[0,:] = np.array([[0., 1., 1.]])
+    elif fever and cough:
+        human_consensus = np.array([2., 2., 0.])
+        X_test[0,:] = np.array([[1., 1., 1.]])
+            
+    # force the model to fit an XOR function with almost entirely zero background
+    model = _fit_human(model_generator, 0, 8, 4)
+
+    attr_function = getattr(methods, method_name)(model, X)
+    methods_attrs = attr_function(X_test)
+    return "human", (human_consensus, methods_attrs[0,:])
+
+def human_xor_00(X, y, model_generator, method_name):
+    """ XOR (false/false)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an eXclusive OR operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever or cough but not both: +6 points
+
+    transform = "identity"
+    sort_order = 3
+    """
+    return _human_xor(X, model_generator, method_name, False, False)
+
+def human_xor_01(X, y, model_generator, method_name):
+    """ XOR (false/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an eXclusive OR operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever or cough but not both: +6 points
+
+    transform = "identity"
+    sort_order = 4
+    """
+    return _human_xor(X, model_generator, method_name, False, True)
+
+def human_xor_11(X, y, model_generator, method_name):
+    """ XOR (true/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for an eXclusive OR operation combined with linear effects. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+    if fever or cough but not both: +6 points
+
+    transform = "identity"
+    sort_order = 5
+    """
+    return _human_xor(X, model_generator, method_name, True, True)
+
+
+def _human_sum(X, model_generator, method_name, fever, cough):
+    assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
+
+    # these are from the sickness_score mturk user study experiement
+    X_test = np.zeros((100,3))
+    if not fever and not cough:
+        human_consensus = np.array([0., 0., 0.])
+        X_test[0,:] = np.array([[0., 0., 1.]])
+    elif not fever and cough:
+        human_consensus = np.array([0., 2., 0.])
+        X_test[0,:] = np.array([[0., 1., 1.]])
+    elif fever and cough:
+        human_consensus = np.array([2., 2., 0.])
+        X_test[0,:] = np.array([[1., 1., 1.]])
+            
+    # force the model to fit an XOR function with almost entirely zero background
+    model = _fit_human(model_generator, 0, 2, 4)
+
+    attr_function = getattr(methods, method_name)(model, X)
+    methods_attrs = attr_function(X_test)
+    return "human", (human_consensus, methods_attrs[0,:])
+
+def human_sum_00(X, y, model_generator, method_name):
+    """ SUM (false/false)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for a SUM operation. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+
+    transform = "identity"
+    sort_order = 0
+    """
+    return _human_sum(X, model_generator, method_name, False, False)
+
+def human_sum_01(X, y, model_generator, method_name):
+    """ SUM (false/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for a SUM operation. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+
+    transform = "identity"
+    sort_order = 1
+    """
+    return _human_sum(X, model_generator, method_name, False, True)
+
+def human_sum_11(X, y, model_generator, method_name):
+    """ SUM (true/true)
+
+    This tests how well a feature attribution method agrees with human intuition
+    for a SUM operation. This metric deals
+    specifically with the question of credit allocation for the following function
+    when all three inputs are true:
+    if fever: +2 points
+    if cough: +2 points
+
+    transform = "identity"
+    sort_order = 2
+    """
+    return _human_sum(X, model_generator, method_name, True, True)
