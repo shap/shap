@@ -425,7 +425,8 @@ class KernelExplainer(Explainer):
                     x_group = x_group.todense()
                 num_mismatches = np.sum(np.invert(np.isclose(x_group, self.data.data[:, inds], equal_nan=True)))
                 varying[i] = num_mismatches > 0
-            return np.nonzero(varying)[0]
+            varying_indices = np.nonzero(varying)[0]
+            return varying_indices
         else:
             varying_indices = []
             # go over all nonzero columns in background and evaluation data
@@ -439,8 +440,10 @@ class KernelExplainer(Explainer):
                 nonzero_rows = data_rows.nonzero()[0]
 
                 if nonzero_rows.size > 0:
-                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows].toarray() - x[0, [varying_index]][0, 0]) > 1e-7)
-                    if num_mismatches == 0:
+                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows].toarray() - x[0, varying_index]) > 1e-7)
+                    # Note: If feature column non-zero but some background zero, can't remove index
+                    if num_mismatches == 0 and not \
+                        (np.abs(x[0, [varying_index]][0, 0]) > 1e-7 and len(nonzero_rows) < data_rows.shape[0]):
                         remove_unvarying_indices.append(i)
             mask = np.ones(len(varying_indices), dtype=bool)
             mask[remove_unvarying_indices] = False
@@ -453,21 +456,28 @@ class KernelExplainer(Explainer):
             # for performance when adding samples
             shape = self.data.data.shape
             nnz = self.data.data.nnz
-            rows, cols = shape
-            rows *= self.nsamples
-            shape = rows, cols
+            data_rows, data_cols = shape
+            rows = data_rows * self.nsamples
+            shape = rows, data_cols
             if nnz == 0:
                 self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
             else:
                 data = self.data.data.data
                 indices = self.data.data.indices
-                new_indptr = np.arange(0, rows * nnz + 1, nnz)
-                new_data = np.tile(data, rows)
-                new_indices = np.tile(indices, rows)
+                indptr = self.data.data.indptr
+                last_indptr_idx = indptr[len(indptr) - 1]
+                indptr_wo_last = indptr[:-1]
+                new_indptrs = []
+                for i in range(0, self.nsamples - 1):
+                    new_indptrs.append(indptr_wo_last + (i * last_indptr_idx))
+                new_indptrs.append(indptr + ((self.nsamples - 1) * last_indptr_idx))
+                new_indptr = np.concatenate(new_indptrs)
+                new_data = np.tile(data, self.nsamples)
+                new_indices = np.tile(indices, self.nsamples)
                 self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
         else:
             self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
-        
+
         self.maskMatrix = np.zeros((self.nsamples, self.M))
         self.kernelWeights = np.zeros(self.nsamples)
         self.y = np.zeros((self.nsamples * self.N, self.D))
