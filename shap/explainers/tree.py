@@ -6,7 +6,7 @@ import os
 import struct
 from distutils.version import LooseVersion
 from .explainer import Explainer
-from ..common import assert_import, record_import_error
+from ..common import assert_import, record_import_error, DenseData
 
 try:
     from .. import _cext
@@ -84,9 +84,11 @@ class TreeExplainer(Explainer):
     def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependent"):
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             self.data = data.values
+        elif isinstance(data, DenseData):
+            self.data = data.data
         else:
             self.data = data
-        self.data_missing = None if data is None else np.isnan(data)
+        self.data_missing = None if self.data is None else np.isnan(self.data)
         self.model_output = model_output
         self.feature_dependence = feature_dependence
         self.expected_value = None
