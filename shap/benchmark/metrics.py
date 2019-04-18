@@ -12,7 +12,6 @@ import functools
 import time
 import hashlib
 import os
-import dill as pickle
 
 try:
     from sklearn.model_selection import train_test_split
