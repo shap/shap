@@ -12,9 +12,9 @@ from . import labels
 from . import colors
 from ..common import convert_name, approximate_interactions
 
-# TODO: remove color argument / use color argument
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
-                    interaction_index="auto", color="#1E88E5", axis_color="#333333",
+                    interaction_index="auto",
+                    color="#1E88E5", axis_color="#333333", cmap=colors.red_blue,
                     dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, show=True):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
@@ -163,8 +163,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             clow = np.nanmin(cv.astype(np.float))
             chigh = np.nanmax(cv.astype(np.float))
             bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
-            color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N-1)
-        
+            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
+
     # optionally add jitter to feature values
     if x_jitter > 0:
         if x_jitter > 1: x_jitter = 1
@@ -191,14 +191,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         cvals[cvals_imp < clow] = clow
         p = pl.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
-            cmap=colors.red_blue, alpha=alpha, vmin=clow, vmax=chigh,
+            cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
             norm=color_norm, rasterized=len(xv) > 500
         )
         p.set_array(cvals[xv_notnan])
     else:
-        pl.scatter(xv, s, s=dot_size, linewidth=0, color="#1E88E5",
+        pl.scatter(xv, s, s=dot_size, linewidth=0, color=color,
                    alpha=alpha, rasterized=len(xv) > 500)
-    
+
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
         if type(cd[0]) == str:
@@ -240,14 +240,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if interaction_index is not None:
         p = pl.scatter(
             xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, c=cvals_imp[xv_nan], cmap=colors.red_blue, alpha=alpha,
+            linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
             vmin=clow, vmax=chigh
         )
         p.set_array(cvals[xv_nan])
     else:
         pl.scatter(
             xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, color="#1E88E5", alpha=alpha
+            linewidth=2, color=color, alpha=alpha
         )
     pl.xlim(*xlim)
 
