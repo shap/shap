@@ -316,13 +316,15 @@ def test_pytorch_single_output():
     class Net(nn.Module):
         def __init__(self, num_features):
             super(Net, self).__init__()
-            self.linear = nn.Linear(num_features, 1)
+            self.linear = nn.Linear(num_features // 2, 2)
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
+            self.maxpool1 = nn.MaxPool1d(kernel_size=2)
+            self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            x = self.leaky_relu(self.conv1d(X.unsqueeze(1))).squeeze(1)
-            return self.linear(x)
+            x = self.maxpool1(self.conv1d(X.unsqueeze(1))).squeeze(1)
+            return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
     model = Net(num_features)
     optimizer = torch.optim.Adam(model.parameters())
 

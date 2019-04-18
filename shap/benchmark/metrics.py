@@ -6,7 +6,6 @@ from .. import __version__
 from . import measures
 from . import methods
 import sklearn
-from sklearn.model_selection import train_test_split
 import numpy as np
 import copy
 import functools
@@ -14,6 +13,12 @@ import time
 import hashlib
 import os
 import dill as pickle
+
+try:
+    from sklearn.model_selection import train_test_split
+except Exception:
+    from sklearn.cross_validation import train_test_split
+
 
 def runtime(X, y, model_generator, method_name):
     """ Runtime
@@ -58,7 +63,7 @@ def local_accuracy(X, y, model_generator, method_name):
     def score_map(true, pred):
         """ Converts local accuracy from % of standard deviation to numerical scores for coloring.
         """
-        
+
         v = min(1.0, np.std(pred - true) / (np.std(true) + 1e-8))
         if v < 1e-6:
             return 1.0
@@ -111,7 +116,7 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "deep_shap": 0.6,
         "expected_gradients": 0.6
     }
-    
+
     return None, guarantees[method_name]
 
 def __mean_pred(true, pred):
@@ -226,7 +231,7 @@ def keep_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fcou
     sort_order = 12
     """
     return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
-    
+
 def remove_positive_resample(X, y, model_generator, method_name, num_fcounts=11):
     """ Remove Positive (resample)
     xlabel = "Max fraction of features removed"
@@ -372,11 +377,11 @@ def remove_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
     return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
 
 def __run_measure(measure, X, y, model_generator, method_name, attribution_sign, num_fcounts, summary_function):
-    
+
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
         if attribution_sign == 0:
             A = np.abs(__strip_list(attr_function(X_test)))
-        else: 
+        else:
             A = attribution_sign * __strip_list(attr_function(X_test))
         nmask = np.ones(len(y_test)) * fcount
         nmask = np.minimum(nmask, np.array(A >= 0).sum(1)).astype(np.int)
@@ -448,7 +453,7 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
 
     # average the method scores over several train/test splits
     method_reps = []
-    
+
     data_hash = hashlib.sha256(__toarray(X).flatten()).hexdigest() + hashlib.sha256(__toarray(y)).hexdigest()
     for i in range(nreps):
         X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=test_size, random_state=i)
@@ -533,7 +538,7 @@ def __strip_list(attrs):
         return attrs
 
 def _fit_human(model_generator, val00, val01, val11):
-    # force the model to fit a function with almost entirely zero background   
+    # force the model to fit a function with almost entirely zero background
     N = 1000000
     M = 3
     X = np.zeros((N,M))
@@ -563,7 +568,7 @@ def _human_and(X, model_generator, method_name, fever, cough):
     elif fever and cough:
         human_consensus = np.array([5., 5., 0.])
         X_test[0,:] = np.array([[1., 1., 1.]])
-            
+
     # force the model to fit an XOR function with almost entirely zero background
     model = _fit_human(model_generator, 0, 2, 10)
 
@@ -634,7 +639,7 @@ def _human_or(X, model_generator, method_name, fever, cough):
     elif fever and cough:
         human_consensus = np.array([5., 5., 0.])
         X_test[0,:] = np.array([[1., 1., 1.]])
-            
+
     # force the model to fit an XOR function with almost entirely zero background
     model = _fit_human(model_generator, 0, 8, 10)
 
@@ -705,7 +710,7 @@ def _human_xor(X, model_generator, method_name, fever, cough):
     elif fever and cough:
         human_consensus = np.array([2., 2., 0.])
         X_test[0,:] = np.array([[1., 1., 1.]])
-            
+
     # force the model to fit an XOR function with almost entirely zero background
     model = _fit_human(model_generator, 0, 8, 4)
 
@@ -776,7 +781,7 @@ def _human_sum(X, model_generator, method_name, fever, cough):
     elif fever and cough:
         human_consensus = np.array([2., 2., 0.])
         X_test[0,:] = np.array([[1., 1., 1.]])
-            
+
     # force the model to fit an XOR function with almost entirely zero background
     model = _fit_human(model_generator, 0, 2, 4)
 
