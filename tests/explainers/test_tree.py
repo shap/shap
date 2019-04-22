@@ -69,6 +69,63 @@ def test_front_page_sklearn():
         # summarize the effects of all the features
         shap.summary_plot(shap_values, X, show=False)
 
+def _conditional_expectation(tree, S, x):
+    tree_ind = 0
+    def R(node_ind):
+        
+        f = tree.features[tree_ind, node_ind]
+        lc = tree.children_left[tree_ind, node_ind]
+        rc = tree.children_right[tree_ind, node_ind]
+        if lc < 0:
+            return tree.values[tree_ind, node_ind]
+        elif f in S:
+            if x[f] <= tree.thresholds[tree_ind, node_ind]:
+                return R(lc)
+            else:
+                return R(rc)
+        else:
+            lw = tree.node_sample_weight[tree_ind, lc]
+            rw = tree.node_sample_weight[tree_ind, rc]
+            return (R(lc) * lw + R(rc) * rw) / (lw + rw)
+    
+    out = 0.0
+    l = tree.values.shape[0] if tree.tree_limit is None else tree.tree_limit
+    for i in range(l):
+        tree_ind = i
+        out += R(0)
+    return out
+
+def _brute_force_tree_shap(tree, x):
+    import itertools
+    import math
+    m = len(x)
+    phi = np.zeros(m)
+    for p in itertools.permutations(list(range(m))):
+        for i in range(m):
+            phi[p[i]] += _conditional_expectation(tree, p[:i+1], x) - _conditional_expectation(tree, p[:i], x)
+    return phi / math.factorial(m)
+
+def test_xgboost_direct():
+    try:
+        import xgboost
+    except Exception as e:
+        print("Skipping test_xgboost_direct!")
+        return
+    import shap
+
+    N = 100
+    M = 4
+    X = np.random.randn(N,M)
+    y = np.random.randn(N)  
+
+    model = xgboost.XGBRegressor()
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    assert np.allclose(shap_values[0,:], _brute_force_tree_shap(explainer.model, X[0,:]))
+
 def test_xgboost_multiclass():
     try:
         import xgboost
@@ -87,6 +144,32 @@ def test_xgboost_multiclass():
 
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
+
+def _validate_shap_values(model, x_test):
+    # explain the model's predictions using SHAP values
+    tree_explainer = shap.TreeExplainer(model)
+    shap_values = tree_explainer.shap_values(x_test)
+    expected_values = tree_explainer.expected_value
+    # validate values sum to the margin prediction of the model plus expected_value
+    assert(np.allclose(np.sum(shap_values, axis=1) + expected_values, model.predict(x_test)))
+
+def test_xgboost_ranking():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_xgboost_ranking!")
+        return
+    import shap
+
+    # train lightgbm ranker model
+    x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
+    params = {'objective': 'rank:pairwise', 'learning_rate': 0.1,
+              'gamma': 1.0, 'min_child_weight': 0.1,
+              'max_depth': 4, 'n_estimators': 4}
+    model = xgboost.sklearn.XGBRanker(**params)
+    model.fit(x_train, y_train, q_train.astype(int),
+              eval_set=[(x_test, y_test)], eval_group=[q_test.astype(int)])
+    _validate_shap_values(model, x_test)
 
 def test_xgboost_mixed_types():
     try:
@@ -185,7 +268,7 @@ def test_lightgbm():
         return
     import shap
 
-    # train XGBoost model
+    # train lightgbm model
     X, y = shap.datasets.boston()
     model = lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
     model.fit(X, y)
@@ -201,7 +284,7 @@ def test_lightgbm_multiclass():
         return
     import shap
 
-    # train XGBoost model
+    # train lightgbm model
     X, Y = shap.datasets.iris()
     model = lightgbm.sklearn.LGBMClassifier()
     model.fit(X, Y)
@@ -211,6 +294,22 @@ def test_lightgbm_multiclass():
 
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
+
+def test_lightgbm_ranking():
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm_ranking!")
+        return
+    import shap
+
+    # train lightgbm ranker model
+    x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
+    model = lightgbm.LGBMRanker()
+    model.fit(x_train, y_train, group=q_train, eval_set=[(x_test, y_test)],
+              eval_group=[q_test], eval_at=[1, 3], early_stopping_rounds=5, verbose=False,
+              callbacks=[lightgbm.reset_parameter(learning_rate=lambda x: 0.95 ** x * 0.1)])
+    _validate_shap_values(model, x_test)
 
 # TODO: Test tree_limit argument
 
@@ -317,10 +416,21 @@ def test_sum_match_gradient_boosting_classifier():
 
     # Use decision function to get prediction before it is mapped to a probability
     predicted = clf.decision_function(X_test)
+
+    # check SHAP values
     ex = shap.TreeExplainer(clf)
+    initial_ex_value = ex.expected_value
     shap_values = ex.shap_values(X_test)
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
         "SHAP values don't sum to model output!"
+
+    # check initial expected value
+    assert np.abs(initial_ex_value - ex.expected_value) < 1e-6, "Inital expected value is wrong!"
+
+    # check SHAP interaction values
+    shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10,:])
+    assert np.abs(shap_interaction_values.sum(1).sum(1) + ex.expected_value - predicted[:10]).max() < 1e-6, \
+        "SHAP interaction values don't sum to model output!"
 
 def test_single_row_gradient_boosting_classifier():
     import shap

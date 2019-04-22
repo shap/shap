@@ -6,7 +6,7 @@ import os
 import struct
 from distutils.version import LooseVersion
 from .explainer import Explainer
-from ..common import assert_import, record_import_error
+from ..common import assert_import, record_import_error, DenseData
 
 try:
     from .. import _cext
@@ -84,9 +84,11 @@ class TreeExplainer(Explainer):
     def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependent"):
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             self.data = data.values
+        elif isinstance(data, DenseData):
+            self.data = data.data
         else:
             self.data = data
-        self.data_missing = None if data is None else np.isnan(data)
+        self.data_missing = None if self.data is None else np.isnan(self.data)
         self.model_output = model_output
         self.feature_dependence = feature_dependence
         self.expected_value = None
@@ -101,14 +103,9 @@ class TreeExplainer(Explainer):
             assert data is not None, "A background dataset must be provided unless you are using feature_dependence=\"tree_path_dependent\"!"
 
         if model_output != "margin":
-            if self.model.model_type == "xgboost" and self.model.objective is None:
-                msg = "When model_output is not \"margin\" then we need to know the model's objective. Unfortuneately " + \
-                      "raw XGBoost Booster objects don't expose this information. Consider using the XGBRegressor/" + \
-                      "XGBClassifier objects, or annotate the Booster object with the objective " + \
-                      "you are using, for example: xgb_model.set_attr(objective=\"binary:logistic\")."
-                raise Exception(msg)
-            elif self.model.objective is None:
-                raise Exception("Model does have a known objective! When model_output is not \"margin\" then we need to know the model's objective")
+            if self.model.objective is None and self.model.tree_output is None:
+                raise Exception("Model does have a known objective or output type! When model_output is " \
+                                "not \"margin\" then we need to know the model's objective or link function.")
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>") and model_output != "margin":
@@ -122,8 +119,8 @@ class TreeExplainer(Explainer):
         elif data is not None:
             self.expected_value = self.model.predict(self.data, output=model_output).mean(0)
         elif hasattr(self.model, "node_sample_weight"):
-            #proportions = self.model.node_sample_weight[:,0] / self.model.node_sample_weight[:,0].sum()
-            self.expected_value = self.model.values[:,0].sum(0) #(self.model.values[:,0].T * proportions).T.sum(0)
+            self.expected_value = self.model.values[:,0].sum(0)
+            self.expected_value += self.model.base_offset
 
     def __dynamic_expected_value(self, y):
         """ This computes the expected value conditioned on the given label value.
@@ -508,8 +505,19 @@ class TreeEnsemble:
             self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
             self.base_offset = xgb_loader.base_score
             less_than_or_equal = False
-            self.objective = objective_name_map.get(model.objective, None)
-            self.tree_output = tree_output_name_map.get(model.objective, None)
+            self.objective = objective_name_map.get(xgb_loader.name_obj, None)
+            self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
+            self.tree_limit = getattr(model, "best_ntree_limit", None)
+        elif str(type(model)).endswith("xgboost.sklearn.XGBRanker'>"):
+            assert_import("xgboost")
+            self.original_model = model.get_booster()
+            self.model_type = "xgboost"
+            xgb_loader = XGBTreeModelLoader(self.original_model)
+            self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
+            self.base_offset = xgb_loader.base_score
+            less_than_or_equal = False
+            # Note: for ranker, leaving tree_output and objective as None as they
+            # are not implemented in native code yet
             self.tree_limit = getattr(model, "best_ntree_limit", None)
         elif str(type(model)).endswith("lightgbm.basic.Booster'>"):
             assert_import("lightgbm")
@@ -538,6 +546,17 @@ class TreeEnsemble:
             if model.objective is None:
                 self.objective = "squared_error"
                 self.tree_output = "raw_value"
+        elif str(type(model)).endswith("lightgbm.sklearn.LGBMRanker'>"):
+            assert_import("lightgbm")
+            self.model_type = "lightgbm"
+            self.original_model = model.booster_
+            tree_info = self.original_model.dump_model()["tree_info"]
+            try:
+                self.trees = [Tree(e, data=data, data_missing=data_missing) for e in tree_info]
+            except:
+                self.trees = None # we get here because the cext can't handle categorical splits yet
+            # Note: for ranker, leaving tree_output and objective as None as they
+            # are not implemented in native code yet
         elif str(type(model)).endswith("lightgbm.sklearn.LGBMClassifier'>"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -557,6 +576,10 @@ class TreeEnsemble:
             self.model_type = "catboost"
             self.original_model = model
         elif str(type(model)).endswith("catboost.core.CatBoostClassifier'>"):
+            assert_import("catboost")
+            self.model_type = "catboost"
+            self.original_model = model
+        elif str(type(model)).endswith("catboost.core.CatBoost'>"):
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
@@ -618,7 +641,7 @@ class TreeEnsemble:
             elif self.tree_output == "probability":
                 transform = "identity"
             else:
-                raise Exception("model_output = \"probability\" is not supported when model.tree_output = \"" + self.tree_output + "\"!")
+                raise Exception("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
         elif model_output == "logloss":
 
             if self.objective == "squared_error":
@@ -626,7 +649,7 @@ class TreeEnsemble:
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                raise Exception("model_output = \"logloss\" is not supported when model.objective = \"" + self.objective + "\"!")
+                raise Exception("model_output = \"logloss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         return transform
 
     def predict(self, X, y=None, output="margin", tree_limit=None):
@@ -707,10 +730,9 @@ class Tree:
             self.children_default = self.children_left # missing values not supported in sklearn
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
+            self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])
             if normalize:
-                self.values = (tree.value[:,0,:].T / tree.value[:,0,:].sum(1)).T
-            else:
-                self.values = tree.value[:,0,:]
+                self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
 

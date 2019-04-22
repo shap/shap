@@ -40,21 +40,21 @@ def kernel_shap_1000_meanref(model, data):
     return lambda X: KernelExplainer(model.predict, kmeans(data, 1)).shap_values(X, nsamples=1000, l1_reg=0)
 
 def sampling_shap_1000(model, data):
-    """ Sampling SHAP 1000
+    """ IME 1000
     color = red_blue_circle(0.5)
     linestyle = dashed
     """
     return lambda X: SamplingExplainer(model.predict, data).shap_values(X, nsamples=1000)
 
 def tree_shap_tree_path_dependent(model, data):
-    """ Tree SHAP (path dependent)
+    """ TreeExplainer
     color = red_blue_circle(0)
     linestyle = solid
     """
     return TreeExplainer(model, feature_dependence="tree_path_dependent").shap_values
 
 def tree_shap_independent_200(model, data):
-    """ Tree SHAP (independent)
+    """ TreeExplainer (independent)
     color = red_blue_circle(0)
     linestyle = dashed
     """
@@ -62,7 +62,7 @@ def tree_shap_independent_200(model, data):
     return TreeExplainer(model, data_subsample, feature_dependence="independent").shap_values
 
 def mean_abs_tree_shap(model, data):
-    """ mean(|Tree SHAP|)
+    """ mean(|TreeExplainer|)
     color = red_blue_circle(0.25)
     linestyle = solid
     """

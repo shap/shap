@@ -91,6 +91,43 @@ def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
 
     return metric(y_test, yp_masked_test)
 
+def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
+    """ The model is revaluated for each test sample with the important features set to an imputed value.
+
+    Note that the imputation is done using a multivariate normality assumption on the dataset. This depends on
+    being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
+    be significantly bigger than X_train.shape[1].
+    """
+
+    X_train, X_test = to_array(X_train, X_test)
+
+    # how many features to mask
+    assert X_train.shape[1] == X_test.shape[1]
+
+    # keep nkeep top features for each test explanation
+    C = np.cov(X_train.T)
+    C += np.eye(C.shape[0]) * 1e-6
+    X_test_tmp = X_test.copy()
+    yp_masked_test = np.zeros(y_test.shape)
+    tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
+    mean_vals = X_train.mean(0)
+    for i in range(len(y_test)):
+        if nmask[i] > 0:
+            ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
+            observe_inds = ordering[nmask[i]:]
+            impute_inds = ordering[:nmask[i]]
+            
+            # impute missing data assuming it follows a multivariate normal distribution
+            Coo_inv = np.linalg.inv(C[observe_inds,:][:,observe_inds])
+            Cio = C[impute_inds,:][:,observe_inds]
+            impute = mean_vals[impute_inds] + Cio @ Coo_inv @ (X_test[i, observe_inds] - mean_vals[observe_inds])
+            
+            X_test_tmp[i, impute_inds] = impute
+
+    yp_masked_test = trained_model.predict(X_test_tmp)
+
+    return metric(y_test, yp_masked_test)
+
 def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """ The model is revaluated for each test sample with the important features set to resample background values.
     """
@@ -245,6 +282,10 @@ def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
 
 def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """ The model is revaluated for each test sample with the non-important features set to an imputed value.
+
+    Note that the imputation is done using a multivariate normality assumption on the dataset. This depends on
+    being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
+    be significantly bigger than X_train.shape[1].
     """
 
     X_train, X_test = to_array(X_train, X_test)
@@ -253,6 +294,8 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
     assert X_train.shape[1] == X_test.shape[1]
 
     # keep nkeep top features for each test explanation
+    C = np.cov(X_train.T)
+    C += np.eye(C.shape[0]) * 1e-6
     X_test_tmp = X_test.copy()
     yp_masked_test = np.zeros(y_test.shape)
     tie_breaking_noise = const_rand(X_train.shape[1], random_state) * 1e-6
@@ -262,11 +305,13 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             observe_inds = ordering[:nkeep[i]]
             impute_inds = ordering[nkeep[i]:]
-            X_train_tmp = X_train[:,observe_inds]
-            impute_model = sklearn.linear_model.LassoLarsIC()
-            for j in impute_inds:
-                impute_model.fit(X_train_tmp, X_train[:,j])
-            X_test_tmp[i,ordering[nkeep[i]:]] = mean_vals[ordering[nkeep[i]:]]
+            
+            # impute missing data assuming it follows a multivariate normal distribution
+            Coo_inv = np.linalg.inv(C[observe_inds,:][:,observe_inds])
+            Cio = C[impute_inds,:][:,observe_inds]
+            impute = mean_vals[impute_inds] + Cio @ Coo_inv @ (X_test[i, observe_inds] - mean_vals[observe_inds])
+            
+            X_test_tmp[i, impute_inds] = impute
 
     yp_masked_test = trained_model.predict(X_test_tmp)
 

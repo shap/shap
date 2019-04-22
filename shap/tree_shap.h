@@ -1356,13 +1356,13 @@ void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, const Exp
                 for (unsigned l = 0; l < contrib_row_size; ++l) {
                     const tfloat val = (on_contribs[l] - off_contribs[l]) / 2;
                     instance_out_contribs[ind * contrib_row_size + l] += val;
-                    diag_contribs[ind] -= val;
+                    diag_contribs[l] -= val;
                 }
             }
         }
 
         // set the diagonal
-        for (unsigned j = 0; j < data.M; ++j) {
+        for (unsigned j = 0; j < data.M + 1; ++j) {
             const unsigned offset = j * contrib_row_size + j * trees.num_outputs;
             for (unsigned k = 0; k < trees.num_outputs; ++k) {
                 instance_out_contribs[offset + k] = diag_contribs[j * trees.num_outputs + k];

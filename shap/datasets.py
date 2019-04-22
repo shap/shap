@@ -231,6 +231,17 @@ def a1a():
     return sklearn.datasets.load_svmlight_file(cache(github_data_url + 'a1a.svmlight'))
 
 
+def rank():
+    """ Ranking datasets from lightgbm repository.
+    """
+    rank_data_url = 'https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/'
+    x_train, y_train = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.train'))
+    x_test, y_test = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.test'))
+    q_train = np.loadtxt(cache(rank_data_url + 'rank.train.query'))
+    q_test = np.loadtxt(cache(rank_data_url + 'rank.test.query'))
+    return x_train, y_train, x_test, y_test, q_train, q_test
+
+
 def cache(url, file_name=None):
     if file_name is None:
         file_name = os.path.basename(url)

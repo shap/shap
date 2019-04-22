@@ -212,6 +212,7 @@ def test_pytorch_mnist_cnn():
                 )
                 self.fc_layers = nn.Sequential(
                     nn.Linear(320, 50),
+                    nn.BatchNorm1d(50),
                     nn.ReLU(),
                     nn.Linear(50, 10),
                     nn.ELU(),
@@ -294,15 +295,15 @@ def test_pytorch_mnist_cnn():
     shutil.rmtree(root_dir)
 
 
-def test_pytorch_regression():
-    """Testing regressions (i.e. single outputs)
+def test_pytorch_single_output():
+    """Testing single outputs
     """
     _skip_if_no_pytorch()
 
     import torch
     from torch import nn
     from torch.nn import functional as F
-    from torch.utils.data import TensorDataset, ConcatDataset, DataLoader
+    from torch.utils.data import TensorDataset, DataLoader
     from sklearn.datasets import load_boston
     import shap
 
@@ -315,10 +316,15 @@ def test_pytorch_regression():
     class Net(nn.Module):
         def __init__(self, num_features):
             super(Net, self).__init__()
-            self.linear = nn.Linear(num_features, 1)
+            self.linear = nn.Linear(num_features // 2, 2)
+            self.conv1d = nn.Conv1d(1, 1, 1)
+            self.leaky_relu = nn.LeakyReLU()
+            self.maxpool1 = nn.MaxPool1d(kernel_size=2)
+            self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            return self.linear(X)
+            x = self.maxpool1(self.conv1d(X.unsqueeze(1))).squeeze(1)
+            return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
     model = Net(num_features)
     optimizer = torch.optim.Adam(model.parameters())
 

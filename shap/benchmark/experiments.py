@@ -28,17 +28,23 @@ regression_metrics = [
     "local_accuracy",
     "consistency_guarantees",
     "keep_positive_mask",
-    "keep_negative_mask",
-    "keep_absolute_mask__r2",
-    "remove_positive_mask",
-    "remove_negative_mask",
-    "remove_absolute_mask__r2",
     "keep_positive_resample",
+    "keep_positive_impute",
+    "keep_negative_mask",
     "keep_negative_resample",
+    "keep_negative_impute",
+    "keep_absolute_mask__r2",
     "keep_absolute_resample__r2",
+    "keep_absolute_impute__r2",
+    "remove_positive_mask",
     "remove_positive_resample",
+    "remove_positive_impute",
+    "remove_negative_mask",
     "remove_negative_resample",
-    "remove_absolute_resample__r2"
+    "remove_negative_impute",
+    "remove_absolute_mask__r2",
+    "remove_absolute_resample__r2",
+    "remove_absolute_impute__r2"
 ]
 
 binary_classification_metrics = [
@@ -46,17 +52,38 @@ binary_classification_metrics = [
     "local_accuracy",
     "consistency_guarantees",
     "keep_positive_mask",
-    "keep_negative_mask",
-    "keep_absolute_mask__roc_auc",
-    "remove_positive_mask",
-    "remove_negative_mask",
-    "remove_absolute_mask__roc_auc",
     "keep_positive_resample",
+    "keep_positive_impute",
+    "keep_negative_mask",
     "keep_negative_resample",
+    "keep_negative_impute",
+    "keep_absolute_mask__roc_auc",
     "keep_absolute_resample__roc_auc",
+    "keep_absolute_impute__roc_auc",
+    "remove_positive_mask",
     "remove_positive_resample",
+    "remove_positive_impute",
+    "remove_negative_mask",
     "remove_negative_resample",
-    "remove_absolute_resample__roc_auc"
+    "remove_negative_impute",
+    "remove_absolute_mask__roc_auc",
+    "remove_absolute_resample__roc_auc",
+    "remove_absolute_impute__roc_auc"
+]
+
+human_metrics = [
+    "human_and_00",
+    "human_and_01",
+    "human_and_11",
+    "human_or_00",
+    "human_or_01",
+    "human_or_11",
+    "human_xor_00",
+    "human_xor_01",
+    "human_xor_11",
+    "human_sum_00",
+    "human_sum_01",
+    "human_sum_11"
 ]
 
 linear_regress_methods = [
@@ -107,7 +134,7 @@ tree_classify_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
     "tree_shap_tree_path_dependent",
-    "tree_shap_independent_1000",
+    "tree_shap_independent_200",
     "saabas",
     "random",
     "tree_gain",
@@ -159,6 +186,9 @@ _experiments += [["cric", "decision_tree", m, s] for s in binary_classification_
 _experiments += [["cric", "random_forest", m, s] for s in binary_classification_metrics for m in tree_classify_methods]
 _experiments += [["cric", "gbm", m, s] for s in binary_classification_metrics for m in tree_classify_methods]
 _experiments += [["cric", "ffnn", m, s] for s in binary_classification_metrics for m in deep_classify_methods]
+
+_experiments += [["human", "decision_tree", m, s] for s in human_metrics for m in tree_regress_methods]
+
 
 def experiments(dataset=None, model=None, method=None, metric=None):
     for experiment in _experiments:

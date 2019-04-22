@@ -94,6 +94,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         tests_require=tests_require,
         ext_modules=ext_modules,
         zip_safe=False
+        # python_requires='>3.0' we will add this at some point
     )
 
 
