@@ -354,10 +354,10 @@ class KernelExplainer(Explainer):
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
                 log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
-                ind_set = np.random.choice(len(remaining_weight_vector), 2 * samples_left, p=remaining_weight_vector)
+                ind_set = np.random.choice(len(remaining_weight_vector), 4 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
-                while samples_left > 0:
+                while samples_left > 0 and ind_set_pos < len(ind_set):
                     mask.fill(0.0)
                     ind = ind_set[ind_set_pos] # we call np.random.choice once to save time and then just read it here
                     ind_set_pos += 1
