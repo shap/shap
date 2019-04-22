@@ -139,7 +139,7 @@ def test_tf_keras_linear():
     np.testing.assert_allclose(expected - values, 0, atol=1e-5)
 
 def test_keras_imdb_lstm():
-    """ Basic LSTM example using keras
+    """ Basic LSTM example using native keras API over tensorflow
     """
     _skip_if_no_tensorflow()
 
@@ -184,6 +184,51 @@ def test_keras_imdb_lstm():
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-06), "Sum of SHAP values does not match difference!"
 
+def test_tf_keras_imdb_lstm():
+    """ Basic LSTM example using the keras API defined in tensorflow
+    """
+    _skip_if_no_tensorflow()
+
+    import numpy as np
+    import tensorflow as tf
+    from tensorflow.keras.datasets import imdb
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.layers import LSTM
+    from tensorflow.keras.layers import Embedding
+    from tensorflow.keras.preprocessing import sequence
+    import shap
+
+    # load the data from keras
+    np.random.seed(7)
+    max_features = 1000
+    (X_train, _), (X_test, _) = imdb.load_data(num_words=max_features)
+    X_train = sequence.pad_sequences(X_train, maxlen=100)
+    X_test = sequence.pad_sequences(X_test, maxlen=100)
+
+    # create the model. note that this is model is very small to make the test
+    # run quick and we don't care about accuracy here
+    mod = Sequential()
+    mod.add(Embedding(max_features, 8))
+    mod.add(LSTM(10, dropout=0.2, recurrent_dropout=0.2))
+    mod.add(Dense(1, activation='sigmoid'))
+    mod.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+    # select the background and test samples
+    inds = np.random.choice(X_train.shape[0], 3, replace=False)
+    background = X_train[inds]
+    testx = X_test[10:11]
+
+    # explain a prediction and make sure it sums to the difference between the average output
+    # over the background samples and the current output
+    tf.keras.backend.get_session().run(tf.global_variables_initializer())
+    e = shap.DeepExplainer((mod.layers[0].input, mod.layers[-1].output), background)
+    shap_values = e.shap_values(testx)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    sess = tf.keras.backend.get_session()
+    diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0,:] - \
+        sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
+    assert np.allclose(sums, diff, atol=1e-06), "Sum of SHAP values does not match difference!"
 
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch

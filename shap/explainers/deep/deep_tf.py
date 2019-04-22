@@ -390,6 +390,12 @@ def gather(explainer, op, *grads):
         dup_out = [2] + [1 for i in xout.shape[1:]]
         delta_in1_t = tf.tile(xin1 - rin1, dup_in1)
         out_sum = tf.reduce_sum(grads[0] * tf.tile(xout - rout, dup_out), list(range(len(indices.shape), len(grads[0].shape))))
+        if op.type == "ResourceGather":
+            return [None, tf.where(
+                tf.abs(delta_in1_t) < 1e-6,
+                tf.zeros_like(delta_in1_t),
+                out_sum / delta_in1_t
+            )]
         return [None, tf.where(
             tf.abs(delta_in1_t) < 1e-6,
             tf.zeros_like(delta_in1_t),
@@ -582,6 +588,7 @@ op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmu
 
 # ops that need their own custom attribution functions
 op_handlers["GatherV2"] = gather
+op_handlers["ResourceGather"] = gather
 op_handlers["MaxPool"] = maxpool
 op_handlers["Softmax"] = softmax
 
