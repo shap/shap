@@ -81,7 +81,7 @@ class DeepExplainer(Explainer):
 
         self.expected_value = self.explainer.expected_value
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order='max', model_stack_ref_grad=None):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order='max', ref_grad=None):
         """ Return approximate SHAP values for the model applied to the data given by X.
 
         Parameters
@@ -114,4 +114,4 @@ class DeepExplainer(Explainer):
         ranked_outputs, and indexes is a matrix that indicates for each sample which output indexes
         were chosen as "top".
         """
-        return self.explainer.shap_values(X, ranked_outputs, output_rank_order, model_stack_ref_grad)
+        return self.explainer.shap_values(X, ranked_outputs, output_rank_order, ref_grad)

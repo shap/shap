@@ -145,38 +145,54 @@ def test_model_stack_keras_xgb():
         print("Skipping test_model_stack_keras_xgb!")
         return
     import shap
+    n = 100
+    m = 100
     np.random.seed(10)
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_dim=5))
+    model.add(Dense(64, activation='relu', input_dim=m))
     model.add(Dropout(0.5))
     model.add(Dense(10, activation='softmax'))
+
     # Encountered an error where I needed to set learning phase before, so I will leave this here
     # from keras import backend as K
     # K.set_learning_phase(0)
-    X = np.random.normal(size=(100,5))
-    y = np.random.normal(size=(100,1))
+
+    X = np.random.normal(size=(n,m))
+    y = np.random.normal(size=(n,1))
     X_embed = model.predict(X)
+
+    # Set up explainer objects
     tree_model = xgboost.train({'eta':1, 'silent':1, 'base_score': 0, }, xgboost.DMatrix(X_embed, label=y), 10)
     tree_expl = shap.TreeExplainer(tree_model, X_embed, feature_dependence="independent")
+    e = shap.DeepExplainer(model, X)
 
-    for i in range(0,2):
-        x_ind = np.random.choice(X_embed.shape[1])
-        x_embed = X_embed[x_ind:x_ind+1]
-        x = X[x_ind:x_ind+1]
-        # Obtain single reference shap values for tree
-        itshap_ms = tree_expl.shap_values(x_embed, model_stack = True)
-        # Rescale shap values to get gradient
-        tree_phi = np.transpose(itshap_ms[0])
-        model_stack_ref_grad = np.divide(tree_phi, X_embed[x_ind] - X_embed, 
-                                         out=np.zeros_like(tree_phi), 
-                                         where=(X_embed[x_ind] - X_embed)!=0)
-        # Make sure intermediary attributions sum up correctly
-        y = tree_model.predict(xgboost.DMatrix(x_embed))
-        assert np.allclose(itshap_ms.mean(2).sum(), y - tree_expl.expected_value.mean())
-        # Make sure stacked attributions sum up correctly
-        e = shap.DeepExplainer(model, X)
-        phi_final = np.array(e.shap_values(x, model_stack_ref_grad=model_stack_ref_grad))[:,0,:]
-        assert np.allclose(itshap_ms.mean(2).sum(), phi_final.sum(0).sum(), atol = .0001)
+    s = t()
+    x_embed = X_embed[0:10]
+    x       = X[0:10]
+
+    # Obtain single reference shap values for tree
+    itshap_ms = tree_expl.shap_values(x_embed, model_stack = True)
+
+    # Rescale shap values to get gradient
+    num_references = X_embed.shape[0]
+    num_samples    = x_embed.shape[0]
+    x_embed2 = np.transpose(x_embed)[np.newaxis,:,:]
+    x_embed2 = np.repeat(x_embed2,num_references,axis=0)
+    X_embed2 = X_embed[:,:,np.newaxis]
+    X_embed2 = np.repeat(X_embed2,num_samples,axis=2)
+    numer    = np.transpose(itshap_ms)
+    denom    = x_embed2 - X_embed2
+    ref_grad = np.divide(numer, denom, out=np.zeros_like(numer), where=denom!=0)
+
+    # Make sure intermediary attributions sum up correctly
+    y_pred = tree_model.predict(xgboost.DMatrix(x_embed))
+    assert np.max(itshap_ms.mean(2).sum(1) - (y_pred - tree_expl.expected_value.mean())) < .0001
+
+    # Make sure stacked attributions sum up correctly
+    phi_final = np.array(e.shap_values(x, ref_grad=ref_grad))
+    assert np.max(itshap_ms.mean(2).sum(1) - phi_final.sum(0).sum(1)) < .0001
+    elapsed_time = t() - s
+    print("Elapsed Time {}".format(elapsed_time))
     
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
