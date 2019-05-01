@@ -4,6 +4,18 @@ import numpy as np
 import scipy as sp
 from scipy.spatial.distance import pdist
 
+import_errors = {}
+
+def assert_import(package_name):
+    global import_errors
+    if package_name in import_errors:
+        msg,e = import_errors[package_name]
+        print(msg)
+        raise e
+
+def record_import_error(package_name, msg, e):
+    global import_errors
+    import_errors[package_name] = (msg, e)
 
 class Instance:
     def __init__(self, x, group_display_values):
@@ -242,6 +254,11 @@ def convert_name(ind, shap_values, feature_names):
             # we allow rank based indexing using the format "rank(int)"
             if ind.startswith("rank("):
                 return np.argsort(-np.abs(shap_values).mean(0))[int(ind[5:-1])]
+
+            # we allow the sum of all the SHAP values to be specified with "sum()"
+            # assuming here that the calling method can deal with this case
+            elif ind == "sum()": 
+                return "sum()"
             else:
                 print("Could not find feature named: " + ind)
                 return None

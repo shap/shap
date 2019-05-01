@@ -4,7 +4,7 @@
  *
  * Sphinx stylesheet -- basic theme.
  *
- * :copyright: Copyright 2007-2016 by the Sphinx team, see AUTHORS.
+ * :copyright: Copyright 2007-2018 by the Sphinx team, see AUTHORS.
  * :license: BSD, see LICENSE for details.
  *
  */
@@ -82,8 +82,20 @@ div.sphinxsidebar input {
 }
 
 div.sphinxsidebar #searchbox input[type="text"] {
-    width: 170px;
+    float: left;
+    width: 80%;
+    padding: 0.25em;
+    box-sizing: border-box;
 }
+
+div.sphinxsidebar #searchbox input[type="submit"] {
+    float: left;
+    width: 20%;
+    border-left: none;
+    padding: 0.25em;
+    box-sizing: border-box;
+}
+
 
 img {
     border: 0;
@@ -122,6 +134,8 @@ ul.keywordmatches li.goodmatch a {
 
 table.contentstable {
     width: 90%;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 table.contentstable p.biglink {
@@ -149,9 +163,14 @@ table.indextable td {
     vertical-align: top;
 }
 
-table.indextable dl, table.indextable dd {
+table.indextable ul {
     margin-top: 0;
     margin-bottom: 0;
+    list-style-type: none;
+}
+
+table.indextable > tbody > tr > td > ul {
+    padding-left: 0em;
 }
 
 table.indextable tr.pcap {
@@ -183,7 +202,19 @@ div.genindex-jumpbox {
     padding: 0.4em;
 }
 
+/* -- domain module index --------------------------------------------------- */
+
+table.modindextable td {
+    padding: 2px;
+    border-collapse: collapse;
+}
+
 /* -- general body styles --------------------------------------------------- */
+
+div.body {
+    min-width: 450px;
+    max-width: 800px;
+}
 
 div.body p, div.body dd, div.body li, div.body blockquote {
     -moz-hyphens: auto;
@@ -215,10 +246,6 @@ div.body p.caption {
 
 div.body td {
     text-align: left;
-}
-
-.field-list ul {
-    padding-left: 1em;
 }
 
 .first {
@@ -322,6 +349,11 @@ table.docutils {
     border-collapse: collapse;
 }
 
+table.align-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 table caption span.caption-number {
     font-style: italic;
 }
@@ -335,10 +367,6 @@ table.docutils td, table.docutils th {
     border-left: 0;
     border-right: 0;
     border-bottom: 1px solid #aaa;
-}
-
-table.field-list td, table.field-list th {
-    border: 0 !important;
 }
 
 table.footnote td, table.footnote th {
@@ -377,6 +405,27 @@ div.figure p.caption span.caption-number {
 div.figure p.caption span.caption-text {
 }
 
+/* -- field list styles ----------------------------------------------------- */
+
+table.field-list td, table.field-list th {
+    border: 0 !important;
+}
+
+.field-list ul {
+    margin: 0;
+    padding-left: 1em;
+}
+
+.field-list p {
+    margin: 0;
+}
+
+.field-name {
+    -moz-hyphens: manual;
+    -ms-hyphens: manual;
+    -webkit-hyphens: manual;
+    hyphens: manual;
+}
 
 /* -- other body styles ----------------------------------------------------- */
 
@@ -418,22 +467,17 @@ dd {
     margin-left: 30px;
 }
 
-dt:target, .highlighted {
+dt:target, span.highlighted {
     background-color: #fbe54e;
+}
+
+rect.highlighted {
+    fill: #fbe54e;
 }
 
 dl.glossary dt {
     font-weight: bold;
     font-size: 1.1em;
-}
-
-.field-list ul {
-    margin: 0;
-    padding-left: 1em;
-}
-
-.field-list p {
-    margin: 0;
 }
 
 .optional {
@@ -492,6 +536,13 @@ abbr, acronym {
 pre {
     overflow: auto;
     overflow-y: hidden;  /* fixes display issues on Chrome browsers */
+}
+
+span.pre {
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    -webkit-hyphens: none;
+    hyphens: none;
 }
 
 td.linenos pre {
@@ -583,6 +634,16 @@ div.body div.math p {
 
 span.eqno {
     float: right;
+}
+
+span.eqno a.headerlink {
+    position: relative;
+    left: 0px;
+    z-index: 1;
+}
+
+div.math:hover a.headerlink {
+    visibility: visible;
 }
 
 /* -- printout stylesheet --------------------------------------------------- */

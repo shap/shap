@@ -117,62 +117,74 @@ def test_pytorch_mnist_cnn():
                        ])),
         batch_size=batch_size, shuffle=True)
 
-    class Net(nn.Module):
-        def __init__(self):
-            super(Net, self).__init__()
-            self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-            self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-            self.conv2_drop = nn.Dropout2d()
-            self.fc1 = nn.Linear(320, 50)
-            self.fc2 = nn.Linear(50, 10)
+    def run_test(train_loader, test_loader, interim):
 
-        def forward(self, x):
-            x = F.relu(F.max_pool2d(self.conv1(x), 2))
-            x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-            x = x.view(-1, 320)
-            x = F.relu(self.fc1(x))
-            x = F.dropout(x, training=self.training)
-            x = self.fc2(x)
-            return F.log_softmax(x, dim=1)
+        class Net(nn.Module):
+            def __init__(self):
+                super(Net, self).__init__()
+                self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+                self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+                self.conv2_drop = nn.Dropout2d()
+                self.fc1 = nn.Linear(320, 50)
+                self.fc2 = nn.Linear(50, 10)
 
-    model = Net()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+            def forward(self, x):
+                x = F.relu(F.max_pool2d(self.conv1(x), 2))
+                x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+                x = x.view(-1, 320)
+                x = F.relu(self.fc1(x))
+                x = F.dropout(x, training=self.training)
+                x = self.fc2(x)
+                return F.log_softmax(x, dim=1)
 
-    def train(model, device, train_loader, optimizer, epoch, cutoff=2000):
-        model.train()
-        num_examples = 0
-        for batch_idx, (data, target) in enumerate(train_loader):
-            num_examples += target.shape[0]
-            data, target = data.to(device), target.to(device)
-            optimizer.zero_grad()
-            output = model(data)
-            loss = F.nll_loss(output, target)
-            loss.backward()
-            optimizer.step()
-            if batch_idx % 10 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader), loss.item()))
-            if num_examples > cutoff:
-                break
+        model = Net()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-    device = torch.device('cpu')
-    train(model, device, train_loader, optimizer, 1)
+        def train(model, device, train_loader, optimizer, epoch, cutoff=2000):
+            model.train()
+            num_examples = 0
+            for batch_idx, (data, target) in enumerate(train_loader):
+                num_examples += target.shape[0]
+                data, target = data.to(device), target.to(device)
+                optimizer.zero_grad()
+                output = model(data)
+                loss = F.nll_loss(output, target)
+                loss.backward()
+                optimizer.step()
+                if batch_idx % 10 == 0:
+                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                        epoch, batch_idx * len(data), len(train_loader.dataset),
+                               100. * batch_idx / len(train_loader), loss.item()))
+                if num_examples > cutoff:
+                    break
 
-    next_x, next_y = next(iter(train_loader))
-    np.random.seed(0)
-    inds = np.random.choice(next_x.shape[0], 20, replace=False)
-    e = shap.GradientExplainer(model, next_x[inds, :, :, :])
-    test_x, test_y = next(iter(test_loader))
-    shap_values = e.shap_values(test_x[:1], nsamples=1000)
+        device = torch.device('cpu')
+        train(model, device, train_loader, optimizer, 1)
 
-    model.eval()
-    model.zero_grad()
-    with torch.no_grad():
-        diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+        next_x, next_y = next(iter(train_loader))
+        np.random.seed(0)
+        inds = np.random.choice(next_x.shape[0], 20, replace=False)
+        if interim:
+            e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
+        else:
+            e = shap.GradientExplainer(model, next_x[inds, :, :, :])
+        test_x, test_y = next(iter(test_loader))
+        shap_values = e.shap_values(test_x[:1], nsamples=1000)
 
+        if not interim:
+            # unlike deepLIFT, Integrated Gradients aren't necessarily consistent for interim layers
+            model.eval()
+            model.zero_grad()
+            with torch.no_grad():
+                diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
+            sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+            d = np.abs(sums - diff).sum()
+            assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values " \
+                                                  "does not match difference! %f" % (d / np.abs(diff).sum())
+
+    print ('Running test from interim layer')
+    run_test(train_loader, test_loader, True)
+    print ('Running test on whole model')
+    run_test(train_loader, test_loader, False)
     # clean up
     shutil.rmtree(root_dir)

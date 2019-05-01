@@ -27,32 +27,63 @@ regression_metrics = [
     "runtime",
     "local_accuracy",
     "consistency_guarantees",
-    "mask_keep_positive",
-    "mask_keep_negative",
-    "keep_positive",
-    "keep_negative",
-    "batch_keep_absolute__r2",
-    "mask_remove_positive",
-    "mask_remove_negative",
-    "remove_positive",
-    "remove_negative",
-    "batch_remove_absolute__r2"
+    "keep_positive_mask",
+    "keep_positive_resample",
+    "keep_positive_impute",
+    "keep_negative_mask",
+    "keep_negative_resample",
+    "keep_negative_impute",
+    "keep_absolute_mask__r2",
+    "keep_absolute_resample__r2",
+    "keep_absolute_impute__r2",
+    "remove_positive_mask",
+    "remove_positive_resample",
+    "remove_positive_impute",
+    "remove_negative_mask",
+    "remove_negative_resample",
+    "remove_negative_impute",
+    "remove_absolute_mask__r2",
+    "remove_absolute_resample__r2",
+    "remove_absolute_impute__r2"
 ]
 
 binary_classification_metrics = [
     "runtime",
     "local_accuracy",
     "consistency_guarantees",
-    "mask_keep_positive",
-    "mask_keep_negative",
-    "keep_positive",
-    #"keep_negative",
-    "batch_keep_absolute__roc_auc",
-    "mask_remove_positive",
-    "mask_remove_negative",
-    "remove_positive",
-    #"remove_negative",
-    "batch_remove_absolute__roc_auc"
+    "keep_positive_mask",
+    "keep_positive_resample",
+    "keep_positive_impute",
+    "keep_negative_mask",
+    "keep_negative_resample",
+    "keep_negative_impute",
+    "keep_absolute_mask__roc_auc",
+    "keep_absolute_resample__roc_auc",
+    "keep_absolute_impute__roc_auc",
+    "remove_positive_mask",
+    "remove_positive_resample",
+    "remove_positive_impute",
+    "remove_negative_mask",
+    "remove_negative_resample",
+    "remove_negative_impute",
+    "remove_absolute_mask__roc_auc",
+    "remove_absolute_resample__roc_auc",
+    "remove_absolute_impute__roc_auc"
+]
+
+human_metrics = [
+    "human_and_00",
+    "human_and_01",
+    "human_and_11",
+    "human_or_00",
+    "human_or_01",
+    "human_or_11",
+    "human_xor_00",
+    "human_xor_01",
+    "human_xor_11",
+    "human_sum_00",
+    "human_sum_01",
+    "human_sum_11"
 ]
 
 linear_regress_methods = [
@@ -85,7 +116,8 @@ linear_classify_methods = [
 tree_regress_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
-    "tree_shap",
+    "tree_shap_tree_path_dependent",
+    "tree_shap_independent_200",
     "saabas",
     "random",
     "tree_gain",
@@ -101,15 +133,16 @@ tree_regress_methods = [
 tree_classify_methods = [
     # NEED tree_shap_ind
     # NEED split_count?
-    "tree_shap",
+    "tree_shap_tree_path_dependent",
+    "tree_shap_independent_200",
     "saabas",
     "random",
     "tree_gain",
-    ##"kernel_shap_1000_meanref",
+    "kernel_shap_1000_meanref",
     "mean_abs_tree_shap",
     #"kernel_shap_100_meanref",
     #"sampling_shap_10000",
-    ##"sampling_shap_1000",
+    "sampling_shap_1000",
     #"lime_tabular_regression_1000"
     #"sampling_shap_100"
 ]
@@ -140,12 +173,22 @@ _experiments += [["corrgroups60", "random_forest", m, s] for s in regression_met
 _experiments += [["corrgroups60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
 _experiments += [["corrgroups60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
 
+_experiments += [["independentlinear60", "lasso", m, s] for s in regression_metrics for m in linear_regress_methods]
+_experiments += [["independentlinear60", "ridge", m, s] for s in regression_metrics for m in linear_regress_methods]
+_experiments += [["independentlinear60", "decision_tree", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "random_forest", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
+
 _experiments += [["cric", "lasso", m, s] for s in binary_classification_metrics for m in linear_classify_methods]
 _experiments += [["cric", "ridge", m, s] for s in binary_classification_metrics for m in linear_classify_methods]
 _experiments += [["cric", "decision_tree", m, s] for s in binary_classification_metrics for m in tree_classify_methods]
 _experiments += [["cric", "random_forest", m, s] for s in binary_classification_metrics for m in tree_classify_methods]
 _experiments += [["cric", "gbm", m, s] for s in binary_classification_metrics for m in tree_classify_methods]
 _experiments += [["cric", "ffnn", m, s] for s in binary_classification_metrics for m in deep_classify_methods]
+
+_experiments += [["human", "decision_tree", m, s] for s in human_metrics for m in tree_regress_methods]
+
 
 def experiments(dataset=None, model=None, method=None, metric=None):
     for experiment in _experiments:
@@ -209,7 +252,7 @@ total_done = 0
 total_failed = 0
 host_records = {}
 worker_lock = Lock()
-ssh_conn_per_min_limit = 100
+ssh_conn_per_min_limit = 0 # set as an argument to run_remote_experiments
 def __thread_worker(q, host):
     global total_sent, total_done
     hostname, python_binary = host.split(":")
@@ -276,7 +319,7 @@ def __print_status():
     sys.stdout.flush()
 
 
-def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
+def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
     """ Use ssh to run the experiments on remote machines in parallel.
 
     Parameters
@@ -287,7 +330,13 @@ def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
     thread_hosts : list of strings
         Each host has the format "host_name:path_to_python_binary" and can appear multiple times
         in the list (one for each parallel execution you want on that machine).
+
+    rate_limit : int
+        How many ssh connections we make per minute to each host (to avoid throttling issues).
     """
+
+    global ssh_conn_per_min_limit
+    ssh_conn_per_min_limit = rate_limit
     
     # first we kill any remaining workers from previous runs
     # note we don't check_call because pkill kills our ssh call as well
@@ -301,10 +350,14 @@ def run_remote_experiments(experiments, thread_hosts, rate_limits={}):
             print("Failed to connect to", hostname, "after 15 seconds! Exiting.")
             return
     
-    global nexperiments
     experiments = copy.copy(list(experiments))
     random.shuffle(experiments) # this way all the hard experiments don't get put on one machine
+    global nexperiments, total_sent, total_done, total_failed, host_records
     nexperiments = len(experiments)
+    total_sent = 0
+    total_done = 0
+    total_failed = 0
+    host_records = {}
 
     q = Queue()
 

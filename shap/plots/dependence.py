@@ -1,16 +1,20 @@
+from __future__ import division
+
 import numpy as np
+import warnings
 try:
     import matplotlib.pyplot as pl
     import matplotlib
 except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
     pass
 from . import labels
 from . import colors
 from ..common import convert_name, approximate_interactions
 
-# TODO: remove color argument / use color argument
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
-                    interaction_index="auto", color="#1E88E5", axis_color="#333333",
+                    interaction_index="auto",
+                    color="#1E88E5", axis_color="#333333", cmap=colors.red_blue,
                     dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, show=True):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
@@ -98,7 +102,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
-            interaction_index=ind2, display_features=display_features, show=False
+            interaction_index=ind2, display_features=display_features, show=False,
+            xmin=xmin, xmax=xmax
         )
         if ind1 == ind2:
             pl.ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
@@ -115,9 +120,11 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    xv = features[:, ind].astype(np.float64)
-    xd = display_features[:, ind]
-    s = shap_values[:, ind]
+    oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
+    np.random.shuffle(oinds)
+    xv = features[oinds, ind].astype(np.float64)
+    xd = display_features[oinds, ind]
+    s = shap_values[oinds, ind]
     if type(xd[0]) == str:
         name_map = {}
         for i in range(len(xv)):
@@ -136,26 +143,28 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     categorical_interaction = False
 
     # get both the raw and display color values
+    color_norm = None
     if interaction_index is not None:
         cv = features[:, interaction_index]
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(features[:, interaction_index].astype(np.float), 5)
-        chigh = np.nanpercentile(features[:, interaction_index].astype(np.float), 95)
+        clow = np.nanpercentile(cv.astype(np.float), 5)
+        chigh = np.nanpercentile(cv.astype(np.float), 95)
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
                 cname_map[cd[i]] = cv[i]
             cnames = list(cname_map.keys())
             categorical_interaction = True
-        elif clow % 1 == 0 and chigh % 1 == 0 and len(set(features[:, interaction_index])) < 50:
+        elif clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
             categorical_interaction = True
 
-    # discritize colors for categorical features
-    color_norm = None
-    if categorical_interaction and clow != chigh:
-        bounds = np.linspace(clow, chigh, chigh - clow + 2)
-        color_norm = matplotlib.colors.BoundaryNorm(bounds, colors.red_blue.N)
-        
+        # discritize colors for categorical features
+        if categorical_interaction and clow != chigh:
+            clow = np.nanmin(cv.astype(np.float))
+            chigh = np.nanmax(cv.astype(np.float))
+            bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
+            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
+
     # optionally add jitter to feature values
     if x_jitter > 0:
         if x_jitter > 1: x_jitter = 1
@@ -170,21 +179,26 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             xv += (np.random.ranf(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
+    xv_nan = np.isnan(xv)
+    xv_notnan = np.invert(xv_nan)
     if interaction_index is not None:
 
         # plot the nan values in the interaction feature as grey
-        cvals = features[:, interaction_index].astype(np.float64)
-        cvals_nans = np.isnan(cvals)
-        pl.scatter(xv[cvals_nans], s[cvals_nans], s=dot_size, linewidth=0, color="#777777",
-                   alpha=alpha, norm=color_norm, rasterized=len(xv) > 500)
-        
-        
-        pl.scatter(xv[np.invert(cvals_nans)], s[np.invert(cvals_nans)], s=dot_size, linewidth=0, c=cvals[np.invert(cvals_nans)], cmap=colors.red_blue,
-                   alpha=alpha, vmin=clow, vmax=chigh, norm=color_norm, rasterized=len(xv) > 500)
+        cvals = features[oinds, interaction_index].astype(np.float64)
+        cvals_imp = cvals.copy()
+        cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
+        cvals[cvals_imp > chigh] = chigh
+        cvals[cvals_imp < clow] = clow
+        p = pl.scatter(
+            xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+            cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
+            norm=color_norm, rasterized=len(xv) > 500
+        )
+        p.set_array(cvals[xv_notnan])
     else:
-        pl.scatter(xv, s, s=dot_size, linewidth=0, color="#1E88E5",
+        pl.scatter(xv, s, s=dot_size, linewidth=0, color=color,
                    alpha=alpha, rasterized=len(xv) > 500)
-    
+
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
         if type(cd[0]) == str:
@@ -222,12 +236,19 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         pl.xlim(xmin, xmax)
 
     # plot any nan feature values as tick marks along the y-axis
-    xv_nans = np.isnan(xv)
     xlim = pl.xlim()
-    pl.scatter(
-        xlim[0] * np.ones(xv_nans.sum()), s[xv_nans], marker=1,
-        linewidth=2, c=cvals[xv_nans], cmap=colors.red_blue, alpha=alpha
-    )
+    if interaction_index is not None:
+        p = pl.scatter(
+            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+            linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
+            vmin=clow, vmax=chigh
+        )
+        p.set_array(cvals[xv_nan])
+    else:
+        pl.scatter(
+            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+            linewidth=2, color=color, alpha=alpha
+        )
     pl.xlim(*xlim)
 
     # make the plot more readable
@@ -249,4 +270,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if type(xd[0]) == str:
         pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical', fontsize=11)
     if show:
-        pl.show()
+        with warnings.catch_warnings(): # ignore expected matplotlib warnings
+            warnings.simplefilter("ignore", RuntimeWarning)
+            pl.show()

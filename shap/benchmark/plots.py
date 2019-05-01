@@ -1,142 +1,218 @@
 import numpy as np
 from .experiments import run_experiments
 from ..plots import colors
+from .. import __version__
 from . import models
 from . import methods
+from . import metrics
 import sklearn
 import io
 import base64
+import os
 try:
     import matplotlib.pyplot as pl
+    import matplotlib
 except ImportError:
     pass
 
 
-labels = {
-    "consistency_guarantees": {
-        "title": "Consistency Guarantees",
-        "sort_order": 3
-    },
-    "local_accuracy": {
-        "title": "Local Accuracy",
-        "sort_order": 2
-    },
-    "runtime": {
-        "title": "Runtime",
-        "sort_order": 1
-    },
-    "remove_positive": {
-        "title": "Remove Positive",
-        "xlabel": "Max fraction of features removed",
-        "ylabel": "Negative mean model output",
-        "sort_order": 11
-    },
-    "mask_remove_positive": {
-        "title": "Mask Remove Positive",
-        "xlabel": "Max fraction of features removed",
-        "ylabel": "Negative mean model output",
-        "sort_order": 9
-    },
-    "remove_negative": {
-        "title": "Remove Negative",
-        "xlabel": "Max fraction of features removed",
-        "ylabel": "Mean model output",
-        "sort_order": 12
-    },
-    "mask_remove_negative": {
-        "title": "Mask Remove Negative",
-        "xlabel": "Max fraction of features removed",
-        "ylabel": "Mean model output",
-        "sort_order": 10
-    },
-    "keep_positive": {
-        "title": "Keep Positive",
-        "xlabel": "Max fraction of features kept",
-        "ylabel": "Mean model output",
-        "sort_order": 6
-    },
-    "mask_keep_positive": {
-        "title": "Mask Keep Positive",
-        "xlabel": "Max fraction of features kept",
-        "ylabel": "Mean model output",
-        "sort_order": 4
-    },
-    "keep_negative": {
-        "title": "Keep Negative",
-        "xlabel": "Max fraction of features kept",
-        "ylabel": "Negative mean model output",
-        "sort_order": 7
-    },
-    "mask_keep_negative": {
-        "title": "Mask Keep Negative",
-        "xlabel": "Max fraction of features kept",
-        "ylabel": "Negative mean model output",
-        "sort_order": 5
-    },
-    "batch_remove_absolute__r2": {
-        "title": "Batch Remove Absolute",
-        "xlabel": "Fraction of features removed",
-        "ylabel": "1 - R^2",
-        "sort_order": 13
-    },
-    "batch_keep_absolute__r2": {
-        "title": "Batch Keep Absolute",
-        "xlabel": "Fraction of features kept",
-        "ylabel": "R^2",
-        "sort_order": 8
-    },
-    "batch_remove_absolute__roc_auc": {
-        "title": "Batch Remove Absolute",
-        "xlabel": "Fraction of features removed",
-        "ylabel": "1 - ROC AUC",
-        "sort_order": 13
-    },
-    "batch_keep_absolute__roc_auc": {
-        "title": "Batch Keep Absolute",
-        "xlabel": "Fraction of features kept",
-        "ylabel": "ROC AUC",
-        "sort_order": 8
-    },
+metadata = {
+    # "runtime": {
+    #     "title": "Runtime",
+    #     "sort_order": 1
+    # },
+    # "local_accuracy": {
+    #     "title": "Local Accuracy",
+    #     "sort_order": 2
+    # },
+    # "consistency_guarantees": {
+    #     "title": "Consistency Guarantees",
+    #     "sort_order": 3
+    # },
+    # "keep_positive_mask": {
+    #     "title": "Keep Positive (mask)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "Mean model output",
+    #     "sort_order": 4
+    # },
+    # "keep_negative_mask": {
+    #     "title": "Keep Negative (mask)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "Negative mean model output",
+    #     "sort_order": 5
+    # },
+    # "keep_absolute_mask__r2": {
+    #     "title": "Keep Absolute (mask)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "R^2",
+    #     "sort_order": 6
+    # },
+    # "keep_absolute_mask__roc_auc": {
+    #     "title": "Keep Absolute (mask)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "ROC AUC",
+    #     "sort_order": 6
+    # },
+    # "remove_positive_mask": {
+    #     "title": "Remove Positive (mask)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "Negative mean model output",
+    #     "sort_order": 7
+    # },
+    # "remove_negative_mask": {
+    #     "title": "Remove Negative (mask)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "Mean model output",
+    #     "sort_order": 8
+    # },
+    # "remove_absolute_mask__r2": {
+    #     "title": "Remove Absolute (mask)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "1 - R^2",
+    #     "sort_order": 9
+    # },
+    # "remove_absolute_mask__roc_auc": {
+    #     "title": "Remove Absolute (mask)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "1 - ROC AUC",
+    #     "sort_order": 9
+    # },
+    # "keep_positive_resample": {
+    #     "title": "Keep Positive (resample)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "Mean model output",
+    #     "sort_order": 10
+    # },
+    # "keep_negative_resample": {
+    #     "title": "Keep Negative (resample)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "Negative mean model output",
+    #     "sort_order": 11
+    # },
+    # "keep_absolute_resample__r2": {
+    #     "title": "Keep Absolute (resample)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "R^2",
+    #     "sort_order": 12
+    # },
+    # "keep_absolute_resample__roc_auc": {
+    #     "title": "Keep Absolute (resample)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "ROC AUC",
+    #     "sort_order": 12
+    # },
+    # "remove_positive_resample": {
+    #     "title": "Remove Positive (resample)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "Negative mean model output",
+    #     "sort_order": 13
+    # },
+    # "remove_negative_resample": {
+    #     "title": "Remove Negative (resample)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "Mean model output",
+    #     "sort_order": 14
+    # },
+    # "remove_absolute_resample__r2": {
+    #     "title": "Remove Absolute (resample)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "1 - R^2",
+    #     "sort_order": 15
+    # },
+    # "remove_absolute_resample__roc_auc": {
+    #     "title": "Remove Absolute (resample)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "1 - ROC AUC",
+    #     "sort_order": 15
+    # },
+    # "remove_positive_retrain": {
+    #     "title": "Remove Positive (retrain)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "Negative mean model output",
+    #     "sort_order": 11
+    # },
+    # "remove_negative_retrain": {
+    #     "title": "Remove Negative (retrain)",
+    #     "xlabel": "Max fraction of features removed",
+    #     "ylabel": "Mean model output",
+    #     "sort_order": 12
+    # },
+    # "keep_positive_retrain": {
+    #     "title": "Keep Positive (retrain)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "Mean model output",
+    #     "sort_order": 6
+    # },
+    # "keep_negative_retrain": {
+    #     "title": "Keep Negative (retrain)",
+    #     "xlabel": "Max fraction of features kept",
+    #     "ylabel": "Negative mean model output",
+    #     "sort_order": 7
+    # },
+    # "batch_remove_absolute__r2": {
+    #     "title": "Batch Remove Absolute",
+    #     "xlabel": "Fraction of features removed",
+    #     "ylabel": "1 - R^2",
+    #     "sort_order": 13
+    # },
+    # "batch_keep_absolute__r2": {
+    #     "title": "Batch Keep Absolute",
+    #     "xlabel": "Fraction of features kept",
+    #     "ylabel": "R^2",
+    #     "sort_order": 8
+    # },
+    # "batch_remove_absolute__roc_auc": {
+    #     "title": "Batch Remove Absolute",
+    #     "xlabel": "Fraction of features removed",
+    #     "ylabel": "1 - ROC AUC",
+    #     "sort_order": 13
+    # },
+    # "batch_keep_absolute__roc_auc": {
+    #     "title": "Batch Keep Absolute",
+    #     "xlabel": "Fraction of features kept",
+    #     "ylabel": "ROC AUC",
+    #     "sort_order": 8
+    # },
     
-    "linear_shap_corr": {
-        "title": "Linear SHAP (corr)"
-    },
-    "linear_shap_ind": {
-        "title": "Linear SHAP (ind)"
-    },
-    "coef": {
-        "title": "Coefficents"
-    },
-    "random": {
-        "title": "Random"
-    },
-    "kernel_shap_1000_meanref": {
-        "title": "Kernel SHAP 1000 mean ref."
-    },
-    "sampling_shap_1000": {
-        "title": "Sampling SHAP 1000"
-    },
-    "tree_shap": {
-        "title": "Tree SHAP"
-    },
-    "saabas": {
-        "title": "Saabas"
-    },
-    "tree_gain": {
-        "title": "Gain/Gini Importance"
-    },
-    "mean_abs_tree_shap": {
-        "title": "mean(|Tree SHAP|)"
-    },
-    "lasso_regression": {
-        "title": "Lasso Regression"
-    },
-    "ridge_regression": {
-        "title": "Ridge Regression"
-    },
-    "gbm_regression": {
-        "title": "Gradient Boosting Regression"
-    }
+    # "linear_shap_corr": {
+    #     "title": "Linear SHAP (corr)"
+    # },
+    # "linear_shap_ind": {
+    #     "title": "Linear SHAP (ind)"
+    # },
+    # "coef": {
+    #     "title": "Coefficents"
+    # },
+    # "random": {
+    #     "title": "Random"
+    # },
+    # "kernel_shap_1000_meanref": {
+    #     "title": "Kernel SHAP 1000 mean ref."
+    # },
+    # "sampling_shap_1000": {
+    #     "title": "Sampling SHAP 1000"
+    # },
+    # "tree_shap_tree_path_dependent": {
+    #     "title": "Tree SHAP"
+    # },
+    # "saabas": {
+    #     "title": "Saabas"
+    # },
+    # "tree_gain": {
+    #     "title": "Gain/Gini Importance"
+    # },
+    # "mean_abs_tree_shap": {
+    #     "title": "mean(|Tree SHAP|)"
+    # },
+    # "lasso_regression": {
+    #     "title": "Lasso Regression"
+    # },
+    # "ridge_regression": {
+    #     "title": "Ridge Regression"
+    # },
+    # "gbm_regression": {
+    #     "title": "Gradient Boosting Regression"
+    # }
 }
 
 benchmark_color_map = {
@@ -150,18 +226,56 @@ benchmark_color_map = {
     "kernel_shap_1000_meanref": "#7C52FF"
 }
 
-negated_metrics = [
-    "runtime",
-    "remove_positive",
-    "mask_remove_positive",
-    "keep_negative",
-    "mask_keep_negative"
-]
+# negated_metrics = [
+#     "runtime",
+#     "remove_positive_retrain",
+#     "remove_positive_mask",
+#     "remove_positive_resample",
+#     "keep_negative_retrain",
+#     "keep_negative_mask",
+#     "keep_negative_resample"
+# ]
 
-one_minus_metrics = [
-    "batch_remove_absolute__r2",
-    "batch_remove_absolute__roc_auc"
-]
+# one_minus_metrics = [
+#     "remove_absolute_mask__r2",
+#     "remove_absolute_mask__roc_auc",
+#     "remove_absolute_resample__r2",
+#     "remove_absolute_resample__roc_auc"
+# ]
+
+def get_method_color(method):
+    for l in getattr(methods, method).__doc__.split("\n"):
+        l = l.strip()
+        if l.startswith("color = "):
+            v = l.split("=")[1].strip()
+            if v.startswith("red_blue_circle("):
+                return colors.red_blue_circle(float(v[16:-1]))
+            else:
+                return v
+    return "#000000"
+
+def get_method_linestyle(method):
+    for l in getattr(methods, method).__doc__.split("\n"):
+        l = l.strip()
+        if l.startswith("linestyle = "):
+            return l.split("=")[1].strip()
+    return "solid"
+
+def get_metric_attr(metric, attr):
+    for l in getattr(metrics, metric).__doc__.split("\n"):
+        l = l.strip()
+
+        # string
+        prefix = attr+" = \""
+        suffix = "\""
+        if l.startswith(prefix) and l.endswith(suffix):
+            return l[len(prefix):-len(suffix)]
+        
+        # number
+        prefix = attr+" = "
+        if l.startswith(prefix):
+            return float(l[len(prefix):])
+    return ""
 
 def plot_curve(dataset, model, metric, cmap=benchmark_color_map):
     experiments = run_experiments(dataset=dataset, model=model, metric=metric)
@@ -169,19 +283,26 @@ def plot_curve(dataset, model, metric, cmap=benchmark_color_map):
     method_arr = []
     for (name,(fcounts,scores)) in experiments:
         _,_,method,_ = name
-        if metric in negated_metrics:
+        transform = get_metric_attr(metric, "transform")
+        if transform == "negate":
             scores = -scores
-        elif metric in one_minus_metrics:
+        elif transform == "one_minus":
             scores = 1 - scores
         auc = sklearn.metrics.auc(fcounts, scores) / fcounts[-1]
         method_arr.append((auc, method, scores))
     for (auc,method,scores) in sorted(method_arr):
         method_title = getattr(methods, method).__doc__.split("\n")[0].strip()
         l = "{:6.3f} - ".format(auc) + method_title
-        pl.plot(fcounts / fcounts[-1], scores, label=l, color=cmap.get(method, "#000000"), linewidth=2)
-    pl.xlabel(labels[metric]["xlabel"])
-    pl.ylabel(labels[metric]["ylabel"])
-    pl.title(labels[metric]["title"])
+        pl.plot(
+            fcounts / fcounts[-1], scores, label=l,
+            color=get_method_color(method), linewidth=2,
+            linestyle=get_method_linestyle(method)
+            )
+    metric_title = getattr(metrics, metric).__doc__.split("\n")[0].strip()
+    pl.xlabel(get_metric_attr(metric, "xlabel"))
+    pl.ylabel(get_metric_attr(metric, "ylabel"))
+    model_title = getattr(models, dataset+"__"+model).__doc__.split("\n")[0].strip()
+    pl.title(metric_title + " - " + model_title)
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('left')
     pl.gca().spines['right'].set_visible(False)
@@ -190,24 +311,92 @@ def plot_curve(dataset, model, metric, cmap=benchmark_color_map):
     pl.legend(reversed(ahandles), reversed(alabels))
     return pl.gcf()
 
+def plot_human(dataset, model, metric, cmap=benchmark_color_map):
+    experiments = run_experiments(dataset=dataset, model=model, metric=metric)
+    pl.figure()
+    method_arr = []
+    for (name,(fcounts,scores)) in experiments:
+        _,_,method,_ = name
+        diff_sum = np.sum(np.abs(scores[1] - scores[0]))
+        method_arr.append((diff_sum, method, scores[0], scores[1]))
+    
+    inds = np.arange(3)    # the x locations for the groups
+    inc_width = (1.0 / len(method_arr)) * 0.8
+    width = inc_width * 0.9
+    pl.bar(inds, method_arr[0][2], width, label="Human Consensus", color="black", edgecolor="white")
+    i = 1
+    line_style_to_hatch = {
+        "dashed": "///",
+        "dotted": "..."
+    }
+    for (diff_sum, method, _, methods_attrs) in sorted(method_arr):
+        method_title = getattr(methods, method).__doc__.split("\n")[0].strip()
+        l = "{:.2f} - ".format(diff_sum) + method_title
+        pl.bar(
+            inds + inc_width * i, methods_attrs.flatten(), width, label=l, edgecolor="white",
+            color=get_method_color(method), hatch=line_style_to_hatch.get(get_method_linestyle(method), None)
+        )
+        i += 1
+    metric_title = getattr(metrics, metric).__doc__.split("\n")[0].strip()
+    pl.xlabel("Features in the model")
+    pl.ylabel("Feature attribution value")
+    model_title = getattr(models, dataset+"__"+model).__doc__.split("\n")[0].strip()
+    pl.title(metric_title + " - " + model_title)
+    pl.gca().xaxis.set_ticks_position('bottom')
+    pl.gca().yaxis.set_ticks_position('left')
+    pl.gca().spines['right'].set_visible(False)
+    pl.gca().spines['top'].set_visible(False)
+    ahandles, alabels = pl.gca().get_legend_handles_labels()
+    #pl.legend(ahandles, alabels)
+    pl.xticks(np.array([0, 1, 2, 3]) - (inc_width + width)/2, ["", "", "", ""])
+
+    pl.gca().xaxis.set_minor_locator(matplotlib.ticker.FixedLocator([0.4, 1.4, 2.4]))
+    pl.gca().xaxis.set_minor_formatter(matplotlib.ticker.FixedFormatter(["Fever", "Cough", "Headache"]))
+    pl.gca().tick_params(which='minor', length=0)
+
+    pl.axhline(0, color="#aaaaaa", linewidth=0.5)
+
+    box = pl.gca().get_position()
+    pl.gca().set_position([
+        box.x0, box.y0 + box.height * 0.3,
+        box.width, box.height * 0.7
+    ])
+
+    # Put a legend below current axis
+    pl.gca().legend(ahandles, alabels, loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
+
+    return pl.gcf()
+
+def _human_score_map(human_consensus, methods_attrs):
+    """ Converts human agreement differences to numerical scores for coloring.
+    """
+
+    v = 1 - min(np.sum(np.abs(methods_attrs - human_consensus)) / (np.abs(human_consensus).sum() + 1), 1.0)
+    return v
+
 def make_grid(scores, dataset, model):
     color_vals = {}
+    metric_sort_order = {}
     for (_,_,method,metric),(fcounts,score) in filter(lambda x: x[0][0] == dataset and x[0][1] == model, scores):
+        metric_sort_order[metric] = metric_sort_order.get(metric, len(metric_sort_order))
         if metric not in color_vals:
             color_vals[metric] = {}
 
-        if metric in negated_metrics:
+        transform = get_metric_attr(metric, "transform")
+        if transform == "negate":
             score = -score
-        elif metric in one_minus_metrics:
+        elif transform == "one_minus":
             score = 1 - score
 
         if fcounts is None:
             color_vals[metric][method] = score
+        elif fcounts == "human":
+            color_vals[metric][method] = _human_score_map(*score)
         else:
             auc = sklearn.metrics.auc(fcounts, score) / fcounts[-1]
             color_vals[metric][method] = auc
     
-    col_keys = sorted(list(color_vals.keys()), key=lambda v: labels[v]["sort_order"])
+    col_keys = sorted(list(color_vals.keys()), key=lambda v: metric_sort_order[metric])
     row_keys = list(set([v for k in col_keys for v in color_vals[k].keys()]))
     
     data = -28567 * np.ones((len(row_keys), len(col_keys)))
@@ -242,19 +431,24 @@ red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
               (1.0, 1, 1))
 })
 from IPython.core.display import HTML
-def plot_grids(dataset, model_names):
+def plot_grids(dataset, model_names, out_dir=None):
+
+    if out_dir is not None:
+        os.mkdir(out_dir)
 
     scores = []
     for model in model_names:
         scores.extend(run_experiments(dataset=dataset, model=model))
-    
-    prefix = ""
+
+    prefix = "<style type='text/css'> .shap_benchmark__select:focus { outline-width: 0 }</style>"
     out = "" # background: rgb(30, 136, 229)
     
-    out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>"
-    out += "<div style='height: 1px; background: #ddd;'></div>"
+    # out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>\n"
+    # out += "<div style='height: 1px; background: #ddd;'></div>\n"
     #out += "<div style='height: 7px; background-image: linear-gradient(to right, rgb(30, 136, 229), rgb(255, 13, 87));'></div>"
-    out += "<table style='border-width: 1px; font-size: 14px; margin-left: 40px'>"
+
+    out += "<div style='position: fixed; left: 0px; top: 0px; right: 0px; height: 230px; background: #fff;'>\n" # box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    out += "<div style='position: absolute; bottom: 0px; left: 0px; right: 0px;' align='center'><table style='border-width: 1px; margin-right: 100px'>\n"
     for ind,model in enumerate(model_names):
         row_keys, col_keys, data = make_grid(scores, dataset, model)
 #         print(data)
@@ -262,43 +456,102 @@ def plot_grids(dataset, model_names):
 #         print(colors.red_blue_solid(1.))
 #         return
         for metric in col_keys:
-            if metric not in ["local_accuracy", "runtime", "consistency_guarantees"]:
+            save_plot = False
+            if metric.startswith("human_"):
+                plot_human(dataset, model, metric)
+                save_plot = True
+            elif metric not in ["local_accuracy", "runtime", "consistency_guarantees"]:
                 plot_curve(dataset, model, metric)
+                save_plot = True
+
+            if save_plot:
                 buf = io.BytesIO()
-                pl.savefig(buf, format = 'png')
+                pl.gcf().set_size_inches(1200.0/175,1000.0/175)
+                pl.savefig(buf, format='png', dpi=175)
+                if out_dir is not None:
+                    pl.savefig("%s/plot_%s_%s_%s.pdf" % (out_dir, dataset, model, metric), format='pdf')
                 pl.close()
                 buf.seek(0)
                 data_uri = base64.b64encode(buf.read()).decode('utf-8').replace('\n', '')
                 plot_id = "plot__"+dataset+"__"+model+"__"+metric
-                prefix += "<div onclick='document.getElementById(\"%s\").style.display = \"none\"' style='display: none; position: fixed; z-index: 10000; left: 0px; right: 0px; top: 0px; bottom: 0px; background: rgba(255,255,255,0.5);' id='%s'>" % (plot_id, plot_id)
-                prefix += "<img style='margin-left: auto; margin-right: auto; margin-top: 200px;' src='data:image/png;base64,%s'>" % data_uri
+                prefix += "<div onclick='document.getElementById(\"%s\").style.display = \"none\"' style='display: none; position: fixed; z-index: 10000; left: 0px; right: 0px; top: 0px; bottom: 0px; background: rgba(255,255,255,0.9);' id='%s'>" % (plot_id, plot_id)
+                prefix += "<img width='600' height='500' style='margin-left: auto; margin-right: auto; margin-top: 230px; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);' src='data:image/png;base64,%s'>" % data_uri
                 prefix += "</div>"
-        
+
         model_title = getattr(models, dataset+"__"+model).__doc__.split("\n")[0].strip()
 
         if ind == 0:
-            out += "<tr><td style='background: #fff'></td></td>"
+            out += "<tr><td style='background: #fff; width: 250px'></td></td>"
             for j in range(data.shape[1]):
-                metric_title = labels[col_keys[j]]["title"]
-                out += "<td style='width: 40px; background: #fff'><div style='margin-bottom: -5px; white-space: nowrap; transform: rotate(-45deg); transform-origin: left top 0; width: 1.5em; margin-top: 8em'>" + metric_title + "</div></td>"
-            out += "</tr>"
-        out += "<tr><td style='background: #fff'></td><td colspan='%d' style='background: #fff; font-weight: bold; text-align: center'>%s</td></tr>" % (data.shape[1], model_title)
+                metric_title = getattr(metrics, col_keys[j]).__doc__.split("\n")[0].strip()
+                out += "<td style='width: 40px; min-width: 40px; background: #fff; text-align: right;'><div style='margin-left: 10px; margin-bottom: -5px; white-space: nowrap; transform: rotate(-45deg); transform-origin: left top 0; width: 1.5em; margin-top: 8em'>" + metric_title + "</div></td>"
+            out += "</tr>\n"
+            out += "</table></div></div>\n"
+            out += "<table style='border-width: 1px; margin-right: 100px; margin-top: 230px;'>\n"
+        out += "<tr><td style='background: #fff'></td><td colspan='%d' style='background: #fff; font-weight: bold; text-align: center; margin-top: 10px;'>%s</td></tr>\n" % (data.shape[1], model_title)
         for i in range(data.shape[0]):
             out += "<tr>"
 #             if i == 0:
 #                 out += "<td rowspan='%d' style='background: #fff; text-align: center; white-space: nowrap; vertical-align: middle; '><div style='font-weight: bold; transform: rotate(-90deg); transform-origin: left top 0; width: 1.5em; margin-top: 8em'>%s</div></td>" % (data.shape[0], model_name)
             method_title = getattr(methods, row_keys[i]).__doc__.split("\n")[0].strip()
-            out += "<td style='background: #ffffff' title='shap.LinearExplainer(model)'>" + method_title + "</td>"
+            out += "<td style='background: #ffffff; text-align: right; width: 250px' title='shap.LinearExplainer(model)'>" + method_title + "</td>\n"
             for j in range(data.shape[1]):
                 plot_id = "plot__"+dataset+"__"+model+"__"+col_keys[j]
-                out += "<td onclick='document.getElementById(\"%s\").style.display = \"block\"' style='padding: 0px; padding-left: 0px; padding-right: 0px; border-left: 0px solid #999; width: 42px; height: 34px; background-color: #fff'>" % plot_id
+                out += "<td onclick='document.getElementById(\"%s\").style.display = \"block\"' style='padding: 0px; padding-left: 0px; padding-right: 0px; border-left: 0px solid #999; width: 42px; min-width: 42px; height: 34px; background-color: #fff'>" % plot_id
                 #out += "<div style='opacity: "+str(2*(max(1-data[i,j], data[i,j])-0.5))+"; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(0. if data[i,j] < 0.5 else 1.)[:-1])) + "; height: "+str((30*max(1-data[i,j], data[i,j])))+"px; margin-left: auto; margin-right: auto; width:"+str((30*max(1-data[i,j], data[i,j])))+"px'></div>"
-                out += "<div style='opacity: "+str(1)+"; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(2*(data[i,j]-0.5))[:-1])) + "; height: "+str((30*data[i,j]))+"px; margin-left: auto; margin-right: auto; width:"+str((30*data[i,j]))+"px'></div>"
+                out += "<div style='opacity: "+str(1)+"; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(data[i,j]-0.8))[:-1])) + "; height: "+str((30*data[i,j]))+"px; margin-left: auto; margin-right: auto; width:"+str((30*data[i,j]))+"px'></div>"
                 #out += "<div style='float: left; background-color: #eee; height: 10px; width: "+str((40*(1-data[i,j])))+"px'></div>"
-                out += "</td>"
-            out += "</tr>" # 
+                out += "</td>\n"
+            out += "</tr>\n" # 
             
-        out += "<tr><td colspan='%d' style='background: #fff'></td>" % (data.shape[1] + 1)
+        out += "<tr><td colspan='%d' style='background: #fff'></td></tr>" % (data.shape[1] + 1)
     out += "</table>"
+
+    out += "<div style='position: fixed; left: 0px; top: 0px; right: 0px; text-align: left; padding: 20px; text-align: right'>\n"
+    out += "<div style='float: left; font-weight: regular; font-size: 24px; color: #000;'>SHAP Benchmark <span style='font-size: 14px; color: #777777;'>v"+__version__+"</span></div>\n"
+# select {
+#   margin: 50px;
+#   width: 150px;
+#   padding: 5px 35px 5px 5px;
+#   font-size: 16px;
+#   border: 1px solid #ccc;
+#   height: 34px;
+#   -webkit-appearance: none;
+#   -moz-appearance: none;
+#   appearance: none;
+#   background: url(http://www.stackoverflow.com/favicon.ico) 96% / 15% no-repeat #eee;
+# }
+    #out += "<div style='display: inline-block; margin-right: 20px; font-weight: normal; text-decoration: none; font-size: 18px; color: #000;'>Dataset:</div>\n"
     
-    return HTML(prefix + out)
+    out += "<select id='shap_benchmark__select' onchange=\"document.location = '../' + this.value + '/index.html'\"dir='rtl' class='shap_benchmark__select' style='font-weight: normal; font-size: 20px; color: #000; padding: 10px; background: #fff; border: 1px solid #fff; -webkit-appearance: none; appearance: none;'>\n"
+    out += "<option value='human' "+("selected" if dataset == "human" else "")+">Agreement with Human Intuition</option>\n"
+    out += "<option value='corrgroups60' "+("selected" if dataset == "corrgroups60" else "")+">Correlated Groups 60 Dataset</option>\n"
+    out += "<option value='independentlinear60' "+("selected" if dataset == "independentlinear60" else "")+">Independent Linear 60 Dataset</option>\n"
+    #out += "<option>CRIC</option>\n"
+    out += "</select>\n"
+    #out += "<script> document.onload = function() { document.getElementById('shap_benchmark__select').value = '"+dataset+"'; }</script>"
+    #out += "<div style='display: inline-block; margin-left: 20px; font-weight: normal; text-decoration: none; font-size: 18px; color: #000;'>CRIC</div>\n"
+    out += "</div>\n"
+
+    # output the legend
+    out += "<table style='border-width: 0px; width: 100px; position: fixed; right: 50px; top: 200px; background: rgba(255, 255, 255, 0.9)'>\n"
+    out += "<tr><td style='background: #fff; font-weight: normal; text-align: center'>Higher score</td></tr>\n"
+    legend_size = 21
+    for i in range(legend_size-9):
+        out += "<tr>"
+        out += "<td style='padding: 0px; padding-left: 0px; padding-right: 0px; border-left: 0px solid #999; height: 34px'>"
+        val = (legend_size-i-1) / (legend_size-1)
+        out += "<div style='opacity: 1; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(val-0.8)))[:-1]) + "; height: "+str(30*val)+"px; margin-left: auto; margin-right: auto; width:"+str(30*val)+"px'></div>"
+        out += "</td>"
+        out += "</tr>\n" # 
+    out += "<tr><td style='background: #fff; font-weight: normal; text-align: center'>Lower score</td></tr>\n"
+    out += "</table>\n"
+
+    if out_dir is not None:
+        with open(out_dir + "/index.html", "w") as f:
+            f.write("<html><body style='margin: 0px; font-size: 16px; font-family: \"Myriad Pro\", Arial, sans-serif;'><center>")
+            f.write(prefix)
+            f.write(out)
+            f.write("</center></body></html>")
+    else:
+        return HTML(prefix + out)

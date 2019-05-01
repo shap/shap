@@ -3,10 +3,27 @@ from setuptools.command.build_ext import build_ext as _build_ext
 import os
 import re
 import codecs
+import platform
+from distutils.sysconfig import get_config_var
+from distutils.version import LooseVersion
+import sys
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload
 # which depends on ~/.pypirc
+
+
+# This is copied from @robbuckley's fix for Panda's
+# For mac, ensure extensions are built for macos 10.9 when compiling on a
+# 10.9 system or above, overriding distuitls behavior which is to target
+# the version that python was built for. This may be overridden by setting
+# MACOSX_DEPLOYMENT_TARGET before calling setup.py
+if sys.platform == 'darwin':
+    if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+        current_system = LooseVersion(platform.mac_ver()[0])
+        python_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        if python_target < '10.9' and current_system >= '10.9':
+            os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -72,11 +89,12 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', 'ipython'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', 'ipython', 'scikit-image'],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
         zip_safe=False
+        # python_requires='>3.0' we will add this at some point
     )
 
 

@@ -1,9 +1,11 @@
 import numpy as np
 import scipy
+import warnings
 try:
     import matplotlib.pyplot as pl
     import matplotlib
 except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
     pass
 from . import labels
 from . import colors
@@ -60,7 +62,7 @@ def monitoring_plot(ind, shap_values, features, feature_names=None):
     if min_pval < 0.05 / shap_values.shape[1]:
         pl.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
         
-    pl.scatter(xs, ys, s=10, c=features[:,ind], cmap=colors.red_blue_solid)
+    pl.scatter(xs, ys, s=10, c=features[:,ind], cmap=colors.red_blue)
     
     pl.xlabel("Sample index")
     pl.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)

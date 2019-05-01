@@ -34,6 +34,19 @@ def boston(display=False):
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
     return df, d.target # pylint: disable=E1101
 
+def imdb(display=False):
+    """ Return the clssic IMDB sentiment analysis training data in a nice package.
+
+    Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
+    Paper to cite when using the data is: http://www.aclweb.org/anthology/P11-1015
+    """
+
+    with open(cache(github_data_url + "imdb_train.txt")) as f:
+        data = f.readlines()
+    y = np.ones(25000, dtype=np.bool)
+    y[:12500] = 0
+    return data, y
+
 def communitiesandcrime(display=False):
     """ Predict total number of non-violent crimes per 100K popuation.
 
@@ -58,7 +71,7 @@ def communitiesandcrime(display=False):
     return X, y
 
 def diabetes(display=False):
-    """ Return the diabetes housing data in a nice package. """
+    """ Return the diabetes data in a nice package. """
 
     d = sklearn.datasets.load_diabetes()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
@@ -140,7 +153,9 @@ def cric(display=False):
 
 
 def corrgroups60(display=False):
-    """ A simulated dataset with tight correlations among distinct groups of features.
+    """ Correlated Groups 60
+    
+    A simulated dataset with tight correlations among distinct groups of features.
     """
 
     # set a constant seed
@@ -182,10 +197,49 @@ def corrgroups60(display=False):
     return pd.DataFrame(X), y
 
 
+def independentlinear60(display=False):
+    """ A simulated dataset with tight correlations among distinct groups of features.
+    """
+
+    # set a constant seed
+    old_seed = np.random.seed()
+    np.random.seed(0)
+
+    # generate dataset with known correlation
+    N = 1000
+    M = 60
+
+    # set one coefficent from each group of 3 to 1
+    beta = np.zeros(M)
+    beta[0:30:3] = 1
+    f = lambda X: np.matmul(X, beta)
+
+    # Make sure the sample correlation is a perfect match
+    X_start = np.random.randn(N, M)
+    X = X_start - X_start.mean(0)
+    y = f(X) + np.random.randn(N) * 1e-2
+
+    # restore the previous numpy random seed
+    np.random.seed(old_seed)
+
+    return pd.DataFrame(X), y
+
+
 def a1a():
     """ A sparse dataset in scipy csr matrix format.
     """
     return sklearn.datasets.load_svmlight_file(cache(github_data_url + 'a1a.svmlight'))
+
+
+def rank():
+    """ Ranking datasets from lightgbm repository.
+    """
+    rank_data_url = 'https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/'
+    x_train, y_train = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.train'))
+    x_test, y_test = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.test'))
+    q_train = np.loadtxt(cache(rank_data_url + 'rank.train.query'))
+    q_test = np.loadtxt(cache(rank_data_url + 'rank.test.query'))
+    return x_train, y_train, x_test, y_test, q_train, q_test
 
 
 def cache(url, file_name=None):

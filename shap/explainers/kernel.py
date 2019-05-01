@@ -6,7 +6,8 @@ import scipy as sp
 import logging
 import copy
 import itertools
-from sklearn.linear_model import LassoLarsIC, Lasso
+import warnings
+from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 from .explainer import Explainer
@@ -65,7 +66,7 @@ class KernelExplainer(Explainer):
         computes a the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
-    data : numpy.array or pandas.DataFrame or iml.DenseData or any scipy.sparse matrix
+    data : numpy.array or pandas.DataFrame or shap.common.DenseData or any scipy.sparse matrix
         The background dataset to use for integrating out features. To determine the impact
         of a feature, that feature is set to "missing" and the change in the model output
         is observed. Since most models aren't designed to handle arbitrary missing data at test
@@ -138,11 +139,17 @@ class KernelExplainer(Explainer):
 
         nsamples : "auto" or int
             Number of times to re-evaluate the model when explaining each prediction. More samples
-            lead to lower variance estimates of the SHAP values.
+            lead to lower variance estimates of the SHAP values. The "auto" setting uses
+            `nsamples = 2 * X.shape[1] + 2048`.
 
-        l1_reg : "auto" or float
+        l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
             The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). Set this to zero to remove the feature selection step before estimation.
+            a debiased lasso). The auto option currently uses "aic" when less that 20% of the possible sample
+            space is enumerated, otherwise it uses no regularization. THE BEHAVIOR OF "auto" WILL CHANGE
+            in a future version to be based on num_features instead of AIC.
+            The "aic" and "bic" options use the AIC and BIC rules for regularization.
+            Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
+            "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
 
         Returns
         -------
@@ -251,7 +258,7 @@ class KernelExplainer(Explainer):
         if not self.vector_out:
             self.fx = np.array([self.fx])
 
-        # if no features vary then there no feature has an effect
+        # if no features vary then no feature has an effect
         if self.M == 0:
             phi = np.zeros((self.data.groups_size, self.D))
             phi_var = np.zeros((self.data.groups_size, self.D))
@@ -347,10 +354,10 @@ class KernelExplainer(Explainer):
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
                 log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
-                ind_set = np.random.choice(len(remaining_weight_vector), samples_left, p=remaining_weight_vector)
+                ind_set = np.random.choice(len(remaining_weight_vector), 4 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
-                while samples_left > 0:
+                while samples_left > 0 and ind_set_pos < len(ind_set):
                     mask.fill(0.0)
                     ind = ind_set[ind_set_pos] # we call np.random.choice once to save time and then just read it here
                     ind_set_pos += 1
@@ -416,9 +423,10 @@ class KernelExplainer(Explainer):
                         varying[i] = False
                         continue
                     x_group = x_group.todense()
-                num_mismatches = np.sum(np.abs(x_group - self.data.data[:, inds]) > 1e-7)
+                num_mismatches = np.sum(np.invert(np.isclose(x_group, self.data.data[:, inds], equal_nan=True)))
                 varying[i] = num_mismatches > 0
-            return np.nonzero(varying)[0]
+            varying_indices = np.nonzero(varying)[0]
+            return varying_indices
         else:
             varying_indices = []
             # go over all nonzero columns in background and evaluation data
@@ -432,8 +440,10 @@ class KernelExplainer(Explainer):
                 nonzero_rows = data_rows.nonzero()[0]
 
                 if nonzero_rows.size > 0:
-                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows].toarray() - x[0, [varying_index]][0, 0]) > 1e-7)
-                    if num_mismatches == 0:
+                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows].toarray() - x[0, varying_index]) > 1e-7)
+                    # Note: If feature column non-zero but some background zero, can't remove index
+                    if num_mismatches == 0 and not \
+                        (np.abs(x[0, [varying_index]][0, 0]) > 1e-7 and len(nonzero_rows) < data_rows.shape[0]):
                         remove_unvarying_indices.append(i)
             mask = np.ones(len(varying_indices), dtype=bool)
             mask[remove_unvarying_indices] = False
@@ -446,21 +456,28 @@ class KernelExplainer(Explainer):
             # for performance when adding samples
             shape = self.data.data.shape
             nnz = self.data.data.nnz
-            rows, cols = shape
-            rows *= self.nsamples
-            shape = rows, cols
+            data_rows, data_cols = shape
+            rows = data_rows * self.nsamples
+            shape = rows, data_cols
             if nnz == 0:
                 self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
             else:
                 data = self.data.data.data
                 indices = self.data.data.indices
-                new_indptr = np.arange(0, rows * nnz + 1, nnz)
-                new_data = np.tile(data, rows)
-                new_indices = np.tile(indices, rows)
+                indptr = self.data.data.indptr
+                last_indptr_idx = indptr[len(indptr) - 1]
+                indptr_wo_last = indptr[:-1]
+                new_indptrs = []
+                for i in range(0, self.nsamples - 1):
+                    new_indptrs.append(indptr_wo_last + (i * last_indptr_idx))
+                new_indptrs.append(indptr + ((self.nsamples - 1) * last_indptr_idx))
+                new_indptr = np.concatenate(new_indptrs)
+                new_data = np.tile(data, self.nsamples)
+                new_indices = np.tile(indices, self.nsamples)
                 self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
         else:
             self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
-        
+
         self.maskMatrix = np.zeros((self.nsamples, self.M))
         self.kernelWeights = np.zeros(self.nsamples)
         self.y = np.zeros((self.nsamples * self.N, self.D))
@@ -523,6 +540,11 @@ class KernelExplainer(Explainer):
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
         log.debug("fraction_evaluated = {0}".format(fraction_evaluated))
+        if self.l1_reg == "auto":
+            warnings.warn(
+                "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
+                "conditional use of AIC to simply \"num_features(10)\"!"
+            )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
@@ -533,15 +555,19 @@ class KernelExplainer(Explainer):
             mask_aug = np.transpose(w_sqrt_aug * np.transpose(np.vstack((self.maskMatrix, self.maskMatrix - 1))))
             #var_norms = np.array([np.linalg.norm(mask_aug[:, i]) for i in range(mask_aug.shape[1])])
 
-            if self.l1_reg == "auto":
-                model = LassoLarsIC(criterion="aic")
-            elif self.l1_reg == "bic" or self.l1_reg == "aic":
-                model = LassoLarsIC(criterion=self.l1_reg)
+            # select a fixed number of top features
+            if isinstance(self.l1_reg, str) and self.l1_reg.startswith("num_features("):
+                r = int(self.l1_reg[len("num_features("):-1])
+                nonzero_inds = lars_path(mask_aug, eyAdj_aug, max_iter=r)[1]
+            
+            # use an adaptive regularization method
+            elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
+                c = "aic" if self.l1_reg == "auto" else self.l1_reg
+                nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
+            
+            # use a fixed regularization coeffcient
             else:
-                model = Lasso(alpha=self.l1_reg)
-
-            model.fit(mask_aug, eyAdj_aug)
-            nonzero_inds = np.nonzero(model.coef_)[0]
+                nonzero_inds = np.nonzero(Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_)[0]
 
         if len(nonzero_inds) == 0:
             return np.zeros(self.M), np.ones(self.M)

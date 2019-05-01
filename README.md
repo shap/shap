@@ -7,23 +7,19 @@
 ---
 <a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.org/slundberg/shap.svg?branch=master"></a>
 
-**SHAP (SHapley Additive exPlanations)** is a unified approach to explain the output of any machine learning model. SHAP connects game theory with local explanations, uniting several previous methods [1-7] and representing the only possible consistent and locally accurate additive feature attribution method based on expectations (see the [SHAP NIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) for details).
+**SHAP (SHapley Additive exPlanations)** is a unified approach to explain the output of any machine learning model. SHAP connects game theory with local explanations, uniting several previous methods [1-7] and representing the only possible consistent and locally accurate additive feature attribution method based on expectations (see our [papers](#citations) for details).
 
 
 
 ## Install
 
-SHAP can be installed from [PyPI](https://pypi.org/project/shap)
+SHAP can be installed from either [PyPI](https://pypi.org/project/shap) or [conda-forge](https://anaconda.org/conda-forge/shap):
 
-```
+<pre>
 pip install shap
-```
-
-or [conda-forge](https://anaconda.org/conda-forge/shap)
-
-```
-conda install -c conda-forge shap 
-```
+<i>or</i>
+conda install -c conda-forge shap
+</pre>
 
 ## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn models)
 
@@ -45,13 +41,43 @@ model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 explainer = shap.TreeExplainer(model)
 shap_values = explainer.shap_values(X)
 
-# visualize the first prediction's explanation
+# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
 shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:])
 ```
 
 <p align="center">
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_instance.png" />
 </p>
+
+<!--If you want to use `matplotlib` backend in place of javascript, you can do so as shown below. You can also rotate the feature names using `text_rotation` parameter, if your dataset has really long feature names.
+```python
+%matplotlib inline
+import xgboost
+import shap
+
+# train XGBoost model
+X,y = shap.datasets.boston()
+
+model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+# explain the model's predictions using SHAP values
+# (same syntax works for LightGBM, CatBoost, and scikit-learn models)
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X)
+# visualize the first prediction's explanation using matplotlib (no javascript needed)
+# rotate the annotations so that they are legible when you have really long attribute names
+shap.force_plot(
+    explainer.expected_value, 
+    shap_values[0, :], 
+    X.iloc[0, :], 
+    matplotlib=True, 
+    text_rotation=30, 
+    show=True
+)
+```
+
+<p align="center">
+  <img width="811" src="https://raw.githubusercontent.com/vatsan/shap/master/docs/artwork/force_plot_matplotlib_rotate.png" />
+</p>-->
 
 The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue (these force plots are introduced in our [Nature BME paper](https://www.nature.com/articles/s41551-018-0304-0)).
 
@@ -66,7 +92,7 @@ shap.force_plot(explainer.expected_value, shap_values, X)
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
-To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as RM (the average number of rooms per house in an area) changes. Vertical dispersion at a single value of RM represents interaction effects with other features. To help reveal these interactions `dependence_plot` automatically selects another feature for coloring. In this case coloring by RAD (index of accessibility to radial highways) highlights that the average number of rooms per house has less impact on home price for areas close to radial highways.
+To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as RM (the average number of rooms per house in an area) changes. Vertical dispersion at a single value of RM represents interaction effects with other features. To help reveal these interactions `dependence_plot` automatically selects another feature for coloring. In this case coloring by RAD (index of accessibility to radial highways) highlights that the average number of rooms per house has less impact on home price for areas with a high RAD value.
 
 ```python
 # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
@@ -242,13 +268,21 @@ An implementation of Tree SHAP, a fast and exact algorithm to compute SHAP value
 
 An implementation of Deep SHAP, a faster (but only approximate) algorithm to compute SHAP values for deep learning models that is based on connections between SHAP and the DeepLIFT algorithm.
 
-- [**MNIST Digit classification with Keras**](https://slundberg.github.io/shap/notebooks/Front%20Page%20DeepExplainer%20MNIST%20Example.html) - Using the MNIST handwriting recognition dataset, this notebook trains a neural network with Keras and then explains predictions using `shap`. 
+- [**MNIST Digit classification with Keras**](https://slundberg.github.io/shap/notebooks/deep_explainer/Front%20Page%20DeepExplainer%20MNIST%20Example.html) - Using the MNIST handwriting recognition dataset, this notebook trains a neural network with Keras and then explains predictions using `shap`.
+
+- [**Keras LSTM for IMDB Sentiment Classification**](https://slundberg.github.io/shap/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.html) - This notebook trains an LSTM with Keras on the IMDB text sentiment analysis dataset and then explains predictions using `shap`. 
 
 ### GradientExplainer
 
 An implementation of expected gradients to approximate SHAP values for deep learning models. It is based on connections between SHAP and the Integrated Gradients algorithm. GradientExplainer is slower than DeepExplainer and makes different approximation assumptions.
 
 - [**Explain an Intermediate Layer of VGG16 on ImageNet**](https://slundberg.github.io/shap/notebooks/gradient_explainer/Explain%20an%20Intermediate%20Layer%20of%20VGG16%20on%20ImageNet.html) - This notebook demonstrates how to explain the output of a pre-trained VGG16 ImageNet model using an internal convolutional layer.
+
+### LinearExplainer
+
+For a linear model with independent features we can analytically compute the exact SHAP values. We can also account for feature correlation if we are willing to estimate the feature covaraince matrix. LinearExplainer supports both of these options.
+
+- [**Sentiment Analysis with Logistic Regression**](https://slundberg.github.io/shap/notebooks/linear_explainer/Sentiment%20Analysis%20with%20Logistic%20Regression.html) - This notebook demonstrates how to explain a linear logistic regression sentiment analysis model.
 
 ### KernelExplainer
 
@@ -275,5 +309,13 @@ An implementation of Kernel SHAP, a model agnostic method to estimate SHAP value
 6. *Shapley regression values:* Lipovetsky, Stan, and Michael Conklin. "Analysis of regression in game theory approach." Applied Stochastic Models in Business and Industry 17.4 (2001): 319-330.
 
 7. *Tree interpreter:* Saabas, Ando. Interpreting random forests. http://blog.datadive.net/interpreting-random-forests/
+
+## Citations
+
+The algorithms and visualizations used in this package came primarily out of research in [Su-In Lee's lab](https://suinlee.cs.washington.edu) at the University of Washington. If you use SHAP in your research we would appreciate a citation to the appropriate paper(s):
+
+- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)). 
+- For TreeExplainer you can (for now) read/cite our [arXiv paper](https://arxiv.org/abs/1802.03888) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/treeshap_arxiv.bib)).
+- For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
 
 <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=189147091855991&ev=PageView&noscript=1" />

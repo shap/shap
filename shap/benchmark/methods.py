@@ -8,17 +8,17 @@ from .. import kmeans
 from ..explainers import other
 from .models import KerasWrap
 import numpy as np
-
+import sklearn
 
 def linear_shap_corr(model, data):
     """ Linear SHAP (corr 1000)
     """
-    return LinearExplainer(model, data, nsamples=1000).shap_values
+    return LinearExplainer(model, data, feature_dependence="correlation", nsamples=1000).shap_values
 
 def linear_shap_ind(model, data):
     """ Linear SHAP (ind)
     """
-    return LinearExplainer(model, data, feature_dependence="interventional").shap_values
+    return LinearExplainer(model, data, feature_dependence="independent").shap_values
 
 def coef(model, data):
     """ Coefficents
@@ -27,26 +27,44 @@ def coef(model, data):
 
 def random(model, data):
     """ Random
+    color = #777777
+    linestyle = solid
     """
     return other.RandomExplainer().attributions
 
 def kernel_shap_1000_meanref(model, data):
     """ Kernel SHAP 1000 mean ref.
+    color = red_blue_circle(0.5)
+    linestyle = solid
     """
     return lambda X: KernelExplainer(model.predict, kmeans(data, 1)).shap_values(X, nsamples=1000, l1_reg=0)
 
 def sampling_shap_1000(model, data):
-    """ Sampling SHAP 1000
+    """ IME 1000
+    color = red_blue_circle(0.5)
+    linestyle = dashed
     """
     return lambda X: SamplingExplainer(model.predict, data).shap_values(X, nsamples=1000)
 
-def tree_shap(model, data):
-    """ Tree SHAP
+def tree_shap_tree_path_dependent(model, data):
+    """ TreeExplainer
+    color = red_blue_circle(0)
+    linestyle = solid
     """
-    return TreeExplainer(model).shap_values
+    return TreeExplainer(model, feature_dependence="tree_path_dependent").shap_values
+
+def tree_shap_independent_200(model, data):
+    """ TreeExplainer (independent)
+    color = red_blue_circle(0)
+    linestyle = dashed
+    """
+    data_subsample = sklearn.utils.resample(data, replace=False, n_samples=min(200, data.shape[0]), random_state=0)
+    return TreeExplainer(model, data_subsample, feature_dependence="independent").shap_values
 
 def mean_abs_tree_shap(model, data):
-    """ mean(|Tree SHAP|)
+    """ mean(|TreeExplainer|)
+    color = red_blue_circle(0.25)
+    linestyle = solid
     """
     def f(X):
         v = TreeExplainer(model).shap_values(X)
@@ -58,11 +76,15 @@ def mean_abs_tree_shap(model, data):
 
 def saabas(model, data):
     """ Saabas
+    color = red_blue_circle(0)
+    linestyle = dotted
     """
     return lambda X: TreeExplainer(model).shap_values(X, approximate=True)
 
 def tree_gain(model, data):
     """ Gain/Gini Importance
+    color = red_blue_circle(0.25)
+    linestyle = dotted
     """
     return other.TreeGainExplainer(model).attributions
 

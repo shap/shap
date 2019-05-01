@@ -72,7 +72,7 @@ class GradientExplainer(Explainer):
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradientExplainer(model, data, batch_size, local_smoothing)
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
         """ Return the values for the model applied to X.
 
         Parameters
@@ -91,9 +91,13 @@ class GradientExplainer(Explainer):
             the output ranks, and indexes is a matrix that tells for each sample which output indexes
             were choses as "top".
 
-        output_rank_order : "max", "min", or "max_abs"
+        output_rank_order : "max", "min", "max_abs", or "custom"
             How to order the model outputs when using ranked_outputs, either by maximum, minimum, or
-            maximum absolute value.
+            maximum absolute value. If "custom" Then "ranked_outputs" contains a list of output nodes.
+
+        rseed : None or int
+            Seeding the randomness in shap value computation  (background example choice, 
+            interpolation between current and background example, smoothing).
 
         Returns
         -------
@@ -105,7 +109,7 @@ class GradientExplainer(Explainer):
         ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
         were chosen as "top".
         """
-        return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order)
+        return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed)
 
 
 class _TFGradientExplainer(Explainer):
@@ -128,13 +132,13 @@ class _TFGradientExplainer(Explainer):
 
         # determine the model inputs and outputs
         if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.models.Sequential'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("keras.engine.training.Model'>"):
-            self.model_inputs = model.layers[0].input
+            self.model_inputs = model.inputs
             self.model_output = model.layers[-1].output
         elif str(type(model)).endswith("tuple'>"):
             self.model_inputs = model[0]
@@ -189,7 +193,7 @@ class _TFGradientExplainer(Explainer):
             self.gradients[i] = tf.gradients(out, self.model_inputs)
         return self.gradients[i]
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -208,9 +212,13 @@ class _TFGradientExplainer(Explainer):
                 model_output_ranks = np.argsort(model_output_values)
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
+            elif output_rank_order == "custom":
+                model_output_ranks = ranked_outputs
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
-            model_output_ranks = model_output_ranks[:,:ranked_outputs]
+                assert False, "output_rank_order must be max, min, max_abs or custom!"
+
+            if output_rank_order in ["max", "min", "max_abs"]:
+                model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
@@ -218,7 +226,10 @@ class _TFGradientExplainer(Explainer):
         output_phis = []
         samples_input = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples,) + X[l].shape[1:]) for l in range(len(X))]
-        rseed = np.random.randint(0,1e6)
+        # use random seed if no argument given
+        if rseed is None:
+            rseed = np.random.randint(0, 1e6)
+
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed) # so we get the same noise patterns for each output class
             phis = []
@@ -338,9 +349,9 @@ class _PyTorchGradientExplainer(Explainer):
                 interim_inputs = self.layer.target_input
                 if type(interim_inputs) is tuple:
                     # this should always be true, but just to be safe
-                    self.data = [torch.tensor(i) for i in interim_inputs]
+                    self.data = [i.clone().detach() for i in interim_inputs]
                 else:
-                    self.data = [torch.tensor(interim_inputs)]
+                    self.data = [interim_inputs.clone().detach()]
         else:
             self.data = data
         self.model = model.eval()
@@ -381,7 +392,7 @@ class _PyTorchGradientExplainer(Explainer):
         input_handle = layer.register_forward_hook(self.get_interim_input)
         self.input_handle = input_handle
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
 
         # X ~ self.model_input
         # X_data ~ self.data
@@ -423,7 +434,11 @@ class _PyTorchGradientExplainer(Explainer):
         # samples_delta = (x - x') for the input being explained - may be an interim input
         samples_input = [torch.zeros((nsamples,) + X[l].shape[1:], device=X[l].device) for l in range(len(X))]
         samples_delta = [np.zeros((nsamples, ) + self.data[l].shape[1:]) for l in range(len(self.data))]
-        rseed = np.random.randint(0, 1e6)
+
+        # use random seed if no argument given
+        if rseed is None:
+            rseed = np.random.randint(0, 1e6)
+
         for i in range(model_output_ranks.shape[1]):
             np.random.seed(rseed)  # so we get the same noise patterns for each output class
             phis = []
@@ -440,13 +455,14 @@ class _PyTorchGradientExplainer(Explainer):
                     for l in range(len(X)):
                         if self.local_smoothing > 0:
                             # local smoothing is added to the base input, unlike in the TF gradient explainer
-                            x = torch.tensor(X[l][j]) + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
+                            x = X[l][j].clone().detach() + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
                                 * self.local_smoothing
                         else:
-                            x = torch.tensor(X[l][j])
-                        samples_input[l][k] = torch.tensor(t * x + (1 - t) * torch.tensor(self.model_inputs[l][rind]))
+                            x = X[l][j].clone().detach()
+                        samples_input[l][k] = (t * x + (1 - t) * (self.model_inputs[l][rind]).clone().detach()).\
+                            clone().detach()
                         if self.input_handle is None:
-                            samples_delta[l][k] = (x - torch.tensor(self.data[l][rind])).cpu().numpy()
+                            samples_delta[l][k] = (x - (self.data[l][rind]).clone().detach()).cpu().numpy()
 
                     if self.interim is True:
                         with torch.no_grad():
@@ -465,7 +481,7 @@ class _PyTorchGradientExplainer(Explainer):
                 find = model_output_ranks[j, i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [torch.tensor(samples_input[l][b:min(b+self.batch_size,nsamples)]) for l in range(len(X))]
+                    batch = [samples_input[l][b:min(b+self.batch_size,nsamples)].clone().detach() for l in range(len(X))]
                     grads.append(self.gradient(find, batch))
                 grad = [np.concatenate([g[l] for g in grads], 0) for l in range(len(self.data))]
                 # assign the attributions to the right part of the output arrays
