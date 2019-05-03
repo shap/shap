@@ -506,8 +506,12 @@ inline int compute_expectations(TreeEnsemble &tree, int i = 0, int depth = 0) {
         const unsigned ri_offset = ri * tree.num_outputs;
         const unsigned i_offset = i * tree.num_outputs;
         for (unsigned j = 0; j < tree.num_outputs; ++j) {
-            const tfloat v = (left_weight * tree.values[li_offset + j] + right_weight * tree.values[ri_offset + j]) / (left_weight + right_weight);
-            tree.values[i_offset + j] = v;
+            if ((left_weight == 0) && (right_weight == 0)) {
+                tree.values[i_offset + j] = 0.0;
+            } else {
+                const tfloat v = (left_weight * tree.values[li_offset + j] + right_weight * tree.values[ri_offset + j]) / (left_weight + right_weight);
+                tree.values[i_offset + j] = v;
+            }
         }
         max_depth = std::max(depth_left, depth_right) + 1;
     }
