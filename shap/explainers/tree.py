@@ -579,6 +579,11 @@ class TreeEnsemble:
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+            self.dtype = np.float32
+            cb_loader = CatBoostTreeModelLoader(model)
+            self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
+            self.tree_output = "log_odds"
+            self.objective = "binary_crossentropy"
         elif str(type(model)).endswith("catboost.core.CatBoost'>"):
             assert_import("catboost")
             self.model_type = "catboost"
@@ -1085,3 +1090,74 @@ class XGBTreeModelLoader(object):
         print("num_pbuffer_deprecated =", self.num_pbuffer_deprecated)
         print("num_output_group =", self.num_output_group)
         print("size_leaf_vector =", self.size_leaf_vector)
+
+
+class CatBoostTreeModelLoader:
+    def __init__(self, cb_model):
+        cb_model.save_model("cb_model.json", format="json")
+        self.loaded_cb_model = json.load(open("cb_model.json", "r"))
+
+        # load the CatBoost oblivious trees specific parameters
+        self.num_trees = self.loaded_cb_model['model_info']['params']['boosting_options']['iterations']
+        self.max_depth = self.loaded_cb_model['model_info']['params']['tree_learner_options']['depth']
+
+    def get_trees(self, data=None, data_missing=None):
+        # load each tree
+        trees = []
+        for tree_index in range(self.num_trees):
+
+            # load the per-tree params
+            depth = len(self.loaded_cb_model['oblivious_trees'][tree_index]['splits'])
+
+            # load the nodes
+
+            # Re-compute the number of samples that pass through each node if we are given data
+            leaf_weights = self.loaded_cb_model['oblivious_trees'][tree_index]['leaf_weights']
+            leaf_weights_unraveled = [0] * (len(leaf_weights) - 1) + leaf_weights
+            leaf_weights_unraveled[0] = sum(leaf_weights)
+            for index in range(len(leaf_weights) - 2, 0, -1):
+                leaf_weights_unraveled[index] = leaf_weights_unraveled[2 * index + 1] + leaf_weights_unraveled[2 * index + 2]
+
+            leaf_values = self.loaded_cb_model['oblivious_trees'][tree_index]['leaf_values']
+            leaf_values_unraveled = [0] * (len(leaf_values) - 1) + leaf_values
+            
+            children_left = [i * 2 + 1 for i in range(len(leaf_values) - 1)]
+            children_left += [-1] * len(leaf_values)
+            
+            children_right = [i * 2 for i in range(1, len(leaf_values))]
+            children_right += [-1] * len(leaf_values)
+            
+            children_default = [i * 2 + 1 for i in range(len(leaf_values) - 1)]
+            children_default += [-1] * len(leaf_values)
+
+            # load the split features and borders
+            # split features and borders go from leafs to the root
+            split_features_index = []
+            borders = []
+
+            # split features and borders go from leafs to the root
+            for elem in self.loaded_cb_model['oblivious_trees'][tree_index]['splits']:
+                split_features_index.append(elem['float_feature_index'])
+                borders.append(elem['border'])
+
+            split_features_index_unraveled = []
+            for counter, feature_index in enumerate(split_features_index[::-1]):
+                split_features_index_unraveled += [feature_index] * (2 ** counter)
+            split_features_index_unraveled += [0] * len(leaf_values)
+            
+            borders_unraveled = []
+            for counter, border in enumerate(borders[::-1]):
+                borders_unraveled += [border] * (2 ** counter)
+            borders_unraveled += [0] * len(leaf_values)
+
+            trees.append(Tree({"children_left": np.array(children_left),
+                             "children_right": np.array(children_right),
+                             "children_default": np.array(children_default),
+                             "feature": np.array(split_features_index_unraveled),
+                             "threshold": np.array(borders_unraveled), 
+                             "value": np.array(leaf_values_unraveled).reshape((-1,1)),
+                             "node_sample_weight": np.array(leaf_weights_unraveled),
+                            }, data=data, data_missing=data_missing))
+
+        return trees
+
