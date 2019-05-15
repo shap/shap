@@ -32,7 +32,7 @@ try:
     blues = []
     alphas = []
     nsteps = 100
-    l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps/2)) + list(np.linspace(l_mid, red_lch[0], nsteps/2))
+    l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps//2)) + list(np.linspace(l_mid, red_lch[0], nsteps//2))
     c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
     h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
     for pos,l,c,h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals):
