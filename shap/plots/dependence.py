@@ -15,7 +15,7 @@ from ..common import convert_name, approximate_interactions
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto",
                     color="#1E88E5", axis_color="#333333", cmap=colors.red_blue,
-                    dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, show=True):
+                    dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -65,7 +65,20 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     xmax : float or string
         Represents the upper bound of the plot's x-axis. It can be a string of the format
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
+
+    ax : matplotlib Axes object
+         Optionally specify an existing matplotlib Axes object, into which the plot will be placed.
+         In this case we do not create a Figure, otherwise we do.
+
     """
+
+    # create a matplotlib figure, if `ax` hasn't been specified.
+    if not ax:
+        figsize = (7.5, 5) if interaction_index != ind else (6, 5)
+        fig = pl.figure(figsize=figsize)
+        ax = fig.gca()
+    else:
+        fig = ax.get_figure()
 
     # convert from DataFrames if we got any
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
@@ -102,13 +115,13 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
-            interaction_index=ind2, display_features=display_features, show=False,
+            interaction_index=ind2, display_features=display_features, ax=ax, show=False,
             xmin=xmin, xmax=xmax
         )
         if ind1 == ind2:
-            pl.ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
+            ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
         else:
-            pl.ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
+            ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
 
         if show:
             pl.show()
@@ -189,15 +202,15 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
         cvals[cvals_imp < clow] = clow
-        p = pl.scatter(
+        p = ax.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
             cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
             norm=color_norm, rasterized=len(xv) > 500
         )
         p.set_array(cvals[xv_notnan])
     else:
-        pl.scatter(xv, s, s=dot_size, linewidth=0, color=color,
-                   alpha=alpha, rasterized=len(xv) > 500)
+        p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
+                       alpha=alpha, rasterized=len(xv) > 500)
 
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
@@ -206,10 +219,10 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             if len(tick_positions) == 2:
                 tick_positions[0] -= 0.25
                 tick_positions[1] += 0.25
-            cb = pl.colorbar(ticks=tick_positions)
+            cb = pl.colorbar(p, ticks=tick_positions)
             cb.set_ticklabels(cnames)
         else:
-            cb = pl.colorbar()
+            cb = pl.colorbar(p)
 
         cb.set_label(feature_names[interaction_index], size=13)
         cb.ax.tick_params(labelsize=11)
@@ -217,7 +230,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             cb.ax.tick_params(length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+        bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
     # handles any setting of xmax and xmin
@@ -233,42 +246,38 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         if xmax is None or xmax == np.nanmax(xv):
             xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
         
-        pl.xlim(xmin, xmax)
+        ax.set_xlim(xmin, xmax)
 
     # plot any nan feature values as tick marks along the y-axis
-    xlim = pl.xlim()
+    xlim = ax.get_xlim()
     if interaction_index is not None:
-        p = pl.scatter(
+        p = ax.scatter(
             xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
             linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
             vmin=clow, vmax=chigh
         )
         p.set_array(cvals[xv_nan])
     else:
-        pl.scatter(
+        ax.scatter(
             xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
             linewidth=2, color=color, alpha=alpha
         )
-    pl.xlim(*xlim)
+    ax.set_xlim(xlim)
 
     # make the plot more readable
-    if interaction_index != ind:
-        pl.gcf().set_size_inches(7.5, 5)
-    else:
-        pl.gcf().set_size_inches(6, 5)
-    pl.xlabel(name, color=axis_color, fontsize=13)
-    pl.ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
+    ax.set_xlabel(name, color=axis_color, fontsize=13)
+    ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
     if title is not None:
-        pl.title(title, color=axis_color, fontsize=13)
-    pl.gca().xaxis.set_ticks_position('bottom')
-    pl.gca().yaxis.set_ticks_position('left')
-    pl.gca().spines['right'].set_visible(False)
-    pl.gca().spines['top'].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
-    for spine in pl.gca().spines.values():
+        ax.set_title(title, color=axis_color, fontsize=13)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
+    for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
-        pl.xticks([name_map[n] for n in xnames], xnames, rotation='vertical', fontsize=11)
+        ax.set_xticks([name_map[n] for n in xnames], xnames, rotation='vertical', fontsize=11)
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
