@@ -6,6 +6,7 @@ from __future__ import division
 import warnings
 import numpy as np
 from scipy.stats import gaussian_kde
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -14,10 +15,12 @@ except ImportError:
 from . import labels
 from . import colors
 
+
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type="dot",
                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None):
+                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None,
+                 export_path=None, width=10):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -41,7 +44,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     multi_class = False
     if isinstance(shap_values, list):
         multi_class = True
-        plot_type = "bar" # only type supported for now
+        plot_type = "bar"  # only type supported for now
     else:
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
@@ -50,7 +53,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         if plot_type == 'layered_violin':
             color = "coolwarm"
         elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
+            color = lambda i: colors.red_blue_circle(i / len(shap_values))
         else:
             color = colors.blue_rgb
 
@@ -126,9 +129,11 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
         pl.subplots_adjust(hspace=0, wspace=0.1)
+        if export_path:
+            pl.savefig(export_path)
         if show:
             pl.show()
-        return
+        return pl
 
     if max_display is None:
         max_display = 20
@@ -145,7 +150,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     row_height = 0.4
     if auto_size_plot:
-        pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        pl.gcf().set_size_inches(width, len(feature_order) * row_height + 1.5)
     pl.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "dot":
@@ -295,7 +300,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
         # loop through each feature and plot:
         for pos, ind in enumerate(feature_order):
-            # decide how to handle: if #unique < layered_violin_max_num_bins then split by unique value, otherwise use bins/percentiles.
+            # decide how to handle: if #unique < layered_violin_max_num_bins then split by unique value,
+            # otherwise use bins/percentiles.
             # to keep simpler code, in the case of uniques, we just adjust the bins to align with the unique counts.
             feature = features[:, ind]
             unique, counts = np.unique(feature, return_counts=True)
@@ -318,9 +324,11 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
-                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
+                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of "
+                        "records to plot."
                         % (i, feature_names[ind]))
-                    # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
+                    # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not
+                    #  ys is already 0, so there's
                     # nothing to do if i == 0
                     if i > 0:
                         ys[i, :] = ys[i - 1, :]
@@ -328,7 +336,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
                 ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
                 # scale it up so that the 'size' of each y represents the size of the bin. For continuous data this will
-                # do nothing, but when we've gone with the unqique option, this will matter - e.g. if 99% are male and 1%
+                # do nothing, but when we've gone with the unqique option, this will matter - e.g. if 99% are male
+                # and 1%
                 # female, we want the 1% to appear a lot smaller.
                 size = thesebins[i + 1] - thesebins[i]
                 bin_size_if_even = features.shape[0] / nbins
@@ -343,7 +352,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = pl.get_cmap(color)(i / (
-                        nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
+                        nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a
+                #  color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
         pl.xlim(shap_min, shap_max)
 
@@ -357,13 +367,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     elif multi_class and plot_type == "bar":
         if class_names is None:
-            class_names = ["Class "+str(i) for i in range(len(shap_values))]
+            class_names = ["Class " + str(i) for i in range(len(shap_values))]
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         left_pos = np.zeros(len(feature_inds))
 
         class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
-        for i,ind in enumerate(class_inds):
+        for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
             pl.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
@@ -405,8 +415,13 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
     else:
         pl.xlabel(labels['VALUE'], fontsize=13)
+    if export_path:
+        pl.savefig(export_path)
     if show:
         pl.show()
+
+    return
+
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
