@@ -294,6 +294,12 @@ An implementation of Kernel SHAP, a model agnostic method to estimate SHAP value
 
 - [**Iris classification**](https://slundberg.github.io/shap/notebooks/Iris%20classification%20with%20scikit-learn.html) - A basic demonstration using the popular iris species dataset. It explains predictions from six different models in scikit-learn using `shap`.
 
+## Documentation notebooks
+
+These notebooks comprehensively demonstrate how to use specific functions and objects. 
+
+- [`shap.dependence_plot`](https://slundberg.github.io/shap/notebooks/plots/dependence_plot.html)
+
 ## Methods Unified by SHAP
 
 1. *LIME:* Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should i trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. ACM, 2016.
