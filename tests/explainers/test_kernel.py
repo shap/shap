@@ -97,7 +97,12 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     from sklearn.utils.sparsefuncs import csc_median_axis_0
     import shap
     np.random.seed(0)
-    
+
+    # log the versions of our dependencies
+    print("sklearn.__version__", sklearn.__version__, file=sys.stderr)
+    print("scipy.__version__", sp.__version__, file=sys.stderr)
+    print("numpy.__version__", np.__version__, file=sys.stderr)
+
     X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.01, random_state=0)
     linear_model = LinearRegression()
