@@ -24,7 +24,7 @@ def test_front_page_model_agnostic():
     shap.initjs()
 
     # train a SVM classifier
-    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     svm = sklearn.svm.SVC(kernel='rbf', probability=True)
     svm.fit(X_train, Y_train)
 
@@ -44,7 +44,7 @@ def test_front_page_model_agnostic_rank():
     shap.initjs()
 
     # train a SVM classifier
-    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     svm = sklearn.svm.SVC(kernel='rbf', probability=True)
     svm.fit(X_train, Y_train)
 
@@ -80,7 +80,7 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
     import shap
 
     X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
-    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.01, random_state=0)
     linear_model = LinearRegression()
     linear_model.fit(x_train, y_train)
 
@@ -99,6 +99,7 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     np.random.seed(0)
 
     # log the versions of our dependencies
+    import sklearn
     print("sklearn.__version__", sklearn.__version__, file=sys.stderr)
     print("scipy.__version__", sp.__version__, file=sys.stderr)
     print("numpy.__version__", np.__version__, file=sys.stderr)
@@ -111,7 +112,7 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     median_dense = csc_median_axis_0(x_train.tocsc())
     median = sp.sparse.csr_matrix(median_dense)
     explainer = shap.KernelExplainer(linear_model.predict, median)
-    shap_values = explainer.shap_values(x_test)
+    shap_values = explainer.shap_values(x_test, l1_reg=0)
     # Compare to dense results
     x_train_dense = x_train.toarray()
 
@@ -121,7 +122,7 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
 
     explainer_dense = shap.KernelExplainer(linear_model.predict, median_dense.reshape((1, len(median_dense))))
     x_test_dense = x_test.toarray()
-    shap_values_dense = explainer_dense.shap_values(x_test_dense)
+    shap_values_dense = explainer_dense.shap_values(x_test_dense, l1_reg=0)
     # Validate sparse and dense result is the same
     # Note: The default tolerance is almost always fine, but in one out of every
     # 20 runs or so it fails so decreasing it by two orders of magnitude from the default
@@ -166,7 +167,7 @@ def test_kernel_sparse_vs_dense_multirow_background():
     from sklearn.linear_model import LogisticRegression
 
     # train a logistic regression classifier
-    X_train, X_test, Y_train, _ = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+    X_train, X_test, Y_train, _ = train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     lr = LogisticRegression(solver='lbfgs')
     lr.fit(X_train, Y_train)
 
