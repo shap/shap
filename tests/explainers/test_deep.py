@@ -258,7 +258,7 @@ def test_pytorch_mnist_cnn():
                     nn.MaxPool2d(2),
                     nn.Tanh(),
                     nn.Conv2d(10, 20, kernel_size=5),
-                    nn.MaxPool2d(2),
+                    nn.AdaptiveAvgPool2d(output_size=(4, 4)),
                     nn.Softplus(),
                 )
                 self.fc_layers = nn.Sequential(
@@ -370,11 +370,11 @@ def test_pytorch_single_output():
             self.linear = nn.Linear(num_features // 2, 2)
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
-            self.maxpool1 = nn.MaxPool1d(kernel_size=2)
+            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=6)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            x = self.maxpool1(self.conv1d(X.unsqueeze(1))).squeeze(1)
+            x = self.aapool1d(self.conv1d(X.unsqueeze(1))).squeeze(1)
             return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
     model = Net(num_features)
     optimizer = torch.optim.Adam(model.parameters())
