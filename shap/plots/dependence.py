@@ -14,7 +14,7 @@ from ..common import convert_name, approximate_interactions
 
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto",
-                    color="#1E88E5", axis_color="#333333", cmap=colors.red_blue,
+                    color="#1E88E5", axis_color="#333333", cmap=None,
                     dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
@@ -72,6 +72,9 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     """
 
+    if cmap is None:
+        cmap = colors.red_blue
+        
     # create a matplotlib figure, if `ax` hasn't been specified.
     if not ax:
         figsize = (7.5, 5) if interaction_index != ind else (6, 5)
