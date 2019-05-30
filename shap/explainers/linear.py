@@ -1,6 +1,6 @@
 import numpy as np
 import warnings
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from .explainer import Explainer
 
 class LinearExplainer(Explainer):
