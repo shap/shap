@@ -55,7 +55,7 @@ class PyTorchDeepExplainer(Explainer):
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
-            self.expected_value = outputs.mean(0).numpy()
+            self.expected_value = outputs.mean(0).cpu().numpy()
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(get_target_input)
@@ -172,7 +172,7 @@ class PyTorchDeepExplainer(Explainer):
                         phis[l][j] = (sample_phis[l][self.data[l].shape[0]:]* (x[l] - data[l])).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]) * (X[l][j: j + 1] - self.data[l])).mean(0)
+                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]).to(X[l].device) * (X[l][j: j + 1] - self.data[l])).cpu().numpy().mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
