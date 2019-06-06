@@ -106,21 +106,17 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     median_dense = csc_median_axis_0(x_train.tocsc())
     median = sp.sparse.csr_matrix(median_dense)
     explainer = shap.KernelExplainer(linear_model.predict, median)
-    shap_values = explainer.shap_values(x_test, l1_reg=0)
-    # Compare to dense results
-    x_train_dense = x_train.toarray()
+    shap_values = explainer.shap_values(x_test)
 
     def dense_to_sparse_predict(data):
         sparse_data = sp.sparse.csr_matrix(data)
         return linear_model.predict(sparse_data)
 
-    explainer_dense = shap.KernelExplainer(linear_model.predict, median_dense.reshape((1, len(median_dense))))
+    explainer_dense = shap.KernelExplainer(dense_to_sparse_predict, median_dense.reshape((1, len(median_dense))))
     x_test_dense = x_test.toarray()
-    shap_values_dense = explainer_dense.shap_values(x_test_dense, l1_reg=0)
+    shap_values_dense = explainer_dense.shap_values(x_test_dense)
     # Validate sparse and dense result is the same
-    # Note: The default tolerance is almost always fine, but in one out of every
-    # 20 runs or so it fails so decreasing it by two orders of magnitude from the default
-    #assert(np.allclose(shap_values, shap_values_dense, rtol=1e-02, atol=1e-04))
+    assert(np.allclose(shap_values, shap_values_dense, rtol=1e-02, atol=1e-01))
 
 def test_kernel_shap_with_high_dim_sparse():
     # verifies we can run on very sparse data produced from feature hashing
