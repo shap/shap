@@ -26,10 +26,10 @@ class DeepExplainer(Explainer):
 
         Parameters
         ----------
-        model : if framework == 'tensorflow', (input : [tf.Operation], output : tf.Operation)
-             A pair of TensorFlow operations (or a list and an op) that specifies the input and
+        model : if framework == 'tensorflow', (input : [tf.Tensor], output : tf.Tensor)
+             A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
             output of the model to be explained. Note that SHAP values are specific to a single
-            output value, so the output tf.Operation should be a single dimensional output (,1).
+            output value, so the output tf.Tensor should be a single dimensional output (,1).
 
             if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
                 where both are nn.Module objects
@@ -42,7 +42,7 @@ class DeepExplainer(Explainer):
             if framework == 'tensorflow': [numpy.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
             The background dataset to use for integrating out features. DeepExplainer integrates
-            over these samples. The data passed here must match the input operations given in the
+            over these samples. The data passed here must match the input tensors given in the
             first argument. Note that since these samples are integrated over for each sample you
             should only something like 100 or 1000 random background samples, not the whole training
             dataset.
