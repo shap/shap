@@ -89,7 +89,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', 'ipython', 'scikit-image'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm>4.25.0', 'ipython', 'scikit-image'],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,

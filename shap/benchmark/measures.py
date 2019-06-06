@@ -1,5 +1,5 @@
 import numpy as np
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import gc
 import warnings
 import sklearn.utils
