@@ -477,7 +477,7 @@ class TreeEnsemble:
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
                 self.base_offset = model.init_.prior
                 self.tree_output = "log_odds"
-            if str(type(model.init_)).endswith("sklearn.dummy.DummyClassifier'>"):
+            elif str(type(model.init_)).endswith("sklearn.dummy.DummyClassifier'>"):
                 self.base_offset = scipy.special.logit(model.init_.class_prior_[1]) # with two classes the trees only model the second class
                 self.tree_output = "log_odds"
             else:
