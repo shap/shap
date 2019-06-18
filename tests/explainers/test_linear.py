@@ -99,3 +99,27 @@ def test_single_feature():
     shap_values = explainer.shap_values(X)
     assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
     assert np.max(np.abs(explainer.expected_value + shap_values.sum(1) - model.predict(X))) < 1e-6
+
+def test_sparse():
+    """ Validate running LinearExplainer on scipy sparse data
+    """
+    import sklearn.linear_model
+    from sklearn.datasets import make_multilabel_classification
+    from scipy.special import expit
+
+    np.random.seed(0)
+    n_features = 20
+    X, y = make_multilabel_classification(n_samples=100,
+                                          sparse=True,
+                                          n_features=n_features,
+                                          n_classes=1,
+                                          n_labels=2)
+
+    # train linear model
+    model = sklearn.linear_model.LogisticRegression()
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X)
+    shap_values = explainer.shap_values(X)
+    assert np.max(np.abs(expit(explainer.expected_value + shap_values[0].sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
