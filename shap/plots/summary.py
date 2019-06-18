@@ -15,7 +15,7 @@ from . import labels
 from . import colors
 
 # TODO: remove unused title argument / use title argument
-def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type="dot",
+def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
                  color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None):
     """Create a SHAP summary plot, colored by feature values when they are provided.
@@ -23,7 +23,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     Parameters
     ----------
     shap_values : numpy.array
-        Matrix of SHAP values (# samples x # features)
+        For single output explanations this is a matrix of SHAP values (# samples x # features).
+        For multi-output explanations this is a list of such matrices of SHAP values.
 
     features : numpy.array or pandas.DataFrame or list
         Matrix of feature values (# samples x # features) or a feature_names list as shorthand
@@ -34,15 +35,19 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     max_display : int
         How many top features to include in the plot (default is 20, or 7 for interaction plots)
 
-    plot_type : "dot" (default) or "violin"
-        What type of summary plot to produce
+    plot_type : "dot" (default for single output), "bar" (default for multi-output), or "violin"
+        What type of summary plot to produce. 
     """
 
     multi_class = False
     if isinstance(shap_values, list):
         multi_class = True
-        plot_type = "bar" # only type supported for now
+        if plot_type is None:
+            plot_type = "bar" # default for multi-output explanations
+        assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
     else:
+        if plot_type is None:
+            plot_type = "dot" # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
