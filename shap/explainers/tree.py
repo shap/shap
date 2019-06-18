@@ -458,7 +458,7 @@ class TreeEnsemble:
                 self.base_offset = model.init_.mean
             elif str(type(model.init_)).endswith("ensemble.gradient_boosting.QuantileEstimator'>"):
                 self.base_offset = model.init_.quantile
-            if str(type(model.init_)).endswith("sklearn.dummy.DummyRegressor'>"):
+            elif str(type(model.init_)).endswith("sklearn.dummy.DummyRegressor'>"):
                 self.base_offset = model.init_.constant_[0]
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
