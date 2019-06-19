@@ -9,7 +9,7 @@ import itertools
 import warnings
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from sklearn.cluster import KMeans
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 from .explainer import Explainer
 
 log = logging.getLogger('shap')
