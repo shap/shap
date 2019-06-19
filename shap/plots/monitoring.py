@@ -17,7 +17,7 @@ def truncate_text(text, max_len):
     else:
         return text
 
-def monitoring_plot(ind, shap_values, features, feature_names=None):
+def monitoring_plot(ind, shap_values, features, feature_names=None, show=True):
     """ Create a SHAP monitoring plot.
     
     (Note this function is preliminary and subject to change!!)
@@ -45,6 +45,11 @@ def monitoring_plot(ind, shap_values, features, feature_names=None):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
+
+    num_features = shap_values.shape[1]
+
+    if feature_names is None:
+        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
         
     pl.figure(figsize=(10,3))
     ys = shap_values[:,ind]
@@ -75,4 +80,5 @@ def monitoring_plot(ind, shap_values, features, feature_names=None):
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 20)
     cb.set_label(truncate_text(feature_names[ind], 30), size=13)
-    pl.show()
+    if show:
+        pl.show()
