@@ -3,6 +3,11 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 from scipy.spatial.distance import pdist
+import sys
+import warnings
+
+if (sys.version_info < (3, 0)):
+    warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
 
 import_errors = {}
 
