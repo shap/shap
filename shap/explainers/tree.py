@@ -119,8 +119,10 @@ class TreeExplainer(Explainer):
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
             self.expected_value = self.model.predict(self.data, output=model_output).mean(0)
+            if len(self.expected_value) == 1:
+                self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
-            self.expected_value = self.model.values[:,0].sum(0)
+            self.expected_value = self.model.values[:,0].sum(0)[0]
             self.expected_value += self.model.base_offset
 
     def __dynamic_expected_value(self, y):
