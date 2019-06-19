@@ -61,6 +61,8 @@ class TFDeepExplainer(Explainer):
         if tf is None:
             from tensorflow.python.framework import ops as tf_ops # pylint: disable=E0611
             from tensorflow.python.ops import gradients_impl as tf_gradients_impl # pylint: disable=E0611
+            if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
+                from tensorflow.python.ops import gradients_util as tf_gradients_impl
             import tensorflow as tf
             if LooseVersion(tf.__version__) < LooseVersion("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
@@ -113,7 +115,7 @@ class TFDeepExplainer(Explainer):
             if keras is not None and keras.backend.tensorflow_backend._SESSION is not None:
                 session = keras.backend.get_session()
             else:
-                session = tf.keras.backend.get_session()
+                session = tf.compat.v1.keras.backend.get_session()
         self.session = tf.get_default_session() if session is None else session
 
         # if no learning phase flags were given we go looking for them
