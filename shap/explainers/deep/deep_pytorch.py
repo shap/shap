@@ -52,6 +52,10 @@ class PyTorchDeepExplainer(Explainer):
         self.num_outputs = 1
         with torch.no_grad():
             outputs = model(*data)
+
+            # also get the device everything is running on
+            self.device = outputs.device
+
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
@@ -119,6 +123,8 @@ class PyTorchDeepExplainer(Explainer):
         else:
             assert type(X) == list, "Expected a list of model inputs!"
 
+        X = [x.to(self.device) for x in X]
+
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
                 model_output_values = self.model(*X)
@@ -169,10 +175,10 @@ class PyTorchDeepExplainer(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:]* (x[l] - data[l])).mean(0)
+                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]).to(X[l].device) * (X[l][j: j + 1] - self.data[l])).cpu().numpy().mean(0)
+                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]).to(self.device) * (X[l][j: j + 1] - self.data[l])).cpu().numpy().mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
