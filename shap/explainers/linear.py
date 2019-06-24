@@ -79,7 +79,7 @@ class LinearExplainer(Explainer):
             raise Exception("A background data distribution must be provided!")
         else:
             if sp.sparse.issparse(data):
-                self.mean = data.mean(0)
+                self.mean = np.array(np.mean(data, 0))[0]
                 if feature_dependence != "independent":
                     raise Exception("Only feature_dependence = 'independent' is supported for sparse data")
             else:
@@ -90,11 +90,18 @@ class LinearExplainer(Explainer):
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
         if sp.sparse.issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
             # accept both sparse and dense coef
-            if not sp.sparse.issparse(self.coef):
-                self.coef = np.asmatrix(self.coef)
-            self.expected_value = self.coef.dot(self.mean.T) + self.intercept
+            # if not sp.sparse.issparse(self.coef):
+            #     self.coef = np.asmatrix(self.coef)
+            self.expected_value = np.dot(self.coef, self.mean) + self.intercept
+
+            # unwrap the matrix form
+            if len(self.expected_value) == 1:
+                self.expected_value = self.expected_value[0,0]
+            else:
+                self.expected_value = np.array(self.expected_value)[0]
         else:
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
+        
         self.M = len(self.mean)
 
         # if needed, estimate the transform matrices
@@ -227,7 +234,7 @@ class LinearExplainer(Explainer):
         elif self.feature_dependence == "independent":
             if sp.sparse.issparse(X):
                 if len(self.coef.shape) == 1:
-                    return np.array(np.multiply(X - self.mean, self.coef[0]))
+                    return np.array(np.multiply(X - self.mean, self.coef))
                 else:
                     return [np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])]
             else:
