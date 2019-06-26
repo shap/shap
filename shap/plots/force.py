@@ -214,26 +214,45 @@ def initjs():
         "<script>{bundle_data}</script>".format(bundle_data=bundle_data)
     ))
 
-def save_html(out_file, plot_html):
+def save_html(out_file, plot_html, full_html=True):
     """ Save html plots to an output file.
+    
+    Parameters
+    ----------
+    out_file : str or file
+        Location or file to be written to
+    plot_html : HTML Object
+        HTML object returned by shap.force_plot()
+    full_html : boolean (default: True)
+        If True, writes a complete HTML document starting 
+        with an <html> tag. If False, only script and div
+        tags are included.
     """
 
     internal_open = False
     if type(out_file) == str:
-        out_file = open(out_file, "w")
+        out_file = open(out_file, "w", encoding="utf-8")
         internal_open = True
-    out_file.write("<html><head><script>\n")
+    
+    if full_html:
+        out_file.write("<html><head><meta http-equiv='content-type' content='text/html'; charset='utf-8'>")
+    
+    out_file.write("<script>\n")
 
     # dump the js code
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
-    with io.open(bundle_path, encoding="utf-8") as f:
+    with open(bundle_path, "r", encoding="utf-8") as f:
         bundle_data = f.read()
     out_file.write(bundle_data)
-    out_file.write("</script></head><body>\n")
+    out_file.write("</script>")
+    
+    if full_html:
+        out_file.write("</head><body>\n")
 
     out_file.write(plot_html.data)
-
-    out_file.write("</body></html>\n")
+    
+    if full_html:
+        out_file.write("</body></html>\n")
 
     if internal_open:
         out_file.close()
