@@ -280,7 +280,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
-        ax.set_xticks([name_map[n] for n in xnames], xnames, rotation='vertical', fontsize=11)
+        ax.set_xticks([name_map[n] for n in xnames])
+        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
