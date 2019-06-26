@@ -17,7 +17,8 @@ from . import colors
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None):
+                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None,
+                 color_bar_label=labels["FEATURE_VALUE"]):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -35,8 +36,10 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     max_display : int
         How many top features to include in the plot (default is 20, or 7 for interaction plots)
 
-    plot_type : "dot" (default for single output), "bar" (default for multi-output), or "violin"
-        What type of summary plot to produce. 
+    plot_type : "dot" (default for single output), "bar" (default for multi-output), "violin",
+        or "compact_dot".
+        What type of summary plot to produce. Note that "compact_dot" is only used for
+        SHAP interaction values.
     """
 
     multi_class = False
@@ -79,6 +82,27 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     # plotting SHAP interaction values
     if not multi_class and len(shap_values.shape) == 3:
+
+        if plot_type == "compact_dot":
+            new_shap_values = shap_values.reshape(shap_values.shape[0], -1)
+            new_features = np.tile(features, (1, 1, features.shape[1])).reshape(features.shape[0], -1)
+
+            new_feature_names = []
+            for c1 in feature_names:
+                for c2 in feature_names:
+                    if c1 == c2:
+                        new_feature_names.append(c1)
+                    else:
+                        new_feature_names.append(c1 + "* - " + c2)
+
+            return summary_plot(
+                new_shap_values, new_features, new_feature_names,
+                max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
+                title=title, alpha=alpha, show=show, sort=sort,
+                color_bar=color_bar, auto_size_plot=auto_size_plot, class_names=class_names,
+                color_bar_label="*" + color_bar_label
+            )
+
         if max_display is None:
             max_display = 7
         else:
@@ -387,7 +411,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         m.set_array([0, 1])
         cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
-        cb.set_label(labels['FEATURE_VALUE'], size=12, labelpad=0)
+        cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
