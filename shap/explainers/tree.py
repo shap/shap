@@ -610,7 +610,7 @@ class TreeEnsemble:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
         
         # build a dense numpy version of all the tree objects
-        if self.trees is not None:
+        if self.trees is not None and self.trees:
             max_nodes = np.max([len(t.values) for t in self.trees])
             assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, "All trees in the ensemble must have the same output dimension!"
             ntrees = len(self.trees)
