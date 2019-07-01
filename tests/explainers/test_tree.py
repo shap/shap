@@ -276,6 +276,52 @@ def test_lightgbm():
     # explain the model's predictions using SHAP values
     shap_values = shap.TreeExplainer(model).shap_values(X)
 
+def test_lightgbm_constant_prediction():
+    # note: this test used to fail with lightgbm 2.2.1 with error:
+    # ValueError: zero-size array to reduction operation maximum which has no identity
+    # on TreeExplainer when trying to compute max nodes:
+    # max_nodes = np.max([len(t.values) for t in self.trees])
+    # The test does not fail with latest lightgbm 2.2.3 however
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm_constant_prediction!")
+        return
+    import shap
+
+    # train lightgbm model with a constant value for y
+    X, y = shap.datasets.boston()
+    # use the mean for all values
+    mean = np.mean(y)
+    y.fill(mean)
+    model = lightgbm.sklearn.LGBMRegressor(n_estimators=1)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    shap_values = shap.TreeExplainer(model).shap_values(X)
+
+def test_lightgbm_constant_multiclass():
+    # note: this test used to fail with lightgbm 2.2.1 with error:
+    # ValueError: zero-size array to reduction operation maximum which has no identity
+    # on TreeExplainer when trying to compute max nodes:
+    # max_nodes = np.max([len(t.values) for t in self.trees])
+    # The test does not fail with latest lightgbm 2.2.3 however
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm_constant_multiclass!")
+        return
+    import shap
+
+    # train lightgbm model
+    X, Y = shap.datasets.iris()
+    Y.fill(1)
+    model = lightgbm.sklearn.LGBMClassifier(num_classes=3, objective="multiclass")
+    model.fit(X, Y)
+
+    # explain the model's predictions using SHAP values
+    shap_values = shap.TreeExplainer(model).shap_values(X)
+
 def test_lightgbm_multiclass():
     try:
         import lightgbm
