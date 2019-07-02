@@ -55,13 +55,11 @@ class PyTorchDeepExplainer(Explainer):
 
             # also get the device everything is running on
             self.device = outputs.device
-            print("debug: device",self.device)
 
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
             self.expected_value = outputs.mean(0).cpu().numpy()
-            print("debug: expected_value",self.expected_value)
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(get_target_input)
@@ -103,9 +101,7 @@ class PyTorchDeepExplainer(Explainer):
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
-        print("debug: outputs", outputs)
         selected = [val for val in outputs[:, idx]]
-        print("debug: selected", selected)
         if self.interim:
             interim_inputs = self.layer.target_input
             grads = [torch.autograd.grad(selected, input)[0].cpu().numpy() for input in interim_inputs]
@@ -113,7 +109,6 @@ class PyTorchDeepExplainer(Explainer):
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
             grads = [torch.autograd.grad(selected, x)[0].cpu().numpy() for x in X]
-            print("grads", grads)
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
@@ -148,7 +143,6 @@ class PyTorchDeepExplainer(Explainer):
                                   torch.arange(0, self.num_outputs).int())
 
         # add the gradient handles
-        print("debug: Adding gradient handles")
         handles = self.add_handles(self.model, add_interim_values, deeplift_grad)
         if self.interim:
             self.add_target_handle(self.layer)
@@ -171,9 +165,7 @@ class PyTorchDeepExplainer(Explainer):
                 joint_x = [torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
-                print("debug: Calling self.gradient")
                 sample_phis = self.gradient(feature_ind, joint_x)
-                print("debug: Called self.gradient")
                 # assign the attributions to the right part of the output arrays
                 if self.interim:
                     sample_phis, output = sample_phis
@@ -216,7 +208,8 @@ def deeplift_grad(module, grad_input, grad_output):
         if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
             return op_handler[module_type](module, grad_input, grad_output)
     else:
-        print('Warning: unrecognized nn.Module: {}'.format(module_type))
+        print('Warning: unrecognized nn.Module: {}'.format(module_type)
+              +'; using regular gradients')
         return grad_input
 
 
@@ -381,6 +374,7 @@ op_handler['BatchNorm3d'] = linear_1d
 
 op_handler['LeakyReLU'] = nonlinear_1d
 op_handler['ReLU'] = nonlinear_1d
+op_handler['Threshold'] = nonlinear_1d
 op_handler['ELU'] = nonlinear_1d
 op_handler['Sigmoid'] = nonlinear_1d
 op_handler["Tanh"] = nonlinear_1d
