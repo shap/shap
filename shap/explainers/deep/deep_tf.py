@@ -287,7 +287,7 @@ class TFDeepExplainer(Explainer):
                 #combine the multipliers with the difference from reference
                 # to get the final attributions
                 phis_j = self.combine_mult_and_diffref(
-                    mult=[sample_phis[l][bg_data[l].shape[0]:]
+                    mult=[sample_phis[l][:-bg_data[l].shape[0]]
                           for l in range(len(X))],
                     orig_inp=[X[l][j] for l in range(len(X))],
                     bg_data=bg_data)

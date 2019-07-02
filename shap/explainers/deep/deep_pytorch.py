@@ -55,11 +55,13 @@ class PyTorchDeepExplainer(Explainer):
 
             # also get the device everything is running on
             self.device = outputs.device
+            print("debug: device",self.device)
 
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
             self.expected_value = outputs.mean(0).cpu().numpy()
+            print("debug: expected_value",self.expected_value)
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(get_target_input)
@@ -101,7 +103,9 @@ class PyTorchDeepExplainer(Explainer):
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
+        print("debug: outputs", outputs)
         selected = [val for val in outputs[:, idx]]
+        print("debug: selected", selected)
         if self.interim:
             interim_inputs = self.layer.target_input
             grads = [torch.autograd.grad(selected, input)[0].cpu().numpy() for input in interim_inputs]
@@ -109,6 +113,7 @@ class PyTorchDeepExplainer(Explainer):
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
             grads = [torch.autograd.grad(selected, x)[0].cpu().numpy() for x in X]
+            print("grads", grads)
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
@@ -143,6 +148,7 @@ class PyTorchDeepExplainer(Explainer):
                                   torch.arange(0, self.num_outputs).int())
 
         # add the gradient handles
+        print("debug: Adding gradient handles")
         handles = self.add_handles(self.model, add_interim_values, deeplift_grad)
         if self.interim:
             self.add_target_handle(self.layer)
@@ -165,7 +171,9 @@ class PyTorchDeepExplainer(Explainer):
                 joint_x = [torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
+                print("debug: Calling self.gradient")
                 sample_phis = self.gradient(feature_ind, joint_x)
+                print("debug: Called self.gradient")
                 # assign the attributions to the right part of the output arrays
                 if self.interim:
                     sample_phis, output = sample_phis
@@ -175,10 +183,10 @@ class PyTorchDeepExplainer(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
+                        phis[l][j] = (sample_phis[l][:-self.data[l].shape[0]] * (x[l] - data[l])).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]).to(self.device) * (X[l][j: j + 1] - self.data[l])).cpu().numpy().mean(0)
+                        phis[l][j] = (torch.from_numpy(sample_phis[l][:-self.data[l].shape[0]]).to(self.device) * (X[l][j: j + 1] - self.data[l])).cpu().numpy().mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
