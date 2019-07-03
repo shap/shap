@@ -1,24 +1,38 @@
 import numpy as np
 import warnings
 from shap.explainers.explainer import Explainer
+from .misc import standard_combine_mult_and_diffref
 from distutils.version import LooseVersion
 torch = None
 
 
 class PyTorchDeepExplainer(Explainer):
 
-    def __init__(self, model, data):
+    def __init__(self, model, data,
+                  combine_mult_and_diffref=standard_combine_mult_and_diffref):
         """
         Parameters
         ----------
         model : WRITEME 
 
-        data : numpy.array or function  
+        data : torch tensor or function  
             If a function is supplied, it must be a function that
             takes a particular input example and generates the background
             dataset for that example. When None is supplied as an input, 
             the function should return values that are in the same format
             as what it would return if an actual input were supplied.
+
+        combine_mult_and_diffref : function
+            This function determines how to combine the multipliers,
+             the original input and the reference input to get
+             the final attributions. Defaults to
+             standard_combine_mult_and_diffref, which just multiplies
+             the multipliers with the difference-from-reference (in
+             accordance with the standard DeepLIFT formulation) and then
+             averages the importance scores across the different references.
+             However, different approaches may be applied depending on
+             the use case (e.g. for computing hypothetical contributions
+             in genomic data)
         """ 
         # try and import pytorch
         global torch
@@ -40,6 +54,7 @@ class PyTorchDeepExplainer(Explainer):
         if type(sample_data) != list:
             sample_data = [sample_data]
         self.data = data
+        self.combine_mult_and_diffref = combine_mult_and_diffref
         self.layer = None
         self.input_handle = None
         self.interim = False
@@ -203,11 +218,25 @@ class PyTorchDeepExplainer(Explainer):
                         x_temp, data_temp = np.split(output[i], 2)
                         x.append(x_temp)
                         data.append(data_temp)
+                    phis_j = self.combine_mult_and_diffref(
+                        mult=[sample_phis[l][:-bg_data[l].shape[0]]
+                              for l in range(len(self.interim_inputs_shape))],
+                        orig_inp=x,
+                        bg_data=data)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][:-bg_data[l].shape[0]] * (x[l] - data[l])).mean(0)
+                        phis[l][j] = phis_j[l] 
                 else:
+                    #combine the multipliers with the difference from reference
+                    # to get the final attributions
+                    phis_j = self.combine_mult_and_diffref(
+                        mult=[sample_phis[l][:-bg_data[l].shape[0]]
+                              for l in range(len(X))],
+                        orig_inp=[X[l][j].detach().cpu().numpy()
+                                  for l in range(len(X))],
+                        bg_data=[x.detach().cpu().numpy() for x in bg_data])
+                    # assign the attributions to the right part of the output arrays
                     for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][:-bg_data[l].shape[0]]).to(self.device) * (X[l][j: j + 1] - bg_data[l])).cpu().numpy().mean(0)
+                        phis[l][j] = phis_j[l] 
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:

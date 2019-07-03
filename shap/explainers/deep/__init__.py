@@ -1,5 +1,6 @@
 from .deep_pytorch import PyTorchDeepExplainer
 from .deep_tf import TFDeepExplainer
+from .misc import standard_combine_mult_and_diffref
 from shap.explainers.explainer import Explainer
 
 
@@ -15,7 +16,9 @@ class DeepExplainer(Explainer):
     current model output (f(x) - E[f(x)]).
     """
 
-    def __init__(self, model, data, session=None, learning_phase_flags=None):
+    def __init__(self, model, data,
+                 session=None, learning_phase_flags=None,
+                 combine_mult_and_diffref=standard_combine_mult_and_diffref):
         """ An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -47,6 +50,18 @@ class DeepExplainer(Explainer):
             should only something like 100 or 1000 random background samples, not the whole training
             dataset.
 
+        combine_mult_and_diffref : function
+            This function determines how to combine the multipliers,
+             the original input and the reference input to get
+             the final attributions. Defaults to
+             standard_combine_mult_and_diffref, which just multiplies
+             the multipliers with the difference-from-reference (in
+             accordance with the standard DeepLIFT formulation) and then
+             averages the importance scores across the different references.
+             However, different approaches may be applied depending on
+             the use case (e.g. for computing hypothetical contributions
+             in genomic data)
+
         if framework == 'tensorflow':
 
         session : None or tensorflow.Session
@@ -77,9 +92,12 @@ class DeepExplainer(Explainer):
                 framework = 'tensorflow'
 
         if framework == 'tensorflow':
-            self.explainer = TFDeepExplainer(model, data, session, learning_phase_flags)
+            self.explainer = TFDeepExplainer(model=model, data=data,
+                session=session, learning_phase_flags=learning_phase_flags,
+                combine_mult_and_diffref=combine_mult_and_diffref)
         elif framework == 'pytorch':
-            self.explainer = PyTorchDeepExplainer(model, data)
+            self.explainer = PyTorchDeepExplainer(model=model, data=data,
+                combine_mult_and_diffref=combine_mult_and_diffref)
 
         self.expected_value = self.explainer.expected_value
 
