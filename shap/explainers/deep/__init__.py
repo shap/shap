@@ -15,7 +15,7 @@ class DeepExplainer(Explainer):
     current model output (f(x) - E[f(x)]).
     """
 
-    def __init__(self, model, data, session=None, learning_phase_flags=None):
+    def __init__(self, model, data, session=None, learning_phase_flags=None, additional_feed_tensors=None, additional_feed_data=None):
         """ An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -77,7 +77,7 @@ class DeepExplainer(Explainer):
                 framework = 'tensorflow'
 
         if framework == 'tensorflow':
-            self.explainer = TFDeepExplainer(model, data, session, learning_phase_flags)
+            self.explainer = TFDeepExplainer(model, data, session, learning_phase_flags, additional_feed_tensors=additional_feed_tensors, additional_feed_data=additional_feed_data)
         elif framework == 'pytorch':
             self.explainer = PyTorchDeepExplainer(model, data)
 

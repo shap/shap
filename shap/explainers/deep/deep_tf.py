@@ -14,7 +14,7 @@ class TFDeepExplainer(Explainer):
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
 
-    def __init__(self, model, data, session=None, learning_phase_flags=None):
+    def __init__(self, model, data, session=None, learning_phase_flags=None, additional_feed_tensors=None, additional_feed_data=None):
         """ An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
@@ -103,10 +103,10 @@ class TFDeepExplainer(Explainer):
         if type(data) != list and (hasattr(data, '__call__')==False):
             data = [data]
         self.data = data
-        
+
         self._vinputs = {} # used to track what op inputs depends on the model inputs
         self.orig_grads = {}
-        
+
         # if we are not given a session find a default session
         if session is None:
             # if keras is installed and already has a session then use it
@@ -136,7 +136,7 @@ class TFDeepExplainer(Explainer):
         else:
             if self.data[0].shape[0] > 5000:
                 warnings.warn("You have provided over 5k background samples! For better performance consider using smaller random sample.")
-            self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+            self.expected_value = 0 #self.run(self.model_output, self.model_inputs, self.data, additional_feed_tensors, additional_feed_data).mean(0)
 
         # find all the operations in the graph between our inputs and outputs
         tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops) # don't follow learning phase branches
@@ -195,7 +195,7 @@ class TFDeepExplainer(Explainer):
             if hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 orig_IsBackpropagatable = tf_gradients_impl._IsBackpropagatable
                 tf_gradients_impl._IsBackpropagatable = lambda tensor: True
-            
+
             # define the computation graph for the attribution values using custom a gradient-like computation
             try:
                 out = self.model_output[:,i] if self.multi_output else self.model_output
@@ -213,7 +213,7 @@ class TFDeepExplainer(Explainer):
                         reg[n]["type"] = self.orig_grads[n]
         return self.phi_symbolics[i]
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", additional_feed_tensors=None, additional_feed_data=None):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -227,7 +227,7 @@ class TFDeepExplainer(Explainer):
 
         # rank and determine the model outputs that we will explain
         if ranked_outputs is not None and self.multi_output:
-            model_output_values = self.run(self.model_output, self.model_inputs, X)
+            model_output_values = self.run(self.model_output, self.model_inputs, X, additional_feed_tensors=additional_feed_tensors, additional_feed_data=additional_feed_data)
             if output_rank_order == "max":
                 model_output_ranks = np.argsort(-model_output_values)
             elif output_rank_order == "min":
@@ -259,7 +259,7 @@ class TFDeepExplainer(Explainer):
                 joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
-                sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
+                sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input, additional_feed_tensors=additional_feed_tensors, additional_feed_data=additional_feed_data)
 
                 # assign the attributions to the right part of the output arrays
                 for l in range(len(X)):
@@ -273,10 +273,14 @@ class TFDeepExplainer(Explainer):
         else:
             return output_phis
 
-    def run(self, out, model_inputs, X):
+    def run(self, out, model_inputs, X, additional_feed_tensors=None, additional_feed_data=None):
         """ Runs the model while also setting the learning phase flags to False.
         """
         feed_dict = dict(zip(model_inputs, X))
+        if additional_feed_tensors is not None:
+            additional_feed_dict = dict(zip(additional_feed_tensors, additional_feed_data))
+            feed_dict.update(additional_feed_dict)
+
         for t in self.learning_phase_flags:
             feed_dict[t] = False
         return self.session.run(out, feed_dict)
@@ -332,6 +336,16 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
     return found_ops
 
 
+def split_tensor(t):
+    if len(t.shape) == 3:
+        return tf.split(t,2,axis=1)
+    return tf.split(t,2)
+
+def get_dup_shape(t):
+    if len(t.shape) == 3:
+        return [1] + [2] + [1 for i in t.shape[2:]]
+    return [2] + [1 for i in t.shape[1:]]
+
 def softmax(explainer, op, *grads):
     """ Just decompose softmax into its components and recurse, we can handle all of them :)
 
@@ -352,10 +366,10 @@ def softmax(explainer, op, *grads):
     del explainer.between_ops[-4:]
 
     # rescale to account for our shift by in0_max (which we did for numerical stability)
-    xin0,rin0 = tf.split(in0, 2)
-    xin0_centered,rin0_centered = tf.split(in0_centered, 2)
+    xin0,rin0 = split_tensor(in0)
+    xin0_centered,rin0_centered = split_tensor(in0_centered)
     delta_in0 = xin0 - rin0
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    dup0 = get_dup_shape(delta_in0)
     return tf.where(
         tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
         out,
@@ -363,13 +377,13 @@ def softmax(explainer, op, *grads):
     )
 
 def maxpool(explainer, op, *grads):
-    xin0,rin0 = tf.split(op.inputs[0], 2)
-    xout,rout = tf.split(op.outputs[0], 2)
+    xin0,rin0 = split_tensor(op.inputs[0])
+    xout,rout = split_tensor(op.outputs[0])
     delta_in0 = xin0 - rin0
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    dup0 = get_dup_shape(delta_in0)
     cross_max = tf.maximum(xout, rout)
     diffs = tf.concat([cross_max - rout, xout - cross_max], 0)
-    xmax_pos,rmax_pos = tf.split(explainer.orig_grads[op.type](op, grads[0] * diffs), 2)
+    xmax_pos,rmax_pos = split_tensor(explainer.orig_grads[op.type](op, grads[0] * diffs))
     return tf.tile(tf.where(
         tf.abs(delta_in0) < 1e-7,
         tf.zeros_like(delta_in0),
@@ -384,8 +398,8 @@ def gather(explainer, op, *grads):
     if var[1] and not var[0]:
         assert len(indices.shape) == 2, "Only scalar indices supported right now in GatherV2!"
 
-        xin1,rin1 = tf.split(tf.to_float(op.inputs[1]), 2)
-        xout,rout = tf.split(op.outputs[0], 2)
+        xin1,rin1 = split_tensor(tf.to_float(op.inputs[1]))
+        xout,rout = split_tensor(op.outputs[0])
         dup_in1 = [2] + [1 for i in xin1.shape[1:]]
         dup_out = [2] + [1 for i in xout.shape[1:]]
         delta_in1_t = tf.tile(xin1 - rin1, dup_in1)
@@ -422,7 +436,7 @@ def nonlinearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
             return nonlinearity_1d_handler(input_ind1, explainer, op, *grads)
         elif var[input_ind0] and var[input_ind1]:
             return nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads)
-        else: 
+        else:
             return [None for _ in op.inputs] # no inputs vary, we must be hidden by a switch function
     return handler
 
@@ -437,11 +451,11 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     for i in range(len(op.inputs)):
         if i != input_ind:
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
-    
-    xin0,rin0 = tf.split(op.inputs[input_ind], 2)
-    xout,rout = tf.split(op.outputs[input_ind], 2)
+
+    xin0,rin0 = split_tensor(op.inputs[input_ind])
+    xout,rout = split_tensor(op.outputs[input_ind])
     delta_in0 = xin0 - rin0
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    dup0 = get_dup_shape(delta_in0)
     out = [None for _ in op.inputs]
     orig_grads = explainer.orig_grads[op.type](op, grads[0])
     out[input_ind] = tf.where(
@@ -453,31 +467,47 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
     assert input_ind0 == 0 and input_ind1 == 1, "TODO: Can't yet handle double inputs that are not first!"
-    xout,rout = tf.split(op.outputs[0], 2)
-    xin0,rin0 = tf.split(op.inputs[input_ind0], 2)
-    xin1,rin1 = tf.split(op.inputs[input_ind1], 2)
+    xout,rout = split_tensor(op.outputs[0])
+    xin0,rin0 = split_tensor(op.inputs[input_ind0])
+    xin1,rin1 = split_tensor(op.inputs[input_ind1])
     delta_in0 = xin0 - rin0
     delta_in1 = xin1 - rin1
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    # d = delta_in0
+    # if len(delta_in0.shape) < len(delta_in1.shape):
+    #     d = delta_in1
+    #dup = [2] + [1 for i in d.shape[1:]]
     out10 = op_func(xin0, rin1)
     out01 = op_func(rin0, xin1)
     out11,out00 = xout,rout
     out0 = 0.5 * (out11 - out01 + out10 - out00)
+    dup0 = get_dup_shape(out0 / delta_in0)
     out0 = grads[0] * tf.tile(out0 / delta_in0, dup0)
     out1 = 0.5 * (out11 - out10 + out01 - out00)
-    out1 = grads[0] * tf.tile(out1 / delta_in1, dup0)
+    dup1 = get_dup_shape(out1 / delta_in1)
+    out1 = grads[0] * tf.tile(out1 / delta_in1, dup1)
 
     # see if due to broadcasting our gradient shapes don't match our input shapes
     if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
         broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
-        out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
+        if len(delta_in1.shape) != len(out1.shape):
+            keepd = False
+        else:
+            keepd = True
+        out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=keepd)
     elif (np.any(np.array(out0.shape) != np.array(delta_in0.shape))):
         broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
-        out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
+        if len(delta_in0.shape) != len(out0.shape):
+            keepd = False
+        else:
+            keepd = True
+        out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=keepd)
 
     # Avoid divide by zero nans
-    out0 = tf.where(tf.abs(tf.tile(delta_in0, dup0)) < 1e-7, tf.zeros_like(out0), out0)
-    out1 = tf.where(tf.abs(tf.tile(delta_in1, dup0)) < 1e-7, tf.zeros_like(out1), out1)
+    try:
+        out0 = tf.where(tf.abs(tf.tile(delta_in0, get_dup_shape(delta_in0))) < 1e-7, tf.zeros_like(out0), out0)
+        out1 = tf.where(tf.abs(tf.tile(delta_in1, get_dup_shape(delta_in1))) < 1e-7, tf.zeros_like(out1), out1)
+    except Exception as e:
+        x = e
 
     return [out0, out1]
 
