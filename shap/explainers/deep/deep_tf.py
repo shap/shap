@@ -179,6 +179,10 @@ class TFDeepExplainer(Explainer):
         self.used_types = {}
         for op in self.between_ops:
             self.used_types[op.type] = True
+            if (op.type not in op_handlers):
+                print("Warning: ",op.type,"used in model but handling of op"
+                      +" is not specified by shap; will use original "
+                      +" gradients")
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
