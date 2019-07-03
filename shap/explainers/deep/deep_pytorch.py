@@ -8,6 +8,18 @@ torch = None
 class PyTorchDeepExplainer(Explainer):
 
     def __init__(self, model, data):
+        """
+        Parameters
+        ----------
+        model : WRITEME 
+
+        data : numpy.array or function  
+            If a function is supplied, it must be a function that
+            takes a particular input example and generates the background
+            dataset for that example. When None is supplied as an input, 
+            the function should return values that are in the same format
+            as what it would return if an actual input were supplied.
+        """ 
         # try and import pytorch
         global torch
         if torch is None:
@@ -17,10 +29,16 @@ class PyTorchDeepExplainer(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = False
-        if type(data) == list:
+        if (hasattr(data, '__call__')):
+            sample_data = data(None)
+        else:
+            sample_data = data
+            if type(data) != list:
+                data = [data]
+        if type(sample_data) == list:
             self.multi_input = True
-        if type(data) != list:
-            data = [data]
+        if type(sample_data) != list:
+            sample_data = [sample_data]
         self.data = data
         self.layer = None
         self.input_handle = None
@@ -37,7 +55,7 @@ class PyTorchDeepExplainer(Explainer):
             # if we are taking an interim layer, the 'data' is going to be the input
             # of the interim layer; we will capture this using a forward hook
             with torch.no_grad():
-                _ = model(*data)
+                _ = model(*sample_data)
                 interim_inputs = self.layer.target_input
                 if type(interim_inputs) is tuple:
                     # this should always be true, but just to be safe
@@ -51,7 +69,7 @@ class PyTorchDeepExplainer(Explainer):
         self.multi_output = False
         self.num_outputs = 1
         with torch.no_grad():
-            outputs = model(*data)
+            outputs = model(*sample_data)
 
             # also get the device everything is running on
             self.device = outputs.device
@@ -59,7 +77,12 @@ class PyTorchDeepExplainer(Explainer):
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
-            self.expected_value = outputs.mean(0).cpu().numpy()
+            #Only set the value of self.expected_value if data
+            # is not a callable, because otherwise the expected value
+            # is example-dependent.
+            if (hasattr(data, '__call__')==False):
+                self.expected_value = outputs.mean(0).cpu().numpy()
+            
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(get_target_input)
@@ -158,11 +181,17 @@ class PyTorchDeepExplainer(Explainer):
                 for k in range(len(X)):
                     phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
+                if (hasattr(self.data, '__call__')):
+                    bg_data = self.data([X[l][j] for l in range(len(X))])
+                    if type(bg_data) != list:
+                        bg_data = [bg_data]
+                else:
+                    bg_data = self.data
                 # tile the inputs to line up with the background data samples
                 tiled_X = [X[l][j:j + 1].repeat(
-                                   (self.data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape) - 1)])) for l
+                                   (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape) - 1)])) for l
                            in range(len(X))]
-                joint_x = [torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))]
+                joint_x = [torch.cat((tiled_X[l], bg_data[l]), dim=0) for l in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.gradient(feature_ind, joint_x)
@@ -175,10 +204,10 @@ class PyTorchDeepExplainer(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][:-self.data[l].shape[0]] * (x[l] - data[l])).mean(0)
+                        phis[l][j] = (sample_phis[l][:-bg_data[l].shape[0]] * (x[l] - data[l])).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][:-self.data[l].shape[0]]).to(self.device) * (X[l][j: j + 1] - self.data[l])).cpu().numpy().mean(0)
+                        phis[l][j] = (torch.from_numpy(sample_phis[l][:-bg_data[l].shape[0]]).to(self.device) * (X[l][j: j + 1] - bg_data[l])).cpu().numpy().mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
