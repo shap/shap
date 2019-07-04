@@ -472,10 +472,6 @@ def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *gra
     xin1,rin1 = split_tensor(op.inputs[input_ind1])
     delta_in0 = xin0 - rin0
     delta_in1 = xin1 - rin1
-    # d = delta_in0
-    # if len(delta_in0.shape) < len(delta_in1.shape):
-    #     d = delta_in1
-    #dup = [2] + [1 for i in d.shape[1:]]
     out10 = op_func(xin0, rin1)
     out01 = op_func(rin0, xin1)
     out11,out00 = xout,rout
@@ -506,8 +502,6 @@ def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *gra
     try:
         out0 = tf.where(tf.abs(tf.tile(delta_in0, get_dup_shape(delta_in0))) < 1e-7, tf.zeros_like(out0), out0)
         out1 = tf.where(tf.abs(tf.tile(delta_in1, get_dup_shape(delta_in1))) < 1e-7, tf.zeros_like(out1), out1)
-    except Exception as e:
-        x = e
 
     return [out0, out1]
 
