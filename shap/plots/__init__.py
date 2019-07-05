@@ -11,5 +11,6 @@ labels = {
     'FEATURE_VALUE': "Feature value",
     'FEATURE_VALUE_LOW': "Low",
     'FEATURE_VALUE_HIGH': "High",
-    'JOINT_VALUE': "Joint SHAP value"
+    'JOINT_VALUE': "Joint SHAP value",
+    'MODEL_OUTPUT': "Model output value"
 }
