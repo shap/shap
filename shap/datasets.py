@@ -34,6 +34,16 @@ def boston(display=False):
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
     return df, d.target # pylint: disable=E1101
 
+
+def linnerud(display=False):
+    """ Return the linnerud data in a nice package (multi-target regression). """
+
+    d = sklearn.datasets.load_linnerud()
+    X = pd.DataFrame(d.data, columns=d.feature_names) # pylint: disable=E1101
+    y = pd.DataFrame(d.target, columns=d.target_names) # pylint: disable=E1101
+    return X, y # pylint: disable=E1101
+
+
 def imdb(display=False):
     """ Return the clssic IMDB sentiment analysis training data in a nice package.
 

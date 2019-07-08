@@ -122,7 +122,9 @@ class TreeExplainer(Explainer):
             if hasattr(self.expected_value, '__len__') and len(self.expected_value) == 1:
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
-            self.expected_value = self.model.values[:,0].sum(0)[0]
+            self.expected_value = self.model.values[:,0].sum(0)
+            if self.expected_value.size == 1:
+                self.expected_value = self.expected_value[0]
             self.expected_value += self.model.base_offset
 
     def __dynamic_expected_value(self, y):
