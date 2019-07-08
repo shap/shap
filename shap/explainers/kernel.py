@@ -179,7 +179,6 @@ class KernelExplainer(Explainer):
         if sp.sparse.issparse(X) and not sp.sparse.isspmatrix_lil(X):
             X = X.tolil()
         assert x_type.endswith(arr_type) or sp.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
         if len(X.shape) == 1:
@@ -206,6 +205,7 @@ class KernelExplainer(Explainer):
         elif len(X.shape) == 2:
             explanations = []
             for i in tqdm(range(X.shape[0]), disable=kwargs.pop("silent", False)):
+                data = X[i:i + 1, :]
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
                 explanations.append(self.explain(data, **kwargs))
@@ -225,6 +225,9 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
                 return out
+        
+        else:
+            raise ValueError("Instance must have 1 or 2 dimensions!")
 
     def explain(self, incoming_instance, **kwargs):
         # convert incoming input to a standardized iml object
