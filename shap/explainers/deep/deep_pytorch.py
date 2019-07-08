@@ -105,11 +105,14 @@ class PyTorchDeepExplainer(Explainer):
         if self.interim:
             interim_inputs = self.layer.target_input
             grads = [torch.autograd.grad(selected, input,
-                                         retain_graph=True)[0].cpu().numpy() for input in interim_inputs]
+                                         retain_graph=True if idx + 1 < len(interim_inputs) else None)[0].cpu().numpy()
+                     for idx, input in enumerate(interim_inputs)]
             del self.layer.target_input
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
-            grads = [torch.autograd.grad(selected, x, retain_graph=True)[0].cpu().numpy() for x in X]
+            grads = [torch.autograd.grad(selected, x,
+                                         retain_graph=True if idx + 1 < len(X) else None)[0].cpu().numpy()
+                     for idx, x in enumerate(X)]
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
