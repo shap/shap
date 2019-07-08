@@ -50,9 +50,12 @@ class MimicExplainer(Explainer):
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
         self.model = convert_to_model(model)
-        self.keep_index = kwargs.get("keep_index", False)
+        self.keep_index = kwargs.pop("keep_index", False)
         self.data = convert_to_data(data, keep_index=self.keep_index)
         match_model_to_data(self.model, self.data)
+
+        if kwargs:
+            raise TypeError("Unused keyword arguments: " + ", ".join(kwargs.keys()))
 
         self.model_out = self.model.f(data.data)
 
@@ -88,6 +91,9 @@ class MimicExplainer(Explainer):
         sum to the model output for that sample. For models with vector outputs this returns a list
         of such matrices, one for each output.
         """
+
+        if kwargs:
+            raise TypeError("Unused keyword arguments: " + ", ".join(kwargs.keys()))
 
         phi = None
         if self.mimic_model_type == "xgboost":

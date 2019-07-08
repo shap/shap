@@ -91,10 +91,13 @@ class KernelExplainer(Explainer):
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
         self.model = convert_to_model(model)
-        self.keep_index = kwargs.get("keep_index", False)
-        self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
+        self.keep_index = kwargs.pop("keep_index", False)
+        self.keep_index_ordered = kwargs.pop("keep_index_ordered", False)
         self.data = convert_to_data(data, keep_index=self.keep_index)
         model_null = match_model_to_data(self.model, self.data)
+
+        if kwargs:
+            raise TypeError("Unused keyword arguments: " + ", ".join(kwargs.keys()))
 
         # enforce our current input type limitations
         assert isinstance(self.data, DenseData) or isinstance(self.data, SparseData), \
@@ -202,8 +205,7 @@ class KernelExplainer(Explainer):
         # explain the whole dataset
         elif len(X.shape) == 2:
             explanations = []
-            for i in tqdm(range(X.shape[0]), disable=kwargs.get("silent", False)):
-                data = X[i:i + 1, :]
+            for i in tqdm(range(X.shape[0]), disable=kwargs.pop("silent", False)):
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
                 explanations.append(self.explain(data, **kwargs))
@@ -228,6 +230,11 @@ class KernelExplainer(Explainer):
         # convert incoming input to a standardized iml object
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
+
+        self.l1_reg = kwargs.pop("l1_reg", "auto")
+        self.nsamples = kwargs.pop("nsamples", "auto")
+        if kwargs:
+            raise TypeError("Unused keyword arguments: " + ", ".join(kwargs.keys()))
 
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model
@@ -273,10 +280,7 @@ class KernelExplainer(Explainer):
 
         # if more than one feature varies then we have to do real work
         else:
-            self.l1_reg = kwargs.get("l1_reg", "auto")
-
             # pick a reasonable number of samples if the user didn't specify how many they wanted
-            self.nsamples = kwargs.get("nsamples", "auto")
             if self.nsamples == "auto":
                 self.nsamples = 2 * self.M + 2**11
 

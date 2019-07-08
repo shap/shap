@@ -27,6 +27,12 @@ class SamplingExplainer(KernelExplainer):
         assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)
 
     def explain(self, incoming_instance, **kwargs):
+        self.nsamples = kwargs.pop("nsamples", "auto")
+        min_samples_per_feature = kwargs.pop("min_samples_per_feature", 100)
+
+        if kwargs:
+            raise TypeError("Unused keyword arguments: " + ", ".join(kwargs.keys()))
+
         # convert incoming input to a standardized iml object
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
@@ -68,12 +74,10 @@ class SamplingExplainer(KernelExplainer):
         else:
 
             # pick a reasonable number of samples if the user didn't specify how many they wanted
-            self.nsamples = kwargs.get("nsamples", "auto")
             if self.nsamples == "auto":
                 self.nsamples = 1000 * self.M
             assert self.nsamples % 2 == 0, "nsamples must be divisible by 2!"
 
-            min_samples_per_feature = kwargs.get("min_samples_per_feature", 100)
             round1_samples = self.nsamples
             round2_samples = 0
             if round1_samples > self.M * min_samples_per_feature:
