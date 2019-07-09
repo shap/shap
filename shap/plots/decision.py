@@ -1,7 +1,5 @@
 """ Visualize cumulative SHAP values."""
 
-# TODO Ask about feature_display_range and title style
-
 from __future__ import division, unicode_literals
 import warnings
 
@@ -110,7 +108,7 @@ def __decision_plot_matplotlib(
         pl.sca(ax_tmp)
 
     if title:
-        # /// TODO decide on style/size
+        # TODO decide on style/size
         pl.title(title)
 
     if ascending:
