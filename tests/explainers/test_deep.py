@@ -415,3 +415,40 @@ def test_pytorch_single_output():
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
             d / np.abs(diff).sum())
+
+
+def test_pytorch_multiple_inputs():
+    _skip_if_no_pytorch()
+
+    import torch
+    from torch import nn
+    import shap
+
+    batch_size = 10
+    x1 = torch.ones(batch_size, 3)
+    x2 = torch.ones(batch_size, 4)
+
+    background = [torch.zeros(batch_size, 3), torch.zeros(batch_size, 4)]
+
+    class Net(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = nn.Linear(7, 1)
+
+        def forward(self, x1, x2):
+            return self.linear(torch.cat((x1, x2), dim=-1))
+
+    model = Net()
+
+    e = shap.DeepExplainer(model, background)
+    shap_x1, shap_x2 = e.shap_values([x1, x2])
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        diff = (model(x1, x2) - model(*background)).detach().numpy().mean(0)
+
+    sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
+            d / np.abs(diff).sum())
