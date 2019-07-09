@@ -6,13 +6,13 @@ import shap
 
 
 def test_null_model_small():
-    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
-    e = explainer.explain(np.ones((1, 4)))
+    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)))
+    e = explainer.explain(np.ones((1, 4)), nsamples=100)
     assert np.sum(np.abs(e)) < 1e-8
 
 def test_null_model():
-    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)), nsamples=100)
-    e = explainer.explain(np.ones((1, 10)))
+    explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)))
+    e = explainer.explain(np.ones((1, 10)), nsamples=100)
     assert np.sum(np.abs(e)) < 1e-8
 
 def test_front_page_model_agnostic():
@@ -29,8 +29,8 @@ def test_front_page_model_agnostic():
     svm.fit(X_train, Y_train)
 
     # use Kernel SHAP to explain test set predictions
-    explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
-    shap_values = explainer.shap_values(X_test)
+    explainer = shap.KernelExplainer(svm.predict_proba, X_train, link="logit")
+    shap_values = explainer.shap_values(X_test, nsamples=100)
 
     # plot the SHAP values for the Setosa output of the first instance
     shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
@@ -49,8 +49,8 @@ def test_front_page_model_agnostic_rank():
     svm.fit(X_train, Y_train)
 
     # use Kernel SHAP to explain test set predictions
-    explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit", l1_reg="rank(3)")
-    shap_values = explainer.shap_values(X_test)
+    explainer = shap.KernelExplainer(svm.predict_proba, X_train, link="logit")
+    shap_values = explainer.shap_values(X_test, nsamples=100, l1_reg="rank(3)")
 
     # plot the SHAP values for the Setosa output of the first instance
     shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
@@ -162,8 +162,8 @@ def test_kernel_sparse_vs_dense_multirow_background():
     lr.fit(X_train, Y_train)
 
     # use Kernel SHAP to explain test set predictions with dense data
-    explainer = shap.KernelExplainer(lr.predict_proba, X_train, nsamples=100, link="logit", l1_reg="rank(3)")
-    shap_values = explainer.shap_values(X_test)
+    explainer = shap.KernelExplainer(lr.predict_proba, X_train, link="logit")
+    shap_values = explainer.shap_values(X_test, nsamples=100, l1_reg="rank(3)")
 
     X_sparse_train = sp.sparse.csr_matrix(X_train)
     X_sparse_test = sp.sparse.csr_matrix(X_test)
@@ -172,7 +172,7 @@ def test_kernel_sparse_vs_dense_multirow_background():
     lr_sparse.fit(X_sparse_train, Y_train)
 
     # use Kernel SHAP again but with sparse data
-    sparse_explainer = shap.KernelExplainer(lr.predict_proba, X_sparse_train, nsamples=100, link="logit", l1_reg="rank(3)")
-    sparse_shap_values = sparse_explainer.shap_values(X_sparse_test)
+    sparse_explainer = shap.KernelExplainer(lr.predict_proba, X_sparse_train, link="logit")
+    sparse_shap_values = sparse_explainer.shap_values(X_sparse_test, nsamples=100, l1_reg="rank(3)")
 
     assert(np.allclose(shap_values, sparse_shap_values, rtol=1e-05, atol=1e-05))
