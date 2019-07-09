@@ -528,6 +528,45 @@ def test_single_row_gradient_boosting_regressor():
     assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
         "SHAP values don't sum to model output!"
 
+
+def test_multi_target_random_forest():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import RandomForestRegressor
+
+    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.linnerud(), test_size=0.2, random_state=0)
+    est = RandomForestRegressor(random_state=202, n_estimators=10, max_depth=10)
+    est.fit(X_train, Y_train)
+    predicted = est.predict(X_test)
+
+    explainer = shap.TreeExplainer(est)
+    expected_values = np.asarray(explainer.expected_value)
+    assert len(expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
+    shap_values = np.asarray(explainer.shap_values(X_test)).reshape(est.n_outputs_ * X_test.shape[0], X_test.shape[1])
+    phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
+    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-6)
+
+
+def test_multi_target_extra_trees():
+    import shap
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import ExtraTreesRegressor
+
+    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.linnerud(), test_size=0.2, random_state=0)
+    est = ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
+    est.fit(X_train, Y_train)
+    predicted = est.predict(X_test)
+
+    explainer = shap.TreeExplainer(est)
+    expected_values = np.asarray(explainer.expected_value)
+    assert len(expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
+    shap_values = np.asarray(explainer.shap_values(X_test)).reshape(est.n_outputs_ * X_test.shape[0], X_test.shape[1])
+    phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
+    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-6)
+
+
 def test_provided_background_tree_path_dependent():
     try:
         import xgboost
