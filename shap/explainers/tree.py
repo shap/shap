@@ -8,6 +8,7 @@ import struct
 from distutils.version import LooseVersion
 from .explainer import Explainer
 from ..common import assert_import, record_import_error, DenseData
+import warnings
 
 try:
     from .. import _cext
@@ -184,6 +185,10 @@ class TreeExplainer(Explainer):
             elif self.model.model_type == "lightgbm":
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
+                # Note: the data must be joined on the last axis
+                if self.model.original_model.params['objective'] == 'binary':
+                    warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
+                    phi = np.concatenate((-phi, phi), axis=-1)
                 if phi.shape[1] != X.shape[1] + 1:
                     phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
             
