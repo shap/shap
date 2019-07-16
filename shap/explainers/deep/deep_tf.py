@@ -115,7 +115,10 @@ class TFDeepExplainer(Explainer):
             if keras is not None and keras.backend.tensorflow_backend._SESSION is not None:
                 session = keras.backend.get_session()
             else:
-                session = tf.compat.v1.keras.backend.get_session()
+                try:
+                    session = tf.compat.v1.keras.backend.get_session()
+                except:
+                    session = tf.keras.backend.get_session()
         self.session = tf.get_default_session() if session is None else session
 
         # if no learning phase flags were given we go looking for them
