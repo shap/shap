@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import sklearn.datasets
 import os
@@ -29,6 +28,7 @@ def imagenet50(display=False, resolution=224):
 
 def boston(display=False):
     """ Return the boston housing data in a nice package. """
+    import pandas as pd
 
     d = sklearn.datasets.load_boston()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
@@ -37,6 +37,7 @@ def boston(display=False):
 
 def linnerud(display=False):
     """ Return the linnerud data in a nice package (multi-target regression). """
+    import pandas as pd
 
     d = sklearn.datasets.load_linnerud()
     X = pd.DataFrame(d.data, columns=d.feature_names) # pylint: disable=E1101
@@ -63,6 +64,7 @@ def communitiesandcrime(display=False):
     This dataset is from the classic UCI Machine Learning repository:
     https://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
     """
+    import pandas as pd
 
     raw_data = pd.read_csv(
         cache(github_data_url + "CommViolPredUnnormalizedData.txt"),
@@ -82,6 +84,7 @@ def communitiesandcrime(display=False):
 
 def diabetes(display=False):
     """ Return the diabetes data in a nice package. """
+    import pandas as pd
 
     d = sklearn.datasets.load_diabetes()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
@@ -90,6 +93,7 @@ def diabetes(display=False):
 
 def iris(display=False):
     """ Return the classic iris data in a nice package. """
+    import pandas as pd
 
     d = sklearn.datasets.load_iris()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
@@ -101,6 +105,7 @@ def iris(display=False):
 
 def adult(display=False):
     """ Return the Adult census data in a nice package. """
+    import pandas as pd
     dtypes = [
         ("Age", "float32"), ("Workclass", "category"), ("fnlwgt", "float32"),
         ("Education", "category"), ("Education-Num", "float32"), ("Marital Status", "category"),
@@ -141,6 +146,7 @@ def adult(display=False):
 def nhanesi(display=False):
     """ A nicely packaged version of NHANES I data with surivival times as labels.
     """
+    import pandas as pd
     X = pd.read_csv(cache(github_data_url + "NHANESI_subset_X.csv"))
     y = pd.read_csv(cache(github_data_url + "NHANESI_subset_y.csv"))["y"]
     if display:
@@ -153,6 +159,7 @@ def nhanesi(display=False):
 def cric(display=False):
     """ A nicely packaged version of CRIC data with progression to ESRD within 4 years as the label.
     """
+    import pandas as pd
     X = pd.read_csv(cache(github_data_url + "CRIC_time_4yearESRD_X.csv"))
     y = np.loadtxt(cache(github_data_url + "CRIC_time_4yearESRD_y.csv"))
     if display:
@@ -167,6 +174,7 @@ def corrgroups60(display=False):
     
     A simulated dataset with tight correlations among distinct groups of features.
     """
+    import pandas as pd
 
     # set a constant seed
     old_seed = np.random.seed()
@@ -210,6 +218,7 @@ def corrgroups60(display=False):
 def independentlinear60(display=False):
     """ A simulated dataset with tight correlations among distinct groups of features.
     """
+    import pandas as pd
 
     # set a constant seed
     old_seed = np.random.seed()

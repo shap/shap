@@ -1,7 +1,6 @@
-from ..common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData
+from ..common import convert_to_instance, match_instance_to_data, is_pandas
 from .kernel import KernelExplainer
 import numpy as np
-import pandas as pd
 import logging
 
 log = logging.getLogger('shap')
@@ -44,7 +43,7 @@ class SamplingExplainer(KernelExplainer):
             model_out = self.model.f(instance.convert_to_df())
         else:
             model_out = self.model.f(instance.x)
-        if isinstance(model_out, (pd.DataFrame, pd.Series)):
+        if is_pandas(instance):
             model_out = model_out.values[0]
         self.fx = model_out[0]
 

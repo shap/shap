@@ -1,5 +1,4 @@
 import re
-import pandas as pd
 import numpy as np
 import scipy as sp
 from scipy.spatial.distance import pdist
@@ -43,11 +42,17 @@ class InstanceWithIndex(Instance):
         self.column_name = column_name
 
     def convert_to_df(self):
+        import pandas as pd
         index = pd.DataFrame(self.index_value, columns=[self.index_name])
         data = pd.DataFrame(self.x, columns=self.column_name)
         df = pd.concat([index, data], axis=1)
         df = df.set_index(self.index_name)
         return df
+
+
+def is_pandas(instance):
+    return str(type(instance)).endswith("pandas.core.series.Series'>") or \
+           str(type(instance)).endswith("'pandas.core.frame.DataFrame'>")
 
 
 def convert_to_instance_with_index(val, column_name, index_value, index_name):
@@ -149,6 +154,7 @@ class DenseDataWithIndex(DenseData):
         self.index_name = index_name
 
     def convert_to_df(self):
+        import pandas as pd
         data = pd.DataFrame(self.data, columns=self.group_names)
         index = pd.DataFrame(self.index_value, columns=[self.index_name])
         df = pd.concat([index, data], axis=1)

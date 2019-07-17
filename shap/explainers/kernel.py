@@ -1,7 +1,8 @@
-from ..common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
+from ..common import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data, \
+    convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData, \
+    is_pandas
 from scipy.special import binom
 import numpy as np
-import pandas as pd
 import scipy as sp
 import logging
 import copy
@@ -115,7 +116,7 @@ class KernelExplainer(Explainer):
         self.nsamplesRun = 0
 
         # find E_x[f(x)]
-        if isinstance(model_null, (pd.DataFrame, pd.Series)):
+        if is_pandas(model_null):
             model_null = np.squeeze(model_null.values)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
@@ -251,7 +252,7 @@ class KernelExplainer(Explainer):
             model_out = self.model.f(instance.convert_to_df())
         else:
             model_out = self.model.f(instance.x)
-        if isinstance(model_out, (pd.DataFrame, pd.Series)):
+        if is_pandas(model_out):
             model_out = model_out.values
         self.fx = model_out[0]
 
@@ -513,6 +514,7 @@ class KernelExplainer(Explainer):
         num_to_run = self.nsamplesAdded * self.N - self.nsamplesRun * self.N
         data = self.synth_data[self.nsamplesRun*self.N:self.nsamplesAdded*self.N,:]
         if self.keep_index:
+            import pandas as pd
             index = self.synth_data_index[self.nsamplesRun*self.N:self.nsamplesAdded*self.N]
             index = pd.DataFrame(index, columns=[self.data.index_name])
             data = pd.DataFrame(data, columns=self.data.group_names)
@@ -520,7 +522,7 @@ class KernelExplainer(Explainer):
             if self.keep_index_ordered:
                 data = data.sort_index()
         modelOut = self.model.f(data)
-        if isinstance(modelOut, (pd.DataFrame, pd.Series)):
+        if is_pandas(modelOut):
             modelOut = modelOut.values
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
