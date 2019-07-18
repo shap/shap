@@ -4,20 +4,19 @@ import shutil
 matplotlib.use('Agg')
 import shap
 
+from .test_deep import _skip_if_no_pytorch, _skip_if_no_tensorflow
+
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
     """
 
-    try:
-        import tensorflow as tf
-        from tensorflow.python import keras
-        from tensorflow.python.keras.models import Sequential
-        from tensorflow.python.keras.layers import Dense, Dropout, Flatten, Activation
-        from tensorflow.python.keras.layers import Conv2D, MaxPooling2D
-        from tensorflow.python.keras import backend as K
-    except Exception as e:
-        print("Skipping test_tf_keras_mnist_cnn!")
-        return
+    _skip_if_no_tensorflow()
+    import tensorflow as tf
+    from tensorflow.python import keras
+    from tensorflow.python.keras.models import Sequential
+    from tensorflow.python.keras.layers import Dense, Dropout, Flatten, Activation
+    from tensorflow.python.keras.layers import Conv2D, MaxPooling2D
+    from tensorflow.python.keras import backend as K
     import shap
 
     batch_size = 128
@@ -89,14 +88,12 @@ def test_tf_keras_mnist_cnn():
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
-    try:
-        import torch, torchvision
-        from torchvision import datasets, transforms
-        from torch import nn
-        from torch.nn import functional as F
-    except Exception as e:
-        print("Skipping test_pytorch_mnist_cnn!")
-        return
+    _skip_if_no_pytorch()
+    import torch
+    from torchvision import datasets, transforms
+    from torch import nn
+    from torch.nn import functional as F
+
     import shap
 
     batch_size=128
@@ -188,3 +185,40 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, False)
     # clean up
     shutil.rmtree(root_dir)
+
+
+def test_pytorch_multiple_inputs():
+
+    _skip_if_no_pytorch()
+    import torch
+    from torch import nn
+    import shap
+
+    batch_size = 10
+    x1 = torch.ones(batch_size, 3)
+    x2 = torch.ones(batch_size, 4)
+
+    background = [torch.zeros(batch_size, 3), torch.zeros(batch_size, 4)]
+
+    class Net(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = nn.Linear(7, 1)
+
+        def forward(self, x1, x2):
+            return self.linear(torch.cat((x1, x2), dim=-1))
+
+    model = Net()
+
+    e = shap.GradientExplainer(model, background)
+    shap_x1, shap_x2 = e.shap_values([x1, x2])
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        diff = (model(x1, x2) - model(*background)).detach().numpy().mean(0)
+
+    sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (
+            d / np.abs(diff).sum())
