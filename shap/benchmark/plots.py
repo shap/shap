@@ -416,22 +416,23 @@ def make_grid(scores, dataset, model):
     
     return row_keys, col_keys, data
 
-from matplotlib.colors import LinearSegmentedColormap
-red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
-    'red': ((0.0, 198./255, 198./255),
-            (1.0, 5./255, 5./255)),
 
-    'green': ((0.0, 34./255, 34./255),
-              (1.0, 198./255, 198./255)),
-
-    'blue': ((0.0, 5./255, 5./255),
-             (1.0, 24./255, 24./255)),
-
-    'alpha': ((0.0, 1, 1),
-              (1.0, 1, 1))
-})
-from IPython.core.display import HTML
 def plot_grids(dataset, model_names, out_dir=None):
+    from matplotlib.colors import LinearSegmentedColormap
+    red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
+        'red': ((0.0, 198. / 255, 198. / 255),
+                (1.0, 5. / 255, 5. / 255)),
+
+        'green': ((0.0, 34. / 255, 34. / 255),
+                  (1.0, 198. / 255, 198. / 255)),
+
+        'blue': ((0.0, 5. / 255, 5. / 255),
+                 (1.0, 24. / 255, 24. / 255)),
+
+        'alpha': ((0.0, 1, 1),
+                  (1.0, 1, 1))
+    })
+    from IPython.core.display import HTML
 
     if out_dir is not None:
         os.mkdir(out_dir)

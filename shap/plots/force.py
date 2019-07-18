@@ -7,8 +7,6 @@ import io
 import string
 import json
 import random
-from IPython.core.display import display, HTML
-from IPython import get_ipython
 import base64
 import numpy as np
 import scipy.cluster
@@ -202,6 +200,8 @@ err_msg = """
 
 
 def initjs():
+    from IPython.core.display import display, HTML
+
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
     with io.open(bundle_path, encoding="utf-8") as f:
         bundle_data = f.read()
@@ -305,6 +305,7 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, 
 
 try:
     # register the visualize function with IPython
+    from IPython import get_ipython
     ip = get_ipython()
     svg_formatter=ip.display_formatter.formatters['text/html']
     svg_formatter.for_type(Explanation, lambda x: visualize(x).data)
@@ -339,6 +340,7 @@ class SimpleListVisualizer:
         }
 
     def html(self):
+        from IPython.core.display import HTML
         return HTML("""
 <div id='{id}'>{err_msg}</div>
  <script>
@@ -372,6 +374,7 @@ class AdditiveForceVisualizer:
         }
 
     def html(self, label_margin=20):
+        from IPython.core.display import HTML
         self.data["labelMargin"] = label_margin
         return HTML("""
 <div id='{id}'>{err_msg}</div>
@@ -428,6 +431,7 @@ class AdditiveForceArrayVisualizer:
                 }
 
     def html(self):
+        from IPython.core.display import HTML
         return HTML("""
 <div id='{id}'>{err_msg}</div>
  <script>
