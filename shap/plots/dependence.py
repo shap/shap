@@ -49,7 +49,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         as a string. If "auto" then shap.common.approximate_interactions is used to pick what
         seems to be the strongest interaction (note that to find to true stongest interaction you
         need to compute the SHAP interaction values).
-        
+
     x_jitter : float (0 - 1)
         Adds random jitter to feature values. May increase plot readability when feature
         is discrete.
@@ -74,7 +74,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
 
     if cmap is None:
         cmap = colors.red_blue
-        
+
     # create a matplotlib figure, if `ax` hasn't been specified.
     if not ax:
         figsize = (7.5, 5) if interaction_index != ind else (6, 5)
@@ -105,7 +105,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         features = np.reshape(features, len(features), 1)
 
     ind = convert_name(ind, shap_values, feature_names)
-    
+
     # plotting SHAP interaction values
     if len(shap_values.shape) == 3 and len(ind) == 2:
         ind1 = convert_name(ind[0], shap_values, feature_names)
@@ -116,14 +116,19 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
 
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
-        dependence_plot(
-            ind1, proj_shap_values, features, feature_names=feature_names,
-            interaction_index=ind2, display_features=display_features, ax=ax, show=False,
-            xmin=xmin, xmax=xmax
-        )
         if ind1 == ind2:
+            dependence_plot(
+                ind1, proj_shap_values, features, feature_names=feature_names,
+                interaction_index=None, display_features=display_features, ax=ax, show=False,
+                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            )
             ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
         else:
+            dependence_plot(
+                ind1, proj_shap_values, features, feature_names=feature_names,
+                interaction_index=ind2, display_features=display_features, ax=ax, show=False,
+                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            )
             ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
 
         if show:
@@ -248,7 +253,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             xmin = np.nanmin(xv) - (xmax - np.nanmin(xv))/20
         if xmax is None or xmax == np.nanmax(xv):
             xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
-        
+
         ax.set_xlim(xmin, xmax)
 
     # plot any nan feature values as tick marks along the y-axis
