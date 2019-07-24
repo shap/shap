@@ -147,7 +147,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
-                display_features = features[i, :]
+                display_features = features[k, :]
 
             instance = Instance(np.ones((1, len(feature_names))), display_features)
             e = AdditiveExplanation(
