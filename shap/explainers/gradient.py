@@ -374,10 +374,14 @@ class _PyTorchGradientExplainer(Explainer):
         selected = [val for val in outputs[:, idx]]
         if self.input_handle is not None:
             interim_inputs = self.layer.target_input
-            grads = [torch.autograd.grad(selected, input)[0].cpu().numpy() for input in interim_inputs]
+            grads = [torch.autograd.grad(selected, input,
+                                         retain_graph=True if idx + 1 < len(interim_inputs) else None)[0].cpu().numpy()
+                     for idx, input in enumerate(interim_inputs)]
             del self.layer.target_input
         else:
-            grads = [torch.autograd.grad(selected, x)[0].cpu().numpy() for x in X]
+            grads = [torch.autograd.grad(selected, x,
+                                         retain_graph=True if idx + 1 < len(X) else None)[0].cpu().numpy()
+                     for idx, x in enumerate(X)]
         return grads
 
     @staticmethod
