@@ -3,6 +3,8 @@
 from __future__ import division, unicode_literals
 import warnings
 
+from typing import Union
+
 import numpy as np
 
 try:
@@ -26,6 +28,7 @@ def __decision_plot_matplotlib(
     cumsum,
     ascending,
     feature_display_count,
+    features,
     feature_names,
     highlight,
     plot_color,
@@ -61,7 +64,8 @@ def __decision_plot_matplotlib(
         linewidth[highlight] = 2
 
     # plot each observation's cumulative SHAP values.
-    pl.gca().set_xlim(xlim)
+    ax = pl.gca()
+    ax.set_xlim(xlim)
     m = cm.ScalarMappable(cmap=plot_color)
     m.set_clim(xlim)
     y_pos = np.arange(0, feature_display_count + 1)
@@ -74,38 +78,61 @@ def __decision_plot_matplotlib(
             linestyle=linestyle[i]
         )
 
-    # style axes
-    pl.gca().xaxis.set_ticks_position('both')
-    pl.gca().yaxis.set_ticks_position('none')
-    pl.gca().spines['right'].set_visible(False)
-    pl.gca().spines['left'].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color, labeltop=True)
+    # determine font size. if ' *\n' character sequence is found, assume interactions which require a smaller font
     s = next((s for s in feature_names if " *\n" in s), None)
     fontsize = 13 if s is None else 9
+
+    # if there is a single observation and feature values are supplied, print them.
+    if (cumsum.shape[0] == 1) and (features is not None):
+        renderer = pl.gcf().canvas.get_renderer()
+        inverter = pl.gca().transData.inverted()
+        y_pos = y_pos + 0.5
+        for i in range(feature_display_count):
+            v = features[0, i]
+            if isinstance(v, str):
+                v = "({})".format(str(v).strip())
+            else:
+                v = "({})".format("{0:,.3f}".format(v).rstrip("0").rstrip("."))
+            t: pl.Text = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
+                    horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
+            bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
+            if bb.xmax > xlim[1]:
+                t.set_text(v + "  ")
+                t.set_x(np.min(cumsum[0, i:(i + 2)]))
+                t.set_horizontalalignment("right")
+                bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
+                if bb.xmin < xlim[0]:
+                    t.set_text(v)
+                    t.set_x(xlim[0])
+                    t.set_horizontalalignment("left")
+
+    # style axes
+    ax.xaxis.set_ticks_position("both")
+    ax.yaxis.set_ticks_position("none")
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(color=axis_color, labelcolor=axis_color, labeltop=True)
     pl.yticks(np.arange(feature_display_count) + 0.5, feature_names, fontsize=fontsize)
-    pl.gca().tick_params('x', labelsize=11)
+    ax.tick_params("x", labelsize=11)
     pl.ylim(0, feature_display_count)
-    pl.xlabel(labels['MODEL_OUTPUT'], fontsize=13)
+    pl.xlabel(labels["MODEL_OUTPUT"], fontsize=13)
 
     # draw the color bar - must come after axes styling
     if color_bar:
         m = cm.ScalarMappable(cmap=plot_color)
         m.set_array(np.array([0, 1]))
 
-        # save the current axis
-        ax_tmp = pl.gca()
-
         # place the colorbar
         pl.ylim(0, feature_display_count + 0.25)
-        ax = ax_tmp.inset_axes([xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25], transform=ax_tmp.transData)
-        cb = pl.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax)
+        ax_cb = ax.inset_axes([xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25], transform=ax.transData)
+        cb = pl.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(alpha)
         cb.outline.set_visible(False)
 
         # re-activate the main axis for drawing.
-        pl.sca(ax_tmp)
+        pl.sca(ax)
 
     if title:
         # TODO decide on style/size
@@ -116,6 +143,44 @@ def __decision_plot_matplotlib(
 
     if show:
         pl.show()
+
+
+class DecisionPlotResult:
+    """The optional return value of decision_plot. The class attributes can be used to create multiple decision
+    plots with the same scale and feature ordering.
+    """
+
+    def __init__(self, shap_values, feature_names, feature_idx, xlim):
+        """
+        Example
+        -------
+        Plot two decision plots using the same feature ordering and x-axis scale.
+        >>> range1, range2 = range(20), range(20, 40)
+        >>> r = decision_plot(base, shap_values[range1], features[range1])
+        >>> decision_plot(base, shap_values[range2], features[range2], feature_order=r.feature_idx, xlim=r.xlim)
+
+        Parameters
+        ----------
+        shap_values : numpy.ndarray
+            The `shap_values` passed to decision_plot re-ordered based on `feature_order`. If SHAP interaction values
+            are passed to decision_plot, `shap_values` is a 2D (matrix) representation of the interactions. See
+            `feature_names` to locate the feature positions.
+
+        feature_names : list of str
+            The feature names used in the plot in the order specified in the decision_plot parameter `feature_order`.
+
+        feature_idx : numpy.ndarray
+            The index used to order `shap_values` based on `feature_order`. This attribute can be used to specify
+            identical feature ordering in multiple decision plots.
+
+        xlim : tuple[float, float]
+            The x-axis limits. This attributed can be used to specify the same x-axis in multiple decision plots.
+
+        """
+        self.shap_values = shap_values
+        self.feature_names = feature_names
+        self.feature_idx = feature_idx
+        self.xlim = xlim
 
 
 def decision_plot(
@@ -136,12 +201,12 @@ def decision_plot(
     title=None,
     xlim=None,
     show=True,
-    matplotlib=False,
-    override_large_data_warnings=False
-):
+    return_objects=False,
+    ignore_warnings=False,
+    matplotlib=False
+) -> Union[DecisionPlotResult, None]:
     """Visualize model decisions using cumulative SHAP values. Each colored line in the plot represents the model
-    output for a single observation. Plotting between 1 to 100 samples at a time is recommended. Plotting
-    too many samples can make the plot unintelligible.
+    prediction for a single observation. Note that plotting too many samples at once can make the plot unintelligible.
 
     Parameters
     ----------
@@ -161,13 +226,13 @@ def decision_plot(
         List of feature names (# features). If None, names may be derived from the features argument if a Pandas
         object is provided. Otherwise, numeric feature names will be generated.
 
-    feature_order : str or None
-        Any of "importance" (the default), "hclust" (hierarchical clustering), or "none".
+    feature_order : str or None or list or numpy.ndarray
+        Any of "importance" (the default), "hclust" (hierarchical clustering), "none", or a list/array of indices.
 
     feature_display_range: slice or range
         The slice or range of features to plot after ordering features by feature_order. A step of 1 or None
         will display the features in ascending order. A step of -1 will display the features in descending order. If
-        feature_display_range=None, slice(None, -21, -1) is used (i.e. show the last 20 features in descending order).
+        feature_display_range=None, slice(-1, -21, -1) is used (i.e. show the last 20 features in descending order).
         If shap_values contains interaction values, the number of features is automatically expanded to include all
         possible interactions: N(N + 1)/2 where N = shap_values.shape[1].
 
@@ -209,14 +274,29 @@ def decision_plot(
 
     show : bool
         Whether to automatically display the plot.
+
+    return_objects : bool
+        Whether to return a DecisionPlotResult object containing various plotting features. This can be used to
+        generate multiple decision plots using the same feature ordering and scale.
         
+    ignore_warnings : bool
+        Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
+        this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.
+
     matplotlib : bool
         Whether to render the plot using matplotlib or HTML/JavaScript.
-        
-    override_large_data_warnings : bool
-        This plot is useful to display decision patterns for a handful of samples and features. Plotting many
-        data points or too many features at a time may be slow, or may create very large plots. Set this argument to
-        `True` to override hard-coded limits that prevent plotting large amounts of data.
+
+    Returns
+    -------
+    Returns DecisionPlotResult object if return_objects is `True`. Returns `None` otherwise (the default).
+
+    Example
+    -------
+    Plot two decision plots using the same feature ordering and x-axis scale.
+        >>> range1, range2 = range(20), range(20, 40)
+        >>> r = decision_plot(base, shap_values[range1], features[range1])
+        >>> decision_plot(base, shap_values[range2], features[range2], feature_order=r.feature_idx, xlim=r.xlim)
+
     """
 
     # code taken from force_plot. auto unwrap the base_value
@@ -256,6 +336,8 @@ def decision_plot(
     # there's a problem.
     if not isinstance(features, (np.ndarray, type(None))):
         raise TypeError("The features arg uses an unsupported type.")
+    if (features is not None) and (features.ndim == 1):
+        features = features.reshape(1, -1)
 
     # validate/generate feature_names. at this point, feature_names does not include interactions.
     if feature_names is None:
@@ -282,21 +364,31 @@ def decision_plot(
             a[i] = "{0} *\n{1}".format(feature_names[row], feature_names[col])
         feature_names = a
         feature_count = shap_values.shape[1]
+        features = None  # Can't use feature values for interactions...
 
-    # order features
-    if (feature_order is None) or (feature_order.lower() == "none"):
+    # determine feature order
+    feature_idx = None
+    if isinstance(feature_order, list):
+        feature_idx = np.array(feature_order)
+    elif isinstance(feature_order, np.ndarray):
+        feature_idx = feature_order
+    elif (feature_order is None) or (feature_order.lower() == "none"):
         feature_idx = np.arange(feature_count)
     elif feature_order is "importance":
         feature_idx = np.argsort(np.sum(np.abs(shap_values), axis=0))
     elif feature_order is "hclust":
         feature_idx = np.array(hclust_ordering(shap_values.transpose()))
     else:
-        raise ValueError("The feature_order arg requires 'importance', 'hclust', or 'none'.")
-    shap_values = shap_values[:, feature_idx]
+        raise ValueError("The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
+                         "of feature indices.")
+
+    if (feature_idx.shape != (feature_count, )) or (not np.issubdtype(feature_idx.dtype, np.integer)):
+        raise ValueError("A list or array has been specified for the feature_order arg. The length must match the "
+                         "feature count and the data type must be integer.")
 
     # validate and convert feature_display_range to a slice. prevents out of range errors later.
     if feature_display_range is None:
-        feature_display_range = slice(None, -21, -1)  # show last 20 features in descending order.
+        feature_display_range = slice(-1, -21, -1)  # show last 20 features in descending order.
     elif not isinstance(feature_display_range, (slice, range)):
         raise TypeError("The feature_display_range arg requires a slice or a range.")
     elif feature_display_range.step not in (-1, 1, None):
@@ -322,7 +414,7 @@ def decision_plot(
         ascending = False
         a = (a[1] + 1, a[0] + 1, 1)
     feature_display_count = a[1] - a[0]
-    feature_names = np.array(feature_names)[feature_idx[a[0]:a[1]]].tolist()
+    shap_values = shap_values[:, feature_idx]
     if a[0] == 0:
         cumsum = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
         cumsum[:, 0] = base_value
@@ -330,18 +422,24 @@ def decision_plot(
     else:
         cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (a[0] - 1):a[1]]
 
+    # Select and sort feature names and features according to the range selected above
+    feature_names = np.array(feature_names)
+    feature_names_display = feature_names[feature_idx[a[0]:a[1]]].tolist()
+    feature_names = feature_names[feature_idx].tolist()
+    features_display = None if features is None else features[:, feature_idx[a[0]:a[1]]]
+
     # throw large data errors
-    if not override_large_data_warnings:
-        if observation_count > 1000:
+    if not ignore_warnings:
+        if observation_count > 2000:
             raise RuntimeError("Plotting {} observations may be slow. Consider subsampling or set "
-                               "override_large_data_warnings=True to ignore this message.".format(observation_count))
+                               "ignore_warnings=True to ignore this message.".format(observation_count))
         if feature_display_count > 200:
             raise RuntimeError("Plotting {} features may create a very large plot. Set "
-                               "override_large_data_warnings=True to ignore this "
+                               "ignore_warnings=True to ignore this "
                                "message.".format(feature_display_count))
         if feature_count * observation_count > 100000000:
             raise RuntimeError("Processing SHAP values for {} features over {} observations may be slow. Set "
-                               "override_large_data_warnings=True to ignore this "
+                               "ignore_warnings=True to ignore this "
                                "message.".format(feature_count, observation_count))
 
     # convert values based on link and update x-axis extents
@@ -379,7 +477,8 @@ def decision_plot(
             cumsum,
             ascending,
             feature_display_count,
-            feature_names,
+            features_display,
+            feature_names_display,
             highlight,
             plot_color,
             axis_color,
@@ -393,3 +492,5 @@ def decision_plot(
         )
     else:
         __decision_plot_js()
+
+    return DecisionPlotResult(shap_values, feature_names, feature_idx, xlim) if return_objects else None

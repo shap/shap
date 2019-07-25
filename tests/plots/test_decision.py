@@ -73,11 +73,19 @@ def test_random_decision():
 # shap.decision_plot(features=features_display, **args1)
 # shap.decision_plot(features=features_display, **args2)
 #
-# # Plot a single observation
+# # Plot a single observation without features
 # shap.decision_plot(base_value, shap_values[0, :], matplotlib=True)
 # shap.decision_plot(base_value, shap_values[[0], :], matplotlib=True)
-# # Now, with a Pandas Series
+#
+# # Now, with a Pandas Series (and also test auto feature value positioning)
 # shap.decision_plot(base_value, shap_values[0, :], features=features_display.iloc[0, :], matplotlib=True)
+# s = shap_values[0, :].copy()
+# s[-1] = -35; s[-2] = 15
+# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], matplotlib=True, feature_order='None')
+# s[-1] = 40; s[-2] = -20
+# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], matplotlib=True, feature_order='None')
+# shap.decision_plot(base_value, shap_values[4, :], features=features_display.iloc[4, :], feature_order='hclust', matplotlib=True)
+# shap.decision_plot(base_value, shap_values[7, :], features=features_display.iloc[7, :], feature_order='hclust', matplotlib=True)
 # shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[0, :], matplotlib=True)
 # # Now with a single observation using a matrix and a Pandas Dataframe
 # shap.decision_plot(base_value, shap_values[[0], :], features=features_display.iloc[[0], :], matplotlib=True)
@@ -148,11 +156,11 @@ def test_random_decision():
 # shap.decision_plot(feature_display_range=slice(-20, None, 1), **args2)
 # shap.decision_plot(**args2) # to compare with previous plot
 #
-# # Use xlim
-# shap.decision_plot(show=False, **args1)
-# xlim = pl.gca().get_xlim()
-# pl.show()
-# shap.decision_plot(base_value, shap_values[11, :], features=features_display, xlim=xlim , matplotlib=True)
+# # Use return_objects
+# r = shap.decision_plot(return_objects=True, **args1)
+# idx = 8
+# shap.decision_plot(base_value, shap_values[idx], features=features_display.iloc[idx],
+#                    feature_order=r.feature_idx, xlim=r.xlim, matplotlib=True)
 #
 #
 # # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
@@ -182,28 +190,26 @@ def test_random_decision():
 # # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 #
 # shap.decision_plot(**args1)
-# shap.decision_plot(feature_display_range=range(0, 20), show=False, **args1)
-# xlim = pl.gca().get_xlim()
-# pl.show()
-# shap.decision_plot(feature_display_range=range(0, 1), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(0, 2), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(1, 2), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(10, 12), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 9, -1), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 12), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 10, -1), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=range(11, 0, -1), xlim=xlim, **args1)
+# r = shap.decision_plot(feature_display_range=range(0, 20), return_objects=True, **args1)
+# shap.decision_plot(feature_display_range=range(0, 1), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(0, 2), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(1, 2), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(10, 12), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(11, 9, -1), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(11, 12), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(11, 10, -1), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=range(11, 0, -1), xlim=r.xlim, **args1)
 #
-# shap.decision_plot(feature_display_range=slice(1), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=slice(-12, -13, -1), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=slice(0, 2), xlim=xlim, **args1)
-# shap.decision_plot(feature_display_range=slice(-11, -13, -1), xlim=xlim, **args1)
+# shap.decision_plot(feature_display_range=slice(1), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=slice(-12, -13, -1), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=slice(0, 2), xlim=r.xlim, **args1)
+# shap.decision_plot(feature_display_range=slice(-11, -13, -1), xlim=r.xlim, **args1)
 #
-# shap.decision_plot(feature_order='hclust', feature_display_range=slice(None, -21, -1), xlim=xlim, **args2)
-# shap.decision_plot(feature_order='hclust', feature_display_range=slice(20, None, -1), xlim=xlim, **args2)
+# shap.decision_plot(feature_order='hclust', feature_display_range=slice(None, -21, -1), xlim=r.xlim, **args2)
+# shap.decision_plot(feature_order='hclust', feature_display_range=slice(20, None, -1), xlim=r.xlim, **args2)
 #
 # # decision_plot transforms negative values in a range so they are interpreted correctly in a slice.
-# shap.decision_plot(feature_order='hclust', feature_display_range=range(11, -1, -1), xlim=xlim, **args2)
-# shap.decision_plot(feature_order='hclust', feature_display_range=range(-100, 12, 1), xlim=xlim, **args2)
+# shap.decision_plot(feature_order='hclust', feature_display_range=range(11, -1, -1), xlim=r.xlim, **args2)
+# shap.decision_plot(feature_order='hclust', feature_display_range=range(-100, 12, 1), xlim=r.xlim, **args2)
 #
-
+#
