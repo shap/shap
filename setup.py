@@ -93,6 +93,10 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
+        classifiers=[
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.6',
+        ],
         zip_safe=False
         # python_requires='>3.0' we will add this at some point
     )
