@@ -141,19 +141,19 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
             warnings.warn("shap.force_plot is slow for many thousands of rows, try subsampling your data.")
 
         exps = []
-        for i in range(shap_values.shape[0]):
+        for k in range(shap_values.shape[0]):
             if feature_names is None:
                 feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
-                display_features = features[i, :]
+                display_features = features[k, :]
 
             instance = Instance(np.ones((1, len(feature_names))), display_features)
             e = AdditiveExplanation(
                 base_value,
-                np.sum(shap_values[i, :]) + base_value,
-                shap_values[i, :],
+                np.sum(shap_values[k, :]) + base_value,
+                shap_values[k, :],
                 None,
                 instance,
                 link,
