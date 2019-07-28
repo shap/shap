@@ -187,6 +187,40 @@ def test_xgboost_mixed_types():
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
 
+def test_pyspark_decision_tree():
+    try:
+        import pyspark
+        import sklearn.datasets
+        from pyspark.sql import SparkSession
+        from pyspark import SparkContext, SparkConf
+        from pyspark.ml.feature import VectorAssembler, StringIndexer
+        from pyspark.ml.classification import DecisionTreeClassifier
+        import pandas as pd
+    except:
+        print("Skipping test_pyspark_decision_tree!")
+        return
+    import shap
+
+    iris_sk = sklearn.datasets.load_iris()
+    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])
+    spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
+
+    col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
+    iris = spark.createDataFrame(iris, col)
+    iris = VectorAssembler(inputCols=col[:-1],outputCol="features").transform(iris)
+    iris = StringIndexer(inputCol="type", outputCol="label").fit(iris).transform(iris)
+
+    dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
+    model = dt.fit(iris)
+    explainer = shap.TreeExplainer(model)
+    X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names) # pylint: disable=E1101
+
+    shap_values = explainer.shap_values(X)
+    spark.stop()
+
+#_validate_shap_values(model, x_test)
+test_pyspark_decision_tree()
+
 def test_sklearn_random_forest_multiclass():
     import shap
     from sklearn.ensemble import RandomForestClassifier

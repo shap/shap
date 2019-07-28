@@ -15,6 +15,11 @@ except ImportError as e:
     record_import_error("cext", "C extension was not built during install!", e)
 
 try:
+    import pyspark
+except ImportError as e:
+    record_import_error("pyspark", "PySpark could not be imported!", e)
+
+try:
     import xgboost
 except ImportError as e:
     record_import_error("xgboost", "XGBoost could not be imported!", e)
@@ -485,6 +490,28 @@ class TreeEnsemble:
 
             self.trees = [Tree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing) for e in model.estimators_[:,0]]
             self.objective = objective_name_map.get(model.criterion, None)
+        elif str(type(model)).endswith("pyspark.ml.classification.RandomForestClassificationModel'>") \
+                or str(type(model)).endswith("pyspark.ml.classification.GBTClassificationModel'>"):
+            assert_import("pyspark")
+            self.original_model = model
+            self.model_type = "pyspark"
+            self.trees = [Tree(tree, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)]
+            if model._java_obj.getImpurity() == 'variance':
+                assert False, "Unsupported objective: variance"
+            self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
+            self.tree_output = "raw_value"
+        elif str(type(model)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>"):
+            assert_import("pyspark")
+            self.original_model = model
+            self.model_type = "pyspark"
+            self.trees = [Tree(model, scaling=1)]
+            #model._java_obj.getImpurity() can be gini, entropy or variance.
+            if model._java_obj.getImpurity() == 'variance':
+                #TODO handle variance as loss?
+                assert False, "Unsupported objective: variance"
+            self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
+            #TODO base_offset?
+            self.tree_output = "raw_value"
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             assert_import("xgboost")
             self.original_model = model
@@ -671,6 +698,10 @@ class TreeEnsemble:
             Limit the number of trees used by the model. By default None means no use the limit of the
             original model, and -1 means no limit.
         """
+        if self.model_type == "pyspark":
+            assert_import("pyspark")
+            #TODO support predict for pyspark
+            raise NotImplementedError("Predict with pyspark isn't implemented")
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -754,6 +785,50 @@ class Tree:
             self.thresholds = tree["threshold"]
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
+
+        elif str(type(tree)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>"):
+            #model._java_obj.numNodes() doesn't give leaves, need to recompute the size
+            def getNumNodes(node, size):
+                size = size + 1
+                if node.subtreeDepth() == 0:
+                    return size
+                else:
+                    size = getNumNodes(node.leftChild(), size)
+                    return getNumNodes(node.rightChild(), size)
+
+            num_nodes = getNumNodes(tree._java_obj.rootNode(), 0)
+            self.children_left = np.full(num_nodes, -2, dtype=np.int32)
+            self.children_right = np.full(num_nodes, -2, dtype=np.int32)
+            self.children_default = np.full(num_nodes, -2, dtype=np.int32)
+            self.features = np.full(num_nodes, -2, dtype=np.int32)
+            self.thresholds = np.full(num_nodes, -2, dtype=np.float64)
+            self.values = [-2]*num_nodes
+            self.node_sample_weight = np.full(num_nodes, -2, dtype=np.float64)
+            def buildTree(index, node):
+                index = index + 1
+                self.values[index] = [e for e in node.impurityStats().stats()] #NDarray(numLabel): 1 per label: number of item for each label which went through this node
+                self.node_sample_weight[index] = node.impurityStats().count() #weighted count of element trough this node
+
+                if node.subtreeDepth() == 0:
+                    return index
+                else:
+                    self.features[index] = node.split().featureIndex() #index of the feature we split on, not available for leaf, int
+                    if str(node.split().getClass()).endswith('tree.CategoricalSplit'):
+                        #Categorical split isn't implemented, TODO: could fake it by creating a fake node to split on the exact value?
+                        raise NotImplementedError('CategoricalSplit are not yet implemented')
+                    self.thresholds[index] = node.split().threshold() #threshold for the feature, not available for leaf, float
+
+                    self.children_left[index] = index + 1
+                    idx = buildTree(index, node.leftChild())
+                    self.children_right[index] = idx + 1
+                    idx = buildTree(idx, node.rightChild())
+                    return idx
+
+            buildTree(-1, tree._java_obj.rootNode())
+            #default Not supported with mlib? (TODO)
+            self.children_default = self.children_left
+            self.values = np.asarray(self.values)
+            self.values = self.values * scaling
 
         elif type(tree) == dict and 'tree_structure' in tree:
             start = tree['tree_structure']
