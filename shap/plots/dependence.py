@@ -165,6 +165,9 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         cd = display_features[:, interaction_index]
         clow = np.nanpercentile(cv.astype(np.float), 5)
         chigh = np.nanpercentile(cv.astype(np.float), 95)
+        if clow == chigh:
+            clow = np.nanmin(cv.astype(np.float))
+            chigh = np.nanmax(cv.astype(np.float))
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
