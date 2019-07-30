@@ -10,6 +10,7 @@ from .explainers.gradient import GradientExplainer
 from .explainers.linear import LinearExplainer
 from .explainers.partition import PartitionExplainer
 from .plots.summary import summary_plot
+from .plots.decision import decision_plot
 from .plots.dependence import dependence_plot
 from .plots.force import force_plot, initjs, save_html
 from .plots.image import image_plot
