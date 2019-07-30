@@ -3,6 +3,7 @@ import numpy as np
 import scipy as sp
 matplotlib.use('Agg')
 import shap
+from sklearn.linear_model import LinearRegression
 
 
 def test_null_model_small():
@@ -176,3 +177,28 @@ def test_kernel_sparse_vs_dense_multirow_background():
     sparse_shap_values = sparse_explainer.shap_values(X_sparse_test)
 
     assert(np.allclose(shap_values, sparse_shap_values, rtol=1e-05, atol=1e-05))
+
+def test_linear():
+    """tests that a linear model on the KernelExplainer gives the right result"""
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = np.random.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    model = LinearRegression()
+    model.fit(x, y)
+
+    # explain
+    e = shap.KernelExplainer(model.predict, x)
+    values = e.shap_values(x, l1_reg="num_features(2)", silent=True)
+
+    # verify that the explanation follows the equation in LinearExplainer
+    assert values.shape == (1000, 2)
+
+    # corolary 1 of https://arxiv.org/abs/1705.07874
+    expected = (x - x.mean(0)) * model.coef_
+    np.testing.assert_allclose(expected, values, rtol=1e-3)
