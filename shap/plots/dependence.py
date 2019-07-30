@@ -116,19 +116,14 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
 
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
+        dependence_plot(
+            ind1, proj_shap_values, features, feature_names=feature_names,
+            interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
+            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+        )
         if ind1 == ind2:
-            dependence_plot(
-                ind1, proj_shap_values, features, feature_names=feature_names,
-                interaction_index=None, display_features=display_features, ax=ax, show=False,
-                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
-            )
             ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
         else:
-            dependence_plot(
-                ind1, proj_shap_values, features, feature_names=feature_names,
-                interaction_index=ind2, display_features=display_features, ax=ax, show=False,
-                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
-            )
             ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
 
         if show:
