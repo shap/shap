@@ -1,0 +1,45 @@
+[HIT Configuration]
+title = Intuitive credit allocation experiment
+description = Allocate blame for sickness among three symptoms in a simple scenario.
+amt_keywords = explainable, interpretable, machine learning
+lifetime = 24
+us_only = true
+approve_requirement = 95
+contact_email_on_error = slund1@cs.washington.edu
+ad_group = Explainable testing
+psiturk_keywords = shap
+organization_name = University of Washington
+browser_exclude_rule = MSIE, mobile, tablet
+
+[Database Parameters]
+database_url = sqlite:///participants.db
+table_name = turkdemo
+
+[Server Parameters]
+host = 0.0.0.0
+port = 22363
+cutoff_time = 30
+logfile = server.log
+loglevel = 2
+debug = true
+login_username = examplename
+login_pw = examplepassword221s0982927998292900
+threads = auto
+secret_key = 'ksd9f98239s9df8skjkj2j32k09a0-k2lk32kl'
+#certfile = <path_to.crt>
+#keyfile = <path_to.key>
+
+[Task Parameters]
+experiment_code_version = 1.0
+num_conds = 1
+num_counters = 1
+
+[Shell Parameters]
+launch_in_sandbox_mode = true
+
+# If you are not using the psiturk ad server, set `use_psiturk_ad_server` to `false` and point `ad_location` to your proxy server <host> and <port>. Format the ad_location like this:
+#
+#   https://<host>:<port>/ad
+
+use_psiturk_ad_server = true
+ad_location = false

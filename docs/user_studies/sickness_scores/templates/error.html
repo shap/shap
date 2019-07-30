@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Error</title>
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css" type="text/css" />
+        <link rel="stylesheet" href="/static/css/style.css" type="text/css" />
+    </head>
+    <body>
+        <div id="container-error">
+
+            <div id="error">
+                <h1>Sorry, there was an error</h1>
+                <hr />
+
+                <div class="alert alert-danger">
+                {% if errornum == 1008 %}
+
+                        <p>Sorry, our records indicate that you have attempted to complete this HIT, but quit before finishing.</p>
+                        <p>Because this is a Psychology experiment, you can only complete this HIT once.</p>
+                        <p>Please return the HIT so someone else can perform the experiment.</p>
+
+                {% elif errornum == 1010 %}
+
+                        <p>Sorry, our records indicate that you have already completed (or attempted to complete) this HIT.</p>
+                        <p>Because this is a Psychology experiment, you can only complete this HIT once.</p>
+                        <p>Please release the HIT so someone else can perform the experiment.</p>
+
+                {% else %}
+
+                        <p>Sorry, there was an unexpected error in our processing of your HIT.</p>
+
+                {% endif %}
+                        <p>
+                            If you would like to receive partial compensation or feel you
+                            have reached this page in error, please email
+                            <a href="mailto:{{contact_address}}">{{contact_address}}</a>
+                            and send the following information:
+                        </p>
+                        <hr />
+                        <p>
+                            <b>Error</b>: {{ errornum }}<br />
+                            <b>Description</b>: {{ errordesc }}<br />
+                            {% if hitId %}<b>HITId</b>: #{{ hitId }}<br /> {% endif %}
+                            {% if assignId %}<b>AssignmentId</b>: #{{ assignId }}<br /> {% endif %}
+                            {% if workerId %}<b>WorkerId</b>: #{{ workerId }}<br /> {% endif %}
+                        </p>
+
+                </div>
+
+                <hr />
+                <h3>Our sincere apologies!</h3>
+            </div>
+        </div>
+    </body>
+</html>

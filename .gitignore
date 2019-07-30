@@ -15,3 +15,8 @@ shap/_cext.cpython-35m-darwin.so
 javascript/build/*
 .vscode
 shap/_cext.so
+.DS_Store
+/notebooks/deep_explainer/mnist_data
+/data/CRIC*
+/docs/artwork/local
+/shap/_cext*
