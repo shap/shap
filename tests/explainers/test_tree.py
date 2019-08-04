@@ -202,7 +202,7 @@ def test_pyspark_decision_tree():
     import shap
 
     iris_sk = sklearn.datasets.load_iris()
-    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])
+    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
     spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
 
     col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
@@ -213,13 +213,20 @@ def test_pyspark_decision_tree():
     dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
     model = dt.fit(iris)
     explainer = shap.TreeExplainer(model)
-    X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names) # pylint: disable=E1101
+    X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100] # pylint: disable=E1101
 
     shap_values = explainer.shap_values(X)
-    spark.stop()
+    expected_values = explainer.expected_value
 
-#_validate_shap_values(model, x_test)
-test_pyspark_decision_tree()
+    # validate values sum to the margin prediction of the model plus expected_value
+    predictions = model.transform(iris).select("rawPrediction")\
+        .rdd.map(lambda x:[float(y) for y in x['rawPrediction']]).toDF(['class0','class1']).toPandas()
+    diffs = expected_values[0] + shap_values[0].sum(1) - predictions.class0
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
+    diffs = expected_values[1] + shap_values[1].sum(1) - predictions.class1
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class1!"
+    assert (np.abs(expected_values - predictions.mean()) < 1e-6).all(), "Bad expected_value!"
+    spark.stop()
 
 def test_sklearn_random_forest_multiclass():
     import shap
