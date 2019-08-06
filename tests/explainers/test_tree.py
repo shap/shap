@@ -187,6 +187,47 @@ def test_xgboost_mixed_types():
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
 
+def test_pyspark_decision_tree():
+    try:
+        import pyspark
+        import sklearn.datasets
+        from pyspark.sql import SparkSession
+        from pyspark import SparkContext, SparkConf
+        from pyspark.ml.feature import VectorAssembler, StringIndexer
+        from pyspark.ml.classification import DecisionTreeClassifier
+        import pandas as pd
+    except:
+        print("Skipping test_pyspark_decision_tree!")
+        return
+    import shap
+
+    iris_sk = sklearn.datasets.load_iris()
+    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
+    spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
+
+    col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
+    iris = spark.createDataFrame(iris, col)
+    iris = VectorAssembler(inputCols=col[:-1],outputCol="features").transform(iris)
+    iris = StringIndexer(inputCol="type", outputCol="label").fit(iris).transform(iris)
+
+    dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
+    model = dt.fit(iris)
+    explainer = shap.TreeExplainer(model)
+    X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100] # pylint: disable=E1101
+
+    shap_values = explainer.shap_values(X)
+    expected_values = explainer.expected_value
+
+    # validate values sum to the margin prediction of the model plus expected_value
+    predictions = model.transform(iris).select("rawPrediction")\
+        .rdd.map(lambda x:[float(y) for y in x['rawPrediction']]).toDF(['class0','class1']).toPandas()
+    diffs = expected_values[0] + shap_values[0].sum(1) - predictions.class0
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
+    diffs = expected_values[1] + shap_values[1].sum(1) - predictions.class1
+    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class1!"
+    assert (np.abs(expected_values - predictions.mean()) < 1e-6).all(), "Bad expected_value!"
+    spark.stop()
+
 def test_sklearn_random_forest_multiclass():
     import shap
     from sklearn.ensemble import RandomForestClassifier
