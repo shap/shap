@@ -20,7 +20,7 @@ from ..common import convert_to_link, LogitLink, hclust_ordering
 
 
 def __decision_plot_js():
-    raise RuntimeError("The JS plot is not yet supported. Set matplotlib=True.")
+    raise RuntimeError("The interactive plot is not yet supported. Set matplotlib=True.")
 
 
 def __decision_plot_matplotlib(
