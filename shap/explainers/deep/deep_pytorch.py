@@ -322,7 +322,7 @@ def maxpool(module, grad_input, grad_output):
     if module.__class__.__name__ == 'MaxPool1d':
         complex_module_gradients.append(grad_input[0])
         # the grad input that is returned doesn't matter, since it will immediately be
-        # be overridden by the gard in the complex_module_gradient
+        # be overridden by the grad in the complex_module_gradient
         grad_input[0] = torch.ones(org_input_shape)
     return tuple(grad_input)
 
