@@ -322,9 +322,6 @@ def maxpool(module, grad_input, grad_output):
     if module.__class__.__name__ == 'MaxPool1d':
         complex_module_gradients.append(grad_input[0])
         grad_input[0] = torch.gather(grad_input[0], -1, indices).unsqueeze(1)
-    # delete the attributes
-    del module.x
-    del module.y
     return tuple(grad_input)
 
 
@@ -343,10 +340,6 @@ def nonlinear_1d(module, grad_input, grad_output):
     grads = [None for _ in grad_input]
     grads[0] = torch.where(torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0],
                            grad_output[0] * (delta_out / delta_in).repeat(dup0))
-
-    # delete the attributes
-    del module.x
-    del module.y
     return tuple(grads)
 
 

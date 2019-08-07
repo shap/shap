@@ -433,10 +433,15 @@ def test_pytorch_multiple_inputs():
     class Net(nn.Module):
         def __init__(self):
             super().__init__()
-            self.linear = nn.Linear(7, 1)
+            self.linear = nn.Linear(7, 2)
+            self.others = nn.Sequential(
+                nn.MaxPool1d(2),
+                nn.ReLU())
 
         def forward(self, x1, x2):
-            return self.linear(torch.cat((x1, x2), dim=-1))
+            x = self.linear(torch.cat((x1, x2), dim=-1))
+            x = x.unsqueeze(1)
+            return self.others(x)
 
     model = Net()
 
