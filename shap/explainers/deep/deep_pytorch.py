@@ -55,7 +55,6 @@ class PyTorchDeepExplainer(Explainer):
 
             # also get the device everything is running on
             self.device = outputs.device
-
             if outputs.shape[1] > 1:
                 self.multi_output = True
                 self.num_outputs = outputs.shape[1]
@@ -316,12 +315,15 @@ def maxpool(module, grad_input, grad_output):
         xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
             grad_output[0] * diffs, indices, module.kernel_size, module.stride,
             module.padding, list(module.x.shape)), 2)
+    org_input_shape = grad_input[0].shape  # for the maxpool 1d
     grad_input = [None for _ in grad_input]
     grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
                            (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
     if module.__class__.__name__ == 'MaxPool1d':
         complex_module_gradients.append(grad_input[0])
-        grad_input[0] = torch.gather(grad_input[0], -1, indices).unsqueeze(1)
+        # the grad input that is returned doesn't matter, since it will immediately be
+        # be overridden by the gard in the complex_module_gradient
+        grad_input[0] = torch.ones(org_input_shape)
     return tuple(grad_input)
 
 

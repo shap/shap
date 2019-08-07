@@ -418,41 +418,72 @@ def test_pytorch_single_output():
 
 
 def test_pytorch_multiple_inputs():
+    """Testing multiple inputs
+    """
     _skip_if_no_pytorch()
 
     import torch
     from torch import nn
+    from torch.nn import functional as F
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.datasets import load_boston
     import shap
 
-    batch_size = 10
-    x1 = torch.ones(batch_size, 3)
-    x2 = torch.ones(batch_size, 4)
-
-    background = [torch.zeros(batch_size, 3), torch.zeros(batch_size, 4)]
+    X, y = load_boston(return_X_y=True)
+    num_features = X.shape[1]
+    x1 = X[:, num_features // 2:]
+    x2 = X[:, :num_features // 2]
+    data = TensorDataset(torch.tensor(x1).float(),
+                         torch.tensor(x2).float(),
+                         torch.tensor(y).float())
+    loader = DataLoader(data, batch_size=128)
 
     class Net(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.linear = nn.Linear(7, 2)
-            self.others = nn.Sequential(
+        def __init__(self, num_features):
+            super(Net, self).__init__()
+            self.linear = nn.Linear(num_features, 2)
+            self.output = nn.Sequential(
                 nn.MaxPool1d(2),
-                nn.ReLU())
+                nn.ReLU()
+            )
 
         def forward(self, x1, x2):
-            x = self.linear(torch.cat((x1, x2), dim=-1))
-            x = x.unsqueeze(1)
-            return self.others(x)
+            x = self.linear(torch.cat((x1, x2), dim=-1)).unsqueeze(1)
+            return self.output(x).squeeze(1)
+    model = Net(num_features)
+    optimizer = torch.optim.Adam(model.parameters())
 
-    model = Net()
+    def train(model, device, train_loader, optimizer, epoch):
+        model.train()
+        num_examples = 0
+        for batch_idx, (data1, data2, target) in enumerate(train_loader):
+            num_examples += target.shape[0]
+            data1, data2, target = data1.to(device), data2.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data1, data2)
+            loss = F.mse_loss(output.squeeze(1), target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 2 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), loss.item()))
 
+    device = torch.device('cpu')
+    train(model, device, loader, optimizer, 1)
+
+    next_x1, next_x2, next_y = next(iter(loader))
+    np.random.seed(0)
+    inds = np.random.choice(next_x1.shape[0], 20, replace=False)
+    background = [next_x1[inds, :], next_x2[inds, :]]
     e = shap.DeepExplainer(model, background)
-    shap_x1, shap_x2 = e.shap_values([x1, x2])
+    test_x1, test_x2, test_y = next(iter(loader))
+    shap_x1, shap_x2 = e.shap_values([test_x1[:1], test_x2[:1]])
 
     model.eval()
     model.zero_grad()
     with torch.no_grad():
-        diff = (model(x1, x2) - model(*background)).detach().numpy().mean(0)
-
+        diff = (model(test_x1[:1], test_x2[:1]) - model(*background)).detach().numpy().mean(0)
     sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
