@@ -315,7 +315,8 @@ def test_lightgbm():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    ex = shap.TreeExplainer(model)
+    shap_values = ex.shap_values(X)
 
     predicted = model.predict(X, raw_score=True)
 
