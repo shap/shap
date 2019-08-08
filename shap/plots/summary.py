@@ -77,6 +77,15 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
 
+    if features is not None:
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
+                    "provided data matrix."
+        if num_features - 1 == features.shape[1]:
+            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
+                          "constant offset? Of so just pass shap_values[:,:-1]."
+        else:
+            assert num_features == features.shape[1], shape_msg
+
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
 
