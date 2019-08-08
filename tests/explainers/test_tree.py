@@ -317,6 +317,35 @@ def test_lightgbm():
     # explain the model's predictions using SHAP values
     shap_values = shap.TreeExplainer(model).shap_values(X)
 
+    predicted = model.predict(X, raw_score=True)
+
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+        "SHAP values don't sum to model output!"
+
+def test_catboost():
+    try:
+        import catboost
+    except:
+        print("Skipping test_catboost!")
+        return
+    import shap
+
+    # train catboost model
+    X, y = shap.datasets.boston()
+    X["RAD"] = X["RAD"].astype(np.int)
+    model = catboost.CatBoostRegressor(iterations=300, learning_rate=0.1, random_seed=123)
+    p = catboost.Pool(X, y, cat_features=["RAD"])
+    model.fit(p, verbose=False, plot=False)
+
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(model)
+    shap_values = ex.shap_values(p)
+
+    predicted = model.predict(X)
+
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+        "SHAP values don't sum to model output!"
+
 def test_lightgbm_constant_prediction():
     # note: this test used to fail with lightgbm 2.2.1 with error:
     # ValueError: zero-size array to reduction operation maximum which has no identity

@@ -53,21 +53,20 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
+def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True):
     ext_modules = []
     if with_binary:
         ext_modules.append(
             Extension('shap._cext', sources=['shap/_cext.cc'])
         )
 
-    if test_xgboost and test_lightgbm:
-        tests_require = ['nose', 'xgboost', 'lightgbm']
-    elif test_xgboost:
-        tests_require = ['nose', 'xgboost']
-    elif test_lightgbm:
-        tests_require = ['nose', 'lightgbm']
-    else:
-        tests_require = ['nose']
+    tests_require = ['nose']
+    if test_xgboost:
+        tests_require += ['xgboost']
+    if test_lightgbm:
+        tests_require += ['lightgbm']
+    if test_catboost:
+        tests_require += ['catboost']
 
     setup(
         name='shap',
@@ -117,6 +116,10 @@ def try_run_setup(**kwargs):
         elif "lightgbm" in str(e).lower():
             kwargs["test_lightgbm"] = False
             print("Couldn't install LightGBM for testing!")
+            try_run_setup(**kwargs)
+        elif "catboost" in str(e).lower():
+            kwargs["test_catboost"] = False
+            print("Couldn't install CatBoost for testing!")
             try_run_setup(**kwargs)
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
