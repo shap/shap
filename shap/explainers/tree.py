@@ -1231,8 +1231,17 @@ class CatBoostTreeModelLoader:
 
             # split features and borders go from leafs to the root
             for elem in self.loaded_cb_model['oblivious_trees'][tree_index]['splits']:
-                split_features_index.append(elem['float_feature_index'])
-                borders.append(elem['border'])
+                split_type = elem.get('split_type')
+                if split_type == 'FloatFeature':
+                    split_feature_index = elem.get('float_feature_index')
+                    borders.append(elem['border'])
+                elif split_type == 'OneHotFeature':
+                    split_feature_index = elem.get('cat_feature_index')
+                    borders.append(elem['value'])
+                else:
+                    split_feature_index = elem.get('ctr_target_border_idx')
+                    borders.append(elem['border'])
+                split_features_index.append(split_feature_index)
 
             split_features_index_unraveled = []
             for counter, feature_index in enumerate(split_features_index[::-1]):
