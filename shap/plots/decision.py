@@ -20,7 +20,7 @@ from ..common import convert_to_link, LogitLink, hclust_ordering
 
 
 def __decision_plot_js():
-    raise RuntimeError("This plot is not yet supported.")
+    raise RuntimeError("The interactive plot is not yet supported. Set matplotlib=True.")
 
 
 def __decision_plot_matplotlib(
@@ -93,7 +93,7 @@ def __decision_plot_matplotlib(
                 v = "({})".format(str(v).strip())
             else:
                 v = "({})".format("{0:,.3f}".format(v).rstrip("0").rstrip("."))
-            t: pl.Text = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
+            t = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
                     horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
             bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
             if bb.xmax > xlim[1]:
@@ -154,9 +154,9 @@ class DecisionPlotResult:
         """
         Example
         -------
-        Plot two decision plots using the same feature ordering and x-axis scale.
+        Plot two decision plots using the same feature order and x-axis.
         >>> range1, range2 = range(20), range(20, 40)
-        >>> r = decision_plot(base, shap_values[range1], features[range1])
+        >>> r = decision_plot(base, shap_values[range1], features[range1], return_objects=True)
         >>> decision_plot(base, shap_values[range2], features[range2], feature_order=r.feature_idx, xlim=r.xlim)
 
         Parameters
@@ -292,9 +292,9 @@ def decision_plot(
 
     Example
     -------
-    Plot two decision plots using the same feature ordering and x-axis scale.
+    Plot two decision plots using the same feature order and x-axis.
         >>> range1, range2 = range(20), range(20, 40)
-        >>> r = decision_plot(base, shap_values[range1], features[range1])
+        >>> r = decision_plot(base, shap_values[range1], features[range1], return_objects=True)
         >>> decision_plot(base, shap_values[range2], features[range2], feature_order=r.feature_idx, xlim=r.xlim)
 
     """
@@ -367,7 +367,6 @@ def decision_plot(
         features = None  # Can't use feature values for interactions...
 
     # determine feature order
-    feature_idx = None
     if isinstance(feature_order, list):
         feature_idx = np.array(feature_order)
     elif isinstance(feature_order, np.ndarray):
