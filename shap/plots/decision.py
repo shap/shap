@@ -19,10 +19,6 @@ from . import colors, labels
 from ..common import convert_to_link, LogitLink, hclust_ordering
 
 
-def __decision_plot_js():
-    raise RuntimeError("The interactive plot is not yet supported. Set matplotlib=True.")
-
-
 def __decision_plot_matplotlib(
     base_value,
     cumsum,
@@ -78,7 +74,9 @@ def __decision_plot_matplotlib(
             linestyle=linestyle[i]
         )
 
-    # determine font size. if ' *\n' character sequence is found, assume interactions which require a smaller font
+    # determine font size. if ' *\n' character sequence is found (as in interaction labels), use a smaller
+    # font. we don't shrink the font for all interaction plots because if an interaction term is not
+    # in the display window there is no need to shrink the font.
     s = next((s for s in feature_names if " *\n" in s), None)
     fontsize = 13 if s is None else 9
 
@@ -202,8 +200,7 @@ def decision_plot(
     xlim=None,
     show=True,
     return_objects=False,
-    ignore_warnings=False,
-    matplotlib=False
+    ignore_warnings=False
 ) -> Union[DecisionPlotResult, None]:
     """Visualize model decisions using cumulative SHAP values. Each colored line in the plot represents the model
     prediction for a single observation. Note that plotting too many samples at once can make the plot unintelligible.
@@ -283,12 +280,9 @@ def decision_plot(
         Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
         this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.
 
-    matplotlib : bool
-        Whether to render the plot using matplotlib or HTML/JavaScript.
-
     Returns
     -------
-    Returns DecisionPlotResult object if return_objects is `True`. Returns `None` otherwise (the default).
+    Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
 
     Example
     -------
@@ -470,26 +464,23 @@ def decision_plot(
     if plot_color is None:
         plot_color = colors.red_blue
 
-    if matplotlib:
-        __decision_plot_matplotlib(
-            base_value,
-            cumsum,
-            ascending,
-            feature_display_count,
-            features_display,
-            feature_names_display,
-            highlight,
-            plot_color,
-            axis_color,
-            y_demarc_color,
-            xlim,
-            alpha,
-            color_bar,
-            auto_size_plot,
-            title,
-            show
-        )
-    else:
-        __decision_plot_js()
+    __decision_plot_matplotlib(
+        base_value,
+        cumsum,
+        ascending,
+        feature_display_count,
+        features_display,
+        feature_names_display,
+        highlight,
+        plot_color,
+        axis_color,
+        y_demarc_color,
+        xlim,
+        alpha,
+        color_bar,
+        auto_size_plot,
+        title,
+        show
+    )
 
     return DecisionPlotResult(shap_values, feature_names, feature_idx, xlim) if return_objects else None
