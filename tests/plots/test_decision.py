@@ -53,11 +53,11 @@ def test_random_decision():
 # select = range(20)
 # features = X_test.iloc[select]
 # y_label = y_test[select]
-# shap_values = explainer.shap_values(features)
+# shap_values = explainer.shap_values(features)[1]
 # shap_interaction_values = explainer.shap_interaction_values(features)
 # features_display = X_display.loc[features.index]
 #
-# args1 = dict(base_value=base_value, shap_values=shap_values, matplotlib=True)
+# args1 = dict(base_value=base_value, shap_values=shap_values)
 # args2 = args1.copy()
 # args2["shap_values"] = shap_interaction_values
 #
@@ -74,29 +74,29 @@ def test_random_decision():
 # shap.decision_plot(features=features_display, **args2)
 #
 # # Plot a single observation without features
-# shap.decision_plot(base_value, shap_values[0, :], matplotlib=True)
-# shap.decision_plot(base_value, shap_values[[0], :], matplotlib=True)
+# shap.decision_plot(base_value, shap_values[0, :])
+# shap.decision_plot(base_value, shap_values[[0], :])
 #
 # # Now, with a Pandas Series (and also test auto feature value positioning)
-# shap.decision_plot(base_value, shap_values[0, :], features=features_display.iloc[0, :], matplotlib=True)
+# shap.decision_plot(base_value, shap_values[0, :], features=features_display.iloc[0, :])
 # s = shap_values[0, :].copy()
 # s[-1] = -35; s[-2] = 15
-# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], matplotlib=True, feature_order='None')
+# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], feature_order='None')
 # s[-1] = 40; s[-2] = -20
-# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], matplotlib=True, feature_order='None')
-# shap.decision_plot(base_value, shap_values[4, :], features=features_display.iloc[4, :], feature_order='hclust', matplotlib=True)
-# shap.decision_plot(base_value, shap_values[7, :], features=features_display.iloc[7, :], feature_order='hclust', matplotlib=True)
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[0, :], matplotlib=True)
+# shap.decision_plot(base_value, s, features=features_display.iloc[0, :], feature_order='None')
+# shap.decision_plot(base_value, shap_values[4, :], features=features_display.iloc[4, :], feature_order='hclust')
+# shap.decision_plot(base_value, shap_values[7, :], features=features_display.iloc[7, :], feature_order='hclust')
+# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[0, :])
 # # Now with a single observation using a matrix and a Pandas Dataframe
-# shap.decision_plot(base_value, shap_values[[0], :], features=features_display.iloc[[0], :], matplotlib=True)
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[[0], :], matplotlib=True)
+# shap.decision_plot(base_value, shap_values[[0], :], features=features_display.iloc[[0], :])
+# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=features_display.iloc[[0], :])
 # # Now with feature names in the features argument.
 # names = features_display.columns.to_list()
-# shap.decision_plot(base_value, shap_values[[0], :], features=names, matplotlib=True)
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=names, matplotlib=True)
+# shap.decision_plot(base_value, shap_values[[0], :], features=names)
+# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=names)
 # # Now with feature names in the features argument as numpy.
-# shap.decision_plot(base_value, shap_values[[0], :], features=np.array(names), matplotlib=True)
-# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=np.array(names), matplotlib=True)
+# shap.decision_plot(base_value, shap_values[[0], :], features=np.array(names))
+# shap.decision_plot(base_value, shap_interaction_values[[0], :], features=np.array(names))
 #
 # names = features_display.columns.to_list()
 # args1["feature_names"] = names
@@ -160,7 +160,7 @@ def test_random_decision():
 # r = shap.decision_plot(return_objects=True, **args1)
 # idx = 8
 # shap.decision_plot(base_value, shap_values[idx], features=features_display.iloc[idx],
-#                    feature_order=r.feature_idx, xlim=r.xlim, matplotlib=True)
+#                    feature_order=r.feature_idx, xlim=r.xlim)
 #
 #
 # # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
