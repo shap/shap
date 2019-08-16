@@ -57,13 +57,8 @@ class LinearExplainer(Explainer):
 
         # sklearn style model
         elif hasattr(model, "coef_") and hasattr(model, "intercept_"):
-            # work around for multi-class with a single class
-            if len(model.coef_.shape) > 1 and model.coef_.shape[0] == 1:
-                self.coef = model.coef_[0]
-                self.intercept = model.intercept_[0]
-            else:
-                self.coef = model.coef_
-                self.intercept = model.intercept_
+            self.coef = model.coef_
+            self.intercept = model.intercept_
         else:
             raise Exception("An unknown model type was passed: " + str(type(model)))
 
@@ -86,7 +81,6 @@ class LinearExplainer(Explainer):
                 self.mean = np.array(np.mean(data, 0)).flatten() # assumes it is an array
                 if feature_dependence == "correlation":
                     self.cov = np.cov(data, rowvar=False)
-        #print(self.coef, self.mean.flatten(), self.intercept)
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
         if sp.sparse.issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
             # accept both sparse and dense coef

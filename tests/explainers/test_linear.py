@@ -122,4 +122,4 @@ def test_sparse():
     # explain the model's predictions using SHAP values
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer.shap_values(X)
-    assert np.max(np.abs(expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
+    assert np.max(np.abs(expit(explainer.expected_value + shap_values[0].sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
