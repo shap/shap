@@ -35,7 +35,9 @@ def __decision_plot_matplotlib(
     color_bar,
     auto_size_plot,
     title,
-    show
+    show,
+    legend_labels,
+    legend_location,
 ):
     """matplotlib rendering for decision_plot()"""
 
@@ -65,14 +67,16 @@ def __decision_plot_matplotlib(
     m = cm.ScalarMappable(cmap=plot_color)
     m.set_clim(xlim)
     y_pos = np.arange(0, feature_display_count + 1)
+    lines = []
     for i in range(cumsum.shape[0]):
-        pl.plot(
+        o = pl.plot(
             cumsum[i, :],
             y_pos,
             color=m.to_rgba(cumsum[i, -1], alpha),
             linewidth=linewidth[i],
             linestyle=linestyle[i]
         )
+        lines.append(o[0])
 
     # determine font size. if ' *\n' character sequence is found (as in interaction labels), use a smaller
     # font. we don't shrink the font for all interaction plots because if an interaction term is not
@@ -131,6 +135,9 @@ def __decision_plot_matplotlib(
 
         # re-activate the main axis for drawing.
         pl.sca(ax)
+
+    if legend_labels is not None:
+        ax.legend(handles=lines, labels=legend_labels, loc=legend_location)
 
     if title:
         # TODO decide on style/size
@@ -200,7 +207,9 @@ def decision_plot(
     xlim=None,
     show=True,
     return_objects=False,
-    ignore_warnings=False
+    ignore_warnings=False,
+    legend_labels=None,
+    legend_location="best",
 ) -> Union[DecisionPlotResult, None]:
     """Visualize model decisions using cumulative SHAP values. Each colored line in the plot represents the model
     prediction for a single observation. Note that plotting too many samples at once can make the plot unintelligible.
@@ -279,6 +288,13 @@ def decision_plot(
     ignore_warnings : bool
         Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
         this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.
+
+    legend_labels : list of str
+        List of legend labels. If `None`, legend will not be shown.
+
+    legend_location : str
+        Legend location. Any of "best", "upper right", "upper left", "lower left", "lower right", "right",
+        "center left", "center right", "lower center", "upper center", "center".
 
     Returns
     -------
@@ -480,7 +496,9 @@ def decision_plot(
         color_bar,
         auto_size_plot,
         title,
-        show
+        show,
+        legend_labels,
+        legend_location,
     )
 
     return DecisionPlotResult(shap_values, feature_names, feature_idx, xlim) if return_objects else None
