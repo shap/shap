@@ -440,7 +440,10 @@ class KernelExplainer(Explainer):
                 nonzero_rows = data_rows.nonzero()[0]
 
                 if nonzero_rows.size > 0:
-                    num_mismatches = np.sum(np.abs(data_rows[nonzero_rows].toarray() - x[0, varying_index]) > 1e-7)
+                    background_data_rows = data_rows[nonzero_rows]
+                    if sp.sparse.issparse(background_data_rows):
+                        background_data_rows = background_data_rows.toarray()
+                    num_mismatches = np.sum(np.abs(background_data_rows - x[0, varying_index]) > 1e-7)
                     # Note: If feature column non-zero but some background zero, can't remove index
                     if num_mismatches == 0 and not \
                         (np.abs(x[0, [varying_index]][0, 0]) > 1e-7 and len(nonzero_rows) < data_rows.shape[0]):
@@ -504,7 +507,12 @@ class KernelExplainer(Explainer):
                     self.synth_data[offset:offset+self.N, group] = x[0, group]
             else:
                 # further performance optimization in case each group has a single feature
-                self.synth_data[offset:offset+self.N, groups] = x[0, groups]
+                evaluation_data = x[0, groups]
+                # In edge case where background is all dense but evaluation data
+                # is all sparse, make evaluation data dense
+                if sp.sparse.issparse(x) and not sp.sparse.issparse(self.synth_data):
+                    evaluation_data = evaluation_data.toarray()
+                self.synth_data[offset:offset+self.N, groups] = evaluation_data
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1

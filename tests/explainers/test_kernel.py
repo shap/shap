@@ -178,6 +178,11 @@ def test_kernel_sparse_vs_dense_multirow_background():
 
     assert(np.allclose(shap_values, sparse_shap_values, rtol=1e-05, atol=1e-05))
 
+    # Use sparse evaluation examples with dense background
+    sparse_sv_dense_bg = explainer.shap_values(X_sparse_test)
+    assert(np.allclose(shap_values, sparse_sv_dense_bg, rtol=1e-05, atol=1e-05))
+
+
 def test_linear():
     """tests that a linear model on the KernelExplainer gives the right result"""
 
