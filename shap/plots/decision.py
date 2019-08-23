@@ -19,6 +19,25 @@ from . import colors, labels
 from ..common import convert_to_link, LogitLink, hclust_ordering
 
 
+def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
+    """Shift SHAP base value to a new value. This function assumes that `base_value` and `new_base_value` are scalars
+    and that `shap_values` is a two or three dimensional array.
+    """
+    # matrix of shap_values
+    if shap_values.ndim == 2:
+        return shap_values + (base_value - new_base_value) / shap_values.shape[1]
+
+    # cube of shap_interaction_values
+    main_effects = shap_values.shape[1]
+    all_effects = main_effects * (main_effects + 1) // 2
+    temp = (base_value - new_base_value) / all_effects / 2  # divided by 2 because interaction effects are halved
+    shap_values = shap_values + temp
+    # Add the other half to the main effects on the diagonal
+    idx = np.diag_indices_from(shap_values[0])
+    shap_values[:, idx[0], idx[1]] += temp
+    return shap_values
+
+
 def __decision_plot_matplotlib(
     base_value,
     cumsum,
@@ -136,15 +155,15 @@ def __decision_plot_matplotlib(
         # re-activate the main axis for drawing.
         pl.sca(ax)
 
-    if legend_labels is not None:
-        ax.legend(handles=lines, labels=legend_labels, loc=legend_location)
-
     if title:
         # TODO decide on style/size
         pl.title(title)
 
     if ascending:
         pl.gca().invert_yaxis()
+
+    if legend_labels is not None:
+        ax.legend(handles=lines, labels=legend_labels, loc=legend_location)
 
     if show:
         pl.show()
@@ -155,7 +174,7 @@ class DecisionPlotResult:
     plots with the same scale and feature ordering.
     """
 
-    def __init__(self, shap_values, feature_names, feature_idx, xlim):
+    def __init__(self, base_value, shap_values, feature_names, feature_idx, xlim):
         """
         Example
         -------
@@ -166,10 +185,15 @@ class DecisionPlotResult:
 
         Parameters
         ----------
+        base_value : float
+            The base value used in the plot. For multioutput models,
+            this will be the mean of the base values. This will inherit `new_base_value` if specified.
+
         shap_values : numpy.ndarray
             The `shap_values` passed to decision_plot re-ordered based on `feature_order`. If SHAP interaction values
             are passed to decision_plot, `shap_values` is a 2D (matrix) representation of the interactions. See
-            `feature_names` to locate the feature positions.
+            `feature_names` to locate the feature positions. If `new_base_value` is specified, the SHAP values are
+            relative to the new base value.
 
         feature_names : list of str
             The feature names used in the plot in the order specified in the decision_plot parameter `feature_order`.
@@ -182,6 +206,7 @@ class DecisionPlotResult:
             The x-axis limits. This attributed can be used to specify the same x-axis in multiple decision plots.
 
         """
+        self.base_value = base_value
         self.shap_values = shap_values
         self.feature_names = feature_names
         self.feature_idx = feature_idx
@@ -208,6 +233,7 @@ def decision_plot(
     show=True,
     return_objects=False,
     ignore_warnings=False,
+    new_base_value=None,
     legend_labels=None,
     legend_location="best",
 ) -> Union[DecisionPlotResult, None]:
@@ -217,12 +243,12 @@ def decision_plot(
     Parameters
     ----------
     base_value : float or numpy.ndarray
-        This is the reference value that the feature contributions start from. For SHAP values it should
-        be the value of explainer.expected_value.
+        This is the reference value that the feature contributions start from. Usually, this is
+        explainer.expected_value.
 
     shap_values : numpy.ndarray
         Matrix of SHAP values (# features) or (# samples x # features) from explainer.shap_values(). Or cube of SHAP
-        interaction values (# samples x # features x # features). from explainer.shap_interaction_values().
+        interaction values (# samples x # features x # features) from explainer.shap_interaction_values().
 
     features : numpy.array or pandas.Series or pandas.DataFrame or numpy.ndarray or list
         Matrix of feature values (# features) or (# samples x # features). This provides the values of all the
@@ -289,6 +315,11 @@ def decision_plot(
         Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
         this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.
 
+    new_base_value : float
+        SHAP values are relative to a base value; by default, the expected value of the model's raw predictions. Use
+        `new_base_value` to shift the base value to an arbitrary value (e.g. the cutoff point for a binary
+        classification task).
+
     legend_labels : list of str
         List of legend labels. If `None`, legend will not be shown.
 
@@ -313,9 +344,11 @@ def decision_plot(
     if type(base_value) == np.ndarray and len(base_value) == 1:
         base_value = base_value[0]
 
-    if isinstance(shap_values, list):
-        raise TypeError("The shap_values arg looks like multi output. Try shap_values[i].")
+    if isinstance(base_value, list) or isinstance(shap_values, list):
+        raise TypeError("Looks like multi output. Try base_value[i] and shap_values[i], "
+                        "shap.multioutput_decision_plot().")
 
+    # validate shap_values
     if not isinstance(shap_values, np.ndarray):
         raise TypeError("The shap_values arg is the wrong type. Try explainer.shap_values().")
 
@@ -413,6 +446,11 @@ def decision_plot(
             feature_display_range.step
         )
 
+    # apply new_base_value
+    if new_base_value is not None:
+        shap_values = __change_shap_base_value(base_value, new_base_value, shap_values)
+        base_value = new_base_value
+
     # use feature_display_range to determine which features will be plotted. convert feature_display_range to
     # ascending indices and expand by one in the negative direction. why? we are plotting the change in prediction
     # for every feature. this requires that we include the value previous to the first displayed feature
@@ -454,6 +492,7 @@ def decision_plot(
     # convert values based on link and update x-axis extents
     create_xlim = xlim is None
     link = convert_to_link(link)
+    base_value_saved = base_value
     if isinstance(link, LogitLink):
         base_value = link.finv(base_value)
         cumsum = link.finv(cumsum)
@@ -501,4 +540,61 @@ def decision_plot(
         legend_location,
     )
 
-    return DecisionPlotResult(shap_values, feature_names, feature_idx, xlim) if return_objects else None
+    if not return_objects:
+        return None
+
+    return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
+
+
+def multioutput_decision_plot(base_values, shap_values, row_index, **kwargs) -> Union[DecisionPlotResult, None]:
+    """Decision plot for multioutput models. Plots all outputs for a single observation. By default, the plotted base
+    value will be the mean of base_values unless new_base_value is specified. Supports both SHAP values and SHAP
+    interaction values.
+
+    Parameters
+    ----------
+    base_values : list of float
+        This is the reference value that the feature contributions start from. Use explainer.expected_value.
+
+    shap_values : list of numpy.ndarray
+        A multioutput list of SHAP matrices or SHAP cubes from explainer.shap_values() or
+        explainer.shap_interaction_values(), respectively.
+
+    row_index : int
+        The integer index of the row to plot.
+
+    **kwargs : Any
+        Arguments to be passed on to decision_plot().
+
+    Returns
+    -------
+    Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
+    """
+
+    if not (isinstance(base_values, list) and isinstance(shap_values, list)):
+        raise ValueError("The base_values and shap_values args expect lists.")
+
+    # convert arguments to arrays for simpler handling
+    base_values = np.array(base_values)
+    if not ((base_values.ndim == 1) or (np.issubdtype(base_values.dtype, np.number))):
+        raise ValueError("The base_values arg should be a list of scalars.")
+    shap_values = np.array(shap_values)
+    if shap_values.ndim not in [3, 4]:
+        raise ValueError("The shap_values arg should be a list of two or three dimensional SHAP arrays.")
+    if shap_values.shape[0] != base_values.shape[0]:
+        raise ValueError("The base_values output length is different than shap_values.")
+
+    # shift shap base values to mean of base values
+    base_values_mean = base_values.mean()
+    for i in range(shap_values.shape[0]):
+        shap_values[i] = __change_shap_base_value(base_values[i], base_values_mean, shap_values[i])
+
+    # select the feature row corresponding to row_index
+    if (kwargs is not None) and ("features" in kwargs):
+        features = kwargs["features"]
+        if isinstance(features, np.ndarray) and (features.ndim == 2):
+            kwargs["features"] = features[[row_index]]
+        elif str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+            kwargs["features"] = features.iloc[row_index]
+
+    return decision_plot(base_values_mean, shap_values[:, row_index, :], **kwargs)
