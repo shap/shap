@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 from . import colors, labels
-from ..common import convert_to_link, LogitLink, hclust_ordering
+from ..common import convert_to_link, hclust_ordering, LogitLink
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
