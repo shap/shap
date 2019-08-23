@@ -346,7 +346,7 @@ def decision_plot(
 
     if isinstance(base_value, list) or isinstance(shap_values, list):
         raise TypeError("Looks like multi output. Try base_value[i] and shap_values[i], "
-                        "shap.multioutput_decision_plot().")
+                        "or use shap.multioutput_decision_plot().")
 
     # validate shap_values
     if not isinstance(shap_values, np.ndarray):
