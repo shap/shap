@@ -16,6 +16,7 @@ def test_random_decision():
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 
 # import lightgbm as lgb
+# import xgboost as xgb
 # import matplotlib.pyplot as pl
 # import numpy as np
 # from scipy.special import expit
@@ -162,6 +163,50 @@ def test_random_decision():
 # shap.decision_plot(base_value, shap_values[idx], features=features_display.iloc[idx],
 #                    feature_order=r.feature_idx, xlim=r.xlim)
 #
+# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+# # New base value
+# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+#
+# p = model.predict(features, raw_score=True)
+#
+# # shap values w/base value zero
+# new_base_value = 0
+# r = shap.decision_plot(base_value, shap_values, features, new_base_value=new_base_value, return_objects=True)
+# a = r.shap_values.sum(axis=1) + new_base_value
+# assert np.all(a.round(5) == p[select].round(5))
+# assert r.base_value == new_base_value
+#
+# # shap values w/base value non-zero
+# new_base_value = 2.3
+# r = shap.decision_plot(base_value, shap_values, features, new_base_value=new_base_value, return_objects=True)
+# a = r.shap_values.sum(axis=1) + new_base_value
+# assert np.all(a.round(5) == p[select].round(5))
+# assert r.base_value == new_base_value
+#
+# # shap interaction values w/base value zero
+# new_base_value = 0
+# r = shap.decision_plot(base_value, shap_interaction_values, features, new_base_value=new_base_value,
+#                        return_objects=True, feature_display_range=slice(None, None, -1))
+# a = r.shap_values.sum(axis=1) + new_base_value
+# assert np.all(a.round(5) == p[select].round(5))
+# assert r.base_value == new_base_value
+#
+# # shap interaction values w/base value non-zero
+# new_base_value = -2.1
+# r = shap.decision_plot(base_value, shap_interaction_values, features, new_base_value=new_base_value,
+#                        return_objects=True, feature_display_range=slice(None, None, -1))
+# a = r.shap_values.sum(axis=1) + new_base_value
+# assert np.all(a.round(5) == p[select].round(5))
+# assert r.base_value == new_base_value
+#
+# # shap interaction values w/base value non-zero and logit link
+# new_base_value = -2.1
+# r = shap.decision_plot(base_value, shap_interaction_values, features, new_base_value=new_base_value,
+#                        return_objects=True, feature_display_range=slice(None, None, -1), link='logit')
+# a = r.shap_values.sum(axis=1) + new_base_value
+# assert np.all(a.round(5) == p[select].round(5))
+# assert r.base_value == new_base_value
+#
 #
 # # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 # # No sorting
@@ -212,4 +257,85 @@ def test_random_decision():
 # shap.decision_plot(feature_order='hclust', feature_display_range=range(11, -1, -1), xlim=r.xlim, **args2)
 # shap.decision_plot(feature_order='hclust', feature_display_range=range(-100, 12, 1), xlim=r.xlim, **args2)
 #
+#
+# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+# # Multioutput
+# # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+#
+# X, y = shap.datasets.iris()
+# model = xgb.XGBClassifier()
+# model.fit(X, y)
+# explainer = shap.TreeExplainer(model)
+# sh = explainer.shap_values(X)
+# ev = explainer.expected_value
+# p = model.predict(X, output_margin=True)
+# for i in [0, 75, 149]:
+#     labels = [f'Class {j + 1} ({p[i, j]:0.2f})' for j in range(3)]
+#     shap.multioutput_decision_plot(ev, sh, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels)
+#
+# # shap values w/mean of expected values
+# r1 = shap.multioutput_decision_plot(ev, sh, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
+#                                return_objects=True)
+# a = r1.shap_values.sum(axis=1) + np.array(ev).mean()
+# print(a)
+# print(p[i])
+# assert np.all(a.round(5) == p[i].round(5))
+# assert r1.base_value == np.array(ev).mean()
+#
+# # shap values w/base value zero
+# new_base_value = 0
+# r1 = shap.multioutput_decision_plot(ev, sh, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
+#                                new_base_value=new_base_value, return_objects=True)
+# a = r1.shap_values.sum(axis=1) + new_base_value
+# print(a)
+# print(p[i])
+# assert np.all(a.round(5) == p[i].round(5))
+# assert r1.base_value == new_base_value
+#
+# # shap interaction values w/mean of expected values
+# shi = explainer.shap_interaction_values(X)
+# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
+#                                return_objects=True)
+# a = r1.shap_values.sum(axis=1) + np.array(ev).mean()
+# print(a)
+# print(p[i])
+# assert np.all(a.round(5) == p[i].round(5))
+# assert r1.base_value == np.array(ev).mean()
+#
+# # shap interaction values w/base value zero
+# new_base_value = 0
+# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
+#                                new_base_value=new_base_value, return_objects=True)
+# a = r1.shap_values.sum(axis=1) + new_base_value
+# print(a)
+# print(p[i])
+# assert np.all(a.round(5) == p[i].round(5))
+# assert r1.base_value == new_base_value
+#
+# # shap interaction values w/base value 7.5
+# new_base_value = 7.5
+# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]), legend_labels=labels,
+#                                new_base_value=new_base_value, return_objects=True)
+# a = r1.shap_values.sum(axis=1) + new_base_value
+# print(a)
+# print(p[i])
+# assert np.all(a.round(5) == p[i].round(5))
+# assert r1.base_value == new_base_value
+#
+# # shap interaction values w/base value 7.5 and logit link
+# new_base_value = 1
+# r1 = shap.multioutput_decision_plot(ev, shi, i, features=X, highlight=np.argmax(p[i]),
+#                                new_base_value=new_base_value, return_objects=True, link='logit')
+# a = r1.shap_values.sum(axis=1) + new_base_value
+# print(a)
+# print(p[i])
+# assert np.all(a.round(5) == p[i].round(5))
+# assert r1.base_value == new_base_value
+#
+# # make sure correct feature is selected and plotted.
+# idx = 1
+# print(X.iloc[[idx]])
+# shap.multioutput_decision_plot([ev[0]], [sh[0]], idx, features=X, legend_labels=labels)
+# shap.multioutput_decision_plot([ev[0]], [sh[0][[idx]]], 0, features=X.iloc[idx], legend_labels=labels)
+# shap.multioutput_decision_plot([ev[0]], [sh[0]], idx, features=X.to_numpy(), legend_labels=labels)
 #
