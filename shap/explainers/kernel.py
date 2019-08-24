@@ -118,7 +118,6 @@ class KernelExplainer(Explainer):
         if isinstance(model_null, (pd.DataFrame, pd.Series)):
             model_null = np.squeeze(model_null.values)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
-        self.expected_value = self.linkfv(self.fnull)
 
         # see if we have a vector output
         self.vector_out = True
@@ -128,6 +127,8 @@ class KernelExplainer(Explainer):
             self.D = 1
         else:
             self.D = self.fnull.shape[0]
+        self.expected_value = self.linkfv(self.fnull)
+        
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
