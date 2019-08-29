@@ -1,15 +1,12 @@
 import React from "react";
-import { select, selectAll } from "d3-selection";
+import { select } from "d3-selection";
 import { scaleLinear } from "d3-scale";
-import { extent } from "d3-array";
 import { format } from "d3-format";
 import { axisBottom } from "d3-axis";
 import { line } from "d3-shape";
 import { hsl } from "d3-color";
 import {
   sortBy,
-  max,
-  copy,
   map,
   each,
   sum,
