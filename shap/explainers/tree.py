@@ -1011,12 +1011,12 @@ class IsoTree(Tree):
     In sklearn the tree of the Isolation Forest does not calculated in a good way.
     """
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
-        super().__init__(self, tree, normalize, scaling, data, data_missing)
+        super(IsoTree, self).__init__(tree, normalize, scaling, data, data_missing)
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             from sklearn.ensemble.iforest import _average_path_length
 
             def _recalculate_value(tree, i , level):
-                value = level + _average_path_length(tree.n_node_samples[i])
+                value = level + _average_path_length(np.array([tree.n_node_samples[i]]))
                 self.values[i, 0] =  value
                 if tree.children_left[i] > 0 :
                     _recalculate_value(tree, tree.children_left[i] , level + 1)
