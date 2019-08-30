@@ -358,7 +358,7 @@ class _PyTorchGradientExplainer(Explainer):
 
         multi_output = False
         outputs = self.model(*self.model_inputs)
-        if outputs.shape[1] > 1:
+        if len(outputs.shape) > 1 and outputs.shape[1] > 1:
             multi_output = True
         self.multi_output = multi_output
 
