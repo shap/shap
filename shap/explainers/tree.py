@@ -424,6 +424,12 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
+        elif str(type(model)).endswith("sklearn.ensemble.iforest.IsolationForest'>"):
+            self.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [IsoTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
+            self.objective = objective_name_map.get('mse', None)
+            self.tree_output = "raw_value"
         elif str(type(model)).endswith("skopt.learning.forest.RandomForestRegressor'>"):
             self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
@@ -999,6 +1005,30 @@ class Tree:
             self.children_left, self.children_right, self.node_sample_weight,
             self.values
         )
+
+class IsoTree(Tree):
+    """ 
+    In sklearn the tree of the Isolation Forest does not calculated in a good way.
+    """
+    def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
+        super().__init__(self, tree, normalize, scaling, data)
+        if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
+            from sklearn.ensemble.iforest import _average_path_length
+
+            def _recalculate_value(tree, i , level):
+                value = level + _average_path_length(tree.n_node_samples[i])
+                self.values[i, 0] =  value
+                if tree.children_left[i] > 0 :
+                    _recalculate_value(tree, tree.children_left[i] , level + 1)
+                if tree.children_right[i] > 0 :
+                    _recalculate_value(tree, tree.children_right[i] , level + 1)
+
+            _recalculate_value(tree, 0, 0)
+            if normalize:
+                self.values = (self.values.T / self.values.sum(1)).T
+            self.values = self.values * scaling
+
+
 
 
 
