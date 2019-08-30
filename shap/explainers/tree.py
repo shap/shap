@@ -1011,7 +1011,7 @@ class IsoTree(Tree):
     In sklearn the tree of the Isolation Forest does not calculated in a good way.
     """
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
-        super().__init__(self, tree, normalize, scaling, data)
+        super().__init__(self, tree, normalize, scaling, data, data_missing)
         if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
             from sklearn.ensemble.iforest import _average_path_length
 
@@ -1027,10 +1027,6 @@ class IsoTree(Tree):
             if normalize:
                 self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
-
-
-
-
 
  
 def get_xgboost_json(model):
