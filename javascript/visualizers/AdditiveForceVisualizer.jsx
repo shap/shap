@@ -56,11 +56,11 @@ class AdditiveForceVisualizer extends React.Component {
       .attr("stroke-width", "4")
       .attr("stroke-linejoin", "round")
       .text("")
-      .on("mouseover", d => {
+      .on("mouseover", () => {
         this.hoverLabel.attr("opacity", 1);
         this.hoverLabelBacking.attr("opacity", 1);
       })
-      .on("mouseout", d => {
+      .on("mouseout", () => {
         this.hoverLabel.attr("opacity", 0);
         this.hoverLabelBacking.attr("opacity", 0);
       });
@@ -71,11 +71,11 @@ class AdditiveForceVisualizer extends React.Component {
       .attr("font-size", 12)
       .attr("fill", "#0f0")
       .text("")
-      .on("mouseover", d => {
+      .on("mouseover", () => {
         this.hoverLabel.attr("opacity", 1);
         this.hoverLabelBacking.attr("opacity", 1);
       })
-      .on("mouseout", d => {
+      .on("mouseout", () => {
         this.hoverLabel.attr("opacity", 0);
         this.hoverLabelBacking.attr("opacity", 0);
       });
@@ -275,7 +275,7 @@ class AdditiveForceVisualizer extends React.Component {
             .text(getLabel(d));
         }
       })
-      .on("mouseout", d => {
+      .on("mouseout", () => {
         this.hoverLabel.attr("opacity", 0);
         this.hoverLabelBacking.attr("opacity", 0);
       });
@@ -297,7 +297,7 @@ class AdditiveForceVisualizer extends React.Component {
       .append("text")
       .attr("class", "force-bar-labels")
       .attr("font-size", "12px")
-      .attr("y", d => 48 + topOffset)
+      .attr("y", 48 + topOffset)
       .merge(labels)
       .text(d => {
         if (d.value !== undefined && d.value !== null && d.value !== "") {
@@ -309,7 +309,7 @@ class AdditiveForceVisualizer extends React.Component {
         } else return d.name;
       })
       .attr("fill", d => (d.effect > 0 ? this.colors[0] : this.colors[1]))
-      .attr("stroke", function(d, i) {
+      .attr("stroke", function(d) {
         d.textWidth = Math.max(
           this.getComputedTextLength(),
           scale(Math.abs(d.effect)) - 10
