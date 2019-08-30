@@ -1,7 +1,6 @@
 import React from "react";
-import { select, selectAll, mouse } from "d3-selection";
+import { select, mouse } from "d3-selection";
 import { scaleLinear, scaleTime } from "d3-scale";
-import { extent } from "d3-array";
 import { format } from "d3-format";
 import { timeFormat, timeParse } from "d3-time-format";
 import { axisBottom, axisLeft } from "d3-axis";
@@ -11,7 +10,6 @@ import {
   sortBy,
   min,
   max,
-  copy,
   map,
   each,
   sum,
