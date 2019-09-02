@@ -428,7 +428,7 @@ class TreeEnsemble:
             self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [IsoTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
-            self.objective = objective_name_map.get('mse', None)
+            self.objective = objective_name_map.get('mae', None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("skopt.learning.forest.RandomForestRegressor'>"):
             self.dtype = np.float32
@@ -1016,12 +1016,15 @@ class IsoTree(Tree):
             from sklearn.ensemble.iforest import _average_path_length
 
             def _recalculate_value(tree, i , level):
-                value = level + _average_path_length(np.array([tree.n_node_samples[i]]))
-                self.values[i, 0] =  value
-                if tree.children_left[i] > 0 :
-                    _recalculate_value(tree, tree.children_left[i] , level + 1)
-                if tree.children_right[i] > 0 :
-                    _recalculate_value(tree, tree.children_right[i] , level + 1)
+                if tree.children_left[i] == -1 and tree.children_right[i] == -1:
+                    value = level + _average_path_length(np.array([tree.n_node_samples[i]]))[0]
+                    self.values[i, 0] =  value
+                    return value * tree.n_node_samples[i]
+                else:
+                    value_left = _recalculate_value(tree, tree.children_left[i] , level + 1)
+                    value_right = _recalculate_value(tree, tree.children_right[i] , level + 1)
+                    self.values[i, 0] =  (value_left + value_right) / tree.n_node_samples[i]
+                    return value_left + value_right
 
             _recalculate_value(tree, 0, 0)
             if normalize:

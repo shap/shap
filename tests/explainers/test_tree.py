@@ -654,7 +654,13 @@ def test_isolation_forest():
 
     explainer = shap.TreeExplainer(iso)
     shap_values = explainer.shap_values(X)
-    assert np.allclose(explainer.expected_value, _average_path_length(np.array([iso.max_samples_]))[0])
+    assert np.allclose(explainer.expected_value, _average_path_length(np.array([iso.max_samples_]))[0], atol=1e-7)
+
+    score_from_shape = - 2**(
+        - (np.sum(shap_values, axis=1) + explainer.expected_value) /
+        _average_path_length(np.array([iso.max_samples_]))[0]
+        )
+    assert np.allclose(iso.score_samples(X), score_from_shape, atol=1e-7)
 
 def test_multi_target_extra_trees():
     import shap
