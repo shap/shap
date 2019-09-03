@@ -299,8 +299,7 @@ An implementation of Kernel SHAP, a model agnostic method to estimate SHAP value
 
 These notebooks comprehensively demonstrate how to use specific functions and objects. 
 
-- [`shap.decision_plot` and `shap.multioutput_decision_plot`](https://slundberg.github.io/shap/notebooks/plots
-/decision_plot.html)
+- [`shap.decision_plot` and `shap.multioutput_decision_plot`](https://slundberg.github.io/shap/notebooks/plots/decision_plot.html)
 
 - [`shap.dependence_plot`](https://slundberg.github.io/shap/notebooks/plots/dependence_plot.html)
 
