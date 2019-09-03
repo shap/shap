@@ -119,15 +119,17 @@ class KernelExplainer(Explainer):
             model_null = np.squeeze(model_null.values)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
-
+        
         # see if we have a vector output
         self.vector_out = True
         if len(self.fnull.shape) == 0:
             self.vector_out = False
             self.fnull = np.array([self.fnull])
             self.D = 1
+            self.expected_value = float(self.expected_value)
         else:
             self.D = self.fnull.shape[0]
+        
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
