@@ -111,7 +111,7 @@ class TreeExplainer(Explainer):
 
         if model_output != "margin":
             if self.model.objective is None and self.model.tree_output is None:
-                raise Exception("Model does have a known objective or output type! When model_output is " \
+                raise Exception("Model does not have a known objective or output type! When model_output is " \
                                 "not \"margin\" then we need to know the model's objective or link function.")
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
@@ -416,7 +416,22 @@ class TreeEnsemble:
             "binary": "log_odds"
         }
 
-        if type(model) == list and type(model[0]) == Tree:
+        if type(model) is dict and "trees" in model:
+            # This allows a dictionary to be passed that represents the model.
+            # this dictionary has several numerica paramters and also a list of trees
+            # where each tree is a dictionary describing that tree
+            if "internal_dtype" in model:
+                self.internal_dtype = model["internal_dtype"]
+            if "input_dtype" in model:
+                self.input_dtype = model["input_dtype"]
+            if "objective" in model:
+                self.objective = model["objective"]
+            if "tree_output" in model:
+                self.tree_output = model["tree_output"]
+            if "base_offset" in model:
+                self.base_offset = model["base_offset"]
+            self.trees = [Tree(t, data=data, data_missing=data_missing) for t in model["trees"]]
+        elif type(model) is list and type(model[0]) == Tree: # old-style direct-load format
             self.trees = model
         elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
@@ -805,7 +820,17 @@ class Tree:
             self.values = self.values * scaling
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
 
-        elif type(tree) == dict and 'children_left' in tree:
+        elif type(tree) is dict and 'features' in tree:
+            self.children_left = tree["children_left"].astype(np.int32)
+            self.children_right = tree["children_right"].astype(np.int32)
+            self.children_default = tree["children_default"].astype(np.int32)
+            self.features = tree["features"].astype(np.int32)
+            self.thresholds = tree["thresholds"]
+            self.values = tree["values"] * scaling
+            self.node_sample_weight = tree["node_sample_weight"]
+
+        # deprecated dictionary support (with sklearn singlular style "feature" and "value" names)
+        elif type(tree) is dict and 'children_left' in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
