@@ -47,7 +47,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
         List of feature names (# features).
 
     out_names : str
-        The name of the outout of the model (plural to support multi-output plotting in the future).
+        The name of the output of the model (plural to support multi-output plotting in the future).
     
     link : "identity" or "logit"
         The transformation used when drawing the tick mark labels. Using logit will change log-odds numbers
