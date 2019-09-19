@@ -12,6 +12,10 @@ import functools
 import time
 import hashlib
 import os
+try:
+    import dill as pickle
+except Exception:
+    pass
 
 try:
     from sklearn.model_selection import train_test_split
@@ -20,9 +24,9 @@ except Exception:
 
 
 def runtime(X, y, model_generator, method_name):
-    """ Runtime
-    transform = "negate"
-    sort_order = 1
+    """ Runtime (sec / 1k samples)
+    transform = "negate_log"
+    sort_order = 2
     """
 
     old_seed = np.random.seed()
@@ -30,7 +34,7 @@ def runtime(X, y, model_generator, method_name):
 
     # average the method scores over several train/test splits
     method_reps = []
-    for i in range(1):
+    for i in range(3):
         X_train, X_test, y_train, _ = train_test_split(__toarray(X), y, test_size=100, random_state=i)
 
         # define the model we are going to explain
@@ -56,32 +60,14 @@ def runtime(X, y, model_generator, method_name):
 def local_accuracy(X, y, model_generator, method_name):
     """ Local Accuracy
     transform = "identity"
-    sort_order = 2
+    sort_order = 0
     """
 
     def score_map(true, pred):
-        """ Converts local accuracy from % of standard deviation to numerical scores for coloring.
+        """ Computes local accuracy as the normalized standard deviation of numerical scores.
         """
-
-        v = min(1.0, np.std(pred - true) / (np.std(true) + 1e-8))
-        if v < 1e-6:
-            return 1.0
-        elif v < 0.01:
-            return 0.9
-        elif v < 0.05:
-            return 0.75
-        elif v < 0.1:
-            return 0.6
-        elif v < 0.2:
-            return 0.4
-        elif v < 0.3:
-            return 0.3
-        elif v < 0.5:
-            return 0.2
-        elif v < 0.7:
-            return 0.1
-        else:
-            return 0.0
+        return np.std(pred - true) / (np.std(true) + 1e-6)
+    
     def score_function(X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
         return measures.local_accuracy(
             X_train, y_train, X_test, y_test, attr_function(X_test),
@@ -92,7 +78,7 @@ def local_accuracy(X, y, model_generator, method_name):
 def consistency_guarantees(X, y, model_generator, method_name):
     """ Consistency Guarantees
     transform = "identity"
-    sort_order = 3
+    sort_order = 1
     """
 
     # 1.0 - perfect consistency
@@ -112,6 +98,9 @@ def consistency_guarantees(X, y, model_generator, method_name):
         "tree_shap_independent_200": 1.0,
         "mean_abs_tree_shap": 1.0,
         "lime_tabular_regression_1000": 0.8,
+        "lime_tabular_classification_1000": 0.8,
+        "maple": 0.8,
+        "tree_maple": 0.8,
         "deep_shap": 0.6,
         "expected_gradients": 0.6
     }
@@ -446,6 +435,9 @@ _attribution_cache = {}
 def __score_method(X, y, fcounts, model_generator, score_function, method_name, nreps=10, test_size=100, cache_dir="/tmp"):
     """ Test an explanation method.
     """
+
+    try: pickle
+    except NameError: assert False, "The 'dill' package could not be loaded and is needed for the benchmark!"
 
     old_seed = np.random.seed()
     np.random.seed(3293)

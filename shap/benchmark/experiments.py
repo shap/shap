@@ -24,51 +24,51 @@ from threading import Thread, Lock
 
 
 regression_metrics = [
-    "runtime",
     "local_accuracy",
     "consistency_guarantees",
     "keep_positive_mask",
     "keep_positive_resample",
-    "keep_positive_impute",
+    #"keep_positive_impute",
     "keep_negative_mask",
     "keep_negative_resample",
-    "keep_negative_impute",
+    #"keep_negative_impute",
     "keep_absolute_mask__r2",
     "keep_absolute_resample__r2",
-    "keep_absolute_impute__r2",
+    #"keep_absolute_impute__r2",
     "remove_positive_mask",
     "remove_positive_resample",
-    "remove_positive_impute",
+    #"remove_positive_impute",
     "remove_negative_mask",
     "remove_negative_resample",
-    "remove_negative_impute",
+    #"remove_negative_impute",
     "remove_absolute_mask__r2",
     "remove_absolute_resample__r2",
-    "remove_absolute_impute__r2"
+    #"remove_absolute_impute__r2"
+    "runtime",
 ]
 
 binary_classification_metrics = [
-    "runtime",
     "local_accuracy",
     "consistency_guarantees",
     "keep_positive_mask",
     "keep_positive_resample",
-    "keep_positive_impute",
+    #"keep_positive_impute",
     "keep_negative_mask",
     "keep_negative_resample",
-    "keep_negative_impute",
+    #"keep_negative_impute",
     "keep_absolute_mask__roc_auc",
     "keep_absolute_resample__roc_auc",
-    "keep_absolute_impute__roc_auc",
+    #"keep_absolute_impute__roc_auc",
     "remove_positive_mask",
     "remove_positive_resample",
-    "remove_positive_impute",
+    #"remove_positive_impute",
     "remove_negative_mask",
     "remove_negative_resample",
-    "remove_negative_impute",
+    #"remove_negative_impute",
     "remove_absolute_mask__roc_auc",
     "remove_absolute_resample__roc_auc",
-    "remove_absolute_impute__roc_auc"
+    #"remove_absolute_impute__roc_auc"
+    "runtime",
 ]
 
 human_metrics = [
@@ -95,7 +95,7 @@ linear_regress_methods = [
     #"kernel_shap_100_meanref",
     #"sampling_shap_10000",
     "sampling_shap_1000",
-    #"lime_tabular_regression_1000"
+    "lime_tabular_regression_1000"
     #"sampling_shap_100"
 ]
 
@@ -126,8 +126,13 @@ tree_regress_methods = [
     #"kernel_shap_100_meanref",
     #"sampling_shap_10000",
     "sampling_shap_1000",
-    #"lime_tabular_regression_1000"
+    "lime_tabular_regression_1000",
+    "maple"
     #"sampling_shap_100"
+]
+
+rf_regress_methods = [ # methods that only support random forest models
+    "tree_maple"
 ]
 
 tree_classify_methods = [
@@ -143,7 +148,8 @@ tree_classify_methods = [
     #"kernel_shap_100_meanref",
     #"sampling_shap_10000",
     "sampling_shap_1000",
-    #"lime_tabular_regression_1000"
+    "lime_tabular_classification_1000",
+    "maple"
     #"sampling_shap_100"
 ]
 
@@ -169,14 +175,14 @@ _experiments = []
 _experiments += [["corrgroups60", "lasso", m, s] for s in regression_metrics for m in linear_regress_methods]
 _experiments += [["corrgroups60", "ridge", m, s] for s in regression_metrics for m in linear_regress_methods]
 _experiments += [["corrgroups60", "decision_tree", m, s] for s in regression_metrics for m in tree_regress_methods]
-_experiments += [["corrgroups60", "random_forest", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["corrgroups60", "random_forest", m, s] for s in regression_metrics for m in (tree_regress_methods + rf_regress_methods)]
 _experiments += [["corrgroups60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
 _experiments += [["corrgroups60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
 
 _experiments += [["independentlinear60", "lasso", m, s] for s in regression_metrics for m in linear_regress_methods]
 _experiments += [["independentlinear60", "ridge", m, s] for s in regression_metrics for m in linear_regress_methods]
 _experiments += [["independentlinear60", "decision_tree", m, s] for s in regression_metrics for m in tree_regress_methods]
-_experiments += [["independentlinear60", "random_forest", m, s] for s in regression_metrics for m in tree_regress_methods]
+_experiments += [["independentlinear60", "random_forest", m, s] for s in regression_metrics for m in (tree_regress_methods + rf_regress_methods)]
 _experiments += [["independentlinear60", "gbm", m, s] for s in regression_metrics for m in tree_regress_methods]
 _experiments += [["independentlinear60", "ffnn", m, s] for s in regression_metrics for m in deep_regress_methods]
 

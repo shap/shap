@@ -374,19 +374,22 @@ def _human_score_map(human_consensus, methods_attrs):
     v = 1 - min(np.sum(np.abs(methods_attrs - human_consensus)) / (np.abs(human_consensus).sum() + 1), 1.0)
     return v
 
-def make_grid(scores, dataset, model):
+def make_grid(scores, dataset, model, normalize=True, transform=True):
     color_vals = {}
     metric_sort_order = {}
     for (_,_,method,metric),(fcounts,score) in filter(lambda x: x[0][0] == dataset and x[0][1] == model, scores):
-        metric_sort_order[metric] = metric_sort_order.get(metric, len(metric_sort_order))
+        metric_sort_order[metric] = get_metric_attr(metric, "sort_order")
         if metric not in color_vals:
             color_vals[metric] = {}
 
-        transform = get_metric_attr(metric, "transform")
-        if transform == "negate":
-            score = -score
-        elif transform == "one_minus":
-            score = 1 - score
+        if transform:
+            transform_type = get_metric_attr(metric, "transform")
+            if transform_type == "negate":
+                score = -score
+            elif transform_type == "one_minus":
+                score = 1 - score
+            elif transform_type == "negate_log":
+                score = -np.log10(score)
 
         if fcounts is None:
             color_vals[metric][method] = score
@@ -395,8 +398,10 @@ def make_grid(scores, dataset, model):
         else:
             auc = sklearn.metrics.auc(fcounts, score) / fcounts[-1]
             color_vals[metric][method] = auc
-    
-    col_keys = sorted(list(color_vals.keys()), key=lambda v: metric_sort_order[metric])
+    # print(metric_sort_order)
+    # col_keys = sorted(list(color_vals.keys()), key=lambda v: metric_sort_order[v])
+    # print(col_keys)
+    col_keys = list(color_vals.keys())
     row_keys = list(set([v for k in col_keys for v in color_vals[k].keys()]))
     
     data = -28567 * np.ones((len(row_keys), len(col_keys)))
@@ -406,8 +411,9 @@ def make_grid(scores, dataset, model):
             data[i,j] = color_vals[col_keys[j]][row_keys[i]]
             
     assert np.sum(data == -28567) == 0, "There are missing data values!"
-            
-    data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
+
+    if normalize: 
+        data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
     
     # sort by performans
     inds = np.argsort(-data.mean(1))

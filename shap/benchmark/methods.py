@@ -90,8 +90,28 @@ def tree_gain(model, data):
 
 def lime_tabular_regression_1000(model, data):
     """ LIME Tabular 1000
+    color = red_blue_circle(0.75)
     """
     return lambda X: other.LimeTabularExplainer(model.predict, data, mode="regression").attributions(X, nsamples=1000)
+
+def lime_tabular_classification_1000(model, data):
+    """ LIME Tabular 1000
+    color = red_blue_circle(0.75)
+    """
+    return lambda X: other.LimeTabularExplainer(model.predict_proba, data, mode="classification").attributions(X, nsamples=1000)[1]
+
+def maple(model, data):
+    """ MAPLE
+    color = red_blue_circle(0.6)
+    """
+    return lambda X: other.MapleExplainer(model.predict, data).attributions(X, multiply_by_input=False)
+
+def tree_maple(model, data):
+    """ Tree MAPLE
+    color = red_blue_circle(0.6)
+    linestyle = dashed
+    """
+    return lambda X: other.TreeMapleExplainer(model, data).attributions(X, multiply_by_input=False)
 
 def deep_shap(model, data):
     """ Deep SHAP (DeepLIFT)
