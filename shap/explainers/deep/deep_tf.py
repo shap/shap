@@ -112,7 +112,12 @@ class TFDeepExplainer(Explainer):
         # if we are not given a session find a default session
         if session is None:
             # if keras is installed and already has a session then use it
-            if keras is not None and keras.backend.tensorflow_backend._SESSION is not None:
+            ksess = None
+            if hasattr(keras.backend.tensorflow_backend, "_SESSION"):
+                ksess = keras.backend.tensorflow_backend._SESSION
+            elif hasattr(keras.backend.tensorflow_backend.tf_keras_backend._SESSION, "session"):
+                ksess = keras.backend.tensorflow_backend.tf_keras_backend._SESSION.session
+            if keras is not None and ksess is not None:
                 session = keras.backend.get_session()
             else:
                 try:
