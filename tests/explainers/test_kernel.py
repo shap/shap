@@ -1,9 +1,6 @@
-import matplotlib
 import numpy as np
 import scipy as sp
-matplotlib.use('Agg')
 import shap
-from sklearn.linear_model import LinearRegression
 
 
 def test_null_model_small():
@@ -184,26 +181,20 @@ def test_kernel_sparse_vs_dense_multirow_background():
 
 
 def test_linear():
-    """tests that a linear model on the KernelExplainer gives the right result"""
+    """tests that KernelExplainer returns the correct result when the model is linear
+    (as per corollary 1 of https://arxiv.org/abs/1705.07874)"""
 
-    # coefficients relating y with x1 and x2.
-    coef = np.array([1, 2]).T
+    np.random.seed(2)
+    x = np.random.normal(size=(200, 3), scale=1)
 
-    # generate data following a linear relationship
-    x = np.random.normal(1, 10, size=(1000, len(coef)))
-    y = np.dot(x, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+    # a linear model
+    def f(x):
+        return x[:, 0] + 2.0*x[:, 1]
 
-    # create a linear model
-    model = LinearRegression()
-    model.fit(x, y)
+    phi = shap.KernelExplainer(f, x).shap_values(x, l1_reg="num_features(2)", silent=True)
+    assert phi.shape == x.shape
 
-    # explain
-    e = shap.KernelExplainer(model.predict, x)
-    values = e.shap_values(x, l1_reg="num_features(2)", silent=True)
+    # corollary 1
+    expected = (x - x.mean(0)) * np.array([1.0, 2.0, 0.0])
 
-    # verify that the explanation follows the equation in LinearExplainer
-    assert values.shape == (1000, 2)
-
-    # corolary 1 of https://arxiv.org/abs/1705.07874
-    expected = (x - x.mean(0)) * model.coef_
-    np.testing.assert_allclose(expected, values, rtol=1e-3)
+    np.testing.assert_allclose(expected, phi, rtol=1e-3)
