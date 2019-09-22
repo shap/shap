@@ -2,6 +2,8 @@ import numpy as np
 import scipy as sp
 import shap
 
+import tests.explainers.common
+
 
 def test_null_model_small():
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
@@ -198,3 +200,33 @@ def test_linear():
     expected = (x - x.mean(0)) * np.array([1.0, 2.0, 0.0])
 
     np.testing.assert_allclose(expected, phi, rtol=1e-3)
+
+
+def test_kernel_shap_accuracy():
+    np.random.seed(2)
+    x = np.random.normal(size=(200, 3), scale=1)
+
+    def f(x):
+        return x[:, 0] * 2.0 * np.exp(-np.abs(x[:, 1]))
+
+    phi = shap.KernelExplainer(f, x).shap_values(x, l1_reg='num_features(10)', silent=True)
+    assert phi.shape == x.shape
+
+    tests.explainers.common.assert_accuracy(phi, f, x, rtol=0.05, atol=0.05)
+
+
+def test_kernel_shap_monotonicity():
+    np.random.seed(3)
+    x = np.random.normal(size=(200, 3), scale=1)
+
+    def f1(x):
+        return x[:, 0] * 2.0 * np.exp(-np.abs(x[:, 1]))
+
+    def f2(x):
+        return x[:, 0] * 2.0 + x[:, 1]
+
+    phi1 = shap.KernelExplainer(f1, x).shap_values(x, l1_reg='num_features(10)', silent=True)
+    phi2 = shap.KernelExplainer(f2, x).shap_values(x, l1_reg='num_features(10)', silent=True)
+
+    tests.explainers.common.assert_monotonicity(x, f1, phi1, f2, phi2, 0)
+    tests.explainers.common.assert_monotonicity(x, f1, phi1, f2, phi2, 1)
