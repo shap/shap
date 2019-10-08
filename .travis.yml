@@ -11,7 +11,7 @@ before_install:
   - sudo apt-get install -y libgomp1
 install:
   - pip install .
-  - pip install tensorflow keras xgboost
+  - pip install tensorflow==1.14 keras xgboost
 script: python setup.py nosetests
 # deploy:
 #   provider: pypi
