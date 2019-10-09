@@ -17,8 +17,10 @@ from . import colors
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
                  color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, auto_size_plot=True, layered_violin_max_num_bins=20, class_names=None,
-                 color_bar_label=labels["FEATURE_VALUE"]):
+                 color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
+                 color_bar_label=labels["FEATURE_VALUE"],
+                 # depreciated
+                 auto_size_plot=None):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -40,7 +42,18 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         or "compact_dot".
         What type of summary plot to produce. Note that "compact_dot" is only used for
         SHAP interaction values.
+
+    plot_size : "auto" (default), float, (float, float), or None
+        What size to make the plot. By default the size is auto-scaled based on the number of
+        features that are being displayed. Passing a single float will cause each row to be that 
+        many inches high. Passing a pair of floats will scale the plot by that
+        number of inches. If None is passed then the size of the current figure will be left
+        unchanged.
     """
+
+    # deprication warnings
+    if auto_size_plot is not None:
+        warnings.warn("auto_size_plot=False is depricated and is now ignored! Use plot_size=None instead.")
 
     multi_class = False
     if isinstance(shap_values, list):
@@ -108,7 +121,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 new_shap_values, new_features, new_feature_names,
                 max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
                 title=title, alpha=alpha, show=show, sort=sort,
-                color_bar=color_bar, auto_size_plot=auto_size_plot, class_names=class_names,
+                color_bar=color_bar, plot_size=plot_size, class_names=class_names,
                 color_bar_label="*" + color_bar_label
             )
 
@@ -135,7 +148,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             proj_shap_values, features[:, sort_inds] if features is not None else None,
             feature_names=feature_names[sort_inds],
             sort=False, show=False, color_bar=False,
-            auto_size_plot=False,
+            plot_size=None,
             max_display=max_display
         )
         pl.xlim((slow, shigh))
@@ -154,7 +167,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 feature_names=["" for i in range(len(feature_names))],
                 show=False,
                 color_bar=False,
-                auto_size_plot=False,
+                plot_size=None,
                 max_display=max_display
             )
             pl.xlim((slow, shigh))
@@ -182,8 +195,12 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
 
     row_height = 0.4
-    if auto_size_plot:
+    if plot_size == "auto":
         pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+    elif type(plot_size) in (list, tuple):
+        pl.gcf().set_size_inches(plot_size[0], plot_size[1])
+    elif plot_size is not None:
+        pl.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
     pl.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "dot":
