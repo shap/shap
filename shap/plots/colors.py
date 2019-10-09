@@ -4,14 +4,14 @@
 from __future__ import division
 
 import numpy as np
-import skimage.color
+from . import colorconv
 
 try:
     import matplotlib
     from matplotlib.colors import LinearSegmentedColormap
 
     def lch2rgb(x):
-        return skimage.color.lab2rgb(skimage.color.lch2lab([[x]]))[0][0]
+        return colorconv.lab2rgb(colorconv.lch2lab([[x]]))[0][0]
 
     # define our colors using Lch
     # note that we intentionally vary the lightness during interpolation so as to better
@@ -57,6 +57,13 @@ try:
         "green": greens,
         "blue": blues,
         "alpha": alphas
+    })
+
+    red_blue_transparent = LinearSegmentedColormap('red_blue_no_bounds', {
+        "red": reds,
+        "green": greens,
+        "blue": blues,
+        "alpha": [(a[0], 0.5, 0.5) for a in alphas]
     })
 
     # define a circular version of the color scale for categorical coloring

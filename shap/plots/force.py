@@ -7,8 +7,12 @@ import io
 import string
 import json
 import random
-from IPython.core.display import display, HTML
-from IPython import get_ipython
+try:
+    from IPython.core.display import display, HTML
+    from IPython import get_ipython
+    have_ipython = True
+except ImportError:
+    have_ipython = False
 import base64
 import numpy as np
 import scipy.cluster
@@ -202,6 +206,7 @@ err_msg = """
 
 
 def initjs():
+    assert have_ipython, "IPython must be installed to use initjs()! Run `pip install ipython` and then restart shap."
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
     with io.open(bundle_path, encoding="utf-8") as f:
         bundle_data = f.read()
@@ -339,6 +344,7 @@ class SimpleListVisualizer:
         }
 
     def html(self):
+        assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         return HTML("""
 <div id='{id}'>{err_msg}</div>
  <script>
@@ -372,6 +378,7 @@ class AdditiveForceVisualizer:
         }
 
     def html(self, label_margin=20):
+        assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
         return HTML("""
 <div id='{id}'>{err_msg}</div>
@@ -428,6 +435,7 @@ class AdditiveForceArrayVisualizer:
                 }
 
     def html(self):
+        assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         return HTML("""
 <div id='{id}'>{err_msg}</div>
  <script>
