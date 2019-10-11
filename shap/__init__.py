@@ -12,6 +12,7 @@ from .explainers.deep import DeepExplainer
 from .explainers.gradient import GradientExplainer
 from .explainers.linear import LinearExplainer
 from .explainers.partition import PartitionExplainer
+from .explainers.bruteforce import BruteForceExplainer
 from .explainers import other
 
 
@@ -32,6 +33,7 @@ if have_matplotlib:
     from .plots.image import image_plot
     from .plots.monitoring import monitoring_plot
     from .plots.embedding import embedding_plot
+    from .plots.partial_dependence import partial_dependence_plot
 else:
     summary_plot = unsupported
     decision_plot = unsupported
@@ -43,6 +45,7 @@ else:
     image_plot = unsupported
     monitoring_plot = unsupported
     embedding_plot = unsupported
+    partial_dependence_plot = unsupported
 
 
 # other stuff :)
