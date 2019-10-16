@@ -68,6 +68,27 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
     if test_catboost:
         tests_require += ['catboost']
 
+    extras_require = {
+        'tree': [
+            'xgboost',
+            'lightgbm',
+            'catboost',
+        ],
+        'nnet': [
+            'keras',
+            'tensorflow',
+            'torch',
+            'torchvision',
+        ],
+        'plots': [
+            'matplotlib',
+        ],
+        'others': [
+            'lime',
+        ],
+    }
+    extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
+
     setup(
         name='shap',
         version=find_version("shap", "__init__.py"),
@@ -89,6 +110,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
         install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0'],
+        extras_require=extras_require,
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
