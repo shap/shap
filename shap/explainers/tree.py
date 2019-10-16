@@ -20,21 +20,6 @@ try:
 except ImportError as e:
     record_import_error("pyspark", "PySpark could not be imported!", e)
 
-try:
-    import xgboost
-except ImportError as e:
-    record_import_error("xgboost", "XGBoost could not be imported!", e)
-
-try:
-    import lightgbm
-except ImportError as e:
-    record_import_error("lightgbm", "LightGBM could not be imported!", e)
-
-try:
-    import catboost
-except ImportError as e:
-    record_import_error("catboost", "CatBoost could not be imported!", e)
-
 output_transform_codes = {
     "identity": 0,
     "logistic": 1,
@@ -116,7 +101,7 @@ class TreeExplainer(Explainer):
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>") and model_output != "margin":
-            assert_import("xgboost")
+            import xgboost
             assert LooseVersion(xgboost.__version__) >= LooseVersion('0.81'), \
                 "A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!"
         
@@ -177,7 +162,7 @@ class TreeExplainer(Explainer):
         if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal" and self.data is None:
             phi = None
             if self.model.model_type == "xgboost":
-                assert_import("xgboost")
+                import xgboost
                 if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                     X = xgboost.DMatrix(X)
                 if tree_limit == -1:
@@ -200,6 +185,7 @@ class TreeExplainer(Explainer):
             elif self.model.model_type == "catboost": # thanks to the CatBoost team for implementing this...
                 assert not approximate, "approximate=True is not supported for CatBoost models!"
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+                import catboost
                 if type(X) != catboost.Pool:
                     X = catboost.Pool(X)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
@@ -313,7 +299,7 @@ class TreeExplainer(Explainer):
 
         # shortcut using the C++ version of Tree SHAP in XGBoost
         if self.model.model_type == "xgboost":
-            assert_import("xgboost")
+            import xgboost
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
@@ -530,7 +516,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.criterion, None)
         elif str(type(model)).endswith("pyspark.ml.classification.RandomForestClassificationModel'>") \
                 or str(type(model)).endswith("pyspark.ml.classification.GBTClassificationModel'>"):
-            assert_import("pyspark")
+            import pyspark
             self.original_model = model
             self.model_type = "pyspark"
             self.trees = [Tree(tree, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)]
@@ -539,7 +525,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>"):
-            assert_import("pyspark")
+            import pyspark
             self.original_model = model
             self.model_type = "pyspark"
             self.trees = [Tree(model, scaling=1)]
@@ -551,7 +537,7 @@ class TreeEnsemble:
             #TODO base_offset?
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
-            assert_import("xgboost")
+            import xgboost
             self.original_model = model
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -561,7 +547,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
         elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
-            assert_import("xgboost")
+            import xgboost
             self.input_dtype = np.float32
             self.model_type = "xgboost"
             self.original_model = model.get_booster()
@@ -573,7 +559,7 @@ class TreeEnsemble:
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
         elif str(type(model)).endswith("xgboost.sklearn.XGBRegressor'>"):
-            assert_import("xgboost")
+            import xgboost
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -584,7 +570,7 @@ class TreeEnsemble:
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
         elif str(type(model)).endswith("xgboost.sklearn.XGBRanker'>"):
-            assert_import("xgboost")
+            import xgboost
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -742,7 +728,7 @@ class TreeEnsemble:
             original model, and -1 means no limit.
         """
         if self.model_type == "pyspark":
-            assert_import("pyspark")
+            import pyspark
             #TODO support predict for pyspark
             raise NotImplementedError("Predict with pyspark isn't implemented")
 
@@ -784,7 +770,7 @@ class TreeEnsemble:
             )
 
         elif self.model_type == "xgboost":
-            assert_import("xgboost")
+            import xgboost
             output = self.original_model.predict(X, output_margin=True, tree_limit=tree_limit)
 
         # drop dimensions we don't need

@@ -7,16 +7,6 @@ import numpy as np
 #import numba
 from .explainer import Explainer
 
-try:
-    import xgboost
-except ImportError:
-    pass
-
-try:
-    import lightgbm
-except ImportError:
-    pass
-
 # class TreeExplainer(Explainer):
 #     def __init__(self, model, **kwargs):
 #         self.model_type = "internal"
@@ -179,6 +169,7 @@ class TreeExplainer:
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         # these are about 10x faster than the numba jit'd implementation below...
         if self.model_type == "xgboost":
+            import xgboost
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
             if tree_limit==-1:
@@ -229,6 +220,7 @@ class TreeExplainer:
 
         # shortcut using the C++ version of Tree SHAP in XGBoost and LightGBM
         if self.model_type == "xgboost":
+            import xgboost
             if not str(type(X)).endswith("xgboost.core.DMatrix'>"):
                 X = xgboost.DMatrix(X)
             if tree_limit==-1:
