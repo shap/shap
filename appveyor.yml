@@ -15,7 +15,7 @@ environment:
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install tensorflow keras matplotlib ipython"
+  - "%PYTHON%\\python.exe -m pip install tensorflow==1.14 keras matplotlib ipython"
 
 build: off
 
