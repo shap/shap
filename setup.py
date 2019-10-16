@@ -69,19 +69,9 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         tests_require += ['catboost']
 
     extras_require = {
-        'tree': [
-            'xgboost',
-            'lightgbm',
-            'catboost',
-        ],
-        'nnet': [
-            'keras',
-            'tensorflow',
-            'torch',
-            'torchvision',
-        ],
         'plots': [
             'matplotlib',
+            'ipython'
         ],
         'others': [
             'lime',
