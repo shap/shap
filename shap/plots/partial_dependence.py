@@ -2,6 +2,8 @@ import shap
 from shap.common import convert_name
 import matplotlib.pyplot as pl
 from mpl_toolkits.mplot3d import Axes3D  
+import numpy as np
+
 
 def compute_bounds(xmin, xmax, xv):
     """ Handles any setting of xmax and xmin.
