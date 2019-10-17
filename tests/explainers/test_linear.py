@@ -39,6 +39,24 @@ def test_sklearn_linear():
     assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
     explainer.shap_values(X)
 
+def test_sklearn_multiclass_no_intercept():
+    np.random.seed(0)
+    from sklearn.linear_model import Ridge
+    import shap
+
+    # train linear model
+    X,y = shap.datasets.boston()
+
+    # make y multiclass
+    multiclass_y = np.expand_dims(y, axis=-1)
+    model = Ridge(fit_intercept=False)
+    model.fit(X, multiclass_y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X)
+    assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
+    explainer.shap_values(X)
+
 def test_perfect_colinear():
     import shap
     from sklearn.linear_model import LinearRegression
