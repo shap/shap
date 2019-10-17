@@ -3,6 +3,7 @@ import warnings
 from shap.explainers.explainer import Explainer
 from .misc import standard_combine_mult_and_diffref
 from distutils.version import LooseVersion
+import sys
 keras = None
 tf = None
 tf_ops = None
@@ -236,7 +237,8 @@ class TFDeepExplainer(Explainer):
                         reg[n]["type"] = self.orig_grads[n]
         return self.phi_symbolics[i]
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max",
+                             progress_message=None):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -270,6 +272,11 @@ class TFDeepExplainer(Explainer):
             for k in range(len(X)):
                 phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
+                if (progress_message is not None):
+                    if ((j%progress_message)==0):
+                        print("Done",j,"examples of",
+                              X[0].shape[0])
+                        sys.stdout.flush()
                 if (hasattr(self.data, '__call__')):
                     bg_data = self.data([X[l][j] for l in range(len(X))])
                     if type(bg_data) != list:
