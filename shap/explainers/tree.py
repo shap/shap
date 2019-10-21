@@ -716,6 +716,9 @@ class TreeEnsemble:
                 transform = "logistic_nlogloss"
             else:
                 raise Exception("model_output = \"logloss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
+        else:
+            assert False, "Unrecognized model_output parameter value: " + model_output
+            
         return transform
 
     def predict(self, X, y=None, output="margin", tree_limit=None):
