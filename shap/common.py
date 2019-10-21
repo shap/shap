@@ -5,6 +5,7 @@ import scipy as sp
 from scipy.spatial.distance import pdist
 import sys
 import warnings
+import sklearn
 
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
@@ -321,3 +322,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
         interactions.append(max(val_v, nan_v))
 
     return np.argsort(-np.abs(interactions))
+
+
+def sample(X, nsamples=100, random_state=0):
+    return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)

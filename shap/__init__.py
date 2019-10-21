@@ -34,6 +34,7 @@ if have_matplotlib:
     from .plots.monitoring import monitoring_plot
     from .plots.embedding import embedding_plot
     from .plots.partial_dependence import partial_dependence_plot
+    from .plots.bar import bar_plot
 else:
     summary_plot = unsupported
     decision_plot = unsupported
@@ -46,9 +47,10 @@ else:
     monitoring_plot = unsupported
     embedding_plot = unsupported
     partial_dependence_plot = unsupported
+    bar_plot = unsupported
 
 
 # other stuff :)
 from . import datasets
 #from . import benchmark
-from .common import approximate_interactions, hclust_ordering
+from .common import approximate_interactions, hclust_ordering, sample
