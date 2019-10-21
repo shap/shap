@@ -60,7 +60,10 @@ class LinearExplainer(Explainer):
             # work around for multi-class with a single class
             if len(model.coef_.shape) > 1 and model.coef_.shape[0] == 1:
                 self.coef = model.coef_[0]
-                self.intercept = model.intercept_[0]
+                try:
+                    self.intercept = model.intercept_[0]
+                except TypeError:
+                    self.intercept = model.intercept_
             else:
                 self.coef = model.coef_
                 self.intercept = model.intercept_
