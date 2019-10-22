@@ -383,6 +383,7 @@ class TreeEnsemble:
             "mse": "squared_error",
             "friedman_mse": "squared_error",
             "reg:linear": "squared_error",
+            "reg:squarederror": "squared_error",
             "regression": "squared_error",
             "regression_l2": "squared_error",
             "mae": "absolute_error",
@@ -397,6 +398,7 @@ class TreeEnsemble:
             "regression": "raw_value",
             "regression_l2": "squared_error",
             "reg:linear": "raw_value",
+            "reg:squarederror": "raw_value",
             "binary:logistic": "log_odds",
             "binary_logloss": "log_odds",
             "binary": "log_odds"
