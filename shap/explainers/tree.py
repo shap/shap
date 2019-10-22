@@ -63,14 +63,14 @@ class TreeExplainer(Explainer):
         dataset and its runtime scales linearly with the size of the background dataset you use. Anywhere
         from 100 to 1000 random background samples are good sizes to use.
     
-    model_output : "margin", "probability", or "log_loss"
+    model_output : "margin", "probability", or "logloss"
         What output of the model should be explained. If "margin" then we explain the raw output of the
         trees, which varies by model (for binary classification in XGBoost this is the log odds ratio).
         If "probability" then we explain the output of the model transformed into probability space
-        (note that this means the SHAP values now sum to the probability output of the model). If "log_loss"
+        (note that this means the SHAP values now sum to the probability output of the model). If "logloss"
         then we explain the log base e of the model loss function, so that the SHAP values sum up to the
         log loss of the model for each sample. This is helpful for breaking down model performance by feature.
-        Currently the probability and log_loss options are only supported when feature_dependence="independent".
+        Currently the probability and logloss options are only supported when feature_dependence="independent".
     """
 
     def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependent"):
