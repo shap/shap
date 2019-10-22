@@ -429,6 +429,11 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
+        elif str(type(model)).endswith("sklearn.ensemble.iforest.IsolationForest'>"):
+            self.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [IsoTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
+            self.tree_output = "raw_value"
         elif str(type(model)).endswith("skopt.learning.forest.RandomForestRegressor'>"):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
@@ -1030,7 +1035,30 @@ class Tree:
             self.values
         )
 
+class IsoTree(Tree):
+    """ 
+    In sklearn the tree of the Isolation Forest does not calculated in a good way.
+    """
+    def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
+        super(IsoTree, self).__init__(tree, normalize, scaling, data, data_missing)
+        if str(type(tree)).endswith("'sklearn.tree._tree.Tree'>"):
+            from sklearn.ensemble.iforest import _average_path_length
 
+            def _recalculate_value(tree, i , level):
+                if tree.children_left[i] == -1 and tree.children_right[i] == -1:
+                    value = level + _average_path_length(np.array([tree.n_node_samples[i]]))[0]
+                    self.values[i, 0] =  value
+                    return value * tree.n_node_samples[i]
+                else:
+                    value_left = _recalculate_value(tree, tree.children_left[i] , level + 1)
+                    value_right = _recalculate_value(tree, tree.children_right[i] , level + 1)
+                    self.values[i, 0] =  (value_left + value_right) / tree.n_node_samples[i]
+                    return value_left + value_right
+
+            _recalculate_value(tree, 0, 0)
+            if normalize:
+                self.values = (self.values.T / self.values.sum(1)).T
+            self.values = self.values * scaling
 
  
 def get_xgboost_json(model):
