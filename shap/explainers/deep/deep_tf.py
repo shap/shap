@@ -223,7 +223,7 @@ class TFDeepExplainer(Explainer):
                         reg[n]["type"] = self.orig_grads[n]
         return self.phi_symbolics[i]
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -276,6 +276,13 @@ class TFDeepExplainer(Explainer):
                     phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
+        
+        if check_additivity:
+            self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+            model_output = self.run(self.model_output, self.model_inputs, X)
+            for l in range(len(X)):
+                diffs = model_output[:, l] - self.expected_value[l] - output_phis[l].sum(axis=tuple(range(1, output_phis[l].ndim)))
+                assert np.abs(diffs).max() < 1e-4, "Explanations do not sum up to the model's output! Please post as a github issue."
         if not self.multi_output:
             return output_phis[0]
         elif ranked_outputs is not None:
