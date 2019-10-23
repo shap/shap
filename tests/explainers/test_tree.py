@@ -642,6 +642,24 @@ def test_multi_target_random_forest():
     phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
     assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-6)
 
+def test_isolation_forest():
+    import shap
+    import numpy as np
+    from sklearn.ensemble import IsolationForest
+    from sklearn.ensemble.iforest import _average_path_length
+
+    X,y = shap.datasets.boston()
+    iso = IsolationForest( behaviour='new', contamination='auto')
+    iso.fit(X)
+
+    explainer = shap.TreeExplainer(iso)
+    shap_values = explainer.shap_values(X)
+
+    score_from_shap = - 2**(
+        - (np.sum(shap_values, axis=1) + explainer.expected_value) /
+        _average_path_length(np.array([iso.max_samples_]))[0]
+        )
+    assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 def test_multi_target_extra_trees():
     import shap
