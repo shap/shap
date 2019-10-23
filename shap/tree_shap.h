@@ -1428,7 +1428,7 @@ void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDat
 
 
 /**
- * The main method for computing Tree SHAP on model using dense data.
+ * The main method for computing Tree SHAP on models using dense data.
  */
 void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, tfloat *out_contribs,
                      const int feature_dependence, unsigned model_transform, bool interactions) {

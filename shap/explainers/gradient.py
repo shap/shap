@@ -158,24 +158,24 @@ class _TFGradientExplainer(Explainer):
         self.batch_size = batch_size
         self.local_smoothing = local_smoothing
 
-        # if we are not given a session find a default session
-        if session is None:
-            # if keras is installed and already has a session then use it
-            ksess = None
-            if keras is not None:
-                if hasattr(keras.backend.tensorflow_backend, "_SESSION"):
-                    ksess = keras.backend.tensorflow_backend._SESSION
-                elif hasattr(keras.backend.tensorflow_backend.tf_keras_backend._SESSION, "session"):
-                    ksess = keras.backend.tensorflow_backend.tf_keras_backend._SESSION.session
-            if keras is not None and ksess is not None:
-                session = keras.backend.get_session()
-            elif hasattr(tf.keras.backend, "get_session"):
-                session = tf.keras.backend.get_session()
         if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
+            # if we are not given a session find a default session
+            if session is None:
+                # if keras is installed and already has a session then use it
+                ksess = None
+                if keras is not None:
+                    if hasattr(keras.backend.tensorflow_backend, "_SESSION"):
+                        ksess = keras.backend.tensorflow_backend._SESSION
+                    elif hasattr(keras.backend.tensorflow_backend.tf_keras_backend._SESSION, "session"):
+                        ksess = keras.backend.tensorflow_backend.tf_keras_backend._SESSION.session
+                if keras is not None and ksess is not None:
+                    session = keras.backend.get_session()
+                elif hasattr(tf.keras.backend, "get_session"):
+                    session = tf.keras.backend.get_session()
+        
             self.session = tf.compat.v1.get_default_session() if session is None else session
 
-        # see if there is a keras operation we need to save
-        if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
+            # see if there is a keras operation we need to save
             self.keras_phase_placeholder = None
             for op in self.session.graph.get_operations():
                 if 'keras_learning_phase' in op.name:

@@ -1,5 +1,5 @@
 import shap
-from shap.common import convert_name
+from ..common import convert_name
 import matplotlib.pyplot as pl
 from mpl_toolkits.mplot3d import Axes3D  
 import numpy as np
