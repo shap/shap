@@ -265,7 +265,7 @@ def test_pyspark_regression_decision_tree():
     # validate values sum to the margin prediction of the model plus expected_value
     test = model.transform(iris).toPandas()
     predictions = model.transform(iris).select("prediction").toPandas()
-    diffs = expected_values + shap_values.sum() - predictions
+    diffs = expected_values + shap_values.sum(1) - predictions["prediction"]
     assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
     assert (np.abs(expected_values - predictions.mean()) < 1e-6).all(), "Bad expected_value!"
     spark.stop()
