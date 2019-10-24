@@ -230,7 +230,7 @@ class _TFGradientExplainer(Explainer):
         if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
             model_output_values = self.run(self.model_output, self.model_inputs, X)
         else:
-            model_output_values = self.model(X)
+            model_output_values = self.model([tf.constant(v) for v in X])
         if ranked_outputs is not None and self.multi_output:
             if output_rank_order == "max":
                 model_output_ranks = np.argsort(-model_output_values)
