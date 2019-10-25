@@ -20,3 +20,4 @@ shap/_cext.so
 /data/CRIC*
 /docs/artwork/local
 /shap/_cext*
+.idea

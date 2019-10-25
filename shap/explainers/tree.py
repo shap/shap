@@ -381,6 +381,7 @@ class TreeEnsemble:
         # we use names like keras
         objective_name_map = {
             "mse": "squared_error",
+            "variance": "squared_error",
             "friedman_mse": "squared_error",
             "reg:linear": "squared_error",
             "reg:squarederror": "squared_error",
@@ -521,28 +522,35 @@ class TreeEnsemble:
 
             self.trees = [Tree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing) for e in model.estimators_[:,0]]
             self.objective = objective_name_map.get(model.criterion, None)
-        elif str(type(model)).endswith("pyspark.ml.classification.RandomForestClassificationModel'>") \
-                or str(type(model)).endswith("pyspark.ml.classification.GBTClassificationModel'>"):
-            import pyspark
+        elif "pyspark.ml" in str(type(model)):
+            assert_import("pyspark")
             self.original_model = model
             self.model_type = "pyspark"
-            self.trees = [Tree(tree, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)]
-            if model._java_obj.getImpurity() == 'variance':
-                assert False, "Unsupported objective: variance"
+            # model._java_obj.getImpurity() can be gini, entropy or variance.
             self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
-            self.tree_output = "raw_value"
-        elif str(type(model)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>"):
-            import pyspark
-            self.original_model = model
-            self.model_type = "pyspark"
-            self.trees = [Tree(model, scaling=1)]
-            #model._java_obj.getImpurity() can be gini, entropy or variance.
-            if model._java_obj.getImpurity() == 'variance':
-                #TODO handle variance as loss?
-                assert False, "Unsupported objective: variance"
-            self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
-            #TODO base_offset?
-            self.tree_output = "raw_value"
+            if "Classification" in str(type(model)):
+                normalize = True
+                self.tree_output = "probability"
+            else:
+                normalize = False
+                self.tree_output = "raw_value"
+            # Spark Random forest, create 1 weighted (avg) tree per sub-model
+            if str(type(model)).endswith("pyspark.ml.classification.RandomForestClassificationModel'>") \
+                    or str(type(model)).endswith("pyspark.ml.regression.RandomForestRegressionModel'>"):
+                sum_weight = sum(model.treeWeights)  # output is average of trees
+                self.trees = [Tree(tree, normalize=normalize, scaling=model.treeWeights[i]/sum_weight) for i, tree in enumerate(model.trees)]
+            # Spark GBT, create 1 weighted (learning rate) tree per sub-model
+            elif str(type(model)).endswith("pyspark.ml.classification.GBTClassificationModel'>") \
+                    or str(type(model)).endswith("pyspark.ml.regression.GBTRegressionModel'>"):
+                self.objective = "squared_error" # GBT subtree use the variance
+                self.tree_output = "raw_value"
+                self.trees = [Tree(tree, normalize=False, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)]
+            # Spark Basic model (single tree)
+            elif str(type(model)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>") \
+                    or str(type(model)).endswith("pyspark.ml.regression.DecisionTreeRegressionModel'>"):
+                self.trees = [Tree(model, normalize=normalize, scaling=1)]
+            else:
+                assert False, "Unsupported Spark model type: " + str(type(model))
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             import xgboost
             self.original_model = model
@@ -835,7 +843,8 @@ class Tree:
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
-        elif str(type(tree)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>"):
+        elif str(type(tree)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>") \
+                or str(type(tree)).endswith("pyspark.ml.regression.DecisionTreeRegressionModel'>"):
             #model._java_obj.numNodes() doesn't give leaves, need to recompute the size
             def getNumNodes(node, size):
                 size = size + 1
@@ -855,7 +864,10 @@ class Tree:
             self.node_sample_weight = np.full(num_nodes, -2, dtype=np.float64)
             def buildTree(index, node):
                 index = index + 1
-                self.values[index] = [e for e in node.impurityStats().stats()] #NDarray(numLabel): 1 per label: number of item for each label which went through this node
+                if tree._java_obj.getImpurity() == 'variance':
+                    self.values[index] = [node.prediction()] #prediction for the node
+                else:
+                    self.values[index] = [e for e in node.impurityStats().stats()] #for gini: NDarray(numLabel): 1 per label: number of item for each label which went through this node
                 self.node_sample_weight[index] = node.impurityStats().count() #weighted count of element trough this node
 
                 if node.subtreeDepth() == 0:
@@ -877,6 +889,8 @@ class Tree:
             #default Not supported with mlib? (TODO)
             self.children_default = self.children_left
             self.values = np.asarray(self.values)
+            if normalize:
+                self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
 
         elif type(tree) == dict and 'tree_structure' in tree:
