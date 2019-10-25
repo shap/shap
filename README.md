@@ -22,9 +22,9 @@ pip install shap
 conda install -c conda-forge shap
 </pre>
 
-## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn models)
+## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn/pyspark models)
 
-While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, and *scikit-learn* tree models:
+While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, *scikit-learn* and *pyspark* tree models:
 
 ```python
 import xgboost
@@ -38,7 +38,7 @@ X,y = shap.datasets.boston()
 model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
 # explain the model's predictions using SHAP values
-# (same syntax works for LightGBM, CatBoost, and scikit-learn models)
+# (same syntax works for LightGBM, CatBoost, scikit-learn and spark models)
 explainer = shap.TreeExplainer(model)
 shap_values = explainer.shap_values(X)
 
@@ -61,7 +61,7 @@ X,y = shap.datasets.boston()
 
 model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 # explain the model's predictions using SHAP values
-# (same syntax works for LightGBM, CatBoost, and scikit-learn models)
+# (same syntax works for LightGBM, CatBoost, scikit-learn and spark models)
 explainer = shap.TreeExplainer(model)
 shap_values = explainer.shap_values(X)
 # visualize the first prediction's explanation using matplotlib (no javascript needed)

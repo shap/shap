@@ -43,7 +43,7 @@ class TreeExplainer(Explainer):
     Parameters
     ----------
     model : model object
-        The tree based machine learning model that we want to explain. XGBoost, LightGBM, CatBoost,
+        The tree based machine learning model that we want to explain. XGBoost, LightGBM, CatBoost, Pyspark
         and most tree-based scikit-learn models are supported.
 
     data : numpy.array or pandas.DataFrame
