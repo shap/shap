@@ -496,7 +496,7 @@ class TreeEnsemble:
             assert_import("pyspark")
             self.original_model = model
             self.model_type = "pyspark"
-            #model._java_obj.getImpurity() can be gini, entropy or variance.
+            # model._java_obj.getImpurity() can be gini, entropy or variance.
             self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
             if "Classification" in str(type(model)):
                 normalize = True
@@ -504,17 +504,18 @@ class TreeEnsemble:
             else:
                 normalize = False
                 self.tree_output = "raw_value"
-            #Spark Random forest, create 1 weighted (avg) tree per sub-model
+            # Spark Random forest, create 1 weighted (avg) tree per sub-model
             if str(type(model)).endswith("pyspark.ml.classification.RandomForestClassificationModel'>") \
                     or str(type(model)).endswith("pyspark.ml.regression.RandomForestRegressionModel'>"):
-                sum_weight = sum(model.treeWeights) # output is average of trees
+                sum_weight = sum(model.treeWeights)  # output is average of trees
                 self.trees = [Tree(tree, normalize=normalize, scaling=model.treeWeights[i]/sum_weight) for i, tree in enumerate(model.trees)]
-            #Spark GBT, create 1 weighted (learning rate) tree per sub-model
+            # Spark GBT, create 1 weighted (learning rate) tree per sub-model
             elif str(type(model)).endswith("pyspark.ml.classification.GBTClassificationModel'>") \
                     or str(type(model)).endswith("pyspark.ml.regression.GBTRegressionModel'>"):
-                self.objective = "squared_error" #GBT subtree use the variance
+                self.objective = "squared_error" # GBT subtree use the variance
+                self.tree_output = "raw_value"
                 self.trees = [Tree(tree, normalize=False, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)]
-            #Spark Basic model (single tree)
+            # Spark Basic model (single tree)
             elif str(type(model)).endswith("pyspark.ml.classification.DecisionTreeClassificationModel'>") \
                     or str(type(model)).endswith("pyspark.ml.regression.DecisionTreeRegressionModel'>"):
                 self.trees = [Tree(model, normalize=normalize, scaling=1)]
