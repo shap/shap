@@ -230,7 +230,7 @@ class _TFGradientExplainer(Explainer):
         if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
             model_output_values = self.run(self.model_output, self.model_inputs, X)
         else:
-            model_output_values = self.model([tf.constant(v) for v in X])
+            model_output_values = self.run(self.model, self.model_inputs, X)
         if ranked_outputs is not None and self.multi_output:
             if output_rank_order == "max":
                 model_output_ranks = np.argsort(-model_output_values)
@@ -343,7 +343,7 @@ class _TFGradientExplainer(Explainer):
                 feed_dict[self.keras_phase_placeholder] = 0
             return self.session.run(out, feed_dict)
         else:
-            return out(X)
+            return out([tf.constant(v) for v in X])
 
 
 class _PyTorchGradientExplainer(Explainer):
