@@ -363,7 +363,7 @@ def safe_isinstance(obj, class_path_str):
     if spec is None:
         return False
 
-    module = importlib.module_from_spec(spec)
+    module = importlib.util.module_from_spec(spec)
 
     #Get class
     _class = getattr(module, class_name, None)
