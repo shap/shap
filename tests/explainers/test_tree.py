@@ -187,17 +187,17 @@ def test_xgboost_mixed_types():
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
 
-def test_pyspark_decision_tree():
+def test_pyspark_classifier_decision_tree():
     try:
         import pyspark
         import sklearn.datasets
         from pyspark.sql import SparkSession
         from pyspark import SparkContext, SparkConf
         from pyspark.ml.feature import VectorAssembler, StringIndexer
-        from pyspark.ml.classification import DecisionTreeClassifier
+        from pyspark.ml.classification import RandomForestClassifier, DecisionTreeClassifier, GBTClassifier
         import pandas as pd
     except:
-        print("Skipping test_pyspark_decision_tree!")
+        print("Skipping test_pyspark_classifier_decision_tree!")
         return
     import shap
 
@@ -210,22 +210,71 @@ def test_pyspark_decision_tree():
     iris = VectorAssembler(inputCols=col[:-1],outputCol="features").transform(iris)
     iris = StringIndexer(inputCol="type", outputCol="label").fit(iris).transform(iris)
 
-    dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
-    model = dt.fit(iris)
-    explainer = shap.TreeExplainer(model)
-    X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100] # pylint: disable=E1101
+    classifiers = [GBTClassifier(labelCol="label", featuresCol="features"),
+                   RandomForestClassifier(labelCol="label", featuresCol="features"),
+                   DecisionTreeClassifier(labelCol="label", featuresCol="features")]
+    for classifier in classifiers:
+        model = classifier.fit(iris)
+        explainer = shap.TreeExplainer(model)
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100] # pylint: disable=E1101
 
-    shap_values = explainer.shap_values(X)
-    expected_values = explainer.expected_value
+        shap_values = explainer.shap_values(X)
+        expected_values = explainer.expected_value
 
-    # validate values sum to the margin prediction of the model plus expected_value
-    predictions = model.transform(iris).select("rawPrediction")\
-        .rdd.map(lambda x:[float(y) for y in x['rawPrediction']]).toDF(['class0','class1']).toPandas()
-    diffs = expected_values[0] + shap_values[0].sum(1) - predictions.class0
-    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
-    diffs = expected_values[1] + shap_values[1].sum(1) - predictions.class1
-    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class1!"
-    assert (np.abs(expected_values - predictions.mean()) < 1e-6).all(), "Bad expected_value!"
+        predictions = model.transform(iris).select("rawPrediction")\
+            .rdd.map(lambda x:[float(y) for y in x['rawPrediction']]).toDF(['class0','class1']).toPandas()
+
+        if str(type(model)).endswith("GBTClassificationModel'>"):
+            diffs = expected_values + shap_values.sum(1) - predictions.class1
+            assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
+        else:
+            normalizedPredictions = (predictions.T / predictions.sum(1)).T
+            diffs = expected_values[0] + shap_values[0].sum(1) - normalizedPredictions.class0
+            assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"+model
+            diffs = expected_values[1] + shap_values[1].sum(1) - normalizedPredictions.class1
+            assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class1!"+model
+            assert (np.abs(expected_values - normalizedPredictions.mean()) < 1e-1).all(), "Bad expected_value!"+model
+    spark.stop()
+
+def test_pyspark_regression_decision_tree():
+    try:
+        import pyspark
+        import sklearn.datasets
+        from pyspark.sql import SparkSession
+        from pyspark import SparkContext, SparkConf
+        from pyspark.ml.feature import VectorAssembler, StringIndexer
+        from pyspark.ml.regression import DecisionTreeRegressor, GBTRegressor, RandomForestRegressor
+        import pandas as pd
+    except:
+        print("Skipping test_pyspark_regression_decision_tree!")
+        return
+    import shap
+
+    iris_sk = sklearn.datasets.load_iris()
+    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
+    spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
+
+    # Simple regressor: try to predict sepal length based on the other features
+    col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
+    iris = spark.createDataFrame(iris, col).drop("type")
+    iris = VectorAssembler(inputCols=col[1:-1],outputCol="features").transform(iris)
+
+    regressors = [GBTRegressor(labelCol="sepal_length", featuresCol="features"),
+                  RandomForestRegressor(labelCol="sepal_length", featuresCol="features"),
+                  DecisionTreeRegressor(labelCol="sepal_length", featuresCol="features")]
+    for regressor in regressors:
+        model = regressor.fit(iris)
+        explainer = shap.TreeExplainer(model)
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', 1)[:100] # pylint: disable=E1101
+
+        shap_values = explainer.shap_values(X)
+        expected_values = explainer.expected_value
+
+        # validate values sum to the margin prediction of the model plus expected_value
+        predictions = model.transform(iris).select("prediction").toPandas()
+        diffs = expected_values + shap_values.sum(1) - predictions["prediction"]
+        assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
+        assert (np.abs(expected_values - predictions.mean()) < 1e-1).all(), "Bad expected_value!"
     spark.stop()
 
 def test_sklearn_random_forest_multiclass():
@@ -954,6 +1003,7 @@ def test_xgboost_classifier_independent_margin():
     shap_values = e.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
+
 
 def test_xgboost_classifier_independent_probability():
     try:
