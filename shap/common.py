@@ -355,7 +355,7 @@ def safe_isinstance(obj, class_path_str):
     module_name, class_name = class_path_str.rsplit(".", 1)
 
     #Check module exists
-    spec = importlib.util.find_spec(package_name)
+    spec = importlib.util.find_spec(module_name)
     if spec is None:
         return False
 
