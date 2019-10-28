@@ -355,11 +355,15 @@ def safe_isinstance(obj, class_path_str):
     module_name, class_name = class_path_str.rsplit(".", 1)
 
     #Check module exists
-    spec = importlib.util.find_spec(module_name)
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except:
+        spec = None
+
     if spec is None:
         return False
 
-    module = importlib.import_module(module_name)
+    module = importlib.module_from_spec(spec)
 
     #Get class
     _class = getattr(module, class_name, None)
