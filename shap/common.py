@@ -359,11 +359,10 @@ def safe_isinstance(obj, class_path_str):
         spec = importlib.util.find_spec(module_name)
     except:
         spec = None
-
     if spec is None:
         return False
 
-    module = importlib.util.module_from_spec(spec)
+    module = importlib.import_module(module_name)
 
     #Get class
     _class = getattr(module, class_name, None)
