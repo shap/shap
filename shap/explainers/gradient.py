@@ -343,7 +343,14 @@ class _TFGradientExplainer(Explainer):
                 feed_dict[self.keras_phase_placeholder] = 0
             return self.session.run(out, feed_dict)
         else:
-            return out([tf.constant(v) for v in X])
+            # build inputs that are correctly shaped, typed, and tf-wrapped
+            inputs = []
+            for i in range(len(X)):
+                shape = list(self.model_inputs[i].shape)
+                shape[0] = -1
+                v = tf.constant(X[i].reshape(shape), dtype=self.model_inputs[i].dtype)
+                inputs.append(v)
+            return out(inputs)
 
 
 class _PyTorchGradientExplainer(Explainer):
