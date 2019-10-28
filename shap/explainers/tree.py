@@ -211,7 +211,7 @@ class TreeExplainer(Explainer):
         if X.dtype != self.model.input_dtype:
             X = X.astype(self.model.input_dtype)
         X_missing = np.isnan(X, dtype=np.bool)
-        assert safe_isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
+        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
