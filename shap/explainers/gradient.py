@@ -443,7 +443,7 @@ class _PyTorchGradientExplainer(Explainer):
         input_handle = layer.register_forward_hook(self.get_interim_input)
         self.input_handle = input_handle
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None):
+    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
 
         # X ~ self.model_input
         # X_data ~ self.data
@@ -481,6 +481,7 @@ class _PyTorchGradientExplainer(Explainer):
         # compute the attributions
         X_batches = X[0].shape[0]
         output_phis = []
+        output_phi_vars = []
         # samples_input = input to the model
         # samples_delta = (x - x') for the input being explained - may be an interim input
         samples_input = [torch.zeros((nsamples,) + X[l].shape[1:], device=X[l].device) for l in range(len(X))]
@@ -542,6 +543,7 @@ class _PyTorchGradientExplainer(Explainer):
                     phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
 
             output_phis.append(phis[0] if len(self.data) == 1 else phis)
+            output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
         # cleanup: remove the handles, if they were added
         if self.input_handle is not None:
             self.input_handle.remove()
@@ -549,8 +551,17 @@ class _PyTorchGradientExplainer(Explainer):
             # note: the target input attribute is deleted in the loop
 
         if not self.multi_output:
-            return output_phis[0]
+            if return_variances:
+                return output_phis[0], output_phi_vars[0]
+            else:
+                return output_phis[0]            
         elif ranked_outputs is not None:
-            return output_phis, model_output_ranks
+            if return_variances:
+                return output_phis, output_phi_vars, model_output_ranks
+            else:
+                return output_phis, model_output_ranks
         else:
-            return output_phis
+            if return_variances:
+                return output_phis, output_phi_vars
+            else:
+                return output_phis
