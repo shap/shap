@@ -330,8 +330,10 @@ def test_sklearn_random_forest_newsgroups():
     vectorizer = pipeline.named_steps['vectorizer']
     densifier = pipeline.named_steps['to_dense']
 
+    dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
+
     test_row = newsgroups_test.data[83:84]
-    explainer = shap.TreeExplainer(rf)
+    explainer = shap.TreeExplainer(rf, dense_bg, feature_dependence="independent")
     vec_row = vectorizer.transform(test_row)
     dense_row = densifier.transform(vec_row)
     explainer.shap_values(dense_row)

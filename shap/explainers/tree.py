@@ -124,7 +124,7 @@ class TreeExplainer(Explainer):
 
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y, output=self.model_output).mean(0)
         
-    def shap_values(self, X, y=None, tree_limit=None, approximate=False):
+    def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -145,6 +145,11 @@ class TreeExplainer(Explainer):
             since this does not have the consistency guarantees of Shapley values and places too
             much weight on lower splits in the tree.
 
+        check_additivity : bool
+            Run a validation check that the sum of the SHAP values equals the output of the model. This
+            check takes only a small amount of time, and will catch potential unforeseen errors.
+            Note that this check only runs right now when explaining the margin of the model.
+
         Returns
         -------
         For models with a single output this returns a matrix of SHAP values
@@ -160,6 +165,7 @@ class TreeExplainer(Explainer):
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
         if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal" and self.data is None:
+            model_output_vals = None
             phi = None
             if self.model.model_type == "xgboost":
                 import xgboost
@@ -171,6 +177,12 @@ class TreeExplainer(Explainer):
                     X, ntree_limit=tree_limit, pred_contribs=True,
                     approx_contribs=approximate, validate_features=False
                 )
+                
+                if check_additivity and self.model_output == "margin":
+                    model_output_vals = self.model.original_model.predict(
+                        X, ntree_limit=tree_limit, output_margin=True,
+                        validate_features=False
+                    )
             
             elif self.model.model_type == "lightgbm":
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
@@ -178,7 +190,7 @@ class TreeExplainer(Explainer):
                 # Note: the data must be joined on the last axis
                 if self.model.original_model.params['objective'] == 'binary':
                     warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
-                    phi = np.concatenate((-phi, phi), axis=-1)
+                    phi = np.concatenate((0-phi, phi), axis=-1)
                 if phi.shape[1] != X.shape[1] + 1:
                     phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
             
@@ -194,10 +206,15 @@ class TreeExplainer(Explainer):
             if phi is not None:
                 if len(phi.shape) == 3:
                     self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
-                    return [phi[:, i, :-1] for i in range(phi.shape[1])]
+                    out = [phi[:, i, :-1] for i in range(phi.shape[1])]
                 else:
                     self.expected_value = phi[0, -1]
-                    return phi[:, :-1]
+                    out = phi[:, :-1]
+                
+                if check_additivity and model_output_vals is not None:
+                    self.assert_additivity(out, model_output_vals)
+
+                return out
 
         # convert dataframes
         if str(type(X)).endswith("pandas.core.series.Series'>"):
@@ -251,16 +268,21 @@ class TreeExplainer(Explainer):
             if self.model_output != "logloss":
                 self.expected_value = phi[0, -1, 0]
             if flat_output:
-                return phi[0, :-1, 0]
+                out = phi[0, :-1, 0]
             else:
-                return phi[:, :-1, 0]
+                out = phi[:, :-1, 0]
         else:
             if self.model_output != "logloss":
                 self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
-                return [phi[0, :-1, i] for i in range(self.model.n_outputs)]
+                out = [phi[0, :-1, i] for i in range(self.model.n_outputs)]
             else:
-                return [phi[:, :-1, i] for i in range(self.model.n_outputs)]
+                out = [phi[:, :-1, i] for i in range(self.model.n_outputs)]
+
+        if check_additivity and self.model_output == "margin":
+            self.assert_additivity(out, self.model.predict(X))
+
+        return out
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
         """ Estimate the SHAP interaction values for a set of samples.
@@ -347,15 +369,27 @@ class TreeExplainer(Explainer):
         if self.model.n_outputs == 1:
             self.expected_value = phi[0, -1, -1, 0]
             if flat_output:
-                return phi[0, :-1, :-1, 0]
+                out = phi[0, :-1, :-1, 0]
             else:
-                return phi[:, :-1, :-1, 0]
+                out = phi[:, :-1, :-1, 0]
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:
-                return [phi[0, :-1, :-1, i] for i in range(self.model.n_outputs)]
+                out = [phi[0, :-1, :-1, i] for i in range(self.model.n_outputs)]
             else:
-                return [phi[:, :-1, :-1, i] for i in range(self.model.n_outputs)]
+                out = [phi[:, :-1, :-1, i] for i in range(self.model.n_outputs)]
+        
+        return out
+
+    def assert_additivity(self, phi, model_output):
+        err_msg = "Additivity check failed in TreeExplainer! Please report this on GitHub."
+        if self.feature_dependence != "independent":
+            err_msg += " Consider retrying with the feature_dependence='independent' option."
+        if type(phi) is list:
+            for i in range(len(phi)):
+                assert np.max(np.abs(self.expected_value[i] + phi[i].sum(-1) - model_output[:,i])) < 1e-3, err_msg
+        else:
+            assert np.max(np.abs(self.expected_value + phi.sum(-1) - model_output)) < 1e-3, err_msg
 
 
 class TreeEnsemble:
