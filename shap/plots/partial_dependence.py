@@ -3,7 +3,7 @@ from ..common import convert_name
 import matplotlib.pyplot as pl
 from mpl_toolkits.mplot3d import Axes3D  
 import numpy as np
-
+import pandas as pd
 
 def compute_bounds(xmin, xmax, xv):
     """ Handles any setting of xmax and xmin.
@@ -27,12 +27,18 @@ def compute_bounds(xmin, xmax, xv):
 def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="percentile(100)",
                             npoints=None, nsamples=100, feature_names=None, hist=True,
                             ylabel=None, ice=False, opacity=None, linewidth=None, show=True):
+    """ A basic partial dependence plot function.
+
+
+    """
     
     # convert from DataFrames if we got any
+    use_dataframe = False
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
+        use_dataframe = True
         
     if feature_names is None:
         feature_names = ["Feature %d" % i for i in range(features.shape[1])]
@@ -46,37 +52,44 @@ def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="pe
         xs = np.linspace(xmin, xmax, npoints)
         
         features_tmp = features.copy()
-        if not ice:
-            vals = np.zeros(npoints)
-            for i in range(npoints):
-                features_tmp[:,ind] = xs[i]
-                vals[i] = model(features_tmp).mean()
-            if linewidth is None:
-                linewidth = 2
-            if opacity is None:
-                opacity = 1
-        else:
+        if ice:
             vals = np.zeros((npoints, features.shape[0]))
             for i in range(npoints):
                 features_tmp[:,ind] = xs[i]
-                vals[i,:] = model(features_tmp)
+                if use_dataframe:
+                    vals[i,:] = model(pd.DataFrame(features_tmp, columns=feature_names))
+                else:
+                    vals[i,:] = model(features_tmp)
             if linewidth is None:
                 linewidth = 1
             if opacity is None:
                 opacity = 0.5
+        else:
+            vals = np.zeros(npoints)
+            for i in range(npoints):
+                features_tmp[:,ind] = xs[i]
+                if use_dataframe:
+                    vals[i] = model(pd.DataFrame(features_tmp, columns=feature_names)).mean()
+                else:
+                    vals[i] = model(features_tmp).mean()
+            if linewidth is None:
+                linewidth = 2
+            if opacity is None:
+                opacity = 1
         
 
         
             
-        # the histogram of the data
+        
         fig, ax1 = pl.subplots()
-
-        ax1.plot(xs, vals, color=shap.plots.colors.blue_rgb, linewidth=linewidth, alpha=opacity)
-
         ax2 = ax1.twinx()
 
+        # the histogram of the data
         if hist:
             n, bins, patches = ax2.hist(xv, 50, density=False, facecolor='black', range=(xmin, xmax))
+
+        # the line plot
+        ax1.plot(xs, vals, color=shap.plots.colors.blue_rgb, linewidth=linewidth, alpha=opacity)
 
         ax2.set_ylim(0,features.shape[0])#ax2.get_ylim()[0], ax2.get_ylim()[1] * 4)
         ax1.set_xlabel(feature_names[ind], fontsize=13)
@@ -84,7 +97,7 @@ def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="pe
             if not ice:
                 ylabel = "E[f(x) | "+ str(feature_names[ind]) + "]"
             else:
-                ylabel = "f(x) | "+X_trainb.columns[find]
+                ylabel = "f(x) | "+ str(feature_names[ind])
         ax1.set_ylabel(ylabel, fontsize=13)
         ax1.xaxis.set_ticks_position('bottom')
         ax1.yaxis.set_ticks_position('left')
