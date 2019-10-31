@@ -6,6 +6,7 @@ from scipy.spatial.distance import pdist
 import sys
 import warnings
 import sklearn
+import importlib
 
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
@@ -326,3 +327,47 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
 
 def sample(X, nsamples=100, random_state=0):
     return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
+
+def safe_isinstance(obj, class_path_str):
+    """
+    Acts as a safe version of isinstance without having to explicitly
+    import packages which may not exist in the users environment.
+
+    Checks if obj is an instance of type specified by class_path_str.
+
+    Parameters
+    ----------
+    obj: Any
+        Some object you want to test against
+    class_path_str: str
+        A string specifying the full class path
+        Example: `sklearn.ensemble.forest.RandomForestRegressor`
+
+    Returns
+    --------
+    bool: True if isinstance and package exists, False otherwise
+    """
+    if not (isinstance(class_path_str, str) and "." in class_path_str):
+        raise ValueError("class_path_str must be a string specifying full \
+            module path to a class. Eg, 'sklearn.ensemble.forest.RandomForestRegressor'")
+
+    # Splits on last occurence of "."
+    module_name, class_name = class_path_str.rsplit(".", 1)
+
+    #Check module exists
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except:
+        spec = None
+    if spec is None:
+        return False
+
+    module = importlib.import_module(module_name)
+
+    #Get class
+    _class = getattr(module, class_name, None)
+    if _class is None:
+        return False
+    
+    return isinstance(obj, _class)
+

@@ -158,7 +158,7 @@ class _TFGradientExplainer(Explainer):
         self.batch_size = batch_size
         self.local_smoothing = local_smoothing
 
-        if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
+        if not tf.executing_eagerly():
             # if we are not given a session find a default session
             if session is None:
                 # if keras is installed and already has a session then use it
@@ -191,7 +191,7 @@ class _TFGradientExplainer(Explainer):
 
     def gradient(self, i):
         if self.gradients[i] is None:
-            if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
+            if not tf.executing_eagerly():
                 out = self.model_output[:,i] if self.multi_output else self.model_output
                 self.gradients[i] = tf.gradients(out, self.model_inputs)
             else:
@@ -227,7 +227,7 @@ class _TFGradientExplainer(Explainer):
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         # rank and determine the model outputs that we will explain
-        if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
+        if not tf.executing_eagerly():
             model_output_values = self.run(self.model_output, self.model_inputs, X)
         else:
             model_output_values = self.run(self.model, self.model_inputs, X)
@@ -337,7 +337,7 @@ class _TFGradientExplainer(Explainer):
                 return output_phis
 
     def run(self, out, model_inputs, X):
-        if LooseVersion(tf.__version__) < LooseVersion("2.0.0"):
+        if not tf.executing_eagerly():
             feed_dict = dict(zip(model_inputs, X))
             if self.keras_phase_placeholder is not None:
                 feed_dict[self.keras_phase_placeholder] = 0
