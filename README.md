@@ -44,6 +44,7 @@ shap_values = explainer.shap_values(X)
 
 # visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
 shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:])
+# shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:] , matplotlib=True)  
 ```
 
 <p align="center">
