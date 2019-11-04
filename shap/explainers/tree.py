@@ -51,17 +51,15 @@ class TreeExplainer(Explainer):
         feature_dependence="tree_path_dependent", since in that case we can use the number of training
         samples that went down each tree path as our background dataset (this is recorded in the model object).
 
-    feature_dependence : "tree_path_dependent" (default) or "independent"
+    feature_dependence : "independent" (default) or "tree_path_dependent" (default when data=None)
         Since SHAP values rely on conditional expectations we need to decide how to handle correlated
-        (or otherwise dependent) input features. The default "tree_path_dependent" approach is to just
-        follow the trees and use the number of training examples that went down each leaf to represent
-        the background distribution. This approach repects feature dependecies along paths in the trees.
-        However, for non-linear marginal transforms (like explaining the model loss)  we don't yet
-        have fast algorithms that respect the tree path dependence, so instead we offer an "independent"
-        approach that breaks the dependencies between features, but allows us to explain non-linear
-        transforms of the model's output. Note that the "independent" option requires a background
-        dataset and its runtime scales linearly with the size of the background dataset you use. Anywhere
-        from 100 to 1000 random background samples are good sizes to use.
+        (or otherwise dependent) input features. The "independent" approach breaks the dependencies between
+        features according to the rules dictated by casual inference (Janzing et al. 2019). Note that the
+        "independent" option requires a background dataset and its runtime scales linearly with the size
+        of the background dataset you use. Anywhere from 100 to 1000 random background samples are good
+        sizes to use. The "tree_path_dependent" approach is to just follow the trees and use the number
+        of training examples that went down each leaf to represent the background distribution. This approach
+        does not require a background dataset and so is used by default when no background dataset is provided.
     
     model_output : "margin", "probability", or "logloss"
         What output of the model should be explained. If "margin" then we explain the raw output of the
@@ -73,13 +71,16 @@ class TreeExplainer(Explainer):
         Currently the probability and logloss options are only supported when feature_dependence="independent".
     """
 
-    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "tree_path_dependent"):
+    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "independent"):
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             self.data = data.values
         elif isinstance(data, DenseData):
             self.data = data.data
         else:
             self.data = data
+        if self.data is None:
+            feature_dependence = "tree_path_dependent"
+            # TODO: place a warning here eventually that we made this switch?
         self.data_missing = None if self.data is None else np.isnan(self.data)
         self.model_output = model_output
         self.feature_dependence = feature_dependence
