@@ -1,23 +1,26 @@
 language: python
 os:
-  - linux
+- linux
 python:
-  - '3.6'
+- '3.6'
 before_install:
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  - sudo apt-get update
-  - sudo apt-get install -y gcc-4.9 g++-4.9
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.9
-  - sudo apt-get install -y libgomp1
+- sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+- sudo apt-get update
+- sudo apt-get install -y gcc-4.9 g++-4.9
+- sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60 --slave
+  /usr/bin/g++ g++ /usr/bin/g++-4.9
+- sudo apt-get install -y libgomp1
 install:
-  - pip install .
-  - pip install tensorflow==1.14 keras xgboost matplotlib ipython
+- pip install .
+- pip install tensorflow==1.14 keras xgboost matplotlib ipython
 script: python setup.py nosetests
-# deploy:
-#   provider: pypi
-#   user: "shap_poster"
-#   password:
-#     secure: "pImO/N+qSzFx8PESxK4HviJV/w7/TtK1DZmVXh/jkZcmv3xcvCafBQ3kVxY1kInh5TqFjTtTnRDcbEwsv/4GtpbGrstt8qbT4v19oV08wDxTRdvdVBpJbMZJp8NX0osuxpEV+G3OXHSeJSEqVzvK/ryufnJdOxqUcPFoTWDJfUKE++EbleSn9l29rHdehQmGqyvI83SdI0OPCLysFvqwJ6YoEAJZdJ3twq2kgodcWGTyS8swmxwAx905VHs7pGcqZx+jGyHcP/10MRT3nKMiYwveFYP9R+NW9nqtw9Kx32dDsp6DIU1dzkTvtZsTMzy2PElGD3qeU5iu/k1GQyKRpscDI6MKmNa55iDAVc3QYUd66gmACgOEoLTak4MSuUKULkVJp6uu3o0yIheffuLz3B5orzU+M405unYZPf5An7+oRmRKBFJQ/BdQ3mlZ/opNx1qEXrKu1rmJdRe6wM3tXWXAmH6VZN7MbO9MTi8w+hT8NUrXXo4iXwelEcA09Q70YU5+af06QyC1xStdZbblPPNDP8pzEdmpnI1ryDQZ4ZFkfihVkkVkAUxdou0nehWfz8hE0yKOBn/sphjgunHYTnFZURM8RFHnbgEgX9X6k168UkkEzakmyKtpXTo8swER9/mOGUbZmMplzc/eNX7LxWYhUyL8JsbCFXhZqCAbosk="
-#   on:
-#     tags: true
-#   distributions: "sdist bdist_wheel"
+deploy:
+  provider: pypi
+  user: "__token__"
+  password:
+    secure: iVB34uR2CL/Hn+lXEcipt4sGK5a8hZEfW8o0DeEZHh6NPO+ykkOjUfavlGBGFj2YBHXHobeNDgNF63+g37oxaIz8UOvp6MZtcuxzNUBuYvzkOSkOevQFttLJCQuVoa1dgfOur0zi2Q0U0xJzqNPoUEeL3x15yM+WXrB0+blYaBKt9y2VqMztlJExMGzZS6N4cccm8YdGSkt6dKovVvzR6ShTT/dIVmeuaVzVkJ6NLS7aw8i71I7zxxF7+K86tlWm8+L/LteyJyLhENVO614el6RxYFoKrLwYthIqnLMwxpZktVejymkW1BhaZvjIUwq7nqGGm9CklZpbDWNs2VP+UUmC1ziYuA/D/zPQy8GI712aZguTlF0gJa1diqLkzDwNIBcPV2xYlbipbkAExzgZnm7yKs9x3wRKDw2GJsYHeE1NvNJR8SN7MeUbICmekHHzQ6yr9B0ZfjHNjLmBKaFavwB8jEHj0u/2PBmtgLL8j2kL8hXoI/jPnihbUQ4nog/WkGQCCOh940zhq5AtZrwxxDmwl2zSwAJiICri6ah10c+1As1kncps4ip23d7WbxcFfYpRb+kn8NS9X9NX1D6c1cFggt96zPVkQ3BAW4vHaXCKxqKw8fZ0cDYK3A6IKdzSauLiTv8bVl7wI/1yATBkjsIjT00p5zg8jvl8jK+BQ8o=
+  on:
+    tags: true
+  distributions: "sdist bdist_wheel"
+  skip_cleanup: true
+  skip_existing: true
