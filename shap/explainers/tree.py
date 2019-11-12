@@ -1,5 +1,6 @@
 import numpy as np
 import multiprocessing
+import scipy.special
 import sys
 import json
 import os
@@ -460,6 +461,8 @@ class TreeEnsemble:
                 self.base_offset = model.init_.mean
             elif str(type(model.init_)).endswith("ensemble.gradient_boosting.QuantileEstimator'>"):
                 self.base_offset = model.init_.quantile
+            elif str(type(model.init_)).endswith("sklearn.dummy.DummyRegressor'>"):
+                self.base_offset = model.init_.constant_[0]
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
 
@@ -468,10 +471,16 @@ class TreeEnsemble:
             self.tree_output = "raw_value"
         elif str(type(model)).endswith("sklearn.ensemble.gradient_boosting.GradientBoostingClassifier'>"):
             self.dtype = np.float32
-            
+
+            if model.estimators_.shape[1] > 1:
+                assert False, "GradientBoostingClassifier is only supported for binary classification right now!"
+
             # currently we only support the logs odds estimator
             if str(type(model.init_)).endswith("ensemble.gradient_boosting.LogOddsEstimator'>"):
                 self.base_offset = model.init_.prior
+                self.tree_output = "log_odds"
+            elif str(type(model.init_)).endswith("sklearn.dummy.DummyClassifier'>"):
+                self.base_offset = scipy.special.logit(model.init_.class_prior_[1]) # with two classes the trees only model the second class
                 self.tree_output = "log_odds"
             else:
                 assert False, "Unsupported init model type: " + str(type(model.init_))
