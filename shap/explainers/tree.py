@@ -10,6 +10,8 @@ from .explainer import Explainer
 from ..common import assert_import, record_import_error, DenseData, safe_isinstance
 import warnings
 
+warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
+
 try:
     from .. import _cext
 except ImportError as e:
@@ -27,8 +29,8 @@ output_transform_codes = {
     "squared_loss": 3
 }
 
-feature_dependence_codes = {
-    "independent": 0,
+feature_perturbation_codes = {
+    "interventional": 0,
     "tree_path_dependent": 1,
     "global_path_dependent": 2
 }
@@ -48,14 +50,14 @@ class TreeExplainer(Explainer):
 
     data : numpy.array or pandas.DataFrame
         The background dataset to use for integrating out features. This argument is optional when
-        feature_dependence="tree_path_dependent", since in that case we can use the number of training
+        feature_perturbation="tree_path_dependent", since in that case we can use the number of training
         samples that went down each tree path as our background dataset (this is recorded in the model object).
 
-    feature_dependence : "independent" (default) or "tree_path_dependent" (default when data=None)
+    feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
         Since SHAP values rely on conditional expectations we need to decide how to handle correlated
-        (or otherwise dependent) input features. The "independent" approach breaks the dependencies between
+        (or otherwise dependent) input features. The "interventional" approach breaks the dependencies between
         features according to the rules dictated by casual inference (Janzing et al. 2019). Note that the
-        "independent" option requires a background dataset and its runtime scales linearly with the size
+        "interventional" option requires a background dataset and its runtime scales linearly with the size
         of the background dataset you use. Anywhere from 100 to 1000 random background samples are good
         sizes to use. The "tree_path_dependent" approach is to just follow the trees and use the number
         of training examples that went down each leaf to represent the background distribution. This approach
@@ -72,7 +74,25 @@ class TreeExplainer(Explainer):
     """
 
 
-    def __init__(self, model, data = None, model_output = "margin", feature_dependence = "independent"):
+    def __init__(self, model, data = None, model_output = "margin", feature_perturbation="interventional", **deprecated_options):
+        
+        # check for deprecated options
+        if "feature_dependence" in deprecated_options:
+            dep_val = deprecated_options["feature_dependence"]
+            if dep_val == "independent" and feature_perturbation == "interventional":
+                warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
+                    " == \"interventional\"! See GitHub issue #882.")
+            elif feature_perturbation != "interventional":
+                warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
+                    " == \"interventional\", you can't supply both options! See GitHub issue #882.")
+            if dep_val == "tree_path_dependent" and feature_perturbation == "interventional":
+                raise Exception("The feature_dependence option has been renamed to feature_perturbation! " \
+                    "Please update the option name before calling TreeExplainer. See GitHub issue #882.")
+        if feature_perturbation == "independent":
+            raise Exception("feature_perturbation = \"independent\" is not a valid option value, please use " \
+                "feature_perturbation == \"interventional\" instead. See GitHub issue #882.")
+        
+        
         if safe_isinstance(data, "pandas.core.frame.DataFrame"):
             self.data = data.values
         elif isinstance(data, DenseData):
@@ -80,21 +100,24 @@ class TreeExplainer(Explainer):
         else:
             self.data = data
         if self.data is None:
-            feature_dependence = "tree_path_dependent"
-            # TODO: place a warning here eventually that we made this switch?
+            feature_perturbation = "tree_path_dependent"
+            warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
+        elif feature_perturbation == "interventional" and self.data.shape[0] > 1000:
+                warnings.warn("Passing "+str(self.data.shape[0]) + " background samples may lead to slow runtimes. Consider "
+                    "using shap.sample(data, 100) to create a smaller background data set.")
         self.data_missing = None if self.data is None else np.isnan(self.data)
         self.model_output = model_output
-        self.feature_dependence = feature_dependence
+        self.feature_perturbation = feature_perturbation
         self.expected_value = None
         self.model = TreeEnsemble(model, self.data, self.data_missing)
 
-        assert feature_dependence in feature_dependence_codes, "Invalid feature_dependence option!"
+        assert feature_perturbation in feature_perturbation_codes, "Invalid feature_perturbation option!"
 
-        # check for unsupported combinations of feature_dependence and model_outputs
-        if feature_dependence == "tree_path_dependent":
-            assert model_output == "margin", "Only margin model_output is supported for feature_dependence=\"tree_path_dependent\""
+        # check for unsupported combinations of feature_perturbation and model_outputs
+        if feature_perturbation == "tree_path_dependent":
+            assert model_output == "margin", "Only margin model_output is supported for feature_perturbation=\"tree_path_dependent\""
         else:   
-            assert data is not None, "A background dataset must be provided unless you are using feature_dependence=\"tree_path_dependent\"!"
+            assert data is not None, "A background dataset must be provided unless you are using feature_perturbation=\"tree_path_dependent\"!"
 
         if model_output != "margin":
             if self.model.objective is None and self.model.tree_output is None:
@@ -166,7 +189,7 @@ class TreeExplainer(Explainer):
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # shortcut using the C++ version of Tree SHAP in XGBoost, LightGBM, and CatBoost
-        if self.feature_dependence == "tree_path_dependent" and self.model.model_type != "internal" and self.data is None:
+        if self.feature_perturbation == "tree_path_dependent" and self.model.model_type != "internal" and self.data is None:
             model_output_vals = None
             phi = None
             if self.model.model_type == "xgboost":
@@ -241,10 +264,10 @@ class TreeExplainer(Explainer):
             assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
         transform = self.model.get_transform(self.model_output)
 
-        if self.feature_dependence == "tree_path_dependent":
+        if self.feature_perturbation == "tree_path_dependent":
             assert self.model.fully_defined_weighting, "The background dataset you provided does not cover all the leaves in the model, " \
-                                                       "so TreeExplainer cannot run with the feature_dependence=\"tree_path_dependent\" option! " \
-                                                       "Try providing a larger background dataset, or using feature_dependence=\"independent\"."
+                                                       "so TreeExplainer cannot run with the feature_perturbation=\"tree_path_dependent\" option! " \
+                                                       "Try providing a larger background dataset, or using feature_perturbation=\"interventional\"."
  
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -254,7 +277,7 @@ class TreeExplainer(Explainer):
                 self.model.children_left, self.model.children_right, self.model.children_default,
                 self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
                 self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
-                self.model.base_offset, phi, feature_dependence_codes[self.feature_dependence],
+                self.model.base_offset, phi, feature_perturbation_codes[self.feature_perturbation],
                 output_transform_codes[transform], False
             )
         else:
@@ -314,7 +337,7 @@ class TreeExplainer(Explainer):
         """
 
         assert self.model_output == "margin", "Only model_output = \"margin\" is supported for SHAP interaction values right now!"
-        assert self.feature_dependence == "tree_path_dependent", "Only feature_dependence = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
+        assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
         # see if we have a default tree_limit in place.
@@ -363,7 +386,7 @@ class TreeExplainer(Explainer):
             self.model.children_left, self.model.children_right, self.model.children_default,
             self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
             self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
-            self.model.base_offset, phi, feature_dependence_codes[self.feature_dependence],
+            self.model.base_offset, phi, feature_perturbation_codes[self.feature_perturbation],
             output_transform_codes[transform], True
         )
 
@@ -385,8 +408,8 @@ class TreeExplainer(Explainer):
 
     def assert_additivity(self, phi, model_output):
         err_msg = "Additivity check failed in TreeExplainer! Please report this on GitHub."
-        if self.feature_dependence != "independent":
-            err_msg += " Consider retrying with the feature_dependence='independent' option."
+        if self.feature_perturbation != "interventional":
+            err_msg += " Consider retrying with the feature_perturbation='interventional' option."
         if type(phi) is list:
             for i in range(len(phi)):
                 assert np.max(np.abs(self.expected_value[i] + phi[i].sum(-1) - model_output[:,i])) < 1e-3, err_msg
