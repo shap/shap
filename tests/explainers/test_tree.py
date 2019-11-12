@@ -333,7 +333,7 @@ def test_sklearn_random_forest_newsgroups():
     dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
 
     test_row = newsgroups_test.data[83:84]
-    explainer = shap.TreeExplainer(rf, dense_bg, feature_dependence="independent")
+    explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
     vec_row = vectorizer.transform(test_row)
     dense_row = densifier.transform(vec_row)
     explainer.shap_values(dense_row)
@@ -762,7 +762,7 @@ def test_provided_background_tree_path_dependent():
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_dependence="tree_path_dependent")
+    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="tree_path_dependent")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
     assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
@@ -798,7 +798,7 @@ def test_provided_background_independent():
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_dependence="independent")
+    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
     assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
@@ -834,7 +834,7 @@ def test_provided_background_independent_prob_output():
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_dependence="independent", model_output="probability")
+    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
     assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
     assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-6, "Bad expected_value!"
@@ -870,7 +870,7 @@ def test_single_tree_compare_with_kernel_shap():
     for i in range(5):
         x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
 
-        expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+        expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
         f = lambda inp : model.predict(xgboost.DMatrix(inp))
         expl_kern = shap.KernelExplainer(f, X)
 
@@ -910,7 +910,7 @@ def test_several_trees():
     # Compare for five random samples
     for i in range(5):
         x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
-        expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+        expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
         itshap = expl.shap_values(x)
         assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
         "SHAP values don't sum to model output!"
@@ -956,7 +956,7 @@ def test_single_tree_nonlinear_transformations():
     pred = model.predict(Xd,output_margin=True) # In margin space (log odds)
     trans_pred = model.predict(Xd) # In probability space
 
-    expl = shap.TreeExplainer(model, X, feature_dependence="independent")
+    expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
     f = lambda inp : model.predict(xgboost.DMatrix(inp), output_margin=True)
     expl_kern = shap.KernelExplainer(f, X)
 
@@ -969,12 +969,12 @@ def test_single_tree_nonlinear_transformations():
     "Independent Tree SHAP doesn't match Kernel SHAP on explaining margin!"
 
     model.set_attr(objective="binary:logistic")
-    expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="probability")
+    expl = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="probability")
     itshap = expl.shap_values(x)
     assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), \
     "SHAP values don't sum to model output on explaining logistic!"
 
-    # expl = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="logloss")
+    # expl = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="logloss")
     # itshap = expl.shap_values(x,y=y[x_ind])
     # margin_pred = model.predict(xgb.DMatrix(x),output_margin=True)
     # currpred = log_loss(y[x_ind],sigmoid(margin_pred))
@@ -1001,7 +1001,7 @@ def test_xgboost_classifier_independent_margin():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    e = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="margin")
+    e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="margin")
     shap_values = e.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
@@ -1027,7 +1027,7 @@ def test_xgboost_classifier_independent_probability():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    e = shap.TreeExplainer(model, X, feature_dependence="independent", model_output="probability")
+    e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="probability")
     shap_values = e.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:,1])
@@ -1045,7 +1045,7 @@ def test_front_page_xgboost_global_path_dependent():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model, X, feature_dependence="global_path_dependent")
+    explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
     shap_values = explainer.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
