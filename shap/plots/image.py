@@ -59,7 +59,7 @@ def image_plot(shap_values, x, labels=None, show=True, width=20, aspect=0.2, hsp
             if labels is not None:
                 axes[row,i+1].set_title(labels[row,i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[0], sv.shape[1], -1))
+            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
             im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
             axes[row,i+1].axis('off')
     if hspace == 'auto':
