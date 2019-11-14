@@ -1,6 +1,4 @@
-import matplotlib
 import numpy as np
-matplotlib.use('Agg')
 import shap
 
 
@@ -12,9 +10,6 @@ def test_front_page_xgboost():
         return
     import shap
 
-    # load JS visualization code to notebook
-    shap.initjs()
-
     # train XGBoost model
     X, y = shap.datasets.boston()
     model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 100)
@@ -23,25 +18,10 @@ def test_front_page_xgboost():
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
 
-    # visualize the first prediction's explaination
-    shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
-
-    # visualize the training set predictions
-    shap.force_plot(explainer.expected_value, shap_values, X)
-
-    # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
-    shap.dependence_plot(5, shap_values, X, show=False)
-    shap.dependence_plot("RM", shap_values, X, show=False)
-
-    # summarize the effects of all the features
-    shap.summary_plot(shap_values, X, show=False)
 
 def test_front_page_sklearn():
     import sklearn.ensemble
     import shap
-
-    # load JS visualization code to notebook
-    shap.initjs()
 
     # train model
     X, y = shap.datasets.boston()
@@ -55,19 +35,6 @@ def test_front_page_sklearn():
         # explain the model's predictions using SHAP values
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
-
-        # visualize the first prediction's explaination
-        shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
-
-        # visualize the training set predictions
-        shap.force_plot(explainer.expected_value, shap_values, X)
-
-        # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
-        shap.dependence_plot(5, shap_values, X, show=False)
-        shap.dependence_plot("RM", shap_values, X, show=False)
-
-        # summarize the effects of all the features
-        shap.summary_plot(shap_values, X, show=False)
 
 def test_xgboost_multiclass():
     try:
@@ -85,9 +52,6 @@ def test_xgboost_multiclass():
     # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
     shap_values = shap.TreeExplainer(model).shap_values(X)
 
-    # ensure plot works for first class
-    shap.dependence_plot(0, shap_values[0], X, show=False)
-
 def test_xgboost_mixed_types():
     try:
         import xgboost
@@ -102,7 +66,6 @@ def test_xgboost_mixed_types():
     X["B"] = X["B"].astype(np.bool)
     bst = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 1000)
     shap_values = shap.TreeExplainer(bst).shap_values(X)
-    shap.dependence_plot(0, shap_values, X, show=False)
 
 def test_sklearn_random_forest_multiclass():
     import shap
@@ -209,9 +172,6 @@ def test_lightgbm_multiclass():
     # explain the model's predictions using SHAP values
     shap_values = shap.TreeExplainer(model).shap_values(X)
 
-    # ensure plot works for first class
-    shap.dependence_plot(0, shap_values[0], X, show=False)
-
 # TODO: Test tree_limit argument
 
 def test_sklearn_interaction():
@@ -233,8 +193,6 @@ def test_sklearn_interaction():
                 for l in range(len(interaction_vals[i][j][k])):
                     assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 1e-6
 
-    # ensure the interaction plot works
-    shap.summary_plot(interaction_vals[0], X, show=False)
 
 def test_lightgbm_interaction():
     try:
