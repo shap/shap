@@ -86,7 +86,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         package_data={'shap': ['tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy<1.17'],
-        install_requires=['numpy<1.17', 'scipy<1.3', 'scikit-learn<0.21', 'pandas<0.25', 'tqdm'],
+        install_requires=['numpy<1.17', 'scipy<1.3', 'scikit-learn<0.21', 'pandas<0.25'],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
