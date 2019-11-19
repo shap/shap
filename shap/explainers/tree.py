@@ -807,7 +807,7 @@ class TreeEnsemble:
         if self.model_type == "pyspark":
             import pyspark
             #TODO support predict for pyspark
-            raise NotImplementedError("Predict with pyspark isn't implemented")
+            raise NotImplementedError("Predict with pyspark isn't implemented. Don't run 'interventional' as feature_perturbation.")
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:
