@@ -236,8 +236,6 @@ def test_pyspark_classifier_decision_tree():
             assert (np.abs(expected_values - normalizedPredictions.mean()) < 1e-1).all(), "Bad expected_value!"+model
     spark.stop()
 
-test_pyspark_classifier_decision_tree()
-
 def test_pyspark_regression_decision_tree():
     try:
         import pyspark
