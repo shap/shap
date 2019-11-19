@@ -236,7 +236,7 @@ class TreeExplainer(Explainer):
                     self.expected_value = phi[0, -1]
                     out = phi[:, :-1]
                 
-                if check_additivity and model_output_vals is not None:
+                if check_additivity and model_output_vals is not None and self.model.model_type != "pyspark":
                     self.assert_additivity(out, model_output_vals)
 
                 return out
@@ -304,7 +304,7 @@ class TreeExplainer(Explainer):
             else:
                 out = [phi[:, :-1, i] for i in range(self.model.n_outputs)]
 
-        if check_additivity and self.model_output == "margin":
+        if check_additivity and self.model_output == "margin" and self.model.model_type != "pyspark":
             self.assert_additivity(out, self.model.predict(X))
 
         return out
