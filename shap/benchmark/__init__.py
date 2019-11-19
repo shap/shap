@@ -20,6 +20,4 @@ from .metrics import batch_keep_absolute__r2
 from .metrics import batch_remove_absolute__roc_auc
 from .metrics import batch_keep_absolute__roc_auc
 
-from .plots import plot_curve, plot_grids
-
 from .experiments import experiments, run_experiment, run_experiments, run_remote_experiments

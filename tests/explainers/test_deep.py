@@ -1,7 +1,5 @@
-import matplotlib
 import numpy as np
 import shutil
-matplotlib.use('Agg')
 import shap
 
 

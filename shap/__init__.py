@@ -8,12 +8,6 @@ from .explainers.tree import TreeExplainer, Tree
 from .explainers.deep import DeepExplainer
 from .explainers.gradient import GradientExplainer
 from .explainers.linear import LinearExplainer
-from .plots.summary import summary_plot
-from .plots.dependence import dependence_plot
-from .plots.force import force_plot, initjs, save_html
-from .plots.image import image_plot
-from .plots.monitoring import monitoring_plot
-from .plots.embedding import embedding_plot
 from . import datasets
 from . import benchmark
 from .explainers import other

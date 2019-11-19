@@ -82,14 +82,11 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         author='Scott Lundberg',
         author_email='slund1@cs.washington.edu',
         license='MIT',
-        packages=[
-            'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers.deep',
-            'shap.plots', 'shap.benchmark'
-        ],
-        package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
+        packages=['shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers.deep', 'shap.benchmark'],
+        package_data={'shap': ['tree_shap.h']},
         cmdclass={'build_ext': build_ext},
-        setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'pandas', 'tqdm', 'ipython', 'scikit-image'],
+        setup_requires=['numpy<1.17'],
+        install_requires=['numpy<1.17', 'scipy<1.3', 'scikit-learn<0.21', 'pandas<0.25', 'tqdm'],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
