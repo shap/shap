@@ -9,7 +9,6 @@ import itertools
 import warnings
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from sklearn.cluster import KMeans
-from tqdm import tqdm
 from .explainer import Explainer
 
 log = logging.getLogger('shap')
@@ -202,7 +201,7 @@ class KernelExplainer(Explainer):
         # explain the whole dataset
         elif len(X.shape) == 2:
             explanations = []
-            for i in tqdm(range(X.shape[0]), disable=kwargs.get("silent", False)):
+            for i in range(X.shape[0]):
                 data = X[i:i + 1, :]
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)

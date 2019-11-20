@@ -1,5 +1,4 @@
 import numpy as np
-from tqdm import tqdm
 import gc
 
 
@@ -40,7 +39,7 @@ def remove(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, 
     tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
     last_nmask = _remove_cache.get("nmask", None)
     last_yp_masked_test = _remove_cache.get("yp_masked_test", None)
-    for i in tqdm(range(len(y_test)), "Retraining for the 'remove' metric"):
+    for i in range(len(y_test)):
         if cache_match and last_nmask[i] == nmask[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nmask[i] == 0:
@@ -159,7 +158,7 @@ def keep(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, me
     tie_breaking_noise = const_rand(X_train.shape[1]) * 1e-6
     last_nkeep = _keep_cache.get("nkeep", None)
     last_yp_masked_test = _keep_cache.get("yp_masked_test", None)
-    for i in tqdm(range(len(y_test)), "Retraining for the 'keep' metric"):
+    for i in range(len(y_test)):
         if cache_match and last_nkeep[i] == nkeep[i]:
             yp_masked_test[i] = last_yp_masked_test[i]
         elif nkeep[i] == attr_test.shape[1]:
