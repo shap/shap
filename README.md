@@ -21,6 +21,14 @@ pip install shap
 conda install -c conda-forge shap
 </pre>
 
+## Development
+
+To install SHAP in a development environment, simply clone this repo and run `python setup.py install`.
+Python 2.7.x is required, as well as a recent version of `setuptools`.
+
+To run the test suite, run `python setup.py test`. Note that tests for `lightbm` will fail unless `libomp` is installed.
+You can install this via `brew install libomp` on MacOS.
+
 ## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn models)
 
 While SHAP values can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods ([Tree SHAP arXiv paper](https://arxiv.org/abs/1802.03888)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, and *scikit-learn* tree models:
