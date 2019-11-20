@@ -225,10 +225,10 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
             if len(tick_positions) == 2:
                 tick_positions[0] -= 0.25
                 tick_positions[1] += 0.25
-            cb = pl.colorbar(p, ticks=tick_positions)
+            cb = pl.colorbar(p, ticks=tick_positions, ax=ax)
             cb.set_ticklabels(cnames)
         else:
-            cb = pl.colorbar(p)
+            cb = pl.colorbar(p, ax=ax)
 
         cb.set_label(feature_names[interaction_index], size=13)
         cb.ax.tick_params(labelsize=11)
