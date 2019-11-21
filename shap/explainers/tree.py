@@ -412,9 +412,11 @@ class TreeExplainer(Explainer):
             err_msg += " Consider retrying with the feature_perturbation='interventional' option."
         if type(phi) is list:
             for i in range(len(phi)):
-                assert np.max(np.abs(self.expected_value[i] + phi[i].sum(-1) - model_output[:,i])) < 1e-3, err_msg
+                val = self.expected_value[i] + phi[i].sum(-1)
+                assert np.max(np.abs(val - model_output[:,i]) / (np.abs(val) + 1e-4)) < 1e-2, err_msg
         else:
-            assert np.max(np.abs(self.expected_value + phi.sum(-1) - model_output)) < 1e-3, err_msg
+            val = self.expected_value + phi.sum(-1)
+            assert np.max(np.abs(val - model_output) / (np.abs(val) + 1e-4)) < 1e-2, err_msg
 
 
 class TreeEnsemble:
