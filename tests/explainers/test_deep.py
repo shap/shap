@@ -310,7 +310,9 @@ def test_pytorch_mnist_cnn():
         else:
             e = shap.DeepExplainer(model, next_x[inds, :, :, :])
         test_x, test_y = next(iter(test_loader))
-        shap_values = e.shap_values(test_x[:1])
+        input_tensor = test_x[:1]
+        input_tensor.requires_grad = True
+        shap_values = e.shap_values(input_tensor)
 
         model.eval()
         model.zero_grad()

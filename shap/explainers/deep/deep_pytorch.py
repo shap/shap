@@ -139,7 +139,7 @@ class PyTorchDeepExplainer(Explainer):
         else:
             assert type(X) == list, "Expected a list of model inputs!"
 
-        X = [x.to(self.device) for x in X]
+        X = [x.detach().to(self.device) for x in X]
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
