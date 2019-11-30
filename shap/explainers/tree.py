@@ -111,13 +111,15 @@ class TreeExplainer(Explainer):
         self.expected_value = None
         self.model = TreeEnsemble(model, self.data, self.data_missing)
 
-        assert feature_perturbation in feature_perturbation_codes, "Invalid feature_perturbation option!"
+        if feature_perturbation not in feature_perturbation_codes:
+            raise ValueError("Invalid feature_perturbation option!")
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":
-            assert model_output == "margin", "Only margin model_output is supported for feature_perturbation=\"tree_path_dependent\""
-        else:   
-            assert data is not None, "A background dataset must be provided unless you are using feature_perturbation=\"tree_path_dependent\"!"
+            if model_output != "margin":
+                raise ValueError("Only margin model_output is supported for feature_perturbation=\"tree_path_dependent\"")
+        elif data is None:
+            raise ValueError("A background dataset must be provided unless you are using feature_perturbation=\"tree_path_dependent\"!")
 
         if model_output != "margin":
             if self.model.objective is None and self.model.tree_output is None:
@@ -127,9 +129,9 @@ class TreeExplainer(Explainer):
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and model_output != "margin":
             import xgboost
-            assert LooseVersion(xgboost.__version__) >= LooseVersion('0.81'), \
-                "A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!"
-        
+            if LooseVersion(xgboost.__version__) < LooseVersion('0.81'):
+                raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
+
         # compute the expected value if we have a parsed tree for the cext
         if self.model_output == "logloss":
             self.expected_value = self.__dynamic_expected_value
