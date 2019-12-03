@@ -20,6 +20,12 @@ install:
   - "%PYTHON%\\python.exe -m pip install tensorflow==1.14 keras matplotlib ipython"
   - ps: |
       # Appveyor script to install hadoop extra package to run spark on windows
+      # create tools directory outside of Spark directory
+      $up = (Get-Item -Path ".." -Verbose).FullName
+      $tools = "$up\tools"
+      if (!(Test-Path $tools)) {
+          New-Item -ItemType Directory -Force -Path $tools | Out-Null
+      }
       # ========================== Hadoop bin package
       $hadoopVer = "2.6.4"
       $hadoopPath = "$tools\hadoop"
