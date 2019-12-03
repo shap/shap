@@ -17,7 +17,7 @@ environment:
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install tensorflow==1.14 keras matplotlib ipython pyspark"
+  - "%PYTHON%\\python.exe -m pip install tensorflow==1.14 keras matplotlib ipython"
   - ps: |
       # Appveyor script to install hadoop extra package to run spark on windows
       # create tools directory outside of Spark directory
@@ -39,6 +39,10 @@ install:
       # add hadoop bin to environment variables
       $env:HADOOP_HOME = "$hadoopPath/winutils-master/hadoop-$hadoopVer"
       $env:Path += ";$env:HADOOP_HOME\bin"
+      Write-Output "PYTHONPATH=";
+      Write-Output "%PYTHON%\Lib;%PYTHON%\DLLs";
+      $env:PYTHONPATH = "%PYTHON%\Lib;%PYTHON%\DLLs"
+      $env:Path += ";$env:PYTHONPATH"
       Pop-Location
 
 build: off
