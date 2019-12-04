@@ -318,8 +318,21 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                     if vmin == vmax:
                         vmin = np.min(values)
                         vmax = np.max(values)
-                pl.scatter(shaps, np.ones(shap_values.shape[0]) * pos, s=9, cmap=colors.red_blue, vmin=vmin, vmax=vmax,
-                           c=values, alpha=alpha, linewidth=0, zorder=1)
+
+                # plot the nan values in the interaction feature as grey
+                nan_mask = np.isnan(values)
+                pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
+                           color="#777777", vmin=vmin, vmax=vmax, s=9,
+                           alpha=alpha, linewidth=0, zorder=1)
+                # plot the non-nan values colored by the trimmed feature value
+                cvals = values[np.invert(nan_mask)].astype(np.float64)
+                cvals_imp = cvals.copy()
+                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
+                cvals[cvals_imp > vmax] = vmax
+                cvals[cvals_imp < vmin] = vmin
+                pl.scatter(shaps[np.invert(nan_mask)], np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
+                           cmap=colors.red_blue, vmin=vmin, vmax=vmax, s=9,
+                           c=cvals, alpha=alpha, linewidth=0, zorder=1)
                 # smooth_values -= nxp.nanpercentile(smooth_values, 5)
                 # smooth_values /= np.nanpercentile(smooth_values, 95)
                 smooth_values -= vmin
@@ -328,7 +341,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue(smooth_values[i]),
+                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue_no_bounds(smooth_values[i]),
                                         zorder=2)
 
         else:
