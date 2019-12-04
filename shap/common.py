@@ -328,6 +328,35 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
 def sample(X, nsamples=100, random_state=0):
     return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
 
+
+def safe_isinstances(obj, class_path_strs):
+    """
+    Acts as a safe version of isinstance without having to explicitly
+    import packages which may not exist in the users environment.
+
+    Checks if obj is an instance of any of the types specified by class_path_strs.
+
+    Parameters
+    ----------
+    obj: Any
+        Some object you want to test against
+    class_path_str: list
+        A list of strings specifying the full class path
+        Example: `[sklearn.ensemble.forest.RandomForestRegressor, sklearn.ensemble._forest.RandomForestRegressor]`
+
+    Returns
+    --------
+    bool: True if isinstance of any of the class_path_strs and package exists, False otherwise
+    """
+    if not isinstance(class_path_strs, list):
+        raise ValueError("class_path_strs must be a list")
+
+    for class_path_str in class_path_strs:
+        if safe_isinstance(obj,class_path_str):
+            return True
+    return False
+
+
 def safe_isinstance(obj, class_path_str):
     """
     Acts as a safe version of isinstance without having to explicitly
