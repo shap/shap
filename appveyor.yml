@@ -12,7 +12,8 @@ environment:
     - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
-    - PYTHON: "C:\\Python38-x64"
+    #Tensorflow doesn't support python 3.8 yet. https://github.com/tensorflow/tensorflow/issues/33374
+    #- PYTHON: "C:\\Python38-x64"
 
 install:
   # We need wheel installed to build wheels
@@ -39,10 +40,9 @@ install:
       # add hadoop bin to environment variables
       $env:HADOOP_HOME = "$hadoopPath/winutils-master/hadoop-$hadoopVer"
       $env:Path += ";$env:HADOOP_HOME\bin"
-
+      #Set pyspark env to the proper python version
       $env:PYSPARK_DRIVER_PYTHON = "$env:PYTHON\python.exe"
       $env:PYSPARK_PYTHON = "$env:PYTHON\python.exe"
-
       Pop-Location
 
 build: off
