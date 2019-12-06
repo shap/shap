@@ -183,6 +183,10 @@ class TreeExplainer(Explainer):
         attribute of the explainer when it is constant). For models with vector outputs this returns
         a list of such matrices, one for each output.
         """
+        if check_additivity and self.model.model_type == "pyspark":
+            warnings.warn("check_additivity requires to run predictions which is not supported with spark, ignoring." 
+                          " Set check_additivity=False to remove this warning")
+            check_additivity = False
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -236,7 +240,7 @@ class TreeExplainer(Explainer):
                     self.expected_value = phi[0, -1]
                     out = phi[:, :-1]
                 
-                if check_additivity and model_output_vals is not None and self.model.model_type != "pyspark":
+                if check_additivity and model_output_vals is not None:
                     self.assert_additivity(out, model_output_vals)
 
                 return out
@@ -304,7 +308,7 @@ class TreeExplainer(Explainer):
             else:
                 out = [phi[:, :-1, i] for i in range(self.model.n_outputs)]
 
-        if check_additivity and self.model_output == "margin" and self.model.model_type != "pyspark":
+        if check_additivity and self.model_output == "margin":
             self.assert_additivity(out, self.model.predict(X))
 
         return out

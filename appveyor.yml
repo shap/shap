@@ -54,8 +54,6 @@ test_script:
   # to put the Python version you want to use on PATH.
   - "%PYTHON%\\python.exe setup.py test"
 
-before_deploy:
-
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory
   - path: dist\*
