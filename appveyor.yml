@@ -39,10 +39,13 @@ install:
       # add hadoop bin to environment variables
       $env:HADOOP_HOME = "$hadoopPath/winutils-master/hadoop-$hadoopVer"
       $env:Path += ";$env:HADOOP_HOME\bin"
-      Write-Output "PYTHONPATH=";
-      Write-Output "%PYTHON%\Lib;%PYTHON%\DLLs";
-      $env:PYTHONPATH = "%PYTHON%\Lib;%PYTHON%\DLLs"
-      $env:Path += ";$env:PYTHONPATH"
+
+      $env:PYSPARK_DRIVER_PYTHON=$env:PYTHON
+      $env:PYSPARK_PYTHON=$env:PYTHON
+
+      Write-Output "PYSPARK_PYTHON=$env:PYTHON"
+      Write-Output "PYSPARK_PYTHON=$env:PYTHON"
+
       Pop-Location
 
 build: off
