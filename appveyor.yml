@@ -9,7 +9,6 @@ environment:
     # The list here is complete (excluding Python 2.6, which
     # isn't covered by this document) at the time of writing.
 
-    - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
     - PYTHON: "C:\\Python38-x64"
@@ -40,11 +39,8 @@ install:
       $env:HADOOP_HOME = "$hadoopPath/winutils-master/hadoop-$hadoopVer"
       $env:Path += ";$env:HADOOP_HOME\bin"
 
-      $env:PYSPARK_DRIVER_PYTHON=$env:PYTHON
-      $env:PYSPARK_PYTHON=$env:PYTHON
-
-      Write-Output "PYSPARK_PYTHON=$env:PYTHON"
-      Write-Output "PYSPARK_PYTHON=$env:PYTHON"
+      $env:PYSPARK_DRIVER_PYTHON=$env:PYTHON\python.exe
+      $env:PYSPARK_PYTHON=$env:PYTHON\python.exe
 
       Pop-Location
 
