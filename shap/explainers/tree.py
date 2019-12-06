@@ -185,6 +185,10 @@ class TreeExplainer(Explainer):
         attribute of the explainer when it is constant). For models with vector outputs this returns
         a list of such matrices, one for each output.
         """
+        if check_additivity and self.model.model_type == "pyspark":
+            warnings.warn("check_additivity requires to run predictions which is not supported with spark, ignoring." 
+                          " Set check_additivity=False to remove this warning")
+            check_additivity = False
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -811,7 +815,7 @@ class TreeEnsemble:
         if self.model_type == "pyspark":
             import pyspark
             #TODO support predict for pyspark
-            raise NotImplementedError("Predict with pyspark isn't implemented")
+            raise NotImplementedError("Predict with pyspark isn't implemented. Don't run 'interventional' as feature_perturbation.")
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:

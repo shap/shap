@@ -53,7 +53,7 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True):
+def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True, test_spark=True):
     ext_modules = []
     if with_binary:
         ext_modules.append(
@@ -67,6 +67,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         tests_require += ['lightgbm']
     if test_catboost:
         tests_require += ['catboost']
+    if test_spark:
+        tests_require += ['pyspark']
 
     extras_require = {
         'plots': [
@@ -142,4 +144,4 @@ def try_run_setup(**kwargs):
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True)
+    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_spark=True)
