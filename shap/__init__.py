@@ -13,6 +13,7 @@ from .explainers.gradient import GradientExplainer
 from .explainers.linear import LinearExplainer
 from .explainers.partition import PartitionExplainer
 from .explainers.bruteforce import BruteForceExplainer
+from .explainers.permutation import PermutationExplainer
 from .explainers import other
 
 
@@ -35,6 +36,7 @@ if have_matplotlib:
     from .plots.embedding import embedding_plot
     from .plots.partial_dependence import partial_dependence_plot
     from .plots.bar import bar_plot
+    from .plots.waterfall import waterfall_plot
 else:
     summary_plot = unsupported
     decision_plot = unsupported

@@ -104,8 +104,8 @@ class KernelExplainer(Explainer):
         # warn users about large background data sets
         if len(self.data.weights) > 100:
             log.warning("Using " + str(len(self.data.weights)) + " background data samples could cause " +
-                        "slower run times. Consider using shap.kmeans(data, K) to summarize the background " +
-                        "as K weighted samples.")
+                        "slower run times. Consider using shap.sample(data, K) or shap.kmeans(data, K) to " +
+                        "summarize the background as K samples.")
 
         # init our parameters
         self.N = self.data.data.shape[0]
