@@ -485,7 +485,7 @@ class TreeEnsemble:
             self.trees = [Tree(t, data=data, data_missing=data_missing) for t in model["trees"]]
         elif type(model) is list and type(model[0]) == Tree: # old-style direct-load format
             self.trees = model
-        elif safe_isinstances(model, ["sklearn.ensemble.forest.RandomForestRegressor", "sklearn.ensemble._forest.RandomForestRegressor"]):
+        elif safe_isinstances(model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor"]):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -493,7 +493,7 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstances(model, ["sklearn.ensemble.iforest.IsolationForest", "sklearn.ensemble._iforest.IsolationForest"]):
+        elif safe_isinstances(model, ["sklearn.ensemble.IsolationForest", "sklearn.ensemble.iforest.IsolationForest"]):
             self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [IsoTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
@@ -506,7 +506,7 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstances(model, ["sklearn.ensemble.forest.ExtraTreesRegressor", "sklearn.ensemble._forest.ExtraTreesRegressor"]):
+        elif safe_isinstances(model, ["sklearn.ensemble.ExtraTreesRegressor", "sklearn.ensemble.forest.ExtraTreesRegressor"]):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -534,7 +534,7 @@ class TreeEnsemble:
             self.trees = [Tree(model.tree_, normalize=True, data=data, data_missing=data_missing)]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstances(model, ["sklearn.ensemble.forest.RandomForestClassifier", "sklearn.ensemble._forest.RandomForestClassifier"]):
+        elif safe_isinstances(model, ["sklearn.ensemble.RandomForestClassifier", "sklearn.ensemble.forest.RandomForestClassifier"]):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -542,7 +542,7 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstances(model, ["sklearn.ensemble.forest.ExtraTreesClassifier", "sklearn.ensemble._forest.ExtraTreesClassifier"]): # TODO: add unit test for this case
+        elif safe_isinstances(model, ["sklearn.ensemble.ExtraTreesClassifier", "sklearn.ensemble.forest.ExtraTreesClassifier"]): # TODO: add unit test for this case
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
