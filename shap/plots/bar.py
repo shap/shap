@@ -1,4 +1,9 @@
-import matplotlib.pyplot as pl
+import warnings
+try:
+    import matplotlib.pyplot as pl
+except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
+    pass
 from . import labels
 from . import colors
 import numpy as np
