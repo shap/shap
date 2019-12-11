@@ -204,10 +204,14 @@ class TreeExplainer(Explainer):
                     X = xgboost.DMatrix(X)
                 if tree_limit == -1:
                     tree_limit = 0
-                phi = self.model.original_model.predict(
-                    X, ntree_limit=tree_limit, pred_contribs=True,
-                    approx_contribs=approximate, validate_features=False
-                )
+                try:
+                    phi = self.model.original_model.predict(
+                        X, ntree_limit=tree_limit, pred_contribs=True,
+                        approx_contribs=approximate, validate_features=False
+                    )
+                except ValueError as e:
+                        raise ValueError("This reshape error is often caused by passing a bad data matrix to SHAP. " \
+                                         "See https://github.com/slundberg/shap/issues/580") from e
 
                 if check_additivity and self.model_output == "margin":
                     model_output_vals = self.model.original_model.predict(
