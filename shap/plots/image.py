@@ -7,8 +7,32 @@ except ImportError:
     pass
 from . import colors
 
-def image_plot(shap_values, x, labels=None, show=True, width=20, aspect=0.2, hspace=0.2, labelpad=None):
+def image_plot(shap_values, pixel_values, labels=None, width=20, aspect=0.2, hspace=0.2, labelpad=None, show=True):
     """ Plots SHAP values for image inputs.
+
+    Parameters
+    ----------
+    shap_values : [numpy.array]
+        List of arrays of SHAP values. Each array has the shap (# samples x width x height x channels), and the
+        length of the list is equal to the number of model outputs that are being explained.
+
+    pixel_values : numpy.array
+        Matrix of pixel values (# samples x width x height x channels) for each image. It should be the same
+        shape as each array in the shap_values list of arrays.
+
+    labels : list
+        List of names for each of the model outputs that are being explained. This list should be the same length
+        as the shap_values list.
+
+    width : float
+        The width of the produced matplotlib plot.
+
+    labelpad : float
+        How much padding to use around the model output labels.
+
+    show : bool
+        Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
+        to be customized further after it has been created.
     """
 
     multi_output = True
@@ -27,6 +51,7 @@ def image_plot(shap_values, x, labels=None, show=True, width=20, aspect=0.2, hsp
     label_kwargs = {} if labelpad is None else {'pad': labelpad}
 
     # plot our explanations
+    x = pixel_values
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
