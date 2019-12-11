@@ -304,14 +304,14 @@ class TreeExplainer(Explainer):
 
         # note we pull off the last column and keep it as our expected_value
         if self.model.n_outputs == 1:
-            if self.model_output != "logloss":
+            if self.expected_value is None and self.model_output != "logloss":
                 self.expected_value = phi[0, -1, 0]
             if flat_output:
                 out = phi[0, :-1, 0]
             else:
                 out = phi[:, :-1, 0]
         else:
-            if self.model_output != "logloss":
+            if self.expected_value is None and self.model_output != "logloss":
                 self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
                 out = [phi[0, :-1, i] for i in range(self.model.n_outputs)]
