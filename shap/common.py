@@ -383,9 +383,12 @@ def safe_isinstance(obj, class_path_str):
     return False
 
 
-def pretty_num(s):
+def format_value(s, format_str):
     """ Strips trailing zeros and uses a unicode minus sign.
     """
+
+    if type(s) is not str:
+        s = format_str % s
     s = re.sub(r'\.?0+$', '', s)
     if s[0] == "-":
         s = u"\u2212" + s[1:]

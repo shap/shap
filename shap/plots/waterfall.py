@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as pl
 from shap.plots import labels
-from shap.common import safe_isinstance, pretty_num
+from shap.common import safe_isinstance, format_value
 from . import colors
 
 
@@ -77,7 +77,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            yticklabels[rng[i]] = feature_names[order[i]] + " = " + pretty_num("%0.03f" % features[order[i]])
+            yticklabels[rng[i]] = feature_names[order[i]] + " = " + format_value(features[order[i]], "%0.03f")
     
     # add a last grouped feature to represent the impact of all the features we didn't show
     if num_features < len(shap_values):
@@ -122,7 +122,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         )
         
         txt_obj = pl.text(
-            pos_lefts[i] + 0.5*dist, pos_inds[i], pretty_num('%+0.02f' % pos_widths[i]),
+            pos_lefts[i] + 0.5*dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
             fontsize=12
         )
@@ -143,7 +143,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         )
         
         txt_obj = pl.text(
-            neg_lefts[i] + 0.5*dist, neg_inds[i], pretty_num('%+0.02f' % neg_widths[i]),
+            neg_lefts[i] + 0.5*dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
             fontsize=12
         )
@@ -199,7 +199,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     ax2=ax.twiny()
     ax2.set_xlim(xmin,xmax)
     ax2.set_xticks([fx, expected_value])
-    ax2.set_xticklabels([pretty_num("%0.03f" % fx), "$E[f(X)]$"], fontsize=12)
+    ax2.set_xticklabels([format_value(fx, "%0.03f"), "$E[f(X)]$"], fontsize=12)
     ax2.spines['right'].set_visible(False)
     ax2.spines['top'].set_visible(False)
     ax2.spines['left'].set_visible(False)
