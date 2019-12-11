@@ -1,6 +1,11 @@
 import shap
 from ..common import convert_name
-import matplotlib.pyplot as pl
+import warnings
+try:
+    import matplotlib.pyplot as pl
+except ImportError:
+    warnings.warn("matplotlib could not be loaded!")
+    pass
 from mpl_toolkits.mplot3d import Axes3D  
 import numpy as np
 import pandas as pd
