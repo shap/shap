@@ -223,7 +223,11 @@ class TreeExplainer(Explainer):
                     warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
                     phi = np.concatenate((0-phi, phi), axis=-1)
                 if phi.shape[1] != X.shape[1] + 1:
-                    phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
+                    try:
+                        phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
+                    except ValueError as e:
+                        raise ValueError("This reshape error is often caused by passing a bad data matrix to SHAP. " \
+                                         "See https://github.com/slundberg/shap/issues/580") from e
 
             elif self.model.model_type == "catboost": # thanks to the CatBoost team for implementing this...
                 assert not approximate, "approximate=True is not supported for CatBoost models!"
