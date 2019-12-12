@@ -6,7 +6,7 @@ import warnings
 class PartitionExplainer():
     
     def __init__(self, model, masker, clustering):
-        """Uses the Partition SHAP method to explain the output of any function.
+        """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
         hierarchy defines feature coalitions and results in the Owen values from game theory. The
