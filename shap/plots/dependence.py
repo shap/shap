@@ -75,13 +75,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if cmap is None:
         cmap = colors.red_blue
 
-    # create a matplotlib figure, if `ax` hasn't been specified.
-    if not ax:
-        figsize = (7.5, 5) if interaction_index != ind else (6, 5)
-        fig = pl.figure(figsize=figsize)
-        ax = fig.gca()
-    else:
-        fig = ax.get_figure()
+    
 
     # convert from DataFrames if we got any
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
@@ -105,6 +99,20 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         features = np.reshape(features, len(features), 1)
 
     ind = convert_name(ind, shap_values, feature_names)
+
+    # guess what other feature as the stongest interaction with the plotted feature
+    if interaction_index == "auto":
+        interaction_index = approximate_interactions(ind, shap_values, features)[0]
+    interaction_index = convert_name(interaction_index, shap_values, feature_names)
+    categorical_interaction = False
+
+    # create a matplotlib figure, if `ax` hasn't been specified.
+    if not ax:
+        figsize = (7.5, 5) if interaction_index != ind else (6, 5)
+        fig = pl.figure(figsize=figsize)
+        ax = fig.gca()
+    else:
+        fig = ax.get_figure()
 
     # plotting SHAP interaction values
     if len(shap_values.shape) == 3 and len(ind) == 2:
@@ -151,12 +159,6 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if type(feature_names) == str:
         feature_names = [feature_names]
     name = feature_names[ind]
-
-    # guess what other feature as the stongest interaction with the plotted feature
-    if interaction_index == "auto":
-        interaction_index = approximate_interactions(ind, shap_values, features)[0]
-    interaction_index = convert_name(interaction_index, shap_values, feature_names)
-    categorical_interaction = False
 
     # get both the raw and display color values
     color_norm = None
