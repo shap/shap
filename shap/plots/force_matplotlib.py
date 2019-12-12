@@ -115,10 +115,17 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
             text = feature[2]
         else:
             text = feature[2] + ' = ' + feature[1]
+
+       if text_rotation is not 0:
+            va_alignment = 'top'
+       else:
+            va_alignment = 'baseline'
+
         text_out_val = plt.text(start_text - sign * offset_text,
                                 -0.15, text,
                                 fontsize=12, color=colors[0],
                                 horizontalalignment=alignement,
+                                va=va_alignment,
                                 rotation=text_rotation)
         text_out_val.set_bbox(dict(facecolor='none', edgecolor='none'))
         
