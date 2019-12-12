@@ -116,9 +116,9 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
         else:
             text = feature[2] + ' = ' + feature[1]
 
-       if text_rotation is not 0:
+        if text_rotation is not 0:
             va_alignment = 'top'
-       else:
+        else:
             va_alignment = 'baseline'
 
         text_out_val = plt.text(start_text - sign * offset_text,
@@ -193,7 +193,7 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
     
     cm = matplotlib.colors.LinearSegmentedColormap.from_list('cm', colors)
     
-    Z, Z2 = np.meshgrid(np.linspace(0, 10), np.linspace(-10, 10))
+    _, Z2 = np.meshgrid(np.linspace(0, 10), np.linspace(-10, 10))
     im = plt.imshow(Z2, interpolation='quadric', cmap=cm,
                     vmax=0.01, alpha=0.3,
                     origin='lower', extent=extent_shading,
