@@ -245,6 +245,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                     if vmin == vmax:
                         vmin = np.min(values)
                         vmax = np.max(values)
+                if vmin > vmax: # fixes rare numerical precision issues
+                    vmin = vmax
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
 

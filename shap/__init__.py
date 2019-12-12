@@ -2,7 +2,7 @@
 
 import warnings
 
-__version__ = '0.33.0'
+__version__ = '0.33.0-dev'
 
 # explainers
 from .explainers.kernel import KernelExplainer, kmeans
