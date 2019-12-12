@@ -136,7 +136,12 @@ class TreeExplainer(Explainer):
         if self.model_output == "logloss":
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
-            self.expected_value = self.model.predict(self.data, output=model_output).mean(0)
+            try:
+                self.expected_value = self.model.predict(self.data, output=model_output).mean(0)
+            except:
+                raise Exception("Currently TreeExplainer can only handle models with categorical splits when " \
+                                "feature_perturbation=\"tree_path_dependent\" and no background data is passed. Please try again using " \
+                                "shap.TreeExplainer(model, feature_perturbation=\"tree_path_dependent\").")
             if hasattr(self.expected_value, '__len__') and len(self.expected_value) == 1:
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
@@ -968,7 +973,7 @@ class Tree:
                 self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
 
-        elif type(tree) == dict and 'tree_structure' in tree:
+        elif type(tree) == dict and 'tree_structure' in tree: # LightGBM model dump
             start = tree['tree_structure']
             num_parents = tree['num_leaves']-1
             self.children_left = np.empty((2*num_parents+1), dtype=np.int32)
