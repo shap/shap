@@ -19,28 +19,12 @@
 using namespace std;
 
 typedef double tfloat;
+typedef tfloat (* transform_f)(const tfloat margin, const tfloat y);
 
 namespace FEATURE_DEPENDENCE {
     const unsigned independent = 0;
     const unsigned tree_path_dependent = 1;
     const unsigned global_path_dependent = 2;
-}
-
-namespace MODEL_TRANSFORM {
-    const unsigned identity = 0;
-    const unsigned logistic = 1;
-    const unsigned logistic_nlogloss = 2;
-    const unsigned squared_loss = 3;
-}
-
-namespace OBJECTIVE { 
-    const unsigned squared_error = 0;
-    const unsigned logistic = 1;
-}
-
-namespace TRANSFORM { 
-    const unsigned identity = 0;
-    const unsigned logistic = 1;
 }
 
 struct TreeEnsemble {
@@ -146,7 +130,6 @@ struct PathElement {
         feature_index(i), zero_fraction(z), one_fraction(o), pweight(w) {}
 };
 
-
 inline tfloat logistic_transform(const tfloat margin, const tfloat y) {
     return 1 / (1 + exp(-margin));
 }
@@ -159,6 +142,31 @@ inline tfloat squared_loss_transform(const tfloat margin, const tfloat y) {
     return (margin - y) * (margin - y);
 }
 
+namespace MODEL_TRANSFORM {
+    const unsigned identity = 0;
+    const unsigned logistic = 1;
+    const unsigned logistic_nlogloss = 2;
+    const unsigned squared_loss = 3;
+}
+
+inline transform_f get_transform(unsigned model_transform) {
+    transform_f transform = NULL;
+    switch (model_transform) {
+        case MODEL_TRANSFORM::logistic:
+            transform = logistic_transform;
+            break;
+
+        case MODEL_TRANSFORM::logistic_nlogloss:
+            transform = logistic_nlogloss_transform;
+            break;
+
+        case MODEL_TRANSFORM::squared_loss:
+            transform = squared_loss_transform;
+            break;
+    }
+
+    return transform;
+}
 
 inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat *x, const bool *x_missing) {
     const unsigned offset = i * trees.max_nodes;
@@ -189,20 +197,7 @@ inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const Exp
     const bool *x_missing = data.X_missing;
 
     // see what transform (if any) we have
-    tfloat (* transform)(const tfloat margin, const tfloat y) = NULL;
-    switch (model_transform) {
-        case MODEL_TRANSFORM::logistic:
-            transform = logistic_transform;
-            break;
-
-        case MODEL_TRANSFORM::logistic_nlogloss:
-            transform = logistic_nlogloss_transform;
-            break;
-
-        case MODEL_TRANSFORM::squared_loss:
-            transform = squared_loss_transform;
-            break;
-    }
+    transform_f transform = get_transform(model_transform);
 
     for (unsigned i = 0; i < data.num_X; ++i) {
 
@@ -1434,20 +1429,7 @@ void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, 
                      const int feature_dependence, unsigned model_transform, bool interactions) {
 
     // see what transform (if any) we have
-    tfloat (* transform)(const tfloat margin, const tfloat y) = NULL;
-    switch (model_transform) {
-        case MODEL_TRANSFORM::logistic:
-            transform = logistic_transform;
-            break;
-
-        case MODEL_TRANSFORM::logistic_nlogloss:
-            transform = logistic_nlogloss_transform;
-            break;
-
-        case MODEL_TRANSFORM::squared_loss:
-            transform = squared_loss_transform;
-            break;
-    }
+    transform_f transform = get_transform(model_transform);
 
     // dispatch to the correct algorithm handler
     switch (feature_dependence) {
