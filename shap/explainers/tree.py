@@ -432,10 +432,10 @@ class TreeExplainer(Explainer):
         if type(phi) is list:
             for i in range(len(phi)):
                 val = self.expected_value[i] + phi[i].sum(-1)
-                assert np.max(np.abs(val - model_output[:,i]) / (np.abs(val) + 1e-4)) < 1e-2, err_msg
+                assert np.max(np.abs(val - model_output[:,i]) / (np.abs(val) + 1e-2)) < 1e-2, err_msg
         else:
             val = self.expected_value + phi.sum(-1)
-            assert np.max(np.abs(val - model_output) / (np.abs(val) + 1e-4)) < 1e-2, err_msg
+            assert np.max(np.abs(val - model_output) / (np.abs(val) + 1e-2)) < 1e-2, err_msg
 
 
 class TreeEnsemble:
