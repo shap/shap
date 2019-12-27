@@ -127,7 +127,7 @@ class PyTorchDeepExplainer(Explainer):
                 grads.append(grad)
             return grads
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=False):
 
         # X ~ self.model_input
         # X_data ~ self.data
