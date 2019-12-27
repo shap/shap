@@ -38,6 +38,13 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
     """
+
+    if (type(expected_value) == np.ndarray or type(expected_value) == list):
+        raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first " \
+                        "parameter, but you have passed an array as the first parameter! " \
+                        "Try shap.waterfall_plot(explainer.expected_value, shap_values[0], X[0]) or " \
+                        "for multi-output models try " \
+                        "shap.waterfall_plot(explainer.expected_value[0], shap_values[0][0], X[0]).")
     
     # unwrap pandas series
     if safe_isinstance(features, "pandas.core.series.Series"):
@@ -230,10 +237,10 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     #     label.set_transform(label.get_transform() + offset)
 
     ax3.set_xticklabels(["$f(x)$","$ = "+format_value(fx, "%0.03f")+"$"], fontsize=12, ha="left")
-    labels = ax3.xaxis.get_majorticklabels()
-    labels[0].set_transform(labels[0].get_transform() + matplotlib.transforms.ScaledTranslation(-10/72., 0, fig.dpi_scale_trans))
-    labels[1].set_transform(labels[1].get_transform() + matplotlib.transforms.ScaledTranslation(12/72., 0, fig.dpi_scale_trans))
-    labels[1].set_color("#999999")
+    tick_labels = ax3.xaxis.get_majorticklabels()
+    tick_labels[0].set_transform(tick_labels[0].get_transform() + matplotlib.transforms.ScaledTranslation(-10/72., 0, fig.dpi_scale_trans))
+    tick_labels[1].set_transform(tick_labels[1].get_transform() + matplotlib.transforms.ScaledTranslation(12/72., 0, fig.dpi_scale_trans))
+    tick_labels[1].set_color("#999999")
     ax3.spines['right'].set_visible(False)
     ax3.spines['top'].set_visible(False)
     ax3.spines['left'].set_visible(False)
