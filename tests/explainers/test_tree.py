@@ -377,6 +377,7 @@ def test_lightgbm():
 def test_catboost():
     try:
         import catboost
+        from catboost.datasets import amazon
     except:
         print("Skipping test_catboost!")
         return
@@ -397,6 +398,22 @@ def test_catboost():
 
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
         "SHAP values don't sum to model output!"
+    
+    train_df, _ = amazon()
+    ix = 100
+    X_train = train_df.drop('ACTION', axis=1)[:ix]
+    y_train = train_df.ACTION[:ix]
+    X_val = train_df.drop('ACTION', axis=1)[ix:ix+20]
+    y_val = train_df.ACTION[ix:ix+20]
+    model = catboost.CatBoostClassifier(iterations=100, learning_rate=0.5, random_seed=12)
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=(X_val, y_val),        
+        verbose=False,
+        plot=False
+    )
+    shap.TreeExplainer(model)
 
 def test_lightgbm_constant_prediction():
     # note: this test used to fail with lightgbm 2.2.1 with error:
