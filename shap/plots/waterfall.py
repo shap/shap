@@ -2,6 +2,7 @@ import numpy as np
 import warnings
 try:
     import matplotlib.pyplot as pl
+    import matplotlib
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
@@ -90,8 +91,8 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         remaining_impact = expected_value - loc
         if remaining_impact < 0:
             pos_inds.append(0)
-            pos_widths.append(remaining_impact)
-            pos_lefts.append(loc)
+            pos_widths.append(-remaining_impact)
+            pos_lefts.append(loc + remaining_impact)
             c = colors.red_rgb
         else:
             neg_inds.append(0)
@@ -187,15 +188,18 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         if v < min_diff:
             min_diff = v
             min_ind = i
+    # print("popping", xticks[min_ind], "at ind", min_ind)
     xticks.pop(min_ind)
-    min_ind = 0
-    min_diff = 1e10
-    for i in range(len(xticks)):
-        v = abs(xticks[i] - fx)
-        if v < min_diff:
-            min_diff = v
-            min_ind = i
-    xticks.pop(min_ind)
+    # min_ind = 0
+    # min_diff = 1e10
+    # for i in range(len(xticks)):
+    #     v = abs(xticks[i] - fx)
+    #     if v < min_diff:
+    #         min_diff = v
+    #         min_ind = i
+    # if min_diff < abs(fx - expected_value):
+    #     xticks.pop(min_ind)
+
     ax.set_xticks(xticks)
     ax.tick_params(labelsize=13)
     ax.set_xlim(xmin,xmax)
@@ -203,16 +207,33 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     # draw the f(x) and E[f(X)] ticks
     ax2=ax.twiny()
     ax2.set_xlim(xmin,xmax)
-    ax2.set_xticks([fx, expected_value])
-    ax2.set_xticklabels([format_value(fx, "%0.03f"), "$E[f(X)]$"], fontsize=12)
+    # if min_diff < abs(fx - expected_value):
+    #     ax2.set_xticks([fx, expected_value])
+    #     ax2.set_xticklabels([format_value(fx, "%0.03f"), "$E[f(X)]$"], fontsize=12)
+    # else:
+    ax2.set_xticks([expected_value])
+    ax2.set_xticklabels(["$E[f(X)]$"], fontsize=12)
     ax2.spines['right'].set_visible(False)
     ax2.spines['top'].set_visible(False)
     ax2.spines['left'].set_visible(False)
 
     ax3=ax2.twiny()
     ax3.set_xlim(xmin,xmax)
-    ax3.set_xticks([expected_value + shap_values.sum()])
-    ax3.set_xticklabels(["$f(x)$"], fontsize=12)
+    ax3.set_xticks([expected_value + shap_values.sum()] * 2)
+    
+    # Create offset transform by 5 points in x direction
+    # dx = -10/72.; dy = 0/72. 
+    # offset = matplotlib.transforms.ScaledTranslation(dx, dy, fig.dpi_scale_trans)
+
+    # # apply offset transform to all x ticklabels.
+    # for label in ax3.xaxis.get_majorticklabels():
+    #     label.set_transform(label.get_transform() + offset)
+
+    ax3.set_xticklabels(["$f(x)$","$ = "+format_value(fx, "%0.03f")+"$"], fontsize=12, ha="left")
+    labels = ax3.xaxis.get_majorticklabels()
+    labels[0].set_transform(labels[0].get_transform() + matplotlib.transforms.ScaledTranslation(-10/72., 0, fig.dpi_scale_trans))
+    labels[1].set_transform(labels[1].get_transform() + matplotlib.transforms.ScaledTranslation(12/72., 0, fig.dpi_scale_trans))
+    labels[1].set_color("#999999")
     ax3.spines['right'].set_visible(False)
     ax3.spines['top'].set_visible(False)
     ax3.spines['left'].set_visible(False)
