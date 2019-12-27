@@ -243,7 +243,11 @@ class TreeExplainer(Explainer):
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
                 if type(X) != catboost.Pool:
-                    X = catboost.Pool(X)
+                    try:
+                        X = catboost.Pool(X)
+                    except:
+                        raise Exception("Failed to wrap X as catboost.Pool(X)! Perhaps you have categorical features? If so " \
+                                        "pass a catboost.Pool object directly and not a DataFrame or array.")
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
 
             # note we pull off the last column and keep it as our expected_value
@@ -736,8 +740,11 @@ class TreeEnsemble:
             self.model_type = "catboost"
             self.original_model = model
             self.input_dtype = np.float32
-            cb_loader = CatBoostTreeModelLoader(model)
-            self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
+            try:
+                cb_loader = CatBoostTreeModelLoader(model)
+                self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
+            except:
+                self.trees = None # we get here because the cext can't handle categorical splits yet
             self.tree_output = "log_odds"
             self.objective = "binary_crossentropy"
         elif safe_isinstance(model, "catboost.core.CatBoost"):
