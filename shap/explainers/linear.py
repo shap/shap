@@ -27,28 +27,34 @@ class LinearExplainer(Explainer):
     nsamples : int
         Number of samples to use when estimating the transformation matrix used to account for
         feature correlations.
-    feature_dependence : "independent" (default) or "correlation"
+    feature_perturbation : "interventional" (default) or "correlation_dependent"
         There are two ways we might want to compute SHAP values, either the full conditional SHAP
-        values or the independent SHAP values. For independent SHAP values we break any
+        values or the interventional SHAP values. For interventional SHAP values we break any
         dependence structure between features in the model and so uncover how the model would behave if we
         intervened and changed some of the inputs. For the full conditional SHAP values we respect
         the correlations among the input features, so if the model depends on one input but that
         input is correlated with another input, then both get some credit for the model's behavior. The
-        independent option stays "true to the model" meaning it will only give credit to features that are
+        interventional option stays "true to the model" meaning it will only give credit to features that are
         actually used by the model, while the correlation option stays "true to the data" in the sense that
         it only considers how the model would behave when respecting the correlations in the input data.
-        For sparse case only independent option is supported.
+        For sparse case only interventional option is supported.
     """
 
-    def __init__(self, model, data, nsamples=1000, feature_dependence=None):
+    def __init__(self, model, data, nsamples=1000, feature_perturbation=None, **kwargs):
         self.nsamples = nsamples
-        if feature_dependence == "interventional":
-            warnings.warn('The option feature_dependence="interventional" is has been renamed to feature_dependence="independent"!')
-            feature_dependence = "independent"
-        elif feature_dependence is None:
-            warnings.warn('The default value for feature_dependence has been changed to "independent"!')
-            feature_dependence = "independent"
-        self.feature_dependence = feature_dependence
+        if 'feature_dependence' in kwargs:
+            warnings.warn('The option feature_dependence has been renamed to feature_perturbation!')
+            feature_perturbation = kwargs["feature_dependence"]
+        if feature_perturbation == "independent":
+            warnings.warn('The option feature_perturbation="independent" is has been renamed to feature_perturbation="interventional"!')
+            feature_perturbation = "interventional"
+        elif feature_perturbation == "correlation":
+            warnings.warn('The option feature_perturbation="correlation" is has been renamed to feature_perturbation="correlation_dependent"!')
+            feature_perturbation = "correlation_dependent"
+        elif feature_perturbation is None:
+            #warnings.warn('The default value for feature_perturbation has been changed to "interventional"!')
+            feature_perturbation = "interventional"
+        self.feature_perturbation = feature_perturbation
 
         # raw coefficents
         if type(model) == tuple and len(model) == 2:
@@ -83,11 +89,11 @@ class LinearExplainer(Explainer):
         else:
             if sp.sparse.issparse(data):
                 self.mean = np.array(np.mean(data, 0))[0]
-                if feature_dependence != "independent":
-                    raise Exception("Only feature_dependence = 'independent' is supported for sparse data")
+                if feature_perturbation != "interventional":
+                    raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
             else:
                 self.mean = np.array(np.mean(data, 0)).flatten() # assumes it is an array
-                if feature_dependence == "correlation":
+                if feature_perturbation == "correlation_dependent":
                     self.cov = np.cov(data, rowvar=False)
         #print(self.coef, self.mean.flatten(), self.intercept)
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
@@ -108,7 +114,7 @@ class LinearExplainer(Explainer):
         self.M = len(self.mean)
 
         # if needed, estimate the transform matrices
-        if feature_dependence == "correlation":
+        if feature_perturbation == "correlation_dependent":
             self.valid_inds = np.where(np.diag(self.cov) > 1e-8)[0]
             self.mean = self.mean[self.valid_inds]
             self.cov = self.cov[:,self.valid_inds][self.valid_inds,:]
@@ -128,11 +134,11 @@ class LinearExplainer(Explainer):
             mean_transform, x_transform = self._estimate_transforms(nsamples)
             self.mean_transformed = np.matmul(mean_transform, self.mean)
             self.x_transform = x_transform
-        elif feature_dependence == "independent":
+        elif feature_perturbation == "interventional":
             if nsamples != 1000:
-                warnings.warn("Setting nsamples has no effect when feature_dependence = 'independent'!")
+                warnings.warn("Setting nsamples has no effect when feature_perturbation = 'interventional'!")
         else:
-            raise Exception("Unknown type of feature_dependence provided: " + feature_dependence)
+            raise Exception("Unknown type of feature_perturbation provided: " + feature_perturbation)
 
     def _estimate_transforms(self, nsamples):
         """ Uses block matrix inversion identities to quickly estimate transforms.
@@ -223,9 +229,9 @@ class LinearExplainer(Explainer):
         #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
-        if self.feature_dependence == "correlation":
+        if self.feature_perturbation == "correlation_dependent":
             if sp.sparse.issparse(X):
-                raise Exception("Only feature_dependence = 'independent' is supported for sparse data")
+                raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
@@ -234,7 +240,7 @@ class LinearExplainer(Explainer):
 
             return full_phi
 
-        elif self.feature_dependence == "independent":
+        elif self.feature_perturbation == "interventional":
             if sp.sparse.issparse(X):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
