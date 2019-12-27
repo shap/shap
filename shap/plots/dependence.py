@@ -75,7 +75,9 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if cmap is None:
         cmap = colors.red_blue
 
-    
+    if type(shap_values) is list:
+        raise TypeError("The passed shap_values are a list not an array! If you have a list of explanations try " \
+                        "passing shap_values[0] instead to explain the first output class of a multi-output model.")
 
     # convert from DataFrames if we got any
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
