@@ -1344,7 +1344,7 @@ class CatBoostTreeModelLoader:
         self.loaded_cb_model = json.load(open("cb_model.json", "r"))
 
         # load the CatBoost oblivious trees specific parameters
-        self.num_trees = self.loaded_cb_model['model_info']['params']['boosting_options']['iterations']
+        self.num_trees = len(self.loaded_cb_model['oblivious_trees'])
         self.max_depth = self.loaded_cb_model['model_info']['params']['tree_learner_options']['depth']
 
     def get_trees(self, data=None, data_missing=None):
