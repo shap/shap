@@ -14,6 +14,7 @@ from .explainers.linear import LinearExplainer
 from .explainers.partition import PartitionExplainer
 from .explainers.bruteforce import BruteForceExplainer
 from .explainers.permutation import PermutationExplainer
+from .explainers.additive import AdditiveExplainer
 from .explainers import other
 
 

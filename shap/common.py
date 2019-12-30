@@ -326,7 +326,10 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
 
 
 def sample(X, nsamples=100, random_state=0):
-    return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
+    if nsamples >= X.shape[0]:
+        return X
+    else:
+        return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
 
 def safe_isinstance(obj, class_path_str):
     """
