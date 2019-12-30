@@ -1,5 +1,5 @@
 import shap
-from ..common import convert_name
+from ..common import convert_name, sample
 import warnings
 try:
     import matplotlib.pyplot as pl
@@ -30,11 +30,10 @@ def compute_bounds(xmin, xmax, xv):
     return (xmin, xmax)
 
 def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="percentile(100)",
-                            npoints=None, nsamples=100, feature_names=None, hist=True,
+                            npoints=None, feature_names=None, hist=True, model_expected_value=False,
+                            feature_expected_value=False, shap_values=None, shap_value_features=None,
                             ylabel=None, ice=False, opacity=None, linewidth=None, show=True):
     """ A basic partial dependence plot function.
-
-
     """
     
     # convert from DataFrames if we got any
@@ -115,6 +114,50 @@ def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="pe
         ax2.yaxis.set_ticks([])
         ax2.spines['right'].set_visible(False)
         ax2.spines['top'].set_visible(False)
+
+
+        if feature_expected_value is not False:
+            ax3=ax2.twiny()
+            ax3.set_xlim(xmin,xmax)
+            mval = xv.mean()
+            ax3.set_xticks([mval])
+            ax3.set_xticklabels(["E["+str(feature_names[ind])+"]"])
+            ax3.spines['right'].set_visible(False)
+            ax3.spines['top'].set_visible(False)
+            ax3.tick_params(length=0, labelsize=11)
+            ax1.axvline(mval, color="#999999", zorder=-1, linestyle="--", linewidth=1)
+        
+        if model_expected_value is not False:
+            if model_expected_value is True:
+                model_expected_value = model(features).mean()
+            ymin,ymax = ax1.get_ylim()
+            ax4=ax2.twinx()
+            ax4.set_ylim(ymin,ymax)
+            ax4.set_yticks([model_expected_value])
+            ax4.set_yticklabels(["E[f(x)]"])
+            ax4.spines['right'].set_visible(False)
+            ax4.spines['top'].set_visible(False)
+            ax4.tick_params(length=0, labelsize=11)
+            ax1.axhline(model_expected_value, color="#999999", zorder=-1, linestyle="--", linewidth=1)
+
+        if shap_values is not None and shap_value_features is not None:
+            sample_ind = 18
+            vals = shap_values[:, ind]
+            if type(model_expected_value) is bool:
+                model_expected_value = model(features).mean()
+            if str(type(shap_value_features)).endswith("'pandas.core.frame.DataFrame'>"):
+                shap_value_features = shap_value_features.values
+            markerline, stemlines, baseline = ax1.stem(
+                shap_value_features[:,ind], model_expected_value + vals,
+                bottom=model_expected_value, 
+                markerfmt="o", basefmt=" ", use_line_collection=True
+            )
+            stemlines.set_edgecolors([shap.plots.colors.red_rgb if v > 0 else shap.plots.colors.blue_rgb for v in vals])
+            pl.setp(stemlines, 'zorder', -1)
+            pl.setp(stemlines, 'linewidth', 2)
+            pl.setp(markerline, 'color', "black")
+            pl.setp(markerline, 'markersize', 4)
+
         if show:
             pl.show()
         else:
