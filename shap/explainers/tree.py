@@ -191,7 +191,7 @@ class TreeExplainer(Explainer):
         a list of such matrices, one for each output.
         """
         if check_additivity and self.model.model_type == "pyspark":
-            warnings.warn("check_additivity requires to run predictions which is not supported with spark, ignoring." 
+            warnings.warn("check_additivity requires us to run predictions which is not supported with spark, ignoring." 
                           " Set check_additivity=False to remove this warning")
             check_additivity = False
 
@@ -430,16 +430,24 @@ class TreeExplainer(Explainer):
         return out
 
     def assert_additivity(self, phi, model_output):
-        err_msg = "Additivity check failed in TreeExplainer! Please report this on GitHub."
-        if self.feature_perturbation != "interventional":
-            err_msg += " Consider retrying with the feature_perturbation='interventional' option."
+
+        def check_sum(sum_val, model_output):
+            diff = np.abs(sum_val - model_output)
+            if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
+                ind = np.argmax(diff)
+                err_msg = "Additivity check failed in TreeExplainer! Please report this on GitHub."
+                if self.feature_perturbation != "interventional":
+                    err_msg += " Consider retrying with the feature_perturbation='interventional' option."
+                err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
+                           " was %f, while the model output was %f. If this difference is acceptable" \
+                           " you can set check_additivity=False to disable this check." % (sum_val[ind], model_output[ind])
+                raise Exception(err_msg)
+
         if type(phi) is list:
             for i in range(len(phi)):
-                val = self.expected_value[i] + phi[i].sum(-1)
-                assert np.max(np.abs(val - model_output[:,i]) / (np.abs(val) + 1e-2)) < 1e-2, err_msg
+                check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:,i])
         else:
-            val = self.expected_value + phi.sum(-1)
-            assert np.max(np.abs(val - model_output) / (np.abs(val) + 1e-2)) < 1e-2, err_msg
+            check_sum(self.expected_value + phi.sum(-1), model_output)
 
 
 class TreeEnsemble:
