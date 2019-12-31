@@ -208,8 +208,12 @@ class TFDeepExplainer(Explainer):
             [out_op], tensor_blacklist,
             dependence_breakers
         )
+        start_ops = []
+        for minput in model_inputs:
+            for op in minput.consumers():
+                start_ops.append(op)
         self.between_ops = forward_walk_ops(
-            [op for op in t_in.consumers() for t_in in model_inputs],
+            start_ops,
             tensor_blacklist, dependence_breakers,
             within_ops=back_ops
         )
