@@ -410,7 +410,10 @@ class TFDeepExplainer(Explainer):
             for n in op_handlers:
                 if n in reg:
                     reg[n]["type"] = self.orig_grads[n]
-        return [v.numpy() for v in out]
+        if not tf.executing_eagerly():
+            return out
+        else:
+            return [v.numpy() for v in out]
 
 def tensors_blocked_by_false(ops):
     """ Follows a set of ops assuming their value is False and find blocked Switch paths.
