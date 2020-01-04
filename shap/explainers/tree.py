@@ -765,6 +765,16 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
+        elif safe_isinstance(model, "ngboost.ngboost.NGBoost") \
+                    or safe_isinstance(model, "ngboost.api.NGBRegressor") \
+                    or safe_isinstance(model, "ngboost.api.NGBClassifier"):
+            assert hasattr(model,"shap_trees"), "Please create TreeExplainer from NGBoost.get_shap_tree_explainer method!"
+            self.internal_dtype = model.shap_trees[0].tree_.value.dtype.type
+            self.input_dtype = np.float32
+            scaling = - model.learning_rate * np.array(model.scalings) # output is weighted average of trees
+            self.trees = [Tree(e.tree_, scaling=s, data=data, data_missing=data_missing) for e,s in zip(model.shap_trees,scaling)]
+            self.objective = objective_name_map.get(model.shap_trees[0].criterion, None)
+            self.tree_output = "raw_value"
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
