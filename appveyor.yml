@@ -18,7 +18,7 @@ environment:
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install tensorflow==1.14 keras matplotlib ipython"
+  - "%PYTHON%\\python.exe -m pip install tensorflow matplotlib ipython"
   - ps: |
       # Appveyor script to install hadoop extra package to run spark on windows
       # create tools directory outside of Spark directory

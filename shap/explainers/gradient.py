@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
-from .explainer import Explainer
+from shap.explainers.explainer import Explainer
+from shap.explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
 from distutils.version import LooseVersion
 keras = None
 tf = None
@@ -125,20 +126,8 @@ class _TFGradientExplainer(Explainer):
 
         # determine the model inputs and outputs
         self.model = model
-        if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
-            self.model_inputs = model.inputs
-            self.model_output = model.layers[-1].output
-        elif str(type(model)).endswith("keras.models.Sequential'>"):
-            self.model_inputs = model.inputs
-            self.model_output = model.layers[-1].output
-        elif str(type(model)).endswith("keras.engine.training.Model'>"):
-            self.model_inputs = model.inputs
-            self.model_output = model.layers[-1].output
-        elif str(type(model)).endswith("tuple'>"):
-            self.model_inputs = model[0]
-            self.model_output = model[1]
-        else:
-            assert False, str(type(model)) + " is not currently a supported model type!"
+        self.model_inputs = _get_model_inputs(model)
+        self.model_output = _get_model_output(model)
         assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
@@ -159,25 +148,11 @@ class _TFGradientExplainer(Explainer):
         self.local_smoothing = local_smoothing
 
         if not tf.executing_eagerly():
-            # if we are not given a session find a default session
-            if session is None:
-                # if keras is installed and already has a session then use it
-                ksess = None
-                if keras is not None:
-                    if hasattr(keras.backend.tensorflow_backend, "_SESSION"):
-                        ksess = keras.backend.tensorflow_backend._SESSION
-                    elif hasattr(keras.backend.tensorflow_backend.tf_keras_backend._SESSION, "session"):
-                        ksess = keras.backend.tensorflow_backend.tf_keras_backend._SESSION.session
-                if keras is not None and ksess is not None:
-                    session = keras.backend.get_session()
-                elif hasattr(tf.keras.backend, "get_session"):
-                    session = tf.keras.backend.get_session()
-        
-            self.session = tf.compat.v1.get_default_session() if session is None else session
-
+            self.session = _get_session(session)
+            self.graph = _get_graph(self)
             # see if there is a keras operation we need to save
             self.keras_phase_placeholder = None
-            for op in self.session.graph.get_operations():
+            for op in self.graph.get_operations():
                 if 'keras_learning_phase' in op.name:
                     self.keras_phase_placeholder = op.outputs[0]
 
