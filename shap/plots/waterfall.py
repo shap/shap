@@ -46,6 +46,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         to be customized further after it has been created.
     """
 
+    # make sure we only have a single output to explain
     if (type(expected_value) == np.ndarray or type(expected_value) == list):
         raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first " \
                         "parameter, but you have passed an array as the first parameter! " \
@@ -53,6 +54,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
                         "for multi-output models try " \
                         "shap.waterfall_plot(explainer.expected_value[0], shap_values[0][0], X[0]).")
 
+    # make sure we only have a single explanation to plot
     if len(shap_values.shape) == 2:
         raise Exception("The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
     
@@ -61,12 +63,14 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
-        
+
+    # fallback feature names
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(len(shap_values))])
-        
+    
+    # init variables we use for tracking the plot locations
     num_features = min(max_display, len(shap_values))
-    row_height=0.5
+    row_height = 0.5
     rng = range(num_features - 1, -1, -1)
     order = np.argsort(-np.abs(shap_values))
     pos_lefts = []
@@ -78,12 +82,16 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     loc = expected_value + shap_values.sum()
     yticklabels = ["" for i in range(num_features + 1)]
     
+    # size the plot based on how many features we are plotting
     pl.gcf().set_size_inches(8, num_features * row_height + 1.5)
 
+    # see how many individual (vs. grouped at the end) features we are plotting
     if num_features == len(shap_values):
         num_individual = num_features
     else:
         num_individual = num_features - 1
+
+    # compute the locations of the individual features and plot the dashed connecting lines
     for i in range(num_individual):
         sval = shap_values[order[i]]
         loc -= sval
@@ -121,7 +129,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     pl.barh(pos_inds, np.array(pos_widths)*1.001, left=pos_lefts, color=colors.red_rgb, alpha=0)
     pl.barh(neg_inds, np.array(neg_widths)*1.001, left=neg_lefts, color=colors.blue_rgb, alpha=0)
     
-    
+    # define variable we need for plotting the arrows
     head_length = 0.08
     bar_width = 0.8
     xlen = pl.xlim()[1] - pl.xlim()[0]
@@ -194,7 +202,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     pl.gca().spines['left'].set_visible(False)
     pl.xlabel("Model output", fontsize=12)
     
-    # remove the ticks that are closest to f(x) and E[f(X)]
+    # remove the x tick mark that is closest to E[f(X)]
     xmin,xmax = ax.get_xlim()
     xticks = ax.get_xticks()
     xticks = list(xticks)
@@ -205,23 +213,12 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         if v < min_diff:
             min_diff = v
             min_ind = i
-    # print("popping", xticks[min_ind], "at ind", min_ind)
     xticks.pop(min_ind)
-    # min_ind = 0
-    # min_diff = 1e10
-    # for i in range(len(xticks)):
-    #     v = abs(xticks[i] - fx)
-    #     if v < min_diff:
-    #         min_diff = v
-    #         min_ind = i
-    # if min_diff < abs(fx - expected_value):
-    #     xticks.pop(min_ind)
-
     ax.set_xticks(xticks)
     ax.tick_params(labelsize=13)
     ax.set_xlim(xmin,xmax)
 
-    # draw the f(x) and E[f(X)] ticks
+    # draw the E[f(X)] tick mark
     ax2=ax.twiny()
     ax2.set_xlim(xmin,xmax)
     # if min_diff < abs(fx - expected_value):
@@ -237,15 +234,8 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     ax3=ax2.twiny()
     ax3.set_xlim(xmin,xmax)
     ax3.set_xticks([expected_value + shap_values.sum()] * 2)
-    
-    # Create offset transform by 5 points in x direction
-    # dx = -10/72.; dy = 0/72. 
-    # offset = matplotlib.transforms.ScaledTranslation(dx, dy, fig.dpi_scale_trans)
 
-    # # apply offset transform to all x ticklabels.
-    # for label in ax3.xaxis.get_majorticklabels():
-    #     label.set_transform(label.get_transform() + offset)
-
+    # draw the f(x) tick mark
     ax3.set_xticklabels(["$f(x)$","$ = "+format_value(fx, "%0.03f")+"$"], fontsize=12, ha="left")
     tick_labels = ax3.xaxis.get_majorticklabels()
     tick_labels[0].set_transform(tick_labels[0].get_transform() + matplotlib.transforms.ScaledTranslation(-10/72., 0, fig.dpi_scale_trans))
@@ -254,7 +244,6 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     ax3.spines['right'].set_visible(False)
     ax3.spines['top'].set_visible(False)
     ax3.spines['left'].set_visible(False)
-    
     
     if show:
         pl.show()
