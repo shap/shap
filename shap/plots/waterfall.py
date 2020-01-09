@@ -12,7 +12,14 @@ from . import colors
 
 
 def waterfall_plot(expected_value, shap_values, features=None, feature_names=None, max_display=10, show=True):
-    """ Plots an explantion of a single prediction as a waterfall.
+    """ Plots an explantion of a single prediction as a waterfall plot.
+
+    The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
+    output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature
+    move the model output from our prior expectation under the background data distribution, to the final model
+    prediction given the evidence of all the features. Features are sorted by the magnitude of their SHAP values
+    with the smallest magnitude features grouped together at the bottom of the plot when the number of features
+    in the models exceeds the max_display parameter.
     
     Parameters
     ----------
@@ -45,6 +52,9 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
                         "Try shap.waterfall_plot(explainer.expected_value, shap_values[0], X[0]) or " \
                         "for multi-output models try " \
                         "shap.waterfall_plot(explainer.expected_value[0], shap_values[0][0], X[0]).")
+
+    if len(shap_values.shape) == 2:
+        raise Exception("The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
     
     # unwrap pandas series
     if safe_isinstance(features, "pandas.core.series.Series"):
