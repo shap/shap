@@ -2,6 +2,7 @@ import numpy as np
 import warnings
 from shap.explainers.explainer import Explainer
 from distutils.version import LooseVersion
+from shap.explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
 keras = None
 tf = None
 tf_ops = None
@@ -48,7 +49,7 @@ class TFDeepExplainer(Explainer):
 
         Parameters
         ----------
-        model : keras.Model or (input : [tf.Operation], output : tf.Operation)
+        model : tf.keras.Model or (input : [tf.Operation], output : tf.Operation)
             A keras model object or a pair of TensorFlow operations (or a list and an op) that
             specifies the input and output of the model to be explained. Note that SHAP values
             are specific to a single output value, so you get an explanation for each element of
@@ -88,30 +89,14 @@ class TFDeepExplainer(Explainer):
         if keras is None:
             try:
                 import keras
-                if LooseVersion(keras.__version__) < LooseVersion("2.1.0"):
-                    warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
+                warnings.warn("keras is no longer supported, please use tf.keras instead.")
             except:
                 pass
 
         self.model = model
         # determine the model inputs and outputs
-        if str(type(model)).endswith("keras.engine.sequential.Sequential'>"):
-            self.model_inputs = model.inputs
-            self.model_output = self._get_model_output(model)
-        elif str(type(model)).endswith("keras.models.Sequential'>"):
-            self.model_inputs = model.inputs
-            self.model_output = self._get_model_output(model)
-        elif str(type(model)).endswith("keras.engine.training.Model'>"):
-            self.model_inputs = model.inputs
-            self.model_output = self._get_model_output(model)
-        elif str(type(model)).endswith("tuple'>"):
-            self.model_inputs = model[0]
-            self.model_output = model[1]
-        elif isinstance(model, tf.keras.Model):
-            self.model_inputs = model.inputs
-            self.model_output = self._get_model_output(model)
-        else:
-            assert False, str(type(model)) + " is not currently a supported model type!"
+        self.model_inputs = _get_model_inputs(model)
+        self.model_output = _get_model_output(model)
         assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
@@ -130,27 +115,11 @@ class TFDeepExplainer(Explainer):
         
         self._vinputs = {} # used to track what op inputs depends on the model inputs
         self.orig_grads = {}
-        
+
         if not tf.executing_eagerly():
-            # if we are not given a session find a default session
-            if session is None:
-                # if keras is installed and already has a session then use it
-                ksess = None
-                if hasattr(keras.backend.tensorflow_backend, "_SESSION"):
-                    ksess = keras.backend.tensorflow_backend._SESSION
-                elif hasattr(keras.backend.tensorflow_backend.tf_keras_backend._SESSION, "session"):
-                    ksess = keras.backend.tensorflow_backend.tf_keras_backend._SESSION.session
-                if keras is not None and ksess is not None:
-                    session = keras.backend.get_session()
-                else:
-                    try:
-                        session = tf.compat.v1.keras.backend.get_session()
-                    except:
-                        session = tf.keras.backend.get_session()
-            self.session = tf.get_default_session() if session is None else session
-            self.graph = self.session.graph
-        else:
-            self.graph = self.model_output.graph
+            self.session = _get_session(session)
+
+        self.graph = _get_graph(self)
 
         # if no learning phase flags were given we go looking for them
         # ...this will catch the one that keras uses
@@ -342,8 +311,7 @@ class TFDeepExplainer(Explainer):
                     diffs = model_output[:, l] - self.expected_value[l]
                     for i in range(len(output_phis[l])):
                         diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
-                
-                assert np.abs(diffs).max() < 1e-4, "Explanations do not sum up to the model's output! Please post as a github issue."
+                assert np.abs(diffs).max() < 1e-2, "Explanations do not sum up to the model's output! Please post as a github issue."
         
         if not self.multi_output:
             return output_phis[0]
@@ -387,6 +355,12 @@ class TFDeepExplainer(Explainer):
         # replace the gradients for all the non-linear activations
         # we do this by hacking our way into the registry (TODO: find a public API for this if it exists)
         reg = tf_ops._gradient_registry._registry
+        ops_not_in_registry = ['TensorListReserve']
+        # NOTE: location_tag taken from tensorflow source for None type ops
+        location_tag = ("UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN")
+        # TODO: unclear why some ops are not in the registry with TF 2.0 like TensorListReserve
+        for non_reg_ops in ops_not_in_registry:
+            reg[non_reg_ops] = {'type': None, 'location': location_tag}
         for n in op_handlers:
             if n in reg:
                 self.orig_grads[n] = reg[n]["type"]
@@ -410,6 +384,8 @@ class TFDeepExplainer(Explainer):
             for n in op_handlers:
                 if n in reg:
                     reg[n]["type"] = self.orig_grads[n]
+            for non_reg_ops in ops_not_in_registry:
+                del reg[non_reg_ops]
         if not tf.executing_eagerly():
             return out
         else:
@@ -578,7 +554,10 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     xin0, rin0 = tf.split(op_inputs[input_ind], 2)
     xout, rout = tf.split(op.outputs[input_ind], 2)
     delta_in0 = xin0 - rin0
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    if delta_in0.shape == None:
+        dup0 = [2, 1]
+    else:
+        dup0 = [2] + [1 for i in delta_in0.shape[1:]]
     out = [None for _ in op_inputs]
     orig_grads = explainer.orig_grads[op.type](op, grads[0])
     out[input_ind] = tf.where(
@@ -678,6 +657,7 @@ op_handlers["Tile"] = passthrough
 op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
+
 
 # ops that don't pass any attributions to their inputs
 op_handlers["Shape"] = break_dependence

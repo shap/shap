@@ -19,6 +19,8 @@ def test_tf_keras_mnist_cnn():
     from tensorflow.python.keras import backend as K
     import shap
 
+    tf.compat.v1.disable_eager_execution()
+
     batch_size = 128
     num_classes = 10
     epochs = 1
@@ -76,7 +78,7 @@ def test_tf_keras_mnist_cnn():
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
-    sess = tf.keras.backend.get_session()
+    sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds,:,:]}).mean(0)
 
