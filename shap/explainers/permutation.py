@@ -8,9 +8,9 @@ log = logging.getLogger('shap')
 
 
 class PermutationExplainer(KernelExplainer):
-    """ This is an approximates the Shapley values by iteration through permutations of the inputs.
+    """ This method approximates the Shapley values by iteration through permutations of the inputs.
 
-    This is an alternative to the KernelExplainer and the SamplingExplainer where we garuntee
+    This is an alternative to the KernelExplainer and the SamplingExplainer where we gurantee
     local accuracy (additivity) by iterating completely through an entire permutatation of the
     features in both forward and reverse directions. If we do this once, then we get the exact SHAP
     values for models with up to second order interaction effects. We can iterate this many times over
