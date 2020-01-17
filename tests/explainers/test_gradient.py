@@ -84,7 +84,7 @@ def test_tf_keras_mnist_cnn():
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+    assert d / np.abs(diff).sum() < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
 def test_pytorch_mnist_cnn():
