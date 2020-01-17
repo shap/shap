@@ -12,11 +12,11 @@ def test_tf_keras_mnist_cnn():
 
     _skip_if_no_tensorflow()
     import tensorflow as tf
-    from tensorflow.python import keras
-    from tensorflow.python.keras.models import Sequential
-    from tensorflow.python.keras.layers import Dense, Dropout, Flatten, Activation
-    from tensorflow.python.keras.layers import Conv2D, MaxPooling2D
-    from tensorflow.python.keras import backend as K
+    from tensorflow import keras
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
+    from tensorflow.keras.layers import Conv2D, MaxPooling2D
+    from tensorflow.keras import backend as K
     import shap
 
     tf.compat.v1.disable_eager_execution()
