@@ -326,7 +326,7 @@ These notebooks comprehensively demonstrate how to use specific functions and ob
 The algorithms and visualizations used in this package came primarily out of research in [Su-In Lee's lab](https://suinlee.cs.washington.edu) at the University of Washington. If you use SHAP in your research we would appreciate a citation to the appropriate paper(s):
 
 - For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)). 
-- For TreeExplainer you can (for now) read/cite our [arXiv paper](https://arxiv.org/abs/1905.04610) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/treeshap_arxiv.bib)).
+- For TreeExplainer you can read/cite our [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-019-0138-9) <!--([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/treeshap_arxiv.bib)).-->
 - For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
 
 <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=189147091855991&ev=PageView&noscript=1" />
