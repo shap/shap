@@ -150,17 +150,6 @@ def nhanesi(display=False):
     else:
         return X, np.array(y)
 
-def cric(display=False):
-    """ A nicely packaged version of CRIC data with progression to ESRD within 4 years as the label.
-    """
-    X = pd.read_csv(cache(github_data_url + "CRIC_time_4yearESRD_X.csv"))
-    y = np.loadtxt(cache(github_data_url + "CRIC_time_4yearESRD_y.csv"))
-    if display:
-        X_display = X.copy()
-        return X_display, y
-    else:
-        return X, y
-
 
 def corrgroups60(display=False):
     """ Correlated Groups 60

@@ -56,8 +56,11 @@ class build_ext(_build_ext):
 def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True, test_spark=True):
     ext_modules = []
     if with_binary:
+        compile_args = []
+        if sys.platform == 'zos':
+            compile_args.append('-qlonglong')
         ext_modules.append(
-            Extension('shap._cext', sources=['shap/_cext.cc'])
+            Extension('shap._cext', sources=['shap/_cext.cc'], extra_compile_args=compile_args)
         )
 
     tests_require = ['nose']
