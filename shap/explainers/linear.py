@@ -3,6 +3,8 @@ import scipy as sp
 import warnings
 from tqdm.autonotebook import tqdm
 from .explainer import Explainer
+from ..common import safe_isinstance
+
 
 class LinearExplainer(Explainer):
     """ Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
@@ -83,7 +85,12 @@ class LinearExplainer(Explainer):
         # get the mean and covariance of the model
         if type(data) == tuple and len(data) == 2:
             self.mean = data[0]
+            if safe_isinstance(self.mean, "pandas.core.series.Series"):
+                self.mean = self.mean.values
+
             self.cov = data[1]
+            if safe_isinstance(self.cov, "pandas.core.frame.DataFrame"):
+                self.cov = self.cov.values
         elif data is None:
             raise Exception("A background data distribution must be provided!")
         else:
