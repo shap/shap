@@ -106,28 +106,28 @@ class TreeExplainer(Explainer):
                 warnings.warn("Passing "+str(self.data.shape[0]) + " background samples may lead to slow runtimes. Consider "
                     "using shap.sample(data, 100) to create a smaller background data set.")
         self.data_missing = None if self.data is None else np.isnan(self.data)
-        self.model_output = model_output
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
-        self.model = TreeEnsemble(model, self.data, self.data_missing)
-
+        self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
+        self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types to margin by how it loads the model
+        
         if feature_perturbation not in feature_perturbation_codes:
             raise ValueError("Invalid feature_perturbation option!")
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":
-            if model_output != "margin":
+            if self.model_output != "margin":
                 raise ValueError("Only margin model_output is supported for feature_perturbation=\"tree_path_dependent\"")
         elif data is None:
             raise ValueError("A background dataset must be provided unless you are using feature_perturbation=\"tree_path_dependent\"!")
 
-        if model_output != "margin":
+        if self.model_output != "margin":
             if self.model.objective is None and self.model.tree_output is None:
                 raise Exception("Model does not have a known objective or output type! When model_output is " \
                                 "not \"margin\" then we need to know the model's objective or link function.")
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
-        if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and model_output != "margin":
+        if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model_output != "margin":
             import xgboost
             if LooseVersion(xgboost.__version__) < LooseVersion('0.81'):
                 raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
@@ -137,7 +137,7 @@ class TreeExplainer(Explainer):
             self.expected_value = self.__dynamic_expected_value
         elif data is not None:
             try:
-                self.expected_value = self.model.predict(self.data, output=model_output).mean(0)
+                self.expected_value = self.model.predict(self.data, output=self.model_output).mean(0)
             except:
                 raise Exception("Currently TreeExplainer can only handle models with categorical splits when " \
                                 "feature_perturbation=\"tree_path_dependent\" and no background data is passed. Please try again using " \
@@ -456,11 +456,12 @@ class TreeEnsemble:
     This object provides a common interface to many different types of models.
     """
 
-    def __init__(self, model, data=None, data_missing=None):
+    def __init__(self, model, data=None, data_missing=None, model_output=None):
         self.model_type = "internal"
         self.trees = None
         less_than_or_equal = True
         self.base_offset = 0
+        self.model_output = model_output
         self.objective = None # what we explain when explaining the loss of the model
         self.tree_output = None # what are the units of the values in the leaves of the trees
         self.internal_dtype = np.float64
@@ -765,15 +766,21 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstance(model, "ngboost.ngboost.NGBoost") \
-                    or safe_isinstance(model, "ngboost.api.NGBRegressor") \
-                    or safe_isinstance(model, "ngboost.api.NGBClassifier"):
-            assert hasattr(model,"shap_trees"), "Please create TreeExplainer from NGBoost.get_shap_tree_explainer method!"
-            self.internal_dtype = model.shap_trees[0].tree_.value.dtype.type
+        elif safe_isinstance(model, ["ngboost.ngboost.NGBoost", "ngboost.api.NGBRegressor", "ngboost.api.NGBClassifier"]):
+            assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
+            if self.model_output == "margin":
+                param_idx = 0 # default to the first parameter of the output distribution
+                warnings.warn("Translating model_ouput=\"margin\" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.")
+            elif type(self.model_output) is int:
+                param_idx = self.model_output
+                self.model_output = "margin" # note that after loading we have a new model_output type
+            assert safe_isinstance(model.base_models[0][param_idx], ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"]), "You must use default_tree_learner!"
+            shap_trees = [trees[param_idx] for trees in model.base_models]
+            self.internal_dtype = shap_trees[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             scaling = - model.learning_rate * np.array(model.scalings) # output is weighted average of trees
-            self.trees = [Tree(e.tree_, scaling=s, data=data, data_missing=data_missing) for e,s in zip(model.shap_trees,scaling)]
-            self.objective = objective_name_map.get(model.shap_trees[0].criterion, None)
+            self.trees = [Tree(e.tree_, scaling=s, data=data, data_missing=data_missing) for e,s in zip(shap_trees,scaling)]
+            self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
@@ -837,11 +844,11 @@ class TreeEnsemble:
             else:
                 raise Exception("model_output = \"logloss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         else:
-            assert False, "Unrecognized model_output parameter value: " + model_output
+            assert False, "Unrecognized model_output parameter value: " + str(model_output)
 
         return transform
 
-    def predict(self, X, y=None, output="margin", tree_limit=None):
+    def predict(self, X, y=None, output=None, tree_limit=None):
         """ A consistent interface to make predictions from this model.
 
         Parameters
@@ -850,6 +857,10 @@ class TreeEnsemble:
             Limit the number of trees used by the model. By default None means no use the limit of the
             original model, and -1 means no limit.
         """
+
+        if output is None:
+            output = self.model_output
+
         if self.model_type == "pyspark":
             import pyspark
             #TODO support predict for pyspark
