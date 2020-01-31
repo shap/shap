@@ -381,7 +381,8 @@ def safe_isinstance(obj, class_path_str):
         if _class is None:
             continue
         
-        return isinstance(obj, _class)
+        if isinstance(obj, _class):
+            return True
 
     return False
 
@@ -396,3 +397,8 @@ def format_value(s, format_str):
     if s[0] == "-":
         s = u"\u2212" + s[1:]
     return s
+
+
+def partition_tree(X, metric="correlation"):
+    D = sp.spatial.distance.pdist(X.fillna(X.mean()).T, metric=metric)
+    return sp.cluster.hierarchy.complete(D)
