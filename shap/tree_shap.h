@@ -13,6 +13,8 @@
 #include <ctime>
 #if defined(_WIN32) || defined(WIN32)
     #include <malloc.h>
+#elif defined(__MVS__)
+    #include <stdlib.h>
 #else
     #include <alloca.h>
 #endif
