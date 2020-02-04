@@ -188,16 +188,18 @@ class AdditiveForceArrayVisualizer extends React.Component {
 
     let x = mouse(this.svg.node())[0];
     if (this.props.explanations) {
-      for (i = 0; i < this.props.explanations.length; ++i) {
+
+      // Find the nearest explanation to the cursor position
+      for (i = 0; i < this.currExplanations.length; ++i) {
         if (
           !nearestExp ||
           Math.abs(nearestExp.xmapScaled - x) >
-            Math.abs(this.props.explanations[i].xmapScaled - x)
+            Math.abs(this.currExplanations[i].xmapScaled - x)
         ) {
-          nearestExp = this.props.explanations[i];
-          this.nearestExpIndex = i;
+          nearestExp = this.currExplanations[i];
         }
       }
+      this.nearestExpIndex = nearestExp.origInd;
 
       this.hoverLine
         .attr("x1", nearestExp.xmapScaled)
@@ -534,13 +536,15 @@ class AdditiveForceArrayVisualizer extends React.Component {
     //let filteredFeatureNames = this.props.featureNames;
     let yvalue = this.ylabel.node().value;
     if (yvalue !== "model output value") {
-      explanations = cloneDeep(explanations);
+      let olde = explanations;
+      explanations = cloneDeep(explanations); // TODO: add pointer from old explanations which is prop.explanations to new ones
       let ind = findKey(this.props.featureNames, x => x === yvalue);
 
       for (let i = 0; i < explanations.length; ++i) {
         let v = explanations[i].features[ind];
         explanations[i].features = {};
         explanations[i].features[ind] = v;
+        olde[i].remapped_version = explanations[i];
       }
       //filteredFeatureNames = [this.props.featureNames[ind]];
       this.currUsedFeatures = [ind];

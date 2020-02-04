@@ -103,7 +103,7 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
         shap_values = np.reshape(shap_values, (1, len(shap_values)))
 
     if out_names is None:
-        out_names = ["output value"]
+        out_names = ["model output value"]
     elif type(out_names) == str:
         out_names = [out_names]
 
@@ -216,7 +216,7 @@ def initjs():
     logo_data = base64.b64encode(logo_data).decode('utf-8')
     display(HTML(
         "<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>".format(logo_data=logo_data) +
-        "<script>{bundle_data}</script>".format(bundle_data=bundle_data)
+        "<script charset='utf-8'>{bundle_data}</script>".format(bundle_data=bundle_data)
     ))
 
 def save_html(out_file, plot_html, full_html=True):
