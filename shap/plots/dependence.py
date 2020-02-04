@@ -103,27 +103,32 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     ind = convert_name(ind, shap_values, feature_names)
 
     # guess what other feature as the stongest interaction with the plotted feature
-    if interaction_index == "auto":
-        interaction_index = approximate_interactions(ind, shap_values, features)[0]
-    interaction_index = convert_name(interaction_index, shap_values, feature_names)
+    if not hasattr(ind, "__len__"):
+        if interaction_index == "auto":
+            interaction_index = approximate_interactions(ind, shap_values, features)[0]
+        interaction_index = convert_name(interaction_index, shap_values, feature_names)
     categorical_interaction = False
 
     # create a matplotlib figure, if `ax` hasn't been specified.
     if not ax:
-        figsize = (7.5, 5) if interaction_index != ind else (6, 5)
+        figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
         fig = pl.figure(figsize=figsize)
         ax = fig.gca()
     else:
         fig = ax.get_figure()
 
     # plotting SHAP interaction values
-    if len(shap_values.shape) == 3 and len(ind) == 2:
+    if len(shap_values.shape) == 3 and hasattr(ind, "__len__") and len(ind) == 2:
         ind1 = convert_name(ind[0], shap_values, feature_names)
         ind2 = convert_name(ind[1], shap_values, feature_names)
         if ind1 == ind2:
             proj_shap_values = shap_values[:, ind2, :]
         else:
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
+
+        # there is no interaction coloring for the main effect
+        if ind1 == ind2:
+            fig.set_size_inches(6, 5, forward=True)
 
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
         dependence_plot(
