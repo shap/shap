@@ -267,7 +267,7 @@ def convert_name(ind, shap_values, feature_names):
             elif ind == "sum()": 
                 return "sum()"
             else:
-                print("Could not find feature named: " + ind)
+                raise ValueError("Could not find feature named: " + ind)
                 return None
         else:
             return nzinds[0]
