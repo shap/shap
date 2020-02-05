@@ -145,10 +145,22 @@ class TreeExplainer(Explainer):
             if hasattr(self.expected_value, '__len__') and len(self.expected_value) == 1:
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
-            self.expected_value = self.model.values[:,0].sum(0)
-            if self.expected_value.size == 1:
-                self.expected_value = self.expected_value[0]
-            self.expected_value += self.model.base_offset
+            if self.model.stacked_models == 1:
+                self.expected_value = self.model.values[:,0].sum(0)
+                if self.expected_value.size == 1:
+                    self.expected_value = self.expected_value[0]
+                self.expected_value += self.model.base_offset
+            
+            # this handles the case when we have stacked models...(XGBoost stacks trees for multi-output models)
+            else:
+                ntrees = self.model.values.shape[0] // self.model.stacked_models
+                self.expected_value = []
+                for i in range(self.model.stacked_models):
+                    self.expected_value.append(self.model.values[i*ntrees:(i+1)*ntrees,0].sum(0))
+                    if self.expected_value[-1].size == 1:
+                        self.expected_value[-1] = self.expected_value[-1][0]
+                    self.expected_value[-1] += self.model.base_offset
+                self.expected_value = np.array(self.expected_value)
 
     def __dynamic_expected_value(self, y):
         """ This computes the expected value conditioned on the given label value.
@@ -470,6 +482,7 @@ class TreeEnsemble:
         self.data_missing = data_missing
         self.fully_defined_weighting = True # does the background dataset land in every leaf (making it valid for the tree_path_dependent method)
         self.tree_limit = None # used for limiting the number of trees we use by default (like from early stopping)
+        self.stacked_models = 1 # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
 
         # we use names like keras
         objective_name_map = {
@@ -654,6 +667,7 @@ class TreeEnsemble:
             less_than_or_equal = False
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
+            self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBClassifier"):
             import xgboost
             self.input_dtype = np.float32
@@ -666,6 +680,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
+            self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             import xgboost
             self.original_model = model.get_booster()
@@ -677,6 +692,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
+            self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             import xgboost
             self.original_model = model.get_booster()
@@ -688,6 +704,7 @@ class TreeEnsemble:
             # Note: for ranker, leaving tree_output and objective as None as they
             # are not implemented in native code yet
             self.tree_limit = getattr(model, "best_ntree_limit", None)
+            self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -893,19 +910,16 @@ class TreeEnsemble:
             assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
         transform = self.get_transform(output)
 
-        if True or self.model_type == "internal":
-            output = np.zeros((X.shape[0], self.n_outputs))
-            assert_import("cext")
-            _cext.dense_tree_predict(
-                self.children_left, self.children_right, self.children_default,
-                self.features, self.thresholds, self.values,
-                self.max_depth, tree_limit, self.base_offset, output_transform_codes[transform],
-                X, X_missing, y, output
-            )
-
-        elif self.model_type == "xgboost":
-            import xgboost
-            output = self.original_model.predict(X, output_margin=True, tree_limit=tree_limit)
+        if self.model.stacked_models != 1:
+            raise ValueError("predict() does not yet support multi-output models where the trees are vertically stacked (like XGBoost does)!")
+        output = np.zeros((X.shape[0], self.n_outputs))
+        assert_import("cext")
+        _cext.dense_tree_predict(
+            self.children_left, self.children_right, self.children_default,
+            self.features, self.thresholds, self.values,
+            self.max_depth, tree_limit, self.base_offset, output_transform_codes[transform],
+            X, X_missing, y, output
+        )
 
         # drop dimensions we don't need
         if flat_output:
