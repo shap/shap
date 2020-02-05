@@ -47,7 +47,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     """
 
     # make sure we only have a single output to explain
-    if (type(expected_value) == np.ndarray or type(expected_value) == list):
+    if (type(expected_value) == np.ndarray and len(expected_value) > 0) or type(expected_value) == list:
         raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first " \
                         "parameter, but you have passed an array as the first parameter! " \
                         "Try shap.waterfall_plot(explainer.expected_value, shap_values[0], X[0]) or " \
