@@ -840,7 +840,7 @@ class TreeEnsemble:
 
             # If we should do <= then we nudge the thresholds to make our <= work like <
             if not less_than_or_equal:
-                self.thresholds = np.nextafter(self.thresholds, -np.inf)
+                self.thresholds = np.nextafter(self.thresholds, np.inf)
 
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])

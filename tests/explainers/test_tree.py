@@ -237,13 +237,13 @@ def test_pyspark_classifier_decision_tree():
 
         if str(type(model)).endswith("GBTClassificationModel'>"):
             diffs = expected_values + shap_values.sum(1) - predictions.class1
-            assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
+            assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!"
         else:
             normalizedPredictions = (predictions.T / predictions.sum(1)).T
             diffs = expected_values[0] + shap_values[0].sum(1) - normalizedPredictions.class0
-            assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"+model
+            assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!"+model
             diffs = expected_values[1] + shap_values[1].sum(1) - normalizedPredictions.class1
-            assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class1!"+model
+            assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class1!"+model
             assert (np.abs(expected_values - normalizedPredictions.mean()) < 1e-1).all(), "Bad expected_value!"+model
     spark.stop()
 
@@ -284,7 +284,7 @@ def test_pyspark_regression_decision_tree():
         # validate values sum to the margin prediction of the model plus expected_value
         predictions = model.transform(iris).select("prediction").toPandas()
         diffs = expected_values + shap_values.sum(1) - predictions["prediction"]
-        assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output for class0!"
+        assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!"
         assert (np.abs(expected_values - predictions.mean()) < 1e-1).all(), "Bad expected_value!"
     spark.stop()
 
@@ -382,7 +382,7 @@ def test_lightgbm():
 
     predicted = model.predict(X, raw_score=True)
 
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
 
 def test_catboost():
@@ -407,7 +407,7 @@ def test_catboost():
 
     predicted = model.predict(X)
 
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
     
     train_df, _ = amazon()
@@ -550,7 +550,7 @@ def test_sklearn_interaction():
         for j in range(len(interaction_vals[i])):
             for k in range(len(interaction_vals[i][j])):
                 for l in range(len(interaction_vals[i][j][k])):
-                    assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 1e-6
+                    assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 1e-4
 
     # ensure the interaction plot works
     shap.summary_plot(interaction_vals[0], X, show=False)
@@ -573,7 +573,7 @@ def test_lightgbm_interaction():
     for j in range(len(interaction_vals)):
         for k in range(len(interaction_vals[j])):
             for l in range(len(interaction_vals[j][k])):
-                assert abs(interaction_vals[j][k][l] - interaction_vals[j][l][k]) < 1e-6
+                assert abs(interaction_vals[j][k][l] - interaction_vals[j][l][k]) < 1e-4
 
 def test_sum_match_random_forest():
     import shap
@@ -588,7 +588,7 @@ def test_sum_match_random_forest():
     predicted = clf.predict_proba(X_test)
     ex = shap.TreeExplainer(clf)
     shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-6, \
+    assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-4, \
         "SHAP values don't sum to model output!"
     
 def test_sum_match_extra_trees():
@@ -604,7 +604,7 @@ def test_sum_match_extra_trees():
     predicted = clf.predict(X_test)
     ex = shap.TreeExplainer(clf)
     shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
 
 def test_single_row_random_forest():
@@ -620,7 +620,7 @@ def test_single_row_random_forest():
     predicted = clf.predict_proba(X_test)
     ex = shap.TreeExplainer(clf)
     shap_values = ex.shap_values(X_test.iloc[0,:])
-    assert np.abs(shap_values[0].sum() + ex.expected_value[0] - predicted[0,0]) < 1e-6, \
+    assert np.abs(shap_values[0].sum() + ex.expected_value[0] - predicted[0,0]) < 1e-4, \
         "SHAP values don't sum to model output!"
 
 def test_sum_match_gradient_boosting_classifier():
@@ -641,15 +641,15 @@ def test_sum_match_gradient_boosting_classifier():
     ex = shap.TreeExplainer(clf)
     initial_ex_value = ex.expected_value
     shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
 
     # check initial expected value
-    assert np.abs(initial_ex_value - ex.expected_value) < 1e-6, "Inital expected value is wrong!"
+    assert np.abs(initial_ex_value - ex.expected_value) < 1e-4, "Inital expected value is wrong!"
 
     # check SHAP interaction values
     shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10,:])
-    assert np.abs(shap_interaction_values.sum(1).sum(1) + ex.expected_value - predicted[:10]).max() < 1e-6, \
+    assert np.abs(shap_interaction_values.sum(1).sum(1) + ex.expected_value - predicted[:10]).max() < 1e-4, \
         "SHAP interaction values don't sum to model output!"
 
 def test_single_row_gradient_boosting_classifier():
@@ -665,7 +665,7 @@ def test_single_row_gradient_boosting_classifier():
     predicted = clf.decision_function(X_test)
     ex = shap.TreeExplainer(clf)
     shap_values = ex.shap_values(X_test.iloc[0,:])
-    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
+    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4, \
         "SHAP values don't sum to model output!"
 
 def test_sum_match_gradient_boosting_regressor():
@@ -682,7 +682,7 @@ def test_sum_match_gradient_boosting_regressor():
     predicted = clf.predict(X_test)
     ex = shap.TreeExplainer(clf)
     shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-6, \
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
 
 def test_single_row_gradient_boosting_regressor():
@@ -699,7 +699,7 @@ def test_single_row_gradient_boosting_regressor():
     predicted = clf.predict(X_test)
     ex = shap.TreeExplainer(clf)
     shap_values = ex.shap_values(X_test.iloc[0,:])
-    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-6, \
+    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4, \
         "SHAP values don't sum to model output!"
 
 
@@ -719,7 +719,7 @@ def test_multi_target_random_forest():
     assert len(expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
     shap_values = np.asarray(explainer.shap_values(X_test)).reshape(est.n_outputs_ * X_test.shape[0], X_test.shape[1])
     phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
-    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-6)
+    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
 
 def test_isolation_forest():
     import shap
@@ -756,7 +756,7 @@ def test_multi_target_extra_trees():
     assert len(expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
     shap_values = np.asarray(explainer.shap_values(X_test)).reshape(est.n_outputs_ * X_test.shape[0], X_test.shape[1])
     phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
-    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-6)
+    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
 
 
 def test_provided_background_tree_path_dependent():
@@ -792,7 +792,7 @@ def test_provided_background_tree_path_dependent():
 
     explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="tree_path_dependent")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
-    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
+    assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
     assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
 
 def test_provided_background_independent():
@@ -828,8 +828,8 @@ def test_provided_background_independent():
 
     explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
-    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
+    assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
+    assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-4, "Bad expected_value!"
 
 def test_provided_background_independent_prob_output():
     try:
@@ -864,8 +864,8 @@ def test_provided_background_independent_prob_output():
 
     explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
-    assert np.max(np.abs(diffs)) < 1e-6, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-6, "Bad expected_value!"
+    assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
+    assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-4, "Bad expected_value!"
 
 def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions
