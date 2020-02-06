@@ -11,7 +11,7 @@ from .explainers.tree import TreeExplainer, Tree
 from .explainers.deep import DeepExplainer
 from .explainers.gradient import GradientExplainer
 from .explainers.linear import LinearExplainer
-from .explainers.partition import PartitionExplainer
+from .explainers.partition import PartitionExplainer, TokenMasker, ImageMasker
 from .explainers.bruteforce import BruteForceExplainer
 from .explainers.permutation import PermutationExplainer
 from .explainers.additive import AdditiveExplainer
@@ -38,6 +38,7 @@ if have_matplotlib:
     from .plots.partial_dependence import partial_dependence_plot
     from .plots.bar import bar_plot
     from .plots.waterfall import waterfall_plot
+    from .plots.text import text_plot
 else:
     summary_plot = unsupported
     decision_plot = unsupported
@@ -51,9 +52,11 @@ else:
     embedding_plot = unsupported
     partial_dependence_plot = unsupported
     bar_plot = unsupported
+    waterfall_plot = unsupported
+    text_plot = unsupported
 
 
 # other stuff :)
 from . import datasets
 #from . import benchmark
-from .common import approximate_interactions, hclust_ordering, sample
+from .common import approximate_interactions, hclust_ordering, sample, partition_tree
