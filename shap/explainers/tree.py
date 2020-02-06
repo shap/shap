@@ -910,7 +910,7 @@ class TreeEnsemble:
             assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
         transform = self.get_transform(output)
 
-        if self.model.stacked_models != 1:
+        if self.stacked_models != 1:
             raise ValueError("predict() does not yet support multi-output models where the trees are vertically stacked (like XGBoost does)!")
         output = np.zeros((X.shape[0], self.n_outputs))
         assert_import("cext")
