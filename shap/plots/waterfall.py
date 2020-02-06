@@ -28,11 +28,10 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
         be the value of explainer.expected_value.
 
     shap_values : numpy.array
-        Matrix of SHAP values (# features) or (# samples x # features). If this is a 1D array then a single
-        force plot will be drawn, if it is a 2D array then a stacked force plot will be drawn.
+        One dimensional array of SHAP values.
 
     features : numpy.array
-        Matrix of feature values (# features) or (# samples x # features). This provides the values of all the
+        One dimensional array of feature values. This provides the values of all the
         features, and should be the same shape as the shap_values argument.
 
     feature_names : list
@@ -50,7 +49,7 @@ def waterfall_plot(expected_value, shap_values, features=None, feature_names=Non
     if (type(expected_value) == np.ndarray and len(expected_value) > 0) or type(expected_value) == list:
         raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first " \
                         "parameter, but you have passed an array as the first parameter! " \
-                        "Try shap.waterfall_plot(explainer.expected_value, shap_values[0], X[0]) or " \
+                        "Try shap.waterfall_plot(explainer.expected_value[0], shap_values[0], X[0]) or " \
                         "for multi-output models try " \
                         "shap.waterfall_plot(explainer.expected_value[0], shap_values[0][0], X[0]).")
 
