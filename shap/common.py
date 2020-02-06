@@ -381,8 +381,7 @@ def safe_isinstance(obj, class_path_str):
         if _class is None:
             continue
         
-        if isinstance(obj, _class):
-            return True
+        return isinstance(obj, _class)
 
     return False
 

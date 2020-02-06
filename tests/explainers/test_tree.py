@@ -187,6 +187,17 @@ def test_xgboost_mixed_types():
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
 
+def test_ngboost():
+    try:
+        import ngboost
+    except Exception as e:
+        print("Skipping test_ngboost!")
+        return
+    X,y = shap.datasets.boston()
+    model = ngboost.NGBRegressor(n_estimators=20).fit(X, y)
+    explainer = shap.TreeExplainer(model, model_output=0)
+    assert np.max(np.abs(explainer.shap_values(X).sum(1) + explainer.expected_value - model.predict(X))) < 1e-5
+
 def test_pyspark_classifier_decision_tree():
     try:
         import pyspark

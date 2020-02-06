@@ -667,7 +667,8 @@ class TreeEnsemble:
             less_than_or_equal = False
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
-            self.stacked_models = xgb_loader.num_class
+            if xgb_loader.num_class > 0:
+                self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBClassifier"):
             import xgboost
             self.input_dtype = np.float32
@@ -680,7 +681,8 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
-            self.stacked_models = xgb_loader.num_class
+            if xgb_loader.num_class > 0:
+                self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             import xgboost
             self.original_model = model.get_booster()
@@ -692,7 +694,8 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
-            self.stacked_models = xgb_loader.num_class
+            if xgb_loader.num_class > 0:
+                self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             import xgboost
             self.original_model = model.get_booster()
@@ -704,7 +707,8 @@ class TreeEnsemble:
             # Note: for ranker, leaving tree_output and objective as None as they
             # are not implemented in native code yet
             self.tree_limit = getattr(model, "best_ntree_limit", None)
-            self.stacked_models = xgb_loader.num_class
+            if xgb_loader.num_class > 0:
+                self.stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -783,7 +787,7 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstance(model, ["ngboost.ngboost.NGBoost", "ngboost.api.NGBRegressor", "ngboost.api.NGBClassifier"]):
+        elif safe_isinstance(model, "ngboost.ngboost.NGBoost") or safe_isinstance(model, "ngboost.api.NGBRegressor") or safe_isinstance(model, "ngboost.api.NGBClassifier"):
             assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
             if self.model_output == "margin":
                 param_idx = 0 # default to the first parameter of the output distribution
@@ -799,6 +803,7 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, scaling=s, data=data, data_missing=data_missing) for e,s in zip(shap_trees,scaling)]
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
+            self.base_offset = model.init_params[param_idx]
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
@@ -909,7 +914,7 @@ class TreeEnsemble:
             assert y is not None, "Both samples and labels must be provided when explaining the loss (i.e. `explainer.shap_values(X, y)`)!"
             assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
         transform = self.get_transform(output)
-
+        
         if self.stacked_models != 1:
             raise ValueError("predict() does not yet support multi-output models where the trees are vertically stacked (like XGBoost does)!")
         output = np.zeros((X.shape[0], self.n_outputs))
