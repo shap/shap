@@ -668,6 +668,42 @@ def test_single_row_gradient_boosting_classifier():
     assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4, \
         "SHAP values don't sum to model output!"
 
+def test_HistGradientBoostingRegressor():
+    from sklearn.experimental import enable_hist_gradient_boosting
+    from sklearn.ensemble import HistGradientBoostingRegressor
+
+    # train a tree-based model
+    X, y = shap.datasets.diabetes()
+    model = HistGradientBoostingRegressor(max_iter=1000, max_depth=6).fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    assert np.max(np.abs(shap_values.sum(1) + explainer.expected_value - model.predict(X))) < 1e-4
+
+def test_HistGradientBoostingClassifier_proba():
+    from sklearn.experimental import enable_hist_gradient_boosting
+    from sklearn.ensemble import HistGradientBoostingClassifier
+
+    # train a tree-based model
+    X, y = shap.datasets.adult()
+    model = HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
+    explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="predict_proba")
+    shap_values = explainer.shap_values(X)
+    assert np.max(np.abs(shap_values[0].sum(1) + explainer.expected_value[0] - model.predict_proba(X)[:,0])) < 1e-4
+
+def test_HistGradientBoostingClassifier_multidim():
+    from sklearn.experimental import enable_hist_gradient_boosting
+    from sklearn.ensemble import HistGradientBoostingClassifier
+
+    # train a tree-based model
+    X, y = shap.datasets.adult()
+    X = X[:100]
+    y = y[:100]
+    y = np.random.randint(0, 3, len(y))
+    model = HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
+    explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="raw")
+    shap_values = explainer.shap_values(X)
+    assert np.max(np.abs(shap_values[0].sum(1) + explainer.expected_value[0] - model.decision_function(X)[:,0])) < 1e-4
+
 def test_sum_match_gradient_boosting_regressor():
     import shap
     import numpy as np

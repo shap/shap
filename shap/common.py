@@ -401,3 +401,6 @@ def format_value(s, format_str):
 def partition_tree(X, metric="correlation"):
     D = sp.spatial.distance.pdist(X.fillna(X.mean()).T, metric=metric)
     return sp.cluster.hierarchy.complete(D)
+
+class SHAPError(Exception):
+    pass

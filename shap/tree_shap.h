@@ -39,14 +39,14 @@ struct TreeEnsemble {
     tfloat *node_sample_weights;
     unsigned max_depth;
     unsigned tree_limit;
-    tfloat base_offset;
+    tfloat *base_offset;
     unsigned max_nodes;
     unsigned num_outputs;
 
     TreeEnsemble() {}
     TreeEnsemble(int *children_left, int *children_right, int *children_default, int *features,
                  tfloat *thresholds, tfloat *values, tfloat *node_sample_weights,
-                 unsigned max_depth, unsigned tree_limit, tfloat base_offset,
+                 unsigned max_depth, unsigned tree_limit, tfloat *base_offset,
                  unsigned max_nodes, unsigned num_outputs) :
         children_left(children_left), children_right(children_right),
         children_default(children_default), features(features), thresholds(thresholds),
@@ -205,7 +205,7 @@ inline void dense_tree_predict(tfloat *out, const TreeEnsemble &trees, const Exp
 
         // add the base offset
         for (unsigned k = 0; k < trees.num_outputs; ++k) {
-            row_out[k] += trees.base_offset;
+            row_out[k] += trees.base_offset[k];
         }
 
         // add the leaf values from each tree
@@ -320,7 +320,7 @@ void dense_tree_saabas(tfloat *out_contribs, const TreeEnsemble& trees, const Ex
 
         // apply the base offset to the bias term
         for (unsigned j = 0; j < trees.num_outputs; ++j) {
-            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset;
+            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset[j];
         }
     }
 }
@@ -1185,7 +1185,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
 
             // compute the model's margin output for x
             if (transform != NULL) {
-                margin_x = trees.base_offset;
+                margin_x = trees.base_offset[oind];
                 for (unsigned k = 0; k < trees.tree_limit; ++k) {
                     margin_x += tree_predict(k, trees, x, x_missing)[oind];
                 }
@@ -1198,7 +1198,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
 
                 // compute the model's margin output for r
                 if (transform != NULL) {
-                    margin_r = trees.base_offset;
+                    margin_r = trees.base_offset[oind];
                     for (unsigned k = 0; k < trees.tree_limit; ++k) {
                         margin_r += tree_predict(k, trees, r, r_missing)[oind];
                     }
@@ -1230,9 +1230,9 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
 
                 // Add the base offset
                 if (transform != NULL) {
-                    instance_out_contribs[data.M * trees.num_outputs + oind] += (*transform)(trees.base_offset + tmp_out_contribs[data.M], 0);
+                    instance_out_contribs[data.M * trees.num_outputs + oind] += (*transform)(trees.base_offset[oind] + tmp_out_contribs[data.M], 0);
                 } else {
-                    instance_out_contribs[data.M * trees.num_outputs + oind] += trees.base_offset + tmp_out_contribs[data.M];
+                    instance_out_contribs[data.M * trees.num_outputs + oind] += trees.base_offset[oind] + tmp_out_contribs[data.M];
                 }
             }
 
@@ -1243,7 +1243,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
 
             // apply the base offset to the bias term
             // for (unsigned j = 0; j < trees.num_outputs; ++j) {
-            //     instance_out_contribs[data.M * trees.num_outputs + j] += (*transform)(trees.base_offset, 0);
+            //     instance_out_contribs[data.M * trees.num_outputs + j] += (*transform)(trees.base_offset[j], 0);
             // }
         }
     }
@@ -1281,7 +1281,7 @@ void dense_tree_path_dependent(const TreeEnsemble& trees, const ExplanationDatas
 
         // apply the base offset to the bias term
         for (unsigned j = 0; j < trees.num_outputs; ++j) {
-            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset;
+            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset[j];
         }
     }
 }
@@ -1373,7 +1373,7 @@ void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, const Exp
         // apply the base offset to the bias term
         const unsigned last_ind = (data.M * (data.M + 1) + data.M) * trees.num_outputs;
         for (unsigned j = 0; j < trees.num_outputs; ++j) {
-            instance_out_contribs[last_ind + j] += trees.base_offset;
+            instance_out_contribs[last_ind + j] += trees.base_offset[j];
         }
     }
 
@@ -1416,7 +1416,7 @@ void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDat
 
         // apply the base offset to the bias term
         for (unsigned j = 0; j < trees.num_outputs; ++j) {
-            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset;
+            instance_out_contribs[data.M * trees.num_outputs + j] += trees.base_offset[j];
         }
     }
 
