@@ -122,6 +122,7 @@ class TreeExplainer(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
+
         if feature_perturbation not in feature_perturbation_codes:
             raise ValueError("Invalid feature_perturbation option!")
 
