@@ -27,7 +27,8 @@ output_transform_codes = {
     "identity": 0,
     "logistic": 1,
     "logistic_nlogloss": 2,
-    "squared_loss": 3
+    "squared_loss": 3,
+    "log_link":4
 }
 
 feature_perturbation_codes = {
@@ -121,7 +122,7 @@ class TreeExplainer(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
-        
+
         if feature_perturbation not in feature_perturbation_codes:
             raise ValueError("Invalid feature_perturbation option!")
 
@@ -940,6 +941,9 @@ class TreeEnsemble:
                 transform = "logistic_nlogloss"
             else:
                 raise SHAPError("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
+        elif self.model_output == "log_link":
+
+                transform = "log_link"
         else:
             raise SHAPError("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported." % (str(self.model_output), str(self.model_output)))
 
