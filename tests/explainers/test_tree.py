@@ -142,8 +142,36 @@ def test_xgboost_multiclass():
     # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
     shap_values = shap.TreeExplainer(model).shap_values(X)
 
+    # validate structure of shap values, must be a list of ndarray for all classes
+    assert isinstance(shap_values, list)
+    assert len(shap_values) == 3
+
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
+
+def test_xgboost_binary():
+    try:
+        import xgboost
+    except:
+        print("Skipping test_xgboost_binary!")
+        return
+    import shap
+    from sklearn.model_selection import train_test_split
+
+    # train lightgbm model
+    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    model = xgboost.XGBClassifier(objective="binary:logistic", max_depth=4)
+    model.fit(X_train, Y_train)
+
+    # explain the model's predictions using SHAP values
+    shap_values = shap.TreeExplainer(model).shap_values(X_test)
+
+    # validate structure of shap values, must be a list of ndarray for both classes
+    assert isinstance(shap_values, list)
+    assert len(shap_values) == 2
+
+    # ensure plot works for first class
+    shap.dependence_plot(0, shap_values[0], X_test, show=False)
 
 def _validate_shap_values(model, x_test):
     # explain the model's predictions using SHAP values

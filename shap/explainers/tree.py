@@ -173,6 +173,13 @@ class TreeExplainer(Explainer):
 
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
+    def _binary_reshape_phi(self, phi, classifier_name):
+        """ For binary classifiers that output only positive class, this reshapes the result to be list of ndarray.
+        """
+        warn_msg = '{} binary classifier with TreeExplainer shap values output has changed to a list of ndarray'
+        warnings.warn(warn_msg.format(classifier_name))
+        return np.concatenate((0-phi, phi), axis=-1)
+
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True):
         """ Estimate the SHAP values for a set of samples.
 
@@ -231,6 +238,12 @@ class TreeExplainer(Explainer):
                         X, ntree_limit=tree_limit, pred_contribs=True,
                         approx_contribs=approximate, validate_features=False
                     )
+                    # Note: the data must be joined on the last axis
+                    if self.model.objective == 'binary_crossentropy' and len(phi.shape) == 2:
+                        phi = self._binary_reshape_phi(phi, 'XGBoost')
+                        num_rows = X.num_row()
+                        num_cols = X.num_col()
+                        phi = phi.reshape(num_rows, phi.shape[1]//(num_cols+1), num_cols+1)
                 except ValueError as e:
                         raise ValueError("This reshape error is often caused by passing a bad data matrix to SHAP. " \
                                          "See https://github.com/slundberg/shap/issues/580") from e
@@ -246,8 +259,7 @@ class TreeExplainer(Explainer):
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 # Note: the data must be joined on the last axis
                 if self.model.original_model.params['objective'] == 'binary':
-                    warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
-                    phi = np.concatenate((0-phi, phi), axis=-1)
+                    phi = self._binary_reshape_phi(phi, 'LightGBM')
                 if phi.shape[1] != X.shape[1] + 1:
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
@@ -465,8 +477,11 @@ class TreeExplainer(Explainer):
                 raise SHAPError(err_msg)
 
         if type(phi) is list:
-            for i in range(len(phi)):
-                check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:,i])
+            if len(model_output.shape) == 1:
+                check_sum(self.expected_value[1] + phi[1].sum(-1), model_output)
+            else:
+                for i in range(len(phi)):
+                    check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:,i])
         else:
             check_sum(self.expected_value + phi.sum(-1), model_output)
 
