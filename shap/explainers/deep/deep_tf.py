@@ -10,7 +10,7 @@ tf_backprop = None
 tf_execute = None
 tf_gradients_impl = None
 
-def custom_record_gradient(op_name, inputs, attrs, results, name):
+def custom_record_gradient(op_name, inputs, attrs, results, name=None):
     """ This overrides tensorflow.python.eager.backprop._record_gradient.
 
     We need to override _record_gradient in order to get gradient backprop to
@@ -24,7 +24,12 @@ def custom_record_gradient(op_name, inputs, attrs, results, name):
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
     
-    out = tf_backprop._record_gradient(op_name, inputs, attrs, results, name)
+    if name is not None:
+        # TF <2.1
+        out = tf_backprop._record_gradient(op_name, inputs, attrs, results, name)
+    else:
+        # TF 2.1 and later
+        out = tf_backprop._record_gradient(op_name, inputs, attrs, results)
 
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
@@ -146,8 +151,7 @@ class TFDeepExplainer(Explainer):
             else:
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
-        if not tf.executing_eagerly():
-            self._init_between_tensors(self.model_output.op, self.model_inputs)
+        self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
