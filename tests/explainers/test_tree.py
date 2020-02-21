@@ -426,6 +426,33 @@ def test_catboost():
     )
     shap.TreeExplainer(model)
 
+def test_catboost_categorical():
+    try:
+        import catboost
+        from catboost.datasets import amazon
+    except:
+        print("Skipping test_catboost!")
+        return
+    import shap
+    import pandas as pd
+    from sklearn.datasets import load_boston
+
+    bunch = load_boston()
+    X, y = load_boston(True)
+    X = pd.DataFrame(X, columns=bunch.feature_names)
+    X['CHAS'] = X['CHAS'].astype(str)
+
+    model = catboost.CatBoostRegressor(100, cat_features=['CHAS'], verbose=False)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    predicted = model.predict(X)
+
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predicted).max() < 1e-4, \
+        "SHAP values don't sum to model output!"
+
 def test_lightgbm_constant_prediction():
     # note: this test used to fail with lightgbm 2.2.1 with error:
     # ValueError: zero-size array to reduction operation maximum which has no identity
