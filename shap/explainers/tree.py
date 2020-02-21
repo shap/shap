@@ -260,11 +260,7 @@ class TreeExplainer(Explainer):
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
                 if type(X) != catboost.Pool:
-                    try:
-                        X = catboost.Pool(X)
-                    except:
-                        raise SHAPError("Failed to wrap X as catboost.Pool(X)! Perhaps you have categorical features? If so " \
-                                        "pass a catboost.Pool object directly and not a DataFrame or array.")
+                    X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
 
             # note we pull off the last column and keep it as our expected_value
@@ -494,6 +490,7 @@ class TreeEnsemble:
         self.fully_defined_weighting = True # does the background dataset land in every leaf (making it valid for the tree_path_dependent method)
         self.tree_limit = None # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1 # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
+        self.cat_feature_indices = None # If this is set it tells us which features are treated categorically
 
         # we use names like keras
         objective_name_map = {
@@ -835,6 +832,7 @@ class TreeEnsemble:
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+            self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "catboost.core.CatBoostClassifier"):
             assert_import("catboost")
             self.model_type = "catboost"
@@ -847,10 +845,12 @@ class TreeEnsemble:
                 self.trees = None # we get here because the cext can't handle categorical splits yet
             self.tree_output = "log_odds"
             self.objective = "binary_crossentropy"
+            self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "catboost.core.CatBoost"):
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+            self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "imblearn.ensemble._forest.BalancedRandomForestClassifier"):
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
