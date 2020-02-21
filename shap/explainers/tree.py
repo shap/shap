@@ -905,18 +905,17 @@ class TreeEnsemble:
             self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
 
             for i in range(num_trees):
-                l = len(self.trees[i].features)
-                self.children_left[i,:l] = self.trees[i].children_left
-                self.children_right[i,:l] = self.trees[i].children_right
-                self.children_default[i,:l] = self.trees[i].children_default
-                self.features[i,:l] = self.trees[i].features
-                self.thresholds[i,:l] = self.trees[i].thresholds
+                self.children_left[i,:len(self.trees[i].children_left)] = self.trees[i].children_left
+                self.children_right[i,:len(self.trees[i].children_right)] = self.trees[i].children_right
+                self.children_default[i,:len(self.trees[i].children_default)] = self.trees[i].children_default
+                self.features[i,:len(self.trees[i].features)] = self.trees[i].features
+                self.thresholds[i,:len(self.trees[i].thresholds)] = self.trees[i].thresholds
                 if self.num_stacked_models > 1:
                     stack_pos = int(i // (num_trees / self.num_stacked_models))
-                    self.values[i,:l,stack_pos] = self.trees[i].values[:,0]
+                    self.values[i,:len(self.trees[i].values[:,0]),stack_pos] = self.trees[i].values[:,0]
                 else:
-                    self.values[i,:l] = self.trees[i].values
-                self.node_sample_weight[i,:l] = self.trees[i].node_sample_weight
+                    self.values[i,:len(self.trees[i].values)] = self.trees[i].values
+                self.node_sample_weight[i,:len(self.trees[i].node_sample_weight)] = self.trees[i].node_sample_weight
 
                 # ensure that the passed background dataset lands in every leaf
                 if np.min(self.trees[i].node_sample_weight) <= 0:
