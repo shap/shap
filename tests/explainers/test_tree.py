@@ -887,21 +887,22 @@ def test_provided_background_independent_prob_output():
     dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
     dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
 
-    params = {
-        'booster': 'gbtree',
-        'objective': 'binary:logistic',
-        'max_depth': 4,
-        'eta': 0.1,
-        'nthread': -1,
-        'silent': 1
-    }
+    for objective in ["reg:logistic", "binary:logistic"]:
+        params = {
+            'booster': 'gbtree',
+            'objective': objective,
+            'max_depth': 4,
+            'eta': 0.1,
+            'nthread': -1,
+            'silent': 1
+        }
 
-    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
+        bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
-    diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
-    assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-4, "Bad expected_value!"
+        explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
+        diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
+        assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
+        assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-4, "Bad expected_value!"
 
 def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions

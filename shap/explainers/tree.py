@@ -456,7 +456,9 @@ class TreeExplainer(Explainer):
             diff = np.abs(sum_val - model_output)
             if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
                 ind = np.argmax(diff)
-                err_msg = "Additivity check failed in TreeExplainer! Please report this on GitHub."
+                err_msg = "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the " \
+                          "explainer is the same shape that the model was trained on. If your data shape is correct " \
+                          "then please report this on GitHub."
                 if self.feature_perturbation != "interventional":
                     err_msg += " Consider retrying with the feature_perturbation='interventional' option."
                 err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
@@ -505,6 +507,7 @@ class TreeEnsemble:
             "mae": "absolute_error",
             "gini": "binary_crossentropy",
             "entropy": "binary_crossentropy",
+            "reg:logistic": "binary_crossentropy",
             "binary:logistic": "binary_crossentropy",
             "binary_logloss": "binary_crossentropy",
             "binary": "binary_crossentropy"
@@ -515,6 +518,7 @@ class TreeEnsemble:
             "regression_l2": "squared_error",
             "reg:linear": "raw_value",
             "reg:squarederror": "raw_value",
+            "reg:logistic": "log_odds",
             "binary:logistic": "log_odds",
             "binary_logloss": "log_odds",
             "binary": "log_odds"
@@ -744,6 +748,11 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            if self.model_output == "predict_proba":
+                if self.num_stacked_models == 1:
+                    self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
+                else:
+                    self.model_output = "probability"
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             import xgboost
             self.original_model = model.get_booster()
@@ -1318,6 +1327,13 @@ class XGBTreeModelLoader(object):
         self.name_obj = self.read_str(self.name_obj_len)
         self.name_gbm_len = self.read('Q')
         self.name_gbm = self.read_str(self.name_gbm_len)
+
+        # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
+        # so we have to transform it depending on the objective
+        import xgboost
+        if LooseVersion(xgboost.__version__).version[0] >= 1:
+            if self.name_obj in ["binary:logistic", "reg:logistic"]:
+                self.base_score = scipy.special.logit(self.base_score)
 
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
