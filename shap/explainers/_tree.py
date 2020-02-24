@@ -295,7 +295,7 @@ class Tree(Explainer):
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 # Note: the data must be joined on the last axis
-                if self.model.original_model.params['objective'] == 'binary':
+                if 'objective' in self.model.original_model.params and self.model.original_model.params['objective'] == 'binary':
                     if not from_call:
                         warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
                     phi = np.concatenate((0-phi, phi), axis=-1)

@@ -382,18 +382,13 @@ def test_sklearn_decision_tree_multiclass():
     assert np.abs(shap_values[0][0,0] - 0.05) < 1e-1
     assert np.abs(shap_values[1][0,0] + 0.05) < 1e-1
 
-def test_lightgbm():
-    try:
-        import lightgbm
-    except:
-        print("Skipping test_lightgbm!")
-        return
+def _common_lightgbm_regressor_test(create_model):
     import shap
     import numpy as np
 
-    # train lightgbm model
+    # train lightgbm model on boston housing price regression dataset
     X, y = shap.datasets.boston()
-    model = lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
+    model = create_model()
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
@@ -404,6 +399,99 @@ def test_lightgbm():
 
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
+
+def test_lightgbm():
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm!")
+        return
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
+
+    _common_lightgbm_regressor_test(create_model)
+
+def test_lightgbm_mse_regressor():
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm_mse_regressor!")
+        return
+    # train the lightgbm model on a dataset with MSE objective
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8], objective='mean_squared_error')
+
+    _common_lightgbm_regressor_test(create_model)
+
+def _common_lightgbm_nonsklearn_api(dataset, params, validation):
+    import shap
+    import lightgbm
+    import numpy as np
+    from sklearn.model_selection import train_test_split
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    X_train, X_test, y_train, y_test = train_test_split(*dataset, test_size=0.2, random_state=0)
+    lgb_train = lightgbm.Dataset(X_train, y_train)
+    lgb_test = lightgbm.Dataset(X_test, y_test, reference=lgb_train)
+
+    booster = lightgbm.train(params, lgb_train, valid_sets=[lgb_train, lgb_test], evals_result={},
+                             verbose_eval=30)
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(booster)
+    shap_values = ex.shap_values(X_test)
+
+    predicted = booster.predict(X_test, raw_score=True)
+
+    validation(shap_values, ex.expected_value, predicted)
+
+def test_lightgbm_nonsklearn_api_binary():
+    import shap
+    import numpy as np
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm_nonsklearn_api_binary!")
+        return
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    params = {
+        'objective': 'binary',
+        'num_threads': 4,
+        'n_estimators': 8000,
+        'early_stopping_round':50,
+        'metric': ['binary_error'],
+        'random_state': 7,
+        'verbose': 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values[1].sum(1) + expected_value[1] - predicted).max() < 1e-4, \
+            "SHAP values don't sum to model output!"
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.iris(), params=params, validation=validation)
+
+def test_lightgbm_nonsklearn_api_regressor():
+    import shap
+    import numpy as np
+    try:
+        import lightgbm
+    except:
+        print("Skipping test_lightgbm_nonsklearn_api_regressor!")
+        return
+    from sklearn.model_selection import train_test_split
+    # train the lightgbm model using non-sklearn API with regression dataset
+    params = {
+        'num_threads': 4,
+        'n_estimators': 8000,
+        'early_stopping_round':50,
+        'metric': ['rmse'],
+        'random_state': 7,
+        'verbose': 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, \
+            "SHAP values don't sum to model output!"
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.adult(), params=params, validation=validation)
 
 def test_gpboost():
     try:
