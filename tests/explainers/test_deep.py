@@ -2,7 +2,10 @@ import shutil
 
 import numpy as np
 import nose
+import os
 
+# force us to not use any GPUs since running many tests may cause trouble
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 def _skip_if_no_tensorflow():
     try:
@@ -17,6 +20,31 @@ def _skip_if_no_pytorch():
     except ImportError:
         raise nose.SkipTest('Pytorch not installed.')
 
+def test_tf_eager():
+    """ This is a basic eager example from keras.
+    """
+    _skip_if_no_tensorflow()
+
+    import pandas as pd
+    import numpy as np
+    import tensorflow as tf
+    from shap import DeepExplainer
+    import datetime
+
+    x = pd.DataFrame({ "B": np.random.random(size=(100,)) })
+    y = x.B
+    y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
+
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(10, input_shape=(x.shape[1],), activation="relu"))
+    model.add(tf.keras.layers.Dense(y.shape[1], input_shape=(10,), activation="softmax"))
+    model.summary()
+    model.compile(loss="categorical_crossentropy", optimizer="Adam")
+    model.fit(x.values, y.values, epochs=2)
+
+    e = DeepExplainer(model, x.values[:1])
+    sv = e.shap_values(x.values)
+    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:,0]).max() < 1e-4
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.

@@ -260,11 +260,7 @@ class TreeExplainer(Explainer):
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
                 if type(X) != catboost.Pool:
-                    try:
-                        X = catboost.Pool(X)
-                    except:
-                        raise SHAPError("Failed to wrap X as catboost.Pool(X)! Perhaps you have categorical features? If so " \
-                                        "pass a catboost.Pool object directly and not a DataFrame or array.")
+                    X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
 
             # note we pull off the last column and keep it as our expected_value
@@ -456,7 +452,9 @@ class TreeExplainer(Explainer):
             diff = np.abs(sum_val - model_output)
             if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
                 ind = np.argmax(diff)
-                err_msg = "Additivity check failed in TreeExplainer! Please report this on GitHub."
+                err_msg = "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the " \
+                          "explainer is the same shape that the model was trained on. If your data shape is correct " \
+                          "then please report this on GitHub."
                 if self.feature_perturbation != "interventional":
                     err_msg += " Consider retrying with the feature_perturbation='interventional' option."
                 err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
@@ -492,6 +490,7 @@ class TreeEnsemble:
         self.fully_defined_weighting = True # does the background dataset land in every leaf (making it valid for the tree_path_dependent method)
         self.tree_limit = None # used for limiting the number of trees we use by default (like from early stopping)
         self.num_stacked_models = 1 # If this is greater than 1 it means we have multiple stacked models with the same number of trees in each model (XGBoost multi-output style)
+        self.cat_feature_indices = None # If this is set it tells us which features are treated categorically
 
         # we use names like keras
         objective_name_map = {
@@ -505,6 +504,7 @@ class TreeEnsemble:
             "mae": "absolute_error",
             "gini": "binary_crossentropy",
             "entropy": "binary_crossentropy",
+            "reg:logistic": "binary_crossentropy",
             "binary:logistic": "binary_crossentropy",
             "binary_logloss": "binary_crossentropy",
             "binary": "binary_crossentropy"
@@ -515,6 +515,7 @@ class TreeEnsemble:
             "regression_l2": "squared_error",
             "reg:linear": "raw_value",
             "reg:squarederror": "raw_value",
+            "reg:logistic": "log_odds",
             "binary:logistic": "log_odds",
             "binary_logloss": "log_odds",
             "binary": "log_odds"
@@ -744,6 +745,11 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            if self.model_output == "predict_proba":
+                if self.num_stacked_models == 1:
+                    self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
+                else:
+                    self.model_output = "probability"
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             import xgboost
             self.original_model = model.get_booster()
@@ -826,6 +832,7 @@ class TreeEnsemble:
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+            self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "catboost.core.CatBoostClassifier"):
             assert_import("catboost")
             self.model_type = "catboost"
@@ -838,10 +845,12 @@ class TreeEnsemble:
                 self.trees = None # we get here because the cext can't handle categorical splits yet
             self.tree_output = "log_odds"
             self.objective = "binary_crossentropy"
+            self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "catboost.core.CatBoost"):
             assert_import("catboost")
             self.model_type = "catboost"
             self.original_model = model
+            self.cat_feature_indices = model.get_cat_feature_indices()
         elif safe_isinstance(model, "imblearn.ensemble._forest.BalancedRandomForestClassifier"):
             self.input_dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
@@ -896,18 +905,17 @@ class TreeEnsemble:
             self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
 
             for i in range(num_trees):
-                l = len(self.trees[i].features)
-                self.children_left[i,:l] = self.trees[i].children_left
-                self.children_right[i,:l] = self.trees[i].children_right
-                self.children_default[i,:l] = self.trees[i].children_default
-                self.features[i,:l] = self.trees[i].features
-                self.thresholds[i,:l] = self.trees[i].thresholds
+                self.children_left[i,:len(self.trees[i].children_left)] = self.trees[i].children_left
+                self.children_right[i,:len(self.trees[i].children_right)] = self.trees[i].children_right
+                self.children_default[i,:len(self.trees[i].children_default)] = self.trees[i].children_default
+                self.features[i,:len(self.trees[i].features)] = self.trees[i].features
+                self.thresholds[i,:len(self.trees[i].thresholds)] = self.trees[i].thresholds
                 if self.num_stacked_models > 1:
                     stack_pos = int(i // (num_trees / self.num_stacked_models))
-                    self.values[i,:l,stack_pos] = self.trees[i].values[:,0]
+                    self.values[i,:len(self.trees[i].values[:,0]),stack_pos] = self.trees[i].values[:,0]
                 else:
-                    self.values[i,:l] = self.trees[i].values
-                self.node_sample_weight[i,:l] = self.trees[i].node_sample_weight
+                    self.values[i,:len(self.trees[i].values)] = self.trees[i].values
+                self.node_sample_weight[i,:len(self.trees[i].node_sample_weight)] = self.trees[i].node_sample_weight
 
                 # ensure that the passed background dataset lands in every leaf
                 if np.min(self.trees[i].node_sample_weight) <= 0:
@@ -1318,6 +1326,13 @@ class XGBTreeModelLoader(object):
         self.name_obj = self.read_str(self.name_obj_len)
         self.name_gbm_len = self.read('Q')
         self.name_gbm = self.read_str(self.name_gbm_len)
+
+        # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
+        # so we have to transform it depending on the objective
+        import xgboost
+        if LooseVersion(xgboost.__version__).version[0] >= 1:
+            if self.name_obj in ["binary:logistic", "reg:logistic"]:
+                self.base_score = scipy.special.logit(self.base_score)
 
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
