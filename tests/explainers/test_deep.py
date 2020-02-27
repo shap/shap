@@ -3,6 +3,8 @@ import shutil
 import numpy as np
 import nose
 
+from tests.fixtures import set_seed
+
 
 def _skip_if_no_tensorflow():
     try:
@@ -199,7 +201,7 @@ def test_tf_keras_imdb_lstm():
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
-def test_pytorch_mnist_cnn():
+def test_pytorch_mnist_cnn(set_seed):
     """The same test as above, but for pytorch
     """
     _skip_if_no_pytorch()
