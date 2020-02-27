@@ -4,8 +4,11 @@ import numpy as np
 import nose
 import os
 
+from tests.fixtures import set_seed
+
 # force us to not use any GPUs since running many tests may cause trouble
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 
 def _skip_if_no_tensorflow():
     try:
@@ -19,6 +22,7 @@ def _skip_if_no_pytorch():
         import torch
     except ImportError:
         raise nose.SkipTest('Pytorch not installed.')
+
 
 def test_tf_eager():
     """ This is a basic eager example from keras.
@@ -227,7 +231,7 @@ def test_tf_keras_imdb_lstm():
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
-def test_pytorch_mnist_cnn():
+def test_pytorch_mnist_cnn(set_seed):
     """The same test as above, but for pytorch
     """
     _skip_if_no_pytorch()
@@ -342,10 +346,12 @@ def test_pytorch_mnist_cnn():
     print ('Running test on interim layer')
     run_test(train_loader, test_loader, interim=True, device="cpu")
     if torch.cuda.is_available():
+        os.environ['CUDA_VISIBLE_DEVICES'] = 0
         run_test(train_loader, test_loader, interim=True, device="cuda:0")
     print ('Running test on whole model')
     run_test(train_loader, test_loader, interim=False, device="cpu")
     if torch.cuda.is_available():
+        os.environ['CUDA_VISIBLE_DEVICES'] = 0
         run_test(train_loader, test_loader, interim=True, device="cuda:0")
     # clean up
     shutil.rmtree(root_dir)
