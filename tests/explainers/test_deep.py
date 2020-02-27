@@ -130,7 +130,7 @@ def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.
     """
     _skip_if_no_tensorflow()
-    
+
     from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.optimizers import SGD
@@ -238,7 +238,7 @@ def test_pytorch_mnist_cnn():
     from torch.nn import functional as F
     import shap
 
-    def run_test(train_loader, test_loader, interim):
+    def run_test(train_loader, test_loader, interim, device):
 
         class Net(nn.Module):
             def __init__(self):
@@ -279,7 +279,7 @@ def test_pytorch_mnist_cnn():
                 data, target = data.to(device), target.to(device)
                 optimizer.zero_grad()
                 output = model(data)
-                loss = F.mse_loss(output, torch.eye(10)[target])
+                loss = F.mse_loss(output, torch.eye(10)[target].to(device))
                 # loss = F.nll_loss(output, target)
                 loss.backward()
                 optimizer.step()
@@ -290,25 +290,32 @@ def test_pytorch_mnist_cnn():
                 if num_examples > cutoff:
                     break
 
-        device = torch.device('cpu')
-        train(model, device, train_loader, optimizer, 1)
+
+        train(model.to(device), device, train_loader, optimizer, 1)
 
         next_x, next_y = next(iter(train_loader))
         np.random.seed(0)
         inds = np.random.choice(next_x.shape[0], 20, replace=False)
         if interim:
-            e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
+            e = shap.DeepExplainer(
+                (model.to(device), model.conv_layers[0].to(device)), next_x[inds, :, :, :].to(device)
+            )
         else:
-            e = shap.DeepExplainer(model, next_x[inds, :, :, :])
+            e = shap.DeepExplainer(
+                model.to(device), next_x[inds, :, :, :].to(device)
+            )
         test_x, test_y = next(iter(test_loader))
         input_tensor = test_x[:1]
         input_tensor.requires_grad = True
-        shap_values = e.shap_values(input_tensor)
+        shap_values = e.shap_values(input_tensor.to(device))
 
+        model = model.to(device)
         model.eval()
         model.zero_grad()
         with torch.no_grad():
-            diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
+            test_outputs = model(test_x[:1].to(device))
+            next_outputs = model(next_x[inds, :].to(device))
+            diff = (test_outputs - next_outputs).detach().cpu().numpy().mean(0)
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
         assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
@@ -332,10 +339,16 @@ def test_pytorch_mnist_cnn():
                        ])),
         batch_size=batch_size, shuffle=True)
 
-    print ('Running test on interim layer')
-    run_test(train_loader, test_loader, interim=True)
-    print ('Running test on whole model')
-    run_test(train_loader, test_loader, interim=False)
+    print('Running test on interim layer')
+    run_test(train_loader, test_loader, interim=True, device="cpu")
+    if torch.cuda.is_available():
+        os.environ['CUDA_VISIBLE_DEVICES'] = 0
+        run_test(train_loader, test_loader, interim=True, device="cuda:0")
+    print('Running test on whole model')
+    run_test(train_loader, test_loader, interim=False, device="cpu")
+    if torch.cuda.is_available():
+        os.environ['CUDA_VISIBLE_DEVICES'] = 0
+        run_test(train_loader, test_loader, interim=True, device="cuda:0")
     # clean up
     shutil.rmtree(root_dir)
 
