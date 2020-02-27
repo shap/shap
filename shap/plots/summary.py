@@ -188,7 +188,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if sort:
         # order features by the sum of their effect magnitudes
         if multi_class:
-            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=0), axis=0))
+            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
         else:
             feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
         feature_order = feature_order[-min(max_display, len(feature_order)):]
