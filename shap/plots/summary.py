@@ -52,9 +52,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         unchanged.
     """
 
-    # deprication warnings
+    # deprecation warnings
     if auto_size_plot is not None:
-        warnings.warn("auto_size_plot=False is depricated and is now ignored! Use plot_size=None instead.")
+        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
 
     multi_class = False
     if isinstance(shap_values, list):
