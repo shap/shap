@@ -24,7 +24,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                  color_bar_label=labels["FEATURE_VALUE"],
                  # depreciated
                  auto_size_plot=None,
-                 path=''):
+                 ):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
