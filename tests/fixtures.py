@@ -1,5 +1,4 @@
 import random
-import pytest
 
 import numpy as np
 
@@ -18,7 +17,5 @@ def set_random_seeds(seed_value=42):
 
     torch.backends.cudnn.deterministic = True
 
-
-@pytest.fixture()
 def set_seed():
     set_random_seeds()

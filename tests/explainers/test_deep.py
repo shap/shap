@@ -5,6 +5,8 @@ import nose
 import os
 
 from tests.fixtures import set_seed
+from nose.tools import with_setup
+
 
 # force us to not use any GPUs since running many tests may cause trouble
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -231,7 +233,9 @@ def test_tf_keras_imdb_lstm():
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
-def test_pytorch_mnist_cnn(set_seed):
+
+@with_setup(set_seed)
+def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
     _skip_if_no_pytorch()
@@ -355,8 +359,8 @@ def test_pytorch_mnist_cnn(set_seed):
     # clean up
     shutil.rmtree(root_dir)
 
-
-def test_pytorch_single_output(set_seed):
+@with_setup(set_seed)
+def test_pytorch_single_output():
     """Testing single outputs
     """
     _skip_if_no_pytorch()
@@ -433,8 +437,8 @@ def test_pytorch_single_output(set_seed):
         os.environ['CUDA_VISIBLE_DEVICES'] = 0
         run_test(loader, device="cuda:0")
 
-
-def test_pytorch_multiple_inputs(set_seed):
+@with_setup(set_seed)
+def test_pytorch_multiple_inputs():
     _skip_if_no_pytorch()
 
     import torch
