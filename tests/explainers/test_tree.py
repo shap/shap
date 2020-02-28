@@ -426,6 +426,33 @@ def test_catboost():
     )
     shap.TreeExplainer(model)
 
+def test_catboost_categorical():
+    try:
+        import catboost
+        from catboost.datasets import amazon
+    except:
+        print("Skipping test_catboost!")
+        return
+    import shap
+    import pandas as pd
+    from sklearn.datasets import load_boston
+
+    bunch = load_boston()
+    X, y = load_boston(True)
+    X = pd.DataFrame(X, columns=bunch.feature_names)
+    X['CHAS'] = X['CHAS'].astype(str)
+
+    model = catboost.CatBoostRegressor(100, cat_features=['CHAS'], verbose=False)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    predicted = model.predict(X)
+
+    assert np.abs(shap_values.sum(1) + explainer.expected_value - predicted).max() < 1e-4, \
+        "SHAP values don't sum to model output!"
+
 def test_lightgbm_constant_prediction():
     # note: this test used to fail with lightgbm 2.2.1 with error:
     # ValueError: zero-size array to reduction operation maximum which has no identity
@@ -887,21 +914,22 @@ def test_provided_background_independent_prob_output():
     dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
     dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
 
-    params = {
-        'booster': 'gbtree',
-        'objective': 'binary:logistic',
-        'max_depth': 4,
-        'eta': 0.1,
-        'nthread': -1,
-        'silent': 1
-    }
+    for objective in ["reg:logistic", "binary:logistic"]:
+        params = {
+            'booster': 'gbtree',
+            'objective': objective,
+            'max_depth': 4,
+            'eta': 0.1,
+            'nthread': -1,
+            'silent': 1
+        }
 
-    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
+        bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
-    diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
-    assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-4, "Bad expected_value!"
+        explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
+        diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
+        assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
+        assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-4, "Bad expected_value!"
 
 def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions

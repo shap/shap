@@ -10,7 +10,7 @@ tf_backprop = None
 tf_execute = None
 tf_gradients_impl = None
 
-def custom_record_gradient(op_name, inputs, attrs, results, name):
+def custom_record_gradient(op_name, inputs, attrs, results):
     """ This overrides tensorflow.python.eager.backprop._record_gradient.
 
     We need to override _record_gradient in order to get gradient backprop to
@@ -23,9 +23,8 @@ def custom_record_gradient(op_name, inputs, attrs, results, name):
     if op_name == "ResourceGather" and inputs[1].dtype == tf.int32:
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
-    
-    out = tf_backprop._record_gradient(op_name, inputs, attrs, results, name)
-
+    out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
+ 
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -92,8 +91,7 @@ class TFDeepExplainer(Explainer):
                 warnings.warn("keras is no longer supported, please use tf.keras instead.")
             except:
                 pass
-
-        self.model = model
+        
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
@@ -102,6 +100,13 @@ class TFDeepExplainer(Explainer):
         self.multi_output = True
         if len(self.model_output.shape) == 1:
             self.multi_output = False
+
+        if tf.executing_eagerly():
+            if type(model) is tuple or type(model) is list:
+                assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
+                self.model = Model(model[0], model[1])
+            else:
+                self.model = model
 
         # check if we have multiple inputs
         self.multi_input = True
@@ -144,6 +149,8 @@ class TFDeepExplainer(Explainer):
             if not tf.executing_eagerly():
                 self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
             else:
+                if type(self.model)is tuple:
+                    sel.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
         if not tf.executing_eagerly():
@@ -255,7 +262,11 @@ class TFDeepExplainer(Explainer):
 
         # rank and determine the model outputs that we will explain
         if ranked_outputs is not None and self.multi_output:
-            model_output_values = self.run(self.model_output, self.model_inputs, X)
+            if not tf.executing_eagerly():
+                model_output_values = self.run(self.model_output, self.model_inputs, X)
+            else:
+                model_output_values = self.model(X)
+
             if output_rank_order == "max":
                 model_output_ranks = np.argsort(-model_output_values)
             elif output_rank_order == "min":
@@ -311,7 +322,10 @@ class TFDeepExplainer(Explainer):
                     diffs = model_output[:, l] - self.expected_value[l]
                     for i in range(len(output_phis[l])):
                         diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
-                assert np.abs(diffs).max() < 1e-2, "Explanations do not sum up to the model's output! Please post as a github issue."
+                assert np.abs(diffs).max() < 1e-2, "The SHAP explanations do not sum up to the model's output! This is either because of a " \
+                                                   "rounding error or because an operator in your computation graph was not fully supported. If " \
+                                                   "the sum difference of %f is significant compared the scale of your model outputs please post " \
+                                                   "as a github issue, with a reproducable example if possible so we can debug it." % np.abs(diffs).max()
         
         if not self.multi_output:
             return output_phis[0]
@@ -331,7 +345,7 @@ class TFDeepExplainer(Explainer):
         else:
             def anon():
                 tf_execute.record_gradient = custom_record_gradient
-
+                
                 # build inputs that are correctly shaped, typed, and tf-wrapped
                 inputs = []
                 for i in range(len(X)):
@@ -349,7 +363,9 @@ class TFDeepExplainer(Explainer):
     def custom_grad(self, op, *grads):
         """ Passes a gradient op creation request to the correct handler.
         """
-        return op_handlers[op.type](self, op, *grads)
+        type_name = op.type[5:] if op.type.startswith("shap_") else op.type
+        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefex before the lookup
+        return out
 
     def execute_with_overridden_gradients(self, f):
         # replace the gradients for all the non-linear activations
@@ -364,6 +380,10 @@ class TFDeepExplainer(Explainer):
         for n in op_handlers:
             if n in reg:
                 self.orig_grads[n] = reg[n]["type"]
+                reg["shap_"+n] = {
+                    "type": self.custom_grad,
+                    "location": reg[n]["location"]
+                }
                 reg[n]["type"] = self.custom_grad
 
         # In TensorFlow 1.10 they started pruning out nodes that they think can't be backpropped
@@ -383,6 +403,7 @@ class TFDeepExplainer(Explainer):
             # restore the original gradient definitions
             for n in op_handlers:
                 if n in reg:
+                    del reg["shap_"+n]
                     reg[n]["type"] = self.orig_grads[n]
             for non_reg_ops in ops_not_in_registry:
                 del reg[non_reg_ops]
@@ -451,9 +472,20 @@ def softmax(explainer, op, *grads):
     evals = tf.exp(in0_centered, name="custom_exp")
     rsum = tf.reduce_sum(evals, axis=-1, keepdims=True)
     div = evals / rsum
-    explainer.between_ops.extend([evals.op, rsum.op, div.op, in0_centered.op]) # mark these as in-between the inputs and outputs
+
+    # mark these as in-between the inputs and outputs
+    for op in [evals.op, rsum.op, div.op, in0_centered.op]:
+        for t in op.outputs:
+            if t.name not in explainer.between_tensors:
+                explainer.between_tensors[t.name] = False
+    
     out = tf.gradients(div, in0_centered, grad_ys=grads[0])[0]
-    del explainer.between_ops[-4:]
+
+    # remove the names we just added
+    for op in [evals.op, rsum.op, div.op, in0_centered.op]:
+        for t in op.outputs:
+            if explainer.between_tensors[t.name] == False:
+                del explainer.between_tensors[t.name]
 
     # rescale to account for our shift by in0_max (which we did for numerical stability)
     xin0,rin0 = tf.split(in0, 2)
@@ -473,6 +505,8 @@ def maxpool(explainer, op, *grads):
     dup0 = [2] + [1 for i in delta_in0.shape[1:]]
     cross_max = tf.maximum(xout, rout)
     diffs = tf.concat([cross_max - rout, xout - cross_max], 0)
+    if op.type.startswith("shap_"):
+        op.type = op.type[5:]
     xmax_pos,rmax_pos = tf.split(explainer.orig_grads[op.type](op, grads[0] * diffs), 2)
     return tf.tile(tf.where(
         tf.abs(delta_in0) < 1e-7,
@@ -506,6 +540,8 @@ def gather(explainer, op, *grads):
             out_sum / delta_in1_t
         ), None]
     elif var[0] and not var[1]:
+        if op.type.startswith("shap_"):
+            op.type = op.type[5:]
         return [explainer.orig_grads[op.type](op, grads[0]), None] # linear in this case
     else:
         assert False, "Axis not yet supported to be varying for gather op!"
@@ -532,7 +568,7 @@ def nonlinearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
             return nonlinearity_1d_handler(input_ind1, explainer, op, *grads)
         elif var[input_ind0] and var[input_ind1]:
             return nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads)
-        else: 
+        else:
             return [None for _ in op.inputs] # no inputs vary, we must be hidden by a switch function
     return handler
 
@@ -559,10 +595,12 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     else:
         dup0 = [2] + [1 for i in delta_in0.shape[1:]]
     out = [None for _ in op_inputs]
-    orig_grads = explainer.orig_grads[op.type](op, grads[0])
+    if op.type.startswith("shap_"):
+        op.type = op.type[5:]
+    orig_grad = explainer.orig_grads[op.type](op, grads[0])
     out[input_ind] = tf.where(
         tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
-        orig_grads[input_ind] if len(op_inputs) > 1 else orig_grads,
+        orig_grad[input_ind] if len(op_inputs) > 1 else orig_grad,
         grads[0] * tf.tile((xout - rout) / delta_in0, dup0)
     )
     return out
@@ -570,8 +608,10 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
     assert input_ind0 == 0 and input_ind1 == 1, "TODO: Can't yet handle double inputs that are not first!"
     xout,rout = tf.split(op.outputs[0], 2)
-    xin0,rin0 = tf.split(op.inputs[input_ind0], 2)
-    xin1,rin1 = tf.split(op.inputs[input_ind1], 2)
+    in0 = op.inputs[input_ind0]
+    in1 = op.inputs[input_ind1]
+    xin0,rin0 = tf.split(in0, 2)
+    xin1,rin1 = tf.split(in1, 2)
     delta_in0 = xin0 - rin0
     delta_in1 = xin1 - rin1
     dup0 = [2] + [1 for i in delta_in0.shape[1:]]
@@ -583,17 +623,17 @@ def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *gra
     out1 = 0.5 * (out11 - out10 + out01 - out00)
     out1 = grads[0] * tf.tile(out1 / delta_in1, dup0)
 
-    # see if due to broadcasting our gradient shapes don't match our input shapes
-    if (np.any(np.array(out1.shape) != np.array(delta_in1.shape))):
-        broadcast_index = np.where(np.array(out1.shape) != np.array(delta_in1.shape))[0][0]
-        out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
-    elif (np.any(np.array(out0.shape) != np.array(delta_in0.shape))):
-        broadcast_index = np.where(np.array(out0.shape) != np.array(delta_in0.shape))[0][0]
-        out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
-
     # Avoid divide by zero nans
     out0 = tf.where(tf.abs(tf.tile(delta_in0, dup0)) < 1e-7, tf.zeros_like(out0), out0)
     out1 = tf.where(tf.abs(tf.tile(delta_in1, dup0)) < 1e-7, tf.zeros_like(out1), out1)
+
+    # see if due to broadcasting our gradient shapes don't match our input shapes
+    if (np.any(np.array(out1.shape) != np.array(in1.shape))):
+        broadcast_index = np.where(np.array(out1.shape) != np.array(in1.shape))[0][0]
+        out1 = tf.reduce_sum(out1, axis=broadcast_index, keepdims=True)
+    elif (np.any(np.array(out0.shape) != np.array(in0.shape))):
+        broadcast_index = np.where(np.array(out0.shape) != np.array(in0.shape))[0][0]
+        out0 = tf.reduce_sum(out0, axis=broadcast_index, keepdims=True)
 
     return [out0, out1]
 
@@ -607,6 +647,8 @@ def linearity_1d_handler(input_ind, explainer, op, *grads):
     for i in range(len(op.inputs)):
         if i != input_ind:
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
+    if op.type.startswith("shap_"):
+        op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
 
 def linearity_with_excluded(input_inds):
@@ -619,9 +661,13 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     for i in range(len(op.inputs)):
         if i in input_inds or i - len(op.inputs) in input_inds:
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
+    if op.type.startswith("shap_"):
+        op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
 
 def passthrough(explainer, op, *grads):
+    if op.type.startswith("shap_"):
+        op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
 
 def break_dependence(explainer, op, *grads):
