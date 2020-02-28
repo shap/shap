@@ -488,7 +488,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if get_png:
         file = BytesIO()
         pl.savefig(file, format='png', bbox_inches="tight")
-       return file
+        return file
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
