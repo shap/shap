@@ -222,7 +222,8 @@ def deeplift_grad(module, grad_input, grad_output):
     # first, check the module is supported
     if module_type in op_handler:
         if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
-            return op_handler[module_type](module, grad_input, grad_output)
+            result = op_handler[module_type](module, grad_input, grad_output)
+            return tuple([grad.to(grad_input[0].device) for grad in result])
     else:
         print('Warning: unrecognized nn.Module: {}'.format(module_type))
         return grad_input
