@@ -5,6 +5,8 @@ from __future__ import division
 
 import warnings
 import numpy as np
+from io import BytesIO
+import base64
 from scipy.stats import gaussian_kde
 try:
     import matplotlib.pyplot as pl
@@ -16,12 +18,13 @@ from . import colors
 
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
-                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+                 color=None, axis_color="#333333", title=None, alpha=1, show=True, save=False, sort=True,
                  color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
                  # depreciated
-                 auto_size_plot=None):
+                 auto_size_plot=None,
+                 path=''):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -148,7 +151,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         summary_plot(
             proj_shap_values, features[:, sort_inds] if features is not None else None,
             feature_names=feature_names[sort_inds],
-            sort=False, show=False, color_bar=False,
+            sort=False, show=False, save=save, color_bar=False,
             plot_size=None,
             max_display=max_display
         )
@@ -165,6 +168,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             summary_plot(
                 proj_shap_values, features[:, sort_inds] if features is not None else None,
                 sort=False,
+                save=save,
                 feature_names=["" for i in range(len(feature_names))],
                 show=False,
                 color_bar=False,
@@ -481,6 +485,15 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+    if save:
+        tmpfile = BytesIO()
+        pl.savefig(tmpfile, format='png')
+        encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+
+        html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+
+        with open(path,'w') as f:
+            f.write(html)
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
