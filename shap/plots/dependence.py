@@ -1,5 +1,7 @@
 from __future__ import division
 
+from io import BytesIO
+import base64
 import numpy as np
 import warnings
 try:
