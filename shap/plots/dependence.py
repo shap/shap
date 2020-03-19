@@ -15,7 +15,8 @@ from ..common import convert_name, approximate_interactions
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto",
                     color="#1E88E5", axis_color="#333333", cmap=None,
-                    dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
+                    dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True,
+                    get_png=False):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -134,7 +135,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         dependence_plot(
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
-            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha, get_png=get_png
         )
         if ind1 == ind2:
             ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
@@ -298,3 +299,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
+    if get_png:
+        file = BytesIO()
+        pl.savefig(file, format='png', bbox_inches="tight")
+        return file
