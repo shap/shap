@@ -120,7 +120,7 @@ class SparseData(Data):
 
 class DenseData(Data):
     def __init__(self, data, group_names, *args):
-        self.groups = args[0] if len(args) > 0 and args[0] != None else [np.array([i]) for i in range(len(group_names))]
+        self.groups = args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
 
         l = sum(len(g) for g in self.groups)
         num_samples = data.shape[0]
