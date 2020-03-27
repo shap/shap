@@ -304,7 +304,9 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
-        val_other = X[inds, i][srt].astype(np.float)
+        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=np.float)
+
+        val_other = encoded_val_other
         v = 0.0
         if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
@@ -312,7 +314,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
                     v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
         val_v = v
 
-        val_other = np.isnan(X[inds, i][srt].astype(np.float))
+        val_other = np.isnan(encoded_val_other)
         v = 0.0
         if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
@@ -404,3 +406,13 @@ def partition_tree(X, metric="correlation"):
 
 class SHAPError(Exception):
     pass
+
+
+def encode_array_if_needed(arr, dtype=np.float64):
+    try:
+        return arr.astype(dtype)
+    except ValueError:
+        unique_values = np.unique(arr)
+        encoding_dict = {string: index for index, string in enumerate(unique_values)}
+        encoded_array = np.array([encoding_dict[string] for string in arr], dtype=dtype)
+        return encoded_array

@@ -10,7 +10,7 @@ except ImportError:
     pass
 from . import labels
 from . import colors
-from ..common import convert_name, approximate_interactions
+from ..common import convert_name, approximate_interactions, encode_array_if_needed
 
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto",
@@ -153,7 +153,9 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # get both the raw and display feature values
     oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-    xv = features[oinds, ind].astype(np.float64)
+
+    xv = encode_array_if_needed(features[oinds, ind])
+
     xd = display_features[oinds, ind]
     s = shap_values[oinds, ind]
     if type(xd[0]) == str:
@@ -170,7 +172,8 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     # get both the raw and display color values
     color_norm = None
     if interaction_index is not None:
-        cv = features[:, interaction_index]
+        interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
+        cv = interaction_feature_values
         cd = display_features[:, interaction_index]
         clow = np.nanpercentile(cv.astype(np.float), 5)
         chigh = np.nanpercentile(cv.astype(np.float), 95)
@@ -212,7 +215,7 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
     if interaction_index is not None:
 
         # plot the nan values in the interaction feature as grey
-        cvals = features[oinds, interaction_index].astype(np.float64)
+        cvals = interaction_feature_values[oinds].astype(np.float64)
         cvals_imp = cvals.copy()
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
