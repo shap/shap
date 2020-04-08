@@ -340,7 +340,7 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg,
 def draw_additive_plot(data, figsize, show, text_rotation=0):
     """Draw additive plot."""
     # Turn off interactive plot
-    if show == False:
+    if show is False:
         plt.ioff()
     
     # Format data
