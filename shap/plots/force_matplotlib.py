@@ -227,36 +227,42 @@ def format_data(data):
         convert_func = lambda x: 1 / (1 + np.exp(-x))
     else:
         assert False, "ERROR: Unrecognized link function: " + str(data['link'])
-    
+
+    # Convert output value and base value and calculate slope of linear approximation of link function
+    sum_shap = data['outValue'] - data['baseValue']
+    data['outValue'] = convert_func(data['outValue'])
+    data['baseValue'] = convert_func(data['baseValue'])
+    if sum_shap != 0:
+        slope = (data['outValue'] - data['baseValue']) / sum_shap
+    else:
+        if data['link'] == 'identity':
+            slope = 1
+        else: # data['link'] == 'logit':
+            slope = -(data['outValue']-1)*data['outValue']
+
     # Convert negative feature values to plot values
     neg_val = data['outValue']
     for i in neg_features:
         val = float(i[0])
-        neg_val = neg_val + np.abs(val)
-        i[0] = convert_func(neg_val)
+        neg_val = neg_val - slope * val
+        i[0] = neg_val
     if len(neg_features) > 0:
         total_neg = np.max(neg_features[:, 0].astype(float)) - \
                     np.min(neg_features[:, 0].astype(float))
     else:
         total_neg = 0
-    
     # Convert positive feature values to plot values
     pos_val = data['outValue']
     for i in pos_features:
         val = float(i[0])
-        pos_val = pos_val - np.abs(val)
-        i[0] = convert_func(pos_val)
-        
+        pos_val = pos_val - slope * val
+        i[0] = pos_val
     if len(pos_features) > 0:
         total_pos = np.max(pos_features[:, 0].astype(float)) - \
                     np.min(pos_features[:, 0].astype(float))
     else:
         total_pos = 0
-    
-    # Convert output value and base value
-    data['outValue'] = convert_func(data['outValue'])
-    data['baseValue'] = convert_func(data['baseValue'])
-    
+
     return neg_features, total_neg, pos_features, total_pos
 
 
