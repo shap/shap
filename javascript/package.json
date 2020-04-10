@@ -10,7 +10,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack-dev-server --content-base build/",
-    "build": "webpack -p"
+    "build": "webpack -p",
+    "publish":"npm run build && npm publish"
   },
   "author": "Scott Lundberg",
   "repository": "https://github.com/slundberg/shap",
