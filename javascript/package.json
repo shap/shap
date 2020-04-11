@@ -9,9 +9,9 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "webpack-dev-server --content-base build/",
+    "dev": "webpack-dev-server --content-base build/ --open",
     "build": "webpack -p",
-    "publish":"npm run build && npm publish"
+    "pub": "npm run build && npm publish"
   },
   "author": "Scott Lundberg",
   "repository": "https://github.com/slundberg/shap",
@@ -29,6 +29,7 @@
     "@babel/preset-react": "^7.9.4",
     "babel-loader": "^8.1.0",
     "webpack": "^4.42.1",
-    "webpack-cli": "^3.3.11"
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
   }
 }

@@ -13,7 +13,7 @@
 
 ## Install
 
-Shap can be installed from either [npm](https://www.npmjs.com/package/shapjs):
+Shap can be installed from [npm](https://www.npmjs.com/package/shapjs):
 
 <pre>
 npm i shapjs
