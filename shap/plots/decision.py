@@ -170,8 +170,9 @@ def __decision_plot_matplotlib(
 
 
 class DecisionPlotResult:
-    """The optional return value of decision_plot. The class attributes can be used to create multiple decision
-    plots with the same scale and feature ordering.
+    """The optional return value of decision_plot.
+
+    The class attributes can be used to apply the same scale and feature ordering to other decision plots.
     """
 
     def __init__(self, base_value, shap_values, feature_names, feature_idx, xlim):
@@ -237,8 +238,11 @@ def decision_plot(
     legend_labels=None,
     legend_location="best",
 ) -> Union[DecisionPlotResult, None]:
-    """Visualize model decisions using cumulative SHAP values. Each colored line in the plot represents the model
-    prediction for a single observation. Note that plotting too many samples at once can make the plot unintelligible.
+    """Visualize model decisions using cumulative SHAP values.
+
+    Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
+    printed in the plot (if supplied). If multiple predictions are plotted together, feature values will not be printed.
+    Plotting too many predictions together will make the plot unintelligible.
 
     Parameters
     ----------
@@ -547,9 +551,10 @@ def decision_plot(
 
 
 def multioutput_decision_plot(base_values, shap_values, row_index, **kwargs) -> Union[DecisionPlotResult, None]:
-    """Decision plot for multioutput models. Plots all outputs for a single observation. By default, the plotted base
-    value will be the mean of base_values unless new_base_value is specified. Supports both SHAP values and SHAP
-    interaction values.
+    """Decision plot for multioutput models.
+
+    Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values
+    unless new_base_value is specified. Supports both SHAP values and SHAP interaction values.
 
     Parameters
     ----------
