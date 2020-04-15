@@ -21,7 +21,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
                  # depreciated
-                 auto_size_plot=None):
+                 auto_size_plot=None,
+                 use_log_scale=False):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -102,6 +103,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+
+    if use_log_scale:
+        pl.xscale('symlog')
 
     # plotting SHAP interaction values
     if not multi_class and len(shap_values.shape) == 3:
