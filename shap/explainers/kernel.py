@@ -90,7 +90,7 @@ class KernelExplainer(Explainer):
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
-        sense to connect them to the ouput with a link function where link(outout) = sum(phi).
+        sense to connect them to the output with a link function where link(output) = sum(phi).
         If the model output is a probability then the LogitLink link function makes the feature
         importance values have log-odds units.
     """
