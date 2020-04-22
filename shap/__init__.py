@@ -31,7 +31,7 @@ if have_matplotlib:
     from .plots.summary import summary_plot
     from .plots.decision import decision_plot, multioutput_decision_plot
     from .plots.dependence import dependence_plot
-    from .plots.force import force_plot, initjs, save_html
+    from .plots.force import force_plot, initjs, getjs, save_html
     from .plots.image import image_plot
     from .plots.monitoring import monitoring_plot
     from .plots.embedding import embedding_plot
