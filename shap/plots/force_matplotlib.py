@@ -397,7 +397,13 @@ def draw_additive_plot(data, figsize, show, text_rotation=0):
     # Add output label
     out_names = data['outNames'][0]
     draw_output_element(out_names, out_value, ax)
-    
+
+    # Scale axis
+    if data['link'] == 'logit':
+        plt.xscale('logit')
+        ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+        ax.ticklabel_format(style='plain')
+
     if show:
         plt.show()
     else:
