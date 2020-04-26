@@ -22,7 +22,8 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
                  color_bar_label=labels["FEATURE_VALUE"],
                  # depreciated
                  auto_size_plot=None,
-                 use_log_scale=False):
+                 use_log_scale=False,
+                 display_features=None):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -90,7 +91,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         feature_names = features
         features = None
 
-    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
+    num_features = compute_number_of_features(shap_values, multi_class)
 
     if features is not None:
         shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
@@ -103,6 +104,23 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+
+    if display_features is not None:
+        display_features_indices = compute_display_feature_indices(display_features, feature_names)
+
+        if feature_names is not None:
+            feature_names = np.asarray(feature_names)
+            feature_names = feature_names[display_features_indices]
+        if features is not None:
+            features = features[:, display_features_indices]
+
+        if multi_class:
+            for index, _ in enumerate(shap_values):
+                shap_values[index] = select_shap_values_with_indices(shap_values[index], display_features_indices)
+        else:
+            shap_values = select_shap_values_with_indices(shap_values, display_features_indices)
+
+        num_features = compute_number_of_features(shap_values, multi_class)
 
     if use_log_scale:
         pl.xscale('symlog')
@@ -486,8 +504,47 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
     if show:
         pl.show()
 
+
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
         return text[:length_limit - 3] + "..."
     else:
         return text
+
+
+def compute_display_feature_indices(display_features, feature_names):
+    if feature_names is None:
+        feature_names = []
+
+    feature_names_indices = {name: index for index, name in enumerate(feature_names)}
+
+    display_features_indices = []
+    for feature_id in display_features:
+        if isinstance(feature_id, str):
+            assert feature_id in feature_names_indices, "display_features argument references unknown feature: {}".format(feature_id)
+            feature_index = feature_names_indices[feature_id]
+        else:
+            feature_index = int(feature_id)
+        display_features_indices.append(feature_index)
+
+    return np.unique(display_features_indices)
+
+
+def compute_number_of_features(shap_values, multi_class):
+    if multi_class:
+        return shap_values[0].shape[1]
+    return shap_values.shape[1]
+
+
+def select_shap_values_with_indices(shap_values, indices):
+    indices = np.array(indices)
+
+    if len(shap_values.shape) == 2:
+        return shap_values[:, indices]
+    elif len(shap_values.shape) == 3:
+        row_indices = indices[indices < shap_values.shape[1]][:, None]
+        column_indices = indices[indices < shap_values.shape[2]]
+        return shap_values[:, row_indices, column_indices]
+    else:
+        assert False, "Invalid shape of the shap_values matrix"
+

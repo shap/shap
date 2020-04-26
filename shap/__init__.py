@@ -28,7 +28,7 @@ try:
 except ImportError:
     have_matplotlib = False
 if have_matplotlib:
-    from .plots.summary import summary_plot
+    from .plots.summary import summary_plot, compute_display_feature_indices
     from .plots.decision import decision_plot, multioutput_decision_plot
     from .plots.dependence import dependence_plot
     from .plots.force import force_plot, initjs, getjs, save_html
