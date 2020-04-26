@@ -52,6 +52,9 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
+
+    display_features : list (can contain strings, ints or both)
+        Names or indices of features to include in the plot.
     """
 
     # deprecation warnings
