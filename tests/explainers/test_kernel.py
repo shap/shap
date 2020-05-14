@@ -198,3 +198,21 @@ def test_linear():
     expected = (x - x.mean(0)) * np.array([1.0, 2.0, 0.0])
 
     np.testing.assert_allclose(expected, phi, rtol=1e-3)
+
+
+def test_non_numeric():
+    import sklearn
+    from sklearn.pipeline import Pipeline
+
+    # create dummy data
+    X = np.array([['A', '0', '0'], ['A', '1', '0'], ['B', '0', '0'], ['B', '1', '0'], ['A', '1', '0']])
+    y = np.array([0, 1, 2, 3, 4])
+
+    # build and train the pipeline
+    pipeline = Pipeline([('oneHotEncoder', sklearn.preprocessing.OneHotEncoder()),
+                     ('linear', sklearn.linear_model.LinearRegression())])
+    pipeline.fit(X, y)
+
+    # use KernelExplainer
+    explainer = shap.KernelExplainer(pipeline.predict, X, nsamples=100)
+    shap_values = explainer.explain(X[0,:].reshape(1, -1))
