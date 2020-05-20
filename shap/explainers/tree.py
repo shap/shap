@@ -595,6 +595,19 @@ class TreeEnsemble:
             self.trees = [Tree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
+            
+        ### Added AdaBoostClassifier based on the outdated StackOverflow response and Github issue here
+        ### https://stackoverflow.com/questions/60433389/how-to-calculate-shap-values-for-adaboost-model/61108156#61108156
+        ### https://github.com/slundberg/shap/issues/335
+        elif safe_isinstance(model, ["sklearn.ensemble.AdaBoostClassifier", "sklearn.ensemble._weighted_boosting.AdaBoostClassifier"]):
+            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
+            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
+            self.input_dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [Tree(e.tree_, normalize=True, scaling=scaling) for e in model.estimators_]
+            self.objective = objective_name_map.get(model.base_estimator_.criterion, None) #This line is done to get the decision criteria, for example gini.
+            self.tree_output = "probability" #This is the last line added
+            
         elif safe_isinstance(model, ["sklearn.ensemble.ExtraTreesClassifier", "sklearn.ensemble.forest.ExtraTreesClassifier"]): # TODO: add unit test for this case
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
