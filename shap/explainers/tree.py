@@ -1312,7 +1312,8 @@ class XGBTreeModelLoader(object):
     tree can actually be wrong when feature values land almost on a threshold.
     """
     def __init__(self, xgb_model):
-        self.buf = xgb_model.save_raw()
+        # new in XGBoost 1.1, 'binf' is appended to the buffer
+        self.buf = xgb_model.save_raw().lstrip(b'binf')
         self.pos = 0
 
         # load the model parameters
