@@ -216,3 +216,5 @@ def test_non_numeric():
     # use KernelExplainer
     explainer = shap.KernelExplainer(pipeline.predict, X, nsamples=100)
     shap_values = explainer.explain(X[0,:].reshape(1, -1))
+    
+    assert np.abs(explainer.expected_value + shap_values.sum(1)[0] - pipeline.predict(X[0,:].reshape(1, -1))[0]) < 1e-4
