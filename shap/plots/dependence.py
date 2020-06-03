@@ -10,7 +10,7 @@ except ImportError:
     pass
 from . import labels
 from . import colors
-from ..common import convert_name, approximate_interactions, encode_array_if_needed
+from ..common import convert_name, approximate_interactions, encode_array_if_needed, safe_isinstance
 
 def dependence_plot(ind, shap_values, features, feature_names=None, display_features=None,
                     interaction_index="auto",
@@ -80,11 +80,11 @@ def dependence_plot(ind, shap_values, features, feature_names=None, display_feat
                         "passing shap_values[0] instead to explain the first output class of a multi-output model.")
 
     # convert from DataFrames if we got any
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if safe_isinstance(features,'pandas.DataFrame'):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
-    if str(type(display_features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if safe_isinstance(display_features,'pandas.DataFrame'):
         if feature_names is None:
             feature_names = display_features.columns
         display_features = display_features.values

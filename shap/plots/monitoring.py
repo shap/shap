@@ -9,6 +9,7 @@ except ImportError:
     pass
 from . import labels
 from . import colors
+from ..common import safe_isinstance
 
 
 def truncate_text(text, max_len):
@@ -41,7 +42,7 @@ def monitoring_plot(ind, shap_values, features, feature_names=None, show=True):
         Names of the features (length # features)
     """
     
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if safe_isinstance(features, 'pandas.DataFrame'):
         if feature_names is None:
             feature_names = features.columns
         features = features.values

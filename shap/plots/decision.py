@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 from . import colors, labels
-from ..common import convert_to_link, hclust_ordering, LogitLink
+from ..common import convert_to_link, hclust_ordering, LogitLink, safe_isinstance
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
@@ -363,11 +363,11 @@ def decision_plot(
     feature_count = shap_values.shape[1]
 
     # code taken from force_plot. convert features from other types.
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if safe_isinstance(features, 'pandas.DataFrame'):
         if feature_names is None:
             feature_names = features.columns.to_list()
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif safe_isinstance(features, 'pandas.Series'):
         if feature_names is None:
             feature_names = features.index.to_list()
         features = features.values
@@ -599,7 +599,7 @@ def multioutput_decision_plot(base_values, shap_values, row_index, **kwargs) -> 
         features = kwargs["features"]
         if isinstance(features, np.ndarray) and (features.ndim == 2):
             kwargs["features"] = features[[row_index]]
-        elif str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+        elif safe_isinstance(features, 'pandas.DataFrame'):
             kwargs["features"] = features.iloc[row_index]
 
     return decision_plot(base_values_mean, shap_values[:, row_index, :], **kwargs)

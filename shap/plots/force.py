@@ -25,7 +25,7 @@ else:
 import warnings
 import re
 from . import labels
-from ..common import convert_to_link, Instance, Model, Data, DenseData, Link, hclust_ordering
+from ..common import convert_to_link, Instance, Model, Data, DenseData, Link, hclust_ordering, safe_isinstance
 from ..plots.force_matplotlib import draw_additive_plot
 
 def force_plot(base_value, shap_values, features=None, feature_names=None, out_names=None, link="identity",
@@ -83,11 +83,11 @@ def force_plot(base_value, shap_values, features=None, feature_names=None, out_n
         return visualize(shap_values)
 
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if safe_isinstance(features, 'pandas.DataFrame'):
         if feature_names is None:
             feature_names = list(features.columns)
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif safe_isinstance(features, 'pandas.Series'):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values

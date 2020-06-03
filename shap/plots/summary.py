@@ -13,6 +13,7 @@ except ImportError:
     pass
 from . import labels
 from . import colors
+from ..common import safe_isinstance
 
 # TODO: remove unused title argument / use title argument
 def summary_plot(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
@@ -78,7 +79,7 @@ def summary_plot(shap_values, features=None, feature_names=None, max_display=Non
             color = colors.blue_rgb
 
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if safe_isinstance(features, 'pandas.DataFrame'):
         if feature_names is None:
             feature_names = features.columns
         features = features.values

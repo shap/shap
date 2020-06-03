@@ -38,7 +38,7 @@ def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="pe
     
     # convert from DataFrames if we got any
     use_dataframe = False
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if safe_isinstance(features, 'pandas.DataFrame'):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
@@ -145,7 +145,7 @@ def partial_dependence_plot(ind, model, features, xmin="percentile(0)", xmax="pe
             vals = shap_values[:, ind]
             if type(model_expected_value) is bool:
                 model_expected_value = model(features).mean()
-            if str(type(shap_value_features)).endswith("'pandas.core.frame.DataFrame'>"):
+            if safe_isinstance(shap_value_features, 'pandas.DataFrame'):
                 shap_value_features = shap_value_features.values
             markerline, stemlines, baseline = ax1.stem(
                 shap_value_features[:,ind], model_expected_value + vals,

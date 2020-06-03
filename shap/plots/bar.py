@@ -6,13 +6,14 @@ except ImportError:
     pass
 from . import labels
 from . import colors
+from ..common import safe_isinstance
 import numpy as np
 
 
 def bar_plot(shap_values, features=None, feature_names=None, max_display=None, show=True):
     
     # unwrap pandas series
-    if str(type(features)) == "<class 'pandas.core.series.Series'>":
+    if safe_isinstance(features, 'pandas.Series'):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
