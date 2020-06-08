@@ -157,9 +157,7 @@ class AdditiveForceVisualizer extends React.Component {
   draw() {
     // copy the feature names onto the features
     each(this.props.featureNames, (n, i) => {
-      if (this.props.features[i]) {
-        this.props.features[i].name = n
-      }
+      if (this.props.features[i]) this.props.features[i].name = n
     });
 
     // create our link function
