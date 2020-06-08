@@ -157,7 +157,9 @@ class AdditiveForceVisualizer extends React.Component {
   draw() {
     // copy the feature names onto the features
     each(this.props.featureNames, (n, i) => {
-      if (this.props.features[i]) this.props.features[i].name = n;
+      if (this.props.features[i]) {
+        this.props.features[i].name = n
+      }
     });
 
     // create our link function
@@ -298,12 +300,13 @@ class AdditiveForceVisualizer extends React.Component {
       .merge(labels)
       .text(d => {
         if (d.value !== undefined && d.value !== null && d.value !== "") {
+          let name = d.name.length > 10 ? d.name.slice(0, 10) + '...' : d.name
           return (
-            d.name +
+            name +
             " = " +
             (isNaN(d.value) ? d.value : this.tickFormat(d.value))
           );
-        } else return d.name;
+        } else return name;
       })
       .attr("fill", d => (d.effect > 0 ? this.colors[0] : this.colors[1]))
       .attr("stroke", function(d) {
@@ -338,7 +341,22 @@ class AdditiveForceVisualizer extends React.Component {
           scaleOffset +
           (d.effect > 0 ? -d.textWidth / 2 : d.textWidth / 2)
       )
-      .attr("text-anchor", "middle"); //d => d.effect > 0 ? 'end' : 'start');
+      .attr("text-anchor", "middle") //d => d.effect > 0 ? 'end' : 'start');
+      .on("mouseover", d => {
+        this.hoverLabel
+          .attr("opacity", 1)
+          .attr("y", topOffset + 70)
+          .attr("x", () =>
+            scale(d.textx) +
+            scaleOffset +
+            (d.effect > 0 ? -d.textWidth / 2 : d.textWidth / 2))
+          .attr("fill", d.effect > 0 ? this.colors[0] : this.colors[1])
+          .merge(labels)
+          .text(getLabel(d))
+      })
+      .on("mouseout", () => {
+        this.hoverLabel.attr("opacity", 0);
+      });
 
     // Now that we know the text widths we further filter by what fits on the screen
     filteredData = filter(filteredData, d => {
