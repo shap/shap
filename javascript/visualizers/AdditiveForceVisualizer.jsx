@@ -350,7 +350,7 @@ class AdditiveForceVisualizer extends React.Component {
             (d.effect > 0 ? -d.textWidth / 2 : d.textWidth / 2))
           .attr("fill", d.effect > 0 ? this.colors[0] : this.colors[1])
           .merge(labels)
-          .text(getLabel(d))
+          .text(d.name)
       })
       .on("mouseout", () => {
         this.hoverLabel.attr("opacity", 0);
