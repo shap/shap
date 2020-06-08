@@ -305,7 +305,7 @@ class TFDeepExplainer(Explainer):
 
                 # assign the attributions to the right part of the output arrays
                 for l in range(len(X)):
-                    phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
+                    phis[l][j] = np.mean(sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l]),axis=0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
