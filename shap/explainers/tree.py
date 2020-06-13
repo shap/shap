@@ -109,7 +109,7 @@ class TreeExplainer(Explainer):
             self.data = data.data
         else:
             self.data = data
-        if self.data is None:
+        if self.data is None and feature_perturbation != "tree_path_dependent":
             feature_perturbation = "tree_path_dependent"
             warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1000:
