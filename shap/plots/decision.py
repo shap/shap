@@ -16,7 +16,7 @@ except ImportError:
     pass
 
 from . import colors, labels
-from ..common import convert_to_link, hclust_ordering, LogitLink
+from ..common import convert_to_link, hclust_ordering, LogitLink, LogLink
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
@@ -277,7 +277,7 @@ def decision_plot(
         example, list of integer indices, or a bool array.
 
     link : str
-        Use "identity" or "logit" to specify the transformation used for the x-axis. The "logit" link transforms
+        Use "identity", "logit" or "log" to specify the transformation used for the x-axis. The "logit" link transforms
         log-odds into probabilities.
 
     plot_color : str or matplotlib.colors.ColorMap
@@ -285,23 +285,23 @@ def decision_plot(
 
     axis_color : str or int
         Color used to draw plot axes.
-        
+
     y_demarc_color : str or int
         Color used to draw feature demarcation lines on the y-axis.
-        
+
     alpha : float
         Alpha blending value in [0, 1] used to draw plot lines.
-        
+
     color_bar : bool
         Whether to draw the color bar.
-        
+
     auto_size_plot : bool
-        Whether to automatically size the matplotlib plot to fit the number of features displayed. If `False`, 
+        Whether to automatically size the matplotlib plot to fit the number of features displayed. If `False`,
         specify the plot size using matplotlib before calling this function.
-        
+
     title : str
         Title of the plot.
-        
+
     xlim: tuple[float, float]
         The extents of the x-axis (e.g. (-1.0, 1.0)). If not specified, the limits are determined by the
         maximum/minimum predictions centered around base_value when link='identity'. When link='logit', the
@@ -314,7 +314,7 @@ def decision_plot(
     return_objects : bool
         Whether to return a DecisionPlotResult object containing various plotting features. This can be used to
         generate multiple decision plots using the same feature ordering and scale.
-        
+
     ignore_warnings : bool
         Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
         this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.
@@ -497,6 +497,11 @@ def decision_plot(
     create_xlim = xlim is None
     link = convert_to_link(link)
     base_value_saved = base_value
+
+    if isinstance(link, LogLink):
+        base_value = link.finv(base_value)
+        cumsum = link.finv(cumsum)
+
     if isinstance(link, LogitLink):
         base_value = link.finv(base_value)
         cumsum = link.finv(cumsum)
