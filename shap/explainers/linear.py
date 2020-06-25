@@ -1,7 +1,9 @@
+import warnings
+
 import numpy as np
 import scipy as sp
-import warnings
 from tqdm.autonotebook import tqdm
+
 from .explainer import Explainer
 from ..common import safe_isinstance
 
@@ -48,13 +50,17 @@ class LinearExplainer(Explainer):
             warnings.warn('The option feature_dependence has been renamed to feature_perturbation!')
             feature_perturbation = kwargs["feature_dependence"]
         if feature_perturbation == "independent":
-            warnings.warn('The option feature_perturbation="independent" is has been renamed to feature_perturbation="interventional"!')
+            warnings.warn(
+                'The option feature_perturbation="independent" has been renamed to '
+                'feature_perturbation="interventional"!')
             feature_perturbation = "interventional"
         elif feature_perturbation == "correlation":
-            warnings.warn('The option feature_perturbation="correlation" is has been renamed to feature_perturbation="correlation_dependent"!')
+            warnings.warn(
+                'The option feature_perturbation="correlation" has been renamed to '
+                'feature_perturbation="correlation_dependent"!')
             feature_perturbation = "correlation_dependent"
         elif feature_perturbation is None:
-            #warnings.warn('The default value for feature_perturbation has been changed to "interventional"!')
+            # warnings.warn('The default value for feature_perturbation has been changed to "interventional"!')
             feature_perturbation = "interventional"
         self.feature_perturbation = feature_perturbation
 
@@ -99,10 +105,10 @@ class LinearExplainer(Explainer):
                 if feature_perturbation != "interventional":
                     raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
             else:
-                self.mean = np.array(np.mean(data, 0)).flatten() # assumes it is an array
+                self.mean = np.array(np.mean(data, 0)).flatten()  # assumes it is an array
                 if feature_perturbation == "correlation_dependent":
                     self.cov = np.cov(data, rowvar=False)
-        #print(self.coef, self.mean.flatten(), self.intercept)
+        # print(self.coef, self.mean.flatten(), self.intercept)
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
         if sp.sparse.issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
             # accept both sparse and dense coef
@@ -112,29 +118,29 @@ class LinearExplainer(Explainer):
 
             # unwrap the matrix form
             if len(self.expected_value) == 1:
-                self.expected_value = self.expected_value[0,0]
+                self.expected_value = self.expected_value[0, 0]
             else:
                 self.expected_value = np.array(self.expected_value)[0]
         else:
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
-        
+
         self.M = len(self.mean)
 
         # if needed, estimate the transform matrices
         if feature_perturbation == "correlation_dependent":
             self.valid_inds = np.where(np.diag(self.cov) > 1e-8)[0]
             self.mean = self.mean[self.valid_inds]
-            self.cov = self.cov[:,self.valid_inds][self.valid_inds,:]
+            self.cov = self.cov[:, self.valid_inds][self.valid_inds, :]
             self.coef = self.coef[self.valid_inds]
 
             # group perfectly redundant variables together
-            self.avg_proj,sum_proj = duplicate_components(self.cov)
+            self.avg_proj, sum_proj = duplicate_components(self.cov)
             self.cov = np.matmul(np.matmul(self.avg_proj, self.cov), self.avg_proj.T)
             self.mean = np.matmul(self.avg_proj, self.mean)
             self.coef = np.matmul(sum_proj, self.coef)
 
             # if we still have some multi-colinearity present then we just add regularization...
-            e,_ = np.linalg.eig(self.cov)
+            e, _ = np.linalg.eig(self.cov)
             if e.min() < 1e-7:
                 self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
 
@@ -159,13 +165,13 @@ class LinearExplainer(Explainer):
         """
         M = len(self.coef)
 
-        mean_transform = np.zeros((M,M))
-        x_transform = np.zeros((M,M))
+        mean_transform = np.zeros((M, M))
+        x_transform = np.zeros((M, M))
         inds = np.arange(M, dtype=np.int)
         for _ in tqdm(range(nsamples), "Estimating transforms"):
             np.random.shuffle(inds)
-            cov_inv_SiSi = np.zeros((0,0))
-            cov_Si = np.zeros((M,0))
+            cov_inv_SiSi = np.zeros((0, 0))
+            cov_Si = np.zeros((M, 0))
             for j in range(M):
                 i = inds[j]
 
@@ -174,25 +180,25 @@ class LinearExplainer(Explainer):
                 cov_inv_SS = cov_inv_SiSi
 
                 # get the new cov_Si
-                cov_Si = self.cov[:,inds[:j+1]]
+                cov_Si = self.cov[:, inds[:j + 1]]
 
                 # compute the new cov_inv_SiSi from cov_inv_SS
-                d = cov_Si[i,:-1].T
+                d = cov_Si[i, :-1].T
                 t = np.matmul(cov_inv_SS, d)
                 Z = self.cov[i, i]
                 u = Z - np.matmul(t.T, d)
-                cov_inv_SiSi = np.zeros((j+1, j+1))
+                cov_inv_SiSi = np.zeros((j + 1, j + 1))
                 if j > 0:
                     cov_inv_SiSi[:-1, :-1] = cov_inv_SS + np.outer(t, t) / u
-                    cov_inv_SiSi[:-1, -1] = cov_inv_SiSi[-1,:-1] = -t / u
+                    cov_inv_SiSi[:-1, -1] = cov_inv_SiSi[-1, :-1] = -t / u
                 cov_inv_SiSi[-1, -1] = 1 / u
 
                 # + coef @ (Q(bar(Sui)) - Q(bar(S)))
                 mean_transform[i, i] += self.coef[i]
 
                 # + coef @ R(Sui)
-                coef_R_Si = np.matmul(self.coef[inds[j+1:]], np.matmul(cov_Si, cov_inv_SiSi)[inds[j+1:]])
-                mean_transform[i, inds[:j+1]] += coef_R_Si
+                coef_R_Si = np.matmul(self.coef[inds[j + 1:]], np.matmul(cov_Si, cov_inv_SiSi)[inds[j + 1:]])
+                mean_transform[i, inds[:j + 1]] += coef_R_Si
 
                 # - coef @ R(S)
                 coef_R_S = np.matmul(self.coef[inds[j:]], np.matmul(cov_S, cov_inv_SS)[inds[j:]])
@@ -202,7 +208,7 @@ class LinearExplainer(Explainer):
                 x_transform[i, i] += self.coef[i]
 
                 # + coef @ R(Sui)
-                x_transform[i, inds[:j+1]] += coef_R_Si
+                x_transform[i, inds[:j + 1]] += coef_R_Si
 
                 # - coef @ R(S)
                 x_transform[i, inds[:j]] -= coef_R_S
@@ -233,17 +239,18 @@ class LinearExplainer(Explainer):
         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
             X = X.values
 
-        #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        # assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         if self.feature_perturbation == "correlation_dependent":
             if sp.sparse.issparse(X):
                 raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
-            phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
+            phi = np.matmul(np.matmul(X[:, self.valid_inds], self.avg_proj.T),
+                            self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
             full_phi = np.zeros(((phi.shape[0], self.M)))
-            full_phi[:,self.valid_inds] = phi
+            full_phi[:, self.valid_inds] = phi
 
             return full_phi
 
@@ -259,22 +266,23 @@ class LinearExplainer(Explainer):
                 else:
                     return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
 
+
 def duplicate_components(C):
-    D = np.diag(1/np.sqrt(np.diag(C)))
+    D = np.diag(1 / np.sqrt(np.diag(C)))
     C = np.matmul(np.matmul(D, C), D)
     components = -np.ones(C.shape[0], dtype=np.int)
     count = -1
     for i in range(C.shape[0]):
         found_group = False
         for j in range(C.shape[0]):
-            if components[j] < 0 and np.abs(2*C[i,j] - C[i,i] - C[j,j]) < 1e-8:
+            if components[j] < 0 and np.abs(2 * C[i, j] - C[i, i] - C[j, j]) < 1e-8:
                 if not found_group:
                     count += 1
                     found_group = True
                 components[j] = count
-                
+
     proj = np.zeros((len(np.unique(components)), C.shape[0]))
     proj[0, 0] = 1
-    for i in range(1,C.shape[0]):
+    for i in range(1, C.shape[0]):
         proj[components[i], i] = 1
     return (proj.T / proj.sum(1)).T, proj
