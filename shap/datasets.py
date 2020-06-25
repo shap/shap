@@ -1,7 +1,8 @@
-import pandas as pd
-import numpy as np
-import sklearn.datasets
 import os
+
+import numpy as np
+import pandas as pd
+import sklearn.datasets
 
 try:
     from urllib.request import urlretrieve
@@ -9,6 +10,7 @@ except ImportError:
     from urllib import urlretrieve
 
 github_data_url = "https://github.com/slundberg/shap/raw/master/data/"
+
 
 def imagenet50(display=False, resolution=224):
     """ This is a set of 50 images representative of ImageNet images.
@@ -27,21 +29,22 @@ def imagenet50(display=False, resolution=224):
     y = np.loadtxt(cache(prefix + "labels.csv"))
     return X, y
 
+
 def boston(display=False):
     """ Return the boston housing data in a nice package. """
 
     d = sklearn.datasets.load_boston()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    return df, d.target # pylint: disable=E1101
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)  # pylint: disable=E1101
+    return df, d.target  # pylint: disable=E1101
 
 
 def linnerud(display=False):
     """ Return the linnerud data in a nice package (multi-target regression). """
 
     d = sklearn.datasets.load_linnerud()
-    X = pd.DataFrame(d.data, columns=d.feature_names) # pylint: disable=E1101
-    y = pd.DataFrame(d.target, columns=d.target_names) # pylint: disable=E1101
-    return X, y # pylint: disable=E1101
+    X = pd.DataFrame(d.data, columns=d.feature_names)  # pylint: disable=E1101
+    y = pd.DataFrame(d.target, columns=d.target_names)  # pylint: disable=E1101
+    return X, y  # pylint: disable=E1101
 
 
 def imdb(display=False):
@@ -57,6 +60,7 @@ def imdb(display=False):
     y[:12500] = 0
     return data, y
 
+
 def communitiesandcrime(display=False):
     """ Predict total number of non-violent crimes per 100K popuation.
 
@@ -70,33 +74,34 @@ def communitiesandcrime(display=False):
     )
 
     # find the indices where the total violent crimes are known
-    valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:,-2])))[0]
-    y = np.array(raw_data.iloc[valid_inds,-2], dtype=np.float)
+    valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:, -2])))[0]
+    y = np.array(raw_data.iloc[valid_inds, -2], dtype=np.float)
 
     # extract the predictive features and remove columns with missing values
-    X = raw_data.iloc[valid_inds,5:-18]
+    X = raw_data.iloc[valid_inds, 5:-18]
     valid_cols = np.where(np.isnan(X.values).sum(0) == 0)[0]
-    X = X.iloc[:,valid_cols]
+    X = X.iloc[:, valid_cols]
 
     return X, y
+
 
 def diabetes(display=False):
     """ Return the diabetes data in a nice package. """
 
     d = sklearn.datasets.load_diabetes()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    return df, d.target # pylint: disable=E1101
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)  # pylint: disable=E1101
+    return df, d.target  # pylint: disable=E1101
 
 
 def iris(display=False):
     """ Return the classic iris data in a nice package. """
 
     d = sklearn.datasets.load_iris()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)  # pylint: disable=E1101
     if display:
-        return df, [d.target_names[v] for v in d.target] # pylint: disable=E1101
+        return df, [d.target_names[v] for v in d.target]  # pylint: disable=E1101
     else:
-        return df, d.target # pylint: disable=E1101
+        return df, d.target  # pylint: disable=E1101
 
 
 def adult(display=False):
@@ -171,10 +176,10 @@ def corrgroups60(display=False):
 
     # build a correlation matrix with groups of 3 tightly correlated features
     C = np.eye(M)
-    for i in range(0,30,3):
-        C[i,i+1] = C[i+1,i] = 0.99
-        C[i,i+2] = C[i+2,i] = 0.99
-        C[i+1,i+2] = C[i+2,i+1] = 0.99
+    for i in range(0, 30, 3):
+        C[i, i + 1] = C[i + 1, i] = 0.99
+        C[i, i + 2] = C[i + 2, i] = 0.99
+        C[i + 1, i + 2] = C[i + 2, i + 1] = 0.99
     f = lambda X: np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
@@ -183,7 +188,8 @@ def corrgroups60(display=False):
     Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
     W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
     X_white = np.matmul(X_centered, W.T)
-    assert np.linalg.norm(np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6 # ensure this decorrelates the data
+    assert np.linalg.norm(
+        np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6  # ensure this decorrelates the data
 
     # create the final data
     X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
@@ -247,7 +253,7 @@ def cache(url, file_name=None):
     data_dir = os.path.join(os.path.dirname(__file__), "cached_data")
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
-    
+
     file_path = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
         urlretrieve(url, file_path)

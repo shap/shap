@@ -22,8 +22,10 @@ from .explainers import other
 def unsupported(*args, **kwargs):
     warnings.warn("matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this.")
 
+
 try:
     import matplotlib
+
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
@@ -55,8 +57,7 @@ else:
     waterfall_plot = unsupported
     text_plot = unsupported
 
-
 # other stuff :)
 from . import datasets
-#from . import benchmark
+# from . import benchmark
 from .common import approximate_interactions, hclust_ordering, sample, partition_tree
