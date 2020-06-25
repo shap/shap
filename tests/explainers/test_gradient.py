@@ -1,10 +1,12 @@
 import matplotlib
 import numpy as np
 import shutil
+
 matplotlib.use('Agg')
 import shap
 
 from .test_deep import _skip_if_no_pytorch, _skip_if_no_tensorflow
+
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
@@ -57,7 +59,7 @@ def test_tf_keras_mnist_cnn():
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
-    model.add(Dense(32, activation='relu')) # 128
+    model.add(Dense(32, activation='relu'))  # 128
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
@@ -66,21 +68,21 @@ def test_tf_keras_mnist_cnn():
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    model.fit(x_train[:1000,:], y_train[:1000,:],
+    model.fit(x_train[:1000, :], y_train[:1000, :],
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test[:1000,:], y_test[:1000,:]))
+              validation_data=(x_test[:1000, :], y_test[:1000, :]))
 
     # explain by passing the tensorflow inputs and outputs
     np.random.seed(0)
     inds = np.random.choice(x_train.shape[0], 20, replace=False)
-    e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
+    e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
     sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds,:,:]}).mean(0)
+           sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
@@ -98,7 +100,7 @@ def test_pytorch_mnist_cnn():
 
     import shap
 
-    batch_size=128
+    batch_size = 128
     root_dir = 'mnist_data'
 
     train_loader = torch.utils.data.DataLoader(
@@ -181,16 +183,15 @@ def test_pytorch_mnist_cnn():
             assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values " \
                                                   "does not match difference! %f" % (d / np.abs(diff).sum())
 
-    print ('Running test from interim layer')
+    print('Running test from interim layer')
     run_test(train_loader, test_loader, True)
-    print ('Running test on whole model')
+    print('Running test on whole model')
     run_test(train_loader, test_loader, False)
     # clean up
     shutil.rmtree(root_dir)
 
 
 def test_pytorch_multiple_inputs():
-
     _skip_if_no_pytorch()
     import torch
     from torch import nn
