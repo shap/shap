@@ -6,9 +6,10 @@ notebooks/deep_explainer/mnist_data
 shap/_cext*
 .idea/
 .eggs/
+.tox/
 /**/__pycache__/
 /**/.ipynb_checkpoints/
-/**/shap.egg-info/
+shap.egg-info/
 /**/cache*/
 /**/node_modules/
 /**/*.pyc
