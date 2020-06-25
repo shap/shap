@@ -1,11 +1,12 @@
+import os
 import shutil
 
-import numpy as np
 import nose
-import os
+import numpy as np
 
 # force us to not use any GPUs since running many tests may cause trouble
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 
 def _skip_if_no_tensorflow():
     try:
@@ -20,6 +21,7 @@ def _skip_if_no_pytorch():
     except ImportError:
         raise nose.SkipTest('Pytorch not installed.')
 
+
 def test_tf_eager():
     """ This is a basic eager example from keras.
     """
@@ -31,7 +33,7 @@ def test_tf_eager():
     from shap import DeepExplainer
     import datetime
 
-    x = pd.DataFrame({ "B": np.random.random(size=(100,)) })
+    x = pd.DataFrame({"B": np.random.random(size=(100,))})
     y = x.B
     y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
 
@@ -44,7 +46,8 @@ def test_tf_eager():
 
     e = DeepExplainer(model, x.values[:1])
     sv = e.shap_values(x.values)
-    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:,0]).max() < 1e-4
+    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
+
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
@@ -97,7 +100,7 @@ def test_tf_keras_mnist_cnn():
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
-    model.add(Dense(32, activation='relu')) # 128
+    model.add(Dense(32, activation='relu'))  # 128
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
@@ -106,25 +109,26 @@ def test_tf_keras_mnist_cnn():
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    model.fit(x_train[:1000,:], y_train[:1000,:],
+    model.fit(x_train[:1000, :], y_train[:1000, :],
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test[:1000,:], y_test[:1000,:]))
+              validation_data=(x_test[:1000, :], y_test[:1000, :]))
 
     # explain by passing the tensorflow inputs and outputs
     np.random.seed(0)
     inds = np.random.choice(x_train.shape[0], 10, replace=False)
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
     sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds,:,:]}).mean(0)
+           sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+
 
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.
@@ -163,12 +167,13 @@ def test_tf_keras_linear():
     shap_values = e.shap_values(x)
 
     # verify that the explanation follows the equation in LinearExplainer
-    values = shap_values[0] # since this is a "multi-output" model with one output
+    values = shap_values[0]  # since this is a "multi-output" model with one output
 
     assert values.shape == (1000, 2)
 
     expected = (x - x.mean(0)) * fit_coef
     np.testing.assert_allclose(expected - values, 0, atol=1e-5)
+
 
 def test_tf_keras_imdb_lstm():
     """ Basic LSTM example using the keras API defined in tensorflow
@@ -193,7 +198,7 @@ def test_tf_keras_imdb_lstm():
     try:
         (X_train, y_train), (X_test, _) = imdb.load_data(num_words=max_features)
     except:
-        return # this hides a bug in the most recent version of keras that prevents data loading
+        return  # this hides a bug in the most recent version of keras that prevents data loading
     X_train = sequence.pad_sequences(X_train, maxlen=100)
     X_test = sequence.pad_sequences(X_test, maxlen=100)
 
@@ -223,11 +228,9 @@ def test_tf_keras_imdb_lstm():
     e = shap.DeepExplainer((mod.layers[0].input, mod.layers[-1].output), background)
     shap_values = e.shap_values(testx)
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0,:] - \
-        sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
+    diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - \
+           sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
-
-
 
 
 def test_pytorch_mnist_cnn():
@@ -335,9 +338,9 @@ def test_pytorch_mnist_cnn():
                        ])),
         batch_size=batch_size, shuffle=True)
 
-    print ('Running test on interim layer')
+    print('Running test on interim layer')
     run_test(train_loader, test_loader, interim=True)
-    print ('Running test on whole model')
+    print('Running test on whole model')
     run_test(train_loader, test_loader, interim=False)
     # clean up
     shutil.rmtree(root_dir)
@@ -467,6 +470,7 @@ def test_pytorch_single_output():
         def forward(self, X):
             x = self.aapool1d(self.convt1d(self.conv1d(X.unsqueeze(1)))).squeeze(1)
             return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
+
     model = Net(num_features)
     optimizer = torch.optim.Adam(model.parameters())
 
