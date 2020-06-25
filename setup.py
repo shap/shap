@@ -1,12 +1,13 @@
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext as _build_ext
-import os
-import re
 import codecs
+import os
 import platform
+import re
+import sys
 from distutils.sysconfig import get_config_var
 from distutils.version import LooseVersion
-import sys
+
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext as _build_ext
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload
@@ -27,9 +28,11 @@ if sys.platform == 'darwin':
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+
 def read(*parts):
     with codecs.open(os.path.join(here, *parts), 'r') as fp:
         return fp.read()
+
 
 def find_version(*file_paths):
     version_file = read(*file_paths)
@@ -37,6 +40,7 @@ def find_version(*file_paths):
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
+
 
 # Extend the default build_ext class to bootstrap numpy installation
 # that are needed to build C extensions.
@@ -145,6 +149,7 @@ def try_run_setup(**kwargs):
             try_run_setup(**kwargs)
         else:
             print("ERROR: Failed to build!")
+
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
