@@ -423,9 +423,10 @@ class KernelExplainer(Explainer):
 
         return phi
 
-    def not_equal(self, i, j):
-        if isinstance(i, str):
-            return 0 if i is None or j is None or i == j else 1
+    @staticmethod
+    def not_equal(i, j):
+        if isinstance(i, str) or isinstance(j, str):
+            return 0 if i == j else 1
         return 0 if np.isclose(i, j, equal_nan=True) else 1
 
     def varying_groups(self, x):

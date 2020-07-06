@@ -219,3 +219,11 @@ def test_non_numeric():
     
     assert np.abs(explainer.expected_value + shap_values.sum(0) - pipeline.predict(X[0,:].reshape(1, -1))[0]) < 1e-4
     assert shap_values[2] == 0
+
+    # tests for shap.KernelExplainer.not_equal
+    assert shap.KernelExplainer.not_equal(0, 0) == shap.KernelExplainer.not_equal('0', '0')
+    assert shap.KernelExplainer.not_equal(0, 1) == shap.KernelExplainer.not_equal('0', '1')
+    assert shap.KernelExplainer.not_equal(0, np.nan) == shap.KernelExplainer.not_equal('0', np.nan)
+    assert shap.KernelExplainer.not_equal(0, np.nan) == shap.KernelExplainer.not_equal('0', None)
+    assert shap.KernelExplainer.not_equal(np.nan, 0) == shap.KernelExplainer.not_equal(np.nan, '0')
+    assert shap.KernelExplainer.not_equal(np.nan, 0) == shap.KernelExplainer.not_equal(None, '0')
