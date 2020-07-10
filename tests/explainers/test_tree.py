@@ -227,8 +227,8 @@ def test_pyspark_classifier_decision_tree():
                    DecisionTreeClassifier(labelCol="label", featuresCol="features")]
     for classifier in classifiers:
         model = classifier.fit(iris)
-        #Make sure the model can be serializable to run shap values with spark
         explainer = shap.TreeExplainer(model)
+        #Make sure the model can be serializable to run shap values with spark
         pickle.dumps(explainer)
         X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100] # pylint: disable=E1101
 
