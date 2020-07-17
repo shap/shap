@@ -692,7 +692,6 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.criterion, None)
         elif "pyspark.ml" in str(type(model)):
             assert_import("pyspark")
-            self.original_model = model
             self.model_type = "pyspark"
             # model._java_obj.getImpurity() can be gini, entropy or variance.
             self.objective = objective_name_map.get(model._java_obj.getImpurity(), None)
