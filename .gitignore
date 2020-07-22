@@ -21,4 +21,4 @@ shap/_cext.so
 /docs/artwork/local
 /shap/_cext*
 .idea
-/catboost_info
+catboost_info
