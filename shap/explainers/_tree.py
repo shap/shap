@@ -1519,8 +1519,13 @@ class XGBTreeModelLoader(object):
 
 class CatBoostTreeModelLoader:
     def __init__(self, cb_model):
-        cb_model.save_model("cb_model.json", format="json")
-        self.loaded_cb_model = json.load(open("cb_model.json", "r"))
+        # cb_model.save_model("cb_model.json", format="json")
+        # self.loaded_cb_model = json.load(open("cb_model.json", "r"))
+        import tempfile
+        tmp_file = tempfile.NamedTemporaryFile()
+        cb_model.save_model(tmp_file.name, format="json")
+        self.loaded_cb_model = json.load(open(tmp_file.name, "r"))
+        tmp_file.close()
 
         # load the CatBoost oblivious trees specific parameters
         self.num_trees = len(self.loaded_cb_model['oblivious_trees'])
