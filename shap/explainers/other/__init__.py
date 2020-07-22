@@ -1,5 +1,5 @@
-from .coefficent import CoefficentExplainer
-from .random import RandomExplainer
-from .lime import LimeTabularExplainer
-from .maple import MapleExplainer, TreeMapleExplainer
-from .treegain import TreeGainExplainer
+from ._coefficent import Coefficent
+from ._random import Random
+from ._lime import LimeTabular
+from ._maple import Maple, TreeMaple
+from ._treegain import TreeGain

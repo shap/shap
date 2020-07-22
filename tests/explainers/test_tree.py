@@ -7,7 +7,7 @@ import shap
 def test_front_page_xgboost():
     try:
         import xgboost
-    except Exception as e:
+    except:
         print("Skipping test_front_page_xgboost!")
         return
     import shap
@@ -108,7 +108,7 @@ def _brute_force_tree_shap(tree, x):
 def test_xgboost_direct():
     try:
         import xgboost
-    except Exception as e:
+    except:
         print("Skipping test_xgboost_direct!")
         return
     import shap
@@ -129,7 +129,7 @@ def test_xgboost_direct():
 def test_xgboost_multiclass():
     try:
         import xgboost
-    except Exception as e:
+    except:
         print("Skipping test_xgboost_multiclass!")
         return
     import shap
@@ -174,7 +174,7 @@ def test_xgboost_ranking():
 def test_xgboost_mixed_types():
     try:
         import xgboost
-    except Exception as e:
+    except:
         print("Skipping test_xgboost_mixed_types!")
         return
     import shap
@@ -190,7 +190,7 @@ def test_xgboost_mixed_types():
 def test_ngboost():
     try:
         import ngboost
-    except Exception as e:
+    except:
         print("Skipping test_ngboost!")
         return
     X,y = shap.datasets.boston()
@@ -439,7 +439,7 @@ def test_catboost_categorical():
 
     bunch = load_boston()
     X, y = load_boston(True)
-    X = pd.DataFrame(X, columns=bunch.feature_names)
+    X = pd.DataFrame(X, columns=bunch.feature_names) # pylint: disable=no-member
     X['CHAS'] = X['CHAS'].astype(str)
 
     model = catboost.CatBoostRegressor(100, cat_features=['CHAS'], verbose=False)
@@ -585,7 +585,7 @@ def test_sklearn_interaction():
 def test_lightgbm_interaction():
     try:
         import lightgbm
-    except Exception as e:
+    except:
         print("Skipping test_lightgbm_interaction!")
         return
     import shap
@@ -788,10 +788,10 @@ def test_isolation_forest():
     import shap
     import numpy as np
     from sklearn.ensemble import IsolationForest
-    from sklearn.ensemble.iforest import _average_path_length
+    from sklearn.ensemble._iforest import _average_path_length
 
-    X,y = shap.datasets.boston()
-    iso = IsolationForest( behaviour='new', contamination='auto')
+    X,_ = shap.datasets.boston()
+    iso = IsolationForest(contamination='auto')
     iso.fit(X)
 
     explainer = shap.TreeExplainer(iso)
@@ -803,6 +803,7 @@ def test_isolation_forest():
         )
     assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
+# TODO: this has sometimes failed with strange answers, should run memcheck on this for any memory issues at some point...
 def test_multi_target_extra_trees():
     import shap
     import numpy as np

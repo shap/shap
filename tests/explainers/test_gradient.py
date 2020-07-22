@@ -6,6 +6,8 @@ import shap
 
 from .test_deep import _skip_if_no_pytorch, _skip_if_no_tensorflow
 
+# pylint: disable=import-error
+
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
     """
@@ -157,7 +159,7 @@ def test_pytorch_mnist_cnn():
                 if num_examples > cutoff:
                     break
 
-        device = torch.device('cpu')
+        device = torch.device('cpu') # pylint: disable=no-member
         train(model, device, train_loader, optimizer, 1)
 
         next_x, next_y = next(iter(train_loader))
@@ -168,7 +170,7 @@ def test_pytorch_mnist_cnn():
         else:
             e = shap.GradientExplainer(model, next_x[inds, :, :, :])
         test_x, test_y = next(iter(test_loader))
-        shap_values = e.shap_values(test_x[:1], nsamples=1000)
+        shap_values = e.shap_values(test_x[:1], nsamples=5000)
 
         if not interim:
             # unlike deepLIFT, Integrated Gradients aren't necessarily consistent for interim layers
@@ -190,6 +192,7 @@ def test_pytorch_mnist_cnn():
 
 
 def test_pytorch_multiple_inputs():
+    # pylint: disable=no-member
 
     _skip_if_no_pytorch()
     import torch
