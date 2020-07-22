@@ -334,10 +334,10 @@ def create_random_forest_vectorizer():
 
 def test_sklearn_random_forest_newsgroups():
     import shap
-    from sklearn.ensemble import RandomForestClassifier
+    #from sklearn.ensemble import RandomForestClassifier
 
     # note: this test used to fail in native TreeExplainer code due to memory corruption
-    newsgroups_train, newsgroups_test, classes = create_binary_newsgroups_data()
+    newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
     pipeline = create_random_forest_vectorizer()
     pipeline.fit(newsgroups_train.data, newsgroups_train.target)
     rf = pipeline.named_steps['rf']
@@ -478,7 +478,7 @@ def test_lightgbm_constant_prediction():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    shap.TreeExplainer(model).shap_values(X)
 
 def test_lightgbm_constant_multiclass():
     # note: this test used to fail with lightgbm 2.2.1 with error:
@@ -500,7 +500,7 @@ def test_lightgbm_constant_multiclass():
     model.fit(X, Y)
 
     # explain the model's predictions using SHAP values
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    shap.TreeExplainer(model).shap_values(X)
 
 def test_lightgbm_multiclass():
     try:
@@ -531,7 +531,7 @@ def test_lightgbm_binary():
     from sklearn.model_selection import train_test_split
 
     # train lightgbm model
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     model = lightgbm.sklearn.LGBMClassifier()
     model.fit(X_train, Y_train)
 
@@ -569,8 +569,8 @@ def test_sklearn_interaction():
     from sklearn.ensemble import RandomForestClassifier
 
     # train a simple sklean RF model on the iris dataset
-    X, y = shap.datasets.iris()
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+    X, _ = shap.datasets.iris()
+    X_train,_,Y_train,_ = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
     rforest = RandomForestClassifier(n_estimators=100, max_depth=None, min_samples_split=2, random_state=0)
     model = rforest.fit(X_train, Y_train)
 
@@ -612,7 +612,7 @@ def test_sum_match_random_forest():
     from sklearn.ensemble import RandomForestClassifier
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     predicted = clf.predict_proba(X_test)
@@ -628,7 +628,7 @@ def test_sum_match_extra_trees():
     from sklearn.ensemble import ExtraTreesRegressor
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     predicted = clf.predict(X_test)
@@ -644,7 +644,7 @@ def test_single_row_random_forest():
     from sklearn.ensemble import RandomForestClassifier
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     predicted = clf.predict_proba(X_test)
@@ -660,7 +660,7 @@ def test_sum_match_gradient_boosting_classifier():
     from sklearn.ensemble import GradientBoostingClassifier
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = GradientBoostingClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
 
@@ -689,7 +689,7 @@ def test_single_row_gradient_boosting_classifier():
     from sklearn.ensemble import GradientBoostingClassifier
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = GradientBoostingClassifier(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     predicted = clf.decision_function(X_test)
@@ -741,7 +741,7 @@ def test_sum_match_gradient_boosting_regressor():
     from sklearn.ensemble import GradientBoostingRegressor
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = GradientBoostingRegressor(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
 
@@ -758,7 +758,7 @@ def test_single_row_gradient_boosting_regressor():
     from sklearn.ensemble import GradientBoostingRegressor
     import sklearn
 
-    X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+    X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = GradientBoostingRegressor(random_state=202, n_estimators=10, max_depth=10)
     clf.fit(X_train, Y_train)
     
@@ -775,7 +775,7 @@ def test_multi_target_random_forest():
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import RandomForestRegressor
 
-    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.linnerud(), test_size=0.2, random_state=0)
+    X_train, X_test, Y_train, _ = train_test_split(*shap.datasets.linnerud(), test_size=0.2, random_state=0)
     est = RandomForestRegressor(random_state=202, n_estimators=10, max_depth=10)
     est.fit(X_train, Y_train)
     predicted = est.predict(X_test)
@@ -813,7 +813,7 @@ def test_multi_target_extra_trees():
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import ExtraTreesRegressor
 
-    X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.linnerud(), test_size=0.2, random_state=0)
+    X_train, X_test, Y_train, _ = train_test_split(*shap.datasets.linnerud(), test_size=0.2, random_state=0)
     est = ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
     est.fit(X_train, Y_train)
     predicted = est.predict(X_test)
@@ -841,7 +841,7 @@ def test_provided_background_tree_path_dependent():
     X,y = shap.datasets.iris()
     X = X[:100]
     y = y[:100]
-    train_x, test_x, train_y, test_y = train_test_split(X, y, random_state=1)
+    train_x, test_x, train_y, _ = train_test_split(X, y, random_state=1)
     feature_names = ["a", "b", "c", "d"]
     dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
     dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
@@ -877,7 +877,7 @@ def test_provided_background_independent():
     X,y = shap.datasets.iris()
     X = X[:100]
     y = y[:100]
-    train_x, test_x, train_y, test_y = train_test_split(X, y, random_state=1)
+    train_x, test_x, train_y, _ = train_test_split(X, y, random_state=1)
     feature_names = ["a", "b", "c", "d"]
     dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
     dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
@@ -913,7 +913,7 @@ def test_provided_background_independent_prob_output():
     X,y = shap.datasets.iris()
     X = X[:100]
     y = y[:100]
-    train_x, test_x, train_y, test_y = train_test_split(X, y, random_state=1)
+    train_x, test_x, train_y, _ = train_test_split(X, y, random_state=1)
     feature_names = ["a", "b", "c", "d"]
     dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
     dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
@@ -963,7 +963,7 @@ def test_single_tree_compare_with_kernel_shap():
     ypred = model.predict(Xd)
 
     # Compare for five random samples
-    for i in range(5):
+    for _ in range(5):
         x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
 
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
@@ -1004,7 +1004,7 @@ def test_several_trees():
     ypred = model.predict(Xd)
 
     # Compare for five random samples
-    for i in range(5):
+    for _ in range(5):
         x_ind = np.random.choice(X.shape[1]); x = X[x_ind:x_ind+1,:]
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
         itshap = expl.shap_values(x)
@@ -1016,14 +1016,14 @@ def test_single_tree_nonlinear_transformations():
     transformations.
     """
     # Supported non-linear transforms
-    def sigmoid(x):
-        return(1/(1+np.exp(-x)))
+    # def sigmoid(x):
+    #     return(1/(1+np.exp(-x)))
 
-    def log_loss(yt,yp):
-        return(-(yt*np.log(yp) + (1 - yt)*np.log(1 - yp)))
+    # def log_loss(yt,yp):
+    #     return(-(yt*np.log(yp) + (1 - yt)*np.log(1 - yp)))
 
-    def mse(yt,yp):
-        return(np.square(yt-yp))
+    # def mse(yt,yp):
+    #     return(np.square(yt-yp))
 
     try:
         import xgboost

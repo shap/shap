@@ -11,6 +11,8 @@ except ImportError:
 from ._labels import labels
 from . import colors
 from ..utils import convert_name, approximate_interactions
+from ..utils._general import encode_array_if_needed
+
 
 def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333333", cmap=None,
                dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
@@ -191,7 +193,7 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
     # get both the raw and display feature values
     oinds = np.arange(shap_values_arr.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-    xv = features[oinds, ind].astype(np.float64)
+    xv = encode_array_if_needed(features[oinds, ind])
     xd = display_data[oinds, ind]
     s = shap_values_arr[oinds, ind]
     if type(xd[0]) == str:
@@ -208,7 +210,8 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
     # get both the raw and display color values
     color_norm = None
     if interaction_index is not None:
-        cv = features[:, interaction_index]
+        interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
+        cv = interaction_feature_values
         cd = display_data[:, interaction_index]
         clow = np.nanpercentile(cv.astype(np.float), 5)
         chigh = np.nanpercentile(cv.astype(np.float), 95)
@@ -400,9 +403,6 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     """
 
-    
-    # print(shap_values.shape)
-    # print(features)
     if cmap is None:
         cmap = colors.red_blue
 
@@ -484,7 +484,9 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # get both the raw and display feature values
     oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-    xv = features[oinds, ind].astype(np.float64)
+    
+    xv = encode_array_if_needed(features[oinds, ind])
+
     xd = display_features[oinds, ind]
     s = shap_values[oinds, ind]
     if type(xd[0]) == str:
@@ -501,7 +503,8 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # get both the raw and display color values
     color_norm = None
     if interaction_index is not None:
-        cv = features[:, interaction_index]
+        interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
+        cv = interaction_feature_values
         cd = display_features[:, interaction_index]
         clow = np.nanpercentile(cv.astype(np.float), 5)
         chigh = np.nanpercentile(cv.astype(np.float), 95)
@@ -543,7 +546,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     if interaction_index is not None:
 
         # plot the nan values in the interaction feature as grey
-        cvals = features[oinds, interaction_index].astype(np.float64)
+        cvals = interaction_feature_values[oinds].astype(np.float64)
         cvals_imp = cvals.copy()
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
@@ -629,4 +632,3 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
-

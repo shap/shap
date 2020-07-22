@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 from sklearn.cluster import KMeans
+from sklearn.impute import SimpleImputer
+from scipy.sparse import issparse
 
 
 def kmeans(X, k, round_values=True):
@@ -10,7 +12,7 @@ def kmeans(X, k, round_values=True):
 
     Parameters
     ----------
-    X : numpy.array or pandas.DataFrame
+    X : numpy.array or pandas.DataFrame or any scipy.sparse matrix
         Matrix of data samples to summarize (# samples x # features)
 
     k : int
@@ -29,12 +31,18 @@ def kmeans(X, k, round_values=True):
     if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
         group_names = X.columns
         X = X.values
+
+    # in case there are any missing values in data impute them
+    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    X = imp.fit_transform(X)
+
     kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
 
     if round_values:
         for i in range(k):
             for j in range(X.shape[1]):
-                ind = np.argmin(np.abs(X[:,j] - kmeans.cluster_centers_[i,j]))
+                xj = X[:,j].toarray().flatten() if issparse(X) else X[:, j] # sparse support courtesy of @PrimozGodec
+                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i,j]))
                 kmeans.cluster_centers_[i,j] = X[ind,j]
     return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
 
@@ -135,7 +143,7 @@ class SparseData(Data):
 
 class DenseData(Data):
     def __init__(self, data, group_names, *args):
-        self.groups = args[0] if len(args) > 0 and args[0] != None else [np.array([i]) for i in range(len(group_names))]
+        self.groups = args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
 
         l = sum(len(g) for g in self.groups)
         num_samples = data.shape[0]

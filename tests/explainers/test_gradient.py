@@ -162,14 +162,14 @@ def test_pytorch_mnist_cnn():
         device = torch.device('cpu') # pylint: disable=no-member
         train(model, device, train_loader, optimizer, 1)
 
-        next_x, next_y = next(iter(train_loader))
+        next_x, _ = next(iter(train_loader))
         np.random.seed(0)
         inds = np.random.choice(next_x.shape[0], 20, replace=False)
         if interim:
             e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
         else:
             e = shap.GradientExplainer(model, next_x[inds, :, :, :])
-        test_x, test_y = next(iter(test_loader))
+        test_x, _ = next(iter(test_loader))
         shap_values = e.shap_values(test_x[:1], nsamples=5000)
 
         if not interim:
