@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import scipy.cluster
+from .. import utils
 from ..utils import safe_isinstance, MaskedModel
 from ._masker import Masker
 from numba import jit
@@ -14,7 +15,7 @@ class Tabular(Masker):
     """ A common base class for TabularIndependent and TabularPartitions.
     """
 
-    def __init__(self, data, hclustering=None):
+    def __init__(self, data, sample=None, hclustering=None):
         """ This masks out tabular features by integrating over the given background dataset. 
         
         Parameters
@@ -41,6 +42,9 @@ class Tabular(Masker):
             self.input_names = data.columns
             data = data.values
             self.output_dataframe = True
+
+        if sample is not None:
+            data = utils.sample(data, sample)
             
         self.data = data
         self.hclustering = hclustering
@@ -191,11 +195,12 @@ def _delta_masking(masks, x, batch_positions, curr_delta_inds, varying_rows_out,
         output_pos += N
 
 
+
 class TabularIndependent(Tabular):
     """ This masks out tabular features by integrating over the given background dataset. 
     """
 
-    def __init__(self, data):
+    def __init__(self, data, sample=None):
         """ Build a TabularIndependent masker with the given background data.
 
         Parameters
@@ -205,8 +210,14 @@ class TabularIndependent(Tabular):
             the masker (to be integrated over) matches the number of samples in this background
             dataset. This means larger background dataset cause longer runtimes. Normally about
             1, 10, 100, or 1000 background samples are reasonable choices.
+
+        sample : None or int
+            If not None then we randomly subsample the passed data to this number of samples. This
+            is important since we often need to evaluate the model for each sample every time we mask
+            the input in a different way. Common values here are 10, or 100 (or just passing a single
+            sample as a background reference).
         """
-        super(TabularIndependent, self).__init__(data, hclustering=None)
+        super(TabularIndependent, self).__init__(data, sample=sample, hclustering=None)
 
 
 class TabularPartitions(Tabular):

@@ -505,6 +505,18 @@ class Tree(Explainer):
         else:
             check_sum(self.expected_value + phi.sum(-1), model_output)
 
+    @staticmethod
+    def supports_model(model):
+        """ Determines if this explainer can handle the given model.
+
+        This is an abstract static method meant to be implemented by each subclass.
+        """
+        try:
+            TreeEnsemble(model)
+        except:
+            return False
+        return True
+
 
 class TreeEnsemble:
     """ An ensemble of decision trees.
