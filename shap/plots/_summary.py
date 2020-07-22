@@ -21,8 +21,10 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
                  color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
+                 cmap=colors.red_blue,
                  # depreciated
-                 auto_size_plot=None):
+                 auto_size_plot=None,
+                 use_log_scale=False):
     """Create a SHAP summary plot, colored by feature values when they are provided.
 
     Parameters
@@ -115,6 +117,9 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+
+    if use_log_scale:
+        pl.xscale('symlog')
 
     # plotting SHAP interaction values
     if not multi_class and len(shap_values.shape) == 3:
@@ -277,7 +282,7 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
                 cvals[cvals_imp > vmax] = vmax
                 cvals[cvals_imp < vmin] = vmin
                 pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                           cmap=colors.red_blue, vmin=vmin, vmax=vmax, s=16,
+                           cmap=cmap, vmin=vmin, vmax=vmax, s=16,
                            c=cvals, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
             else:
@@ -347,7 +352,7 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
                 cvals[cvals_imp > vmax] = vmax
                 cvals[cvals_imp < vmin] = vmin
                 pl.scatter(shaps[np.invert(nan_mask)], np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
-                           cmap=colors.red_blue, vmin=vmin, vmax=vmax, s=9,
+                           cmap=cmap, vmin=vmin, vmax=vmax, s=9,
                            c=cvals, alpha=alpha, linewidth=0, zorder=1)
                 # smooth_values -= nxp.nanpercentile(smooth_values, 5)
                 # smooth_values /= np.nanpercentile(smooth_values, 95)
@@ -465,7 +470,7 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
     if color_bar and features is not None and plot_type != "bar" and \
             (plot_type != "layered_violin" or color in pl.cm.datad):
         import matplotlib.cm as cm
-        m = cm.ScalarMappable(cmap=colors.red_blue if plot_type != "layered_violin" else pl.get_cmap(color))
+        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
         cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])

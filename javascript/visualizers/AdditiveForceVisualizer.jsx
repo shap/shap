@@ -14,7 +14,7 @@ import {
   findIndex,
   debounce
 } from "lodash";
-import colors from "../color-set";
+import colors from "./color-set";
 
 class AdditiveForceVisualizer extends React.Component {
   constructor() {

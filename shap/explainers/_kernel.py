@@ -1,6 +1,7 @@
 from ..utils._legacy import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
 from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
 from scipy.special import binom
+from scipy.sparse import issparse
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -42,12 +43,12 @@ class Kernel(Explainer):
         this background dataset can be the whole training set, but for larger problems consider
         using a single reference value or using the kmeans function to summarize the dataset.
         Note: for sparse case we accept any sparse matrix but convert to lil format for
-        performance. 
+        performance.
 
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
-        sense to connect them to the ouput with a link function where link(outout) = sum(phi).
+        sense to connect them to the output with a link function where link(output) = sum(phi).
         If the model output is a probability then the LogitLink link function makes the feature
         importance values have log-odds units.
     """
@@ -85,7 +86,7 @@ class Kernel(Explainer):
             model_null = np.squeeze(model_null.values)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
-        
+
         # see if we have a vector output
         self.vector_out = True
         if len(self.fnull.shape) == 0:
@@ -95,7 +96,7 @@ class Kernel(Explainer):
             self.expected_value = float(self.expected_value)
         else:
             self.D = self.fnull.shape[0]
-        
+
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
@@ -137,7 +138,7 @@ class Kernel(Explainer):
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values
-        
+
         x_type = str(type(X))
         arr_type = "'numpy.ndarray'>"
         # if sparse, convert to lil for performance
@@ -273,7 +274,7 @@ class Kernel(Explainer):
             # given nsamples*remaining_weight_vector[subset_size]
             num_full_subsets = 0
             num_samples_left = self.nsamples
-            group_inds = np.arange(self.M, dtype='int64') 
+            group_inds = np.arange(self.M, dtype='int64')
             mask = np.zeros(self.M)
             remaining_weight_vector = copy.copy(weight_vector)
             for subset_size in range(1, num_subset_sizes + 1):
@@ -535,12 +536,12 @@ class Kernel(Explainer):
             if isinstance(self.l1_reg, str) and self.l1_reg.startswith("num_features("):
                 r = int(self.l1_reg[len("num_features("):-1])
                 nonzero_inds = lars_path(mask_aug, eyAdj_aug, max_iter=r)[1]
-            
+
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
                 nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
-            
+
             # use a fixed regularization coeffcient
             else:
                 nonzero_inds = np.nonzero(Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_)[0]

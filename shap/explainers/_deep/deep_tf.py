@@ -484,7 +484,7 @@ def softmax(explainer, op, *grads):
     # remove the names we just added
     for op in [evals.op, rsum.op, div.op, in0_centered.op]:
         for t in op.outputs:
-            if explainer.between_tensors[t.name] == False:
+            if explainer.between_tensors[t.name] is False:
                 del explainer.between_tensors[t.name]
 
     # rescale to account for our shift by in0_max (which we did for numerical stability)
@@ -590,7 +590,7 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     xin0, rin0 = tf.split(op_inputs[input_ind], 2)
     xout, rout = tf.split(op.outputs[input_ind], 2)
     delta_in0 = xin0 - rin0
-    if delta_in0.shape == None:
+    if delta_in0.shape is None:
         dup0 = [2, 1]
     else:
         dup0 = [2] + [1 for i in delta_in0.shape[1:]]

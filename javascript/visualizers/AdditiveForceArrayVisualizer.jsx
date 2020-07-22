@@ -21,7 +21,7 @@ import {
   cloneDeep,
   findKey
 } from "lodash";
-import colors from "../color-set";
+import colors from "./color-set";
 
 class AdditiveForceArrayVisualizer extends React.Component {
   constructor() {

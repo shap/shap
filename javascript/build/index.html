@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Test</title>
-    <meta charset="utf-8">
+    <title>SHAP Visualizers Test</title>
+    <meta charset="utf-8" />
     <script type="text/javascript" src="bundle.js" charset="utf-8"></script>
   </head>
   <body>
     <div id="viz"></div>
-    <!-- <script>/*SimpleListVisualizer*/
-      IML.ReactDom.render(
-        IML.React.createElement(IML.AdditiveForceArrayVisualizer, {
+    <!-- <script>
+      /*AdditiveForceArrayVisualizer*/
+      SHAP.ReactDom.render(
+        SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {
           baseValue: 0.0,
-          link: 'identity',
+          link: "identity",
           featureNames: {
             "0": "Blue",
             "1": "Red",
@@ -52,31 +53,32 @@
             }
           ]
         }),
-        document.getElementById('viz')
+        document.getElementById("viz")
       );
     </script> -->
 
-    <script>/*SimpleListVisualizer*/
-    IML.ReactDom.render(
-  IML.React.createElement(IML.AdditiveForceVisualizer, {
-    baseValue: 0.0,
-    link: "identity",
-    featureNames: {
-      "0": "Blue",
-      "1": "Red",
-      "2": "Green",
-      "3": "Orange"
-    },
-    outNames: ["color rating"],
-    features: {
-      "0": { value: 1.0, effect: 1.0 },
-      "1": { value: 0.0, effect: 0.5 },
-      "2": { value: 2.0, effect: -2.5 },
-      "3": { value: 2.0, effect: -0.5 }
-    }
-  }),
-  document.getElementById("viz")
-);
-</script>
+    <script>
+      /*AdditiveForceVisualizer*/
+      SHAP.ReactDom.render(
+        SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {
+          baseValue: 0.0,
+          link: "identity",
+          featureNames: {
+            "0": "Blue",
+            "1": "Red",
+            "2": "Green",
+            "3": "Orange"
+          },
+          outNames: ["color rating"],
+          features: {
+            "0": { value: 1.0, effect: 1.0 },
+            "1": { value: 0.0, effect: 0.5 },
+            "2": { value: 2.0, effect: -2.5 },
+            "3": { value: 2.0, effect: -0.5 }
+          }
+        }),
+        document.getElementById("viz")
+      );
+    </script>
   </body>
 </html>

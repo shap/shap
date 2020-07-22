@@ -33,3 +33,6 @@ def test_random_summary_layered_violin_with_data():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="layered_violin", show=False)
+
+def test_random_summary_with_log_scale():
+    shap.summary_plot(np.random.randn(20, 5), use_log_scale=True, show=False)

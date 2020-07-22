@@ -218,35 +218,41 @@ err_msg = """
 </div>"""
 
 
-def initjs():
-    assert have_ipython, "IPython must be installed to use initjs()! Run `pip install ipython` and then restart shap."
+def getjs():
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
     with io.open(bundle_path, encoding="utf-8") as f:
         bundle_data = f.read()
+    return "<script charset='utf-8'>{bundle_data}</script>".format(bundle_data=bundle_data)
+
+
+def initjs():
+    assert have_ipython, "IPython must be installed to use initjs()! Run `pip install ipython` and then restart shap."
     logo_path = os.path.join(os.path.split(__file__)[0], "resources", "logoSmallGray.png")
     with open(logo_path, "rb") as f:
         logo_data = f.read()
     logo_data = base64.b64encode(logo_data).decode('utf-8')
     display(HTML(
         "<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>".format(logo_data=logo_data) +
-        "<script charset='utf-8'>{bundle_data}</script>".format(bundle_data=bundle_data)
+        getjs()
     ))
 
-def save_html(out_file, plot_html, full_html=True):
+
+def save_html(out_file, plot, full_html=True):
     """ Save html plots to an output file.
     
     Parameters
     ----------
     out_file : str or file
         Location or file to be written to
-    plot_html : HTML Object
-        HTML object returned by shap.force_plot()
+    plot : BaseVisualizer
+        Visualizer returned by shap.force_plot()
     full_html : boolean (default: True)
         If True, writes a complete HTML document starting 
         with an <html> tag. If False, only script and div
         tags are included.
     """
 
+    assert isinstance(plot, BaseVisualizer), "save_html requires a Visualizer returned by shap.force_plot()."
     internal_open = False
     if type(out_file) == str:
         out_file = open(out_file, "w", encoding="utf-8")
@@ -267,7 +273,7 @@ def save_html(out_file, plot_html, full_html=True):
     if full_html:
         out_file.write("</head><body>\n")
 
-    out_file.write(plot_html.data)
+    out_file.write(plot.html())
     
     if full_html:
         out_file.write("</body></html>\n")
@@ -307,36 +313,24 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, 
         if matplotlib:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show, text_rotation=text_rotation)
         else:
-            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).html()
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
     elif isinstance(e, Explanation):
         if matplotlib:
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
-            return SimpleListVisualizer(e).html()
+            return SimpleListVisualizer(e)
     elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
         if matplotlib:
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
-            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format).html()
+            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format)
     else:
         assert False, "visualize() can only display Explanation objects (or arrays of them)!"
 
-try:
-    # register the visualize function with IPython
-    ip = get_ipython()
-    svg_formatter=ip.display_formatter.formatters['text/html']
-    svg_formatter.for_type(Explanation, lambda x: visualize(x).data)
-    old_list_formatter = svg_formatter.for_type(list)
-    def try_list_display(e):
-        if isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
-            return visualize(e).data
-        else:
-            return str(e) if old_list_formatter is None else old_list_formatter(e)
-    svg_formatter.for_type(list, try_list_display)
-except:
-    pass
+class BaseVisualizer:
+    pass 
 
-class SimpleListVisualizer:
+class SimpleListVisualizer(BaseVisualizer):
     def __init__(self, e):
         assert isinstance(e, Explanation), "SimpleListVisualizer can only visualize Explanation objects!"
 
@@ -357,18 +351,21 @@ class SimpleListVisualizer:
         }
 
     def html(self):
-        assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return HTML("""
+        # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        return """
 <div id='{id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.SimpleListVisualizer, {data}),
     document.getElementById('{id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator()))
+</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+
+    def _repr_html_(self):
+        return self.html()
 
 
-class AdditiveForceVisualizer:
+class AdditiveForceVisualizer(BaseVisualizer):
     def __init__(self, e, plot_cmap="RdBu"):
         assert isinstance(e, AdditiveExplanation), \
             "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"
@@ -391,24 +388,27 @@ class AdditiveForceVisualizer:
         }
 
     def html(self, label_margin=20):
-        assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
-        return HTML("""
+        return """
 <div id='{id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {data}),
     document.getElementById('{id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator()))
+</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
     
     def matplotlib(self, figsize, show, text_rotation):
         fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation)
         
         return fig
+    
+    def _repr_html_(self):
+        return self.html()
         
 
-class AdditiveForceArrayVisualizer:
+class AdditiveForceArrayVisualizer(BaseVisualizer):
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
         assert isinstance(arr[0], AdditiveExplanation), \
             "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
@@ -448,12 +448,15 @@ class AdditiveForceArrayVisualizer:
                 }
 
     def html(self):
-        assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return HTML("""
+        # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        return """
 <div id='{id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {data}),
     document.getElementById('{id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator()))
+</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+
+    def _repr_html_(self):
+        return self.html()
