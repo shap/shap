@@ -381,6 +381,12 @@ class Kernel(Explainer):
 
         return phi
 
+    @staticmethod
+    def not_equal(i, j):
+        if isinstance(i, str) or isinstance(j, str):
+            return 0 if i == j else 1
+        return 0 if np.isclose(i, j, equal_nan=True) else 1
+
     def varying_groups(self, x):
         if not sp.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
@@ -392,7 +398,7 @@ class Kernel(Explainer):
                         varying[i] = False
                         continue
                     x_group = x_group.todense()
-                num_mismatches = np.sum(np.invert(np.isclose(x_group, self.data.data[:, inds], equal_nan=True)))
+                num_mismatches = np.sum(np.frompyfunc(self.not_equal, 2, 1)(x_group, self.data.data[:, inds]))
                 varying[i] = num_mismatches > 0
             varying_indices = np.nonzero(varying)[0]
             return varying_indices
