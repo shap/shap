@@ -164,15 +164,13 @@ def safe_isinstance(obj, class_path_str):
         # Splits on last occurence of "."
         module_name, class_name = class_path_str.rsplit(".", 1)
 
-        #Check module exists
-        try:
-            spec = importlib.util.find_spec(module_name)
-        except:
-            spec = None
-        if spec is None:
+        # here we don't check further if the model is not imported, since we shouldn't have
+        # an object of that types passed to us if the model the type is from has never been
+        # imported. (and we don't want to import lots of new modules for no reason)
+        if module_name not in sys.modules:
             continue
 
-        module = importlib.import_module(module_name)
+        module = sys.modules[module_name]
         
         #Get class
         _class = getattr(module, class_name, None)

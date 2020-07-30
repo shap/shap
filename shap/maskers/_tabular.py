@@ -15,7 +15,7 @@ class Tabular(Masker):
     """ A common base class for TabularIndependent and TabularPartitions.
     """
 
-    def __init__(self, data, sample=None, hclustering=None):
+    def __init__(self, data, sample=None, clustering=None):
         """ This masks out tabular features by integrating over the given background dataset. 
         
         Parameters
@@ -26,8 +26,8 @@ class Tabular(Masker):
             dataset. This means larger background dataset cause longer runtimes. Normally about
             1, 10, 100, or 1000 background samples are reasonable choices.
 
-        hclustering : string or None (default) or numpy.ndarray
-            The distance metric to use for creating the partition_tree of the features. The
+        clustering : string or None (default) or numpy.ndarray
+            The distance metric to use for creating the clustering of the features. The
             distance function can be any valid scipy.spatial.distance.pdist's metric argument.
             However we suggest using 'correlation' in most cases. The full list of options is
             ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, ‘correlation’, ‘cosine’, ‘dice’,
@@ -47,7 +47,7 @@ class Tabular(Masker):
             data = utils.sample(data, sample)
             
         self.data = data
-        self.hclustering = hclustering
+        self.clustering = clustering
 
         # warn users about large background data sets
         if self.data.shape[0] > 100:
@@ -55,19 +55,15 @@ class Tabular(Masker):
                         "run times. Consider shap.utils.sample(data, K) to summarize the background as K samples.")
 
         # compute the clustering of the data
-        if hclustering is not None:
-            if type(hclustering) is str:
-                bg_no_nan = data.copy()
-                for i in range(bg_no_nan.shape[1]):
-                    np.nan_to_num(bg_no_nan[:,i], nan=np.nanmean(bg_no_nan[:,i]), copy=False)
-                D = sp.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape)*1e-8, metric=hclustering)
-                self.partition_tree = sp.cluster.hierarchy.complete(D)
-            elif safe_isinstance(hclustering, "numpy.ndarray"):
-                self.partition_tree
+        if clustering is not None:
+            if type(clustering) is str:
+                self.clustering = utils.hclust(data, metric=clustering)
+            elif safe_isinstance(clustering, "numpy.ndarray"):
+                self.clustering = clustering
             else:
-                raise Exception("Unknown hclustering given! Make sure you pass a distance metric as a string or a clustering as an numpy.ndarray.")
+                raise Exception("Unknown clustering given! Make sure you pass a distance metric as a string or a clustering as an numpy.ndarray.")
         else:
-            self.partition_tree = None
+            self.clustering = None
 
         # self._last_mask = np.zeros(self.data.shape[1], dtype=np.bool)
         self._masked_data = data.copy()
@@ -217,7 +213,7 @@ class TabularIndependent(Tabular):
             the input in a different way. Common values here are 10, or 100 (or just passing a single
             sample as a background reference).
         """
-        super(TabularIndependent, self).__init__(data, sample=sample, hclustering=None)
+        super(TabularIndependent, self).__init__(data, sample=sample, clustering=None)
 
 
 class TabularPartitions(Tabular):
@@ -226,7 +222,7 @@ class TabularPartitions(Tabular):
     Unlike TabularIndependent, TabularPartitions respects a hierarchial structure o
     """
 
-    def __init__(self, data, hclustering="correlation"):
+    def __init__(self, data, sample=None, clustering="correlation"):
         """ Build a TabularPartitions masker with the given background data and clustering.
 
         Parameters
@@ -237,8 +233,8 @@ class TabularPartitions(Tabular):
             dataset. This means larger background dataset cause longer runtimes. Normally about
             1, 10, 100, or 1000 background samples are reasonable choices.
 
-        hclustering : string or numpy.ndarray
-            If a string, then this is the distance metric to use for creating the partition_tree of
+        clustering : string or numpy.ndarray
+            If a string, then this is the distance metric to use for creating the clustering of
             the features. The distance function can be any valid scipy.spatial.distance.pdist's metric
             argument. However we suggest using 'correlation' in most cases. The full list of options is
             ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, ‘correlation’, ‘cosine’, ‘dice’,
@@ -248,7 +244,7 @@ class TabularPartitions(Tabular):
             the options from scipy.spatial.distance.pdist's metric argument.
             If an array, then this is assumed to be the clustering of 
         """
-        super(TabularPartitions, self).__init__(data, hclustering=hclustering)
+        super(TabularPartitions, self).__init__(data, sample=sample, clustering=clustering)
 
 
 # class ConditionedTabular(ConditionedMasker):
@@ -273,7 +269,7 @@ class TabularPartitions(Tabular):
 #         assert collapse_invariances, "right now we always do this"
 
 #         self.masker = masker
-#         self.partition_tree = self.masker.partition_tree # we use a global shared partition tree
+#         self.clustering = self.masker.clustering # we use a global shared partition tree
 #         self.x = x
 #         self._data_variance = ~np.isclose(x, self.masker.data)
 #         self.changed_rows[:] = True
@@ -304,9 +300,9 @@ class TabularPartitions(Tabular):
 #             for i in range(bg_no_nan.shape[1]):
 #                 np.nan_to_num(bg_no_nan[:,i], nan=np.nanmean(bg_no_nan[:,i]), copy=False)
 #             D = sp.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape)*1e-8, metric=clustering)
-#             self.partition_tree = sp.cluster.hierarchy.complete(D)
+#             self.clustering = sp.cluster.hierarchy.complete(D)
 #         else:
-#             self.partition_tree = None
+#             self.clustering = None
 
 #         self._last_mask = np.zeros(self.data.shape[1], dtype=np.bool)
 #         self._masked_data = data.copy()

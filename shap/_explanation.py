@@ -29,7 +29,7 @@ class Explanation(AttributionExplanation):
         upper_bounds = None,
         main_effects = None,
         hierarchical_values = None,
-        partition_tree = None
+        clustering = None
     ):
         
         input_shape = _compute_shape(data)
@@ -54,8 +54,8 @@ class Explanation(AttributionExplanation):
             kwargs_dict["output_names"] = (output_dims, Slicer(output_names))
         if hierarchical_values is not None:
             kwargs_dict["hierarchical_values"] = (hierarchical_values, Slicer(hierarchical_values))
-        if partition_tree is not None:
-            kwargs_dict["partition_tree"] = (partition_tree, Slicer(partition_tree))
+        if clustering is not None:
+            self.clustering = clustering
 
         super().__init__(
             data,
@@ -120,7 +120,10 @@ class Explanation(AttributionExplanation):
                     tmp[i] = int(ind)
                     item = tuple(tmp)
         
-        return super().__getitem__(item)
+        out = super().__getitem__(item)
+        if getattr(self, "clustering", None) is not None:
+            out.clustering = self.clustering
+        return out
 
 
 def _compute_shape(x):

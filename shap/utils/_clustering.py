@@ -2,6 +2,9 @@ import numpy as np
 import scipy as sp
 from scipy.spatial.distance import pdist
 from numba import jit
+import sklearn
+import warnings
+from ._general import safe_isinstance
 
 
 def partition_tree(X, metric="correlation"):
@@ -139,4 +142,56 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     
     return sets[-1]
 
+# we can build better clsutering trees by doing grouping based on reducing xgb losses
+def xgboost_r2(X, y, random_state=0):
+    import xgboost
+    X_train,X_test,y_train,y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
+
+    model = xgboost.XGBRegressor(n_estimators=500)
+    model.fit(X_train, y_train, eval_set=[(X_test, y_test)], early_stopping_rounds=10, verbose=False)
+
+    # return the R^2 value
+    return 1 - np.mean((y - model.predict(X))**2) / np.mean((y - np.mean(y))**2)
+
+def retrain_hclustering(X, y, model=xgboost_r2, random_state=0):
+    Xtmp = X.values
+    dist = np.zeros((Xtmp.shape[1], Xtmp.shape[1]))
+    for i in range(Xtmp.shape[1]):
+        for j in range(i, Xtmp.shape[1]):
+            dist[i,j] = dist[j,i] = xgboost_r2(Xtmp[:,[i,j]], y, random_state=random_state)
+            
+    #dist2 = np.zeros((Xtmp.shape[1], Xtmp.shape[1]))
+    out = []
+    for i in range(Xtmp.shape[1]):
+        for j in range(i+1, Xtmp.shape[1]):
+            if i != j:
+                out.append(1 - (dist[i,i] + dist[j,j] - dist[i,j]) / dist[i,j])
     
+    return np.array(out)
+
+def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
+    if metric == "auto":
+        if y is not None:
+            metric = "retrain_xgboost_r2"
+    
+    # build the distance matrix
+    if metric == "retrain_xgboost_r2":
+        dist = retrain_hclustering(X, y, model=xgboost_r2, random_state=random_state)
+    else:
+        if y is not None:
+            warnings.warn("Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!")
+        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            bg_no_nan = X.values.copy()
+        else:
+            bg_no_nan = X.copy()
+        for i in range(bg_no_nan.shape[1]):
+            np.nan_to_num(bg_no_nan[:,i], nan=np.nanmean(bg_no_nan[:,i]), copy=False)
+        dist = sp.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape)*1e-8, metric=metric)
+    # else:
+    #     raise Exception("Unknown metric: " + str(metric))
+
+    # build linkage
+    if linkage == "complete":
+        return sp.cluster.hierarchy.complete(dist)
+    else:
+        raise Exception("Unknown linkage: " + str(linkage))

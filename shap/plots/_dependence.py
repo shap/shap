@@ -15,7 +15,7 @@ from ..utils._general import encode_array_if_needed
 
 
 def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333333", cmap=None,
-               dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
+               dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -41,9 +41,9 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
         If only a single column of an Explanation object is passed then that feature column will be used
         to color the data points.
 
-    x_jitter : float (0 - 1)
-        Adds random jitter to feature values. May increase plot readability when feature
-        is discrete.
+    x_jitter : 'auto' or float (0 - 1)
+        Adds random jitter to feature values. May increase plot readability when a feature
+        is discrete. By default x_jitter is chosen base on auto-detection of categorical features
 
     alpha : float
         The transparency of the data points (between 0 and 1). This can be useful to the
@@ -93,6 +93,8 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
 
     #     feature_names
 
+    
+
         
     if str(type(color)).endswith("Explanation'>"):
         shap_values2 = color
@@ -110,6 +112,7 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
         interaction_index = "auto"
 
     
+
     # print(shap_values.shape)
     # print(features)
     if cmap is None:
@@ -141,6 +144,27 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
         features = np.reshape(features, len(features), 1)
 
     ind = convert_name(ind, shap_values_arr, feature_names)
+
+    # pick jitter for categorical features
+    vals = np.sort(np.unique(features[:,ind]))
+    min_dist = np.inf
+    for i in range(1,len(vals)):
+        d = vals[i] - vals[i-1]
+        if d > 1e-8 and d < min_dist:
+            min_dist = d
+    num_points_per_value = len(features[:,ind]) / len(vals)
+    if num_points_per_value < 10:
+        #categorical = False
+        if x_jitter == "auto":
+            x_jitter = 0
+    elif num_points_per_value < 100:
+        #categorical = True
+        if x_jitter == "auto":
+            x_jitter = min_dist * 0.1
+    else:
+        #categorical = True
+        if x_jitter == "auto":
+            x_jitter = min_dist * 0.2
 
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):

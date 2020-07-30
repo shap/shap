@@ -14,9 +14,10 @@ class MaskedModel():
 
     delta_mask_noop_value = 2147483647 # used to encode a noop for delta masking
 
-    def __init__(self, model, masker, *args):
+    def __init__(self, model, masker, link, *args):
         self.model = model
         self.masker = masker
+        self.link = link
         self.args = args
 
         # if the masker supports it, save what positions vary from the background
@@ -110,7 +111,7 @@ class MaskedModel():
         # print(varying_rows)
         # for o in (averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
         #     print(type(o), o.dtype)
-        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows)
+        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
 
         return averaged_outs
 
@@ -159,7 +160,8 @@ class MaskedModel():
 
         averaged_outs = np.zeros((varying_rows.shape[0],) + outputs.shape[1:])
         last_outs = np.zeros((varying_rows.shape[1],) + outputs.shape[1:])
-        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows)
+        #print("link", self.link)
+        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
 
         return averaged_outs
 
@@ -189,7 +191,7 @@ class MaskedModel():
         #varying_rows = np.array(varying_rows)
         # for o in (averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
         #     print(type(o), o.dtype)
-        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows)
+        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
 
         return averaged_outs
     
@@ -309,7 +311,7 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
     return all_masked_inputs, i + 1 # i + 1 is the number of output rows after averaging
 
 @jit
-def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
+def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
     last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
@@ -321,7 +323,7 @@ def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, vary
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
             else:
                 last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
-            averaged_outs[i] = np.mean(last_outs)
+            averaged_outs[i] = link(np.mean(last_outs))
         else:
             averaged_outs[i] = averaged_outs[i-1]
 

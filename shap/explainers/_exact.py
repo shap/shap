@@ -9,6 +9,7 @@ import numpy as np
 import itertools
 import sys
 from numba import jit
+from .. import links
 
 log = logging.getLogger('shap')
 
@@ -24,7 +25,7 @@ class Exact(Explainer):
     and a greedly sorting method for hclustering structured maskers.
     """
 
-    def __init__(self, model, masker):
+    def __init__(self, model, masker, link=links.identity):
         """ Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
@@ -38,9 +39,16 @@ class Exact(Explainer):
             masked samples are evaluated using the model function and the outputs are then averaged.
             As a shortcut for the standard masking used by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. To use a clustering
-            game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object.
+            game structure you can pass a shap.maskers.TabularPartitions(data) object.
+
+        link : function
+            The link function used to map between the output units of the model and the SHAP value units. By
+            default it is shap.links.identity, but shap.links.logit can be useful so that expectations are
+            computed in probability units while explanations remain in the (more naturally additive) log-odds
+            units. For more details on how link functions work see any overview of link functions for generalized
+            linear models.
         """
-        super(Exact, self).__init__(model, masker)
+        super(Exact, self).__init__(model, masker, link=link)
 
         if getattr(masker, "partition_tree", None) is not None:
             self._partition_masks,self._partition_masks_inds = partition_masks(masker.partition_tree)
@@ -72,7 +80,7 @@ class Exact(Explainer):
         #     raise Exception("Exact does not yet support using a partition tree!")
 
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(self.model, self.masker, *row_args)
+        fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
         # do the standard Shapley values
         inds = None

@@ -458,7 +458,6 @@ class Tree(Explainer):
         # run the core algorithm using the C extension
         assert_import("cext")
         phi = np.zeros((X.shape[0], X.shape[1]+1, X.shape[1]+1, self.model.num_outputs))
-        print(self.feature_perturbation)
         _cext.dense_tree_shap(
             self.model.children_left, self.model.children_right, self.model.children_default,
             self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,

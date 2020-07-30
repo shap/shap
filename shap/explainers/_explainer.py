@@ -120,16 +120,16 @@ class Explainer():
             # build the right subclass
             if algorithm == "exact":
                 self.__class__ = explainers.Exact
-                explainers.Exact.__init__(self, model, self.masker)
+                explainers.Exact.__init__(self, model, self.masker, link=self.link)
             elif algorithm == "permutation":
                 self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, model, self.masker)
+                explainers.Permutation.__init__(self, model, self.masker, link=self.link)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, model, self.masker)
+                explainers.Partition.__init__(self, model, self.masker, link=self.link)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
-                explainers.Tree.__init__(self, model, self.masker)
+                explainers.Tree.__init__(self, model, self.masker, link=self.link)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
@@ -203,7 +203,9 @@ class Explainer():
             arg_values[j] = np.array([v.reshape(*mask_shapes[i][j]) for v in arg_values[j]])
             out.append(Explanation(
                 expected_values, arg_values[j], args[j],
-                input_names=input_names[j], main_effects=main_effects# output_shape=output_shape,
+                input_names=input_names[j], main_effects=main_effects,
+                clustering=getattr(self.masker, "clustering", None)
+                # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))
         return out[0] if len(out) == 1 else out

@@ -4,6 +4,7 @@ from ._explainer import Explainer
 import numpy as np
 import pandas as pd
 import scipy as sp
+from .. import links
 
 
 class Permutation(Explainer):
@@ -19,7 +20,7 @@ class Permutation(Explainer):
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
     """
 
-    def __init__(self, model, masker):
+    def __init__(self, model, masker, link=links.identity):
         """ Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
@@ -35,7 +36,7 @@ class Permutation(Explainer):
             instead of a function and that matrix will be used for masking. To use a clustering
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
-        super(Permutation, self).__init__(model, masker)
+        super(Permutation, self).__init__(model, masker, link=link)
 
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, silent):
@@ -43,7 +44,7 @@ class Permutation(Explainer):
         """
 
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(self.model, self.masker, *row_args)
+        fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
         # by default we run 10 permutations forward and backward
         if max_evals == "auto":
