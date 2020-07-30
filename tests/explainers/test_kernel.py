@@ -198,3 +198,32 @@ def test_linear():
     expected = (x - x.mean(0)) * np.array([1.0, 2.0, 0.0])
 
     np.testing.assert_allclose(expected, phi, rtol=1e-3)
+
+
+def test_non_numeric():
+    import sklearn
+    from sklearn.pipeline import Pipeline
+
+    # create dummy data
+    X = np.array([['A', '0', '0'], ['A', '1', '0'], ['B', '0', '0'], ['B', '1', '0'], ['A', '1', '0']])
+    y = np.array([0, 1, 2, 3, 4])
+
+    # build and train the pipeline
+    pipeline = Pipeline([('oneHotEncoder', sklearn.preprocessing.OneHotEncoder()),
+                     ('linear', sklearn.linear_model.LinearRegression())])
+    pipeline.fit(X, y)
+
+    # use KernelExplainer
+    explainer = shap.KernelExplainer(pipeline.predict, X, nsamples=100)
+    shap_values = explainer.explain(X[0,:].reshape(1, -1))
+
+    assert np.abs(explainer.expected_value + shap_values.sum(0) - pipeline.predict(X[0,:].reshape(1, -1))[0]) < 1e-4
+    assert shap_values[2] == 0
+
+    # tests for shap.KernelExplainer.not_equal
+    assert shap.KernelExplainer.not_equal(0, 0) == shap.KernelExplainer.not_equal('0', '0')
+    assert shap.KernelExplainer.not_equal(0, 1) == shap.KernelExplainer.not_equal('0', '1')
+    assert shap.KernelExplainer.not_equal(0, np.nan) == shap.KernelExplainer.not_equal('0', np.nan)
+    assert shap.KernelExplainer.not_equal(0, np.nan) == shap.KernelExplainer.not_equal('0', None)
+    assert shap.KernelExplainer.not_equal(np.nan, 0) == shap.KernelExplainer.not_equal(np.nan, '0')
+    assert shap.KernelExplainer.not_equal(np.nan, 0) == shap.KernelExplainer.not_equal(None, '0')
