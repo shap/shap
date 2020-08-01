@@ -924,11 +924,6 @@ class TreeEnsemble:
         else:
             raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
-        # make sure the base offset is a 1D array
-        if not hasattr(self.base_offset, "__len__") or len(self.base_offset) == 0:
-            self.base_offset = np.array([self.base_offset])
-        self.base_offset = self.base_offset.flatten()
-
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
             max_nodes = np.max([len(t.values) for t in self.trees])
@@ -974,6 +969,12 @@ class TreeEnsemble:
 
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])
+
+            # make sure the base offset is a 1D array
+            if not hasattr(self.base_offset, "__len__") or len(self.base_offset) == 0:
+                self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
+            self.base_offset = self.base_offset.flatten()
+            assert len(self.base_offset) == self.num_outputs
 
     def get_transform(self):
         """ A consistent interface to make predictions from this model.
@@ -1433,11 +1434,6 @@ class XGBTreeModelLoader(object):
                 self.node_cright[-1][j] = self.read('i')
                 self.node_sindex[-1][j] = self.read('I')
                 self.node_info[-1][j] = self.read('f')
-#                 print("self.node_cleft[-1][%d]" % j, self.node_cleft[-1][j])
-#                 print("self.node_cright[-1][%d]" % j, self.node_cright[-1][j])
-#                 print("self.node_sindex[-1][%d]" % j, self.node_sindex[-1][j])
-#                 print("self.node_info[-1][%d]" % j, self.node_info[-1][j])
-#                 print()
 
             # load the stat nodes
             self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
@@ -1449,11 +1445,6 @@ class XGBTreeModelLoader(object):
                 self.sum_hess[-1][j] = self.read('f')
                 self.base_weight[-1][j] = self.read('f')
                 self.leaf_child_cnt[-1][j] = self.read('i')
-#                 print("self.loss_chg[-1][%d]" % j, self.loss_chg[-1][j])
-#                 print("self.sum_hess[-1][%d]" % j, self.sum_hess[-1][j])
-#                 print("self.base_weight[-1][%d]" % j, self.base_weight[-1][j])
-#                 print("self.leaf_child_cnt[-1][%d]" % j, self.leaf_child_cnt[-1][j])
-#                 print()
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
