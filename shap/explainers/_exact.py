@@ -1,4 +1,4 @@
-from ..utils import MaskedModel, shapley_coefficients, make_masks, hclust_ordering, delta_minimization_order
+from ..utils import MaskedModel, shapley_coefficients, make_masks, delta_minimization_order
 from .._explanation import Explanation
 from ._explainer import Explainer
 import numpy as np

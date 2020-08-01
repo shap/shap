@@ -81,66 +81,67 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
     """
     
-    # compute a hierarchical clustering
+    # compute a hierarchical clustering and return the optimal leaf ordering
     D = sp.spatial.distance.pdist(X, metric)
     cluster_matrix = sp.cluster.hierarchy.complete(D)
+    return sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
     
     # merge clusters, rotating them to make the end points match as best we can
-    sets = [[i] for i in range(X.shape[0])]
-    for i in range(cluster_matrix.shape[0]):
-        s1 = sets[int(cluster_matrix[i,0])]
-        s2 = sets[int(cluster_matrix[i,1])]
+    # sets = [[i] for i in range(X.shape[0])]
+    # for i in range(cluster_matrix.shape[0]):
+    #     s1 = sets[int(cluster_matrix[i,0])]
+    #     s2 = sets[int(cluster_matrix[i,1])]
 
-        # compute distances between the end points of the lists
-        d_s1_s2 = pdist(np.vstack([X[s1[-1],:], X[s2[0],:]]), metric)[0]
-        d_s1_s2r = pdist(np.vstack([X[s1[-1],:], X[s2[-1],:]]), metric)[0]
-        d_s1r_s2 = pdist(np.vstack([X[s1[0],:], X[s2[0],:]]), metric)[0]
-        d_s1r_s2r = pdist(np.vstack([X[s1[0],:], X[s2[-1],:]]), metric)[0]
-        d_s2_s1 = pdist(np.vstack([X[s2[-1],:], X[s1[0],:]]), metric)[0]
-        d_s2_s1r = pdist(np.vstack([X[s2[-1],:], X[s1[-1],:]]), metric)[0]
-        d_s2r_s1 = pdist(np.vstack([X[s2[0],:], X[s1[0],:]]), metric)[0]
-        d_s2r_s1r = pdist(np.vstack([X[s2[0],:], X[s1[-1],:]]), metric)[0]
+    #     # compute distances between the end points of the lists
+    #     d_s1_s2 = pdist(np.vstack([X[s1[-1],:], X[s2[0],:]]), metric)[0]
+    #     d_s1_s2r = pdist(np.vstack([X[s1[-1],:], X[s2[-1],:]]), metric)[0]
+    #     d_s1r_s2 = pdist(np.vstack([X[s1[0],:], X[s2[0],:]]), metric)[0]
+    #     d_s1r_s2r = pdist(np.vstack([X[s1[0],:], X[s2[-1],:]]), metric)[0]
+    #     d_s2_s1 = pdist(np.vstack([X[s2[-1],:], X[s1[0],:]]), metric)[0]
+    #     d_s2_s1r = pdist(np.vstack([X[s2[-1],:], X[s1[-1],:]]), metric)[0]
+    #     d_s2r_s1 = pdist(np.vstack([X[s2[0],:], X[s1[0],:]]), metric)[0]
+    #     d_s2r_s1r = pdist(np.vstack([X[s2[0],:], X[s1[-1],:]]), metric)[0]
 
-        # if we are anchoring the first element to the start of the list then we invalidate orderings
-        # that would move that element into a different position
-        if anchor_first:
-            max_val = max(d_s1_s2, d_s1_s2r, d_s1r_s2, d_s1r_s2r, d_s2_s1, d_s2_s1r, d_s2r_s1, d_s2r_s1r) + 1
-            if s1[0] == 0:
-                d_s1r_s2 = max_val
-                d_s1r_s2r = max_val
-                d_s2_s1 = max_val
-                d_s2_s1r = max_val
-                d_s2r_s1 = max_val
-                d_s2r_s1r = max_val
-            elif s2[0] == 0:
-                d_s1_s2 = max_val
-                d_s1_s2r = max_val
-                d_s1r_s2 = max_val
-                d_s1r_s2r = max_val
-                d_s2r_s1 = max_val
-                d_s2r_s1r = max_val
+    #     # if we are anchoring the first element to the start of the list then we invalidate orderings
+    #     # that would move that element into a different position
+    #     if anchor_first:
+    #         max_val = max(d_s1_s2, d_s1_s2r, d_s1r_s2, d_s1r_s2r, d_s2_s1, d_s2_s1r, d_s2r_s1, d_s2r_s1r) + 1
+    #         if s1[0] == 0:
+    #             d_s1r_s2 = max_val
+    #             d_s1r_s2r = max_val
+    #             d_s2_s1 = max_val
+    #             d_s2_s1r = max_val
+    #             d_s2r_s1 = max_val
+    #             d_s2r_s1r = max_val
+    #         elif s2[0] == 0:
+    #             d_s1_s2 = max_val
+    #             d_s1_s2r = max_val
+    #             d_s1r_s2 = max_val
+    #             d_s1r_s2r = max_val
+    #             d_s2r_s1 = max_val
+    #             d_s2r_s1r = max_val
 
-        # concatenete the lists in the way the minimizes the difference between
-        # the samples at the junction
-        best = min(d_s1_s2, d_s1_s2r, d_s1r_s2, d_s1r_s2r, d_s2_s1, d_s2_s1r, d_s2r_s1, d_s2r_s1r)
-        if best == d_s1_s2:
-            sets.append(s1 + s2)
-        elif best == d_s1_s2r:
-            sets.append(s1 + list(reversed(s2)))
-        elif best == d_s1r_s2:
-            sets.append(list(reversed(s1)) + s2)
-        elif best == d_s1r_s2r:
-            sets.append(list(reversed(s1)) + list(reversed(s2)))
-        elif best == d_s2_s1:
-            sets.append(s2 + s1)
-        elif best == d_s2_s1r:
-            sets.append(s2 + list(reversed(s1)))
-        elif best == d_s2r_s1:
-            sets.append(list(reversed(s2)) + s1)
-        elif best == d_s2r_s1r:
-            sets.append(list(reversed(s2)) + list(reversed(s1)))
+    #     # concatenete the lists in the way the minimizes the difference between
+    #     # the samples at the junction
+    #     best = min(d_s1_s2, d_s1_s2r, d_s1r_s2, d_s1r_s2r, d_s2_s1, d_s2_s1r, d_s2r_s1, d_s2r_s1r)
+    #     if best == d_s1_s2:
+    #         sets.append(s1 + s2)
+    #     elif best == d_s1_s2r:
+    #         sets.append(s1 + list(reversed(s2)))
+    #     elif best == d_s1r_s2:
+    #         sets.append(list(reversed(s1)) + s2)
+    #     elif best == d_s1r_s2r:
+    #         sets.append(list(reversed(s1)) + list(reversed(s2)))
+    #     elif best == d_s2_s1:
+    #         sets.append(s2 + s1)
+    #     elif best == d_s2_s1r:
+    #         sets.append(s2 + list(reversed(s1)))
+    #     elif best == d_s2r_s1:
+    #         sets.append(list(reversed(s2)) + s1)
+    #     elif best == d_s2r_s1r:
+    #         sets.append(list(reversed(s2)) + list(reversed(s1)))
     
-    return sets[-1]
+    # return sets[-1]
 
 # we can build better clsutering trees by doing grouping based on reducing xgb losses
 def xgboost_r2(X, y, random_state=0):
