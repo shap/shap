@@ -208,14 +208,14 @@ def test_pyspark_classifier_decision_tree():
         from pyspark.ml.classification import RandomForestClassifier, DecisionTreeClassifier, GBTClassifier
         import pandas as pd
         import pickle
+
+        iris_sk = sklearn.datasets.load_iris()
+        iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
+        spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
     except:
         print("Skipping test_pyspark_classifier_decision_tree!")
         return
     import shap
-
-    iris_sk = sklearn.datasets.load_iris()
-    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
-    spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
 
     col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
     iris = spark.createDataFrame(iris, col)
@@ -259,14 +259,14 @@ def test_pyspark_regression_decision_tree():
         from pyspark.ml.feature import VectorAssembler, StringIndexer
         from pyspark.ml.regression import DecisionTreeRegressor, GBTRegressor, RandomForestRegressor
         import pandas as pd
+
+        iris_sk = sklearn.datasets.load_iris()
+        iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
+        spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
     except:
         print("Skipping test_pyspark_regression_decision_tree!")
         return
     import shap
-
-    iris_sk = sklearn.datasets.load_iris()
-    iris = pd.DataFrame(data= np.c_[iris_sk['data'], iris_sk['target']], columns= iris_sk['feature_names'] + ['target'])[:100]
-    spark = SparkSession.builder.config(conf=SparkConf().set("spark.master", "local[*]")).getOrCreate()
 
     # Simple regressor: try to predict sepal length based on the other features
     col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
