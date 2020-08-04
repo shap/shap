@@ -126,7 +126,7 @@ class Tree(Explainer):
             self.data = data
         if self.data is None:
             feature_perturbation = "tree_path_dependent"
-            warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
+            #warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1000:
                 warnings.warn("Passing "+str(self.data.shape[0]) + " background samples may lead to slow runtimes. Consider "
                     "using shap.sample(data, 100) to create a smaller background data set.")
