@@ -93,32 +93,19 @@ class Explanation(AttributionExplanation):
         
         # convert any magic strings
         for i,t in enumerate(item):
-            if type(t) is str:
-                if t.startswith("rank("):
-                    t = "abs_rank(" + t[5:] # convert rank() to abs_rank()
-                if t.startswith("abs_rank("):
-                    rank = int(t[9:-1])
-                    ranks = np.argsort(-np.sum(np.abs(self.values), tuple(j for j in range(len(self.values.shape)) if j != i)))
-                    tmp = list(item)
-                    tmp[i] = ranks[rank]
-                    item = tuple(tmp)
-                elif t.startswith("pos_rank("):
-                    rank = int(t[9:-1])
-                    ranks = np.argsort(-np.sum(self.values, tuple(j for j in range(len(self.values.shape)) if j != i)))
-                    tmp = list(item)
-                    tmp[i] = ranks[rank]
-                    item = tuple(tmp)
-                elif t.startswith("neg_rank("):
-                    rank = int(t[9:-1])
-                    ranks = np.argsort(np.sum(self.values, tuple(j for j in range(len(self.values.shape)) if j != i)))
-                    tmp = list(item)
-                    tmp[i] = ranks[rank]
-                    item = tuple(tmp)
-                else:
-                    ind = np.where(np.array(self.feature_names) == t)[0][0]
-                    tmp = list(item)
-                    tmp[i] = int(ind)
-                    item = tuple(tmp)
+            if callable(t):
+                tmp = list(item)
+                tmp[i] = t(self.values, i)
+                if issubclass(type(tmp[i]), (np.int64, np.int32)): # because slicer does not like numpy indexes
+                    tmp[i] = int(tmp[i])
+                elif issubclass(type(tmp[i]), np.ndarray):
+                    tmp[i] = [int(v) for v in tmp[i]] # slicer wants lists not numpy arrays for indexing
+                item = tuple(tmp)
+            elif type(t) is str:
+                ind = np.where(np.array(self.feature_names) == t)[0][0]
+                tmp = list(item)
+                tmp[i] = int(ind)
+                item = tuple(tmp)
         
         out = super().__getitem__(item)
         if getattr(self, "clustering", None) is not None:

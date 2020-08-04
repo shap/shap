@@ -67,6 +67,7 @@ else:
 from . import datasets
 from . import utils
 from . import links
+from . import orders
 #from . import benchmark
 
 from .utils._legacy import kmeans
