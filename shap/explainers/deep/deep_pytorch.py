@@ -13,7 +13,15 @@ class PyTorchDeepExplainer(Explainer):
         """
         Parameters
         ----------
-        model : WRITEME 
+        model : an nn.Module object (model), or a tuple (model, layer), where
+            both are nn.Module objects.
+            The model is an nn.Module object which takes as input a tensor (or list of tensors) of
+            shape data, and returns an output of shape (B, 1), where B is the batch dimension.
+            Note that the second dimension must be 1. Otherwise, the gradient cannot be computed
+            (since the output won't be a scalar).
+            If the input is a tuple, the returned shap values will be for the input of the
+            layer argument. layer must be a layer in the model, i.e. model.conv2
+
 
         data : torch tensor or function  
             If a function is supplied, it must be a function that
@@ -142,14 +150,15 @@ class PyTorchDeepExplainer(Explainer):
         selected = [val for val in outputs[:, idx]]
         if self.interim:
             interim_inputs = self.layer.target_input
-            grads = [torch.autograd.grad(selected, input)[0].cpu().numpy() for input in interim_inputs]
+            grads = [torch.autograd.grad(selected, input, retain_graph=True)[0].cpu().numpy() for input in interim_inputs]
             del self.layer.target_input
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
-            grads = [torch.autograd.grad(selected, x)[0].cpu().numpy() for x in X]
+            grads = [torch.autograd.grad(selected, x, retain_graph=True)[0].cpu().numpy() for x in X]
             return grads
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max"):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max",
+                             progress_message=None):
 
         # X ~ self.model_input
         # X_data ~ self.data
@@ -196,6 +205,12 @@ class PyTorchDeepExplainer(Explainer):
                 for k in range(len(X)):
                     phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
+                if (progress_message is not None):
+                    if ((j%progress_message)==0):
+                        print("Done",j,"examples of",
+                              X[0].shape[0])
+                        sys.stdout.flush()
+
                 if (hasattr(self.data, '__call__')):
                     bg_data = self.data([X[l][j] for l in range(len(X))])
                     if type(bg_data) != list:
