@@ -12,8 +12,7 @@ environment:
     - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
-    #Tensorflow doesn't support python 3.8 yet. https://github.com/tensorflow/tensorflow/issues/33374
-    #- PYTHON: "C:\\Python38-x64"
+    - PYTHON: "C:\\Python38-x64"
 
 install:
   # We need wheel installed to build wheels
