@@ -388,6 +388,29 @@ def test_lightgbm():
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
         "SHAP values don't sum to model output!"
 
+def test_gpboost():
+    try:
+        import gpboost
+    except:
+        print("Skipping test_gpboost!")
+        return
+    import shap
+
+    # train gpboost model
+    X, y = shap.datasets.boston()
+    data_train = gpboost.Dataset(X, y, categorical_feature=[8])
+    model = gpboost.train(params={'objective': 'regression_l2', 'learning_rate': 0.1, 'verbose': 0},
+                          train_set=data_train, num_boost_round=10)
+
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+    shap_values = ex.shap_values(X)
+
+    predicted = model.predict(X, raw_score=True)
+
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
+        "SHAP values don't sum to model output!"
+
 def test_catboost():
     try:
         import catboost
