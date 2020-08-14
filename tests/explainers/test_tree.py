@@ -1,7 +1,5 @@
 import matplotlib
-import numpy as np
 matplotlib.use('Agg')
-import shap
 
 
 def test_front_page_xgboost():
@@ -11,6 +9,7 @@ def test_front_page_xgboost():
         print("Skipping test_front_page_xgboost!")
         return
     import shap
+    import numpy as np
 
     # load JS visualization code to notebook
     shap.initjs()
@@ -39,6 +38,7 @@ def test_front_page_xgboost():
 def test_front_page_sklearn():
     import sklearn.ensemble
     import shap
+    import numpy as np
 
     # load JS visualization code to notebook
     shap.initjs()
@@ -98,6 +98,8 @@ def _conditional_expectation(tree, S, x):
 def _brute_force_tree_shap(tree, x):
     import itertools
     import math
+    import numpy as np
+
     m = len(x)
     phi = np.zeros(m)
     for p in itertools.permutations(list(range(m))):
@@ -112,6 +114,7 @@ def test_xgboost_direct():
         print("Skipping test_xgboost_direct!")
         return
     import shap
+    import numpy as np
 
     N = 100
     M = 4
@@ -133,6 +136,7 @@ def test_xgboost_multiclass():
         print("Skipping test_xgboost_multiclass!")
         return
     import shap
+    import numpy as np
 
     # train XGBoost model
     X, Y = shap.datasets.iris()
@@ -146,6 +150,9 @@ def test_xgboost_multiclass():
     shap.dependence_plot(0, shap_values[0], X, show=False)
 
 def _validate_shap_values(model, x_test):
+    import shap
+    import numpy as np
+
     # explain the model's predictions using SHAP values
     tree_explainer = shap.TreeExplainer(model)
     shap_values = tree_explainer.shap_values(x_test)
@@ -160,6 +167,7 @@ def test_xgboost_ranking():
         print("Skipping test_xgboost_ranking!")
         return
     import shap
+    import numpy as np
 
     # train lightgbm ranker model
     x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
@@ -193,6 +201,9 @@ def test_ngboost():
     except:
         print("Skipping test_ngboost!")
         return
+    import shap
+    import numpy as np
+
     X,y = shap.datasets.boston()
     model = ngboost.NGBRegressor(n_estimators=20).fit(X, y)
     explainer = shap.TreeExplainer(model, model_output=0)
@@ -216,6 +227,7 @@ def test_pyspark_classifier_decision_tree():
         print("Skipping test_pyspark_classifier_decision_tree!")
         return
     import shap
+    import numpy as np
 
     col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
     iris = spark.createDataFrame(iris, col)
@@ -267,6 +279,7 @@ def test_pyspark_regression_decision_tree():
         print("Skipping test_pyspark_regression_decision_tree!")
         return
     import shap
+    import numpy as np
 
     # Simple regressor: try to predict sepal length based on the other features
     col = ["sepal_length","sepal_width","petal_length","petal_width","type"]
@@ -294,6 +307,7 @@ def test_pyspark_regression_decision_tree():
 def test_sklearn_random_forest_multiclass():
     import shap
     from sklearn.ensemble import RandomForestClassifier
+    import numpy as np
 
     X, y = shap.datasets.iris()
     y[y == 2] = 1
@@ -334,6 +348,7 @@ def create_random_forest_vectorizer():
 
 def test_sklearn_random_forest_newsgroups():
     import shap
+    import numpy as np
     #from sklearn.ensemble import RandomForestClassifier
 
     # note: this test used to fail in native TreeExplainer code due to memory corruption
@@ -355,6 +370,7 @@ def test_sklearn_random_forest_newsgroups():
 def test_sklearn_decision_tree_multiclass():
     import shap
     from sklearn.tree import DecisionTreeClassifier
+    import numpy as np
 
     X, y = shap.datasets.iris()
     y[y == 2] = 1
@@ -373,6 +389,7 @@ def test_lightgbm():
         print("Skipping test_lightgbm!")
         return
     import shap
+    import numpy as np
 
     # train lightgbm model
     X, y = shap.datasets.boston()
@@ -396,6 +413,7 @@ def test_catboost():
         print("Skipping test_catboost!")
         return
     import shap
+    import numpy as np
 
     # train catboost model
     X, y = shap.datasets.boston()
@@ -439,6 +457,7 @@ def test_catboost_categorical():
     import shap
     import pandas as pd
     from sklearn.datasets import load_boston
+    import numpy as np
 
     bunch = load_boston()
     X, y = load_boston(True)
@@ -468,6 +487,7 @@ def test_lightgbm_constant_prediction():
         print("Skipping test_lightgbm_constant_prediction!")
         return
     import shap
+    import numpy as np
 
     # train lightgbm model with a constant value for y
     X, y = shap.datasets.boston()
@@ -492,6 +512,7 @@ def test_lightgbm_constant_multiclass():
         print("Skipping test_lightgbm_constant_multiclass!")
         return
     import shap
+    import numpy as np
 
     # train lightgbm model
     X, Y = shap.datasets.iris()
@@ -509,6 +530,7 @@ def test_lightgbm_multiclass():
         print("Skipping test_lightgbm_multiclass!")
         return
     import shap
+    import numpy as np
 
     # train lightgbm model
     X, Y = shap.datasets.iris()
@@ -552,6 +574,7 @@ def test_lightgbm_ranking():
         print("Skipping test_lightgbm_ranking!")
         return
     import shap
+    import numpy as np
 
     # train lightgbm ranker model
     x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
@@ -567,6 +590,8 @@ def test_sklearn_interaction():
     import sklearn
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import RandomForestClassifier
+    import numpy as np
+    import shap
 
     # train a simple sklean RF model on the iris dataset
     X, _ = shap.datasets.iris()
@@ -592,6 +617,7 @@ def test_lightgbm_interaction():
         print("Skipping test_lightgbm_interaction!")
         return
     import shap
+    import numpy as np
 
     # train XGBoost model
     X, y = shap.datasets.boston()
@@ -701,6 +727,8 @@ def test_single_row_gradient_boosting_classifier():
 def test_HistGradientBoostingRegressor():
     from sklearn.experimental import enable_hist_gradient_boosting
     from sklearn.ensemble import HistGradientBoostingRegressor
+    import numpy as np
+    import shap
 
     # train a tree-based model
     X, y = shap.datasets.diabetes()
@@ -712,6 +740,8 @@ def test_HistGradientBoostingRegressor():
 def test_HistGradientBoostingClassifier_proba():
     from sklearn.experimental import enable_hist_gradient_boosting
     from sklearn.ensemble import HistGradientBoostingClassifier
+    import numpy as np
+    import shap
 
     # train a tree-based model
     X, y = shap.datasets.adult()
@@ -723,6 +753,8 @@ def test_HistGradientBoostingClassifier_proba():
 def test_HistGradientBoostingClassifier_multidim():
     from sklearn.experimental import enable_hist_gradient_boosting
     from sklearn.ensemble import HistGradientBoostingClassifier
+    import numpy as np
+    import shap
 
     # train a tree-based model
     X, y = shap.datasets.adult()
@@ -945,6 +977,8 @@ def test_single_tree_compare_with_kernel_shap():
     except:
         print("Skipping test_single_tree_compare_with_kernel_shap!")
         return
+    import numpy as np
+    import shap
     np.random.seed(10)
 
     n = 1000
@@ -986,6 +1020,8 @@ def test_several_trees():
     except:
         print("Skipping test_several_trees!")
         return
+    import shap
+    import numpy as np
     np.random.seed(10)
 
     n = 1000
@@ -1030,7 +1066,8 @@ def test_single_tree_nonlinear_transformations():
     except:
         print("Skipping test_several_trees!")
         return
-
+    import shap
+    import numpy as np
     np.random.seed(10)
 
     n = 1000
@@ -1083,7 +1120,9 @@ def test_xgboost_classifier_independent_margin():
     except:
         print("Skipping test_several_trees!")
         return
-    
+    import numpy as np
+    import shap
+
     # train XGBoost model
     np.random.seed(10)
     n = 1000
@@ -1109,7 +1148,9 @@ def test_xgboost_classifier_independent_probability():
     except:
         print("Skipping test_several_trees!")
         return
-    
+    import shap
+    import numpy as np
+
     # train XGBoost model
     np.random.seed(10)
     n = 1000
@@ -1134,6 +1175,8 @@ def test_front_page_xgboost_global_path_dependent():
     except:
         print("Skipping test_front_page_xgboost!")
         return
+    import shap
+    import numpy as np
 
     # train XGBoost model
     X, y = shap.datasets.boston()
@@ -1153,7 +1196,9 @@ def test_skopt_rf_et():
     except:
         print("Skipping test_skopt_rf_et!")
         return
-    
+    import shap
+    import numpy as np
+
     # Define an objective function for skopt to optimise.
     def objective_function(x):
         return x[0]**2 - x[1]**2 + x[1]*x[0]

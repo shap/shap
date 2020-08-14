@@ -72,7 +72,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         if features is None:
             features = shap_exp.data
         if feature_names is None:
-            feature_names = shap_exp.feature_names
+            feature_names = shap_exp.input_names
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
@@ -116,7 +116,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         shap_values = np.reshape(shap_values, (1, len(shap_values)))
 
     if out_names is None:
-        out_names = ["model output value"]
+        out_names = ["f(x)"]
     elif type(out_names) == str:
         out_names = [out_names]
 

@@ -145,7 +145,12 @@ class Exact(Explainer):
                 inds = np.arange(len(fm))
             main_effect_values = fm.main_effects(inds)
         
-        return row_values, outputs[0], fm.mask_shapes, main_effect_values
+        return {
+            "values": row_values,
+            "expected_values": outputs[0],
+            "mask_shapes": fm.mask_shapes,
+            "main_effects": main_effect_values
+        }
 
 @jit
 def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):

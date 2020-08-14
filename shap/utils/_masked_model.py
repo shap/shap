@@ -21,7 +21,7 @@ class MaskedModel():
         self.args = args
 
         # if the masker supports it, save what positions vary from the background
-        if callable(getattr(self.masker, "invariants")):
+        if callable(getattr(self.masker, "invariants", None)):
             self._variants = ~self.masker.invariants(*args)
             self._variants_column_sums = self._variants.sum(0)
             self._variants_row_inds = [
@@ -29,6 +29,20 @@ class MaskedModel():
             ]
         else:
             self._variants = None
+        
+        # compute the length of the mask (and hence our length)
+        if hasattr(self.masker, "shape"):
+            if callable(self.masker.shape):
+                mshape = self.masker.shape(*self.args)
+                self._masker_rows = mshape[0]
+                self._masker_cols = mshape[1]
+            else:
+                mshape = self.masker.shape
+                self._masker_rows = mshape[0]
+                self._masker_cols = mshape[1]
+        else:
+            self._masker_rows = None# # just assuming...
+            self._masker_cols = sum(np.prod(a.shape[1:]) for a in self.args)
 
     def __call__(self, masks, batch_size=None):
 
@@ -52,7 +66,8 @@ class MaskedModel():
         num_mask_samples = np.zeros(len(masks), dtype=np.int)
         num_varying_rows = np.zeros(len(masks), dtype=np.int)
         varying_rows = []
-        delta_tmp = self._variants.copy().astype(np.int)
+        if self._variants is not None:
+            delta_tmp = self._variants.copy().astype(np.int)
         for i,mask in enumerate(masks):
 
             # mask the inputs
@@ -106,7 +121,7 @@ class MaskedModel():
         outputs = self.model(*joined_masked_inputs)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
-        last_outs = np.zeros((self.masker.shape[0],) + outputs.shape[1:])
+        last_outs = np.zeros((self._masker_rows,) + outputs.shape[1:])
         varying_rows = np.array(varying_rows)
         # print(varying_rows)
         # for o in (averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
@@ -200,7 +215,10 @@ class MaskedModel():
 
     @property
     def mask_shapes(self):
-        return [a.shape for a in self.args] # TODO: this will need to get more flexible
+        if hasattr(self.masker, "mask_shapes") and callable(self.masker.mask_shapes):
+            return self.masker.mask_shapes(*self.args)
+        else:
+            return [a.shape for a in self.args] # TODO: this will need to get more flexible
 
     def __len__(self):
         """ How many binary inputs there are to toggle.
@@ -208,10 +226,7 @@ class MaskedModel():
         By default we just match what the masker tells us. But if the masker doesn't help us
         out by giving a length then we assume is the number of data inputs.
         """
-        if hasattr(self.masker, "shape"):
-            return self.masker.shape[1]
-        else:
-            return sum(np.prod(a.shape[1:]) for a in self.args)
+        return self._masker_cols
 
     def varying_inputs(self):
         return np.where(np.any(self._variants, axis=0))[0]

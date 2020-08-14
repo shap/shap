@@ -134,7 +134,7 @@ class Explainer():
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
 
-    def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, silent=False, **kwargs):
+    def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto", silent=False, **kwargs):
         """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
 
         Note this default version could be ois an abstract method that is implemented by each algorithm-specific
@@ -163,19 +163,43 @@ class Explainer():
                 input_names[i] = list(args[i].columns)
                 args[i] = args[i].to_numpy()
 
+            # convert nlp Dataset objects to lists
+            if safe_isinstance(args[i], "nlp.arrow_dataset.Dataset"):
+                args[i] = args[i]["text"]
+            elif issubclass(type(args[i]), dict) and "text" in args[i]:
+                args[i] = args[i]["text"]
+        
+        if batch_size == "auto":
+            if hasattr(self.masker, "default_batch_size"):
+                batch_size = self.masker.default_batch_size
+            else:
+                batch_size = 10
+
         # loop over each sample, filling in the values array
         values = []
         expected_values = []
         mask_shapes = []
         main_effects = []
+        hierarchical_values = []
+        clustering = []
+        if callable(getattr(self.masker, "input_names", None)):
+            input_names = [[] for _ in range(len(args))]
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
-            row_values, row_expected_values, row_mask_shapes, row_main_effects = self.explain_row(
-                *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, silent=silent, **kwargs
+            row_result = self.explain_row(
+                *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
+                batch_size=batch_size, silent=silent, **kwargs
             )
-            values.append(row_values)
-            expected_values.append(row_expected_values)
-            mask_shapes.append(row_mask_shapes)
-            main_effects.append(row_main_effects)
+            values.append(row_result.get("values", None))
+            expected_values.append(row_result.get("expected_values", None))
+            mask_shapes.append(row_result["mask_shapes"])
+            main_effects.append(row_result.get("main_effects", None))
+            clustering.append(row_result.get("clustering", None))
+            hierarchical_values.append(row_result.get("hierarchical_values", None))
+            
+            if callable(getattr(self.masker, "input_names", None)):
+                row_input_names = self.masker.input_names(*row_args)
+                for i in range(len(row_args)):
+                    input_names[i].append(row_input_names[i])
 
         # split the values up according to each input
         arg_values = [[] for a in args]
@@ -197,14 +221,38 @@ class Explainer():
         else:
             main_effects = np.array(main_effects)
 
+        # collapse the hierarchical values if we didn't compute them
+        if hierarchical_values[0] is None:
+            hierarchical_values = None
+        else:
+            hierarchical_values = np.array(hierarchical_values)
+
+        # collapse the hierarchical values if we didn't compute them
+        if clustering[0] is None:
+            clustering = None
+        else:
+            clustering = np.array(clustering)
+
         # build the explanation objects
         out = []
         for j in range(len(args)):
-            arg_values[j] = np.array([v.reshape(*mask_shapes[i][j]) for v in arg_values[j]])
+
+            # reshape the attribution values using the mask_shapes
+            arg_values[j] = np.array([v.reshape(*mask_shapes[i][j]) for i,v in enumerate(arg_values[j])])
+            
+            # allow the masker to transform the input data to better match the masking pattern
+            # (such as breaking text into token segments)
+            if hasattr(self.masker, "data_transform"):
+                data = np.array([self.masker.data_transform(v) for v in args[j]])
+            else:
+                data = args[j]
+            
+            # build an explanation object for this input argument
             out.append(Explanation(
-                expected_values, arg_values[j], args[j],
+                expected_values, arg_values[j], data,
                 input_names=input_names[j], main_effects=main_effects,
-                clustering=getattr(self.masker, "clustering", None)
+                clustering=clustering,
+                hierarchical_values=hierarchical_values
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))
@@ -224,7 +272,7 @@ class Explainer():
         of all the input shapes (since the row_values is always flattened),
         """
         
-        return None, None, None, None
+        return {}
 
     @staticmethod
     def supports_model(model):

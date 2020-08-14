@@ -187,10 +187,16 @@ def format_value(s, format_str):
     """ Strips trailing zeros and uses a unicode minus sign.
     """
 
-    if type(s) is not str:
+    if not issubclass(type(s), str):
         s = format_str % s
     s = re.sub(r'\.?0+$', '', s)
     if s[0] == "-":
         s = u"\u2212" + s[1:]
     return s
+
+# From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
+def ordinal_str(n):
+    """ Converts a number to and ordinal string. 
+    """
+    return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 

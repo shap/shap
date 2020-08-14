@@ -91,7 +91,13 @@ class Permutation(Explainer):
         # compute the main effects if we need to
         main_effect_values = fm.main_effects(inds) if main_effects else None
         
-        return row_values / (2 * npermutations), expected_value, fm.mask_shapes, main_effect_values
+        #return row_values / (2 * npermutations), expected_value, fm.mask_shapes, main_effect_values
+        return {
+            "values": row_values / (2 * npermutations),
+            "expected_values": expected_value,
+            "mask_shapes": fm.mask_shapes,
+            "main_effects": main_effect_values
+        }
     
 
     def shap_values(self, X, npermutations=10, main_effects=False, error_bounds=False, batch_evals=True, silent=False):

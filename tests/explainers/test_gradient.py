@@ -1,9 +1,3 @@
-import matplotlib
-import numpy as np
-import shutil
-matplotlib.use('Agg')
-import shap
-
 from .test_deep import _skip_if_no_pytorch, _skip_if_no_tensorflow
 
 # pylint: disable=import-error
@@ -20,6 +14,7 @@ def test_tf_keras_mnist_cnn():
     from tensorflow.keras.layers import Conv2D, MaxPooling2D
     from tensorflow.keras import backend as K
     import shap
+    import numpy as np
 
     tf.compat.v1.disable_eager_execution()
 
@@ -97,8 +92,9 @@ def test_pytorch_mnist_cnn():
     from torchvision import datasets, transforms
     from torch import nn
     from torch.nn import functional as F
-
+    import shutil
     import shap
+    import numpy as np
 
     batch_size=128
     root_dir = 'mnist_data'
@@ -198,6 +194,7 @@ def test_pytorch_multiple_inputs():
     import torch
     from torch import nn
     import shap
+    import numpy as np
 
     batch_size = 10
     x1 = torch.ones(batch_size, 3)

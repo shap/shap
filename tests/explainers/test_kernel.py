@@ -1,14 +1,15 @@
-import numpy as np
-import scipy as sp
-import shap
 
 
 def test_null_model_small():
+    import shap
+    import numpy as np
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
     e = explainer.explain(np.ones((1, 4)))
     assert np.sum(np.abs(e)) < 1e-8
 
 def test_null_model():
+    import shap
+    import numpy as np
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)), nsamples=100)
     e = explainer.explain(np.ones((1, 10)))
     assert np.sum(np.abs(e)) < 1e-8
@@ -17,6 +18,7 @@ def test_front_page_model_agnostic():
     import sklearn
     import shap
     from sklearn.model_selection import train_test_split
+    import numpy as np
 
     # print the JS visualization code to the notebook
     shap.initjs()
@@ -37,6 +39,7 @@ def test_front_page_model_agnostic_rank():
     import sklearn
     import shap
     from sklearn.model_selection import train_test_split
+    import numpy as np
 
     # print the JS visualization code to the notebook
     shap.initjs()
@@ -76,6 +79,8 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     import shap
+    import numpy as np
+    import scipy as sp
 
     X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.01, random_state=0)
@@ -89,11 +94,13 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
     explainer.shap_values(x_test)
 
 def test_kernel_shap_with_a1a_sparse_nonzero_background():
+    import numpy as np
     np.set_printoptions(threshold=100000)
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     from sklearn.utils.sparsefuncs import csc_median_axis_0
     import shap
+    import scipy as sp
     np.random.seed(0)
 
     X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
@@ -121,6 +128,8 @@ def test_kernel_shap_with_high_dim_sparse():
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
     import shap
+    import numpy as np
+    import scipy as sp
     remove = ('headers', 'footers', 'quotes')
     categories = [
         'alt.atheism',
@@ -153,6 +162,8 @@ def test_kernel_sparse_vs_dense_multirow_background():
     import shap
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LogisticRegression
+    import numpy as np
+    import scipy as sp
 
     # train a logistic regression classifier
     X_train, X_test, Y_train, _ = train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
@@ -183,6 +194,8 @@ def test_kernel_sparse_vs_dense_multirow_background():
 def test_linear():
     """tests that KernelExplainer returns the correct result when the model is linear
     (as per corollary 1 of https://arxiv.org/abs/1705.07874)"""
+    import numpy as np
+    import shap
 
     np.random.seed(2)
     x = np.random.normal(size=(200, 3), scale=1)
@@ -203,6 +216,8 @@ def test_linear():
 def test_non_numeric():
     import sklearn
     from sklearn.pipeline import Pipeline
+    import shap
+    import numpy as np
 
     # create dummy data
     X = np.array([['A', '0', '0'], ['A', '1', '0'], ['B', '0', '0'], ['B', '1', '0'], ['A', '1', '0']])

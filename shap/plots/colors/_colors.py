@@ -24,6 +24,7 @@ try:
     blue_rgb = lch2rgb(blue_lch)
     red_rgb = lch2rgb(red_lch)
     gray_rgb = lch2rgb(gray_lch)
+    white_rgb = np.array([1.,1.,1.])
     
     
     light_blue_rgb = np.array([127., 196, 252])/255
@@ -121,6 +122,15 @@ try:
 
     old_blue_rgb = np.array([30, 136, 229]) / 255
     old_red_rgb = np.array([255, 13, 87]) / 255
+
+    colors = []
+    for alpha in np.linspace(1, 0, 100):
+        c = blue_rgb * alpha + (1 - alpha) * white_rgb
+        colors.append(c)
+    for alpha in np.linspace(0, 1, 100):
+        c = red_rgb * alpha + (1 - alpha) * white_rgb
+        colors.append(c)
+    red_white_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
 
 
 except ImportError:

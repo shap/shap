@@ -1,4 +1,5 @@
 from ._bar import bar
+from ._heatmap import heatmap
 from ._decision import decision
 from ._dependence import dependence
 from ._embedding import embedding
@@ -10,5 +11,4 @@ from ._partial_dependence import partial_dependence
 from ._summary import summary
 from ._text import text
 from ._waterfall import waterfall
-from ._monitoring import monitoring
 

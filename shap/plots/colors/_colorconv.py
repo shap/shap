@@ -1,4 +1,4 @@
-# This is a small check of code from the skimage package. It is reproduced
+# This is a small chunk of code from the skimage package. It is reproduced
 # here because all we need is a couple color conversion routines, and adding
 # all of skimage as dependecy is really heavy.
 
@@ -124,6 +124,41 @@
 import numpy as np
 from scipy import linalg
 from warnings import warn
+
+def rgb2xyz(rgb):
+    """RGB to XYZ color space conversion.
+    Parameters
+    ----------
+    rgb : (..., 3) array_like
+        The image in RGB format. Final dimension denotes channels.
+    Returns
+    -------
+    out : (..., 3) ndarray
+        The image in XYZ format. Same dimensions as input.
+    Raises
+    ------
+    ValueError
+        If `rgb` is not at least 2-D with shape (..., 3).
+    Notes
+    -----
+    The CIE XYZ color space is derived from the CIE RGB color space. Note
+    however that this function converts from sRGB.
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/CIE_1931_color_space
+    Examples
+    --------
+    >>> from skimage import data
+    >>> img = data.astronaut()
+    >>> img_xyz = rgb2xyz(img)
+    """
+    # Follow the algorithm from http://www.easyrgb.com/index.php
+    # except we don't multiply/divide by 100 in the conversion
+    arr = _prepare_colorarray(rgb).copy()
+    mask = arr > 0.04045
+    arr[mask] = np.power((arr[mask] + 0.055) / 1.055, 2.4)
+    arr[~mask] /= 12.92
+    return arr @ xyz_from_rgb.T.astype(arr.dtype)
 
 def lab2xyz(lab, illuminant="D65", observer="2"):
     """CIE-LAB to XYZcolor space conversion.
@@ -558,8 +593,9 @@ illuminants = \
 
 
 __all__ = ['img_as_float32', 'img_as_float64', 'img_as_float',
-           'img_as_int', 'img_as_uint', 'img_as_ubyte',
-           'img_as_bool', 'dtype_limits']
+           #'img_as_int', 'img_as_uint', 'img_as_ubyte',
+           #'img_as_bool',
+           'dtype_limits']
 
 # For integers Numpy uses `_integer_types` basis internally, and builds a leaky
 # `np.XintYY` abstraction on top of it. This leads to situations when, for
