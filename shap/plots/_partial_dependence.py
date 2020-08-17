@@ -1,21 +1,22 @@
-import shap
-from ..utils import convert_name, sample, safe_isinstance
+from ..utils import convert_name
+from .. import Explanation
+from ..plots.colors import light_blue_rgb, blue_rgb, red_rgb, red_blue_transparent
 import warnings
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from mpl_toolkits.mplot3d import Axes3D  
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import pandas as pd
 
 def compute_bounds(xmin, xmax, xv):
     """ Handles any setting of xmax and xmin.
-    
+
     Note that we handle None, float, or "percentile(float)" formats.
     """
-    
+
     if xmin is not None or xmax is not None:
         if type(xmin) == str and xmin.startswith("percentile"):
             xmin = np.nanpercentile(xv, float(xmin[11:-1]))
@@ -26,7 +27,7 @@ def compute_bounds(xmin, xmax, xv):
             xmin = np.nanmin(xv) - (xmax - np.nanmin(xv))/20
         if xmax is None or xmax == np.nanmax(xv):
             xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
-            
+
     return (xmin, xmax)
 
 def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(100)",
@@ -35,14 +36,13 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
                        ylabel=None, ice=True, ace_opacity=1, pd_opacity=1, pd_linewidth=2, ace_linewidth='auto', ax=None, show=True):
     """ A basic partial dependence plot function.
     """
-    
-    if safe_isinstance(data, "shap.Explanation"):
+
+    if isinstance(data, Explanation):
         features = data.data
         shap_values = data
     else:
         features = data
-    
-    
+
     # convert from DataFrames if we got any
     use_dataframe = False
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
@@ -50,10 +50,10 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             feature_names = features.columns
         features = features.values
         use_dataframe = True
-        
+
     if feature_names is None:
         feature_names = ["Feature %d" % i for i in range(features.shape[1])]
-    
+
     # this is for a 1D partial dependence plot
     if type(ind) is not tuple:
         ind = convert_name(ind, None, feature_names)
@@ -61,8 +61,8 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
         xmin, xmax = compute_bounds(xmin, xmax, xv)
         npoints = 100 if npoints is None else npoints
         xs = np.linspace(xmin, xmax, npoints)
-        
-        
+
+
         if ice:
             features_tmp = features.copy()
             ice_vals = np.zeros((npoints, features.shape[0]))
@@ -76,7 +76,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             #     linewidth = 1
             # if opacity is None:
             #     opacity = 0.5
-        
+
         features_tmp = features.copy()
         vals = np.zeros(npoints)
         for i in range(npoints):
@@ -85,10 +85,10 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
                 vals[i] = model(pd.DataFrame(features_tmp, columns=feature_names)).mean()
             else:
                 vals[i] = model(features_tmp).mean()
-        
 
-        
-            
+
+
+
         if ax is None:
             fig = pl.figure()
             ax1 = pl.gca()
@@ -101,19 +101,19 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
         # the histogram of the data
         if hist:
-            #n, bins, patches = 
+            #n, bins, patches =
             ax2.hist(xv, 50, density=False, facecolor='black', range=(xmin, xmax))
 
-        
+
 
         # ice line plot
         if ice:
             if ace_linewidth == "auto":
                 ace_linewidth = min(1, 50/ice_vals.shape[1]) # pylint: disable=unsubscriptable-object
-            ax1.plot(xs, ice_vals, color=shap.plots.colors.light_blue_rgb, linewidth=ace_linewidth, alpha=ace_opacity)
+            ax1.plot(xs, ice_vals, color=light_blue_rgb, linewidth=ace_linewidth, alpha=ace_opacity)
 
         # the line plot
-        ax1.plot(xs, vals, color=shap.plots.colors.blue_rgb, linewidth=pd_linewidth, alpha=pd_opacity)
+        ax1.plot(xs, vals, color=blue_rgb, linewidth=pd_linewidth, alpha=pd_opacity)
 
         ax2.set_ylim(0,features.shape[0])#ax2.get_ylim()[0], ax2.get_ylim()[1] * 4)
         ax1.set_xlabel(feature_names[ind], fontsize=13)
@@ -146,7 +146,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             ax3.spines['top'].set_visible(False)
             ax3.tick_params(length=0, labelsize=11)
             ax1.axvline(mval, color="#999999", zorder=-1, linestyle="--", linewidth=1)
-        
+
         if model_expected_value is not False or shap_values is not None:
             # if model_expected_value is True:
             #     if use_dataframe:
@@ -180,10 +180,10 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:,ind], shap_values.expected_value + shap_values.values[:, ind],
-                bottom=shap_values.expected_value, 
+                bottom=shap_values.expected_value,
                 markerfmt="o", basefmt=" ", use_line_collection=True
             )
-            stemlines.set_edgecolors([shap.plots.colors.red_rgb if v > 0 else shap.plots.colors.blue_rgb for v in vals])
+            stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])
             pl.setp(stemlines, 'zorder', -1)
             pl.setp(stemlines, 'linewidth', 2)
             pl.setp(markerline, 'color', "black")
@@ -193,26 +193,26 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             pl.show()
         else:
             return fig,ax1
-        
-        
+
+
     # this is for a 2D partial dependence plot
     else:
         ind0 = convert_name(ind[0], None, feature_names)
         ind1 = convert_name(ind[1], None, feature_names)
         xv0 = features[:,ind0]
         xv1 = features[:,ind1]
-        
+
         xmin0 = xmin[0] if type(xmin) is tuple else xmin
         xmin1 = xmin[1] if type(xmin) is tuple else xmin
         xmax0 = xmax[0] if type(xmax) is tuple else xmax
         xmax1 = xmax[1] if type(xmax) is tuple else xmax
-        
+
         xmin0, xmax0 = compute_bounds(xmin0, xmax0, xv0)
         xmin1, xmax1 = compute_bounds(xmin1, xmax1, xv1)
         npoints = 20 if npoints is None else npoints
         xs0 = np.linspace(xmin0, xmax0, npoints)
         xs1 = np.linspace(xmin1, xmax1, npoints)
-        
+
         features_tmp = features.copy()
         x0 = np.zeros((npoints, npoints))
         x1 = np.zeros((npoints, npoints))
@@ -224,7 +224,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
                 x0[i, j] = xs0[i]
                 x1[i, j] = xs1[j]
                 vals[i, j] = model(features_tmp).mean()
-                
+
         fig = pl.figure()
         ax = fig.add_subplot(111, projection='3d')
 
@@ -234,7 +234,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 #         zs = np.array(fun(np.ravel(X), np.ravel(Y)))
 #         Z = zs.reshape(X.shape)
 
-        ax.plot_surface(x0, x1, vals, cmap=shap.plots.colors.red_blue_transparent)
+        ax.plot_surface(x0, x1, vals, cmap=red_blue_transparent)
 
         ax.set_xlabel(feature_names[ind0], fontsize=13)
         ax.set_ylabel(feature_names[ind1], fontsize=13)
@@ -242,5 +242,5 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
         if show:
             pl.show()
-        else:      
+        else:
             return fig, ax

@@ -1,6 +1,6 @@
 from .deep_pytorch import PyTorchDeep
 from .deep_tf import TFDeep
-from shap.explainers._explainer import Explainer
+from .._explainer import Explainer
 
 
 class Deep(Explainer):
