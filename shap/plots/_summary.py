@@ -255,13 +255,15 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
             ys *= 0.9 * (row_height / np.max(ys + 1))
 
             if features is not None and colored_feature:
-                # Trim the value and color range to percentiles
-                vmin, vmax, cvals = _trim_crange(values)
-
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
 
-                # plot the nan values in the interaction feature as grey
+                # Get nan values:
                 nan_mask = np.isnan(values)
+
+                # Trim the value and color range to percentiles
+                vmin, vmax, cvals = _trim_crange(values, nan_mask)
+
+                # plot the nan values in the interaction feature as grey
                 pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
                            vmax=vmax, s=16, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
@@ -317,20 +319,17 @@ def summary(shap_values, features=None, feature_names=None, max_display=None, pl
                     else:
                         back_fill += 1
 
+                # Get nan values:
+                nan_mask = np.isnan(values)
+
                 # Trim the value and color range to percentiles
-                vmin, vmax, cvals = _trim_crange(values)
+                vmin, vmax, cvals = _trim_crange(values, nan_mask)
 
                 # plot the nan values in the interaction feature as grey
-                nan_mask = np.isnan(values)
                 pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
                            color="#777777", vmin=vmin, vmax=vmax, s=9,
                            alpha=alpha, linewidth=0, zorder=1)
                 # plot the non-nan values colored by the trimmed feature value
-                cvals = values[np.invert(nan_mask)].astype(np.float64)
-                cvals_imp = cvals.copy()
-                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
-                cvals[cvals_imp > vmax] = vmax
-                cvals[cvals_imp < vmin] = vmin
                 pl.scatter(shaps[np.invert(nan_mask)], np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
                            cmap=cmap, vmin=vmin, vmax=vmax, s=9,
                            c=cvals, alpha=alpha, linewidth=0, zorder=1)
