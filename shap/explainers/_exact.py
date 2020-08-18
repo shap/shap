@@ -50,20 +50,21 @@ class Exact(Explainer):
         """
         super(Exact, self).__init__(model, masker, link=link)
 
-        if getattr(masker, "partition_tree", None) is not None:
-            self._partition_masks,self._partition_masks_inds = partition_masks(masker.partition_tree)
-            self._partition_delta_indexes = partition_delta_indexes(masker.partition_tree, self._partition_masks)
+        if getattr(masker, "clustering", None) is not None:
+            self._partition_masks,self._partition_masks_inds = partition_masks(masker.clustering)
+            self._partition_delta_indexes = partition_delta_indexes(masker.clustering, self._partition_masks)
 
         self._gray_code_cache = {} # used to avoid regenerating the same gray code patterns
 
-    def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, silent=False):
+    def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, batch_size="auto", silent=False):
         """ Explains the output of model(*args), where args represents one or more parallel iterators.
         """
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
         return super(Exact, self).__call__(
-            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, silent=silent
+            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, 
+            batch_size=batch_size, silent=silent
         )
     
     def _cached_gray_codes(self, n):
@@ -71,20 +72,16 @@ class Exact(Explainer):
             self._gray_code_cache[n] = gray_code_indexes(n)
         return self._gray_code_cache[n]
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
-
-        # see if we need to follow a partition tree
-        # if getattr(self.masker, "partition_tree", None) is not None:
-        #     raise Exception("Exact does not yet support using a partition tree!")
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
         # do the standard Shapley values
         inds = None
-        if getattr(self.masker, "partition_tree", None) is None:
+        if getattr(self.masker, "clustering", None) is None:
 
             # see which elements we actually need to perturb
             inds = fm.varying_inputs()
@@ -107,7 +104,7 @@ class Exact(Explainer):
                     extended_delta_indexes[i] = inds[delta_indexes[i]]
 
             # run the model
-            outputs = fm(extended_delta_indexes)
+            outputs = fm(extended_delta_indexes, batch_size=batch_size)
             
             # loop over all the outputs to update the rows
             coeff = shapley_coefficients(len(inds))
@@ -129,7 +126,7 @@ class Exact(Explainer):
             delta_indexes = self._partition_delta_indexes
             
             # run the model
-            outputs = fm(delta_indexes)
+            outputs = fm(delta_indexes, batch_size=batch_size)
 
             # loop over each output feature
             row_values = np.zeros(len(fm))
@@ -149,7 +146,8 @@ class Exact(Explainer):
             "values": row_values,
             "expected_values": outputs[0],
             "mask_shapes": fm.mask_shapes,
-            "main_effects": main_effect_values
+            "main_effects": main_effect_values,
+            "clustering": getattr(self.masker, "clustering", None)
         }
 
 @jit

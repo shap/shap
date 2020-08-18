@@ -59,7 +59,7 @@ class Sampling(Kernel):
         if type(v) is list:
             output_shape = (len(v),)
             v = np.stack(v, axis=-1) # put outputs at the end
-        e = Explanation(self.expected_value, v, X, input_names=feature_names, output_shape=output_shape)
+        e = Explanation(v, self.expected_value, X, input_names=feature_names, output_shape=output_shape)
         return e
 
     def explain(self, incoming_instance, **kwargs):

@@ -7,7 +7,7 @@ import sys
 import warnings
 import sklearn
 import importlib
-
+import copy
 
 
 if (sys.version_info < (3, 0)):
@@ -200,3 +200,42 @@ def ordinal_str(n):
     """
     return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
+
+class OpChain():
+    """ A way to represent a set of dot chained operations on an object without actually running them.
+    """
+
+    def __init__(self):
+        self._ops = []
+    
+    def apply(self, obj):
+        """ Applies all our ops to the given object.
+        """
+        for o in self._ops:
+            op,args,kwargs = o
+            if args is not None:
+                obj = getattr(obj, op)(*args, **kwargs)
+            else:
+                obj = getattr(obj, op)
+        return obj
+    
+    def __call__(self, *args, **kwargs):
+        """ Update the args for the previous operation.
+        """
+        new_self = OpChain()
+        new_self._ops = copy.copy(self._ops)
+        new_self._ops[-1][1] = args
+        new_self._ops[-1][2] = kwargs
+        return new_self
+        
+    def __getitem__(self, item):
+        new_self = OpChain()
+        new_self._ops = copy.copy(self._ops)
+        new_self._ops.append(["__getitem__", [item], {}])
+        return new_self
+
+    def __getattr__(self, name):
+        new_self = OpChain()
+        new_self._ops = copy.copy(self._ops)
+        new_self._ops.append([name, None, None])
+        return new_self

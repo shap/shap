@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Explainer():
-    def __init__(self, model, masker, link=links.identity, algorithm="auto"):
+    def __init__(self, model, masker, link=links.identity, algorithm="auto", output_names=None):
         """ Uses Shapley values to explain any machine learning model or python function.
 
         This is the primary explainer interface for the SHAP library. It takes any combination
@@ -50,16 +50,23 @@ class Explainer():
             algorithm used will determine what type of subclass object is returned by this constructor, and
             you can also build those subclasses directly if you prefer or need more fine grained control over
             their options.
+
+        output_names : None or list of strings
+            The names of the model outputs. For example if the model is an image classifier, then output_names would
+            be the names of all the output classes. This parameter is optional. When output_names is None then
+            the Explanation objects produced by this explainer will not have any output_names, which could effect
+            downstream plots.
         """
 
         self.model = model
+        self.output_names = output_names
         
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or (safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2):
             if algorithm == "partition":
-                self.masker = maskers.TabularPartitions(masker)
+                self.masker = maskers.Partition(masker)
             else:
-                self.masker = maskers.TabularIndependent(masker)
+                self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, "transformers.PreTrainedTokenizer"):
             self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:
@@ -93,12 +100,12 @@ class Explainer():
 
                 # otherwise use a model agnostic method
                 elif callable(model):
-                    if issubclass(type(self.masker), maskers.TabularIndependent):
+                    if issubclass(type(self.masker), maskers.Independent):
                         if self.masker.shape[1] <= 10:
                             algorithm = "exact"
                         else:
                             algorithm = "permutation"
-                    elif issubclass(type(self.masker), maskers.TabularPartitions):
+                    elif issubclass(type(self.masker), maskers.Partition):
                         if self.masker.shape[1] <= 32:
                             algorithm = "exact"
                         else:
@@ -134,7 +141,8 @@ class Explainer():
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
 
-    def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto", silent=False, **kwargs):
+    def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
+                 outputs=None, silent=False, **kwargs):
         """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
 
         Note this default version could be ois an abstract method that is implemented by each algorithm-specific
@@ -212,8 +220,8 @@ class Explainer():
 
         # collapse the expected values if they are the same for each sample
         expected_values = np.array(expected_values)
-        if np.allclose(expected_values, expected_values[0]):
-            expected_values = expected_values[0]
+        # if np.allclose(expected_values, expected_values[0]):
+        #     expected_values = expected_values[0]
 
         # collapse the main effects if we didn't compute them
         if main_effects[0] is None:
@@ -233,6 +241,12 @@ class Explainer():
         else:
             clustering = np.array(clustering)
 
+            # collapse across all the sample if we have just one clustering
+            # if len(clustering.shape) == 3 and clustering.std(0).sum() < 1e-8:
+            #     clustering = clustering[0]
+
+        
+
         # build the explanation objects
         out = []
         for j in range(len(args)):
@@ -249,10 +263,11 @@ class Explainer():
             
             # build an explanation object for this input argument
             out.append(Explanation(
-                expected_values, arg_values[j], data,
+                arg_values[j], expected_values, data,
                 input_names=input_names[j], main_effects=main_effects,
                 clustering=clustering,
-                hierarchical_values=hierarchical_values
+                hierarchical_values=hierarchical_values,
+                output_names=self.output_names
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))

@@ -87,7 +87,7 @@ class Tree(Explainer):
         masker = data
         super(Tree, self).__init__(model, masker)
 
-        if type(self.masker) is maskers.TabularIndependent:
+        if type(self.masker) is maskers.Independent:
             data = self.masker.data
         elif masker is not None:
             raise Exception("Unsupported masker type: %s!" % str(type(self.masker)))
@@ -202,10 +202,17 @@ class Tree(Explainer):
             if type(v) is list:
                 output_shape = (len(v),)
                 v = np.stack(v, axis=-1) # put outputs at the end
-            e = Explanation(self.expected_value, v, X, input_names=feature_names, output_shape=output_shape)
+
+            # the explanation object expects an expected value for each row
+            if hasattr(self.expected_value, "__len__"):
+                ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+            else:
+                ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+            e = Explanation(v, ev_tiled, X, input_names=feature_names, output_shape=output_shape)
         else:
             v = self.shap_interaction_values(X)
-            e = Explanation(self.expected_value, v, X, input_names=feature_names, interaction_order=2)
+            e = Explanation(v, self.expected_value, X, input_names=feature_names, interaction_order=2)
         return e
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):

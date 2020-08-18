@@ -14,13 +14,13 @@ from ..utils import convert_name, approximate_interactions
 from ..utils._general import encode_array_if_needed
 
 
-def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333333", cmap=None,
-               dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
-    """ Create a SHAP dependence plot, colored by an interaction feature.
+def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333", cmap=None,
+            dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
+    """ Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
-    richer extenstion of the classical parital dependence plots. Vertical dispersion of the
+    richer extenstion of classical parital dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
 
@@ -127,9 +127,7 @@ def dependence(shap_values, display_data=None, color="#1E88E5", axis_color="#333
         if feature_names is None:
             feature_names = features.columns
         features = features.values
-    if str(type(display_data)).endswith("'pandas.core.frame.DataFrame'>"):
-        if feature_names is None:
-            feature_names = display_data.columns
+    if str(type(display_data)).endswith("'pandas.core.frame.Series'>"):
         display_data = display_data.values
     elif display_data is None:
         display_data = features

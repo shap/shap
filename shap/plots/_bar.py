@@ -10,11 +10,11 @@ from . import colors
 import numpy as np
 import scipy
 import copy
-from .. import order
+from .. import Explanation
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
-def bar(shap_values, max_display=10, order=order.abs, clustering=None, cluster_threshold=0.5, show=True):
+def bar(shap_values, max_display=10, order=Explanation.abs.argsort, clustering=None, cluster_threshold=0.5, show=True):
     """ Create a bar plot of a set of SHAP values.
 
     If a single sample is passed then we plot the SHAP values as a bar chart. If an
@@ -54,14 +54,14 @@ def bar(shap_values, max_display=10, order=order.abs, clustering=None, cluster_t
     if partition_tree is not None:
         assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
     transform_history = shap_values.transform_history
-    shap_values = np.array(shap_values.values)
+    values = np.array(shap_values.values)
 
-    if len(shap_values) == 0:
+    if len(values) == 0:
         raise Exception("The passed Explanation is empty! (so there is nothing to plot)")
 
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
     if issubclass(type(feature_names), str):
-        feature_names = [ordinal_str(i)+" "+feature_names for i in range(len(shap_values))]
+        feature_names = [ordinal_str(i)+" "+feature_names for i in range(len(values))]
 
     # build our auto xlabel based on the transform history of the Explanation object
     xlabel = "SHAP value"
@@ -81,32 +81,32 @@ def bar(shap_values, max_display=10, order=order.abs, clustering=None, cluster_t
     
     # ensure we at least have default feature names
     if feature_names is None:
-        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(len(shap_values))])
+        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(len(values))])
     
     # determine how many top features we will plot
     if max_display is None:
         max_display = len(feature_names)
-    num_features = min(max_display, len(shap_values))
+    num_features = min(max_display, len(values))
 
     # iteratively merge nodes until we can cut off the smallest feature values to stay within
     # num_features without breaking a cluster tree
-    orig_inds = [[i] for i in range(len(shap_values))]
-    orig_shap_values = shap_values.copy()
+    orig_inds = [[i] for i in range(len(values))]
+    orig_values = values.copy()
     while True:
-        feature_order = order.apply(shap_values, 0)
+        feature_order = order.apply(shap_values)
         if partition_tree is not None:
 
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
-            clust_order = sort_inds(partition_tree, np.abs(shap_values))
+            clust_order = sort_inds(partition_tree, np.abs(values))
 
             # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
-            feature_order = get_sort_order(shap_values, dist, clust_order, cluster_threshold, order)
+            feature_order = get_sort_order(values, dist, clust_order, cluster_threshold, order)
         
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
             if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= cluster_threshold:
-                shap_values, partition_tree, orig_inds = merge_nodes(shap_values, partition_tree, orig_inds)
+                values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
             else:
                 break
         else:
@@ -122,14 +122,14 @@ def bar(shap_values, max_display=10, order=order.abs, clustering=None, cluster_t
         elif len(inds) <= 2:
             feature_names_new.append(" + ".join([feature_names[i] for i in inds]))
         else:
-            max_ind = np.argmax(orig_shap_values[inds])
+            max_ind = np.argmax(orig_values[inds])
             feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds)-1))
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
-    if num_features < len(shap_values):
-        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(shap_values))])
-        shap_values[feature_order[num_features-1]] = np.sum([shap_values[feature_order[i]] for i in range(num_features-1, len(shap_values))])
+    if num_features < len(values):
+        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values))])
+        values[feature_order[num_features-1]] = np.sum([values[feature_order[i]] for i in range(num_features-1, len(values))])
     
     # build our y-tick labels
     yticklabels = []
@@ -138,23 +138,23 @@ def bar(shap_values, max_display=10, order=order.abs, clustering=None, cluster_t
             yticklabels.append(format_value(features[i], "%0.03f") + " = " + feature_names[i])
         else:
             yticklabels.append(feature_names[i])
-    if num_features < len(shap_values):
-        yticklabels[-1] = "%d other features" % num_cut
+    if num_features < len(values):
+        yticklabels[-1] = "Sum of %d other features" % num_cut
 
     # compute our figure size based on how many features we are showing
     row_height = 0.5
     pl.gcf().set_size_inches(8, num_features * row_height + 1.5)
 
     # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
-    negative_values_present = np.sum(shap_values[feature_order[:num_features]] < 0) > 0
+    negative_values_present = np.sum(values[feature_order[:num_features]] < 0) > 0
     if negative_values_present:
         pl.axvline(0, 0, 1, color="#000000", linestyle="-", linewidth=1, zorder=1)
 
     # draw the bars
     pl.barh(
-        y_pos, shap_values[feature_inds],
+        y_pos, values[feature_inds],
         0.7, align='center',
-        color=[colors.blue_rgb if shap_values[feature_inds[i]] <= 0 else colors.red_rgb for i in range(len(y_pos))]
+        color=[colors.blue_rgb if values[feature_inds[i]] <= 0 else colors.red_rgb for i in range(len(y_pos))]
     )
 
     # draw the yticks
@@ -170,15 +170,15 @@ def bar(shap_values, max_display=10, order=order.abs, clustering=None, cluster_t
 
     for i in range(len(y_pos)):
         ind = feature_order[i]
-        if shap_values[ind] < 0:
+        if values[ind] < 0:
             pl.text(
-                shap_values[ind] - (5/72)*bbox_to_xscale, y_pos[i], format_value(shap_values[ind], '%+0.02f'),
+                values[ind] - (5/72)*bbox_to_xscale, y_pos[i], format_value(values[ind], '%+0.02f'),
                 horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
                 fontsize=12
             )
         else:
             pl.text(
-                shap_values[ind] + (5/72)*bbox_to_xscale, y_pos[i], format_value(shap_values[ind], '%+0.02f'),
+                values[ind] + (5/72)*bbox_to_xscale, y_pos[i], format_value(values[ind], '%+0.02f'),
                 horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
                 fontsize=12
             )
@@ -262,14 +262,14 @@ def get_sort_order(shap_values, dist, clust_order, cluster_threshold, order):
     """ Returns a sorted order of the values where we respect the clustering order when dist[i,j] < cluster_threshold
     """
     
-    #feature_imp = np.abs(shap_values)
+    #feature_imp = np.abs(values)
 
     # if partition_tree is not None:
     #     new_tree = fill_internal_max_values(partition_tree, shap_values)
     #     clust_order = sort_inds(new_tree, np.abs(shap_values))
     clust_inds = np.argsort(clust_order)
 
-    feature_order = order.apply(shap_values, 0)
+    feature_order = order.apply(Explanation(shap_values))
     # print("feature_order", feature_order)
     for i in range(len(feature_order)-1):
         ind1 = feature_order[i]

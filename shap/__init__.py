@@ -9,9 +9,6 @@ __version__ = '0.36.0'
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
 
-from . import _order
-order = _order.Order() # build an empty order to use as a base to build on
-
 from ._explanation import Explanation
 
 # explainers
@@ -39,7 +36,7 @@ except ImportError:
 if have_matplotlib:
     from .plots._summary import summary as summary_plot
     from .plots._decision import decision as decision_plot, multioutput_decision as multioutput_decision_plot
-    from .plots._dependence import dependence_legacy as dependence_plot
+    from .plots._scatter import dependence_legacy as dependence_plot
     from .plots._force import force as force_plot, initjs, save_html, getjs
     from .plots._image import image as image_plot
     from .plots._monitoring import monitoring as monitoring_plot

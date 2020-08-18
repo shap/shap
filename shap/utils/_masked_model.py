@@ -119,6 +119,7 @@ class MaskedModel():
         
         joined_masked_inputs = self._stack_inputs(all_masked_inputs)
         outputs = self.model(*joined_masked_inputs)
+        _assert_output_input_match(joined_masked_inputs, outputs)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
         last_outs = np.zeros((self._masker_rows,) + outputs.shape[1:])
@@ -172,40 +173,11 @@ class MaskedModel():
         
         # joined_masked_inputs = self._stack_inputs(all_masked_inputs)
         outputs = self.model(*subset_masked_inputs)
+        _assert_output_input_match(subset_masked_inputs, outputs)
 
         averaged_outs = np.zeros((varying_rows.shape[0],) + outputs.shape[1:])
         last_outs = np.zeros((varying_rows.shape[1],) + outputs.shape[1:])
         #print("link", self.link)
-        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
-
-        return averaged_outs
-
-    def _delta_masking_call_old(self, masks, batch_size=None):
-        # TODO: we need to do batching here
-
-        assert getattr(self.masker, "reset_delta_masking", None) is not None, "Masker must support delta masking!"
-        
-        # reset the masker from any previous delta masking calls (delta masking involves a stateful masker)
-        self.masker.reset_delta_masking()
-
-        batch_positions = np.zeros(len(masks)+1, dtype=np.int)
-        num_mask_samples = np.zeros(len(masks), dtype=np.int)
-        num_varying_rows = np.zeros(len(masks), dtype=np.int)
-        delta_indexes = np.zeros(len(masks), dtype=np.int)
-        varying_rows = np.zeros((len(masks), self.masker.shape[0]), dtype=np.bool)
-        all_masked_inputs, num_outputs = _build_delta_masked_inputs(
-            masks, batch_positions, num_mask_samples, num_varying_rows, delta_indexes,
-            varying_rows, self.args, self.masker, self._variants, self._variants_column_sums
-        )
-        
-        joined_masked_inputs = self._stack_inputs(all_masked_inputs)
-        outputs = self.model(*joined_masked_inputs)
-
-        averaged_outs = np.zeros((num_outputs,) + outputs.shape[1:])
-        last_outs = np.zeros((self.masker.shape[0],) + outputs.shape[1:])
-        #varying_rows = np.array(varying_rows)
-        # for o in (averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
-        #     print(type(o), o.dtype)
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
 
         return averaged_outs
@@ -259,6 +231,10 @@ class MaskedModel():
             expanded_main_effects[ind] = main_effects[i]
         
         return expanded_main_effects
+
+def _assert_output_input_match(inputs, outputs):
+    assert len(outputs) == len(inputs[0]), \
+        f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
 
 
 #@jit # TODO: figure out how to jit this function, or most of it
@@ -325,7 +301,7 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
 
     return all_masked_inputs, i + 1 # i + 1 is the number of output rows after averaging
 
-@jit
+#@jit
 def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs

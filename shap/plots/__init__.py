@@ -1,7 +1,7 @@
 from ._bar import bar
 from ._heatmap import heatmap
 from ._decision import decision
-from ._dependence import dependence
+from ._scatter import scatter
 from ._embedding import embedding
 from ._force import force, initjs
 from ._group_difference import group_difference

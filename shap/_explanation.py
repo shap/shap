@@ -1,23 +1,67 @@
 
 import pandas as pd
 import numpy as np
+import scipy as sp
 import sys
 import warnings
 import copy
 from slicer.interpretapi.explanation import AttributionExplanation
 from slicer import Slicer
+# from ._order import Order
+from .utils._general import OpChain
 
 # slicer confuses pylint...
 # pylint: disable=no-member
 
 
-class Explanation(AttributionExplanation):
+op_chain_root = OpChain()
+class MetaExplanation(type):
+    """ This metaclass exposes the Explanation object's methods for creating template op chains.
+    """
+
+    def __getitem__(cls, item):
+        return op_chain_root.__getitem__(item)
+
+    @property
+    def abs(cls):
+        return op_chain_root.abs
+
+    @property
+    def argsort(cls):
+        return op_chain_root.argsort
+
+    @property
+    def sum(cls):
+        return op_chain_root.sum
+
+    @property
+    def max(cls):
+        return op_chain_root.max
+
+    @property
+    def min(cls):
+        return op_chain_root.min
+
+    @property
+    def mean(cls):
+        return op_chain_root.mean
+    
+    @property
+    def sample(cls):
+        return op_chain_root.sample
+
+    @property
+    def hclust(cls):
+        return op_chain_root.hclust
+
+
+class Explanation(AttributionExplanation, metaclass=MetaExplanation):
     """ This is currently an experimental feature don't depend on this object yet! :)
     """
     def __init__(
         self,
-        expected_value,
         values,
+        expected_value = None,
         data = None,
         output_shape = tuple(),
         interaction_order = 0,
@@ -34,8 +78,18 @@ class Explanation(AttributionExplanation):
         clustering = None
     ):
         self.transform_history = []
-        
-        input_shape = _compute_shape(data)
+
+        if issubclass(type(values), Explanation):
+            e = values
+            values = e.values
+            expected_value = e.expected_value
+            data = e.data
+            # TODO: better cloning :)
+
+        if data is not None:
+            input_shape = _compute_shape(data)
+        else:
+            input_shape = _compute_shape(values)
 
         # trim any trailing None shapes since we don't want slicer to try and use those
         if len(input_shape) > 0 and input_shape[-1] is None:
@@ -68,6 +122,8 @@ class Explanation(AttributionExplanation):
             else:
                 input_name_dims = values_dims[1:]
             kwargs_dict["input_names"] = (input_name_dims, Slicer(input_names))
+        else:
+            self.input_names = None
         if original_rows is not None:
             kwargs_dict["original_rows"] = (values_dims[1:], Slicer(original_rows))
         if clustering is not None:
@@ -80,6 +136,8 @@ class Explanation(AttributionExplanation):
                 kwargs_dict["expected_value"] = (values_dims[1:], Slicer(expected_value))
             else:
                 raise Exception("The shape of the passed expected_value does not match the shape of the passed values!")
+        else:
+            self.expected_value = None
         # if clustering is not None:
         #     self.clustering = clustering
 
@@ -105,8 +163,9 @@ class Explanation(AttributionExplanation):
     # expected_value = property(get_expected_value)
         
     def __repr__(self):
-        out  = ".expected_value =\n"+self.expected_value.__repr__()
-        out += "\n\n.values =\n"+self.values.__repr__()
+        out = ".values =\n"+self.values.__repr__()
+        if self.expected_value is not None:
+            out += "\n\n.expected_value =\n"+self.expected_value.__repr__()
         if self.data is not None:
             out += "\n\n.data =\n"+self.data.__repr__()
         return out
@@ -119,9 +178,9 @@ class Explanation(AttributionExplanation):
         
         # convert any magic strings
         for i,t in enumerate(item):
-            if hasattr(t, "apply") and callable(t.apply):
+            if issubclass(type(t), OpChain):
                 tmp = list(item)
-                tmp[i] = t.apply(self.values, i)
+                tmp[i] = t.apply(self)
                 if issubclass(type(tmp[i]), (np.int64, np.int32)): # because slicer does not like numpy indexes
                     tmp[i] = int(tmp[i])
                 elif issubclass(type(tmp[i]), np.ndarray):
@@ -147,6 +206,10 @@ class Explanation(AttributionExplanation):
                     new_self.input_names = t
                     new_self.clustering = None
                     return new_self
+            elif issubclass(type(t), np.ndarray):
+                tmp = list(item)
+                tmp[i] = [int(j) for j in t]
+                item = tuple(tmp)
         
         out = super().__getitem__(item)
         # if getattr(self, "clustering", None) is not None:
@@ -168,7 +231,7 @@ class Explanation(AttributionExplanation):
     def mean(self, dims):
         new_self = copy.deepcopy(self)
 
-        if not is_1d(self.input_names) and dims == 0:
+        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
             new_values = self._flatten_input_names()
             new_self.feature_names = np.array(list(new_values.keys()))
             new_self.values = np.array([np.mean(v) for v in new_values.values()])
@@ -176,10 +239,65 @@ class Explanation(AttributionExplanation):
         else:
             new_self.values = new_self.values.mean(dims)
 
+        if dims == 0 and len(getattr(self, "clustering", np.zeros(0)).shape) == 3:
+            if self.clustering.std(0).sum() < 1e-8:
+                new_self.clustering = self.clustering[0]
+            else:
+                new_self.clustering = None
+
         new_self.data = None
         new_self.transform_history.append(("mean", (dims,)))
         
         return new_self
+
+    @property
+    def argsort(self):
+        return np.argsort(-self.values)
+
+
+    def hclust(self, metric="sqeuclidean", axis=0):
+        """ Computes an optimal leaf ordering sort order using hclustering.
+        
+        hclust(metric="sqeuclidean")
+        
+        Parameters
+        ----------
+        metric : string
+            A metric supported by scipy clustering.
+
+        axis : int
+            The axis to cluster along.
+        """
+        values = self.values
+
+        if len(values.shape) != 2:
+            raise Exception("The hclust order only supports 2D arrays right now!")
+
+        if axis == 1:
+            values = values.T
+
+        # compute a hierarchical clustering and return the optimal leaf ordering
+        D = sp.spatial.distance.pdist(values, metric)
+        cluster_matrix = sp.cluster.hierarchy.complete(D)
+        inds = sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
+        return inds
+
+    def sample(self, max_samples, replace=False, random_state=0):
+        """ Randomly samples the instances (rows) of the Explanation object.
+
+        Parameters
+        ----------
+        max_samples : int
+            The number of rows to sample. Note that if replace=False then less than
+            fewer than max_samples will be drawn if explanation.shape[0] < max_samples.
+        
+        replace : bool
+            Sample with or without replacement.
+        """
+        prev_seed = np.random.seed(random_state)
+        inds = np.random.choice(self.shape[0], min(max_samples, self.shape[0]), replace=replace)
+        np.random.seed(prev_seed)
+        return self[list(inds)]
 
     def _flatten_input_names(self):
         new_values = {}
@@ -201,7 +319,7 @@ class Explanation(AttributionExplanation):
 
     def sum(self, dims):
         new_self = copy.deepcopy(self)
-        if not is_1d(self.input_names) and dims == 0:
+        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
             new_values = self._flatten_input_names()
             new_self.input_names = np.array(list(new_values.keys()))
             new_self.values = np.array([np.sum(v) for v in new_values.values()])
@@ -214,7 +332,7 @@ class Explanation(AttributionExplanation):
 
     def max(self, dims):
         new_self = copy.deepcopy(self)
-        if not is_1d(self.input_names) and dims == 0:
+        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
             new_values = self._flatten_input_names()
             new_self.input_names = np.array(list(new_values.keys()))
             new_self.values = np.array([np.max(v) for v in new_values.values()])
@@ -227,7 +345,7 @@ class Explanation(AttributionExplanation):
 
     def min(self, dims):
         new_self = copy.deepcopy(self)
-        if not is_1d(self.input_names) and dims == 0:
+        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
             new_values = self._flatten_input_names()
             new_self.input_names = np.array(list(new_values.keys()))
             new_self.values = np.array([np.min(v) for v in new_values.values()])
@@ -240,7 +358,7 @@ class Explanation(AttributionExplanation):
 
     def percentile(self, q, dims):
         new_self = copy.deepcopy(self)
-        if not is_1d(self.input_names) and dims == 0:
+        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
             new_values = self._flatten_input_names()
             new_self.input_names = np.array(list(new_values.keys()))
             new_self.values = np.array([np.percentile(v, q) for v in new_values.values()])

@@ -5,10 +5,12 @@ try:
 except ImportError:
     pass
 from . import colors
-from .. import order
+from .. import Explanation
+from ..utils import OpChain
 
 
-def heatmap(shap_values, input_order=order.abs.mean, sample_order=order.hclust, max_display=10, cmap=colors.red_white_blue, show=True):
+def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0), 
+            feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True):
     """ Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
@@ -21,13 +23,17 @@ def heatmap(shap_values, input_order=order.abs.mean, sample_order=order.hclust, 
     shap_values : shap.Explanation
         A multi-row Explanation object that we want to visualize in a cluster ordering.
     
-    input_order : callable or numpy.ndarray
-        A function that returns a sort ordering given a matrix of SHAP values and an axis, or
-        a direct input feature ordering given as an numpy.ndarray.
-        
-    sample_order : callable or numpy.ndarray
+    instance_order : OpChain or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values and an axis, or
         a direct sample ordering given as an numpy.ndarray.
+
+    feature_values : OpChain or numpy.ndarray
+        A function that returns a global summary value for each input feature, or an array of such values.
+
+    feature_order : None, OpChain, or numpy.ndarray
+        A function that returns a sort ordering given a matrix of SHAP values and an axis, or
+        a direct input feature ordering given as an numpy.ndarray. If None then we use
+        feature_values.argsort
         
     max_display : int
         The maximum number of features to display.
@@ -37,34 +43,44 @@ def heatmap(shap_values, input_order=order.abs.mean, sample_order=order.hclust, 
         further customization of the plot by the caller after the bar() function is finished. 
 
     """
-    
+
     # sort the SHAP values matrix by rows and columns
     values = shap_values.values
-    if type(input_order) == type(order):
-        input_order,order_values = input_order.apply(shap_values.values, 1, return_values=True)
-    elif not hasattr(input_order, "__len__"):
-        raise Exception("Unsupported input_order: %s!" % str(input_order))
-    if type(sample_order) == type(order):
-        sample_order = sample_order.apply(shap_values.values, 0)
-    elif not hasattr(sample_order, "__len__"):
-        raise Exception("Unsupported sample_order: %s!" % str(sample_order))
-        
-    feature_names = np.array(shap_values.feature_names)[input_order]
-    values = shap_values.values[sample_order][:,input_order]
-    order_values = order_values[input_order]
-    
+    if issubclass(type(feature_values), OpChain):
+        feature_values = feature_values.apply(Explanation(values))
+    if issubclass(type(feature_values), Explanation):
+        feature_values = feature_values.values
+    if feature_order is None:
+        feature_order = np.argsort(-feature_values)
+    elif issubclass(type(feature_order), OpChain):
+        feature_order = feature_order.apply(Explanation(values))
+    elif not hasattr(feature_order, "__len__"):
+        raise Exception("Unsupported feature_order: %s!" % str(feature_order))
+    xlabel = "Instances"
+    if issubclass(type(instance_order), OpChain):
+        #xlabel += " " + instance_order.summary_string("SHAP values")
+        instance_order = instance_order.apply(Explanation(values))
+    elif not hasattr(instance_order, "__len__"):
+        raise Exception("Unsupported instance_order: %s!" % str(instance_order))
+    else:
+        instance_order_ops = None
+
+    feature_names = np.array(shap_values.feature_names)[feature_order]
+    values = shap_values.values[instance_order][:,feature_order]
+    feature_values = feature_values[feature_order]
+
     # collapse
     if values.shape[1] > max_display:
         new_values = np.zeros((values.shape[0], max_display))
-        new_values[:,:max_display-1] = values[:,:max_display-1]
-        new_values[:,max_display-1] = values[:,max_display-1:].sum(1)
-        new_order_values = np.zeros(max_display)
-        new_order_values[:max_display-1] = order_values[:max_display-1]
-        new_order_values[max_display-1] = order_values[max_display-1:].sum()
+        new_values[:, :max_display-1] = values[:, :max_display-1]
+        new_values[:, max_display-1] = values[:, max_display-1:].sum(1)
+        new_feature_values = np.zeros(max_display)
+        new_feature_values[:max_display-1] = feature_values[:max_display-1]
+        new_feature_values[max_display-1] = feature_values[max_display-1:].sum()
         feature_names = list(feature_names[:max_display])
-        feature_names[-1] = "%d other features" % (values.shape[1] - max_display + 1)
+        feature_names[-1] = "Sum of %d other features" % (values.shape[1] - max_display + 1)
         values = new_values
-        order_values = new_order_values
+        feature_values = new_feature_values
     
     # define the plot size
     row_height = 0.5
@@ -98,14 +114,14 @@ def heatmap(shap_values, input_order=order.abs.mean, sample_order=order.hclust, 
     pl.gca().spines['left'].set_bounds(values.shape[1]-0.5, -0.5)
     pl.gca().spines['right'].set_bounds(values.shape[1]-0.5, -0.5)
     b = pl.barh(
-        yticks_pos, (order_values / np.abs(order_values).max()) * values.shape[0] / 20, 
+        yticks_pos, (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20, 
         0.7, align='center', color="#000000", left=values.shape[0] * 1.0 - 0.5
         #color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
     )
     for v in b:
         v.set_clip_on(False)
     pl.xlim(-0.5, values.shape[0]-0.5)
-    pl.xlabel("Samples ordered by similarity")
+    pl.xlabel(xlabel)
     
     
     

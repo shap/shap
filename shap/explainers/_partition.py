@@ -202,7 +202,7 @@ class Partition(Explainer):
             output_names = self.output_names
         
         return Explanation(
-            self.expected_value, out, X, input_names=feature_names, output_shape=self.output_shape,
+            out, self.expected_value, X, input_names=feature_names, output_shape=self.output_shape,
             output_indexes=out_inds, output_names=output_names
         )
         
@@ -505,7 +505,7 @@ class Partition(Explainer):
         # make sure output_indexes is a list of indexes
         if output_indexes is not None:
             assert self.multi_output, "output_indexes is only valid for multi-output models!"
-            
+            inds = output_indexes.apply(f11, 0)
             out_len = output_indexes_len(output_indexes)
             if output_indexes.startswith("max("):
                 output_indexes = np.argsort(-f11)[:out_len]
