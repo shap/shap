@@ -102,7 +102,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
         # the histogram of the data
         if hist:
             #n, bins, patches = 
-            ax2.hist(xv, 50, density=False, facecolor='black', range=(xmin, xmax))
+            ax2.hist(xv, 50, density=False, facecolor='black', alpha=0.1, range=(xmin, xmax))
 
         
 
@@ -134,6 +134,8 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
         ax2.yaxis.set_ticks([])
         ax2.spines['right'].set_visible(False)
         ax2.spines['top'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
+        ax2.spines['bottom'].set_visible(False)
 
 
         if feature_expected_value is not False:
@@ -148,12 +150,13 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             ax1.axvline(mval, color="#999999", zorder=-1, linestyle="--", linewidth=1)
         
         if model_expected_value is not False or shap_values is not None:
-            # if model_expected_value is True:
-            #     if use_dataframe:
-            #         model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
-            #     else:
-            #         model_expected_value = model(features).mean()
-            model_expected_value = shap_values.expected_value
+            if model_expected_value is True:
+                if use_dataframe:
+                    model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
+                else:
+                    model_expected_value = model(features).mean()
+            else:
+                model_expected_value = shap_values.base_values
             ymin,ymax = ax1.get_ylim()
             ax4=ax2.twinx()
             ax4.set_ylim(ymin,ymax)
@@ -179,8 +182,8 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             # if str(type(shap_value_features)).endswith("'pandas.core.frame.DataFrame'>"):
             #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
-                shap_values.data[:,ind], shap_values.expected_value + shap_values.values[:, ind],
-                bottom=shap_values.expected_value, 
+                shap_values.data[:,ind], shap_values.base_values + shap_values.values[:, ind],
+                bottom=shap_values.base_values, 
                 markerfmt="o", basefmt=" ", use_line_collection=True
             )
             stemlines.set_edgecolors([shap.plots.colors.red_rgb if v > 0 else shap.plots.colors.blue_rgb for v in vals])

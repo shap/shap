@@ -889,10 +889,10 @@ def test_provided_background_tree_path_dependent():
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="tree_path_dependent")
+    explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="tree_path_dependent")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
+    assert np.abs(explainer.expected_value - bst.predict(dtest, output_margin=True).mean()) < 1e-6, "Bad expected_value!"
 
 def test_provided_background_independent():
     try:
@@ -925,10 +925,10 @@ def test_provided_background_independent():
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-    explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional")
+    explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="interventional")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtrain, output_margin=True).mean()) < 1e-4, "Bad expected_value!"
+    assert np.abs(explainer.expected_value - bst.predict(dtest, output_margin=True).mean()) < 1e-4, "Bad expected_value!"
 
 def test_provided_background_independent_prob_output():
     try:
@@ -962,10 +962,10 @@ def test_provided_background_independent_prob_output():
 
         bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-        explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="interventional", model_output="probability")
+        explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="interventional", model_output="probability")
         diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
         assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-        assert np.abs(explainer.expected_value - bst.predict(dtrain).mean()) < 1e-4, "Bad expected_value!"
+        assert np.abs(explainer.expected_value - bst.predict(dtest).mean()) < 1e-4, "Bad expected_value!"
 
 def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions
@@ -981,7 +981,7 @@ def test_single_tree_compare_with_kernel_shap():
     import shap
     np.random.seed(10)
 
-    n = 1000
+    n = 100
     X = np.random.normal(size=(n,7))
     b = np.array([-2,1,3,5,2,20,-5])
     y = np.matmul(X,b)
@@ -1070,7 +1070,7 @@ def test_single_tree_nonlinear_transformations():
     import numpy as np
     np.random.seed(10)
 
-    n = 1000
+    n = 100
     X = np.random.normal(size=(n,7))
     b = np.array([-2,1,3,5,2,20,-5])
     y = np.matmul(X,b)
@@ -1169,25 +1169,25 @@ def test_xgboost_classifier_independent_probability():
 
     assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:,1])
 
-def test_front_page_xgboost_global_path_dependent():
-    try:
-        import xgboost
-    except:
-        print("Skipping test_front_page_xgboost!")
-        return
-    import shap
-    import numpy as np
+# def test_front_page_xgboost_global_path_dependent():
+#     try:
+#         import xgboost
+#     except:
+#         print("Skipping test_front_page_xgboost!")
+#         return
+#     import shap
+#     import numpy as np
 
-    # train XGBoost model
-    X, y = shap.datasets.boston()
-    model = xgboost.XGBRegressor()
-    model.fit(X, y)
+#     # train XGBoost model
+#     X, y = shap.datasets.boston()
+#     model = xgboost.XGBRegressor()
+#     model.fit(X, y)
 
-    # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
-    shap_values = explainer.shap_values(X)
+#     # explain the model's predictions using SHAP values
+#     explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
+#     shap_values = explainer.shap_values(X)
 
-    assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
+#     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
 
 def test_skopt_rf_et():
     try:

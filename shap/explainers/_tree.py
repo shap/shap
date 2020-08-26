@@ -209,10 +209,10 @@ class Tree(Explainer):
             else:
                 ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-            e = Explanation(v, ev_tiled, X, input_names=feature_names, output_shape=output_shape)
+            e = Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names)
         else:
             v = self.shap_interaction_values(X)
-            e = Explanation(v, self.expected_value, X, input_names=feature_names, interaction_order=2)
+            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names, interaction_order=2)
         return e
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):

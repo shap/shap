@@ -12,10 +12,12 @@ from ._labels import labels
 from . import colors
 from ..utils import convert_name, approximate_interactions
 from ..utils._general import encode_array_if_needed
+from .._explanation import Explanation
 
 
-def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333", cmap=None,
-            dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
+def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
+            dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
+            ax=None, show=True):
     """ Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -24,14 +26,15 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
 
+    Note that if you want to change the data being displayed you can update the
+    shap_values.display_features attribute and it will then be used for plotting instead of
+    shap_values.data.
+
 
     Parameters
     ----------
     shap_values : shap.Explanation
         A single column of a SHAP Explanation object (i.e. shap_values[:,"Feature A"]).
-
-    display_data : numpy.array or pandas.DataFrame
-        Matrix of feature values for visual display (such as strings instead of coded values).
 
     color : string or shap.Explanation
         How to color the scatter plot points. This can be a fixed color string, or a Explanation object.
@@ -40,6 +43,11 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
         This is calculated using shap.utils.approximate_interactions.
         If only a single column of an Explanation object is passed then that feature column will be used
         to color the data points.
+
+    hist : bool
+        Whether to show a light histogram along the x-axis to show the density of the data. Note that the
+        histogram is normalized that that if all the point were in a single bin then that bin would span
+        the full height of the plot.
 
     x_jitter : 'auto' or float (0 - 1)
         Adds random jitter to feature values. May increase plot readability when a feature
@@ -72,51 +80,47 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
     ind = 0
     shap_values_arr = shap_values.values.reshape(-1, 1)
     features = shap_values.data.reshape(-1, 1)
+    if shap_values.display_data is None:
+        display_features = features
+    else:
+        display_features = shap_values.display_data.reshape(-1, 1)
     interaction_index = None
 
-    # # support passing an explanation object
-    # if str(type(ind)).endswith("Explanation'>"):
-    #     shap_values = ind
-    #     if len(shap_values.shape) != 1:
-    #         raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to shap.plots.dependence like: shap_values[:,column]")
-    #     feature_names = [shap_values.feature_names]
-    #     ind = 0
-    #     shap_values_arr = shap_values.values.reshape(-1, 1)
-    #     features = shap_values.data.reshape(-1, 1)
-    #     # if features is None:
-    #     #     features = shap_values.data
-    #     # if feature_names is None:
-    #     #     feature_names = shap_values.feature_names
-    #     # if out_names is None: # TODO: waiting for slicer support of this
-    #     #     out_names = shap_values.output_names
-    #     interaction_index = None
-
-    #     feature_names
+    # unwrap explanation objects used for bounds
+    if issubclass(type(xmin), Explanation):
+        xmin = xmin.data
+    if issubclass(type(xmax), Explanation):
+        xmax = xmax.data
+    if issubclass(type(ymin), Explanation):
+        ymin = ymin.values
+    if issubclass(type(ymax), Explanation):
+        ymax = ymax.values
 
     
-
-        
+    # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if str(type(color)).endswith("Explanation'>"):
         shap_values2 = color
-        if type(shap_values2.feature_names) is str:
+        if issubclass(type(shap_values2.feature_names), (str, int)):
             feature_names.append(shap_values2.feature_names)
             shap_values_arr = np.hstack([shap_values_arr, shap_values2.values.reshape(-1, len(feature_names)-1)])
             features = np.hstack([features, shap_values2.data.reshape(-1, len(feature_names)-1)])
+            if shap_values2.display_data is None:
+                display_features = np.hstack([display_features, shap_values2.data.reshape(-1, len(feature_names)-1)])
+            else:
+                display_features = np.hstack([display_features, shap_values2.display_data.reshape(-1, len(feature_names)-1)])
         else:
             feature_names2 = np.array(shap_values2.feature_names)
             mask = ~(feature_names[0] == feature_names2)
             feature_names.extend(feature_names2[mask])
             shap_values_arr = np.hstack([shap_values_arr, shap_values2.values[:,mask]])
             features = np.hstack([features, shap_values2.data[:,mask]])
+            if shap_values2.display_data is None:
+                display_features = np.hstack([display_features, shap_values2.data[:,mask]])
+            else:
+                display_features = np.hstack([display_features, shap_values2.display_data[:,mask]])
         color = None
         interaction_index = "auto"
 
-    
-
-    # print(shap_values.shape)
-    # print(features)
-    if cmap is None:
-        cmap = colors.red_blue
 
     if type(shap_values_arr) is list:
         raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try " \
@@ -127,10 +131,6 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
         if feature_names is None:
             feature_names = features.columns
         features = features.values
-    if str(type(display_data)).endswith("'pandas.core.frame.Series'>"):
-        display_data = display_data.values
-    elif display_data is None:
-        display_data = features
 
     if feature_names is None:
         feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values_arr.shape[1])]
@@ -195,7 +195,7 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
         dependence_legacy(
             ind1, proj_shap_values_arr, features, feature_names=feature_names,
-            interaction_index=(None if ind1 == ind2 else ind2), display_features=display_data, ax=ax, show=False,
+            interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
             xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
         )
         if ind1 == ind2:
@@ -216,14 +216,15 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
     oinds = np.arange(shap_values_arr.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
     xv = encode_array_if_needed(features[oinds, ind])
-    xd = display_data[oinds, ind]
+    xd = display_features[oinds, ind]
+    
     s = shap_values_arr[oinds, ind]
     if type(xd[0]) == str:
         name_map = {}
         for i in range(len(xv)):
             name_map[xd[i]] = xv[i]
         xnames = list(name_map.keys())
-
+    
     # allow a single feature name to be passed alone
     if type(feature_names) == str:
         feature_names = [feature_names]
@@ -234,7 +235,7 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
     if interaction_index is not None:
         interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
         cv = interaction_feature_values
-        cd = display_data[:, interaction_index]
+        cd = display_features[:, interaction_index]
         clow = np.nanpercentile(cv.astype(np.float), 5)
         chigh = np.nanpercentile(cv.astype(np.float), 95)
         if clow == chigh:
@@ -257,6 +258,7 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
     # optionally add jitter to feature values
+    xv_no_jitter = xv.copy()
     if x_jitter > 0:
         if x_jitter > 1: x_jitter = 1
         xvals = xv.copy()
@@ -269,6 +271,7 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
             jitter_amount = x_jitter * smallest_diff
             xv += (np.random.random_sample(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
+    
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
@@ -293,10 +296,9 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
         if type(cd[0]) == str:
-            tick_positions = [cname_map[n] for n in cnames]
-            if len(tick_positions) == 2:
-                tick_positions[0] -= 0.25
-                tick_positions[1] += 0.25
+            tick_positions = np.array([cname_map[n] for n in cnames])
+            tick_positions *= 1 - 1 / len(cnames)
+            tick_positions += 0.5 * (chigh - clow) / (chigh - clow + 1)
             cb = pl.colorbar(p, ticks=tick_positions, ax=ax)
             cb.set_ticklabels(cnames)
         else:
@@ -326,6 +328,19 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
 
         ax.set_xlim(xmin, xmax)
 
+    if ymin is not None or ymax is not None:
+        # if type(ymin) == str and ymin.startswith("percentile"):
+        #     ymin = np.nanpercentile(xv, float(ymin[11:-1]))
+        # if type(ymax) == str and ymax.startswith("percentile"):
+        #     ymax = np.nanpercentile(xv, float(ymax[11:-1]))
+
+        if ymin is None or ymin == np.nanmin(xv):
+            ymin = np.nanmin(xv) - (ymax - np.nanmin(xv))/20
+        if ymax is None or ymax == np.nanmax(xv):
+            ymax = np.nanmax(xv) + (np.nanmax(xv) - ymin)/20
+
+        ax.set_ylim(ymin, ymax)
+
     # plot any nan feature values as tick marks along the y-axis
     xlim = ax.get_xlim()
     if interaction_index is not None:
@@ -341,6 +356,47 @@ def scatter(shap_values, display_data=None, color="#1E88E5", axis_color="#333333
             linewidth=2, color=color, alpha=alpha
         )
     ax.set_xlim(xlim)
+
+    # the histogram of the data
+    if hist:
+        ax2 = ax.twinx()
+        #n, bins, patches = 
+        xlim = ax.get_xlim()
+        xvals = np.unique(xv_no_jitter)
+
+        if len(xvals) / len(xv_no_jitter) < 0.2 and len(xvals) < 75 and np.max(xvals) < 75 and np.min(xvals) >= 0:
+            np.sort(xvals)
+            bin_edges = []
+            for i in range(int(np.max(xvals)+1)):
+                bin_edges.append(i-0.5)
+
+                #bin_edges.append((xvals[i] + xvals[i+1])/2)
+            bin_edges.append(int(np.max(xvals))+0.5)
+
+            lim = np.floor(np.min(xvals) - 0.5) + 0.5, np.ceil(np.max(xvals) + 0.5) - 0.5
+            ax.set_xlim(lim)
+        else:
+            if len(xv_no_jitter) >= 500:
+                bin_edges = 50
+            elif len(xv_no_jitter) >= 200:
+                bin_edges = 20
+            elif len(xv_no_jitter) >= 100:
+                bin_edges = 10
+            else:
+                bin_edges = 5
+        
+        ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
+        ax2.set_ylim(0,len(xv))
+
+        ax2.xaxis.set_ticks_position('bottom')
+        ax2.yaxis.set_ticks_position('left')
+        ax2.yaxis.set_ticks([])
+        ax2.spines['right'].set_visible(False)
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
+        ax2.spines['bottom'].set_visible(False)
+
+    pl.sca(ax)
 
     # make the plot more readable
     ax.set_xlabel(name, color=axis_color, fontsize=13)

@@ -7,7 +7,7 @@ except ImportError:
 from . import colors
 from .. import Explanation
 from ..utils import OpChain
-
+from ._utils import convert_ordering, convert_color
 
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0), 
             feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True):
@@ -57,13 +57,14 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     elif not hasattr(feature_order, "__len__"):
         raise Exception("Unsupported feature_order: %s!" % str(feature_order))
     xlabel = "Instances"
-    if issubclass(type(instance_order), OpChain):
-        #xlabel += " " + instance_order.summary_string("SHAP values")
-        instance_order = instance_order.apply(Explanation(values))
-    elif not hasattr(instance_order, "__len__"):
-        raise Exception("Unsupported instance_order: %s!" % str(instance_order))
-    else:
-        instance_order_ops = None
+    instance_order = convert_ordering(instance_order, shap_values)
+    # if issubclass(type(instance_order), OpChain):
+    #     #xlabel += " " + instance_order.summary_string("SHAP values")
+    #     instance_order = instance_order.apply(Explanation(values))
+    # elif not hasattr(instance_order, "__len__"):
+    #     raise Exception("Unsupported instance_order: %s!" % str(instance_order))
+    # else:
+    #     instance_order_ops = None
 
     feature_names = np.array(shap_values.feature_names)[feature_order]
     values = shap_values.values[instance_order][:,feature_order]
