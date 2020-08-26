@@ -8,7 +8,8 @@ from ._group_difference import group_difference
 from ._image import image
 from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
-from ._summary import summary
+from ._beeswarm import beeswarm
+from ._violin import violin
 from ._text import text
 from ._waterfall import waterfall
 

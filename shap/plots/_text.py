@@ -16,27 +16,26 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
     """
     from IPython.core.display import display, HTML
 
-    def values_min_max(values, base_value):
-        fx = base_value + values.sum()
-        # pick our x axis limits
+    def values_min_max(values, base_values):
+        """ Used to pick our axis limits.
+        """
+        fx = base_values + values.sum()
         xmin = fx - values[values > 0].sum()
         xmax = fx - values[values < 0].sum()
+        cmax = max(abs(values.min()), abs(values.max()))
         d = xmax - xmin
         xmin -= 0.1 * d
         xmax += 0.1 * d
 
-        cmax = max(abs(values.min()), abs(values.max()))
-
-        #print(xmin,xmax,fx, base_value, values.sum(), values[values > 0].sum(), values[values < 0].sum())
         return xmin, xmax, cmax
 
     # loop when we get multi-row inputs
     if len(shap_values.shape) == 2:
         tokens, values, group_sizes = process_shap_values(shap_values[0], group_threshold, separator)
-        xmin, xmax, cmax = values_min_max(values, shap_values[0].expected_value)
+        xmin, xmax, cmax = values_min_max(values, shap_values[0].base_values)
         for i in range(1,len(shap_values)):
             tokens, values, group_sizes = process_shap_values(shap_values[i], group_threshold, separator)
-            xmin_i,xmax_i,cmax_i = values_min_max(values, shap_values[i].expected_value)
+            xmin_i,xmax_i,cmax_i = values_min_max(values, shap_values[i].base_values)
             if xmin_i < xmin:
                 xmin = xmin_i
             if xmax_i > xmax:
@@ -49,7 +48,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         return
     
     # set any unset bounds
-    xmin_new, xmax_new, cmax_new = values_min_max(shap_values.values, shap_values.expected_value)
+    xmin_new, xmax_new, cmax_new = values_min_max(shap_values.values, shap_values.base_values)
     if xmin is None:
         xmin = xmin_new
     if xmax is None:
@@ -65,13 +64,13 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
     maxv = values.max()
     minv = values.min()
     out = ""
-    # ev_str = str(shap_values.expected_value)
+    # ev_str = str(shap_values.base_values)
     # vsum_str = str(values.sum())
-    # fx_str = str(shap_values.expected_value + values.sum())
+    # fx_str = str(shap_values.base_values + values.sum())
     
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
     encoded_tokens = [t.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '') for t in tokens]
-    out += svg_force_plot(values, shap_values.expected_value, shap_values.expected_value + values.sum(), encoded_tokens, uuid, xmin, xmax)
+    out += svg_force_plot(values, shap_values.base_values, shap_values.base_values + values.sum(), encoded_tokens, uuid, xmin, xmax)
     
     for i in range(len(tokens)):
         scaled_value = 0.5 + 0.5 * values[i] / cmax
@@ -211,7 +210,7 @@ def process_shap_values(shap_values, group_threshold, separator):
 
     return tokens, values, group_sizes
 
-def svg_force_plot(values, base_value, fx, tokens, uuid, xmin, xmax):
+def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax):
     
 
     def xpos(xval):
@@ -238,16 +237,16 @@ def svg_force_plot(values, base_value, fx, tokens, uuid, xmin, xmax):
             s += '<text x="%f%%" y="10" font-size="12px" fill="rgb(120,120,120)" dominant-baseline="bottom" text-anchor="middle">%s</text>' % (xpos(xval), label)
         return s
 
-    s += draw_tick_mark(base_value, label="base value")
+    s += draw_tick_mark(base_values, label="base value")
     tick_interval = (xmax - xmin) / 7
     side_buffer = (xmax - xmin) / 14
     for i in range(1,10):
-        pos = base_value - i * tick_interval
+        pos = base_values - i * tick_interval
         if pos < xmin + side_buffer:
             break
         s += draw_tick_mark(pos)
     for i in range(1,10):
-        pos = base_value + i * tick_interval
+        pos = base_values + i * tick_interval
         if pos > xmax - side_buffer:
             break
         s += draw_tick_mark(pos)

@@ -6,6 +6,7 @@ except ImportError:
     pass
 from ._labels import labels
 from ..utils import format_value, ordinal_str
+from ._utils import convert_ordering, convert_color
 from . import colors
 import numpy as np
 import scipy
@@ -14,7 +15,7 @@ from .. import Explanation
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
-def bar(shap_values, max_display=10, order=Explanation.abs.argsort, clustering=None, cluster_threshold=0.5, show=True):
+def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, cluster_threshold=0.5, show=True):
     """ Create a bar plot of a set of SHAP values.
 
     If a single sample is passed then we plot the SHAP values as a bar chart. If an
@@ -44,7 +45,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs.argsort, clustering=N
 
     # unpack the Explanation object
     features = shap_values.data
-    feature_names = shap_values.input_names
+    feature_names = shap_values.feature_names
     if clustering is None:
         partition_tree = getattr(shap_values, "clustering", None)
     elif clustering is False:
@@ -93,7 +94,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs.argsort, clustering=N
     orig_inds = [[i] for i in range(len(values))]
     orig_values = values.copy()
     while True:
-        feature_order = order.apply(shap_values)
+        feature_order = convert_ordering(order, Explanation(values))
         if partition_tree is not None:
 
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
@@ -101,7 +102,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs.argsort, clustering=N
 
             # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
-            feature_order = get_sort_order(values, dist, clust_order, cluster_threshold, order)
+            feature_order = get_sort_order(values, dist, clust_order, cluster_threshold, feature_order)
         
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
@@ -258,7 +259,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs.argsort, clustering=N
     if show:
         pl.show()
 
-def get_sort_order(shap_values, dist, clust_order, cluster_threshold, order):
+def get_sort_order(shap_values, dist, clust_order, cluster_threshold, feature_order):
     """ Returns a sorted order of the values where we respect the clustering order when dist[i,j] < cluster_threshold
     """
     
@@ -269,7 +270,7 @@ def get_sort_order(shap_values, dist, clust_order, cluster_threshold, order):
     #     clust_order = sort_inds(new_tree, np.abs(shap_values))
     clust_inds = np.argsort(clust_order)
 
-    feature_order = order.apply(Explanation(shap_values))
+    feature_order = feature_order.copy()#order.apply(Explanation(shap_values))
     # print("feature_order", feature_order)
     for i in range(len(feature_order)-1):
         ind1 = feature_order[i]

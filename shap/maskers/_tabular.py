@@ -43,7 +43,7 @@ class Tabular(Masker):
 
         self.output_dataframe = False
         if safe_isinstance(data, "pandas.core.frame.DataFrame"):
-            self.input_names = data.columns
+            self.feature_names = data.columns
             data = data.values
             self.output_dataframe = True
 
@@ -104,7 +104,7 @@ class Tabular(Masker):
                 variants_column_sums, masked_inputs_out, MaskedModel.delta_mask_noop_value
             )
             if self.output_dataframe:
-                return (pd.DataFrame(masked_inputs_out, columns=self.input_names),), varying_rows_out
+                return (pd.DataFrame(masked_inputs_out, columns=self.feature_names),), varying_rows_out
             else:
                 return (masked_inputs_out,), varying_rows_out
         
@@ -114,7 +114,7 @@ class Tabular(Masker):
             self._last_mask[:] = mask
 
         if self.output_dataframe:
-            return pd.DataFrame(self._masked_data, columns=self.input_names)
+            return pd.DataFrame(self._masked_data, columns=self.feature_names)
         else:
             return self._masked_data
 

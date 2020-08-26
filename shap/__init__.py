@@ -34,7 +34,7 @@ try:
 except ImportError:
     have_matplotlib = False
 if have_matplotlib:
-    from .plots._summary import summary as summary_plot
+    from .plots._beeswarm import summary_legacy as summary_plot
     from .plots._decision import decision as decision_plot, multioutput_decision as multioutput_decision_plot
     from .plots._scatter import dependence_legacy as dependence_plot
     from .plots._force import force as force_plot, initjs, save_html, getjs

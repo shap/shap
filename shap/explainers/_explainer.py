@@ -156,7 +156,7 @@ class Explainer():
         # parse our incoming arguments
         num_rows = None
         args = list(args)
-        input_names = [None for _ in range(len(args))]
+        feature_names = [None for _ in range(len(args))]
         for i in range(len(args)):
 
             # try and see if we can get a length from any of the for our progress bar
@@ -168,7 +168,7 @@ class Explainer():
             
             # convert DataFrames to numpy arrays
             if safe_isinstance(args[i], "pandas.core.frame.DataFrame"):
-                input_names[i] = list(args[i].columns)
+                feature_names[i] = list(args[i].columns)
                 args[i] = args[i].to_numpy()
 
             # convert nlp Dataset objects to lists
@@ -190,8 +190,8 @@ class Explainer():
         main_effects = []
         hierarchical_values = []
         clustering = []
-        if callable(getattr(self.masker, "input_names", None)):
-            input_names = [[] for _ in range(len(args))]
+        if callable(getattr(self.masker, "feature_names", None)):
+            feature_names = [[] for _ in range(len(args))]
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
             row_result = self.explain_row(
                 *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
@@ -204,10 +204,10 @@ class Explainer():
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
             
-            if callable(getattr(self.masker, "input_names", None)):
-                row_input_names = self.masker.input_names(*row_args)
+            if callable(getattr(self.masker, "feature_names", None)):
+                row_feature_names = self.masker.feature_names(*row_args)
                 for i in range(len(row_args)):
-                    input_names[i].append(row_input_names[i])
+                    feature_names[i].append(row_feature_names[i])
 
         # split the values up according to each input
         arg_values = [[] for a in args]
@@ -264,7 +264,7 @@ class Explainer():
             # build an explanation object for this input argument
             out.append(Explanation(
                 arg_values[j], expected_values, data,
-                input_names=input_names[j], main_effects=main_effects,
+                feature_names=feature_names[j], main_effects=main_effects,
                 clustering=clustering,
                 hierarchical_values=hierarchical_values,
                 output_names=self.output_names

@@ -161,7 +161,7 @@ class Text(Masker):
 
         return invariants.reshape(1,-1)
 
-    def input_names(self, s):
+    def feature_names(self, s):
         self._update_s_cache(s)
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 

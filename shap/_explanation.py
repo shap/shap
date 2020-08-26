@@ -5,8 +5,7 @@ import scipy as sp
 import sys
 import warnings
 import copy
-from slicer.interpretapi.explanation import AttributionExplanation
-from slicer import Slicer
+from slicer import Slicer, Alias
 # from ._order import Order
 from .utils._general import OpChain
 
@@ -14,7 +13,7 @@ from .utils._general import OpChain
 # pylint: disable=no-member
 
 
-op_chain_root = OpChain()
+op_chain_root = OpChain("shap.Explanation")
 class MetaExplanation(type):
     """ This metaclass exposes the Explanation object's methods for creating template op chains.
     """
@@ -55,117 +54,143 @@ class MetaExplanation(type):
         return op_chain_root.hclust
 
 
-class Explanation(AttributionExplanation, metaclass=MetaExplanation):
+class Explanation(object, metaclass=MetaExplanation):
     """ This is currently an experimental feature don't depend on this object yet! :)
     """
     def __init__(
         self,
         values,
-        expected_value = None,
+        base_values = None,
         data = None,
-        output_shape = tuple(),
-        interaction_order = 0,
+        display_data = None,
         instance_names = None,
-        input_names = None,
+        feature_names = None,
         output_names = None,
         output_indexes = None,
-        feature_types = None,
         lower_bounds = None,
         upper_bounds = None,
         main_effects = None,
         hierarchical_values = None,
-        original_rows = None,
         clustering = None
     ):
         self.transform_history = []
 
+        # cloning. TODO: better cloning :)
         if issubclass(type(values), Explanation):
             e = values
             values = e.values
-            expected_value = e.expected_value
+            base_values = e.base_values
             data = e.data
-            # TODO: better cloning :)
+            
+        output_dims = compute_output_dims(values, base_values, data)
 
-        if data is not None:
-            input_shape = _compute_shape(data)
-        else:
-            input_shape = _compute_shape(values)
+        if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
+            values_shape = _compute_shape(values)
+            if len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
+                feature_names = Alias(feature_names, 0)
+            elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
+                feature_names = Alias(feature_names, 1)
 
-        # trim any trailing None shapes since we don't want slicer to try and use those
-        if len(input_shape) > 0 and input_shape[-1] is None:
-            input_shape = input_shape[:-1]
-        
-        values_dims = list(
-            range(len(input_shape) + interaction_order + len(output_shape))
+        self._s = Slicer(
+            values = values,
+            base_values = base_values,
+            data = data,
+            display_data = display_data,
+            instance_names = None if instance_names is None else Alias(instance_names, 0),
+            feature_names = feature_names, 
+            output_names = None if output_names is None else Alias(output_names, output_dims),
+            output_indexes = None if output_indexes is None else (output_dims, output_indexes),
+            lower_bounds = lower_bounds,
+            upper_bounds = lower_bounds,
+            main_effects = main_effects,
+            hierarchical_values = hierarchical_values, #Obj(hierarchical_values, (0,None)),
+            clustering = clustering
         )
-        output_dims = range(len(input_shape) + interaction_order, values_dims[-1])
-        
-        #main_effects_inds = values_dims[0:len(input_shape)] + values_dims[len(input_shape) + interaction_order:]
-        self.output_names = output_names # TODO: needs to tracked after slicing still
-        
-        kwargs_dict = {}
-        if lower_bounds is not None:
-            kwargs_dict["lower_bounds"] = (values_dims, Slicer(lower_bounds))
-        if upper_bounds is not None:
-            kwargs_dict["upper_bounds"] = (values_dims, Slicer(upper_bounds))
-        if main_effects is not None:
-            kwargs_dict["main_effects"] = (values_dims, Slicer(main_effects))
-        if output_indexes is not None:
-            kwargs_dict["output_indexes"] = (output_dims, Slicer(output_indexes))
-        if output_names is not None:
-            kwargs_dict["output_names"] = (output_dims, Slicer(output_names))
-        if hierarchical_values is not None:
-            kwargs_dict["hierarchical_values"] = (values_dims, Slicer(hierarchical_values))
-        if input_names is not None:
-            if not is_1d(input_names):
-                input_name_dims = values_dims
-            else:
-                input_name_dims = values_dims[1:]
-            kwargs_dict["input_names"] = (input_name_dims, Slicer(input_names))
-        else:
-            self.input_names = None
-        if original_rows is not None:
-            kwargs_dict["original_rows"] = (values_dims[1:], Slicer(original_rows))
-        if clustering is not None:
-            kwargs_dict["clustering"] = ([0], Slicer(clustering))
-        if expected_value is not None:
-            ndims = len(getattr(expected_value, "shape", []))
-            if ndims == len(values_dims):
-                kwargs_dict["expected_value"] = (values_dims, Slicer(expected_value))
-            elif ndims == len(values_dims)-1:
-                kwargs_dict["expected_value"] = (values_dims[1:], Slicer(expected_value))
-            else:
-                raise Exception("The shape of the passed expected_value does not match the shape of the passed values!")
-        else:
-            self.expected_value = None
-        # if clustering is not None:
-        #     self.clustering = clustering
 
-        super().__init__(
-            data,
-            values,
-            input_shape,
-            output_shape,
-            expected_value,
-            interaction_order,
-            instance_names,
-            input_names,
-            feature_types,
-            **kwargs_dict
-        )
-        
-    def get_shape(self):
-        return _compute_shape(self.values)
-    shape = property(get_shape)
-    
-    # def get_expected_value(self):
-    #     return self.expected_value
-    # expected_value = property(get_expected_value)
+    @property
+    def shape(self):
+        return _compute_shape(self._s.values)
+
+    @property
+    def values(self):
+        return self._s.values
+    @values.setter
+    def values(self, new_values):
+        self._s.values = new_values
+
+    @property
+    def base_values(self):
+        return self._s.base_values
+    @base_values.setter
+    def base_values(self, new_base_values):
+        self._s.base_values = new_base_values
+
+    @property
+    def data(self):
+        return self._s.data
+    @data.setter
+    def data(self, new_data):
+        self._s.data = new_data
+
+    @property
+    def display_data(self):
+        return self._s.display_data
+    @display_data.setter
+    def display_data(self, new_display_data):
+        self._s.display_data = new_display_data
+
+    @property
+    def instance_names(self):
+        return self._s.instance_names
+
+    @property
+    def output_names(self):
+        return self._s.output_names
+
+    @property
+    def output_indexes(self):
+        return self._s.output_indexes
+
+    @property
+    def feature_names(self):
+        return self._s.feature_names
+    @feature_names.setter
+    def feature_names(self, new_feature_names):
+        self._s.feature_names = new_feature_names
+
+    @property
+    def lower_bounds(self):
+        return self._s.lower_bounds
+
+    @property
+    def upper_bounds(self):
+        return self._s.upper_bounds
+
+    @property
+    def main_effects(self):
+        return self._s.main_effects
+    @main_effects.setter
+    def main_effects(self, new_main_effects):
+        self._s.main_effects = new_main_effects
+
+    @property
+    def hierarchical_values(self):
+        return self._s.hierarchical_values
+    @hierarchical_values.setter
+    def hierarchical_values(self, new_hierarchical_values):
+        self._s.hierarchical_values = new_hierarchical_values
+
+    @property
+    def clustering(self):
+        return self._s.clustering
+    @clustering.setter
+    def clustering(self, new_clustering):
+        self._s.clustering = new_clustering
         
     def __repr__(self):
         out = ".values =\n"+self.values.__repr__()
-        if self.expected_value is not None:
-            out += "\n\n.expected_value =\n"+self.expected_value.__repr__()
+        if self.base_values is not None:
+            out += "\n\n.base_values =\n"+self.base_values.__repr__()
         if self.data is not None:
             out += "\n\n.data =\n"+self.data.__repr__()
         return out
@@ -176,83 +201,142 @@ class Explanation(AttributionExplanation, metaclass=MetaExplanation):
         if not isinstance(item, tuple):
             item = (item,)
         
-        # convert any magic strings
+        # convert any OpChains or magic strings
         for i,t in enumerate(item):
+            orig_t = t
             if issubclass(type(t), OpChain):
-                tmp = list(item)
-                tmp[i] = t.apply(self)
-                if issubclass(type(tmp[i]), (np.int64, np.int32)): # because slicer does not like numpy indexes
-                    tmp[i] = int(tmp[i])
-                elif issubclass(type(tmp[i]), np.ndarray):
-                    tmp[i] = [int(v) for v in tmp[i]] # slicer wants lists not numpy arrays for indexing
-                item = tuple(tmp)
+                t = t.apply(self)
+                if issubclass(type(t), (np.int64, np.int32)): # because slicer does not like numpy indexes
+                    t = int(t)
+                elif issubclass(type(t), np.ndarray):
+                    t = [int(v) for v in t] # slicer wants lists not numpy arrays for indexing
+            elif issubclass(type(t), Explanation):
+                t = t.values
             elif type(t) is str:
-                if is_1d(self.input_names):
-                    ind = np.where(np.array(self.input_names) == t)[0][0]
-                    tmp = list(item)
-                    tmp[i] = int(ind)
-                    item = tuple(tmp)
+                if is_1d(self.feature_names):
+                    ind = np.where(np.array(self.feature_names) == t)[0][0]
+                    t = int(ind)
                 else:
                     new_values = []
                     new_data = []
                     for i in range(len(self.values)):
-                        for s,v,d in zip(self.input_names[i], self.values[i], self.data[i]):
+                        for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
                             if s == t:
                                 new_values.append(v)
                                 new_data.append(d)
                     new_self = copy.deepcopy(self)
                     new_self.values = new_values
                     new_self.data = new_data
-                    new_self.input_names = t
+                    new_self.feature_names = t
                     new_self.clustering = None
                     return new_self
-            elif issubclass(type(t), np.ndarray):
+            if issubclass(type(t), np.ndarray):
+                t = [int(j) for j in t]
+            elif issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
+                t = int(t)
+            
+            if t is not orig_t:
                 tmp = list(item)
-                tmp[i] = [int(j) for j in t]
+                tmp[i] = t
                 item = tuple(tmp)
         
-        out = super().__getitem__(item)
-        # if getattr(self, "clustering", None) is not None:
-        #     out.clustering = self.clustering
-        out.transform_history = self.transform_history
-        out.transform_history.append(("__getitem__", (item,)))
-        return out
+        # call slicer for the real work
+        new_self = copy.copy(self)
+        new_self.transform_history.append(("__getitem__", (item,)))
+        new_self._s = self._s.__getitem__(item)
+        
+        return new_self
 
     def __len__(self):
         return self.shape[0]
 
+    def __copy__(self):
+        return Explanation(
+            self.values,
+            self.base_values,
+            self.data,
+            self.display_data,
+            self.instance_names,
+            self.feature_names,
+            self.output_names,
+            self.output_indexes,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.main_effects,
+            self.hierarchical_values,
+            self.clustering
+        )
+
     @property
     def abs(self):
-        new_self = copy.deepcopy(self)
+        new_self = copy.copy(self)
         new_self.values = np.abs(new_self.values)
         new_self.transform_history.append(("abs", None))
         return new_self
 
-    def mean(self, dims):
-        new_self = copy.deepcopy(self)
+    def _numpy_func(self, fname, **kwargs):
+        new_self = copy.copy(self)
+        axis = kwargs.get("axis", None)
 
-        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
-            new_values = self._flatten_input_names()
+        # collapse the slicer to right shape
+        if axis == 0:
+            new_self = new_self[0]
+        elif axis == 1:
+            new_self = new_self[1]
+        elif axis == 2:
+            new_self = new_self[2]
+
+
+        if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
+            new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([np.mean(v) for v in new_values.values()])
+            new_self.values = np.array([getattr(np, fname)(v) for v in new_values.values()])
             new_self.clustering = None
         else:
-            new_self.values = new_self.values.mean(dims)
+            new_self.values = getattr(np, fname)(np.array(self.values), **kwargs)
+            if new_self.data is not None:
+                try:
+                    new_self.data = getattr(np, fname)(np.array(self.data), **kwargs)
+                except:
+                    new_self.data = None
+            if new_self.base_values is not None and issubclass(type(axis), int) and len(self.base_values.shape) > axis:
+                new_self.base_values = getattr(np, fname)(self.base_values, **kwargs)
+            elif issubclass(type(axis), int):
+                new_self.base_values = None
 
-        if dims == 0 and len(getattr(self, "clustering", np.zeros(0)).shape) == 3:
+        if axis == 0 and self.clustering is not None and len(self.clustering.shape) == 3:
             if self.clustering.std(0).sum() < 1e-8:
                 new_self.clustering = self.clustering[0]
             else:
                 new_self.clustering = None
-
-        new_self.data = None
-        new_self.transform_history.append(("mean", (dims,)))
+        
+        new_self.transform_history.append((fname, kwargs))
         
         return new_self
 
+    def mean(self, axis):
+        return self._numpy_func("mean", axis=axis)
+
+    def max(self, axis):
+        return self._numpy_func("max", axis=axis)
+
+    def min(self, axis):
+        return self._numpy_func("min", axis=axis)
+
+    def sum(self, axis):
+        return self._numpy_func("sum", axis=axis)
+
+    @property
+    def abs(self):
+        return self._numpy_func("abs")
+
     @property
     def argsort(self):
-        return np.argsort(-self.values)
+        return self._numpy_func("argsort")
+
+    @property
+    def flip(self):
+        return self._numpy_func("flip")
 
 
     def hclust(self, metric="sqeuclidean", axis=0):
@@ -299,10 +383,10 @@ class Explanation(AttributionExplanation, metaclass=MetaExplanation):
         np.random.seed(prev_seed)
         return self[list(inds)]
 
-    def _flatten_input_names(self):
+    def _flatten_feature_names(self):
         new_values = {}
         for i in range(len(self.values)):
-            for s,v in zip(self.input_names[i], self.values[i]):
+            for s,v in zip(self.feature_names[i], self.values[i]):
                 if s not in new_values:
                     new_values[s] = []
                 new_values[s].append(v)
@@ -317,57 +401,41 @@ class Explanation(AttributionExplanation, metaclass=MetaExplanation):
                 new_values[s].append(v)
         return new_values
 
-    def sum(self, dims):
+    def percentile(self, q, axis=None):
         new_self = copy.deepcopy(self)
-        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
-            new_values = self._flatten_input_names()
-            new_self.input_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([np.sum(v) for v in new_values.values()])
-            new_self.clustering = None
-        else:
-            new_self.values = new_self.values.sum(dims)
-        new_self.data = None
-        new_self.transform_history.append(("sum", (dims,)))
-        return new_self
-
-    def max(self, dims):
-        new_self = copy.deepcopy(self)
-        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
-            new_values = self._flatten_input_names()
-            new_self.input_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([np.max(v) for v in new_values.values()])
-            new_self.clustering = None
-        else:
-            new_self.values = new_self.values.max(dims)
-        new_self.data = None
-        new_self.transform_history.append(("max", (dims,)))
-        return new_self
-
-    def min(self, dims):
-        new_self = copy.deepcopy(self)
-        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
-            new_values = self._flatten_input_names()
-            new_self.input_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([np.min(v) for v in new_values.values()])
-            new_self.clustering = None
-        else:
-            new_self.values = new_self.values.min(dims)
-        new_self.data = None
-        new_self.transform_history.append(("min", (dims,)))
-        return new_self
-
-    def percentile(self, q, dims):
-        new_self = copy.deepcopy(self)
-        if self.input_names is not None and not is_1d(self.input_names) and dims == 0:
-            new_values = self._flatten_input_names()
-            new_self.input_names = np.array(list(new_values.keys()))
+        if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
+            new_values = self._flatten_feature_names()
+            new_self.feature_names = np.array(list(new_values.keys()))
             new_self.values = np.array([np.percentile(v, q) for v in new_values.values()])
             new_self.clustering = None
         else:
-            new_self.values = np.percentile(new_self.values, q, dims)
-        new_self.data = None
-        new_self.transform_history.append(("percentile", (dims,)))
+            new_self.values = np.percentile(new_self.values, q, axis)
+            new_self.data = np.percentile(new_self.data, q, axis)
+        #new_self.data = None
+        new_self.transform_history.append(("percentile", (axis,)))
         return new_self
+
+def compute_output_dims(values, base_values, data):
+    values_shape = _compute_shape(values)
+
+    # input shape matches the data shape
+    if data is not None:
+        data_shape = _compute_shape(data)
+
+    # if we are not given any data we assume it would be the same shape as the given values
+    else: 
+        data_shape = values_shape
+
+    # output shape is known from the base values
+    if base_values is not None:
+        output_shape = _compute_shape(base_values)[1:]
+    else:
+        output_shape = tuple()
+
+    interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
+    values_dims = list(range(len(values_shape)))
+    output_dims = range(len(data_shape) + interaction_order, values_dims[-1])
+    return tuple(output_dims)
 
 def is_1d(val):
     return not (issubclass(type(val[0]), list) or issubclass(type(val[0]), np.ndarray))
