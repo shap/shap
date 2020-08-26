@@ -121,7 +121,7 @@ def beeswarm(shap_values, max_display=None, color=None, feature_order=Explanatio
                     else:
                         new_feature_names.append(c1 + "* - " + c2)
 
-            return summary(
+            return beeswarm(
                 new_shap_values, new_features, new_feature_names,
                 max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
                 title=title, alpha=alpha, show=show, sort=sort,
@@ -437,7 +437,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     else:
                         new_feature_names.append(c1 + "* - " + c2)
 
-            return summary(
+            return summary_legacy(
                 new_shap_values, new_features, new_feature_names,
                 max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
                 title=title, alpha=alpha, show=show, sort=sort,
@@ -464,7 +464,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         pl.subplot(1, max_display, 1)
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
-        summary(
+        summary_legacy(
             proj_shap_values, features[:, sort_inds] if features is not None else None,
             feature_names=feature_names[sort_inds],
             sort=False, show=False, color_bar=False,
@@ -481,7 +481,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
-            summary(
+            summary_legacy(
                 proj_shap_values, features[:, sort_inds] if features is not None else None,
                 sort=False,
                 feature_names=["" for i in range(len(feature_names))],
