@@ -438,7 +438,7 @@ def compute_output_dims(values, base_values, data):
     return tuple(output_dims)
 
 def is_1d(val):
-    return not (issubclass(type(val[0]), list) or issubclass(type(val[0]), np.ndarray))
+    return not (isinstance(val[0], list) or isinstance(val[0], np.ndarray))
 
 class Op():
     pass
@@ -456,7 +456,7 @@ class Percentile(Op):
 def _compute_shape(x):
     if not hasattr(x, "__len__"):
         return tuple()
-    elif len(x) > 0 and type(x[0]) is str:
+    elif len(x) > 0 and isinstance(x[0], str):
         return (None,)
     else:
         if type(x) == dict:
