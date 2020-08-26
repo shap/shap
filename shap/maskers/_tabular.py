@@ -15,7 +15,7 @@ class Tabular(Masker):
     """ A common base class for Independent and Partition.
     """
 
-    def __init__(self, data, max_samples=50, clustering=None):
+    def __init__(self, data, max_samples=100, clustering=None):
         """ This masks out tabular features by integrating over the given background dataset. 
         
         Parameters
@@ -200,7 +200,7 @@ class Independent(Tabular):
     """ This masks out tabular features by integrating over the given background dataset. 
     """
 
-    def __init__(self, data, max_samples=50):
+    def __init__(self, data, max_samples=100):
         """ Build a Independent masker with the given background data.
 
         Parameters
@@ -224,7 +224,7 @@ class Partition(Tabular):
     Unlike Independent, Partition respects a hierarchial structure o
     """
 
-    def __init__(self, data, max_samples=50, clustering="correlation"):
+    def __init__(self, data, max_samples=100, clustering="correlation"):
         """ Build a Partition masker with the given background data and clustering.
 
         Parameters
