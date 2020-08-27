@@ -67,7 +67,7 @@ class Explainer():
                 self.masker = maskers.Partition(masker)
             else:
                 self.masker = maskers.Independent(masker)
-        elif safe_isinstance(masker, "transformers.PreTrainedTokenizer"):
+        elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
             self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
