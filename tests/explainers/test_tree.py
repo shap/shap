@@ -590,22 +590,22 @@ def test_lightgbm_binary():
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X_test, show=False)
 
-def test_lightgbm_ranking():
-    try:
-        import lightgbm
-    except:
-        print("Skipping test_lightgbm_ranking!")
-        return
-    import shap
-    import numpy as np
+# def test_lightgbm_ranking():
+#     try:
+#         import lightgbm
+#     except:
+#         print("Skipping test_lightgbm_ranking!")
+#         return
+#     import shap
+#     import numpy as np
 
-    # train lightgbm ranker model
-    x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
-    model = lightgbm.LGBMRanker()
-    model.fit(x_train, y_train, group=q_train, eval_set=[(x_test, y_test)],
-              eval_group=[q_test], eval_at=[1, 3], early_stopping_rounds=5, verbose=False,
-              callbacks=[lightgbm.reset_parameter(learning_rate=lambda x: 0.95 ** x * 0.1)])
-    _validate_shap_values(model, x_test)
+#     # train lightgbm ranker model
+#     x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
+#     model = lightgbm.LGBMRanker()
+#     model.fit(x_train, y_train, group=q_train, eval_set=[(x_test, y_test)],
+#               eval_group=[q_test], eval_at=[1, 3], early_stopping_rounds=5, verbose=False,
+#               callbacks=[lightgbm.reset_parameter(learning_rate=lambda x: 0.95 ** x * 0.1)])
+#     _validate_shap_values(model, x_test)
 
 # TODO: Test tree_limit argument
 
