@@ -99,7 +99,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         license='MIT',
         packages=[
             'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers._deep',
-            'shap.plots', 'shap.benchmark', 'shap.maskers', 'shap.utils', 'shap.plots.colors'
+            'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils'
         ],
         package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
         cmdclass={'build_ext': build_ext},
