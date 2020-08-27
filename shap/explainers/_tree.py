@@ -843,6 +843,19 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
             self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
 
+        elif safe_isinstance(model, "gpboost.basic.Booster"):
+            assert_import("gpboost")
+            self.model_type = "gpboost"
+            self.original_model = model
+            tree_info = self.original_model.dump_model()["tree_info"]
+            try:
+                self.trees = [SingleTree(e, data=data, data_missing=data_missing) for e in tree_info]
+            except:
+                self.trees = None # we get here because the cext can't handle categorical splits yet
+
+            self.objective = objective_name_map.get(model.params.get("objective", "regression"), None)
+            self.tree_output = tree_output_name_map.get(model.params.get("objective", "regression"), None)
+
         elif safe_isinstance(model, "lightgbm.sklearn.LGBMRegressor"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
