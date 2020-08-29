@@ -6,8 +6,8 @@ import warnings
 import time
 from tqdm.auto import tqdm
 import queue
-from ..utils import assert_import, record_import_error, safe_isinstance, make_masks
-from .._explanation import Explanation
+from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain
+from .. import Explanation
 from .. import maskers
 from ._explainer import Explainer
 from .. import links
@@ -81,6 +81,7 @@ class Partition(Explainer):
 
         self.model = lambda x: np.array(model(x))
         self.expected_value = None
+        self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
             raise ValueError("The passed masker must have a .clustering attribute defined! Try shap.maskers.Partition(data) for example.")
         # if partition_tree is None:
@@ -424,70 +425,78 @@ class Partition(Explainer):
             else:
                 return out
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
-        if max_evals == "auto":
-            max_evals = 100
+        # make sure we have the base value and current value outputs
+        M = len(fm)
+        m00 = np.zeros(M, dtype=np.bool)
+        if self._curr_base_value is None or getattr(self.masker, "fixed_background", False):
+            self._curr_base_value = fm(m00.reshape(1,-1))[0]
+        f11 = fm(~m00.reshape(1,-1))[0]
 
         if callable(self.masker.clustering):
             self._clustering = self.masker.clustering(*row_args)
             self._mask_matrix = make_masks(self._clustering)
-        self.multi_output = False
-        # allocate space for our outputs
-        if self.multi_output:
-            if output_indexes is not None:
-                out_shape = (2*self._clustering.shape[0]+1, output_indexes_len(output_indexes))
-            else:
-                out_shape = (2*self._clustering.shape[0]+1, len(self.curr_expected_value))
+
+        if hasattr(self._curr_base_value, 'shape') and len(self._curr_base_value.shape) > 0:
+            if outputs is None:
+                outputs = np.arange(len(self._curr_base_value))
+            elif isinstance(outputs, OpChain):
+                outputs = outputs.apply(Explanation(f11)).values
+            
+            out_shape = (2*self._clustering.shape[0]+1, len(outputs))
         else:
             out_shape = (2*self._clustering.shape[0]+1,)
+
+
+        if max_evals == "auto":
+            max_evals = 100
+
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        output_indexes = None
         fixed_context = 1
-        output_indexes, base_value = self.owen(fm, max_evals // 2, output_indexes, fixed_context, batch_size, silent)
+        self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, fixed_context, batch_size, silent)
 
-        if False:
-            if self.multi_output:
-                return [self.dvalues[:,i] for i in range(self.dvalues.shape[1])], oinds
-            else:
-                return self.dvalues.copy(), oinds   
-        else:
-            # drop the interaction terms down onto self.values
-            self.values[:] = self.dvalues
-            M = len(fm)
-            def lower_credit(i, value=0):
-                if i < M:
-                    self.values[i] += value
-                    return
-                li = int(self._clustering[i-M,0])
-                ri = int(self._clustering[i-M,1])
-                group_size = int(self._clustering[i-M,3])
-                lsize = int(self._clustering[li-M,3]) if li >= M else 1
-                rsize = int(self._clustering[ri-M,3]) if ri >= M else 1
-                assert lsize+rsize == group_size
+        # if False:
+        #     if self.multi_output:
+        #         return [self.dvalues[:,i] for i in range(self.dvalues.shape[1])], oinds
+        #     else:
+        #         return self.dvalues.copy(), oinds   
+        # else:
+        # drop the interaction terms down onto self.values
+        self.values[:] = self.dvalues
+        
+        def lower_credit(i, value=0):
+            if i < M:
                 self.values[i] += value
-                lower_credit(li, self.values[i] * lsize / group_size)
-                lower_credit(ri, self.values[i] * rsize / group_size)
-            lower_credit(len(self.dvalues) - 1)
+                return
+            li = int(self._clustering[i-M,0])
+            ri = int(self._clustering[i-M,1])
+            group_size = int(self._clustering[i-M,3])
+            lsize = int(self._clustering[li-M,3]) if li >= M else 1
+            rsize = int(self._clustering[ri-M,3]) if ri >= M else 1
+            assert lsize+rsize == group_size
+            self.values[i] += value
+            lower_credit(li, self.values[i] * lsize / group_size)
+            lower_credit(ri, self.values[i] * rsize / group_size)
+        lower_credit(len(self.dvalues) - 1)
             
-
         return {
-            "values": self.values[:len(fm)].copy(),
-            "expected_values": base_value,
-            "mask_shapes": fm.mask_shapes,
+            "values": self.values[:M].copy(),
+            "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],
+            "mask_shapes": [s + out_shape[1:] for s in fm.mask_shapes],
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),
             "clustering": self._clustering
         }
 
-    def owen(self, fm, npartitions, output_indexes, fixed_context, batch_size, silent):
+    def owen(self, fm, f00, f11, npartitions, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
         """
         
@@ -496,23 +505,23 @@ class Partition(Explainer):
         #masks = np.zeros(2*len(inds)+1, dtype=np.int)
         M = len(fm)
         m00 = np.zeros(M, dtype=np.bool)
-        f00 = fm(m00.reshape(1,-1))[0]
+        #f00 = fm(m00.reshape(1,-1))[0]
         base_value = f00
-        f11 = fm(~m00.reshape(1,-1))[0]
+        #f11 = fm(~m00.reshape(1,-1))[0]
         #f11 = self._reshaped_model(r(~m00, x)).mean(0)
         ind = len(self.dvalues)-1
 
         # make sure output_indexes is a list of indexes
         if output_indexes is not None:
-            assert self.multi_output, "output_indexes is only valid for multi-output models!"
-            inds = output_indexes.apply(f11, 0)
-            out_len = output_indexes_len(output_indexes)
-            if output_indexes.startswith("max("):
-                output_indexes = np.argsort(-f11)[:out_len]
-            elif output_indexes.startswith("min("):
-                output_indexes = np.argsort(f11)[:out_len]
-            elif output_indexes.startswith("max(abs("):
-                output_indexes = np.argsort(np.abs(f11))[:out_len]
+            # assert self.multi_output, "output_indexes is only valid for multi-output models!"
+            # inds = output_indexes.apply(f11, 0)
+            # out_len = output_indexes_len(output_indexes)
+            # if output_indexes.startswith("max("):
+            #     output_indexes = np.argsort(-f11)[:out_len]
+            # elif output_indexes.startswith("min("):
+            #     output_indexes = np.argsort(f11)[:out_len]
+            # elif output_indexes.startswith("max(abs("):
+            #     output_indexes = np.argsort(np.abs(f11))[:out_len]
         
             f00 = f00[output_indexes]
             f11 = f11[output_indexes]
@@ -543,7 +552,15 @@ class Partition(Explainer):
                 # get the left and right children of this cluster
                 lind = int(self._clustering[ind-M, 0]) if ind >= M else -1
                 rind = int(self._clustering[ind-M, 1]) if ind >= M else -1
-                distance = self._clustering[ind-M, 2] if ind >= M else -1
+                
+                # get the distance of this cluster's children
+                if ind < M:
+                    distance = -1
+                else:
+                    if self._clustering.shape[1] >= 3:
+                        distance = self._clustering[ind-M, 2]
+                    else:
+                        distance = 1
 
                 # check if we are a leaf node (or other negative distance cluster) and so should terminate our decent
                 if distance < 0:

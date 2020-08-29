@@ -158,8 +158,8 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         color=[colors.blue_rgb if values[feature_inds[i]] <= 0 else colors.red_rgb for i in range(len(y_pos))]
     )
 
-    # draw the yticks
-    pl.yticks(list(y_pos) + list(y_pos), yticklabels + [l.split('=')[-1] for l in yticklabels], fontsize=13)
+    # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
+    pl.yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [l.split('=')[-1] for l in yticklabels], fontsize=13)
 
     xlen = pl.xlim()[1] - pl.xlim()[0]
     fig = pl.gcf()

@@ -30,7 +30,7 @@ class Text(Masker):
                 self.mask_token_str = ""
 
         # note if this masker can use different background for different samples
-        self.variable_background = self.mask_token is not None
+        self.fixed_background = self.mask_token is None
 
         self.default_batch_size = 5
 

@@ -195,7 +195,7 @@ class Explainer():
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
             row_result = self.explain_row(
                 *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
-                batch_size=batch_size, silent=silent, **kwargs
+                batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
             )
             values.append(row_result.get("values", None))
             expected_values.append(row_result.get("expected_values", None))
@@ -273,7 +273,7 @@ class Explainer():
             ))
         return out[0] if len(out) == 1 else out
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, silent, **kwargs):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, outputs, silent, **kwargs):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
 
         This is an abstract method meant to be implemented by each subclass.

@@ -39,7 +39,7 @@ class Permutation(Explainer):
         super(Permutation, self).__init__(model, masker, link=link)
 
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
 

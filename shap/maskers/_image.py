@@ -24,9 +24,12 @@ class Image(Masker):
         if shape is None:
             if type(mask_value) is str:
                 raise TypeError("When the mask_value is a string the shape parameter must be given!")
-            self.shape = mask_value.shape
+            self.input_shape = mask_value.shape # the (1,) is because we only return a single masked sample to average over
         else:
-            self.shape = shape
+            self.input_shape = shape
+        
+        # This is the shape of the masks we expect
+        self.shape = (1, np.prod(self.input_shape)) # the (1, ...) is because we only return a single masked sample to average over
         
         self.blur_kernel = None
         if issubclass(type(mask_value), np.ndarray):
@@ -37,21 +40,21 @@ class Image(Masker):
             if mask_value.startswith("blur("):
                 self.blur_kernel = tuple(map(int, mask_value[5:-1].split(",")))
         else:
-            self.mask_value = np.ones(self.shape).flatten() * mask_value
+            self.mask_value = np.ones(self.input_shape).flatten() * mask_value
         self.build_partition_tree()
 
         # note if this masker can use different background for different samples
-        self.variable_background = type(self.mask_value) is str
+        self.fixed_background = type(self.mask_value) is not str
         
-        self.scratch_mask = np.zeros(self.shape[:-1], dtype=np.bool)
+        #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=np.bool)
         self.last_xid = None
     
-    def __call__(self, x, mask=None):
+    def __call__(self, mask, x):
 
-        if np.prod(x.shape) != np.prod(self.shape):
+        if np.prod(x.shape) != np.prod(self.input_shape):
             raise Exception("The length of the image to be masked must match the shape given in the " + \
                             "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
-                            " != "+" * ".join([str(i) for i in self.shape]))
+                            " != "+" * ".join([str(i) for i in self.input_shape]))
 
         # unwrap single element lists (which are how single input models look in multi-input format)
         if type(x) is list and len(x) == 1:
@@ -69,7 +72,7 @@ class Image(Masker):
         if type(self.mask_value) is str:
             if self.blur_kernel is not None:
                 if self.last_xid != id(x):
-                    self.blur_value = cv2.blur(x.reshape(self.shape), self.blur_kernel).flatten()
+                    self.blur_value = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).flatten()
                     self.last_xid = id(x)
                 out = x.copy()
                 out[~mask] = self.blur_value[~mask]
@@ -88,14 +91,14 @@ class Image(Masker):
         cv2.blur()
         
     def inpaint(self, x, mask, method):
-        reshaped_mask = mask.reshape(self.shape).astype(np.uint8).max(2)
-        if reshaped_mask.sum() == np.prod(self.shape[:-1]):
-            out = x.reshape(self.shape).copy()
+        reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(2)
+        if reshaped_mask.sum() == np.prod(self.input_shape[:-1]):
+            out = x.reshape(self.input_shape).copy()
             out[:] = out.mean((0,1))
             return out.flatten()
         else:
             return cv2.inpaint(
-                x.reshape(self.shape).astype(np.uint8),
+                x.reshape(self.input_shape).astype(np.uint8),
                 reshaped_mask,
                 inpaintRadius=3,
                 flags=getattr(cv2, method)
@@ -106,24 +109,24 @@ class Image(Masker):
         """
         
         xmin = 0
-        xmax = self.shape[0]
+        xmax = self.input_shape[0]
         ymin = 0
-        ymax = self.shape[1]
+        ymax = self.input_shape[1]
         zmin = 0
-        zmax = self.shape[2]
+        zmax = self.input_shape[2]
         #total_xwidth = xmax - xmin
         total_ywidth = ymax - ymin
         total_zwidth = zmax - zmin
         q = queue.PriorityQueue()
-        M = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
-        self.partition_tree = np.zeros((M - 1, 2))
+        M = int((xmax - xmin) * (ymax - ymin) * (zmax - zmin))
+        self.clustering = np.zeros((M - 1, 4))
         q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
-        ind = len(self.partition_tree) - 1
+        ind = len(self.clustering) - 1
         while not q.empty():
-            _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
+            neg_size, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
             
             if parent_ind >= 0:
-                self.partition_tree[parent_ind, 0 if is_left else 1] = ind
+                self.clustering[parent_ind, 0 if is_left else 1] = ind + M
 
             # make sure we line up with a flattened indexing scheme
             if ind < 0:
@@ -169,4 +172,11 @@ class Image(Masker):
                 q.put((-rsize, rxmin, rxmax, rymin, rymax, rzmin, rzmax, ind, False))
 
             ind -= 1
-        self.partition_tree += int(M)
+        
+        # fill in the group sizes
+        for i in range(len(self.clustering)):
+            li = int(self.clustering[i,0])
+            ri = int(self.clustering[i,1])
+            lsize = 1 if li < M else self.clustering[li-M,3]
+            rsize = 1 if ri < M else self.clustering[ri-M,3]
+            self.clustering[i,3] = lsize + rsize
