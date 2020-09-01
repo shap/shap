@@ -71,7 +71,8 @@ class Explanation(object, metaclass=MetaExplanation):
         upper_bounds = None,
         main_effects = None,
         hierarchical_values = None,
-        clustering = None
+        clustering = None,
+        cohorts = None
     ):
         self.transform_history = []
 
@@ -104,7 +105,8 @@ class Explanation(object, metaclass=MetaExplanation):
             upper_bounds = lower_bounds,
             main_effects = main_effects,
             hierarchical_values = hierarchical_values, #Obj(hierarchical_values, (0,None)),
-            clustering = clustering
+            clustering = clustering,
+            cohorts = cohorts,
         )
 
     @property
@@ -186,6 +188,13 @@ class Explanation(object, metaclass=MetaExplanation):
     @clustering.setter
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
+
+    @property
+    def cohorts(self):
+        return self._s.cohorts
+    @cohorts.setter
+    def cohorts(self, new_cohorts):
+        self._s.cohorts = new_cohorts
         
     def __repr__(self):
         out = ".values =\n"+self.values.__repr__()
@@ -230,9 +239,7 @@ class Explanation(object, metaclass=MetaExplanation):
                     new_self.feature_names = t
                     new_self.clustering = None
                     return new_self
-            if issubclass(type(t), np.ndarray):
-                t = [int(j) for j in t]
-            elif issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
+            if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
             
             if t is not orig_t:
