@@ -11,10 +11,11 @@ from . import colors
 import numpy as np
 import scipy
 import copy
-from .. import Explanation
+from .. import Explanation, Cohorts
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
+# TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, cluster_threshold=0.5, merge_cohorts=False, show=True):
     """ Create a bar plot of a set of SHAP values.
 
@@ -25,7 +26,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     Parameters
     ----------
-    shap_values : shap.Explanation or dictionary of shap.Explanation objects
+    shap_values : shap.Explanation or shap.Cohorts or dictionary of shap.Explanation objects
         A single row of a SHAP Explanation object (i.e. shap_values[0]) or a multi-row Explanation
         object that we want to summarize.
 
@@ -42,25 +43,21 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
-        if getattr(shap_values, "cohorts", None) is None:
-            shap_values = {"": shap_values}
-        else:
-            cohorts = {}
-            for name in np.unique(shap_values.cohorts):
-                cohorts[name] = shap_values[shap_values.cohorts == name]
-            shap_values = cohorts
+        cohorts = {"": shap_values}
+    elif isinstance(shap_values, Cohorts):
+        cohorts = shap_values.cohorts
+    else:
+        assert isinstance(shap_values, dict), "You must pass an Explanation object, Cohorts object, or dictionary to bar plot!"
 
     # unpack our list of Explanation objects we need to plot
-    cohort_labels = list(shap_values.keys())
-    cohort_exps = list(shap_values.values())
+    cohort_labels = list(cohorts.keys())
+    cohort_exps = list(cohorts.values())
     for i in range(len(cohort_exps)):
         if len(cohort_exps[i].shape) == 2:
             cohort_exps[i] = cohort_exps[i].abs.mean(0)
-        assert isinstance(cohort_exps[i], Explanation), "The shap_values paramemter must be a Explanation object or dictionary of Explanation objects!"
+        assert isinstance(cohort_exps[i], Explanation), "The shap_values paramemter must be a Explanation object, Cohorts object, or dictionary of Explanation objects!"
         assert cohort_exps[i].shape == cohort_exps[0].shape, "When passing several Explanation objects they must all have the same shape!"
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
-    # shap_values_list = shap_values
-    # shap_values = shap_values[0]
 
     # unpack the Explanation object
     features = cohort_exps[0].data
@@ -73,7 +70,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         partition_tree = clustering
     if partition_tree is not None:
         assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
-    transform_history = cohort_exps[0].transform_history
+    op_history = cohort_exps[0].op_history
     values = np.array([cohort_exps[i].values for i in range(len(cohort_exps))])
 
     if len(values[0]) == 0:
@@ -85,13 +82,22 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     # build our auto xlabel based on the transform history of the Explanation object
     xlabel = "SHAP value"
-    for op in transform_history:
-        if op[0] == "abs":
+    for op in op_history:
+        if op["name"] == "abs":
             xlabel = "|"+xlabel+"|"
-        elif op[0] == "__getitem__":
-            pass # no need for slicing to effect our label
+        elif op["name"] == "__getitem__":
+            pass # no need for slicing to effect our label, it will be used later to find the sizes of cohorts
         else:
-            xlabel = str(op[0])+"("+xlabel+")"
+            xlabel = str(op["name"])+"("+xlabel+")"
+
+    # find how many instances are in each cohort (if they were created from an Explanation object)
+    cohort_sizes = []
+    for exp in cohort_exps:
+        for op in exp.op_history:
+            if op.get("collapsed_instances", False): # see if this if the first op to collapse the instances
+                cohort_sizes.append(op["prev_shape"][0])
+                break
+    
 
     # unwrap any pandas series
     if str(type(features)) == "<class 'pandas.core.series.Series'>":
@@ -186,7 +192,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             y_pos + ypos_offset, values[i,feature_inds],
             bar_width, align='center',
             color=[colors.blue_rgb if values[i,feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
-            hatch=patterns[i], edgecolor=(1,1,1,0.8), label=cohort_labels[i]
+            hatch=patterns[i], edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)

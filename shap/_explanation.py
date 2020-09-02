@@ -5,6 +5,7 @@ import scipy as sp
 import sys
 import warnings
 import copy
+import sklearn
 from slicer import Slicer, Alias
 # from ._order import Order
 from .utils._general import OpChain
@@ -71,10 +72,9 @@ class Explanation(object, metaclass=MetaExplanation):
         upper_bounds = None,
         main_effects = None,
         hierarchical_values = None,
-        clustering = None,
-        cohorts = None
+        clustering = None
     ):
-        self.transform_history = []
+        self.op_history = []
 
         # cloning. TODO: better cloning :)
         if issubclass(type(values), Explanation):
@@ -104,9 +104,8 @@ class Explanation(object, metaclass=MetaExplanation):
             lower_bounds = lower_bounds,
             upper_bounds = lower_bounds,
             main_effects = main_effects,
-            hierarchical_values = hierarchical_values, #Obj(hierarchical_values, (0,None)),
-            clustering = clustering,
-            cohorts = cohorts,
+            hierarchical_values = hierarchical_values,
+            clustering = clustering
         )
 
     @property
@@ -189,12 +188,23 @@ class Explanation(object, metaclass=MetaExplanation):
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
 
-    @property
-    def cohorts(self):
-        return self._s.cohorts
-    @cohorts.setter
-    def cohorts(self, new_cohorts):
-        self._s.cohorts = new_cohorts
+    def cohorts(self, cohorts):
+        """ Split this explanation into several cohorts.
+
+        Parameters
+        ----------
+        cohorts : int or array
+            If this is an integer then we auto build that many cohorts using a decision tree. If this is
+            an array then we treat that as an array of cohort names/ids for each instance.
+        """
+        
+        if isinstance(cohorts, int):
+            return _auto_cohorts(self, max_cohorts=cohorts)
+        elif isinstance(cohorts, (list, tuple, np.ndarray)):
+            cohorts = np.array(cohorts)
+            return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
+        else:
+            raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
         
     def __repr__(self):
         out = ".values =\n"+self.values.__repr__()
@@ -249,16 +259,20 @@ class Explanation(object, metaclass=MetaExplanation):
         
         # call slicer for the real work
         new_self = copy.copy(self)
-        new_self.transform_history.append(("__getitem__", (item,)))
         new_self._s = self._s.__getitem__(item)
-        
+        new_self.op_history.append({
+            "name": "__getitem__",
+            "args": (item,),
+            "prev_shape": self.shape
+        })
+
         return new_self
 
     def __len__(self):
         return self.shape[0]
 
     def __copy__(self):
-        return Explanation(
+        new_exp = Explanation(
             self.values,
             self.base_values,
             self.data,
@@ -273,12 +287,17 @@ class Explanation(object, metaclass=MetaExplanation):
             self.hierarchical_values,
             self.clustering
         )
+        new_exp.op_history = copy.copy(self.op_history)
+        return new_exp
 
     @property
     def abs(self):
         new_self = copy.copy(self)
         new_self.values = np.abs(new_self.values)
-        new_self.transform_history.append(("abs", None))
+        new_self.op_history.append({
+            "name": "abs",
+            "prev_shape": self.shape
+        })
         return new_self
 
     def _numpy_func(self, fname, **kwargs):
@@ -292,7 +311,8 @@ class Explanation(object, metaclass=MetaExplanation):
             new_self = new_self[1]
         elif axis == 2:
             new_self = new_self[2]
-
+        if axis in [0,1,2]:
+            new_self.op_history = new_self.op_history[:-1] # pop off the slicing operation we just used
 
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
@@ -317,7 +337,12 @@ class Explanation(object, metaclass=MetaExplanation):
             else:
                 new_self.clustering = None
         
-        new_self.transform_history.append((fname, kwargs))
+        new_self.op_history.append({
+            "name": fname,
+            "kwargs": kwargs,
+            "prev_shape": self.shape,
+            "collapsed_instances": axis == 0
+        })
         
         return new_self
 
@@ -419,7 +444,12 @@ class Explanation(object, metaclass=MetaExplanation):
             new_self.values = np.percentile(new_self.values, q, axis)
             new_self.data = np.percentile(new_self.data, q, axis)
         #new_self.data = None
-        new_self.transform_history.append(("percentile", (axis,)))
+        new_self.op_history.append({
+            "name": "percentile",
+            "args": (axis,),
+            "prev_shape": self.shape,
+            "collapsed_instances": axis == 0
+        })
         return new_self
 
 def compute_output_dims(values, base_values, data):
@@ -480,8 +510,77 @@ def _compute_shape(x):
             return (len(x),) + _compute_shape(x[0])
         else:
             first_shape = _compute_shape(x[0])
-            for i in range(1,len(x)):
-                shape = _compute_shape(x[i])
-                if shape != first_shape:
-                    return (len(x), None)
-            return (len(x),) + first_shape
+            if first_shape == tuple():
+                return (len(x),)
+            else: # we have an array of arrays...
+                for i in range(1,len(x)):
+                    shape = _compute_shape(x[i])
+                    if shape != first_shape:
+                        return (len(x), None)
+                return (len(x),) + first_shape
+
+class Cohorts():
+    def __init__(self, **kwargs):
+        self.cohorts = kwargs
+        for k in self.cohorts:
+            assert isinstance(self.cohorts[k], Explanation), "All the arguments to a Cohorts set must be Explanation objects!"
+
+    def __getitem__(self, item):
+        new_cohorts = Cohorts()
+        for k in self.cohorts:
+            new_cohorts.cohorts[k] = self.cohorts[k].__getitem__(item)
+        return new_cohorts
+    
+    def __getattr__(self, name):
+        new_cohorts = Cohorts()
+        for k in self.cohorts:
+            new_cohorts.cohorts[k] = getattr(self.cohorts[k], name)
+        return new_cohorts
+    
+    def __call__(self, *args, **kwargs):
+        new_cohorts = Cohorts()
+        for k in self.cohorts:
+            new_cohorts.cohorts[k] = self.cohorts[k].__call__(*args, **kwargs)
+        return new_cohorts
+
+    def __repr__(self):
+        return f"<shap._explanation.Cohorts object with {len(self.cohorts)} cohorts of sizes: {[v.shape for v in self.cohorts.values()]}>"
+
+
+def _auto_cohorts(shap_values, max_cohorts):
+    """ This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values.
+    """
+
+    # fit a decision tree that well spearates the SHAP values 
+    m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
+    m.fit(shap_values.data, shap_values.values)
+
+    # group instances by their decision paths
+    paths = m.decision_path(shap_values.data).toarray()
+    unique_paths = np.unique(m.decision_path(shap_values.data).todense(), axis=0)
+    path_names = []
+
+    # mark each instance with a path name
+    for i in range(shap_values.shape[0]):
+        name = ""
+        for j in range(len(paths[i])):
+            if paths[i,j] > 0:
+                feature = m.tree_.feature[j]
+                threshold = m.tree_.threshold[j]
+                val = shap_values.data[i,feature]
+                if feature >= 0:
+                    name += str(shap_values.feature_names[feature])
+                    if val < threshold:
+                        name += " < "
+                    else:
+                        name += " >= "
+                    name += str(threshold) + " & "
+        path_names.append(name[:-3]) # the -3 strips off the last unneeded ' & '
+    path_names = np.array(path_names)
+    
+    # split the instances into cohorts by their path names
+    cohorts = {}
+    for name in np.unique(path_names):
+        cohorts[name] = shap_values[path_names == name]
+    
+    return Cohorts(**cohorts)

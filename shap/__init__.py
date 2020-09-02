@@ -9,7 +9,7 @@ __version__ = '0.36.0'
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
 
-from ._explanation import Explanation
+from ._explanation import Explanation, Cohorts
 
 # explainers
 from .explainers._explainer import Explainer
