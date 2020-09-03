@@ -287,11 +287,11 @@ class OpChain():
             op,args,kwargs = o
             out += "."
             out += op
-            if (args is not None and len(args) > 0) or (kwargs is not Nont and len(kwargs) > 0):
+            if (args is not None and len(args) > 0) or (kwargs is not None and len(kwargs) > 0):
                 out += "("
                 if args is not None and len(args) > 0:
                     out += ", ".join([str(v) for v in args])
-                if kwargs is not Nont and len(kwargs) > 0:
+                if kwargs is not None and len(kwargs) > 0:
                     out += ", " + ", ".join([str(k)+"="+str(kwargs[k]) for k in kwargs.keys()])
                 out += ")"
         return out

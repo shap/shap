@@ -1,6 +1,11 @@
-from shap.common import safe_isinstance
+from shap.utils import safe_isinstance
+from shap.maskers import Text, Partition
+import shap.datasets
 import matplotlib.pyplot as pl
 import sklearn
+import nlp 
+import transformers
+import xgboost 
 import numpy as np
 from tqdm.auto import tqdm
 import time
@@ -18,7 +23,7 @@ class SequentialPerturbation():
         # then we make a masker that perturbs features independently
         if type(self.masker) == np.ndarray:
             self.masker_data = self.masker
-            self.masker = lambda x, mask: x * mask + self.masker_data * np.invert(mask)
+            self.masker = lambda mask, x: x * mask + self.masker_data * np.invert(mask)
         
         # define our sort order
         if self.sort_order == "positive":
@@ -61,7 +66,7 @@ class SequentialPerturbation():
             
             # compute the fully masked score
             values = np.zeros(len(X[i])+1)
-            masked = self.masker(X[i], mask)
+            masked = self.masker(mask, X[i])
             values[0] = self.score_function(None if y is None else y[i], self.f(masked).mean(0))
 
             # loop over all the features
@@ -73,7 +78,7 @@ class SequentialPerturbation():
                 if not ((self.sort_order == "positive" and attributions[i][oind] <= 0) or \
                         (self.sort_order == "negative" and attributions[i][oind] >= 0)):
                     mask[oind] = self.perturbation == "keep"
-                    masked = self.masker(X[i], mask)
+                    masked = self.masker(mask, X[i])
                     curr_val = self.score_function(None if y is None else y[i], self.f(masked).mean(0))
                 values[j+1] = curr_val
             svals.append(values)
@@ -127,4 +132,21 @@ class SequentialPerturbation():
             pl.gca().invert_yaxis()
         pl.legend()
         pl.show()
-        
+
+# Example 
+
+X,y = shap.datasets.adult()
+model = xgboost.XGBClassifier().fit(X, y)
+
+f = lambda x: model.predict(x, output_margin=True)
+masker = Partition(X[:500])
+explainer = shap.Explainer(f, masker)(X[:500])
+shap_values = explainer.values
+data = explainer.data
+score_function = lambda y, out: out
+sort_order = 'absolute'
+perturbation = 'keep'
+
+sp = SequentialPerturbation(f, masker, sort_order, score_function, perturbation)
+sp.score(shap_values, data)
+sp.plot()
