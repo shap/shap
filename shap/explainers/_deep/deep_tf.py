@@ -104,6 +104,7 @@ class TFDeep(Explainer):
         if tf.executing_eagerly():
             if type(model) is tuple or type(model) is list:
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
+                from tensorflow.keras import Model
                 self.model = Model(model[0], model[1])
             else:
                 self.model = model
