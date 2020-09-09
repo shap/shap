@@ -5,6 +5,7 @@ from numba import jit
 import sklearn
 import warnings
 from ._general import safe_isinstance
+from ._show_progress import show_progress
 
 
 def partition_tree(X, metric="correlation"):
@@ -85,99 +86,74 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     D = sp.spatial.distance.pdist(X, metric)
     cluster_matrix = sp.cluster.hierarchy.complete(D)
     return sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
+
+def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
+    """ Compute reducancy distances scaled from 0-1 amoung all the feature in X relative to the label y.
     
-    # merge clusters, rotating them to make the end points match as best we can
-    # sets = [[i] for i in range(X.shape[0])]
-    # for i in range(cluster_matrix.shape[0]):
-    #     s1 = sets[int(cluster_matrix[i,0])]
-    #     s2 = sets[int(cluster_matrix[i,1])]
-
-    #     # compute distances between the end points of the lists
-    #     d_s1_s2 = pdist(np.vstack([X[s1[-1],:], X[s2[0],:]]), metric)[0]
-    #     d_s1_s2r = pdist(np.vstack([X[s1[-1],:], X[s2[-1],:]]), metric)[0]
-    #     d_s1r_s2 = pdist(np.vstack([X[s1[0],:], X[s2[0],:]]), metric)[0]
-    #     d_s1r_s2r = pdist(np.vstack([X[s1[0],:], X[s2[-1],:]]), metric)[0]
-    #     d_s2_s1 = pdist(np.vstack([X[s2[-1],:], X[s1[0],:]]), metric)[0]
-    #     d_s2_s1r = pdist(np.vstack([X[s2[-1],:], X[s1[-1],:]]), metric)[0]
-    #     d_s2r_s1 = pdist(np.vstack([X[s2[0],:], X[s1[0],:]]), metric)[0]
-    #     d_s2r_s1r = pdist(np.vstack([X[s2[0],:], X[s1[-1],:]]), metric)[0]
-
-    #     # if we are anchoring the first element to the start of the list then we invalidate orderings
-    #     # that would move that element into a different position
-    #     if anchor_first:
-    #         max_val = max(d_s1_s2, d_s1_s2r, d_s1r_s2, d_s1r_s2r, d_s2_s1, d_s2_s1r, d_s2r_s1, d_s2r_s1r) + 1
-    #         if s1[0] == 0:
-    #             d_s1r_s2 = max_val
-    #             d_s1r_s2r = max_val
-    #             d_s2_s1 = max_val
-    #             d_s2_s1r = max_val
-    #             d_s2r_s1 = max_val
-    #             d_s2r_s1r = max_val
-    #         elif s2[0] == 0:
-    #             d_s1_s2 = max_val
-    #             d_s1_s2r = max_val
-    #             d_s1r_s2 = max_val
-    #             d_s1r_s2r = max_val
-    #             d_s2r_s1 = max_val
-    #             d_s2r_s1r = max_val
-
-    #     # concatenete the lists in the way the minimizes the difference between
-    #     # the samples at the junction
-    #     best = min(d_s1_s2, d_s1_s2r, d_s1r_s2, d_s1r_s2r, d_s2_s1, d_s2_s1r, d_s2r_s1, d_s2r_s1r)
-    #     if best == d_s1_s2:
-    #         sets.append(s1 + s2)
-    #     elif best == d_s1_s2r:
-    #         sets.append(s1 + list(reversed(s2)))
-    #     elif best == d_s1r_s2:
-    #         sets.append(list(reversed(s1)) + s2)
-    #     elif best == d_s1r_s2r:
-    #         sets.append(list(reversed(s1)) + list(reversed(s2)))
-    #     elif best == d_s2_s1:
-    #         sets.append(s2 + s1)
-    #     elif best == d_s2_s1r:
-    #         sets.append(s2 + list(reversed(s1)))
-    #     elif best == d_s2r_s1:
-    #         sets.append(list(reversed(s2)) + s1)
-    #     elif best == d_s2r_s1r:
-    #         sets.append(list(reversed(s2)) + list(reversed(s1)))
+    Distances are measured by training univariate XGBoost models of y for all the features, and then
+    predicting the output of these models using univariate XGBoost models of other features. If one
+    feature can effectively predict the output of another feature's univariate XGBoost model of y,
+    then the second feature is redundant with the first with respect to y. A distance of 1 corresponds
+    to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
+    proportion of variance explained). Note these distances are not symmetric.
+    """
     
-    # return sets[-1]
-
-# we can build better clsutering trees by doing grouping based on reducing xgb losses
-def xgboost_r2(X, y, random_state=0):
     import xgboost
+    
+    # pick our train/text split
     X_train,X_test,y_train,y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
-    model = xgboost.XGBRegressor(n_estimators=500)
-    model.fit(X_train, y_train, eval_set=[(X_test, y_test)], early_stopping_rounds=10, verbose=False)
+    # fit an XGBoost model on each of the features
+    test_preds = []
+    train_preds = []
+    for i in range(X.shape[1]):
+        model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1)
+        model.fit(X_train[:,i:i+1], y_train, eval_set=[(X_test[:,i:i+1], y_test)], early_stopping_rounds=early_stopping_rounds, verbose=False)
+        train_preds.append(model.predict(X_train[:,i:i+1]))
+        test_preds.append(model.predict(X_test[:,i:i+1]))
+    train_preds = np.vstack(train_preds).T
+    test_preds = np.vstack(test_preds).T
 
-    # return the R^2 value
-    return 1 - np.mean((y - model.predict(X))**2) / np.mean((y - np.mean(y))**2)
-
-def retrain_hclustering(X, y, model=xgboost_r2, random_state=0):
-    Xtmp = X.values
-    dist = np.zeros((Xtmp.shape[1], Xtmp.shape[1]))
-    for i in range(Xtmp.shape[1]):
-        for j in range(i, Xtmp.shape[1]):
-            dist[i,j] = dist[j,i] = xgboost_r2(Xtmp[:,[i,j]], y, random_state=random_state)
+    # fit XGBoost models to predict the outputs of other XGBoost models to see how redundant features are
+    dist = np.zeros((X.shape[1], X.shape[1]))
+    for i in show_progress(range(X.shape[1]), total=X.shape[1]):
+        for j in range(X.shape[1]):
+            if i == j:
+                dist[i,j] = 0
+                continue
             
-    #dist2 = np.zeros((Xtmp.shape[1], Xtmp.shape[1]))
-    out = []
-    for i in range(Xtmp.shape[1]):
-        for j in range(i+1, Xtmp.shape[1]):
-            if i != j:
-                out.append(1 - (dist[i,i] + dist[j,j] - dist[i,j]) / dist[i,j])
+            # skip features that have not variance in their predictions (likely because the feature is a constant)
+            preds_var = np.var(test_preds[:,i])
+            if preds_var < 1e-4:
+                warnings.warn(f"No/low signal found from feature {i} (this is typically caused by constant or near-constant features)! Cluster distances can't be computed for it (so setting all distances to 1).")
+                r2 = 0
+            
+            # fit the model
+            else:
+                model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1)
+                model.fit(X_train[:,j:j+1], train_preds[:,i], eval_set=[(X_test[:,j:j+1], test_preds[:,i])], early_stopping_rounds=early_stopping_rounds, verbose=False)
+                r2 = max(0, 1 - np.mean((test_preds[:,i] - model.predict(X_test[:,j:j+1]))**2) / preds_var)
+            dist[i,j] = 1 - r2
     
-    return np.array(out)
+    return dist
 
 def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
     if metric == "auto":
         if y is not None:
-            metric = "retrain_xgboost_r2"
+            metric = "xgboost_distances_r2"
     
     # build the distance matrix
-    if metric == "retrain_xgboost_r2":
-        dist = retrain_hclustering(X, y, model=xgboost_r2, random_state=random_state)
+    if metric == "xgboost_distances_r2":
+        dist_full = xgboost_distances(X, y, random_state=random_state)
+        
+        # build a condensed upper triangular version by taking the max distance from either direction
+        dist = []
+        for i in range(dist_full.shape[0]):
+            for j in range(i+1, dist_full.shape[1]):
+                if i != j:
+                    dist.append(max(dist_full[i,j], dist_full[j,i]))
+        dist = np.array(dist)
+    
     else:
         if y is not None:
             warnings.warn("Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!")

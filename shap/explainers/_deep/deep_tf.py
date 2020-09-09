@@ -1,8 +1,8 @@
 import numpy as np
 import warnings
-from shap.explainers._explainer import Explainer
+from .._explainer import Explainer
 from distutils.version import LooseVersion
-from shap.explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
 keras = None
 tf = None
 tf_ops = None
@@ -24,7 +24,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
     out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
- 
+
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -70,7 +70,7 @@ class TFDeep(Explainer):
             batch norm or dropout. If None is passed then we look for tensors in the graph that look like
             learning phase flags (this works for Keras models). Note that we assume all the flags should
             have a value of False during predictions (and hence explanations).
-            
+
         """
         # try and import keras and tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
@@ -91,7 +91,7 @@ class TFDeep(Explainer):
                 warnings.warn("keras is no longer supported, please use tf.keras instead.")
             except:
                 pass
-        
+
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
@@ -117,7 +117,7 @@ class TFDeep(Explainer):
         if type(data) != list and (hasattr(data, '__call__')==False):
             data = [data]
         self.data = data
-        
+
         self._vinputs = {} # used to track what op inputs depends on the model inputs
         self.orig_grads = {}
 
@@ -326,7 +326,7 @@ class TFDeep(Explainer):
                                                    "rounding error or because an operator in your computation graph was not fully supported. If " \
                                                    "the sum difference of %f is significant compared the scale of your model outputs please post " \
                                                    "as a github issue, with a reproducable example if possible so we can debug it." % np.abs(diffs).max()
-        
+
         if not self.multi_output:
             return output_phis[0]
         elif ranked_outputs is not None:
@@ -345,7 +345,7 @@ class TFDeep(Explainer):
         else:
             def anon():
                 tf_execute.record_gradient = custom_record_gradient
-                
+
                 # build inputs that are correctly shaped, typed, and tf-wrapped
                 inputs = []
                 for i in range(len(X)):
@@ -478,7 +478,7 @@ def softmax(explainer, op, *grads):
         for t in op.outputs:
             if t.name not in explainer.between_tensors:
                 explainer.between_tensors[t.name] = False
-    
+
     out = tf.gradients(div, in0_centered, grad_ys=grads[0])[0]
 
     # remove the names we just added
@@ -672,7 +672,7 @@ def passthrough(explainer, op, *grads):
 
 def break_dependence(explainer, op, *grads):
     """ This function name is used to break attribution dependence in the graph traversal.
-     
+
     These operation types may be connected above input data values in the graph but their outputs
     don't depend on the input values (for example they just depend on the shape).
     """

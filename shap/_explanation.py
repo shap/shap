@@ -290,6 +290,14 @@ class Explanation(object, metaclass=MetaExplanation):
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
 
+    def __sub__(self, other):
+        new_exp = self.__copy__()
+        new_exp.op_history = copy.copy(self.op_history)
+        new_exp.values -= other.values
+        if new_exp.data is not None:
+            new_exp.data -= other.data
+        return new_exp
+
     @property
     def abs(self):
         new_self = copy.copy(self)

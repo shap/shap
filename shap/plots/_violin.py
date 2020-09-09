@@ -49,7 +49,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
+        features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
@@ -255,32 +255,20 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
             ys *= 0.9 * (row_height / np.max(ys + 1))
 
             if features is not None and colored_feature:
-                # trim the color range, but prevent the color range from collapsing
-                vmin = np.nanpercentile(values, 5)
-                vmax = np.nanpercentile(values, 95)
-                if vmin == vmax:
-                    vmin = np.nanpercentile(values, 1)
-                    vmax = np.nanpercentile(values, 99)
-                    if vmin == vmax:
-                        vmin = np.min(values)
-                        vmax = np.max(values)
-                if vmin > vmax: # fixes rare numerical precision issues
-                    vmin = vmax
-
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
 
-                # plot the nan values in the interaction feature as grey
+                # Get nan values:
                 nan_mask = np.isnan(values)
+
+                # Trim the value and color range to percentiles
+                vmin, vmax, cvals = _trim_crange(values, nan_mask)
+
+                # plot the nan values in the interaction feature as grey
                 pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
                            vmax=vmax, s=16, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
 
                 # plot the non-nan values colored by the trimmed feature value
-                cvals = values[np.invert(nan_mask)].astype(np.float64)
-                cvals_imp = cvals.copy()
-                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
-                cvals[cvals_imp > vmax] = vmax
-                cvals[cvals_imp < vmin] = vmin
                 pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
                            cmap=cmap, vmin=vmin, vmax=vmax, s=16,
                            c=cvals, alpha=alpha, linewidth=0,
@@ -331,26 +319,17 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                     else:
                         back_fill += 1
 
-                vmin = np.nanpercentile(values, 5)
-                vmax = np.nanpercentile(values, 95)
-                if vmin == vmax:
-                    vmin = np.nanpercentile(values, 1)
-                    vmax = np.nanpercentile(values, 99)
-                    if vmin == vmax:
-                        vmin = np.min(values)
-                        vmax = np.max(values)
+                # Get nan values:
+                nan_mask = np.isnan(values)
+
+                # Trim the value and color range to percentiles
+                vmin, vmax, cvals = _trim_crange(values, nan_mask)
 
                 # plot the nan values in the interaction feature as grey
-                nan_mask = np.isnan(values)
                 pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
                            color="#777777", vmin=vmin, vmax=vmax, s=9,
                            alpha=alpha, linewidth=0, zorder=1)
                 # plot the non-nan values colored by the trimmed feature value
-                cvals = values[np.invert(nan_mask)].astype(np.float64)
-                cvals_imp = cvals.copy()
-                cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
-                cvals[cvals_imp > vmax] = vmax
-                cvals[cvals_imp < vmin] = vmin
                 pl.scatter(shaps[np.invert(nan_mask)], np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
                            cmap=cmap, vmin=vmin, vmax=vmax, s=9,
                            c=cvals, alpha=alpha, linewidth=0, zorder=1)
@@ -499,6 +478,31 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+
+def _trim_crange(values, nan_mask):
+    """Trim the color range, but prevent the color range from collapsing."""
+    # Get vmin and vmax as 5. and 95. percentiles
+    vmin = np.nanpercentile(values, 5)
+    vmax = np.nanpercentile(values, 95)
+    if vmin == vmax:  # if percentile range is equal, take 1./99. perc.
+        vmin = np.nanpercentile(values, 1)
+        vmax = np.nanpercentile(values, 99)
+        if vmin == vmax:  # if still equal, use min/max
+            vmin = np.min(values)
+            vmax = np.max(values)
+
+    if vmin > vmax: # fixes rare numerical precision issues
+        vmin = vmax
+
+    # Get color values depnding on value range
+    cvals = values[np.invert(nan_mask)].astype(np.float64)
+    cvals_imp = cvals.copy()
+    cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
+    cvals[cvals_imp > vmax] = vmax
+    cvals[cvals_imp < vmin] = vmin
+
+    return vmin, vmax, cvals
+
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
