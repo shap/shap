@@ -609,7 +609,7 @@ class TreeEnsemble:
         elif safe_isinstance(model, ["sklearn.ensemble.IsolationForest", "sklearn.ensemble.iforest.IsolationForest"]):
             self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
-            self.trees = [IsoTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
+            self.trees = [IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing) for e, f in zip(model.estimators_, model.estimators_features_)]
             self.tree_output = "raw_value"
         elif safe_isinstance(model, "skopt.learning.forest.RandomForestRegressor"):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
@@ -1341,7 +1341,7 @@ class IsoTree(SingleTree):
     """
     In sklearn the tree of the Isolation Forest does not calculated in a good way.
     """
-    def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
+    def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
         super(IsoTree, self).__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
             from sklearn.ensemble.iforest import _average_path_length # pylint: disable=no-name-in-module
@@ -1361,6 +1361,8 @@ class IsoTree(SingleTree):
             if normalize:
                 self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
+            # re-number the features if each tree gets a different set of features
+            self.features = np.where(self.features >= 0, tree_features[self.features], self.features)
 
 
 def get_xgboost_json(model):
