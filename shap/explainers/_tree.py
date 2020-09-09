@@ -13,6 +13,7 @@ from ..utils._legacy import DenseData
 from .._explanation import Explanation
 from .. import maskers
 import warnings
+import pandas as pd
 
 warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
 
@@ -84,6 +85,10 @@ class Tree(Explainer):
 
 
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", **deprecated_options):
+        
+        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+            self.data_feature_names = list(data.columns)
+        
         masker = data
         super(Tree, self).__init__(model, masker)
 
@@ -130,7 +135,7 @@ class Tree(Explainer):
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1000:
                 warnings.warn("Passing "+str(self.data.shape[0]) + " background samples may lead to slow runtimes. Consider "
                     "using shap.sample(data, 100) to create a smaller background data set.")
-        self.data_missing = None if self.data is None else np.isnan(self.data)
+        self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
@@ -194,10 +199,10 @@ class Tree(Explainer):
             feature_names = list(X.columns)
             X = X.values
         else:
-            feature_names = None # we can make self.feature_names from background data eventually if we have it
+            feature_names = getattr(self, "data_feature_names", None)
         
         if not interactions:
-            v = self.shap_values(X, from_call=True, check_additivity=check_additivity)
+            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity)
             output_shape = tuple()
             if type(v) is list:
                 output_shape = (len(v),)
