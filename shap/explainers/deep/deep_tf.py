@@ -77,6 +77,7 @@ class TFDeepExplainer(Explainer):
         # try and import keras and tensorflow
         global tf, tf_ops, tf_gradients_impl
         if tf is None:
+            print("HERE--tf") 
             from tensorflow.python.framework import ops as tf_ops # pylint: disable=E0611
             from tensorflow.python.ops import gradients_impl as tf_gradients_impl # pylint: disable=E0611
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
@@ -86,6 +87,7 @@ class TFDeepExplainer(Explainer):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         global keras
         if keras is None:
+            print("HERE--keras")
             try:
                 import keras
                 if LooseVersion(keras.__version__) < LooseVersion("2.1.0"):
@@ -129,13 +131,14 @@ class TFDeepExplainer(Explainer):
         
         # if we are not given a session find a default session
         if session is None:
-            # if keras is installed and already has a session then use it
-            if keras is not None and keras.backend.tensorflow_backend._SESSION is not None:
-                session = keras.backend.get_session()
-            else:
-                session = tf.compat.v1.keras.backend.get_session()
-        self.session = tf.get_default_session() if session is None else session
-
+            try:
+                self.session = tf.compat.v1.keras.backend.get_session()
+                print("here!")
+                print(self.session)
+            except:
+                self.session = tf.get_default_session() 
+        else:
+            self.session=session
         # if no learning phase flags were given we go looking for them
         # ...this will catch the one that keras uses
         # we need to find them since we want to make sure learning phase flags are set to False
@@ -191,7 +194,7 @@ class TFDeepExplainer(Explainer):
                 self.phi_symbolics = [None for i in range(noutputs)]
             else:
                 raise Exception("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
-
+        self.session=session 
     def _variable_inputs(self, op):
         """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
         """
@@ -316,6 +319,10 @@ class TFDeepExplainer(Explainer):
         feed_dict = dict(zip(model_inputs, X))
         for t in self.learning_phase_flags:
             feed_dict[t] = False
+        import tensorflow
+        from tensorflow.compat.v1.keras.backend import get_session
+        tensorflow.compat.v1.disable_v2_behavior()
+        self.session=get_session()
         return self.session.run(out, feed_dict)
 
     def custom_grad(self, op, *grads):
