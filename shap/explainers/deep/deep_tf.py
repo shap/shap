@@ -77,7 +77,6 @@ class TFDeepExplainer(Explainer):
         # try and import keras and tensorflow
         global tf, tf_ops, tf_gradients_impl
         if tf is None:
-            print("HERE--tf") 
             from tensorflow.python.framework import ops as tf_ops # pylint: disable=E0611
             from tensorflow.python.ops import gradients_impl as tf_gradients_impl # pylint: disable=E0611
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
@@ -87,7 +86,6 @@ class TFDeepExplainer(Explainer):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         global keras
         if keras is None:
-            print("HERE--keras")
             try:
                 import keras
                 if LooseVersion(keras.__version__) < LooseVersion("2.1.0"):
@@ -132,11 +130,11 @@ class TFDeepExplainer(Explainer):
         # if we are not given a session find a default session
         if session is None:
             try:
-                self.session = tf.compat.v1.keras.backend.get_session()
-                print("here!")
-                print(self.session)
+                #tf1
+                self.session=tf.get_default_session()
             except:
-                self.session = tf.get_default_session() 
+                #tf2:
+                self.session = tf.compat.v1.keras.backend.get_session()
         else:
             self.session=session
         # if no learning phase flags were given we go looking for them
@@ -194,7 +192,6 @@ class TFDeepExplainer(Explainer):
                 self.phi_symbolics = [None for i in range(noutputs)]
             else:
                 raise Exception("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
-        self.session=session 
     def _variable_inputs(self, op):
         """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
         """
@@ -320,9 +317,14 @@ class TFDeepExplainer(Explainer):
         for t in self.learning_phase_flags:
             feed_dict[t] = False
         import tensorflow
-        from tensorflow.compat.v1.keras.backend import get_session
-        tensorflow.compat.v1.disable_v2_behavior()
-        self.session=get_session()
+        try:
+            #tf 1
+            self.session=tf.session()
+        except:
+            #tf 2
+            from tensorflow.compat.v1.keras.backend import get_session
+            tensorflow.compat.v1.disable_v2_behavior()
+            self.session=get_session()
         return self.session.run(out, feed_dict)
 
     def custom_grad(self, op, *grads):
