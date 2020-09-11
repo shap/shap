@@ -16,15 +16,18 @@ from . import colors
 
 # TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
-def violin(shap_values, features=None, feature_names=None, max_display=None, plot_type="violin",
-                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
-                 class_inds=None,
-                 color_bar_label=labels["FEATURE_VALUE"],
-                 cmap=colors.red_blue,
-                 # depreciated
-                 auto_size_plot=None,
-                 use_log_scale=False):
+def violin(
+        shap_values, features=None, feature_names=None, categoric=None, categoric_names=None,
+        max_display=None, plot_type="violin",
+        color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+        color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
+        class_inds=None,
+        color_bar_label=labels["FEATURE_VALUE"],
+        cmap=colors.red_blue, markers='oPdXv^<>', cat_legend=True,
+        # deprecated
+        auto_size_plot=None,
+        use_log_scale=False
+):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -77,9 +80,12 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         if plot_type is None:
             plot_type = "bar" # default for multi-output explanations
         assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
+        assert categoric is None, ("Only `categoric=None` is supported for multi-output explanations!")
     else:
         if plot_type is None:
             plot_type = "dot" # default for single output explanations
+        elif not plot_type in ('dot', 'compact_dot'):
+            assert categoric is None, ("`categoric!=None` is only supported for plot-type `dot` or `compact_dot`!")
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
@@ -91,10 +97,24 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         else:
             color = colors.blue_rgb
 
+    # If categoric column(s) were passed, assert that it is a list/tuple
+    ctgrc = (
+        categoric if categoric is None  # keep None
+        else categoric if isinstance(categoric, (list, tuple))  # keep list/tup
+        else [categoric] if isinstance(categoric, (str, int))  # int/str to lst
+        else categoric  # else (ndarray etc) keep input type and risk errors
+    )
+
+    # Extract categoric names for labeling:
+    categoric_names = ctgrc if categoric_names is None else categoric_names
+
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = features.columns
+        # Get categoric int indexers if not None
+        ctgrc = features.columns.get_indexer_for(
+            ctgrc) if ctgrc is not None else []
         features = features.values
     elif isinstance(features, list):
         if feature_names is None:
@@ -104,6 +124,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         feature_names = features
         features = None
 
+    # Count the number of features
     num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
 
     if features is not None:
@@ -117,6 +138,56 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+
+    # Check that categorics are now int or None
+    assert categoric is None or all(
+        [isinstance(cat, (int, np.integer)) for cat in ctgrc]), (
+            'Categoric identifiers must be column names if `features` is a '
+            'pandas DataFrame or integers for all other types of `features`.')
+    # Check that categoric names has the correct num. of elements
+    if cat_legend:  # if plotting legend
+        assert categoric is None or (len(categoric_names) == len(ctgrc)), (
+            "If `categoric_names` are specified, it must be a list, tuple or "
+            "str with the number of names matching the number of categoric "
+            "variables.")
+
+    if categoric is not None:
+        # Get unique categoric combinations
+        if not isinstance(features.dtype, np.object):
+            unique_cats = np.unique(features[:, ctgrc], axis=0)
+        else:  # if object dtype, meaning f.i. that strings are in features
+            unique_cats = np.asarray(
+                list({tuple(row) for row in features[:, ctgrc]}),
+                dtype=np.object
+            )
+        # Get number of unique combinations across columns:
+        n_combs = (
+            unique_cats.shape[0] if unique_cats.ndim > 1 else unique_cats.size
+        )
+        # Get indices where each of the categories is located in the
+        # features array
+        cat_idcs_int = [np.where(
+            (features[:, ctgrc] == ucat).all(axis=1)
+        )[0] for ucat in unique_cats]
+        # Transform this to a boolean array (n_features, n_categories) to mix
+        # with nan mask
+        cat_mask = np.zeros((features.shape[0], n_combs), dtype=bool)
+        _ = [  # set
+            np.put(cat_mask[:, i], cat_idcs_int[i], True)
+            for i in range(n_combs)
+        ]
+
+        # Adjust num markers by repeating list to be geq the no. of cats:
+        markers = (
+            markers if len(markers) >= n_combs
+            else markers * int(n_combs / len(markers) + 1))
+    else:
+        n_combs = 1
+        cat_mask = (
+            np.ones((features.shape[0], n_combs),
+                    dtype=bool) if features is not None
+            else np.ones((1, 1), dtype=bool)
+        )
 
     if use_log_scale:
         pl.xscale('symlog')
@@ -136,7 +207,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                     else:
                         new_feature_names.append(c1 + "* - " + c2)
 
-            return summary(
+            return violin(
                 new_shap_values, new_features, new_feature_names,
                 max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
                 title=title, alpha=alpha, show=show, sort=sort,
@@ -163,7 +234,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         pl.subplot(1, max_display, 1)
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
-        summary(
+        violin(
             proj_shap_values, features[:, sort_inds] if features is not None else None,
             feature_names=feature_names[sort_inds],
             sort=False, show=False, color_bar=False,
@@ -180,7 +251,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
             proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
-            summary(
+            violin(
                 proj_shap_values, features[:, sort_inds] if features is not None else None,
                 sort=False,
                 feature_names=["" for i in range(len(feature_names))],
@@ -231,6 +302,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
             np.random.shuffle(inds)
             if values is not None:
                 values = values[inds]
+                cat_mask_shffl = cat_mask[inds, :]
             shaps = shaps[inds]
             colored_feature = True
             try:
@@ -264,19 +336,61 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                 vmin, vmax, cvals = _trim_crange(values, nan_mask)
 
                 # plot the nan values in the interaction feature as grey
-                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                           vmax=vmax, s=16, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
+                for cat_i in range(n_combs):
+                    # Mask where nan values AND current cat
+                    nan_cat_mask = nan_mask & cat_mask_shffl[:, cat_i]
+                    # Mask where numeric values AND current cat
+                    num_cat_mask = (
+                        np.invert(nan_mask) & cat_mask_shffl[:, cat_i]
+                    )
+                    # Plot nan values
+                    pl.scatter(
+                        shaps[nan_cat_mask], pos + ys[nan_cat_mask],
+                        color="#777777", vmin=vmin, vmax=vmax, alpha=alpha,
+                        s=16, linewidth=0, marker=markers[cat_i],
+                        zorder=3, rasterized=len(shaps) > 500,
+                    )
 
-                # plot the non-nan values colored by the trimmed feature value
-                pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                           cmap=cmap, vmin=vmin, vmax=vmax, s=16,
-                           c=cvals, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
+                    # plot the non-nan values colored by the trimmed feature value
+                    pl.scatter(
+                        shaps[num_cat_mask], pos + ys[num_cat_mask],
+                        cmap=cmap, vmin=vmin, vmax=vmax, c=cvals[num_cat_mask],
+                        alpha=alpha, s=16, linewidth=0, marker=markers[cat_i],
+                        zorder=3, rasterized=len(shaps) > 500,
+                    )
             else:
+                pl.scatter(
+                    shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
+                    color=color if colored_feature else "#777777",
+                    rasterized=len(shaps) > 500
+                )
 
-                pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                           color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
+        if categoric is not None and cat_legend:
+            # Base format string for legend
+            base_frmt_num, base_frmt_str = "{0}: {1:.3G}", "{0}: {1}"
+            # Loop over combinations and categorics to construct legend labels
+            # and plot the dummy scatter plot
+            for i in range(n_combs):
+                comb_leg_entry = []
+                for k in range(len(ctgrc)):
+                    comb_leg_entry.append(
+                        base_frmt_num.format(  # if cat val is numeric
+                            categoric_names[k], unique_cats[i, k]
+                        ) if not isinstance(unique_cats[i, k], str)
+                        else base_frmt_str.format(  # if cat val is string
+                            categoric_names[k], unique_cats[i, k]
+                        )
+                    )
+                # Join legend labels
+                leg_label = ", ".join(comb_leg_entry)
+                # Dummy plot to generate legend handles without having to
+                # import the base matplotlib module
+                pl.scatter(
+                    [], [], c="#777777", marker=markers[i], alpha=alpha, s=16,
+                    linewidth=0, label=leg_label
+                )
+            # Add the legend to the plot
+            pl.legend()
 
     elif plot_type == "violin":
         for pos, i in enumerate(feature_order):
