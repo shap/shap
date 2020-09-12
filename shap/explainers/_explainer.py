@@ -280,11 +280,12 @@ class Explainer():
 
         Returns
         -------
-        A tuple of (row_values, row_expected_values, row_mask_shapes), where row_values is an array of the
-        attribution values for each sample, row_expected_values is an array (or single value) representing
-        the expected value of the model for each sample (which is the same for all samples unless there
-        are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
-        of all the input shapes (since the row_values is always flattened),
+        tuple
+            A tuple of (row_values, row_expected_values, row_mask_shapes), where row_values is an array of the
+            attribution values for each sample, row_expected_values is an array (or single value) representing
+            the expected value of the model for each sample (which is the same for all samples unless there
+            are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
+            of all the input shapes (since the row_values is always flattened),
         """
         
         return {}

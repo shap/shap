@@ -248,11 +248,12 @@ class Tree(Explainer):
 
         Returns
         -------
-        For models with a single output this returns a matrix of SHAP values
-        (# samples x # features). Each row sums to the difference between the model output for that
-        sample and the expected value of the model output (which is stored in the expected_value
-        attribute of the explainer when it is constant). For models with vector outputs this returns
-        a list of such matrices, one for each output.
+        array or list
+            For models with a single output this returns a matrix of SHAP values
+            (# samples x # features). Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored in the expected_value
+            attribute of the explainer when it is constant). For models with vector outputs this returns
+            a list of such matrices, one for each output.
         """
         if check_additivity and self.model.model_type == "pyspark":
             warnings.warn("check_additivity requires us to run predictions which is not supported with spark, ignoring." 
@@ -414,14 +415,15 @@ class Tree(Explainer):
 
         Returns
         -------
-        For models with a single output this returns a tensor of SHAP values
-        (# samples x # features x # features). The matrix (# features x # features) for each sample sums
-        to the difference between the model output for that sample and the expected value of the model output
-        (which is stored in the expected_value attribute of the explainer). Each row of this matrix sums to the
-        SHAP value for that feature for that sample. The diagonal entries of the matrix represent the
-        "main effect" of that feature on the prediction and the symmetric off-diagonal entries represent the
-        interaction effects between all pairs of features for that sample. For models with vector outputs
-        this returns a list of tensors, one for each output.
+        array or list
+            For models with a single output this returns a tensor of SHAP values
+            (# samples x # features x # features). The matrix (# features x # features) for each sample sums
+            to the difference between the model output for that sample and the expected value of the model output
+            (which is stored in the expected_value attribute of the explainer). Each row of this matrix sums to the
+            SHAP value for that feature for that sample. The diagonal entries of the matrix represent the
+            "main effect" of that feature on the prediction and the symmetric off-diagonal entries represent the
+            interaction effects between all pairs of features for that sample. For models with vector outputs
+            this returns a list of tensors, one for each output.
         """
 
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"

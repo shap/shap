@@ -21,6 +21,7 @@
 #
 import os
 import sys
+import sphinx_rtd_theme
 print(os.path.abspath('./shap'))
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -35,7 +36,16 @@ sys.path.insert(0, os.path.abspath('..'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx_rtd_theme',
+    'numpydoc',
 ]
+autodoc_default_options = {
+    'members': True,
+    'inherited-members': True
+}
+autosummary_generate = True
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -132,7 +142,20 @@ html_theme = "sphinx_rtd_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    #'canonical_url': '',
+    'logo_only': False,
+    'display_version': True,
+    'prev_next_buttons_location': 'bottom',
+    'style_external_links': False,
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
+# html_logo = ''
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -343,3 +366,18 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #
 # texinfo_no_detailmenu = False
+
+
+def setup(app):
+    import shap
+    # need to assign the names here, otherwise autodoc won't document these classes,
+    # and will instead just say 'alias of ...'
+    shap.TreeExplainer.__name__ = 'TreeExplainer'
+    shap.LinearExplainer.__name__ = 'LinearExplainer'
+    shap.KernelExplainer.__name__ = 'KernelExplainer'
+    shap.SamplingExplainer.__name__ = 'SamplingExplainer'
+    shap.DeepExplainer.__name__ = 'DeepExplainer'
+    shap.GradientExplainer.__name__ = 'GradientExplainer'
+    shap.PartitionExplainer.__name__ = 'PartitionExplainer'
+    shap.PermutationExplainer.__name__ = 'PermutationExplainer'
+    shap.AdditiveExplainer.__name__ = 'AdditiveExplainer'
