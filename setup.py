@@ -87,6 +87,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
             'numpydoc',
             'sphinx_rtd_theme',
             'sphinx',
+            'nbsphinx',
         ]
     }
     extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
