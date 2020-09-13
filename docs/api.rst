@@ -1,5 +1,8 @@
 .. currentmodule:: shap
 
+API Reference
+=============
+
 Core Explainers
 ---------------
 .. autosummary::
@@ -21,15 +24,19 @@ Other Explainers
 .. autosummary::
     :toctree: generated/
 
-    shap.explainers.other.Coefficient
+    shap.explainers.other.Coefficent
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
     shap.explainers.other.Maple
     shap.explainers.other.TreeMaple
     shap.explainers.other.TreeGain
 
+.. _plot_api:
+
 Plots
 -----
+For usage examples, see :ref:`Plotting Examples <plots_examples>`
+
 .. autosummary::
     :toctree: generated/
 

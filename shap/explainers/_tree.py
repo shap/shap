@@ -81,9 +81,11 @@ class Tree(Explainer):
         then we explain the log base e of the model loss function, so that the SHAP values sum up to the
         log loss of the model for each sample. This is helpful for breaking down model performance by feature.
         Currently the probability and logloss options are only supported when feature_dependence="independent".
+
+    Examples
+    --------
+    See :ref:`Tree Explainer Examples <tree_explainer_examples>`
     """
-
-
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", **deprecated_options):
         
         if safe_isinstance(data, "pandas.core.frame.DataFrame"):
