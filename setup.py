@@ -104,7 +104,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', 'slicer', 'numba'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', 'slicer=0.0.3', 'numba'],
         extras_require=extras_require,
         test_suite='nose.collector',
         tests_require=tests_require,
