@@ -19,6 +19,10 @@ class Gradient(Explainer):
     and combines that expectation with sampling reference values from the background dataset. This leads
     to a single combined expectation of gradients that converges to attributions that sum to the
     difference between the expected model output and the current output.
+    
+    Examples
+    --------
+    See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
     """
 
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
@@ -95,13 +99,14 @@ class Gradient(Explainer):
 
         Returns
         -------
-        For a models with a single output this returns a tensor of SHAP values with the same shape
-        as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
-        which are the same shape as X. If ranked_outputs is None then this list of tensors matches
-        the number of model outputs. If ranked_outputs is a positive integer a pair is returned
-        (shap_values, indexes), where shap_values is a list of tensors with a length of
-        ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
-        were chosen as "top".
+        array or list
+            For a models with a single output this returns a tensor of SHAP values with the same shape
+            as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
+            which are the same shape as X. If ranked_outputs is None then this list of tensors matches
+            the number of model outputs. If ranked_outputs is a positive integer a pair is returned
+            (shap_values, indexes), where shap_values is a list of tensors with a length of
+            ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
+            were chosen as "top".
         """
         return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)
 

@@ -54,11 +54,15 @@ class Partition(Explainer):
 
         partition_tree : None or function or numpy.array
             A hierarchical clustering of the input features represented by a matrix that follows the format
-            used by scipy.cluster.hierarchy (see the notebooks/partition_explainer directory an example).
+            used by scipy.cluster.hierarchy (see the notebooks_html/partition_explainer directory an example).
             If this is a function then the function produces a clustering matrix when given a single input
             example. If you are using a standard SHAP masker object then you can pass masker.clustering
             to use that masker's built-in clustering of the features, or if partition_tree is None then
             masker.clustering will be used by default.
+        
+        Examples
+        --------
+        See :ref:`Partition Explainer Examples <partition_explainer_examples>`
         """
 
         super(Partition, self).__init__(model, masker, algorithm="partition")

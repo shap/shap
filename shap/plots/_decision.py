@@ -338,7 +338,8 @@ def decision(
 
     Returns
     -------
-    Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
+    DecisionPlotResult or None
+        Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
 
     Example
     -------
@@ -578,7 +579,8 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
 
     Returns
     -------
-    Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
+    DecisionPlotResult or None
+        Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
     """
 
     if not (isinstance(base_values, list) and isinstance(shap_values, list)):
