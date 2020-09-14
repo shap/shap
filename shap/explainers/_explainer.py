@@ -93,7 +93,7 @@ class Explainer():
                 # use implementation-aware methods if possible
                 if explainers.Linear.supports_model(model):
                     algorithm = "linear"
-                elif explainers.Tree.supports_model(model):
+                elif explainers.Tree.supports_model(model): # TODO: check for Partition?
                     algorithm = "tree"
                 elif explainers.Additive.supports_model(model):
                     algorithm = "additive"

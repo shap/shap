@@ -62,7 +62,7 @@ class Permutation(Explainer):
 
             # shuffle the indexes so we get a random permutation ordering
             if getattr(self.masker, "clustering", None) is not None:
-                # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M
+                # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M TODO: still true?
                 #assert len(inds) == len(fm), "Need to support partition shuffle when not all the inds vary!!"
                 partition_tree_shuffle(inds, inds_mask, self.masker.clustering)
             else:
