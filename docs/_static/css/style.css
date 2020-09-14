@@ -10,7 +10,7 @@
    }
 }
 
-img.logo {
+.wy-side-nav-search .wy-dropdown>a img.logo,.wy-side-nav-search>a img.logo {
    max-width: 40%;
 }
 
