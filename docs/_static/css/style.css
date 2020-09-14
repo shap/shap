@@ -9,3 +9,15 @@
       overflow: visible;
    }
 }
+
+img.logo {
+   max-width: 40%;
+}
+
+.wy-side-nav-search>div.version {
+   color: #d9d9d9;
+}
+
+.wy-nav-top {
+   background: #343131;
+}
