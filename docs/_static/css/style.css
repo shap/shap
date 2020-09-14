@@ -21,3 +21,11 @@
 .wy-nav-top {
    background: #343131;
 }
+
+.highlight {
+   background: #f7f7f7;
+}
+
+.wy-side-nav-search input[type=text] {
+   border-color: #666666;
+}
