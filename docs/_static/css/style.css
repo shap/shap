@@ -1,0 +1,11 @@
+.wy-side-nav-search>div.version {
+    color: black;
+}
+@media screen and (min-width: 767px) {
+   .wy-table-responsive table td {
+      white-space: normal;
+   }
+   .wy-table-responsive {
+      overflow: visible;
+   }
+}

@@ -51,6 +51,10 @@ class Kernel(Explainer):
         sense to connect them to the output with a link function where link(output) = sum(phi).
         If the model output is a probability then the LogitLink link function makes the feature
         importance values have log-odds units.
+
+    Examples
+    --------
+    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
     """
 
     def __init__(self, model, data, link=IdentityLink(), **kwargs):
@@ -122,11 +126,12 @@ class Kernel(Explainer):
 
         Returns
         -------
-        For models with a single output this returns a matrix of SHAP values
-        (# samples x # features). Each row sums to the difference between the model output for that
-        sample and the expected value of the model output (which is stored as expected_value
-        attribute of the explainer). For models with vector outputs this returns a list
-        of such matrices, one for each output.
+        array or list
+            For models with a single output this returns a matrix of SHAP values
+            (# samples x # features). Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored as expected_value
+            attribute of the explainer). For models with vector outputs this returns a list
+            of such matrices, one for each output.
         """
 
         # convert dataframes

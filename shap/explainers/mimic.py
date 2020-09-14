@@ -82,11 +82,12 @@ class MimicExplainer(Explainer):
 
         Returns
         -------
-        For a models with a single output this returns a matrix of SHAP values
-        (# samples x # features + 1). The last column is the base value of the model, which is
-        the expected value of the model applied to the background dataset. This causes each row to
-        sum to the model output for that sample. For models with vector outputs this returns a list
-        of such matrices, one for each output.
+        array or list
+            For a models with a single output this returns a matrix of SHAP values
+            (# samples x # features + 1). The last column is the base value of the model, which is
+            the expected value of the model applied to the background dataset. This causes each row to
+            sum to the model output for that sample. For models with vector outputs this returns a list
+            of such matrices, one for each output.
         """
 
         phi = None
