@@ -43,7 +43,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
-        breakpoint()
         shap_exp = shap_values
         base_values = shap_exp.base_values
         values = shap_exp.values
