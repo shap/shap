@@ -16,7 +16,8 @@ from .. import Explanation, Cohorts
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
-def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, cluster_threshold=0.5, merge_cohorts=False, show=True):
+def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, cluster_threshold=0.5,
+        merge_cohorts=False, show_data="auto", show=True):
     """ Create a bar plot of a set of SHAP values.
 
     If a single sample is passed then we plot the SHAP values as a bar chart. If an
@@ -75,6 +76,10 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     if len(values[0]) == 0:
         raise Exception("The passed Explanation is empty! (so there is nothing to plot)")
+
+    # we show the data on auto only when there are no transforms
+    if show_data == "auto":
+        show_data = len(op_history) == 0
 
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
     if issubclass(type(feature_names), str):
@@ -166,7 +171,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     # build our y-tick labels
     yticklabels = []
     for i in feature_inds:
-        if features is not None:
+        if features is not None and show_data:
             yticklabels.append(format_value(features[i], "%0.03f") + " = " + feature_names[i])
         else:
             yticklabels.append(feature_names[i])

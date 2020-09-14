@@ -15,6 +15,7 @@ from ..utils._general import encode_array_if_needed
 from .._explanation import Explanation
 
 
+# TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
 def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
             ax=None, show=True):
@@ -96,6 +97,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     if issubclass(type(ymax), Explanation):
         ymax = ymax.values
 
+    # wrap np.arrays as Explanations
+    if isinstance(color, np.ndarray):
+        color = Explanation(values=color, base_values=None, data=color)
     
     # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if str(type(color)).endswith("Explanation'>"):
