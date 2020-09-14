@@ -1022,7 +1022,7 @@ class TreeEnsemble:
             else:
                 raise Exception("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         else:
-            raise Exception("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported." % (str(self.model_output), str(self.model_output)))
+            raise Exception("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
 
         return transform
 
