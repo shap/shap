@@ -159,7 +159,7 @@ html_theme_options = {
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
-    'style_nav_header_background': '#BBDEFB',
+    'style_nav_header_background': '#343131',
     # Toc options
     'collapse_navigation': True,
     'sticky_navigation': True,
@@ -169,7 +169,7 @@ html_theme_options = {
 }
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'artwork/shap_logo.png'
+html_logo = 'artwork/shap_logo_white.png'
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
