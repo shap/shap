@@ -35,7 +35,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
+        features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
@@ -43,6 +43,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
+        breakpoint()
         shap_exp = shap_values
         base_values = shap_exp.base_values
         values = shap_exp.values
@@ -52,7 +53,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
-    
+
 
     # # deprecation warnings
     # if auto_size_plot is not None:
@@ -214,7 +215,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
-        
+
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
             if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= cluster_threshold:
@@ -248,12 +249,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     if num_features < len(values[0]):
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
         values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
-    
+
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
     if num_features < len(values[0]):
         yticklabels[-1] = "Sum of %d other features" % num_cut
-    
+
     row_height = 0.4
     if plot_size == "auto":
         pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
@@ -408,7 +409,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
+        features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
@@ -417,7 +418,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
-        base_value = shap_exp.base_value
+        base_value = shap_exp.base_values
         shap_values = shap_exp.values
         if features is None:
             features = shap_exp.data
