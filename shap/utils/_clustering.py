@@ -144,7 +144,7 @@ def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
     
     # build the distance matrix
     if metric == "xgboost_distances_r2":
-        dist_full = xgboost_distances(X, y, random_state=random_state)
+        dist_full = xgboost_distances_r2(X, y, random_state=random_state)
         
         # build a condensed upper triangular version by taking the max distance from either direction
         dist = []
