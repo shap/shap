@@ -47,3 +47,7 @@ html.writer-html4 .rst-content dl:not(.docutils)>dt, html.writer-html5 .rst-cont
    color: #0086f6;
    border-top: 3px solid #008bfbaa;
 }
+
+.rst-versions .rst-current-version {
+   color: #fcfcfc;
+}
