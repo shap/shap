@@ -94,7 +94,7 @@ class Explanation(object, metaclass=MetaExplanation):
 
         self._s = Slicer(
             values = values,
-            base_values = Obj(base_values, [0] + list(output_dims)),
+            base_values = None if base_values is None else Obj(base_values, [0] + list(output_dims)),
             data = data,
             display_data = display_data,
             instance_names = None if instance_names is None else Alias(instance_names, 0),
