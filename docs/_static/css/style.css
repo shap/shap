@@ -29,3 +29,21 @@
 .wy-side-nav-search input[type=text] {
    border-color: #666666;
 }
+
+.a {
+   color: #008bfb;
+}
+
+.a:hover {
+   color: #008bfb;
+}
+
+.a:visited {
+   color: #008bfb;
+}
+
+html.writer-html4 .rst-content dl:not(.docutils)>dt, html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple)>dt {
+   background: #008bfb11;
+   color: #0086f6;
+   border-top: 3px solid #008bfbaa;
+}
