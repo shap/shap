@@ -6,7 +6,7 @@ import sys
 import warnings
 import copy
 import sklearn
-from slicer import Slicer, Alias
+from slicer import Slicer, Alias, Obj
 # from ._order import Order
 from .utils._general import OpChain
 
@@ -94,7 +94,7 @@ class Explanation(object, metaclass=MetaExplanation):
 
         self._s = Slicer(
             values = values,
-            base_values = base_values,
+            base_values = Obj(base_values, [0] + list(output_dims)),
             data = data,
             display_data = display_data,
             instance_names = None if instance_names is None else Alias(instance_names, 0),
@@ -479,7 +479,7 @@ def compute_output_dims(values, base_values, data):
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
     values_dims = list(range(len(values_shape)))
-    output_dims = range(len(data_shape) + interaction_order, values_dims[-1])
+    output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
 def is_1d(val):

@@ -252,7 +252,13 @@ class Explainer():
         for j in range(len(args)):
 
             # reshape the attribution values using the mask_shapes
-            arg_values[j] = np.array([v.reshape(*mask_shapes[i][j]) for i,v in enumerate(arg_values[j])])
+            tmp = []
+            for i,v in enumerate(arg_values[j]):
+                if np.prod(mask_shapes[i][j]) != np.prod(v.shape): # see if we have multiple outputs
+                    tmp.append(v.reshape(*mask_shapes[i][j], -1))
+                else:
+                    tmp.append(v.reshape(*mask_shapes[i][j]))
+            arg_values[j] = np.array(tmp)
             
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)

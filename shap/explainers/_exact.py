@@ -108,7 +108,7 @@ class Exact(Explainer):
             
             # loop over all the outputs to update the rows
             coeff = shapley_coefficients(len(inds))
-            row_values = np.zeros(len(fm))
+            row_values = np.zeros((len(fm),) + outputs.shape[1:])
             mask = np.zeros(len(fm), dtype=np.bool)
             _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
