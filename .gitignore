@@ -22,3 +22,6 @@ shap/_cext.so
 /shap/_cext*
 .idea
 catboost_info
+tests/local_scratch.py
+tests/mnist_data
+data/*
