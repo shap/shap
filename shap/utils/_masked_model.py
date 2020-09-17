@@ -124,9 +124,7 @@ class MaskedModel():
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
         last_outs = np.zeros((self._masker_rows,) + outputs.shape[1:])
         varying_rows = np.array(varying_rows)
-        # print(varying_rows)
-        # for o in (averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
-        #     print(type(o), o.dtype)
+        
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
 
         return averaged_outs
@@ -301,18 +299,21 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
 
     return all_masked_inputs, i + 1 # i + 1 is the number of output rows after averaging
 
-@jit # we can't use this when using a link function...
+
 def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+    if len(last_outs.shape) == 1:
+        _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link)
+    else:
+        _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link)
+
+@jit # we can't use this when using a custom link function...
+def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
     last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
     sample_count = last_outs.shape[0]
     multi_output = len(last_outs.shape) > 1
-    if multi_output:
-        for j in range(last_outs.shape[1]):
-            averaged_outs[0,j] = np.mean(last_outs[:,j]) # we can't just do np.mean(last_outs, 0) because that fails to numba compile
-    else:
-        averaged_outs[0] = np.mean(last_outs)
+    averaged_outs[0] = np.mean(last_outs)
     for i in range(1, len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
@@ -320,11 +321,28 @@ def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, vary
             else:
                 last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
             averaged_outs[i] = link(np.mean(last_outs))
-            if multi_output:
-                for j in range(last_outs.shape[1]):
-                    averaged_outs[i,j] = np.mean(last_outs[:,j])
+            averaged_outs[i] = np.mean(last_outs)
+        else:
+            averaged_outs[i] = averaged_outs[i-1]
+
+@jit
+def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+    # here we can assume that the outputs will always be the same size, and we need
+    # to carry over evaluation outputs
+    last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
+    sample_count = last_outs.shape[0]
+    multi_output = len(last_outs.shape) > 1
+    for j in range(last_outs.shape[-1]): # using -1 is important so 
+        averaged_outs[0,j] = np.mean(last_outs[:,j]) # we can't just do np.mean(last_outs, 0) because that fails to numba compile
+    for i in range(1, len(averaged_outs)):
+        if batch_positions[i] < batch_positions[i+1]:
+            if num_varying_rows[i] == sample_count:
+                last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
             else:
-                averaged_outs[i] = np.mean(last_outs)
+                last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
+            averaged_outs[i] = link(np.mean(last_outs))
+            for j in range(last_outs.shape[1]):
+                averaged_outs[i,j] = np.mean(last_outs[:,j])
         else:
             averaged_outs[i] = averaged_outs[i-1]
 

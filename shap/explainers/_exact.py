@@ -129,11 +129,11 @@ class Exact(Explainer):
             outputs = fm(delta_indexes, batch_size=batch_size)
 
             # loop over each output feature
-            row_values = np.zeros(len(fm))
+            row_values = np.zeros((len(fm),) + outputs.shape[1:])
             for i in range(len(fm)):
                 on_outputs = outputs[self._partition_masks_inds[i][1]]
                 off_outputs = outputs[self._partition_masks_inds[i][0]]
-                row_values[i] = (on_outputs - off_outputs).mean()
+                row_values[i] = (on_outputs - off_outputs).mean(0)
 
         # compute the main effects if we need to
         main_effect_values = None

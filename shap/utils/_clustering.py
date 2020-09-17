@@ -138,6 +138,9 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     return dist
 
 def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
+    if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        X = X.values
+
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
