@@ -57,7 +57,7 @@ class Permutation(Explainer):
         masks = np.zeros(2*len(inds)+1, dtype=np.int)
         masks[0] = MaskedModel.delta_mask_noop_value
         npermutations = max_evals // (2*len(inds)+1)
-        row_values = np.zeros(len(fm))
+        row_values = None
         for _ in range(npermutations):
 
             # shuffle the indexes so we get a random permutation ordering
@@ -79,6 +79,9 @@ class Permutation(Explainer):
             
             # evaluate the masked model
             outputs = fm(masks, batch_size=batch_size)
+
+            if row_values is None:
+                row_values = np.zeros((len(fm),) + outputs.shape[1:])
             
             # update our SHAP value estimates
             for i,ind in enumerate(inds):
