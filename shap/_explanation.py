@@ -105,7 +105,7 @@ class Explanation(object, metaclass=MetaExplanation):
             upper_bounds = lower_bounds,
             main_effects = main_effects,
             hierarchical_values = hierarchical_values,
-            clustering = clustering
+            clustering = None if clustering is None else Obj(clustering, [0])
         )
 
     @property
