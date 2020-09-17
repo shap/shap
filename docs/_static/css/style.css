@@ -30,15 +30,15 @@
    border-color: #666666;
 }
 
-.a {
+a {
    color: #008bfb;
 }
 
-.a:hover {
+a:hover {
    color: #008bfb;
 }
 
-.a:visited {
+a:visited {
    color: #008bfb;
 }
 
