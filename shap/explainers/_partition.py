@@ -65,7 +65,7 @@ class Partition(Explainer):
         See :ref:`Partition Explainer Examples <partition_explainer_examples>`
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition")
+        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names)
 
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         
@@ -81,7 +81,7 @@ class Partition(Explainer):
         # TODO: maybe? if we have a tabular masker then we build a PermutationExplainer that we
         # will use for sampling
         self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
-        self.output_names = output_names
+        # self.output_names = output_names
 
         self.model = lambda x: np.array(model(x))
         self.expected_value = None
@@ -175,7 +175,8 @@ class Partition(Explainer):
             "mask_shapes": [s + out_shape[1:] for s in fm.mask_shapes],
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),
-            "clustering": self._clustering
+            "clustering": self._clustering,
+            "output_indices": outputs
         }
 
     def owen(self, fm, f00, f11, npartitions, output_indexes, fixed_context, batch_size, silent):
