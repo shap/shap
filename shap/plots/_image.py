@@ -51,7 +51,8 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
             pixel_values = shap_exp.data
-        labels = shap_exp.output_names
+        if labels is None:
+            labels = shap_exp.output_names
 
     multi_output = True
     if type(shap_values) != list:

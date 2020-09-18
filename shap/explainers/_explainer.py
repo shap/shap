@@ -133,7 +133,7 @@ class Explainer():
                 explainers.Permutation.__init__(self, model, self.masker, link=self.link)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, model, self.masker, link=self.link)
+                explainers.Partition.__init__(self, model, self.masker, link=self.link, output_names = self.output_names)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
                 explainers.Tree.__init__(self, model, self.masker, link=self.link)
@@ -185,6 +185,7 @@ class Explainer():
 
         # loop over each sample, filling in the values array
         values = []
+        output_indices = [] 
         expected_values = []
         mask_shapes = []
         main_effects = []
@@ -198,6 +199,7 @@ class Explainer():
                 batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
             )
             values.append(row_result.get("values", None))
+            output_indices.append(row_result.get("output_indices", None))
             expected_values.append(row_result.get("expected_values", None))
             mask_shapes.append(row_result["mask_shapes"])
             main_effects.append(row_result.get("main_effects", None))
@@ -223,6 +225,9 @@ class Explainer():
         # if np.allclose(expected_values, expected_values[0]):
         #     expected_values = expected_values[0]
 
+        # collapse the output_indices if they are the same for each sample
+        output_indices = np.array(output_indices)
+        
         # collapse the main effects if we didn't compute them
         if main_effects[0] is None:
             main_effects = None
@@ -245,7 +250,9 @@ class Explainer():
             # if len(clustering.shape) == 3 and clustering.std(0).sum() < 1e-8:
             #     clustering = clustering[0]
 
-        
+        # getting output labels 
+        labels = np.array(self.output_names)
+        sliced_labels = np.array([labels[index_list] for index_list in output_indices])
 
         # build the explanation objects
         out = []
@@ -273,7 +280,7 @@ class Explainer():
                 feature_names=feature_names[j], main_effects=main_effects,
                 clustering=clustering,
                 hierarchical_values=hierarchical_values,
-                output_names=self.output_names
+                output_names= sliced_labels # self.output_names
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))

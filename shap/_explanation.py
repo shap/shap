@@ -91,7 +91,14 @@ class Explanation(object, metaclass=MetaExplanation):
                 feature_names = Alias(feature_names, 0)
             elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
                 feature_names = Alias(feature_names, 1)
-
+        
+        if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
+            values_shape = _compute_shape(values)
+            if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
+                output_names = Alias(output_names, 0)
+            elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
+                output_names = Alias(output_names, 1)
+                
         self._s = Slicer(
             values = values,
             base_values = None if base_values is None else Obj(base_values, [0] + list(output_dims)),
@@ -99,7 +106,7 @@ class Explanation(object, metaclass=MetaExplanation):
             display_data = display_data,
             instance_names = None if instance_names is None else Alias(instance_names, 0),
             feature_names = feature_names, 
-            output_names = None if output_names is None else Alias(output_names, output_dims),
+            output_names =  output_names, # None if output_names is None else Alias(output_names, output_dims),
             output_indexes = None if output_indexes is None else (output_dims, output_indexes),
             lower_bounds = lower_bounds,
             upper_bounds = lower_bounds,
