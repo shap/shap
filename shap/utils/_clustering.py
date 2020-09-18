@@ -138,13 +138,16 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     return dist
 
 def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
+    if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        X = X.values
+
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
     
     # build the distance matrix
     if metric == "xgboost_distances_r2":
-        dist_full = xgboost_distances(X, y, random_state=random_state)
+        dist_full = xgboost_distances_r2(X, y, random_state=random_state)
         
         # build a condensed upper triangular version by taking the max distance from either direction
         dist = []

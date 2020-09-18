@@ -57,12 +57,12 @@ class Permutation(Explainer):
         masks = np.zeros(2*len(inds)+1, dtype=np.int)
         masks[0] = MaskedModel.delta_mask_noop_value
         npermutations = max_evals // (2*len(inds)+1)
-        row_values = np.zeros(len(fm))
+        row_values = None
         for _ in range(npermutations):
 
             # shuffle the indexes so we get a random permutation ordering
             if getattr(self.masker, "clustering", None) is not None:
-                # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M
+                # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M TODO: still true?
                 #assert len(inds) == len(fm), "Need to support partition shuffle when not all the inds vary!!"
                 partition_tree_shuffle(inds, inds_mask, self.masker.clustering)
             else:
@@ -79,6 +79,9 @@ class Permutation(Explainer):
             
             # evaluate the masked model
             outputs = fm(masks, batch_size=batch_size)
+
+            if row_values is None:
+                row_values = np.zeros((len(fm),) + outputs.shape[1:])
             
             # update our SHAP value estimates
             for i,ind in enumerate(inds):
@@ -117,11 +120,12 @@ class Permutation(Explainer):
 
         Returns
         -------
-        For models with a single output this returns a matrix of SHAP values
-        (# samples x # features). Each row sums to the difference between the model output for that
-        sample and the expected value of the model output (which is stored as expected_value
-        attribute of the explainer). For models with vector outputs this returns a list
-        of such matrices, one for each output.
+        array or list
+            For models with a single output this returns a matrix of SHAP values
+            (# samples x # features). Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored as expected_value
+            attribute of the explainer). For models with vector outputs this returns a list
+            of such matrices, one for each output.
         """
 
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)

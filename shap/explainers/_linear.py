@@ -40,6 +40,10 @@ class Linear(Explainer):
         actually used by the model, while the correlation option stays "true to the data" in the sense that
         it only considers how the model would behave when respecting the correlations in the input data.
         For sparse case only interventional option is supported.
+
+    Examples
+    --------
+    See :ref:`Linear Explainer Examples <linear_explainer_examples>`
     """
 
     def __init__(self, model, data, nsamples=1000, feature_perturbation=None, **kwargs):
@@ -240,10 +244,11 @@ class Linear(Explainer):
 
         Returns
         -------
-        For models with a single output this returns a matrix of SHAP values
-        (# samples x # features). Each row sums to the difference between the model output for that
-        sample and the expected value of the model output (which is stored as expected_value
-        attribute of the explainer).
+        array or list
+            For models with a single output this returns a matrix of SHAP values
+            (# samples x # features). Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored as expected_value
+            attribute of the explainer).
         """
 
         # convert dataframes

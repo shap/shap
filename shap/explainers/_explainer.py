@@ -93,7 +93,7 @@ class Explainer():
                 # use implementation-aware methods if possible
                 if explainers.Linear.supports_model(model):
                     algorithm = "linear"
-                elif explainers.Tree.supports_model(model):
+                elif explainers.Tree.supports_model(model): # TODO: check for Partition?
                     algorithm = "tree"
                 elif explainers.Additive.supports_model(model):
                     algorithm = "additive"
@@ -252,7 +252,13 @@ class Explainer():
         for j in range(len(args)):
 
             # reshape the attribution values using the mask_shapes
-            arg_values[j] = np.array([v.reshape(*mask_shapes[i][j]) for i,v in enumerate(arg_values[j])])
+            tmp = []
+            for i,v in enumerate(arg_values[j]):
+                if np.prod(mask_shapes[i][j]) != np.prod(v.shape): # see if we have multiple outputs
+                    tmp.append(v.reshape(*mask_shapes[i][j], -1))
+                else:
+                    tmp.append(v.reshape(*mask_shapes[i][j]))
+            arg_values[j] = np.array(tmp)
             
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)
@@ -280,11 +286,12 @@ class Explainer():
 
         Returns
         -------
-        A tuple of (row_values, row_expected_values, row_mask_shapes), where row_values is an array of the
-        attribution values for each sample, row_expected_values is an array (or single value) representing
-        the expected value of the model for each sample (which is the same for all samples unless there
-        are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
-        of all the input shapes (since the row_values is always flattened),
+        tuple
+            A tuple of (row_values, row_expected_values, row_mask_shapes), where row_values is an array of the
+            attribution values for each sample, row_expected_values is an array (or single value) representing
+            the expected value of the model for each sample (which is the same for all samples unless there
+            are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
+            of all the input shapes (since the row_values is always flattened),
         """
         
         return {}

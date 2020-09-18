@@ -1,0 +1,57 @@
+.wy-side-nav-search>div.version {
+    color: black;
+}
+@media screen and (min-width: 767px) {
+   .wy-table-responsive table td {
+      white-space: normal;
+   }
+   .wy-table-responsive {
+      overflow: visible;
+   }
+}
+
+.wy-side-nav-search .wy-dropdown>a img.logo,.wy-side-nav-search>a img.logo {
+   max-width: 40%;
+}
+
+.wy-side-nav-search>div.version {
+   color: #d9d9d9;
+}
+
+.wy-nav-top {
+   background: #343131;
+}
+
+.highlight {
+   background: #f7f7f7;
+}
+
+.wy-side-nav-search input[type=text] {
+   border-color: #666666;
+}
+
+a {
+   color: #008bfb;
+}
+
+a:hover {
+   color: #008bfb;
+}
+
+a:visited {
+   color: #008bfb;
+}
+
+html.writer-html4 .rst-content dl:not(.docutils)>dt, html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple)>dt {
+   background: #008bfb11;
+   color: #0086f6;
+   border-top: 3px solid #008bfbaa;
+}
+
+.rst-versions .rst-current-version {
+   color: #fcfcfc;
+}
+
+.wy-menu-vertical a {
+   color: #d9d9d9;
+}

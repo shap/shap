@@ -16,7 +16,8 @@ from .. import Explanation, Cohorts
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
-def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, cluster_threshold=0.5, merge_cohorts=False, show=True):
+def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clustering_cutoff=0.5,
+        merge_cohorts=False, show_data="auto", show=True):
     """ Create a bar plot of a set of SHAP values.
 
     If a single sample is passed then we plot the SHAP values as a bar chart. If an
@@ -76,6 +77,10 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if len(values[0]) == 0:
         raise Exception("The passed Explanation is empty! (so there is nothing to plot)")
 
+    # we show the data on auto only when there are no transforms
+    if show_data == "auto":
+        show_data = len(op_history) == 0
+
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
     if issubclass(type(feature_names), str):
         feature_names = [ordinal_str(i)+" "+feature_names for i in range(len(values[0]))]
@@ -125,13 +130,13 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values).mean(0))
 
-            # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
+            # now relax the requirement to match the parition tree ordering for connections above clustering_cutoff
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
-            feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
+            feature_order = get_sort_order(dist, clust_order, clustering_cutoff, feature_order)
         
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
-            if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= cluster_threshold:
+            if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= clustering_cutoff:
                 #values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values).mean(0), partition_tree)
                 for i in range(len(values)):
@@ -166,7 +171,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     # build our y-tick labels
     yticklabels = []
     for i in feature_inds:
-        if features is not None:
+        if features is not None and show_data:
             yticklabels.append(format_value(features[i], "%0.03f") + " = " + feature_names[i])
         else:
             yticklabels.append(feature_names[i])
@@ -247,6 +252,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     pl.gca().tick_params('x', labelsize=11)
 
     xmin,xmax = pl.gca().get_xlim()
+    ymin,ymax = pl.gca().get_ylim()
     
     if negative_values_present:
         pl.gca().set_xlim(xmin - (xmax-xmin)*0.05, xmax + (xmax-xmin)*0.05)
@@ -277,7 +283,13 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         # plot the distance cut line above which we don't show tree edges
         xmin,xmax = pl.xlim()
         xlines_min,xlines_max = np.min(xlines),np.max(xlines)
-        l = pl.axvline((cluster_threshold / (xlines_max - xlines_min)) * 0.1 * (xmax - xmin) + xmax, color="#dddddd", dashes=(1, 1))
+        ct_line_pos = (clustering_cutoff / (xlines_max - xlines_min)) * 0.1 * (xmax - xmin) + xmax
+        pl.text(
+            ct_line_pos + 0.005 * (xmax - xmin), (ymax - ymin)/2, "Clustering cutoff = " + format_value(clustering_cutoff, '%0.02f'),
+            horizontalalignment='left', verticalalignment='center', color="#999999",
+            fontsize=12, rotation=-90
+        )
+        l = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
         l.set_clip_on(False)
         
         for (xline, yline) in zip(xlines, ylines):
@@ -286,7 +298,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             xv = (np.array(xline) / (xlines_max - xlines_min))
 
             # only draw if we are not going past distance threshold
-            if np.array(xline).max() <= cluster_threshold:
+            if np.array(xline).max() <= clustering_cutoff:
 
                 # only draw if we are not going past the bottom of the plot
                 if yline.max() < max_display:

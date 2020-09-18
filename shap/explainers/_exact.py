@@ -108,7 +108,7 @@ class Exact(Explainer):
             
             # loop over all the outputs to update the rows
             coeff = shapley_coefficients(len(inds))
-            row_values = np.zeros(len(fm))
+            row_values = np.zeros((len(fm),) + outputs.shape[1:])
             mask = np.zeros(len(fm), dtype=np.bool)
             _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
@@ -129,11 +129,11 @@ class Exact(Explainer):
             outputs = fm(delta_indexes, batch_size=batch_size)
 
             # loop over each output feature
-            row_values = np.zeros(len(fm))
+            row_values = np.zeros((len(fm),) + outputs.shape[1:])
             for i in range(len(fm)):
                 on_outputs = outputs[self._partition_masks_inds[i][1]]
                 off_outputs = outputs[self._partition_masks_inds[i][0]]
-                row_values[i] = (on_outputs - off_outputs).mean()
+                row_values[i] = (on_outputs - off_outputs).mean(0)
 
         # compute the main effects if we need to
         main_effect_values = None
