@@ -325,7 +325,7 @@ class Explanation(object, metaclass=MetaExplanation):
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([getattr(np, fname)(v) for v in new_values.values()])
+            new_self.values = np.array([getattr(np, fname)(v,0) for v in new_values.values()])
             new_self.clustering = None
         else:
             new_self.values = getattr(np, fname)(np.array(self.values), **kwargs)
