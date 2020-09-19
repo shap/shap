@@ -80,7 +80,7 @@ class Tree(Explainer):
         (note that this means the SHAP values now sum to the probability output of the model). If "logloss"
         then we explain the log base e of the model loss function, so that the SHAP values sum up to the
         log loss of the model for each sample. This is helpful for breaking down model performance by feature.
-        Currently the probability and logloss options are only supported when feature_dependence="independent".
+        Currently the probability and logloss options are only supported when feature_perturbation="interventional".
 
     Examples
     --------
