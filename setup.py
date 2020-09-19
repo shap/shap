@@ -81,6 +81,14 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         'others': [
             'lime',
         ],
+        'docs': [
+            'matplotlib',
+            'ipython',
+            'numpydoc',
+            'sphinx_rtd_theme',
+            'sphinx',
+            'nbsphinx',
+        ]
     }
     extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
 
@@ -98,13 +106,13 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         author_email='slund1@cs.washington.edu',
         license='MIT',
         packages=[
-            'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers.deep',
-            'shap.plots', 'shap.benchmark'
+            'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers._deep',
+            'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils'
         ],
         package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', 'slicer==0.0.3', 'numba'],
         extras_require=extras_require,
         test_suite='nose.collector',
         tests_require=tests_require,

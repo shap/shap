@@ -2,6 +2,8 @@ import matplotlib
 import numpy as np
 matplotlib.use('Agg')
 import shap
+import warnings
+
 
 def test_random_summary():
     """ Just make sure the summary_plot function doesn't crash.
@@ -28,7 +30,9 @@ def test_random_summary_violin_with_data():
     shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="violin", show=False)
 
 def test_random_summary_layered_violin_with_data():
-    shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="layered_violin", show=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="layered_violin", show=False)
 
 def test_random_summary_with_log_scale():
     shap.summary_plot(np.random.randn(20, 5), use_log_scale=True, show=False)

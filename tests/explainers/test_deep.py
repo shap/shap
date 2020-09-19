@@ -1,13 +1,12 @@
-import shutil
 
-import numpy as np
-import nose
-import os
-
-# force us to not use any GPUs since running many tests may cause trouble
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 def _skip_if_no_tensorflow():
+    import nose
+    import os
+
+    # force us to not use any GPUs since running many tests may cause trouble
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    
     try:
         import tensorflow
     except ImportError:
@@ -15,6 +14,12 @@ def _skip_if_no_tensorflow():
 
 
 def _skip_if_no_pytorch():
+    import nose
+    import os
+
+    # force us to not use any GPUs since running many tests may cause trouble
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
     try:
         import torch
     except ImportError:
@@ -58,6 +63,7 @@ def test_tf_keras_mnist_cnn():
     from tensorflow.keras import backend as K
     import tensorflow as tf
     import shap
+    import numpy as np
 
     tf.compat.v1.disable_eager_execution()
 
@@ -136,6 +142,7 @@ def test_tf_keras_linear():
     from tensorflow.keras.optimizers import SGD
     import tensorflow as tf
     import shap
+    import numpy as np
 
     tf.compat.v1.disable_eager_execution()
 
@@ -240,6 +247,8 @@ def test_pytorch_mnist_cnn():
     from torch import nn
     from torch.nn import functional as F
     import shap
+    import shutil
+    import numpy as np
 
     def run_test(train_loader, test_loader, interim):
 
@@ -354,6 +363,7 @@ def test_pytorch_custom_nested_models():
     from torch.utils.data import TensorDataset, DataLoader
     from sklearn.datasets import load_boston
     import shap
+    import numpy as np
 
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
@@ -447,6 +457,7 @@ def test_pytorch_single_output():
     from torch.utils.data import TensorDataset, DataLoader
     from sklearn.datasets import load_boston
     import shap
+    import numpy as np
 
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
@@ -518,6 +529,7 @@ def test_pytorch_multiple_inputs():
         from torch.utils.data import TensorDataset, DataLoader
         from sklearn.datasets import load_boston
         import shap
+        import numpy as np
 
         X, y = load_boston(return_X_y=True)
         num_features = X.shape[1]

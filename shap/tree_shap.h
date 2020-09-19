@@ -1141,7 +1141,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
             node_tree[j].feat = trees.features[en_ind];
         }
     }
-    
+
     // preallocate arrays needed by the algorithm
     float *pos_lst = new float[trees.max_nodes];
     float *neg_lst = new float[trees.max_nodes];
@@ -1247,7 +1247,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
             // }
         }
     }
-    
+
     delete[] tmp_out_contribs;
     delete[] node_trees;
     delete[] pos_lst;

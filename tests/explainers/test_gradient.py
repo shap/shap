@@ -1,10 +1,6 @@
-import matplotlib
-import numpy as np
-import shutil
-matplotlib.use('Agg')
-import shap
-
 from .test_deep import _skip_if_no_pytorch, _skip_if_no_tensorflow
+
+# pylint: disable=import-error
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
@@ -18,6 +14,7 @@ def test_tf_keras_mnist_cnn():
     from tensorflow.keras.layers import Conv2D, MaxPooling2D
     from tensorflow.keras import backend as K
     import shap
+    import numpy as np
 
     tf.compat.v1.disable_eager_execution()
 
@@ -95,8 +92,9 @@ def test_pytorch_mnist_cnn():
     from torchvision import datasets, transforms
     from torch import nn
     from torch.nn import functional as F
-
+    import shutil
     import shap
+    import numpy as np
 
     batch_size=128
     root_dir = 'mnist_data'
@@ -157,18 +155,18 @@ def test_pytorch_mnist_cnn():
                 if num_examples > cutoff:
                     break
 
-        device = torch.device('cpu')
+        device = torch.device('cpu') # pylint: disable=no-member
         train(model, device, train_loader, optimizer, 1)
 
-        next_x, next_y = next(iter(train_loader))
+        next_x, _ = next(iter(train_loader))
         np.random.seed(0)
         inds = np.random.choice(next_x.shape[0], 20, replace=False)
         if interim:
             e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
         else:
             e = shap.GradientExplainer(model, next_x[inds, :, :, :])
-        test_x, test_y = next(iter(test_loader))
-        shap_values = e.shap_values(test_x[:1], nsamples=1000)
+        test_x, _ = next(iter(test_loader))
+        shap_values = e.shap_values(test_x[:1], nsamples=5000)
 
         if not interim:
             # unlike deepLIFT, Integrated Gradients aren't necessarily consistent for interim layers
@@ -190,11 +188,13 @@ def test_pytorch_mnist_cnn():
 
 
 def test_pytorch_multiple_inputs():
+    # pylint: disable=no-member
 
     _skip_if_no_pytorch()
     import torch
     from torch import nn
     import shap
+    import numpy as np
 
     batch_size = 10
     x1 = torch.ones(batch_size, 3)
