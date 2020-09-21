@@ -88,16 +88,16 @@ class Explanation(object, metaclass=MetaExplanation):
         if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
             if len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
-                feature_names = Alias(feature_names, 0)
+                feature_names = Alias(list(feature_names), 0)
             elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
-                feature_names = Alias(feature_names, 1)
+                feature_names = Alias(list(feature_names), 1)
         
         if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
             if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
-                output_names = Alias(output_names, 0)
+                output_names = Alias(list(output_names), 0)
             elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
-                output_names = Alias(output_names, 1)
+                output_names = Alias(list(output_names), 1)
                 
         self._s = Slicer(
             values = values,
