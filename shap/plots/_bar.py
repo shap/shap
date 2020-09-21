@@ -124,7 +124,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     orig_inds = [[i] for i in range(len(values[0]))]
     orig_values = values.copy()
     while True:
-        feature_order = convert_ordering(order, Explanation(np.abs(values).mean(0)))
+        feature_order = convert_ordering(order, Explanation(values.mean(0)))
         if partition_tree is not None:
 
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
