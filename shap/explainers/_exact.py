@@ -49,6 +49,7 @@ class Exact(Explainer):
             linear models.
         """
         super(Exact, self).__init__(model, masker, link=link)
+        self.name = 'exact explainer'
 
         if getattr(masker, "clustering", None) is not None:
             self._partition_masks,self._partition_masks_inds = partition_masks(masker.clustering)

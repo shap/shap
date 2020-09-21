@@ -62,6 +62,7 @@ class Partition(Explainer):
         """
 
         super(Partition, self).__init__(model, masker, algorithm="partition")
+        self.name = 'partition explainer'
 
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         

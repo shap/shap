@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import pandas as pd 
 import numpy as np 
 
-root = ''
-model = 'Decision_Tree'
+root = 'C:/Users/maggiewu/Desktop/'
+model = 'Explainers'
 
 df = pd.read_excel(root + '{}.xlsx'.format(model))
 explainers = df['Explainers']
@@ -11,6 +11,7 @@ explainers = df['Explainers']
 df = df.set_index('Explainers')
 metrics = df.columns
 model = model.replace('_', ' ')
+model = 'Random Forest'
 markers = dict()
 
 def decide_markers(df):
@@ -35,7 +36,7 @@ def normalize(df):
 def plot_explainers(df):
     ax = plt.gca()
     for explainer in explainers:
-        plt.plot(df.loc[explainer], '-o', markevery=list(markers.keys()))
+        plt.plot(df.loc[explainer], '--o')
 
     ax.tick_params(which='major', axis='both', labelsize=8)
 

@@ -86,6 +86,7 @@ class Tree(Explainer):
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", **deprecated_options):
         masker = data
         super(Tree, self).__init__(model, masker)
+        self.name = 'tree explainer'
 
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
