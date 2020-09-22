@@ -251,8 +251,11 @@ class Explainer():
             #     clustering = clustering[0]
 
         # getting output labels 
-        labels = np.array(self.output_names)
-        sliced_labels = np.array([labels[index_list] for index_list in output_indices])
+        if self.output_names is None:
+            sliced_labels = None
+        else:
+            labels = np.array(self.output_names)
+            sliced_labels = np.array([labels[index_list] for index_list in output_indices])
 
         # build the explanation objects
         out = []
