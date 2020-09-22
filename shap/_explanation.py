@@ -5,6 +5,7 @@ import scipy as sp
 import sys
 import warnings
 import copy
+import operator
 import sklearn
 from slicer import Slicer, Alias, Obj
 # from ._order import Order
@@ -297,13 +298,48 @@ class Explanation(object, metaclass=MetaExplanation):
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
 
-    def __sub__(self, other):
+    def _apply_binary_operator(self, other, binary_op, op_name):
         new_exp = self.__copy__()
         new_exp.op_history = copy.copy(self.op_history)
-        new_exp.values -= other.values
-        if new_exp.data is not None:
-            new_exp.data -= other.data
+        new_exp.op_history.append({
+            "name": op_name,
+            "args": (other,),
+            "prev_shape": self.shape
+        })
+        if isinstance(other, Explanation):
+            new_exp.values = binary_op(new_exp.values, other.values)
+            if new_exp.data is not None:
+                new_exp.data = binary_op(new_exp.data, other.data)
+            if new_exp.base_values is not None:
+                new_exp.base_values = binary_op(new_exp.base_values, other.base_values)
+        else:
+            new_exp.values = binary_op(new_exp.values, other)
+            if new_exp.data is not None:
+                new_exp.data = binary_op(new_exp.data, other)
+            if new_exp.base_values is not None:
+                new_exp.base_values = binary_op(new_exp.base_values, other)
         return new_exp
+
+    def __add__(self, other):
+        return self._apply_binary_operator(other, operator.add, "__add__")
+    
+    def __radd__(self, other):
+        return self._apply_binary_operator(other, operator.add, "__add__")
+        
+    def __sub__(self, other):
+        return self._apply_binary_operator(other, operator.sub, "__sub__")
+    
+    def __rsub__(self, other):
+        return self._apply_binary_operator(other, operator.sub, "__sub__")
+    
+    def __mul__(self, other):
+        return self._apply_binary_operator(other, operator.mul, "__mul__")
+    
+    def __rmul__(self, other):
+        return self._apply_binary_operator(other, operator.mul, "__mul__")
+        
+    def __truediv__(self, other):
+        return self._apply_binary_operator(other, operator.truediv, "__truediv__")
 
     @property
     def abs(self):
@@ -332,7 +368,7 @@ class Explanation(object, metaclass=MetaExplanation):
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([getattr(np, fname)(v) for v in new_values.values()])
+            new_self.values = np.array([getattr(np, fname)(v,0) for v in new_values.values()])
             new_self.clustering = None
         else:
             new_self.values = getattr(np, fname)(np.array(self.values), **kwargs)

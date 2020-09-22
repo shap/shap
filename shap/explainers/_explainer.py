@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Explainer():
-    def __init__(self, model, masker, link=links.identity, algorithm="auto", output_names=None):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None):
         """ Uses Shapley values to explain any machine learning model or python function.
 
         This is the primary explainer interface for the SHAP library. It takes any combination
@@ -19,7 +19,7 @@ class Explainer():
             User supplied function or model object that takes a dataset of samples and
             computes the output of the model for those samples.
 
-        masker : function, numpy.array, pandas.DataFrame, tokenizer, or a list of these for each model input
+        masker : function, numpy.array, pandas.DataFrame, tokenizer, None, or a list of these for each model input
             The function used to "mask" out hidden features of the form `masked_args = masker(*model_args, mask=mask)`. 
             It takes input in the same form as the model, but for just a single sample with a binary
             mask, then returns an iterable of masked samples. These
