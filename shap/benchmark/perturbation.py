@@ -1,5 +1,6 @@
-from shap.utils import safe_isinstance
+from shap.utils import safe_isinstance, MaskedModel
 from shap.maskers import Text, Partition
+import shap.links
 import shap.datasets
 import matplotlib.pyplot as pl
 import sklearn
@@ -19,6 +20,10 @@ class SequentialPerturbation():
         self.score_function = score_function
         self.perturbation = perturbation
         
+        # convert dataframe
+        if safe_isinstance(self.masker, "pandas.core.series.Series") or safe_isinstance(self.masker, "pandas.core.frame.DataFrame"):
+            self.masker = self.masker.values
+
         # If the user just gave a dataset as the masker
         # then we make a masker that perturbs features independently
         if type(self.masker) == np.ndarray:
@@ -38,16 +43,18 @@ class SequentialPerturbation():
         self.score_values = []
         self.score_aucs = []
         self.labels = []
+
+    def maskedmodel(self):
+        self.masked_model = MaskedModel(self.f, self.masker, shap.links.identity) 
     
-    def score(self, attributions, X, y=None, label=None, silent=False):
+    def score(self, explainer, X, y=None, label=None, silent=False):
+        attributions = explainer(X).values
         
         if label is None:
             label = "Score %d" % len(self.score_values)
         
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(self.masker, "pandas.core.frame.DataFrame"):
+        if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
             X = X.values
             
         # convert all single-sample vectors to matrices
@@ -125,28 +132,27 @@ class SequentialPerturbation():
                 yp = self.score_values[i][j]
                 curves[j,:] = np.interp(xs, xp, yp)
             ys = curves.mean(0)
-            pl.plot(
-                xs, ys, label=self.labels[i] + " AUC %0.4f" % self.score_aucs[i].mean()
-            )
+            pl.plot(xs, ys, label=self.labels[i] + " AUC %0.4f" % self.score_aucs[i].mean())
         if (self.sort_order == "negative") != (self.perturbation == "remove"):
             pl.gca().invert_yaxis()
         pl.legend()
         pl.show()
 
+# scores_functions = [np.mean(pred), sklearn.metrics.r2_score, sklearn.metrics.roc_auc_score]
+
 # Example 
 
-X,y = shap.datasets.adult()
-model = xgboost.XGBClassifier().fit(X, y)
+# X,y = shap.datasets.adult()
+# model = xgboost.XGBClassifier().fit(X, y)
 
-f = lambda x: model.predict(x, output_margin=True)
-masker = Partition(X[:500])
-explainer = shap.Explainer(f, masker)(X[:500])
-shap_values = explainer.values
-data = explainer.data
-score_function = lambda y, out: out
-sort_order = 'absolute'
-perturbation = 'keep'
+# f = lambda x: model.predict(x, output_margin=True)
+# f = model.predict 
+# masker = Partition(X[:500])
+# explainer = shap.Explainer(f, masker)
+# score_function = lambda y, out: out
+# sort_order = 'absolute'
+# perturbation = 'keep'
 
-sp = SequentialPerturbation(f, masker, sort_order, score_function, perturbation)
-sp.score(shap_values, data)
-sp.plot()
+# sp = SequentialPerturbation(f, masker, sort_order, score_function, perturbation)
+# sp.score(explainer, X[:500])
+# sp.plot()

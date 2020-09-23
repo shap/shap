@@ -104,7 +104,7 @@ class Partition(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-    def __call__d(self, X, y=None, max_evals=1000, output_indexes=None,
+    def __call__(self, X, y=None, max_evals=1000, output_indexes=None,
                  batch_size=10, hierarchical=None, silent=False):
         """ Explain the model's prediction on the given set of instances.
 
