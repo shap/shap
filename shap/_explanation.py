@@ -28,6 +28,10 @@ class MetaExplanation(type):
         return op_chain_root.abs
 
     @property
+    def identity(cls):
+        return op_chain_root.identity
+
+    @property
     def argsort(cls):
         return op_chain_root.argsort
 
@@ -412,6 +416,10 @@ class Explanation(object, metaclass=MetaExplanation):
     @property
     def abs(self):
         return self._numpy_func("abs")
+
+    @property
+    def identity(self):
+        return self
 
     @property
     def argsort(self):
