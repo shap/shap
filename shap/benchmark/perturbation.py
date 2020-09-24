@@ -74,8 +74,8 @@ class SequentialPerturbation():
             # compute the fully masked score
             values = np.zeros(len(X[i])+1)
             masked = self.masker(mask, X[i])
-            values[0] = self.score_function(None if y is None else y[i], self.f(masked).mean(0))
-
+            values[0] = self.f(masked).mean(0)
+            
             # loop over all the features
             curr_val = None
             for j in range(len(X[i])):
@@ -86,7 +86,7 @@ class SequentialPerturbation():
                         (self.sort_order == "negative" and attributions[i][oind] >= 0)):
                     mask[oind] = self.perturbation == "keep"
                     masked = self.masker(mask, X[i])
-                    curr_val = self.score_function(None if y is None else y[i], self.f(masked).mean(0))
+                    curr_val = self.f(masked).mean(0)
                 values[j+1] = curr_val
             svals.append(values)
 
@@ -100,15 +100,17 @@ class SequentialPerturbation():
             
         self.score_values.append(np.array(svals))
         
-        if self.sort_order == "negative":
-            curve_sign = -1
-        else:
-            curve_sign = 1
+        if self.sort_order == "negative": curve_sign = -1
+        else: curve_sign = 1
+
+        svals = np.array(svals)
+        scores = [self.score_function(y, svals[:,i]) for i in range(svals.shape[1])]
+        auc = sklearn.metrics.auc(np.linspace(0, 1, len(scores)), curve_sign*(scores-scores[0]))
         
-        self.score_aucs.append(np.array([
-            sklearn.metrics.auc(np.linspace(0, 1, len(svals[i])), curve_sign*(svals[i] - svals[i][0]))
-            for i in range(len(svals))
-        ]))
+        # self.score_aucs.append(np.array([
+        #     sklearn.metrics.auc(np.linspace(0, 1, len(svals[i])), curve_sign*(svals[i] - svals[i][0]))
+        #     for i in range(len(svals))
+        # ]))
         
         self.labels.append(label)
         
@@ -120,7 +122,7 @@ class SequentialPerturbation():
             curves[j,:] = np.interp(xs, xp, yp)
         ys = curves.mean(0)
         
-        return xs, ys
+        return xs, ys, auc
         
     def plot(self):
         

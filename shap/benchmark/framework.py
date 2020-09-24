@@ -3,21 +3,21 @@ import pandas as pd
 import numpy as np 
 import scipy as sp 
 import sklearn 
-from sklearn.model_selection import train_test_split
 import xgboost
 import torch 
 import transformers
 import time
 import shap 
+from sklearn.model_selection import train_test_split
 from shap.utils import safe_isinstance, MaskedModel
 from perturbation import SequentialPerturbation
 
-def update(model, X, y, explainer, masker, sort_order, score_function, perturbation, results, score=""):
-    metric = perturbation + ' ' + sort_order + ' ' + score
+def update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores):
+    metric = perturbation + ' ' + sort_order
     sp = SequentialPerturbation(model, masker, sort_order, score_function, perturbation)
-    x, y = sp.score(explainer, X, y=y)
-    results['metrics'].append(metric)
-    results['output'][metric] = [x, y, sklearn.metrics.auc(x, y)] 
+    x, y, auc = sp.score(explainer, X, y=y)
+    scores['metrics'].append(metric)
+    scores['values'][metric] = [x, y, auc] 
 
 def benchmark(model, X, y, explainer, masker, metrics, *args):
     # convert dataframes
@@ -25,95 +25,89 @@ def benchmark(model, X, y, explainer, masker, metrics, *args):
         X = X.values
     if safe_isinstance(masker, "pandas.core.series.Series") or safe_isinstance(masker, "pandas.core.frame.DataFrame"):
         masker = masker.values
-        
-    results = {'metrics': list(), 'output': dict()}
+    
+    # record scores per metric 
+    scores = {'name': explainer.name, 'metrics': list(), 'values': dict()}
     for sort_order in metrics['sort_order']:
         for perturbation in metrics['perturbation']:
-            if sort_order == "positive" or sort_order == "negative": 
-                score_function = lambda true, pred: np.mean(pred)
-                update(model, X, y, explainer, masker, sort_order, score_function, perturbation, results, *args)
+            score_function = lambda true, pred: np.mean(pred)
+            update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores)
 
-            if sort_order == "absolute": 
-                score_function = sklearn.metrics.r2_score
-                update(model, X, y, explainer, masker, sort_order, score_function, perturbation, results, score="r2", *args)
+    return scores 
 
-                score_function = sklearn.metrics.roc_auc_score
-                update(model, X, y, explainer, masker, sort_order, score_function, perturbation, results, score="roc auc", *args)
-
-    return results 
-
-def dataframe(benchmarks, trend=False):
-    '''
-    results - dictionary of benchmark 
-    '''
-    explainers = list()
+def get_metrics(benchmarks, selection):
+    # select metrics to plot using selection function
+    explainer_metrics = set()
     for explainer in benchmarks: 
-        metrics = benchmarks[explainer]['metrics']
-        plt.clf()
-        if trend: 
-            for metric in benchmarks[explainer]['output']: 
-                fcounts, scores, _ = benchmarks[explainer]['output'][metric]
-                plt.plot(fcounts, scores, '--o')
-                plt.show()
-        else: 
-            explainer_metric = [explainer]
-            for metric in benchmarks[explainer]['output']:
-                _, _, auc = benchmarks[explainer]['output'][metric]
-                explainer_metric.append(auc)
-            explainers.append(explainer_metric)
-
-    df = pd.DataFrame(explainers, columns=['Explainers']+metrics)
-
-    return df 
-
-markers = dict()
-def process_dataframe(df):
-    explainers = df['Explainers']
-    df = df.set_index('Explainers')
-
-    metrics = df.columns
-    for metric in metrics:
-        if df[metric].dtype == bool:
-            markers[df.columns.get_loc(metric)] = df[metric]
-
-    bool_column = np.array([i/(len(explainers)-1) for i in range(0, len(explainers))]).reshape(-1, 1)
-    for bool_index in markers:
-        df[metrics[bool_index]] = bool_column
-
-    min_per_metric = df.min(axis=0)
-    df = df.sub(min_per_metric, axis=1)
+        scores = benchmarks[explainer]
+        if len(explainer_metrics) == 0: explainer_metrics = set(scores['metrics'])
+        else: explainer_metrics = selection(explainer_metrics, set(scores['metrics']))
     
-    max_per_normalized = df.max(axis=0)
-    percent_df = df.divide(max_per_normalized, axis=1)
+    return list(explainer_metrics)
 
-    return explainers, percent_df
+def trend_plot(benchmarks):
+    explainer_metrics = get_metrics(benchmarks, lambda x, y: x.union(y))
 
-def singleplot():
-    pass 
+    # plot all curves if metric exists 
+    for metric in explainer_metrics:
+        plt.clf()
 
-def multiplot(explainers, df):
-    '''
-    df - dataframe of benchmark results
-    '''
-    metrics = df.columns 
+        for explainer in benchmarks: 
+            scores = benchmarks[explainer]
+            try: 
+                x, y, auc = scores['values'][metric]
+                plt.plot(x, y, label='{} - {}'.format(round(auc, 3), explainer))
+            except: 
+                pass 
+
+        plt.title(metric)
+        plt.legend()
+        plt.show()
+    
+def compare_plot(benchmarks):
+    explainer_metrics = get_metrics(benchmarks, lambda x, y: x.intersection(y))
+    explainers = list(benchmarks.keys())
+
+    # dummy start to evenly distribute explainers on the left 
+    # can later be replaced by boolean metrics 
+    aucs = dict()
+    for i in range(len(explainers)): 
+        explainer = explainers[i]
+        aucs[explainer] = [i/(len(explainers)-1)] 
+
+    # normalize per metric
+    for metric in explainer_metrics: 
+        max_auc, min_auc = -float('inf'), float('inf')
+
+        for explainer in explainers: 
+            scores = benchmarks[explainer] 
+            _, _, auc = scores['values'][metric]
+            min_auc = min(auc, min_auc)
+            max_auc = max(auc, max_auc)
+        
+        for explainer in explainers: 
+            scores = benchmarks[explainer] 
+            _, _, auc = scores['values'][metric]
+            aucs[explainer].append((auc-min_auc)/(max_auc-min_auc))
+    
+    # plot common curves
     ax = plt.gca()
-    for explainer in explainers:
-        plt.plot(df.loc[explainer], '--o')
+    for explainer in explainers: 
+        plt.plot(np.linspace(0, 1, len(explainer_metrics)+1), aucs[explainer], '--o')
 
     ax.tick_params(which='major', axis='both', labelsize=8)
 
     ax.set_yticks([i/(len(explainers)-1) for i in range(0, len(explainers))])
     ax.set_yticklabels(explainers, rotation=0)
 
-    ax.set_xticks([i for i in range(len(metrics))])
-    ax.set_xticklabels(metrics, rotation=45, ha='right')
+    ax.set_xticks(np.linspace(0, 1, len(explainer_metrics)+1))
+    ax.set_xticklabels([' '] + explainer_metrics, rotation=45, ha='right')
 
     plt.grid(which='major', axis='x', linestyle='--')
     plt.tight_layout()
     plt.show()
 
-
-metrics = {'sort_order': ['positive', 'negative'], 'perturbation': ['keep', 'remove']}
+metrics = {'sort_order': ['positive', 'negative'], 'perturbation': ['keep']}
 
 model_generator = lambda: xgboost.XGBRegressor(n_estimators=100, subsample=0.3)
 X,y = shap.datasets.boston()
@@ -133,7 +127,7 @@ benchmarks = dict()
 masker = X_train
 benchmarks[permutation_explainer.name] = benchmark(model.predict, X_train, y_train, permutation_explainer, masker, metrics)
 benchmarks[tree_explainer.name] = benchmark(model.predict, X_train, y_train, tree_explainer, masker, metrics)
+benchmarks[exact_explainer.name] = benchmark(model.predict, X_train, y_train, exact_explainer, masker, metrics)
 
-df = dataframe(benchmarks)
-explainers, processed_df = process_dataframe(df)
-multiplot(explainers, processed_df)
+trend_plot(benchmarks)
+compare_plot(benchmarks)
