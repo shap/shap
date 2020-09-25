@@ -5,6 +5,7 @@ from ._explainer import Explainer
 from ..utils import safe_isinstance, MaskedModel
 from .. import maskers
 
+
 class Additive(Explainer):
     """ Computes SHAP values for generalized additive models.
 

@@ -4,6 +4,7 @@ import warnings
 from tqdm.autonotebook import tqdm
 from ._explainer import Explainer
 from ..utils import safe_isinstance
+from .. import maskers
 
 
 class Linear(Explainer):
@@ -225,9 +226,13 @@ class Linear(Explainer):
         return coef,intercept
 
     @staticmethod
-    def supports_model(model):
+    def supports_model_with_masker(model, masker):
         """ Determines if we can parse the given model.
         """
+        
+        if not isinstance(masker, (maskers.Independent, maskers.Partition)):
+            return False
+
         try:
             Linear._parse_model(model)
         except:

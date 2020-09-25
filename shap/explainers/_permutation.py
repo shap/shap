@@ -58,41 +58,44 @@ class Permutation(Explainer):
         masks[0] = MaskedModel.delta_mask_noop_value
         npermutations = max_evals // (2*len(inds)+1)
         row_values = None
-        for _ in range(npermutations):
+        main_effect_values = None
+        if len(inds) > 0:
+            for _ in range(npermutations):
 
-            # shuffle the indexes so we get a random permutation ordering
-            if getattr(self.masker, "clustering", None) is not None:
-                # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M TODO: still true?
-                #assert len(inds) == len(fm), "Need to support partition shuffle when not all the inds vary!!"
-                partition_tree_shuffle(inds, inds_mask, self.masker.clustering)
-            else:
-                np.random.shuffle(inds)
+                # shuffle the indexes so we get a random permutation ordering
+                if getattr(self.masker, "clustering", None) is not None:
+                    # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M TODO: still true?
+                    #assert len(inds) == len(fm), "Need to support partition shuffle when not all the inds vary!!"
+                    partition_tree_shuffle(inds, inds_mask, self.masker.clustering)
+                else:
+                    np.random.shuffle(inds)
 
-            # create a large batch of masks to evaluate
-            i = 1
-            for ind in inds:
-                masks[i] = ind
-                i += 1
-            for ind in inds:
-                masks[i] = ind
-                i += 1
+                # create a large batch of masks to evaluate
+                i = 1
+                for ind in inds:
+                    masks[i] = ind
+                    i += 1
+                for ind in inds:
+                    masks[i] = ind
+                    i += 1
+                
+                # evaluate the masked model
+                outputs = fm(masks, batch_size=batch_size)
+
+                if row_values is None:
+                    row_values = np.zeros((len(fm),) + outputs.shape[1:])
+                
+                # update our SHAP value estimates
+                for i,ind in enumerate(inds):
+                    row_values[ind] += outputs[i+1] - outputs[i]
+                for i,ind in enumerate(inds):
+                    row_values[ind] += outputs[i+1] - outputs[i]
             
-            # evaluate the masked model
-            outputs = fm(masks, batch_size=batch_size)
+            expected_value = outputs[0]
 
-            if row_values is None:
-                row_values = np.zeros((len(fm),) + outputs.shape[1:])
-            
-            # update our SHAP value estimates
-            for i,ind in enumerate(inds):
-                row_values[ind] += outputs[i+1] - outputs[i]
-            for i,ind in enumerate(inds):
-                row_values[ind] += outputs[i+1] - outputs[i]
-        
-        expected_value = outputs[0]
-
-        # compute the main effects if we need to
-        main_effect_values = fm.main_effects(inds) if main_effects else None
+            # compute the main effects if we need to
+            if main_effects:
+                main_effect_values = fm.main_effects(inds)
         
         return {
             "values": row_values / (2 * npermutations),
