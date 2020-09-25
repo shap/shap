@@ -1,5 +1,6 @@
 import numpy as np
 from ._masker import Masker
+from ..utils import safe_isinstance
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -50,7 +51,11 @@ class Text(Masker):
                 out = self._segments_s[mask]
             else:
                 out = np.array([self._segments_s[i] if mask[i] else self.mask_token_str for i in range(len(mask))])
-            out = "".join(out)
+
+            if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+                out = self.tokenizer.convert_tokens_to_string(out)
+            elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+                out = "".join(out)
         else:
             if self.mask_token is None:
                 out = self._tokenized_s[mask]
@@ -79,17 +84,33 @@ class Text(Masker):
             return np.array([out])
 
     def data_transform(self, s):
-        return self.token_segments(s)
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+            out = self.token_segments(s)
+            out = [token+' ' for token in out]
+            return out
+        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+            return self.token_segments(s)
     
     def tokenize(self, s):
-        return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+            return self.tokenizer.encode_plus(s)
+        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+            return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
     
     def token_segments(self, s):
-        offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
-        offsets = [(0,0) if o is None else o for o in offsets]
-        parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
-        parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
-        return parts
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+            token_ids = self.tokenizer.encode_plus(s)['input_ids']
+            tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
+            special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
+            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))]
+            return tokens
+
+        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+            offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
+            offsets = [(0,0) if o is None else o for o in offsets]
+            parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
+            parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
+            return parts
 
     def clustering(self, s):
         self._update_s_cache(s)
