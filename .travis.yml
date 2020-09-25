@@ -17,7 +17,7 @@ before_install:
 install:
 - pip install .
 - pip install tensorflow xgboost matplotlib ipython codecov
-script: python setup.py nosetests --with-coverage
+script: python setup.py nosetests --with-coverage --cover-package=shap
 after_success:
   - codecov
 deploy:
