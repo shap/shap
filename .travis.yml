@@ -16,8 +16,10 @@ before_install:
 - sudo apt-get install -y libgomp1
 install:
 - pip install .
-- pip install tensorflow xgboost matplotlib ipython
-script: python setup.py nosetests
+- pip install tensorflow xgboost matplotlib ipython codecov
+script: python setup.py nosetests --with-coverage
+after_success:
+  - codecov
 deploy:
   provider: pypi
   user: "__token__"
