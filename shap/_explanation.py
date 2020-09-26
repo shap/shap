@@ -5,8 +5,9 @@ import scipy as sp
 import sys
 import warnings
 import copy
+import operator
 import sklearn
-from slicer import Slicer, Alias
+from slicer import Slicer, Alias, Obj
 # from ._order import Order
 from .utils._general import OpChain
 
@@ -25,6 +26,10 @@ class MetaExplanation(type):
     @property
     def abs(cls):
         return op_chain_root.abs
+
+    @property
+    def identity(cls):
+        return op_chain_root.identity
 
     @property
     def argsort(cls):
@@ -88,24 +93,31 @@ class Explanation(object, metaclass=MetaExplanation):
         if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
             if len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
-                feature_names = Alias(feature_names, 0)
+                feature_names = Alias(list(feature_names), 0)
             elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
-                feature_names = Alias(feature_names, 1)
-
+                feature_names = Alias(list(feature_names), 1)
+        
+        if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
+            values_shape = _compute_shape(values)
+            if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
+                output_names = Alias(list(output_names), 0)
+            elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
+                output_names = Alias(list(output_names), 1)
+                
         self._s = Slicer(
             values = values,
-            base_values = base_values,
+            base_values = None if base_values is None else Obj(base_values, [0] + list(output_dims)),
             data = data,
             display_data = display_data,
             instance_names = None if instance_names is None else Alias(instance_names, 0),
             feature_names = feature_names, 
-            output_names = None if output_names is None else Alias(output_names, output_dims),
+            output_names =  output_names, # None if output_names is None else Alias(output_names, output_dims),
             output_indexes = None if output_indexes is None else (output_dims, output_indexes),
             lower_bounds = lower_bounds,
             upper_bounds = lower_bounds,
             main_effects = main_effects,
             hierarchical_values = hierarchical_values,
-            clustering = clustering
+            clustering = None if clustering is None else Obj(clustering, [0])
         )
 
     @property
@@ -290,13 +302,48 @@ class Explanation(object, metaclass=MetaExplanation):
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
 
-    def __sub__(self, other):
+    def _apply_binary_operator(self, other, binary_op, op_name):
         new_exp = self.__copy__()
         new_exp.op_history = copy.copy(self.op_history)
-        new_exp.values -= other.values
-        if new_exp.data is not None:
-            new_exp.data -= other.data
+        new_exp.op_history.append({
+            "name": op_name,
+            "args": (other,),
+            "prev_shape": self.shape
+        })
+        if isinstance(other, Explanation):
+            new_exp.values = binary_op(new_exp.values, other.values)
+            if new_exp.data is not None:
+                new_exp.data = binary_op(new_exp.data, other.data)
+            if new_exp.base_values is not None:
+                new_exp.base_values = binary_op(new_exp.base_values, other.base_values)
+        else:
+            new_exp.values = binary_op(new_exp.values, other)
+            if new_exp.data is not None:
+                new_exp.data = binary_op(new_exp.data, other)
+            if new_exp.base_values is not None:
+                new_exp.base_values = binary_op(new_exp.base_values, other)
         return new_exp
+
+    def __add__(self, other):
+        return self._apply_binary_operator(other, operator.add, "__add__")
+    
+    def __radd__(self, other):
+        return self._apply_binary_operator(other, operator.add, "__add__")
+        
+    def __sub__(self, other):
+        return self._apply_binary_operator(other, operator.sub, "__sub__")
+    
+    def __rsub__(self, other):
+        return self._apply_binary_operator(other, operator.sub, "__sub__")
+    
+    def __mul__(self, other):
+        return self._apply_binary_operator(other, operator.mul, "__mul__")
+    
+    def __rmul__(self, other):
+        return self._apply_binary_operator(other, operator.mul, "__mul__")
+        
+    def __truediv__(self, other):
+        return self._apply_binary_operator(other, operator.truediv, "__truediv__")
 
     @property
     def abs(self):
@@ -325,7 +372,7 @@ class Explanation(object, metaclass=MetaExplanation):
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([getattr(np, fname)(v) for v in new_values.values()])
+            new_self.values = np.array([getattr(np, fname)(v,0) for v in new_values.values()])
             new_self.clustering = None
         else:
             new_self.values = getattr(np, fname)(np.array(self.values), **kwargs)
@@ -369,6 +416,10 @@ class Explanation(object, metaclass=MetaExplanation):
     @property
     def abs(self):
         return self._numpy_func("abs")
+
+    @property
+    def identity(self):
+        return self
 
     @property
     def argsort(self):
@@ -479,7 +530,7 @@ def compute_output_dims(values, base_values, data):
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
     values_dims = list(range(len(values_shape)))
-    output_dims = range(len(data_shape) + interaction_order, values_dims[-1])
+    output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
 def is_1d(val):

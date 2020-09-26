@@ -521,11 +521,15 @@ class Tree(Explainer):
             check_sum(self.expected_value + phi.sum(-1), model_output)
 
     @staticmethod
-    def supports_model(model):
+    def supports_model_with_masker(model, masker):
         """ Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
+
+        if not isinstance(masker, (maskers.Independent)) and masker is not None:
+            return False
+
         try:
             TreeEnsemble(model)
         except:

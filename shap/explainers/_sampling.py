@@ -47,13 +47,13 @@ class Sampling(Kernel):
         assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)
 
     def __call__(self, X, y=None, nsamples=2000):
-        
+
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
             X = X.values
         else:
             feature_names = None # we can make self.feature_names from background data eventually if we have it
-        
+
         v = self.shap_values(X, nsamples=nsamples)
         output_shape = tuple()
         if type(v) is list:
@@ -107,7 +107,6 @@ class Sampling(Kernel):
             self.nsamples = kwargs.get("nsamples", "auto")
             if self.nsamples == "auto":
                 self.nsamples = 1000 * self.M
-            assert self.nsamples % 2 == 0, "nsamples must be divisible by 2!"
 
             min_samples_per_feature = kwargs.get("min_samples_per_feature", 100)
             round1_samples = self.nsamples
@@ -124,14 +123,14 @@ class Sampling(Kernel):
             # explain every feature in round 1
             phi = np.zeros((self.P, self.D))
             phi_var = np.zeros((self.P, self.D))
-            self.X_masked = np.zeros((nsamples_each1.max(), self.data.data.shape[1]))
+            self.X_masked = np.zeros((nsamples_each1.max() * 2, self.data.data.shape[1]))
             for i,ind in enumerate(self.varyingInds):
                 phi[ind,:],phi_var[ind,:] = self.sampling_estimate(ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i])
 
             # optimally allocate samples according to the variance
             if phi_var.sum() == 0:
                 phi_var += 1 # spread samples uniformally if we found no variability
-            phi_var /= phi_var.sum()
+            phi_var /= phi_var.sum(0)[np.newaxis, :]
             nsamples_each2 = (phi_var[self.varyingInds,:].mean(1) * round2_samples).astype(np.int)
             for i in range(len(nsamples_each2)):
                 if nsamples_each2[i] % 2 == 1: nsamples_each2[i] += 1
@@ -143,7 +142,7 @@ class Sampling(Kernel):
                 else:
                     break
 
-            self.X_masked = np.zeros((nsamples_each2.max(), self.data.data.shape[1]))
+            self.X_masked = np.zeros((nsamples_each2.max() * 2, self.data.data.shape[1]))
             for i,ind in enumerate(self.varyingInds):
                 if nsamples_each2[i] > 0:
                     val,var = self.sampling_estimate(ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each2[i])
@@ -175,11 +174,10 @@ class Sampling(Kernel):
         return phi
 
     def sampling_estimate(self, j, f, x, X, nsamples=10):
-        assert nsamples % 2 == 0, "nsamples must be divisible by 2!"
-        X_masked = self.X_masked[:nsamples,:]
+        X_masked = self.X_masked[:nsamples * 2,:]
         inds = np.arange(X.shape[1])
 
-        for i in range(0, nsamples//2):
+        for i in range(0, nsamples):
             np.random.shuffle(inds)
             pos = np.where(inds == j)[0][0]
             rind = np.random.randint(X.shape[0])
@@ -189,8 +187,8 @@ class Sampling(Kernel):
             X_masked[-(i+1), inds[pos:]] = X[rind, inds[pos:]]
 
         evals = f(X_masked)
-        evals_on = evals[:nsamples//2]
-        evals_off = evals[nsamples//2:][::-1]
+        evals_on = evals[:nsamples]
+        evals_off = evals[nsamples:][::-1]
         d = evals_on - evals_off
 
         return np.mean(d, 0), np.var(d, 0)
