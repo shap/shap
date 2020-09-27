@@ -92,15 +92,15 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
     }
     extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
 
+    with open('README.rst') as f:
+        long_description = f.read()
+
     setup(
         name='shap',
         version=find_version("shap", "__init__.py"),
         description='A unified approach to explain the output of any machine learning model.',
-        long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain the output of " + \
-                         "any machine learning model. SHAP connects game theory with local explanations, uniting " + \
-                         "several previous methods and representing the only possible consistent and locally accurate " + \
-                         "additive feature attribution method based on expectations.",
-        long_description_content_type="text/markdown",
+        long_description=long_description,
+        long_description_content_type='text/x-rst',
         url='http://github.com/slundberg/shap',
         author='Scott Lundberg',
         author_email='slund1@cs.washington.edu',
