@@ -5,7 +5,7 @@
 </p>
 
 ---
-<a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.org/slundberg/shap.svg?branch=master"></a>
+[![Travis](https://travis-ci.org/slundberg/shap)](https://travis-ci.org/slundberg/shap.svg?branch=master)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/slundberg/shap/master)
 [![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
 
@@ -15,15 +15,16 @@
 
 
 
-## Install
+## Installation
 
-Shap can be installed from either [PyPI](https://pypi.org/project/shap) or [conda-forge](https://anaconda.org/conda-forge/shap):
-
-<pre>
+Shap can be installed from either [PyPI](https://pypi.org/project/shap):
+```
 pip install shap
-<i>or</i>
+```
+or [conda-forge](https://anaconda.org/conda-forge/shap):
+```
 conda install -c conda-forge shap
-</pre>
+```
 
 ## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn/pyspark models)
 
@@ -37,7 +38,7 @@ import shap
 shap.initjs()
 
 # train XGBoost model
-X,y = shap.datasets.boston()
+X, y = shap.datasets.boston()
 model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
 # explain the model's predictions using SHAP
@@ -173,7 +174,7 @@ import shap
 
 # load pre-trained model and choose two images to explain
 model = VGG16(weights='imagenet', include_top=True)
-X,y = shap.datasets.imagenet50()
+X, y = shap.datasets.imagenet50()
 to_explain = X[[39,41]]
 
 # load the ImageNet class names
@@ -219,7 +220,7 @@ from sklearn.model_selection import train_test_split
 shap.initjs()
 
 # train a SVM classifier
-X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
+X_train, X_test, Y_train, Y_test = train_test_split(*shap.datasets.iris(), test_size=0.2, random_state=0)
 svm = sklearn.svm.SVC(kernel='rbf', probability=True)
 svm.fit(X_train, Y_train)
 
