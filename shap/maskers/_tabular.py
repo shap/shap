@@ -251,3 +251,64 @@ class Partition(Tabular):
             If an array, then this is assumed to be the clustering of 
         """
         super(Partition, self).__init__(data, max_samples=max_samples, clustering=clustering)
+
+class Mean(Tabular):
+    def __init__(self, data):
+        self.data = data 
+        self.mean = data.mean(0) 
+
+    def __call__(self, mask, x):
+        masker_data = self.data.copy()
+        
+        return self.mean * mask + masker_data * np.invert(mask)
+
+class Impute(Tabular):
+    def __init__(self, data):
+        self.data = data 
+        self.mean = data.mean(0)
+
+        self.C = np.cov(data.T)
+        self.C += np.eye(self.C.shape[0]) * 1e-6
+
+    def __call__(self, mask, x):
+        masker_data = self.data.copy()
+        observe_inds = np.where(mask == True)[0]
+        impute_inds = np.where(mask == False)[0]
+        
+        # impute missing data assuming it follows a multivariate normal distribution
+        Coo_inv = np.linalg.inv(self.C[observe_inds,:][:,observe_inds])
+        Cio = self.C[impute_inds,:][:,observe_inds]
+        impute = self.mean[impute_inds] + Cio @ Coo_inv @ (x[observe_inds] - self.mean[observe_inds])
+
+        masker_data[:,impute_inds] = impute 
+        
+        return masker_data
+
+class Resample(Tabular):
+    def __init__(self, data):
+        self.data = data
+
+    def __call__(self, mask, x): 
+        pass 
+        # masker_data = self.data.copy()
+
+        # nsamples = 100
+        # random_state = np.random.randint(0, 10)
+
+        # temp_x = x.copy()
+
+        # inds = 
+
+        # # keep nkeep top features for each test explanation
+        # N,M = X_test.shape
+        # X_test_tmp = np.tile(X_test, [1, nsamples]).reshape(nsamples * N, M)
+        # inds = sklearn.utils.resample(np.arange(N), n_samples=nsamples, random_state=random_state)
+        # for i in range(N):
+        #     if nkeep[i] < M:
+        #         ordering = np.argsort(-attr_test[i,:])
+        #         X_test_tmp[i*nsamples:(i+1)*nsamples, ordering[nkeep[i]:]] = X_train[inds, :][:, ordering[nkeep[i]:]]
+
+        # yp_masked_test = trained_model.predict(X_test_tmp)
+        # yp_masked_test = np.reshape(yp_masked_test, (N, nsamples)).mean(1) # take the mean output over all samples
+
+        # return metric(y_test, yp_masked_test)

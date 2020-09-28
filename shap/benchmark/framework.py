@@ -19,7 +19,7 @@ def update(model, X, y, explainer, masker, sort_order, score_function, perturbat
     scores['metrics'].append(metric)
     scores['values'][metric] = [x, y, auc] 
 
-def benchmark(model, X, y, explainer, masker, metrics, *args):
+def get_benchmark(model, X, y, explainer, masker, metrics, *args):
     # convert dataframes
     if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
         X = X.values
@@ -107,27 +107,27 @@ def compare_plot(benchmarks):
     plt.tight_layout()
     plt.show()
 
-metrics = {'sort_order': ['positive', 'negative'], 'perturbation': ['keep']}
+# metrics = {'sort_order': ['positive', 'negative'], 'perturbation': ['keep']}
 
-model_generator = lambda: xgboost.XGBRegressor(n_estimators=100, subsample=0.3)
-X,y = shap.datasets.boston()
-X = X.values
+# model_generator = lambda: xgboost.XGBRegressor(n_estimators=100, subsample=0.3)
+# X,y = shap.datasets.boston()
+# X = X.values
 
-test_size = 0.3 
-random_state = 0
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+# test_size = 0.3 
+# random_state = 0
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-model = model_generator().fit(X_train, y_train)
+# model = model_generator().fit(X_train, y_train)
 
-permutation_explainer = shap.Explainer(model.predict, X, algorithm='permutation')
-tree_explainer = shap.Explainer(model, X, algorithm='tree')
-exact_explainer = shap.Explainer(model.predict, X, algorithm='exact')
+# permutation_explainer = shap.Explainer(model.predict, X, algorithm='permutation')
+# tree_explainer = shap.Explainer(model, X, algorithm='tree')
+# exact_explainer = shap.Explainer(model.predict, X, algorithm='exact')
 
-benchmarks = dict()
-masker = X_train
-benchmarks[permutation_explainer.name] = benchmark(model.predict, X_train, y_train, permutation_explainer, masker, metrics)
-benchmarks[tree_explainer.name] = benchmark(model.predict, X_train, y_train, tree_explainer, masker, metrics)
-benchmarks[exact_explainer.name] = benchmark(model.predict, X_train, y_train, exact_explainer, masker, metrics)
+# benchmarks = dict()
+# masker = X_train
+# benchmarks[permutation_explainer.name] = get_benchmark(model.predict, X_train, y_train, permutation_explainer, masker, metrics)
+# benchmarks[tree_explainer.name] = get_benchmark(model.predict, X_train, y_train, tree_explainer, masker, metrics)
+# benchmarks[exact_explainer.name] = get_benchmark(model.predict, X_train, y_train, exact_explainer, masker, metrics)
 
-trend_plot(benchmarks)
-compare_plot(benchmarks)
+# trend_plot(benchmarks)
+# compare_plot(benchmarks)

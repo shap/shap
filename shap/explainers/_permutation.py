@@ -49,7 +49,7 @@ class Permutation(Explainer):
 
         # by default we run 10 permutations forward and backward
         if max_evals == "auto":
-            max_evals = 2 * len(fm) + 1
+            max_evals = 10 * 2 * len(fm) + 1
 
         # loop over many permutations
         inds = fm.varying_inputs()

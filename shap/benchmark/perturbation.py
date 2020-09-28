@@ -67,6 +67,7 @@ class SequentialPerturbation():
         pbar = None
         start_time = time.time()
         svals = []
+
         for i in range(len(X)):
             mask = np.ones(len(X[i]), dtype=np.bool) * (self.perturbation == "remove")
             ordered_inds = self.sort_order_map(attributions[i])

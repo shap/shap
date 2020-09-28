@@ -21,6 +21,8 @@ from .metrics import keep_absolute_mask__r2
 from .metrics import remove_absolute_mask__roc_auc
 from .metrics import keep_absolute_mask__roc_auc
 
-from .plots import plot_curve, plot_grids
+# from .plots import plot_curve, plot_grids
+from .framework import update, get_metrics, get_benchmark, trend_plot, compare_plot
+from .perturbation import SequentialPerturbation
 
 from .experiments import experiments, run_experiment, run_experiments, run_remote_experiments
