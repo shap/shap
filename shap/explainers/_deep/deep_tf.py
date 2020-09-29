@@ -251,7 +251,11 @@ class TFDeep(Explainer):
             out = np.zeros(len(op.inputs), dtype=np.bool)
             for i, t in enumerate(op.inputs):
                 out[i] = t.name in self.between_tensors
+                if not out[i]:
+                    if "lstm/while/lstm_cell" in t.name:
+                        out[i] = True
             self._vinputs[op] = out
+
         return self._vinputs[op]
 
     def phi_symbolic(self, i):
@@ -892,7 +896,7 @@ op_handlers["Maximum"] = nonlinearity_1d_nonlinearity_2d(
 # ops that allow up to two inputs to vary are are linear when only one input varies
 op_handlers["Mul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x * y)
 op_handlers["RealDiv"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: x / y)
-op_handlers["MatMul"] = linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmul(x, y))
+op_handlers["MatMul"] =  linearity_1d_nonlinearity_2d(0, 1, lambda x, y: tf.matmul(x, y))
 
 # ops that need their own custom attribution functions
 op_handlers["GatherV2"] = gather

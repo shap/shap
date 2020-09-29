@@ -52,8 +52,10 @@ def test_lstm():
     exp = shap.DeepExplainer(m, data=x[15:30])
     vals = exp.shap_values(x, check_additivity=False)
     rec = vals[0].sum(axis=(1, 2)) + exp.expected_value.numpy()
-    print(pred)
-    print(rec)
+    # print(pred)
+    # print(rec)
+
+    print(np.abs((pred - rec)/pred).mean())
     assert not np.allclose(vals, 0)
     assert np.allclose(rec, pred)
 
