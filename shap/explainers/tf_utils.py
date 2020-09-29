@@ -43,7 +43,7 @@ def _get_graph(explainer):
     if not tf.executing_eagerly():
         return explainer.session.graph
     else:
-        return explainer.model_output.graph
+        return getattr(explainer.model_output, "graph", None)
 
 def _get_model_inputs(model):
     """ Common utility to determine the model inputs.

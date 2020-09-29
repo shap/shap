@@ -130,19 +130,22 @@ class TFDeep(Explainer):
         # if no learning phase flags were given we go looking for them
         # ...this will catch the one that keras uses
         # we need to find them since we want to make sure learning phase flags are set to False
-        if learning_phase_flags is None:
-            self.learning_phase_ops = []
-            for op in self.graph.get_operations():
-                if 'learning_phase' in op.name and op.type == "Const" and len(op.outputs[0].shape) == 0:
-                    if op.outputs[0].dtype == tf.bool:
-                        self.learning_phase_ops.append(op)
-            self.learning_phase_flags = [op.outputs[0] for op in self.learning_phase_ops]
+        if self.graph is not None:
+            if learning_phase_flags is None:
+                self.learning_phase_ops = []
+                for op in self.graph.get_operations():
+                    if 'learning_phase' in op.name and op.type == "Const" and len(op.outputs[0].shape) == 0:
+                        if op.outputs[0].dtype == tf.bool:
+                            self.learning_phase_ops.append(op)
+                self.learning_phase_flags = [op.outputs[0] for op in self.learning_phase_ops]
+            else:
+                self.learning_phase_ops = [t.op for t in learning_phase_flags]
         else:
-            self.learning_phase_ops = [t.op for t in learning_phase_flags]
+            self.learning_phase_ops = self.learning_phase_flags = []
 
         # save the expected output of the model
         # if self.data is a function, set self.expected_value to None
-        if (hasattr(self.data, '__call__')):
+        if hasattr(self.data, '__call__'):
             self.expected_value = None
         else:
             if self.data[0].shape[0] > 5000:
@@ -150,12 +153,12 @@ class TFDeep(Explainer):
             if not tf.executing_eagerly():
                 self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
             else:
-                if type(self.model)is tuple:
-                    sel.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
-        self._init_between_tensors(self.model_output.op, self.model_inputs)
-
+        if not tf.executing_eagerly():
+            self._init_between_tensors(getattr(self.model_output.op, self.model_output), self.model_inputs)
+        else:
+            self.between_tensors = []
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
         # only explain the top 5 it would be a waste to build graphs for the other 995
@@ -703,6 +706,9 @@ op_handlers["Tile"] = passthrough
 op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
+op_handlers["TensorListStack"] = passthrough
+op_handlers["While"] = passthrough
+op_handlers["TensorListFromTensor"] = passthrough
 
 
 # ops that don't pass any attributions to their inputs
