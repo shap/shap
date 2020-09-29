@@ -154,8 +154,7 @@ class TFDeep(Explainer):
                     sel.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
-        if not tf.executing_eagerly():
-            self._init_between_tensors(self.model_output.op, self.model_inputs)
+        self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
