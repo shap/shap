@@ -795,7 +795,10 @@ def convert(image, dtype, force_copy=False, uniform=False):
     """
     image = np.asarray(image)
     dtypeobj_in = image.dtype
-    dtypeobj_out = np.dtype(dtype)
+    if dtype is np.floating:
+        dtypeobj_out = np.dtype("float64")
+    else:
+        dtypeobj_out = np.dtype(dtype)
     dtype_in = dtypeobj_in.type
     dtype_out = dtypeobj_out.type
     kind_in = dtypeobj_in.kind
