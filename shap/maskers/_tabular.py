@@ -221,7 +221,7 @@ class Independent(Tabular):
 class Partition(Tabular):
     """ This masks out tabular features by integrating over the given background dataset.
 
-    Unlike Independent, Partition respects a hierarchial structure o
+    Unlike Independent, Partition respects a hierarchial structure 
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):
@@ -258,9 +258,9 @@ class Mean(Tabular):
         self.mean = data.mean(0) 
 
     def __call__(self, mask, x):
-        masker_data = self.data.copy()
+        output = (x * mask + self.mean * np.invert(mask)).reshape(1,-1)
         
-        return self.mean * mask + masker_data * np.invert(mask)
+        return output
 
 class Impute(Tabular):
     def __init__(self, data):
@@ -271,44 +271,13 @@ class Impute(Tabular):
         self.C += np.eye(self.C.shape[0]) * 1e-6
 
     def __call__(self, mask, x):
-        masker_data = self.data.copy()
-        observe_inds = np.where(mask == True)[0]
-        impute_inds = np.where(mask == False)[0]
-        
         # impute missing data assuming it follows a multivariate normal distribution
-        Coo_inv = np.linalg.inv(self.C[observe_inds,:][:,observe_inds])
-        Cio = self.C[impute_inds,:][:,observe_inds]
-        impute = self.mean[impute_inds] + Cio @ Coo_inv @ (x[observe_inds] - self.mean[observe_inds])
-
-        masker_data[:,impute_inds] = impute 
+        Coo_inv = np.linalg.inv(self.C[mask,:][:,mask])
+        Cio = self.C[np.invert(mask),:][:,mask]
+        impute = self.mean[np.invert(mask)] + Cio @ Coo_inv @ (x[mask] - self.mean[mask])
         
-        return masker_data
-
-class Resample(Tabular):
-    def __init__(self, data):
-        self.data = data
-
-    def __call__(self, mask, x): 
-        pass 
-        # masker_data = self.data.copy()
-
-        # nsamples = 100
-        # random_state = np.random.randint(0, 10)
-
-        # temp_x = x.copy()
-
-        # inds = 
-
-        # # keep nkeep top features for each test explanation
-        # N,M = X_test.shape
-        # X_test_tmp = np.tile(X_test, [1, nsamples]).reshape(nsamples * N, M)
-        # inds = sklearn.utils.resample(np.arange(N), n_samples=nsamples, random_state=random_state)
-        # for i in range(N):
-        #     if nkeep[i] < M:
-        #         ordering = np.argsort(-attr_test[i,:])
-        #         X_test_tmp[i*nsamples:(i+1)*nsamples, ordering[nkeep[i]:]] = X_train[inds, :][:, ordering[nkeep[i]:]]
-
-        # yp_masked_test = trained_model.predict(X_test_tmp)
-        # yp_masked_test = np.reshape(yp_masked_test, (N, nsamples)).mean(1) # take the mean output over all samples
-
-        # return metric(y_test, yp_masked_test)
+        output = x * mask 
+        output[np.invert(mask)] = impute 
+        output = output.reshape(1, -1)
+        
+        return output 

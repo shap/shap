@@ -10,7 +10,7 @@ import time
 import shap 
 from sklearn.model_selection import train_test_split
 from shap.utils import safe_isinstance, MaskedModel
-from perturbation import SequentialPerturbation
+from shap.benchmark import SequentialPerturbation
 
 def update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores):
     metric = perturbation + ' ' + sort_order
