@@ -189,7 +189,7 @@ class TFDeep(Explainer):
 
         if not tf.executing_eagerly():
             self._init_between_tensors(
-                getattr(self.model_output.op, self.model_output), self.model_inputs
+                getattr(self.model_output, "op", self.model_output), self.model_inputs
             )
         else:
             self.between_tensors = []
