@@ -108,11 +108,6 @@ class SequentialPerturbation():
         scores = [self.score_function(y, svals[:,i]) for i in range(svals.shape[1])]
         auc = sklearn.metrics.auc(np.linspace(0, 1, len(scores)), curve_sign*(scores-scores[0]))
         
-        # self.score_aucs.append(np.array([
-        #     sklearn.metrics.auc(np.linspace(0, 1, len(svals[i])), curve_sign*(svals[i] - svals[i][0]))
-        #     for i in range(len(svals))
-        # ]))
-        
         self.labels.append(label)
         
         xs = np.linspace(0, 1, 100)
@@ -140,22 +135,3 @@ class SequentialPerturbation():
             pl.gca().invert_yaxis()
         pl.legend()
         pl.show()
-
-# scores_functions = [np.mean(pred), sklearn.metrics.r2_score, sklearn.metrics.roc_auc_score]
-
-# Example 
-
-# X,y = shap.datasets.adult()
-# model = xgboost.XGBClassifier().fit(X, y)
-
-# f = lambda x: model.predict(x, output_margin=True)
-# f = model.predict 
-# masker = Partition(X[:500])
-# explainer = shap.Explainer(f, masker)
-# score_function = lambda y, out: out
-# sort_order = 'absolute'
-# perturbation = 'keep'
-
-# sp = SequentialPerturbation(f, masker, sort_order, score_function, perturbation)
-# sp.score(explainer, X[:500])
-# sp.plot()
