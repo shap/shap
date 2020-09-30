@@ -568,7 +568,18 @@ class Kernel(Explainer):
 
         # solve a weighted least squares equation to estimate phi
         tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
-        tmp2 = np.linalg.inv(np.dot(np.transpose(tmp), etmp))
+        etmp_dot = np.dot(np.transpose(tmp), etmp)
+        try:
+            tmp2 = np.linalg.inv(etmp_dot)
+        except np.linalg.LinAlgError:
+            tmp2 = np.linalg.pinv(etmp_dot)
+            warnings.warn(
+                "Linear regression equation is singular, Moore-Penrose pseudoinverse is used instead of the regular inverse.\n"
+                "To use regular inverse do one of the following:\n"
+                "1) turn up the number of samples,\n"
+                "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
+                "3) group features together to reduce the number of inputs that need to be explained."
+            )
         w = np.dot(tmp2, np.dot(np.transpose(tmp), eyAdj2))
         log.debug("np.sum(w) = {0}".format(np.sum(w)))
         log.debug("self.link(self.fx) - self.link(self.fnull) = {0}".format(
