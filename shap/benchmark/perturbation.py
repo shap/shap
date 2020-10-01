@@ -48,7 +48,11 @@ class SequentialPerturbation():
         self.masked_model = MaskedModel(self.f, self.masker, shap.links.identity) 
     
     def score(self, explainer, X, y=None, label=None, silent=False):
-        attributions = explainer(X).values
+        # if explainer is already the attributions 
+        if safe_isinstance(explainer, "numpy.ndarray"): 
+            attributions = explainer 
+        else: 
+            attributions = explainer(X).values
         
         if label is None:
             label = "Score %d" % len(self.score_values)

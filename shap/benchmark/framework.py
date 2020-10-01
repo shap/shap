@@ -19,15 +19,22 @@ def update(model, X, y, explainer, masker, sort_order, score_function, perturbat
     scores['metrics'].append(metric)
     scores['values'][metric] = [x, y, auc] 
 
-def get_benchmark(model, X, y, explainer, masker, metrics, *args):
+def get_benchmark(model, X, y, explainer, masker, metrics, exp_num=1, *args):
     # convert dataframes
     if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
         X = X.values
     if safe_isinstance(masker, "pandas.core.series.Series") or safe_isinstance(masker, "pandas.core.frame.DataFrame"):
         masker = masker.values
     
+    # in case the explainer doesn't have a name
+    try: 
+        name = explainer.name 
+    except: 
+        name = 'explainer' + str(exp_num) 
+        exp_num += 1 
+
     # record scores per metric 
-    scores = {'name': explainer.name, 'metrics': list(), 'values': dict()}
+    scores = {'name': name, 'metrics': list(), 'values': dict()}
     for sort_order in metrics['sort_order']:
         for perturbation in metrics['perturbation']:
             score_function = lambda true, pred: np.mean(pred)
