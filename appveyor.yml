@@ -42,6 +42,7 @@ install:
       $env:PYSPARK_DRIVER_PYTHON = "$env:PYTHON\python.exe"
       $env:PYSPARK_PYTHON = "$env:PYTHON\python.exe"
       Pop-Location
+  - "%PYTHON%\\python.exe setup.py develop"
   - "%PYTHON%\\python.exe -m pip install .[test]"
 
 build: off
