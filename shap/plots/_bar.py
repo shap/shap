@@ -118,6 +118,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if max_display is None:
         max_display = len(feature_names)
     num_features = min(max_display, len(values[0]))
+    max_display = min(max_display, num_features)
 
     # iteratively merge nodes until we can cut off the smallest feature values to stay within
     # num_features without breaking a cluster tree
