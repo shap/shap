@@ -1,5 +1,4 @@
 from shap.utils import safe_isinstance, MaskedModel
-from shap.maskers import Text, Partition
 import shap.links
 import shap.datasets
 import matplotlib.pyplot as pl
