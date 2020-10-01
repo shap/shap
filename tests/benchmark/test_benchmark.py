@@ -6,13 +6,15 @@ X = np.array([[3, 4], [5, 12], [7, 24]])
 y = np.array([5, 13, 25])
 explainer = np.array([[-1, 2], [-4, 2], [1, 2]])
 masker = X
-sort_order = 'positive'
-score_function = lambda true, pred: np.mean(pred)
-perturbation = 'keep'
 
 def test_update():
+    sort_order = 'positive'
+    score_function = lambda true, pred: np.mean(pred)
+    perturbation = 'keep'
     scores = {'name': 'test', 'metrics': list(), 'values': dict()}
+
     shap.benchmark.update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores)
+    
     metric = perturbation + ' ' + sort_order
 
     assert scores['metrics'][0] == metric
@@ -21,6 +23,7 @@ def test_update():
 def test_get_benchmark():
     metrics = {'sort_order': ['positive', 'negative'], 'perturbation': ['keep']}
     scores = shap.benchmark.get_benchmark(model, X, y, explainer, masker, metrics)
+    
     expected_metrics = ['keep positive', 'keep negative']
 
     assert set(expected_metrics) == set(scores['metrics'])
