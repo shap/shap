@@ -1,40 +1,19 @@
+import os
 
+import numpy as np
+import pandas as pd
+import pytest
 
-def _skip_if_no_tensorflow():
-    import nose
-    import os
+import shap
+from shap import DeepExplainer
 
-    # force us to not use any GPUs since running many tests may cause trouble
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-    
-    try:
-        import tensorflow
-    except ImportError:
-        raise nose.SkipTest('Tensorflow not installed.')
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-
-def _skip_if_no_pytorch():
-    import nose
-    import os
-
-    # force us to not use any GPUs since running many tests may cause trouble
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-    try:
-        import torch
-    except ImportError:
-        raise nose.SkipTest('Pytorch not installed.')
 
 def test_tf_eager():
     """ This is a basic eager example from keras.
     """
-    _skip_if_no_tensorflow()
-
-    import pandas as pd
-    import numpy as np
-    import tensorflow as tf
-    from shap import DeepExplainer
-    import datetime
+    tf = pytest.importorskip('tensorflow')
 
     x = pd.DataFrame({ "B": np.random.random(size=(100,)) })
     y = x.B
@@ -51,19 +30,17 @@ def test_tf_eager():
     sv = e.shap_values(x.values)
     assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:,0]).max() < 1e-4
 
+
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
     """
-    _skip_if_no_tensorflow()
+    tf = pytest.importorskip('tensorflow')
 
     from tensorflow import keras
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
     from tensorflow.keras.layers import Conv2D, MaxPooling2D
     from tensorflow.keras import backend as K
-    import tensorflow as tf
-    import shap
-    import numpy as np
 
     tf.compat.v1.disable_eager_execution()
 
@@ -132,17 +109,15 @@ def test_tf_keras_mnist_cnn():
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
 
+
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.
     """
-    _skip_if_no_tensorflow()
-
+    tf = pytest.importorskip('tensorflow')
+    
     from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.optimizers import SGD
-    import tensorflow as tf
-    import shap
-    import numpy as np
 
     tf.compat.v1.disable_eager_execution()
 
@@ -177,20 +152,18 @@ def test_tf_keras_linear():
     expected = (x - x.mean(0)) * fit_coef
     np.testing.assert_allclose(expected - values, 0, atol=1e-5)
 
+
 def test_tf_keras_imdb_lstm():
     """ Basic LSTM example using the keras API defined in tensorflow
     """
-    _skip_if_no_tensorflow()
+    tf = pytest.importorskip('tensorflow')
 
-    import numpy as np
-    import tensorflow as tf
     from tensorflow.keras.datasets import imdb
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense
     from tensorflow.keras.layers import LSTM
     from tensorflow.keras.layers import Embedding
     from tensorflow.keras.preprocessing import sequence
-    import shap
 
     tf.compat.v1.disable_eager_execution()
 
@@ -235,20 +208,15 @@ def test_tf_keras_imdb_lstm():
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-
-
-def test_pytorch_mnist_cnn():
+def test_pytorch_mnist_cnn(tmpdir):
     """The same test as above, but for pytorch
     """
-    _skip_if_no_pytorch()
+    torch = pytest.importorskip('torch')
+    torchvision = pytest.importorskip('torchvision')
 
-    import torch, torchvision
     from torchvision import datasets, transforms
     from torch import nn
     from torch.nn import functional as F
-    import shap
-    import shutil
-    import numpy as np
 
     def run_test(train_loader, test_loader, interim):
 
@@ -327,17 +295,16 @@ def test_pytorch_mnist_cnn():
                 d / np.abs(diff).sum())
 
     batch_size = 128
-    root_dir = 'mnist_data'
 
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root_dir, train=True, download=True,
+        datasets.MNIST(tmpdir, train=True, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
                        ])),
         batch_size=batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root_dir, train=False, download=True,
+        datasets.MNIST(tmpdir, train=False, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
@@ -348,22 +315,17 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, interim=True)
     print ('Running test on whole model')
     run_test(train_loader, test_loader, interim=False)
-    # clean up
-    shutil.rmtree(root_dir)
 
 
 def test_pytorch_custom_nested_models():
     """Testing single outputs
     """
-    _skip_if_no_pytorch()
+    torch = pytest.importorskip('torch')
 
-    import torch
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
     from sklearn.datasets import load_boston
-    import shap
-    import numpy as np
 
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
@@ -449,15 +411,12 @@ def test_pytorch_custom_nested_models():
 def test_pytorch_single_output():
     """Testing single outputs
     """
-    _skip_if_no_pytorch()
+    torch = pytest.importorskip('torch')
 
-    import torch
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
     from sklearn.datasets import load_boston
-    import shap
-    import numpy as np
 
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
@@ -518,19 +477,16 @@ def test_pytorch_single_output():
 
 
 def test_pytorch_multiple_inputs():
-    _skip_if_no_pytorch()
+    torch = pytest.importorskip('torch')
 
     def _run_pytorch_multiple_inputs_test(disconnected):
         """Testing multiple inputs
         """
-        import torch
         from torch import nn
         from torch.nn import functional as F
         from torch.utils.data import TensorDataset, DataLoader
         from sklearn.datasets import load_boston
-        import shap
-        import numpy as np
-
+        torch.manual_seed(1)
         X, y = load_boston(return_X_y=True)
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
@@ -600,3 +556,6 @@ def test_pytorch_multiple_inputs():
 
     _run_pytorch_multiple_inputs_test(disconnected=True)
     _run_pytorch_multiple_inputs_test(disconnected=False)
+
+if __name__ == '__main__':
+    test_pytorch_multiple_inputs()

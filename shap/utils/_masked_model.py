@@ -42,7 +42,7 @@ class MaskedModel():
                 self._masker_cols = mshape[1]
         else:
             self._masker_rows = None# # just assuming...
-            self._masker_cols = sum(np.prod(a.shape) for a in self.args)
+            self._masker_cols = sum(np.prod(self.masker(a).shape) for a in self.args)
 
     def __call__(self, masks, batch_size=None):
 

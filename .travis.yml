@@ -15,9 +15,9 @@ before_install:
   /usr/bin/g++ g++ /usr/bin/g++-4.9
 - sudo apt-get install -y libgomp1
 install:
-- pip install .
+- pip install .[test]
 - pip install tensorflow xgboost matplotlib ipython codecov
-script: python setup.py nosetests --with-coverage --cover-package=shap
+script: pytest .
 after_success:
   - codecov
 deploy:

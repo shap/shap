@@ -42,6 +42,7 @@ install:
       $env:PYSPARK_DRIVER_PYTHON = "$env:PYTHON\python.exe"
       $env:PYSPARK_PYTHON = "$env:PYTHON\python.exe"
       Pop-Location
+  - "%PYTHON%\\python.exe -m pip install .[test]"
 
 build: off
 
@@ -50,7 +51,7 @@ test_script:
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
   # to put the Python version you want to use on PATH.
-  - "%PYTHON%\\python.exe setup.py test"
+  - "%PYTHON%\\python.exe -m pytest ."
 
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory
