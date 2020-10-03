@@ -16,7 +16,7 @@ environment:
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install tensorflow matplotlib ipython torch torchvision"
+  - "%PYTHON%\\python.exe -m pip install tensorflow matplotlib ipython"
   - "%PYTHON%\\python.exe -m pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
   
   - ps: |
