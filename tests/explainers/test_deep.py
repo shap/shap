@@ -556,6 +556,3 @@ def test_pytorch_multiple_inputs():
 
     _run_pytorch_multiple_inputs_test(disconnected=True)
     _run_pytorch_multiple_inputs_test(disconnected=False)
-
-if __name__ == '__main__':
-    test_pytorch_multiple_inputs()

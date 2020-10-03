@@ -19,7 +19,7 @@ def test_heatmap(explainer):
 def test_heatmap_feature_order(explainer):
     fig = plt.figure()
     shap_values = explainer(explainer.data)
-    shap.plots.heatmap(shap_values, max_display=5, 
+    shap.plots.heatmap(shap_values, max_display=5,
                        feature_order=np.array(range(shap_values.shape[1]))[::-1])
     plt.tight_layout()
     return fig
