@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt 
 import pandas as pd 
 import numpy as np 
+import itertools as it 
 import sklearn 
 import shap 
 from sklearn.model_selection import train_test_split
@@ -30,10 +31,9 @@ def get_benchmark(model, X, y, explainer, masker, metrics, exp_num=1, *args):
 
     # record scores per metric 
     scores = {'name': name, 'metrics': list(), 'values': dict()}
-    for sort_order in metrics['sort_order']:
-        for perturbation in metrics['perturbation']:
-            score_function = lambda true, pred: np.mean(pred)
-            update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores)
+    for sort_order, perturbation in list(it.product(metrics['sort_order'], metrics['perturbation'])):
+        score_function = lambda true, pred: np.mean(pred)
+        update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores)
 
     return scores 
 
@@ -42,8 +42,10 @@ def get_metrics(benchmarks, selection):
     explainer_metrics = set()
     for explainer in benchmarks: 
         scores = benchmarks[explainer]
-        if len(explainer_metrics) == 0: explainer_metrics = set(scores['metrics'])
-        else: explainer_metrics = selection(explainer_metrics, set(scores['metrics']))
+        if len(explainer_metrics) == 0: 
+            explainer_metrics = set(scores['metrics'])
+        else: 
+            explainer_metrics = selection(explainer_metrics, set(scores['metrics']))
     
     return list(explainer_metrics)
 
@@ -56,12 +58,18 @@ def trend_plot(benchmarks):
 
         for explainer in benchmarks: 
             scores = benchmarks[explainer]
-            try: 
+            if metric in scores['values']:
                 x, y, auc = scores['values'][metric]
                 plt.plot(x, y, label='{} - {}'.format(round(auc, 3), explainer))
-            except: 
-                pass 
 
+        metric_passive = ''
+        if 'keep' in metric: 
+            metric_passive = 'Kept'
+        if 'remove' in metric:
+            metric_passive = 'Removed'
+
+        plt.ylabel('Mean Model Output')
+        plt.ylabel('Max Fraction of Features {}'.format(metric_passive))
         plt.title(metric)
         plt.legend()
         plt.show()
@@ -69,14 +77,16 @@ def trend_plot(benchmarks):
 def compare_plot(benchmarks):
     explainer_metrics = get_metrics(benchmarks, lambda x, y: x.intersection(y))
     explainers = list(benchmarks.keys())
+    num_explainers = len(explainers)
+    num_metrics = len(explainer_metrics)
 
     # dummy start to evenly distribute explainers on the left 
     # can later be replaced by boolean metrics 
     aucs = dict()
-    for i in range(len(explainers)): 
+    for i in range(num_explainers): 
         explainer = explainers[i]
-        aucs[explainer] = [i/(len(explainers)-1)] 
-
+        aucs[explainer] = [i/(num_explainers-1)] 
+    
     # normalize per metric
     for metric in explainer_metrics: 
         max_auc, min_auc = -float('inf'), float('inf')
@@ -99,12 +109,15 @@ def compare_plot(benchmarks):
 
     ax.tick_params(which='major', axis='both', labelsize=8)
 
-    ax.set_yticks([i/(len(explainers)-1) for i in range(0, len(explainers))])
+    ax.set_yticks([i/(num_explainers-1) for i in range(0, num_explainers)])
     ax.set_yticklabels(explainers, rotation=0)
 
-    ax.set_xticks(np.linspace(0, 1, len(explainer_metrics)+1))
+    ax.set_xticks(np.linspace(0, 1, num_metrics+1))
     ax.set_xticklabels([' '] + explainer_metrics, rotation=45, ha='right')
 
     plt.grid(which='major', axis='x', linestyle='--')
     plt.tight_layout()
+    plt.ylabel('Relative Performance of Each Explanation Method')
+    plt.xlabel('Evaluation Metrics')
+    plt.title('Explanation Method Performance Across Metrics')
     plt.show()

@@ -42,9 +42,9 @@ def runtime(X, y, model_generator, explainer):
         model.fit(X_train, y_train)
 
         # evaluate each method
-        # start = time.time()
-        # explainer = explainer(model, X_train)
-        # build_time = time.time() - start
+        start = time.time()
+        explainer = explainer(model, X_train)
+        build_time = time.time() - start
 
         start = time.time()
         explainer(X_test)
@@ -52,8 +52,7 @@ def runtime(X, y, model_generator, explainer):
 
         # we always normalize the explain time as though we were explaining 1000 samples
         # even if to reduce the runtime of the benchmark we do less (like just 100)
-        # method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
-        method_reps.append(explain_time * 1000.0 / X_test.shape[0])
+        method_reps.append(build_time + explain_time * 1000.0 / X_test.shape[0])
     np.random.seed(old_seed)
 
     return None, np.mean(method_reps)
@@ -76,37 +75,37 @@ def local_accuracy(X, y, model_generator, explainer):
         )
     return None, __score_method(X, y, None, model_generator, score_function, explainer)
 
-# def consistency_guarantees(X, y, model_generator, method_name):
-#     """ Consistency Guarantees
-#     transform = "identity"
-#     sort_order = 1
-#     """
+def consistency_guarantees(X, y, model_generator, method_name):
+    """ Consistency Guarantees
+    transform = "identity"
+    sort_order = 1
+    """
 
-#     # 1.0 - perfect consistency
-#     # 0.8 - guarantees depend on sampling
-#     # 0.6 - guarantees depend on approximation
-#     # 0.0 - no garuntees
-#     guarantees = {
-#         "linear_shap_corr": 1.0,
-#         "linear_shap_ind": 1.0,
-#         "coef": 0.0,
-#         "kernel_shap_1000_meanref": 0.8,
-#         "sampling_shap_1000": 0.8,
-#         "random": 0.0,
-#         "saabas": 0.0,
-#         "tree_gain": 0.0,
-#         "tree_shap_tree_path_dependent": 1.0,
-#         "tree_shap_independent_200": 1.0,
-#         "mean_abs_tree_shap": 1.0,
-#         "lime_tabular_regression_1000": 0.8,
-#         "lime_tabular_classification_1000": 0.8,
-#         "maple": 0.8,
-#         "tree_maple": 0.8,
-#         "deep_shap": 0.6,
-#         "expected_gradients": 0.6
-#     }
+    # 1.0 - perfect consistency
+    # 0.8 - guarantees depend on sampling
+    # 0.6 - guarantees depend on approximation
+    # 0.0 - no garuntees
+    guarantees = {
+        "linear_shap_corr": 1.0,
+        "linear_shap_ind": 1.0,
+        "coef": 0.0,
+        "kernel_shap_1000_meanref": 0.8,
+        "sampling_shap_1000": 0.8,
+        "random": 0.0,
+        "saabas": 0.0,
+        "tree_gain": 0.0,
+        "tree_shap_tree_path_dependent": 1.0,
+        "tree_shap_independent_200": 1.0,
+        "mean_abs_tree_shap": 1.0,
+        "lime_tabular_regression_1000": 0.8,
+        "lime_tabular_classification_1000": 0.8,
+        "maple": 0.8,
+        "tree_maple": 0.8,
+        "deep_shap": 0.6,
+        "expected_gradients": 0.6
+    }
 
-#     return None, guarantees[method_name]
+    return None, guarantees[method_name]
 
 def __mean_pred(true, pred):
     """ A trivial metric that is just is the output of the model.
@@ -329,41 +328,41 @@ def remove_absolute_impute__roc_auc(X, y, model_generator, explainer, num_fcount
     """
     return __run_measure(measures.remove_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-# def keep_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Keep Positive (retrain)
-#     xlabel = "Max fraction of features kept"
-#     ylabel = "Mean model output"
-#     transform = "identity"
-#     sort_order = 6
-#     """
-#     return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+def keep_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Positive (retrain)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Mean model output"
+    transform = "identity"
+    sort_order = 6
+    """
+    return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
 
-# def keep_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Keep Negative (retrain)
-#     xlabel = "Max fraction of features kept"
-#     ylabel = "Negative mean model output"
-#     transform = "negate"
-#     sort_order = 7
-#     """
-#     return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+def keep_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
+    """ Keep Negative (retrain)
+    xlabel = "Max fraction of features kept"
+    ylabel = "Negative mean model output"
+    transform = "negate"
+    sort_order = 7
+    """
+    return __run_measure(measures.keep_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
 
-# def remove_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Remove Positive (retrain)
-#     xlabel = "Max fraction of features removed"
-#     ylabel = "Negative mean model output"
-#     transform = "negate"
-#     sort_order = 11
-#     """
-#     return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+def remove_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
+    """ Remove Positive (retrain)
+    xlabel = "Max fraction of features removed"
+    ylabel = "Negative mean model output"
+    transform = "negate"
+    sort_order = 11
+    """
+    return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
 
-# def remove_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Remove Negative (retrain)
-#     xlabel = "Max fraction of features removed"
-#     ylabel = "Mean model output"
-#     transform = "identity"
-#     sort_order = 12
-#     """
-#     return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+def remove_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
+    """ Remove Negative (retrain)
+    xlabel = "Max fraction of features removed"
+    ylabel = "Mean model output"
+    transform = "identity"
+    sort_order = 12
+    """
+    return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
 
 def __run_measure(measure, X, y, model_generator, explainer, attribution_sign, num_fcounts, summary_function):
 
@@ -381,56 +380,56 @@ def __run_measure(measure, X, y, model_generator, explainer, attribution_sign, n
     fcounts = __intlogspace(0, X.shape[1], num_fcounts)
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, explainer)
 
-# def batch_remove_absolute_retrain__r2(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Batch Remove Absolute (retrain)
-#     xlabel = "Fraction of features removed"
-#     ylabel = "1 - R^2"
-#     transform = "one_minus"
-#     sort_order = 13
-#     """
-#     return __run_batch_abs_metric(measures.batch_remove_retrain, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
+def batch_remove_absolute_retrain__r2(X, y, model_generator, method_name, num_fcounts=11):
+    """ Batch Remove Absolute (retrain)
+    xlabel = "Fraction of features removed"
+    ylabel = "1 - R^2"
+    transform = "one_minus"
+    sort_order = 13
+    """
+    return __run_batch_abs_metric(measures.batch_remove_retrain, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
 
-# def batch_keep_absolute_retrain__r2(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Batch Keep Absolute (retrain)
-#     xlabel = "Fraction of features kept"
-#     ylabel = "R^2"
-#     transform = "identity"
-#     sort_order = 13
-#     """
-#     return __run_batch_abs_metric(measures.batch_keep_retrain, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
+def batch_keep_absolute_retrain__r2(X, y, model_generator, method_name, num_fcounts=11):
+    """ Batch Keep Absolute (retrain)
+    xlabel = "Fraction of features kept"
+    ylabel = "R^2"
+    transform = "identity"
+    sort_order = 13
+    """
+    return __run_batch_abs_metric(measures.batch_keep_retrain, X, y, model_generator, method_name, sklearn.metrics.r2_score, num_fcounts)
 
-# def batch_remove_absolute_retrain__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Batch Remove Absolute (retrain)
-#     xlabel = "Fraction of features removed"
-#     ylabel = "1 - ROC AUC"
-#     transform = "one_minus"
-#     sort_order = 13
-#     """
-#     return __run_batch_abs_metric(measures.batch_remove_retrain, X, y, model_generator, method_name, sklearn.metrics.roc_auc_score, num_fcounts)
+def batch_remove_absolute_retrain__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    """ Batch Remove Absolute (retrain)
+    xlabel = "Fraction of features removed"
+    ylabel = "1 - ROC AUC"
+    transform = "one_minus"
+    sort_order = 13
+    """
+    return __run_batch_abs_metric(measures.batch_remove_retrain, X, y, model_generator, method_name, sklearn.metrics.roc_auc_score, num_fcounts)
 
-# def batch_keep_absolute_retrain__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
-#     """ Batch Keep Absolute (retrain)
-#     xlabel = "Fraction of features kept"
-#     ylabel = "ROC AUC"
-#     transform = "identity"
-#     sort_order = 13
-#     """
-#     return __run_batch_abs_metric(measures.batch_keep_retrain, X, y, model_generator, method_name, sklearn.metrics.roc_auc_score, num_fcounts)
+def batch_keep_absolute_retrain__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+    """ Batch Keep Absolute (retrain)
+    xlabel = "Fraction of features kept"
+    ylabel = "ROC AUC"
+    transform = "identity"
+    sort_order = 13
+    """
+    return __run_batch_abs_metric(measures.batch_keep_retrain, X, y, model_generator, method_name, sklearn.metrics.roc_auc_score, num_fcounts)
 
-# def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
-#     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
-#         A_train = np.abs(__strip_list(attr_function(X_train)))
-#         nkeep_train = (np.ones(len(y_train)) * fcount).astype(np.int)
-#         #nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(np.int)
-#         A_test = np.abs(__strip_list(attr_function(X_test)))
-#         nkeep_test = (np.ones(len(y_test)) * fcount).astype(np.int)
-#         #nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(np.int)
-#         return metric(
-#             nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test,
-#             model_generator, loss
-#         )
-#     fcounts = __intlogspace(0, X.shape[1], num_fcounts)
-#     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
+def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
+    def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
+        A_train = np.abs(__strip_list(attr_function(X_train)))
+        nkeep_train = (np.ones(len(y_train)) * fcount).astype(np.int)
+        #nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(np.int)
+        A_test = np.abs(__strip_list(attr_function(X_test)))
+        nkeep_test = (np.ones(len(y_test)) * fcount).astype(np.int)
+        #nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(np.int)
+        return metric(
+            nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test,
+            model_generator, loss
+        )
+    fcounts = __intlogspace(0, X.shape[1], num_fcounts)
+    return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 _attribution_cache = {}
 def __score_method(X, y, fcounts, model_generator, score_function, explainer, nreps=10, test_size=100, cache_dir="/tmp"):

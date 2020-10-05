@@ -90,16 +90,6 @@ def tree_gain(model, data):
     """
     return other.TreeGainExplainer(model).attributions
 
-def permutation_shap_1(model, data):
-    """ Permutation Explainer
-    """
-    return lambda X: PermutationExplainer(model.predict, data).shap_values(X, npermutations=1)
-
-def permutation_shap_10(model, data):
-    """ Permutation Explainer
-    """
-    return lambda X: PermutationExplainer(model.predict, data).shap_values(X)
-
 def lime_tabular_regression_1000(model, data):
     """ LIME Tabular 1000
     color = red_blue_circle(0.75)

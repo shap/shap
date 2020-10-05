@@ -78,7 +78,9 @@ class SequentialPerturbation():
             values[0] = self.f(masked).mean(0)
             
             # loop over all the features
-            curr_val = None
+            # default curr_val to be fully masked score in case when entire attributions is negative/positive
+            # avoid nan by setting default curr_val to full masked score
+            curr_val = self.f(masked).mean(0)
             for j in range(len(X[i])):
                 oind = ordered_inds[j]
                 
@@ -101,8 +103,10 @@ class SequentialPerturbation():
             
         self.score_values.append(np.array(svals))
         
-        if self.sort_order == "negative": curve_sign = -1
-        else: curve_sign = 1
+        if self.sort_order == "negative": 
+            curve_sign = -1
+        else: 
+            curve_sign = 1
 
         svals = np.array(svals)
         scores = [self.score_function(y, svals[:,i]) for i in range(svals.shape[1])]

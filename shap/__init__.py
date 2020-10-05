@@ -70,5 +70,4 @@ from . import links
 
 from . import benchmark
 
-# from .utils._legacy import kmeans
 from .utils import sample, approximate_interactions, kmeans
