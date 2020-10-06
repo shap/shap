@@ -21,8 +21,19 @@
 #
 import os
 import sys
+import shutil
+import sphinx_rtd_theme
 print(os.path.abspath('./shap'))
 sys.path.insert(0, os.path.abspath('..'))
+
+# make copy of notebooks in docs folder, as they must be here for sphinx to
+# pick them up properly.
+NOTEBOOKS_DIR = os.path.abspath('example_notebooks')
+if os.path.exists(NOTEBOOKS_DIR):
+    import warnings
+    warnings.warn('example_notebooks directory exists, replacing...')
+    shutil.rmtree(NOTEBOOKS_DIR)
+shutil.copytree(os.path.abspath('../notebooks'), NOTEBOOKS_DIR, )
 
 # -- General configuration ------------------------------------------------
 
@@ -35,7 +46,17 @@ sys.path.insert(0, os.path.abspath('..'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx_rtd_theme',
+    'numpydoc',
+    'nbsphinx',
 ]
+autodoc_default_options = {
+    'members': True,
+    'inherited-members': True
+}
+autosummary_generate = True
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -132,7 +153,23 @@ html_theme = "sphinx_rtd_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    #'canonical_url': '',
+    'logo_only': True,
+    'display_version': True,
+    'prev_next_buttons_location': 'bottom',
+    'style_external_links': False,
+    'style_nav_header_background': '#343131',
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+html_logo = 'artwork/shap_logo_white.png'
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -146,16 +183,11 @@ html_theme = "sphinx_rtd_theme"
 #
 # html_short_title = None
 
-# The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
-#
-# html_logo = None
-
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
 #
-# html_favicon = None
+html_favicon = 'artwork/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -343,3 +375,23 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #
 # texinfo_no_detailmenu = False
+
+
+def setup(app):
+    import shap
+    # need to assign the names here, otherwise autodoc won't document these classes,
+    # and will instead just say 'alias of ...'
+    shap.TreeExplainer.__name__ = 'TreeExplainer'
+    shap.LinearExplainer.__name__ = 'LinearExplainer'
+    shap.KernelExplainer.__name__ = 'KernelExplainer'
+    shap.SamplingExplainer.__name__ = 'SamplingExplainer'
+    shap.DeepExplainer.__name__ = 'DeepExplainer'
+    shap.GradientExplainer.__name__ = 'GradientExplainer'
+    shap.PartitionExplainer.__name__ = 'PartitionExplainer'
+    shap.PermutationExplainer.__name__ = 'PermutationExplainer'
+    shap.AdditiveExplainer.__name__ = 'AdditiveExplainer'
+    app.connect('build-finished', build_finished)
+
+
+def build_finished(app, exception):
+    shutil.rmtree(NOTEBOOKS_DIR)
