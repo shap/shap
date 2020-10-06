@@ -589,3 +589,32 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
 
     from IPython.core.display import display, HTML
     return display(HTML(out))
+
+def saliency_map(input_tokens,output_tokens,shap_values):
+    
+    def get_color(shap_value):
+        scaled_value = 0.5 + 0.5 * shap_value
+        color = colors.red_transparent_blue(scaled_value)
+        color = (color[0]*255, color[1]*255, color[2]*255, color[3])
+        return color
+    
+    from IPython.core.display import display, HTML
+
+    out = '<table border = "1" cellpadding = "5" cellspacing = "5">'
+    
+    for i in range(len(shap_values)):
+        out += '<tr>'
+        out += '<th>' + output_tokens[i] + '</th>'
+        for j in range(len(shap_values[0])):
+            color = get_color(shap_values[i][j])
+            out += '<th style="background: rgba' + str(color)+ '">' + str(shap_values[i][j]) + '</th>'
+        out += '</tr>'
+        
+    out += '<tr>'
+    out += '<th></th>'
+    for j in range(len(shap_values[0])):
+        out += '<th>' + input_tokens[j] + '</th>'
+    out += '</tr>'
+    out += '</table>'
+    
+    display(HTML(out))
