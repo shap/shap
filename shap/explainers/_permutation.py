@@ -87,8 +87,10 @@ class Permutation(Explainer):
             for i,ind in enumerate(inds):
                 row_values[ind] += outputs[i+1] - outputs[i]
         
-        if npermutations <= 1: expected_value = outputs
-        else: expected_value = outputs[0]
+        if npermutations <= 1: 
+            expected_value = outputs
+        else: 
+            expected_value = outputs[0]
 
         # compute the main effects if we need to
         main_effect_values = fm.main_effects(inds) if main_effects else None
