@@ -12,5 +12,5 @@ from ._beeswarm import beeswarm
 from ._violin import violin
 from ._text import text
 from ._waterfall import waterfall
-from ._text import saliency_map
+from ._text import saliency_map,text_to_text
 

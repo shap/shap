@@ -14,6 +14,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
     """
+    
     from IPython.core.display import display, HTML
 
     def values_min_max(values, base_values):
@@ -618,3 +619,153 @@ def saliency_map(input_tokens,output_tokens,shap_values):
     out += '</table>'
     
     display(HTML(out))
+
+
+def text_to_text(input_tokens,output_tokens,shap_values):
+    from IPython.core.display import display, HTML
+    import json
+
+    colors_dict = {}
+
+    def get_color(shap_value):
+            scaled_value = 0.5 + 0.5 * shap_value
+            color = colors.red_transparent_blue(scaled_value)
+            color = (color[0]*255, color[1]*255, color[2]*255, color[3])
+            return color
+
+    for i in range(len(output_tokens)):
+        color_values = {}
+        for j in range(len(input_tokens)):
+            color_values['token_left_'+str(j)] = 'rgba' + str(get_color(shap_values[i][j]))
+        colors_dict['token_right_'+str(i)] = color_values
+
+    shap_values_dict = {}
+
+    for i in range(len(output_tokens)):
+        shap_values_list = {}
+        for j in range(len(input_tokens)):
+            shap_values_list['value_label_left_'+str(j)] = shap_values[i][j]
+        shap_values_dict['token_right_'+str(i)] = shap_values_list
+        
+    colors_json = json.dumps(colors_dict)
+    shap_values_json = json.dumps(shap_values_dict)
+
+    javascript = """
+    <script>
+        var state_val = null;
+        
+        
+        function tokenValueToggle(ele) {
+            if (state_val !== null) {
+            if (ele.previousElementSibling.style.display == 'none') {
+                ele.previousElementSibling.style.display = 'block';
+                ele.parentNode.style.display = 'inline-block';
+            }
+            else {
+                ele.previousElementSibling.style.display = 'none';
+                ele.parentNode.style.display = 'inline';
+            }
+            }
+        }
+        
+        function onMouseHoverRight(id) {
+            if (state_val === null) {
+                document.getElementById(id).style.backgroundColor  = "grey";
+                setBackgroundColors(id);
+            }
+        }
+        
+        function onMouseOutRight(id) {
+            if (state_val === null) {
+                document.getElementById(id).style.backgroundColor  = "white";
+                cleanValuesAndColors(id);
+            }
+        }
+        
+        function onMouseClickRight(id) {
+            if (state_val === id) {
+                document.getElementById(id).style.backgroundColor  = "white";
+                cleanValuesAndColors();
+                state_val = null;
+            }
+            else {
+                if (state_val !== null) {
+                    document.getElementById(state_val).style.backgroundColor  = "white";
+                }
+                cleanValuesAndColors(id)
+                state_val = id;
+                document.getElementById(id).style.backgroundColor  = "grey";
+                setLabelValues(id);
+                setBackgroundColors(id);
+            }
+        }
+        
+        function setLabelValues(id) {
+            for(const token_left in shap_values[id]){
+                document.getElementById(token_left).innerHTML = shap_values[id][token_left];
+            }
+        }
+        
+        function setBackgroundColors(id) {
+            for(const token_left in colors[id]){
+                document.getElementById(token_left).style.backgroundColor  = colors[id][token_left];
+            }
+        }
+        
+        function cleanValuesAndColors(id) {
+            for(const token_left in shap_values[id]){
+                document.getElementById(token_left).innerHTML = "";
+            }
+            for(const token_left in colors[id]){
+                document.getElementById(token_left).style.backgroundColor  = "white";
+            }
+        }
+        
+    </script>
+
+    """
+
+    javascript2 = "<script> " \
+                + "colors = " + colors_json + "\n" \
+                + " shap_values = " + shap_values_json + "\n"\
+                +  "</script> \n"
+
+    left = ''
+
+    for i in range(len(input_tokens)):
+        left += "<div style='display:inline; text-align:center;'>" \
+                + "<div id='value_label_left_"+ str(i) +"'" \
+                + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
+                + "0.15" \
+                + "</div>" \
+                + "<div id='token_left_"+ str(i) +"'" \
+                + "style='display: inline; background:white; border-radius: 3px; padding: 0px'" \
+                + "onclick=\"tokenValueToggle(this)\"" \
+                + ">" \
+                + input_tokens[i] \
+                + " </div>" \
+                + "</div>"
+
+    right = ''
+
+    for i in range(len(output_tokens)):
+        right += "<div style='display:inline; text-align:center;'" \
+                + "id='token_right_"+ str(i) +"'" \
+                + "onmouseover=\"onMouseHoverRight(this.id)\" " \
+                + "onmouseout=\"onMouseOutRight(this.id)\" " \
+                + "onclick=\"onMouseClickRight(this.id)\" " \
+                + ">" \
+                + output_tokens[i] + " </div>"
+
+    html = " <table style='width:100%;background-color:#ffffff;'>" \
+        + "<tr>" \
+        + "<td style='text-align:center;font-size: 30px;'> Input Text </td>" \
+        + "<td style='text-align:center;font-size: 30px;'> Output Text </td>" \
+        + "</tr>" \
+        + "<tr hover='background-color:#ffffff;'>" \
+        + "<td style='text-align:center;padding:50px;overflow-wrap: break-word;font-size: 25px;'> " + left + " </td>" \
+        + "<td style='text-align:center;padding:50px;overflow-wrap: break-word;font-size: 25px;'> " + right + " </td>" \
+        + "</tr>" \
+        + "</table>"
+
+    display(HTML(javascript+javascript2+html))
