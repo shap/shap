@@ -1,3 +1,19 @@
+'''
+This module extends the Kernel SHAP explainer as proposed by Scott Lundberg* and Su-In Lee**, in their paper
+"A Unified Approach to Interpreting Model Predictions". The here defined function extends the Kernel SHAP method from
+computing local feature importance to computing global feature importance values. Moreover, the global feature importance measures
+are 'standardised' in terms of the increase/decrease in accuracy they provide to the model. This latter point
+is inspired by the approach taken by Paolo Giudici+ and Emanueala Raffinetti++, in their paper
+"Shapley-Lorenz decompositions in exPlainable Artificial Intelligence", where they standardise
+Shapley values, by considering their Gini coefficient, i.e. how much variance of the true variance, can be
+attributed to each feature.
+
+*slund1@cs.washington.edu
+**suinlee@cs.washington.edu
++paolo.giudici@unipv.it
+++emanuela.raffinetti@unimi.it
+'''
+
 import auxiliary_functions
 import numpy as np
 import pandas as pd
