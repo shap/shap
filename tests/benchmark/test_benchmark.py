@@ -45,7 +45,3 @@ def test_get_metrics():
 
     assert set(shap.benchmark.get_metrics(benchmarks, lambda x, y: x.intersection(y))) == expected_metrics1
     assert set(shap.benchmark.get_metrics(benchmarks, lambda x, y: x.union(y))) == expected_metrics2
-
-test_update()
-test_get_benchmark()
-test_get_metrics()

@@ -69,7 +69,7 @@ def trend_plot(benchmarks):
             metric_passive = 'Removed'
 
         plt.ylabel('Mean Model Output')
-        plt.ylabel('Max Fraction of Features {}'.format(metric_passive))
+        plt.xlabel('Max Fraction of Features {}'.format(metric_passive))
         plt.title(metric)
         plt.legend()
         plt.show()
