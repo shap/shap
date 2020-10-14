@@ -187,8 +187,8 @@ class PyTorchDeep(Explainer):
                 if self.interim:
                     sample_phis, output = sample_phis
                     x, data = [], []
-                    for i in range(len(output)):
-                        x_temp, data_temp = np.split(output[i], 2)
+                    for k in range(len(output)):
+                        x_temp, data_temp = np.split(output[k], 2)
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
