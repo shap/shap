@@ -176,7 +176,8 @@ class Partition(Explainer):
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),
             "clustering": self._clustering,
-            "output_indices": outputs
+            "output_indices": outputs,
+            "output_names": fm.model_kwargs_params['output_names'] if 'output_names' in fm.model_kwargs_params else None
         }
 
     def owen(self, fm, f00, f11, npartitions, output_indexes, fixed_context, batch_size, silent):

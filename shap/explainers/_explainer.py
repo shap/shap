@@ -192,6 +192,7 @@ class Explainer():
         main_effects = []
         hierarchical_values = []
         clustering = []
+        output_names = []
         if callable(getattr(self.masker, "feature_names", None)):
             feature_names = [[] for _ in range(len(args))]
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
@@ -206,6 +207,8 @@ class Explainer():
             main_effects.append(row_result.get("main_effects", None))
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
+            if self.output_names is None:
+                output_names.append(row_result.get("output_names", None))
             
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
@@ -253,7 +256,11 @@ class Explainer():
 
         # getting output labels 
         if self.output_names is None:
-            sliced_labels = None
+            if bool(output_names):
+                labels = np.array(output_names)
+                sliced_labels = np.array([labels[i][index_list] for i,index_list in enumerate(output_indices)])
+            else:
+                sliced_labels = None
         else:
             labels = np.array(self.output_names)
             sliced_labels = np.array([labels[index_list] for index_list in output_indices])
