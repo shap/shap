@@ -207,8 +207,8 @@ class Explainer():
             main_effects.append(row_result.get("main_effects", None))
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
-            if self.output_names is None:
-                output_names.append(row_result.get("output_names", None))
+            if self.output_names is None and row_result.get("output_names") is not None:
+                output_names.append(row_result.get("output_names"))
             
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
