@@ -92,7 +92,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
     }
     extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
 
-    with open('README.rst') as f:
+    with open('README.md', encoding='utf-8') as f:
         long_description = f.read()
 
     setup(
@@ -100,7 +100,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         version=find_version("shap", "__init__.py"),
         description='A unified approach to explain the output of any machine learning model.',
         long_description=long_description,
-        long_description_content_type='text/x-rst',
+        long_description_content_type='text/markdown',
         url='http://github.com/slundberg/shap',
         author='Scott Lundberg',
         author_email='slund1@cs.washington.edu',
