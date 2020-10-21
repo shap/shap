@@ -4,6 +4,7 @@ from . import colors
 from ..utils import ordinal_str
 import random
 import string
+import json
 
 
 # TODO: we should support text output explanations (from models that output text not numbers), this would require the force
@@ -15,6 +16,9 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
     SHAP value assigned to that token.
     """
     from IPython.core.display import display, HTML
+
+
+
 
     def values_min_max(values, base_values):
         """ Used to pick our axis limits.
@@ -30,7 +34,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         return xmin, xmax, cmax
 
     # loop when we get multi-row inputs
-    if len(shap_values.shape) == 2:
+    if len(shap_values.shape) == 2 and shap_values.output_names is None:
         tokens, values, group_sizes = process_shap_values(shap_values[0], group_threshold, separator)
         xmin, xmax, cmax = values_min_max(values, shap_values[0].base_values)
         for i in range(1,len(shap_values)):
@@ -46,6 +50,16 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
             display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
             text(shap_values[i], num_starting_labels=num_starting_labels, group_threshold=group_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
         return
+    
+    elif len(shap_values.shape) == 2 and shap_values.output_names is not None:
+        text_to_text(shap_values)
+        return
+    elif len(shap_values.shape) == 3:
+        for i in range(len(shap_values)):
+            display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
+            text(shap_values[i])
+        return
+
     
     # set any unset bounds
     xmin_new, xmax_new, cmax_new = values_min_max(shap_values.values, shap_values.base_values)
@@ -589,3 +603,347 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
 
     from IPython.core.display import display, HTML
     return display(HTML(out))
+
+def text_to_text(shap_values):                
+    
+    from IPython.core.display import display, HTML
+    # unique ID added to HTML elements and function to avoid collision of differnent instances
+    uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
+    
+    saliency_plot_markup = saliency_plot(shap_values)
+    heatmap_markup = heatmap(shap_values)
+    
+    html = f"""
+    <html>
+    <div id="{uuid}_viz_container">
+      <div id="{uuid}_viz_header" style="padding:15px;border-style:solid;margin:5px;font-family:sans-serif;font-weight:bold;">
+        Visualization Type:
+        <select name="viz_type" id="{uuid}_viz_type" onchange="selectVizType_{uuid}(this)">
+          <option value="heatmap" selected="selected">Input/Output - Heatmap</option>
+          <option value="saliency-plot">Saliency Plot</option>
+        </select>
+      </div>
+      <div id="{uuid}_content" style="padding:15px;border-style:solid;margin:5px;">
+          <div id = "{uuid}_saliency_plot_container" class="{uuid}_viz_container" style="display:none"> 
+              {saliency_plot_markup}
+          </div>
+          
+          <div id = "{uuid}_heatmap_container" class="{uuid}_viz_container">
+              {heatmap_markup}
+          </div>
+      </div>
+    </div>
+    </html>
+    """
+
+
+    javascript = f"""
+    <script>
+        function selectVizType_{uuid}(selectObject) {{
+
+          /* Hide all viz */
+
+            var elements = document.getElementsByClassName("{uuid}_viz_container")
+          for (var i = 0; i < elements.length; i++){{
+              elements[i].style.display = 'none';
+          }}
+
+          var value = selectObject.value;
+          if ( value === "saliency-plot" ){{
+              document.getElementById('{uuid}_saliency_plot_container').style.display  = "block";
+          }}
+          else if ( value === "heatmap" ) {{
+              document.getElementById('{uuid}_heatmap_container').style.display  = "block";
+          }}
+        }}
+    </script>
+    """
+    
+    display(HTML(javascript + html))
+
+def saliency_plot(shap_values):
+    
+    uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
+    
+    # generate background colors of saliency plot
+    
+    def get_colors(shap_values):
+        input_colors = []
+        for row_index in range(shap_values.values.shape[0]):
+            input_colors_row = []
+            for col_index in range(shap_values.values.shape[1]):
+                cmax = max(abs(shap_values.values[:,col_index].min()), abs(shap_values.values[:,col_index].max()))
+                scaled_value = 0.5 + 0.5 * shap_values.values[row_index,col_index] / cmax
+                color = colors.red_transparent_blue(scaled_value)
+                color = 'rgba'+str((color[0]*255, color[1]*255, color[2]*255, color[3]))
+                input_colors_row.append(color)
+            input_colors.append(input_colors_row)
+        
+        return input_colors
+    
+    
+    model_input = shap_values.data
+    model_output = shap_values.output_names
+    
+    input_colors = get_colors(shap_values)
+    
+    out = '<table border = "1" cellpadding = "5" cellspacing = "5" style="overflow-x:scroll;display:block;">'
+    
+    # add top row containing input tokens
+    out += '<tr>'
+    out += '<th></th>'
+    for j in range(model_input.shape[0]):
+        out += '<th>' + model_input[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+    out += '</tr>'
+    
+    for row_index in range(model_output.shape[0]):
+        out += '<tr>'
+        out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+        for col_index in range(model_input.shape[0]):
+            out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(shap_values.values[col_index][row_index],3)) + '</th>'
+        out += '</tr>'
+            
+    out += '</table>'
+            
+    saliency_plot_html = f"""
+        <div id="{uuid}_saliency_plot" class="{uuid}_viz_content">
+            <div style="margin:5px;font-family:sans-serif;font-weight:bold;">
+                <span style="font-size: 20px;"> Saliency Plot </span>
+                <br>
+                x-axis: Output Text
+                <br>
+                y-axis: Input Text
+            </div>
+            {out}
+        </div>
+    """
+    return saliency_plot_html
+
+def heatmap(shap_values):
+    
+    uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
+    
+    def get_color(shap_value,cmax):
+        scaled_value = 0.5 + 0.5 * shap_value / cmax
+        color = colors.red_transparent_blue(scaled_value)
+        color = (color[0]*255, color[1]*255, color[2]*255, color[3])
+        return color
+    
+    
+    # unpack input tokens and output tokens
+    model_input = shap_values.data
+    model_output = shap_values.output_names
+    
+    # generate dictionary containing precomputed backgroud colors and shap values which are addresable by html token ids
+    colors_dict = {}
+    shap_values_dict = {}
+    
+    for col_index in range(model_output.shape[0]):
+        color_values = {}
+        cmax = max(abs(shap_values.values[:,col_index].min()), abs(shap_values.values[:,col_index].max()))
+        for row_index in range(model_input.shape[0]):
+            color_values[uuid+'_flat_token_input_'+str(row_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
+        colors_dict[uuid+'_flat_token_output_'+str(col_index)] = color_values
+    
+    
+    for row_index in range(model_input.shape[0]):
+        color_values = {}
+        cmax = max(abs(shap_values.values[row_index,:].min()), abs(shap_values.values[row_index,:].max()))
+        for col_index in range(model_output.shape[0]):
+            color_values[uuid+'_flat_token_output_'+str(col_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
+        colors_dict[uuid+'_flat_token_input_'+str(row_index)] = color_values
+        
+    for col_index in range(model_output.shape[0]):
+        shap_values_list = {}
+        for row_index in range(model_input.shape[0]):
+            shap_values_list[uuid+'_flat_value_label_input_'+str(row_index)] = shap_values.values[row_index][col_index]
+        shap_values_dict[uuid+'_flat_token_output_'+str(col_index)] = shap_values_list
+    
+    for row_index in range(model_input.shape[0]):
+        shap_values_list = {}
+        for col_index in range(model_output.shape[0]):
+            shap_values_list[uuid+'_flat_value_label_output_'+str(col_index)] = shap_values.values[row_index][col_index]
+        shap_values_dict[uuid+'_flat_token_input_'+str(row_index)] = shap_values_list
+    
+    # convert python disctionary into json to be inserted into the runtime javascript environment
+    colors_json = json.dumps(colors_dict)
+    shap_values_json = json.dumps(shap_values_dict)
+    
+    
+    javascript_values = "<script> " \
+            + f"colors_{uuid} = " + colors_json + "\n" \
+            + f" shap_values_{uuid} = " + shap_values_json + "\n"\
+            +  "</script> \n "
+    
+    
+    # generates the input token html elements
+    # each element contains the label value (initially hidden) and the token text
+    input_text_html = ''
+
+    for i in range(model_input.shape[0]):
+        input_text_html += "<div style='display:inline; text-align:center;'>" \
+                + f"<div id='{uuid}_flat_value_label_input_"+ str(i) +"'" \
+                + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
+                + "</div>" \
+                + f"<div id='{uuid}_flat_token_input_"+ str(i) +"'" \
+                + "style='display: inline; background:white; border-radius: 3px; padding: 0px;cursor: default;'" \
+                + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
+                + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
+                + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
+                + ">" \
+                + model_input[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + " </div>" \
+                + "</div>"
+        
+        
+    # generates the output token html elements
+    output_text_html = ''
+
+    for i in range(model_output.shape[0]):
+        output_text_html += "<div style='display:inline; text-align:center;'>" \
+                + f"<div id='{uuid}_flat_value_label_output_"+ str(i) +"'" \
+                + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
+                + "</div>" \
+                + f"<div id='{uuid}_flat_token_output_"+ str(i) +"'" \
+                + "style='display: inline; background:white; border-radius: 3px; padding: 0px;cursor: default;'" \
+                + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
+                + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
+                + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
+                + ">" \
+                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + " </div>" \
+                + "</div>"
+    
+    heatmap_html = f"""
+        <div id="{uuid}_heatmap" class="{uuid}_viz_content">
+          <div id="{uuid}_heatmap_header" style="padding:15px;margin:5px;font-family:sans-serif;font-weight:bold;">
+            <div style="display:inline">
+              <span style="font-size: 20px;"> Input/Output - Heatmap </span>
+            </div>
+            <div style="display:inline;float:right">
+              Alignment :
+              <select name="alignment" id="{uuid}_alignment" onchange="selectAlignment_{uuid}(this)">
+                <option value="left-right" selected="selected">Left/Right</option>
+                <option value="top-bottom">Top/Bottom</option>
+              </select>
+            </div>
+          </div>
+          <div id="{uuid}_heatmap_content" style="display:flex;">
+            <div id="{uuid}_input_container" style="padding:15px;border-style:solid;margin:5px;flex:1;">
+              <div id="{uuid}_input_header" style="margin:5px;font-weight:bold;font-family:sans-serif;margin-bottom:10px">
+                Input Text
+              </div>
+              <div id="{uuid}_input_content" style="margin:5px;font-family:sans-serif;">
+                  {input_text_html}
+              </div>
+            </div>
+            <div id="{uuid}_output_container" style="padding:15px;border-style:solid;margin:5px;flex:1;">
+              <div id="{uuid}_output_header" style="margin:5px;font-weight:bold;font-family:sans-serif;margin-bottom:10px">
+                Output Text
+              </div>
+              <div id="{uuid}_output_content" style="margin:5px;font-family:sans-serif;">
+                  {output_text_html}
+              </div>
+            </div>
+          </div>
+        </div>
+    """
+    
+    heatmap_javascript = f"""
+        <script>
+            function selectAlignment_{uuid}(selectObject) {{
+                var value = selectObject.value;
+                if ( value === "left-right" ){{
+                  document.getElementById('{uuid}_heatmap_content').style.display  = "flex";
+                }}
+                else if ( value === "top-bottom" ) {{
+                  document.getElementById('{uuid}_heatmap_content').style.display  = "inline";
+                }}
+            }}
+            
+            var {uuid}_heatmap_flat_state = null;
+            
+            function onMouseHoverFlat_{uuid}(id) {{
+                if ({uuid}_heatmap_flat_state === null) {{
+                    document.getElementById(id).style.backgroundColor  = "grey";
+                    document.getElementById(id).style.backgroundColor  = "grey";
+                    setBackgroundColors_{uuid}(id);
+                }}
+            }}
+            
+            function onMouseOutFlat_{uuid}(id) {{
+                if ({uuid}_heatmap_flat_state === null) {{
+                    document.getElementById(id).style.backgroundColor  = "white";
+                    cleanValuesAndColors_{uuid}(id);
+                }}
+            }}
+
+            function onMouseClickFlat_{uuid}(id) {{
+                if ({uuid}_heatmap_flat_state === id) {{
+                    document.getElementById(id).style.backgroundColor  = "white";
+                    cleanValuesAndColors_{uuid}();
+                    {uuid}_heatmap_flat_state = null;
+                }}
+                else {{
+                    if ({uuid}_heatmap_flat_state === null) {{
+                        cleanValuesAndColors_{uuid}(id)
+                        {uuid}_heatmap_flat_state = id;
+                        document.getElementById(id).style.backgroundColor  = "grey";
+                        setLabelValues_{uuid}(id);
+                        setBackgroundColors_{uuid}(id);
+                    }}
+                    else {{
+                        if (getIdSide_{uuid}({uuid}_heatmap_flat_state) === getIdSide_{uuid}(id)) {{
+                            document.getElementById({uuid}_heatmap_flat_state).style.backgroundColor  = "white";
+                            cleanValuesAndColors_{uuid}(id)
+                            {uuid}_heatmap_flat_state = id;
+                            document.getElementById(id).style.backgroundColor  = "grey";
+                            setLabelValues_{uuid}(id);
+                            setBackgroundColors_{uuid}(id);
+                        }}
+                        else{{
+                            if (document.getElementById(id).previousElementSibling.style.display == 'none') {{
+                                document.getElementById(id).previousElementSibling.style.display = 'block';
+                                document.getElementById(id).parentNode.style.display = 'inline-block';
+                              }}
+                            else {{
+                                document.getElementById(id).previousElementSibling.style.display = 'none';
+                                document.getElementById(id).parentNode.style.display = 'inline';
+                              }}
+                        }}
+                    }}
+                
+                }}
+            }}
+
+            function setLabelValues_{uuid}(id) {{
+                for(const token in shap_values_{uuid}[id]){{
+                    document.getElementById(token).innerHTML = shap_values_{uuid}[id][token];
+                }}
+            }}
+
+            function setBackgroundColors_{uuid}(id) {{
+                for(const token in colors_{uuid}[id]){{
+                    document.getElementById(token).style.backgroundColor  = colors_{uuid}[id][token];
+                }}
+            }}
+
+            function cleanValuesAndColors_{uuid}(id) {{
+                for(const token in shap_values_{uuid}[id]){{
+                    document.getElementById(token).innerHTML = "";
+                }}
+                 for(const token in colors_{uuid}[id]){{
+                    document.getElementById(token).style.backgroundColor  = "white";
+                }}
+            }}
+            
+            function getIdSide_{uuid}(id) {{
+                if (id === null) {{
+                    return 'null'
+                }}
+                return id.split("_")[3];
+            }}
+        </script>
+    """
+    
+    return heatmap_html + heatmap_javascript + javascript_values
