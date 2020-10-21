@@ -43,6 +43,7 @@ class Linear(Explainer):
     """
 
     def __init__(self, model, data, nsamples=1000, feature_perturbation=None, **kwargs):
+        self.name = 'linear explainer'
         self.nsamples = nsamples
         if 'feature_dependence' in kwargs:
             warnings.warn('The option feature_dependence has been renamed to feature_perturbation!')

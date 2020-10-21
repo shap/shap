@@ -23,7 +23,7 @@ except Exception:
     from sklearn.cross_validation import train_test_split
 
 
-def runtime(X, y, model_generator, method_name):
+def runtime(X, y, model_generator, explainer):
     """ Runtime (sec / 1k samples)
     transform = "negate_log"
     sort_order = 2
@@ -43,7 +43,7 @@ def runtime(X, y, model_generator, method_name):
 
         # evaluate each method
         start = time.time()
-        explainer = getattr(methods, method_name)(model, X_train)
+        explainer = explainer(model, X_train)
         build_time = time.time() - start
 
         start = time.time()
@@ -57,7 +57,7 @@ def runtime(X, y, model_generator, method_name):
 
     return None, np.mean(method_reps)
 
-def local_accuracy(X, y, model_generator, method_name):
+def local_accuracy(X, y, model_generator, explainer):
     """ Local Accuracy
     transform = "identity"
     sort_order = 0
@@ -73,7 +73,7 @@ def local_accuracy(X, y, model_generator, method_name):
             X_train, y_train, X_test, y_test, attr_function(X_test),
             model_generator, score_map, trained_model
         )
-    return None, __score_method(X, y, None, model_generator, score_function, method_name)
+    return None, __score_method(X, y, None, model_generator, score_function, explainer)
 
 def consistency_guarantees(X, y, model_generator, method_name):
     """ Consistency Guarantees
@@ -112,221 +112,221 @@ def __mean_pred(true, pred):
     """
     return np.mean(pred)
 
-def keep_positive_mask(X, y, model_generator, method_name, num_fcounts=11):
+def keep_positive_mask(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Positive (mask)
     xlabel = "Max fraction of features kept"
     ylabel = "Mean model output"
     transform = "identity"
     sort_order = 4
     """
-    return __run_measure(measures.keep_mask, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+    return __run_measure(measures.keep_mask, X, y, model_generator, explainer, 1, num_fcounts, __mean_pred)
 
-def keep_negative_mask(X, y, model_generator, method_name, num_fcounts=11):
+def keep_negative_mask(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Negative (mask)
     xlabel = "Max fraction of features kept"
     ylabel = "Negative mean model output"
     transform = "negate"
     sort_order = 5
     """
-    return __run_measure(measures.keep_mask, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+    return __run_measure(measures.keep_mask, X, y, model_generator, explainer, -1, num_fcounts, __mean_pred)
 
-def keep_absolute_mask__r2(X, y, model_generator, method_name, num_fcounts=11):
+def keep_absolute_mask__r2(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Absolute (mask)
     xlabel = "Max fraction of features kept"
     ylabel = "R^2"
     transform = "identity"
     sort_order = 6
     """
-    return __run_measure(measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+    return __run_measure(measures.keep_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.r2_score)
 
-def keep_absolute_mask__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+def keep_absolute_mask__roc_auc(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Absolute (mask)
     xlabel = "Max fraction of features kept"
     ylabel = "ROC AUC"
     transform = "identity"
     sort_order = 6
     """
-    return __run_measure(measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    return __run_measure(measures.keep_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-def remove_positive_mask(X, y, model_generator, method_name, num_fcounts=11):
+def remove_positive_mask(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Positive (mask)
     xlabel = "Max fraction of features removed"
     ylabel = "Negative mean model output"
     transform = "negate"
     sort_order = 7
     """
-    return __run_measure(measures.remove_mask, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+    return __run_measure(measures.remove_mask, X, y, model_generator, explainer, 1, num_fcounts, __mean_pred)
 
-def remove_negative_mask(X, y, model_generator, method_name, num_fcounts=11):
+def remove_negative_mask(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Negative (mask)
     xlabel = "Max fraction of features removed"
     ylabel = "Mean model output"
     transform = "identity"
     sort_order = 8
     """
-    return __run_measure(measures.remove_mask, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+    return __run_measure(measures.remove_mask, X, y, model_generator, explainer, -1, num_fcounts, __mean_pred)
 
-def remove_absolute_mask__r2(X, y, model_generator, method_name, num_fcounts=11):
+def remove_absolute_mask__r2(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Absolute (mask)
     xlabel = "Max fraction of features removed"
     ylabel = "1 - R^2"
     transform = "one_minus"
     sort_order = 9
     """
-    return __run_measure(measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+    return __run_measure(measures.remove_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.r2_score)
 
-def remove_absolute_mask__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+def remove_absolute_mask__roc_auc(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Absolute (mask)
     xlabel = "Max fraction of features removed"
     ylabel = "1 - ROC AUC"
     transform = "one_minus"
     sort_order = 9
     """
-    return __run_measure(measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    return __run_measure(measures.remove_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-def keep_positive_resample(X, y, model_generator, method_name, num_fcounts=11):
+def keep_positive_resample(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Positive (resample)
     xlabel = "Max fraction of features kept"
     ylabel = "Mean model output"
     transform = "identity"
     sort_order = 10
     """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+    return __run_measure(measures.keep_resample, X, y, model_generator, explainer, 1, num_fcounts, __mean_pred)
 
-def keep_negative_resample(X, y, model_generator, method_name, num_fcounts=11):
+def keep_negative_resample(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Negative (resample)
     xlabel = "Max fraction of features kept"
     ylabel = "Negative mean model output"
     transform = "negate"
     sort_order = 11
     """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+    return __run_measure(measures.keep_resample, X, y, model_generator, explainer, -1, num_fcounts, __mean_pred)
 
-def keep_absolute_resample__r2(X, y, model_generator, method_name, num_fcounts=11):
+def keep_absolute_resample__r2(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Absolute (resample)
     xlabel = "Max fraction of features kept"
     ylabel = "R^2"
     transform = "identity"
     sort_order = 12
     """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+    return __run_measure(measures.keep_resample, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.r2_score)
 
-def keep_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+def keep_absolute_resample__roc_auc(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Absolute (resample)
     xlabel = "Max fraction of features kept"
     ylabel = "ROC AUC"
     transform = "identity"
     sort_order = 12
     """
-    return __run_measure(measures.keep_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    return __run_measure(measures.keep_resample, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-def remove_positive_resample(X, y, model_generator, method_name, num_fcounts=11):
+def remove_positive_resample(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Positive (resample)
     xlabel = "Max fraction of features removed"
     ylabel = "Negative mean model output"
     transform = "negate"
     sort_order = 13
     """
-    return __run_measure(measures.remove_resample, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+    return __run_measure(measures.remove_resample, X, y, model_generator, explainer, 1, num_fcounts, __mean_pred)
 
-def remove_negative_resample(X, y, model_generator, method_name, num_fcounts=11):
+def remove_negative_resample(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Negative (resample)
     xlabel = "Max fraction of features removed"
     ylabel = "Mean model output"
     transform = "identity"
     sort_order = 14
     """
-    return __run_measure(measures.remove_resample, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+    return __run_measure(measures.remove_resample, X, y, model_generator, explainer, -1, num_fcounts, __mean_pred)
 
-def remove_absolute_resample__r2(X, y, model_generator, method_name, num_fcounts=11):
+def remove_absolute_resample__r2(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Absolute (resample)
     xlabel = "Max fraction of features removed"
     ylabel = "1 - R^2"
     transform = "one_minus"
     sort_order = 15
     """
-    return __run_measure(measures.remove_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+    return __run_measure(measures.remove_resample, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.r2_score)
 
-def remove_absolute_resample__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+def remove_absolute_resample__roc_auc(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Absolute (resample)
     xlabel = "Max fraction of features removed"
     ylabel = "1 - ROC AUC"
     transform = "one_minus"
     sort_order = 15
     """
-    return __run_measure(measures.remove_resample, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    return __run_measure(measures.remove_resample, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-def keep_positive_impute(X, y, model_generator, method_name, num_fcounts=11):
+def keep_positive_impute(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Positive (impute)
     xlabel = "Max fraction of features kept"
     ylabel = "Mean model output"
     transform = "identity"
     sort_order = 16
     """
-    return __run_measure(measures.keep_impute, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+    return __run_measure(measures.keep_impute, X, y, model_generator, explainer, 1, num_fcounts, __mean_pred)
 
-def keep_negative_impute(X, y, model_generator, method_name, num_fcounts=11):
+def keep_negative_impute(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Negative (impute)
     xlabel = "Max fraction of features kept"
     ylabel = "Negative mean model output"
     transform = "negate"
     sort_order = 17
     """
-    return __run_measure(measures.keep_impute, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+    return __run_measure(measures.keep_impute, X, y, model_generator, explainer, -1, num_fcounts, __mean_pred)
 
-def keep_absolute_impute__r2(X, y, model_generator, method_name, num_fcounts=11):
+def keep_absolute_impute__r2(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Absolute (impute)
     xlabel = "Max fraction of features kept"
     ylabel = "R^2"
     transform = "identity"
     sort_order = 18
     """
-    return __run_measure(measures.keep_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+    return __run_measure(measures.keep_impute, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.r2_score)
 
-def keep_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+def keep_absolute_impute__roc_auc(X, y, model_generator, explainer, num_fcounts=11):
     """ Keep Absolute (impute)
     xlabel = "Max fraction of features kept"
     ylabel = "ROC AUC"
     transform = "identity"
     sort_order = 19
     """
-    return __run_measure(measures.keep_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    return __run_measure(measures.keep_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
-def remove_positive_impute(X, y, model_generator, method_name, num_fcounts=11):
+def remove_positive_impute(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Positive (impute)
     xlabel = "Max fraction of features removed"
     ylabel = "Negative mean model output"
     transform = "negate"
     sort_order = 7
     """
-    return __run_measure(measures.remove_impute, X, y, model_generator, method_name, 1, num_fcounts, __mean_pred)
+    return __run_measure(measures.remove_impute, X, y, model_generator, explainer, 1, num_fcounts, __mean_pred)
 
-def remove_negative_impute(X, y, model_generator, method_name, num_fcounts=11):
+def remove_negative_impute(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Negative (impute)
     xlabel = "Max fraction of features removed"
     ylabel = "Mean model output"
     transform = "identity"
     sort_order = 8
     """
-    return __run_measure(measures.remove_impute, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
+    return __run_measure(measures.remove_impute, X, y, model_generator, explainer, -1, num_fcounts, __mean_pred)
 
-def remove_absolute_impute__r2(X, y, model_generator, method_name, num_fcounts=11):
+def remove_absolute_impute__r2(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Absolute (impute)
     xlabel = "Max fraction of features removed"
     ylabel = "1 - R^2"
     transform = "one_minus"
     sort_order = 9
     """
-    return __run_measure(measures.remove_impute, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.r2_score)
+    return __run_measure(measures.remove_impute, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.r2_score)
 
-def remove_absolute_impute__roc_auc(X, y, model_generator, method_name, num_fcounts=11):
+def remove_absolute_impute__roc_auc(X, y, model_generator, explainer, num_fcounts=11):
     """ Remove Absolute (impute)
     xlabel = "Max fraction of features removed"
     ylabel = "1 - ROC AUC"
     transform = "one_minus"
     sort_order = 9
     """
-    return __run_measure(measures.remove_mask, X, y, model_generator, method_name, 0, num_fcounts, sklearn.metrics.roc_auc_score)
+    return __run_measure(measures.remove_mask, X, y, model_generator, explainer, 0, num_fcounts, sklearn.metrics.roc_auc_score)
 
 def keep_positive_retrain(X, y, model_generator, method_name, num_fcounts=11):
     """ Keep Positive (retrain)
@@ -364,7 +364,7 @@ def remove_negative_retrain(X, y, model_generator, method_name, num_fcounts=11):
     """
     return __run_measure(measures.remove_retrain, X, y, model_generator, method_name, -1, num_fcounts, __mean_pred)
 
-def __run_measure(measure, X, y, model_generator, method_name, attribution_sign, num_fcounts, summary_function):
+def __run_measure(measure, X, y, model_generator, explainer, attribution_sign, num_fcounts, summary_function):
 
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
         if attribution_sign == 0:
@@ -378,7 +378,7 @@ def __run_measure(measure, X, y, model_generator, method_name, attribution_sign,
             model_generator, summary_function, trained_model, random_state
         )
     fcounts = __intlogspace(0, X.shape[1], num_fcounts)
-    return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
+    return fcounts, __score_method(X, y, fcounts, model_generator, score_function, explainer)
 
 def batch_remove_absolute_retrain__r2(X, y, model_generator, method_name, num_fcounts=11):
     """ Batch Remove Absolute (retrain)
@@ -432,7 +432,7 @@ def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num
     return fcounts, __score_method(X, y, fcounts, model_generator, score_function, method_name)
 
 _attribution_cache = {}
-def __score_method(X, y, fcounts, model_generator, score_function, method_name, nreps=10, test_size=100, cache_dir="/tmp"):
+def __score_method(X, y, fcounts, model_generator, score_function, explainer, nreps=10, test_size=100, cache_dir="/tmp"):
     """ Test an explanation method.
     """
 
@@ -448,20 +448,11 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
     data_hash = hashlib.sha256(__toarray(X).flatten()).hexdigest() + hashlib.sha256(__toarray(y)).hexdigest()
     for i in range(nreps):
         X_train, X_test, y_train, y_test = train_test_split(__toarray(X), y, test_size=test_size, random_state=i)
+        
+        model = model_generator()
+        model.fit(X_train, y_train)
 
-        # define the model we are going to explain, caching so we onlu build it once
-        model_id = "model_cache__v" + "__".join([__version__, data_hash, model_generator.__name__])+".pickle"
-        cache_file = os.path.join(cache_dir, model_id + ".pickle")
-        if os.path.isfile(cache_file):
-            with open(cache_file, "rb") as f:
-                model = pickle.load(f)
-        else:
-            model = model_generator()
-            model.fit(X_train, y_train)
-            with open(cache_file, "wb") as f:
-                pickle.dump(model, f)
-
-        attr_key = "_".join([model_generator.__name__, method_name, str(test_size), str(nreps), str(i), data_hash])
+        attr_key = "_".join([explainer.name, str(test_size), str(nreps), str(i), data_hash])
         def score(attr_function):
             def cached_attr_function(X_inner):
                 if attr_key not in _attribution_cache:
@@ -479,7 +470,7 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
 
         # evaluate the method (only building the attribution function if we need to)
         if attr_key not in _attribution_cache:
-            method_reps.append(score(getattr(methods, method_name)(model, X_train)))
+            method_reps.append(score(lambda X: explainer(X).values))
         else:
             method_reps.append(score(None))
 

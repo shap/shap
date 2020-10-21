@@ -31,6 +31,7 @@ class Additive(Explainer):
             note that this structure information has no effect on the explanations of additive models.
         """
         super(Additive, self).__init__(model, masker)
+        self.name = 'additive explainer'
 
         assert safe_isinstance(self.masker, "shap.maskers.Tabular"), "The Additive explainer only supports the Tabular masker at the moment!"
 

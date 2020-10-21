@@ -221,7 +221,7 @@ class Independent(Tabular):
 class Partition(Tabular):
     """ This masks out tabular features by integrating over the given background dataset.
 
-    Unlike Independent, Partition respects a hierarchial structure o
+    Unlike Independent, Partition respects a hierarchical structure 
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):
@@ -251,3 +251,33 @@ class Partition(Tabular):
             If an array, then this is assumed to be the clustering of 
         """
         super(Partition, self).__init__(data, max_samples=max_samples, clustering=clustering)
+
+class Mean(Tabular):
+    def __init__(self, data):
+        self.data = data 
+        self.mean = data.mean(0) 
+
+    def __call__(self, mask, x):
+        output = (x * mask + self.mean * np.invert(mask)).reshape(1,-1)
+        
+        return output
+
+class Impute(Tabular):
+    def __init__(self, data):
+        self.data = data 
+        self.mean = data.mean(0)
+
+        self.C = np.cov(data.T)
+        self.C += np.eye(self.C.shape[0]) * 1e-6
+
+    def __call__(self, mask, x):
+        # impute missing data assuming it follows a multivariate normal distribution
+        Coo_inv = np.linalg.inv(self.C[mask,:][:,mask])
+        Cio = self.C[np.invert(mask),:][:,mask]
+        impute = self.mean[np.invert(mask)] + Cio @ Coo_inv @ (x[mask] - self.mean[mask])
+        
+        output = x * mask 
+        output[np.invert(mask)] = impute 
+        output = output.reshape(1, -1)
+        
+        return output 

@@ -37,6 +37,7 @@ class Permutation(Explainer):
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
         super(Permutation, self).__init__(model, masker, link=link)
+        self.name = 'permutation explainer'
 
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
@@ -48,7 +49,7 @@ class Permutation(Explainer):
 
         # by default we run 10 permutations forward and backward
         if max_evals == "auto":
-            max_evals = 10 * 2 * len(fm)
+            max_evals = 10 * 2 * len(fm) + 1
 
         # loop over many permutations
         inds = fm.varying_inputs()
@@ -86,7 +87,10 @@ class Permutation(Explainer):
             for i,ind in enumerate(inds):
                 row_values[ind] += outputs[i+1] - outputs[i]
         
-        expected_value = outputs[0]
+        if npermutations <= 1: 
+            expected_value = outputs
+        else: 
+            expected_value = outputs[0]
 
         # compute the main effects if we need to
         main_effect_values = fm.main_effects(inds) if main_effects else None
@@ -125,4 +129,4 @@ class Permutation(Explainer):
         """
 
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
-        return explanation._old_format()
+        return explanation.values

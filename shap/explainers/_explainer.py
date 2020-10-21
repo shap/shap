@@ -57,7 +57,7 @@ class Explainer():
             the Explanation objects produced by this explainer will not have any output_names, which could effect
             downstream plots.
         """
-
+        self.name = 'abstract explainer'
         self.model = model
         self.output_names = output_names
         

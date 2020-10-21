@@ -1,11 +1,8 @@
-from shap.utils import safe_isinstance
-from shap.maskers import Text, Partition
+from shap.utils import safe_isinstance, MaskedModel
+import shap.links
 import shap.datasets
 import matplotlib.pyplot as pl
 import sklearn
-import nlp 
-import transformers
-import xgboost 
 import numpy as np
 from tqdm.auto import tqdm
 import time
@@ -19,6 +16,10 @@ class SequentialPerturbation():
         self.score_function = score_function
         self.perturbation = perturbation
         
+        # convert dataframe
+        if safe_isinstance(self.masker, "pandas.core.series.Series") or safe_isinstance(self.masker, "pandas.core.frame.DataFrame"):
+            self.masker = self.masker.values
+
         # If the user just gave a dataset as the masker
         # then we make a masker that perturbs features independently
         if type(self.masker) == np.ndarray:
@@ -38,16 +39,22 @@ class SequentialPerturbation():
         self.score_values = []
         self.score_aucs = []
         self.labels = []
+
+    def maskedmodel(self):
+        self.masked_model = MaskedModel(self.f, self.masker, shap.links.identity) 
     
-    def score(self, attributions, X, y=None, label=None, silent=False):
+    def score(self, explainer, X, y=None, label=None, silent=False):
+        # if explainer is already the attributions 
+        if safe_isinstance(explainer, "numpy.ndarray"): 
+            attributions = explainer 
+        else: 
+            attributions = explainer(X).values
         
         if label is None:
             label = "Score %d" % len(self.score_values)
         
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(self.masker, "pandas.core.frame.DataFrame"):
+        if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
             X = X.values
             
         # convert all single-sample vectors to matrices
@@ -60,6 +67,7 @@ class SequentialPerturbation():
         pbar = None
         start_time = time.time()
         svals = []
+
         for i in range(len(X)):
             mask = np.ones(len(X[i]), dtype=np.bool) * (self.perturbation == "remove")
             ordered_inds = self.sort_order_map(attributions[i])
@@ -67,10 +75,12 @@ class SequentialPerturbation():
             # compute the fully masked score
             values = np.zeros(len(X[i])+1)
             masked = self.masker(mask, X[i])
-            values[0] = self.score_function(None if y is None else y[i], self.f(masked).mean(0))
-
+            values[0] = self.f(masked).mean(0)
+            
             # loop over all the features
-            curr_val = None
+            # default curr_val to be fully masked score in case when entire attributions is negative/positive
+            # avoid nan by setting default curr_val to full masked score
+            curr_val = self.f(masked).mean(0)
             for j in range(len(X[i])):
                 oind = ordered_inds[j]
                 
@@ -79,7 +89,7 @@ class SequentialPerturbation():
                         (self.sort_order == "negative" and attributions[i][oind] >= 0)):
                     mask[oind] = self.perturbation == "keep"
                     masked = self.masker(mask, X[i])
-                    curr_val = self.score_function(None if y is None else y[i], self.f(masked).mean(0))
+                    curr_val = self.f(masked).mean(0)
                 values[j+1] = curr_val
             svals.append(values)
 
@@ -93,15 +103,14 @@ class SequentialPerturbation():
             
         self.score_values.append(np.array(svals))
         
-        if self.sort_order == "negative":
+        if self.sort_order == "negative": 
             curve_sign = -1
-        else:
+        else: 
             curve_sign = 1
-        
-        self.score_aucs.append(np.array([
-            sklearn.metrics.auc(np.linspace(0, 1, len(svals[i])), curve_sign*(svals[i] - svals[i][0]))
-            for i in range(len(svals))
-        ]))
+
+        svals = np.array(svals)
+        scores = [self.score_function(y, svals[:,i]) for i in range(svals.shape[1])]
+        auc = sklearn.metrics.auc(np.linspace(0, 1, len(scores)), curve_sign*(scores-scores[0]))
         
         self.labels.append(label)
         
@@ -113,7 +122,7 @@ class SequentialPerturbation():
             curves[j,:] = np.interp(xs, xp, yp)
         ys = curves.mean(0)
         
-        return xs, ys
+        return xs, ys, auc
         
     def plot(self):
         
@@ -125,28 +134,8 @@ class SequentialPerturbation():
                 yp = self.score_values[i][j]
                 curves[j,:] = np.interp(xs, xp, yp)
             ys = curves.mean(0)
-            pl.plot(
-                xs, ys, label=self.labels[i] + " AUC %0.4f" % self.score_aucs[i].mean()
-            )
+            pl.plot(xs, ys, label=self.labels[i] + " AUC %0.4f" % self.score_aucs[i].mean())
         if (self.sort_order == "negative") != (self.perturbation == "remove"):
             pl.gca().invert_yaxis()
         pl.legend()
         pl.show()
-
-# Example 
-
-X,y = shap.datasets.adult()
-model = xgboost.XGBClassifier().fit(X, y)
-
-f = lambda x: model.predict(x, output_margin=True)
-masker = Partition(X[:500])
-explainer = shap.Explainer(f, masker)(X[:500])
-shap_values = explainer.values
-data = explainer.data
-score_function = lambda y, out: out
-sort_order = 'absolute'
-perturbation = 'keep'
-
-sp = SequentialPerturbation(f, masker, sort_order, score_function, perturbation)
-sp.score(shap_values, data)
-sp.plot()

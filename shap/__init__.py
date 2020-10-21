@@ -68,7 +68,6 @@ from . import datasets
 from . import utils
 from . import links
 
-#from . import benchmark
+from . import benchmark
 
-from .utils._legacy import kmeans
-from .utils import sample, approximate_interactions
+from .utils import sample, approximate_interactions, kmeans
