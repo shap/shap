@@ -1250,3 +1250,20 @@ def test_skopt_rf_et():
 
     assert np.allclose(shap_values_et.sum(1) + explainer_et.expected_value, result_et.models[-1].predict(et_df))
     assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value, result_rf.models[-1].predict(rf_df))
+
+def test_tweedie_objective():
+    import shap
+    import numpy as np
+    import xgboost
+    # train XGBoost model
+    X, Y = shap.datasets.diabetes()
+    model = xgboost.XGBRegressor(objective="reg:tweedie", max_depth=4)
+    model.fit(X, Y)
+
+    # Create explainer with model_output="log_link" 
+    explainer = shap.TreeExplainer(
+        model, X, feature_perturbation="interventional", model_output="log_link")
+    shap_values = explainer.shap_values(X)
+  
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X)),\
+        "SHAP values don't sum to model output on explaining tweedie!"
