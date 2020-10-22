@@ -1,11 +1,8 @@
-import matplotlib
-import numpy as np
-matplotlib.use('Agg')
-import shap
-
 
 
 def test_tied_pair():
+    import numpy as np
+    import shap
     np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
@@ -15,6 +12,8 @@ def test_tied_pair():
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_tied_triple():
+    import numpy as np
+    import shap
     np.random.seed(0)
     beta = np.array([0, 1, 0, 0])
     mu = 1*np.ones(4)
@@ -25,6 +24,8 @@ def test_tied_triple():
     assert np.abs(explainer.shap_values(X) - np.array([0.33333, 0.33333, 0.33333, 0])).max() < 0.05
 
 def test_sklearn_linear():
+    import numpy as np
+    import shap
     np.random.seed(0)
     from sklearn.linear_model import Ridge
     import shap
@@ -40,6 +41,8 @@ def test_sklearn_linear():
     explainer.shap_values(X)
 
 def test_sklearn_multiclass_no_intercept():
+    import numpy as np
+    import shap
     np.random.seed(0)
     from sklearn.linear_model import Ridge
     import shap
@@ -73,6 +76,8 @@ def test_perfect_colinear():
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
 
 def test_shape_values_linear_many_features():
+    import numpy as np
+    import shap
     from sklearn.linear_model import Ridge
 
     np.random.seed(0)
@@ -101,6 +106,8 @@ def test_single_feature():
     """ Make sure things work with a univariate linear regression.
     """
     import sklearn.linear_model
+    import numpy as np
+    import shap
 
     np.random.seed(0)
 
@@ -124,6 +131,8 @@ def test_sparse():
     import sklearn.linear_model
     from sklearn.datasets import make_multilabel_classification
     from scipy.special import expit
+    import numpy as np
+    import shap
 
     np.random.seed(0)
     n_features = 20

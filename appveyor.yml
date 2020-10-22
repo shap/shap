@@ -9,16 +9,16 @@ environment:
     # The list here is complete (excluding Python 2.6, which
     # isn't covered by this document) at the time of writing.
 
-    - PYTHON: "C:\\Python35-x64"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
-    #Tensorflow doesn't support python 3.8 yet. https://github.com/tensorflow/tensorflow/issues/33374
-    #- PYTHON: "C:\\Python38-x64"
+    - PYTHON: "C:\\Python38-x64"
 
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
   - "%PYTHON%\\python.exe -m pip install tensorflow matplotlib ipython"
+  - "%PYTHON%\\python.exe -m pip install torch==1.6.0+cpu torchvision==0.7.0+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+  
   - ps: |
       # Appveyor script to install hadoop extra package to run spark on windows
       # create tools directory outside of Spark directory
@@ -44,6 +44,8 @@ install:
       $env:PYSPARK_DRIVER_PYTHON = "$env:PYTHON\python.exe"
       $env:PYSPARK_PYTHON = "$env:PYTHON\python.exe"
       Pop-Location
+  - "%PYTHON%\\python.exe setup.py develop"
+  - "%PYTHON%\\python.exe -m pip install .[test]"
 
 build: off
 
@@ -52,7 +54,7 @@ test_script:
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
   # to put the Python version you want to use on PATH.
-  - "%PYTHON%\\python.exe setup.py test"
+  - "%PYTHON%\\python.exe -m pytest ."
 
 artifacts:
   # bdist_wheel puts your built wheel in the dist directory

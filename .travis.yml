@@ -15,9 +15,12 @@ before_install:
   /usr/bin/g++ g++ /usr/bin/g++-4.9
 - sudo apt-get install -y libgomp1
 install:
-- pip install .
-- pip install tensorflow xgboost matplotlib ipython
-script: python setup.py nosetests
+- python setup.py develop
+- pip install .[test]
+- pip install tensorflow xgboost matplotlib ipython codecov torch torchvision
+script: python -m pytest .
+after_success:
+  - codecov
 deploy:
   provider: pypi
   user: "__token__"

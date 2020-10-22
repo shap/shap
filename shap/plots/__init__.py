@@ -1,16 +1,15 @@
+from ._bar import bar
+from ._heatmap import heatmap
+from ._decision import decision
+from ._scatter import scatter
+from ._embedding import embedding
+from ._force import force, initjs
+from ._group_difference import group_difference
+from ._image import image
+from ._monitoring import monitoring
+from ._partial_dependence import partial_dependence
+from ._beeswarm import beeswarm
+from ._violin import violin
+from ._text import text
+from ._waterfall import waterfall
 
-labels = {
-    'MAIN_EFFECT': "SHAP main effect value for\n%s",
-    'INTERACTION_VALUE': "SHAP interaction value",
-    'INTERACTION_EFFECT': "SHAP interaction value for\n%s and %s",
-    'VALUE': "SHAP value (impact on model output)",
-    'GLOBAL_VALUE': "mean(|SHAP value|) (average impact on model output magnitude)",
-    'VALUE_FOR': "SHAP value for\n%s",
-    'PLOT_FOR': "SHAP plot for %s",
-    'FEATURE': "Feature %s",
-    'FEATURE_VALUE': "Feature value",
-    'FEATURE_VALUE_LOW': "Low",
-    'FEATURE_VALUE_HIGH': "High",
-    'JOINT_VALUE': "Joint SHAP value",
-    'MODEL_OUTPUT': "Model output value"
-}

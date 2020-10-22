@@ -14,7 +14,7 @@ import {
   findIndex,
   debounce
 } from "lodash";
-import colors from "../color-set";
+import colors from "./color-set";
 
 class AdditiveForceVisualizer extends React.Component {
   constructor() {
@@ -278,7 +278,7 @@ class AdditiveForceVisualizer extends React.Component {
       });
     blocks.exit().remove();
 
-    let filteredData = _.filter(data, d => {
+    let filteredData = filter(data, d => {
       return (
         scale(Math.abs(d.effect)) > scale(totalEffect) / 50 &&
         scale(Math.abs(d.effect)) > 10

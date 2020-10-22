@@ -1,23 +1,19 @@
-import matplotlib
 import numpy as np
-import shutil
-matplotlib.use('Agg')
+import pytest
+
 import shap
 
-from .test_deep import _skip_if_no_pytorch, _skip_if_no_tensorflow
+
+# pylint: disable=import-error
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
     """
-
-    _skip_if_no_tensorflow()
-    import tensorflow as tf
-    from tensorflow import keras
+    tf = pytest.importorskip('tensorflow')
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
     from tensorflow.keras.layers import Conv2D, MaxPooling2D
     from tensorflow.keras import backend as K
-    import shap
 
     tf.compat.v1.disable_eager_execution()
 
@@ -29,7 +25,7 @@ def test_tf_keras_mnist_cnn():
     img_rows, img_cols = 28, 28
 
     # the data, split between train and test sets
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -46,8 +42,8 @@ def test_tf_keras_mnist_cnn():
     x_test /= 255
 
     # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_train = tf.keras.utils.to_categorical(y_train, num_classes)
+    y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),
@@ -62,8 +58,8 @@ def test_tf_keras_mnist_cnn():
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
+    model.compile(loss=tf.keras.losses.categorical_crossentropy,
+                  optimizer=tf.keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(x_train[:1000,:], y_train[:1000,:],
@@ -87,29 +83,26 @@ def test_tf_keras_mnist_cnn():
     assert d / np.abs(diff).sum() < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_mnist_cnn():
+def test_pytorch_mnist_cnn(tmpdir):
     """The same test as above, but for pytorch
     """
-    _skip_if_no_pytorch()
-    import torch
+    torch = pytest.importorskip('torch')
+    torchvision = pytest.importorskip('torchvision')
     from torchvision import datasets, transforms
     from torch import nn
     from torch.nn import functional as F
 
-    import shap
-
     batch_size=128
-    root_dir = 'mnist_data'
 
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root_dir, train=True, download=True,
+        datasets.MNIST(tmpdir, train=True, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
                        ])),
         batch_size=batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(root_dir, train=False, download=True,
+        datasets.MNIST(tmpdir, train=False, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
@@ -157,18 +150,18 @@ def test_pytorch_mnist_cnn():
                 if num_examples > cutoff:
                     break
 
-        device = torch.device('cpu')
+        device = torch.device('cpu') # pylint: disable=no-member
         train(model, device, train_loader, optimizer, 1)
 
-        next_x, next_y = next(iter(train_loader))
+        next_x, _ = next(iter(train_loader))
         np.random.seed(0)
         inds = np.random.choice(next_x.shape[0], 20, replace=False)
         if interim:
             e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
         else:
             e = shap.GradientExplainer(model, next_x[inds, :, :, :])
-        test_x, test_y = next(iter(test_loader))
-        shap_values = e.shap_values(test_x[:1], nsamples=1000)
+        test_x, _ = next(iter(test_loader))
+        shap_values = e.shap_values(test_x[:1], nsamples=5000)
 
         if not interim:
             # unlike deepLIFT, Integrated Gradients aren't necessarily consistent for interim layers
@@ -185,17 +178,13 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, True)
     print ('Running test on whole model')
     run_test(train_loader, test_loader, False)
-    # clean up
-    shutil.rmtree(root_dir)
 
 
 def test_pytorch_multiple_inputs():
-
-    _skip_if_no_pytorch()
-    import torch
+    # pylint: disable=no-member
+    torch = pytest.importorskip('torch')
     from torch import nn
-    import shap
-
+    torch.manual_seed(1)
     batch_size = 10
     x1 = torch.ones(batch_size, 3)
     x2 = torch.ones(batch_size, 4)

@@ -308,6 +308,12 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     const unsigned max_nodes = PyArray_DIM(values_array, 1);
     const unsigned num_outputs = PyArray_DIM(values_array, 2);
 
+    const unsigned num_offsets = PyArray_DIM(base_offset_array, 0);
+    if (num_offsets != num_outputs) {
+        std::cerr << "The passed base_offset array does that have the same number of outputs as the values array: " << num_offsets << " vs. " << num_outputs << std::endl;
+        return NULL;
+    }
+
     // Get pointers to the data as C-types
     int *children_left = (int*)PyArray_DATA(children_left_array);
     int *children_right = (int*)PyArray_DATA(children_right_array);

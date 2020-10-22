@@ -1,22 +1,28 @@
 # flake8: noqa
 
 import warnings
+import sys
 
-__version__ = '0.34.0'
+__version__ = '0.37.0'
+
+# check python version
+if (sys.version_info < (3, 0)):
+    warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
+
+from ._explanation import Explanation, Cohorts
 
 # explainers
-from .explainers.kernel import KernelExplainer, kmeans
-from .explainers.sampling import SamplingExplainer
-from .explainers.tree import TreeExplainer, Tree
-from .explainers.deep import DeepExplainer
-from .explainers.gradient import GradientExplainer
-from .explainers.linear import LinearExplainer
-from .explainers.partition import PartitionExplainer, TokenMasker, ImageMasker
-from .explainers.bruteforce import BruteForceExplainer
-from .explainers.permutation import PermutationExplainer
-from .explainers.additive import AdditiveExplainer
+from .explainers._explainer import Explainer
+from .explainers._kernel import Kernel as KernelExplainer
+from .explainers._sampling import Sampling as SamplingExplainer
+from .explainers._tree import Tree as TreeExplainer
+from .explainers._deep import Deep as DeepExplainer
+from .explainers._gradient import Gradient as GradientExplainer
+from .explainers._linear import Linear as LinearExplainer
+from .explainers._partition import Partition as PartitionExplainer
+from .explainers._permutation import Permutation as PermutationExplainer
+from .explainers._additive import Additive as AdditiveExplainer
 from .explainers import other
-
 
 # plotting (only loaded if matplotlib is present)
 def unsupported(*args, **kwargs):
@@ -28,17 +34,18 @@ try:
 except ImportError:
     have_matplotlib = False
 if have_matplotlib:
-    from .plots.summary import summary_plot
-    from .plots.decision import decision_plot, multioutput_decision_plot
-    from .plots.dependence import dependence_plot
-    from .plots.force import force_plot, initjs, save_html
-    from .plots.image import image_plot
-    from .plots.monitoring import monitoring_plot
-    from .plots.embedding import embedding_plot
-    from .plots.partial_dependence import partial_dependence_plot
-    from .plots.bar import bar_plot
-    from .plots.waterfall import waterfall_plot
-    from .plots.text import text_plot
+    from .plots._beeswarm import summary_legacy as summary_plot
+    from .plots._decision import decision as decision_plot, multioutput_decision as multioutput_decision_plot
+    from .plots._scatter import dependence_legacy as dependence_plot
+    from .plots._force import force as force_plot, initjs, save_html, getjs
+    from .plots._image import image as image_plot
+    from .plots._monitoring import monitoring as monitoring_plot
+    from .plots._embedding import embedding as embedding_plot
+    from .plots._partial_dependence import partial_dependence as partial_dependence_plot
+    from .plots._bar import bar_legacy as bar_plot
+    from .plots._waterfall import waterfall as waterfall_plot
+    from .plots._group_difference import group_difference as group_difference_plot
+    from .plots._text import text as text_plot
 else:
     summary_plot = unsupported
     decision_plot = unsupported
@@ -58,5 +65,10 @@ else:
 
 # other stuff :)
 from . import datasets
+from . import utils
+from . import links
+
 #from . import benchmark
-from .common import approximate_interactions, hclust_ordering, sample, partition_tree
+
+from .utils._legacy import kmeans
+from .utils import sample, approximate_interactions

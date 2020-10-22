@@ -2,7 +2,7 @@ import React from "react";
 import { scaleLinear } from "d3-scale";
 import { format } from "d3-format";
 import { sortBy, reverse, max, map } from "lodash";
-import colors from "../color-set";
+import colors from "./color-set";
 
 class SimpleListVisualizer extends React.Component {
   constructor() {
