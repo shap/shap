@@ -740,12 +740,10 @@ class TreeEnsemble:
 
             self.trees = [SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing) for e in model.estimators_[:,0]]
             self.objective = objective_name_map.get(model.criterion, None)
-        '''Taken from the the unfinished pull request 1219 -- https://github.com/slundberg/shap/pull/1219/files'''
         ### Added AdaBoostClassifier based on the outdated StackOverflow response and Github issue here
         ### https://stackoverflow.com/questions/60433389/how-to-calculate-shap-values-for-adaboost-model/61108156#61108156
         ### https://github.com/slundberg/shap/issues/335
-        ###
-        elif safe_isinstance(model, ["sklearn.ensemble.AdaBoostClassifier", "sklearn.ensemble._weighted_boosting.AdaBoostClassifier"]):
+        elif safe_isinstance(model, ["sklearn.ensemble.AdaBoostClassifier","sklearn.ensemble._weighted_boosting.AdaBoostClassifier"]):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
