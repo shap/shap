@@ -744,8 +744,8 @@ def test_sum_match_adaboost_classifier():
     predicted = clf.predict_proba(X_test) 
     ex = shap.TreeExplainer(clf) 
     shap_values = ex.shap_values(X_test) 
-    assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-4, \ 
-     "SHAP values don't sum to model output!" 
+    assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-4, \
+        "SHAP values don't sum to model output!" 
     
 def test_single_row_gradient_boosting_classifier():
     import shap
