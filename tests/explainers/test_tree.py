@@ -739,7 +739,7 @@ def test_sum_match_adaboost_classifier():
     import sklearn 
 
     X_train,X_test,Y_train,Y_test = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0) 
-    clf = AdaBoostClassifier(random_state=202, n_estimators=100) 
+    clf = AdaBoostClassifier(random_state=202, n_estimators=10) 
     clf.fit(X_train, Y_train) 
     predicted = clf.predict_proba(X_test) 
     ex = shap.TreeExplainer(clf) 
