@@ -100,6 +100,12 @@ class Kernel(Explainer):
             self.expected_value = float(self.expected_value)
         else:
             self.D = self.fnull.shape[0]
+            
+        # find multivariate mean and variance covariance of background data
+        self.mu = np.zeros(self.P)
+        for j in range(self.P):
+            self.mu[j] = np.mean(self.data.data.data[:,j])
+        self.cov = np.cov(self.data.data.data)
 
 
     def shap_values(self, X, **kwargs):
@@ -143,6 +149,8 @@ class Kernel(Explainer):
                 index_name = X.index.name
                 column_name = list(X.columns)
             X = X.values
+            
+        self.X = X
 
         x_type = str(type(X))
         arr_type = "'numpy.ndarray'>"
@@ -432,6 +440,50 @@ class Kernel(Explainer):
             mask[remove_unvarying_indices] = False
             varying_indices = varying_indices[mask]
             return varying_indices
+        
+    # Conditional multivariate distribution
+    def conmvn(self, dependent_indx, given_indx, X_given, mean, covmat, check_covmat = True):
+        '''
+        Finds the conditional mean and conditional variance covariance matrix
+        '''
+        # Conditions
+        if check_covmat == True:
+            assert np.allclose(covmat, covmat.T, 1e-05, 1e-08),\
+                'provided variance covariance matrix needs to be symmetric'
+            assert np.any(np.linalg.eig(covmat < 1e-8)[0]),\
+                'provided variance covariance matrix needs to be positive-definite'
+        if str(type(covmat)).endswith("frame.DataFrame"):
+            covmat = covmat.values
+        # Decompose covariance matrix
+        try:
+            sigma_sbsb = covmat[dependent_indx][:, dependent_indx]
+        except:
+            sigma_sbsb = covmat[dependent_indx, dependent_indx]
+        sigma_sbs = covmat[dependent_indx][:, given_indx]
+        try:
+            sigma_ss = covmat[given_indx][:, given_indx]
+        except:
+            sigma_ss = covmat[given_indx,given_indx]
+        try: 
+            sigma_sbsSigmassInv = np.dot(sigma_sbs,np.linalg.inv(sigma_ss))
+        except:
+            sigma_sbsSigmassInv = sigma_sbs / sigma_ss
+        try:
+            conMu = mean[dependent_indx] + np.dot(sigma_sbsSigmassInv, (X_given - mean[given_indx]))
+        except:
+            conMu = mean[dependent_indx] + np.dot(sigma_sbsSigmassInv, (X_given - mean[given_indx]))
+        conVar = sigma_sbsb - np.dot(sigma_sbsSigmassInv, sigma_sbs.T)
+
+        return conMu, conVar;
+
+    def rg_condmvn(self, n, dependent_indx, given_indx, X_given, mean, covmat, check_covmat = True):
+        '''
+        Random number generator from a conditional multivariate normal distribution
+        '''
+        conMu, conVar = self.conmvn(dependent_indx, given_indx, X_given, mean, covmat, check_covmat = True)
+        result = np.random.multivariate_normal(conMu, conVar, n)
+
+        return result
 
     def allocate(self):
         if sp.sparse.issparse(self.data.data):
@@ -478,21 +530,35 @@ class Kernel(Explainer):
                 for k in self.varyingFeatureGroups[j]:
                     if m[j] == 1.0:
                         self.synth_data[offset:offset+self.N, k] = x[0, k]
+                    if m[j] != 1.0:
+                        kbar = [itm for itm in np.arange(len(self.varyingFeatureGroups)) if itm not in k]
+                        # find conditional mean and variance covariance matrix of background data
+                        self.synth_data[offset:offset+self.N, kbar] = self.conmvn(self.N, k, kbar,\
+                            self.synth_data[offset:offset+self.N, kbar], self.mu, self.cov)
         else:
             # for non-jagged numpy array we can significantly boost performance
             mask = m == 1.0
             groups = self.varyingFeatureGroups[mask]
+            groups_indx = np.where(mask)
+            groups_invert = self.varyingFeatureGroups[np.invert(mask)]
+            groups_invert_indx = np.where(np.invert(mask))
             if len(groups.shape) == 2:
                 for group in groups:
                     self.synth_data[offset:offset+self.N, group] = x[0, group]
+            if len(groups_invert.shape) == 2:
+                for group_in in groups_invert:
+                    self.synth_data[offset:offset+self.N, group_in] = self.conmvn(self.N, groups_indx, groups_invert_indx,\
+                        self.synth_data[offset:offset+self.N, groups_indx], self.mu, self.cov)
             else:
                 # further performance optimization in case each group has a single feature
                 evaluation_data = x[0, groups]
+                bg_data = self.conmvn(self.N, groups_indx, groups_invert_indx, x[0, groups], self.mu, self.cov)
                 # In edge case where background is all dense but evaluation data
                 # is all sparse, make evaluation data dense
                 if sp.sparse.issparse(x) and not sp.sparse.issparse(self.synth_data):
                     evaluation_data = evaluation_data.toarray()
                 self.synth_data[offset:offset+self.N, groups] = evaluation_data
+                self.synth_data[offset:offset+self.N, groups_invert] = bg_data
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1
