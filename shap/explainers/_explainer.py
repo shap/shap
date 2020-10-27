@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Explainer():
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, fixed_context = 1):
         """ Uses Shapley values to explain any machine learning model or python function.
 
         This is the primary explainer interface for the SHAP library. It takes any combination
@@ -60,6 +60,7 @@ class Explainer():
 
         self.model = model
         self.output_names = output_names
+        self.fixed_context = fixed_context
         
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or (safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2):
@@ -133,7 +134,7 @@ class Explainer():
                 explainers.Permutation.__init__(self, model, self.masker, link=self.link)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, model, self.masker, link=self.link, output_names = self.output_names)
+                explainers.Partition.__init__(self, model, self.masker, link=self.link, output_names = self.output_names, fixed_context = self.fixed_context)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
                 explainers.Tree.__init__(self, model, self.masker, link=self.link)
