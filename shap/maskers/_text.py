@@ -1,5 +1,6 @@
 import numpy as np
 from ._masker import Masker
+from ..utils import safe_isinstance
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -15,7 +16,6 @@ class Text(Masker):
         null_tokens = tokenizer.encode("")
         self.output_type = output_type
         
-        
         assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"
         self.keep_prefix = len(null_tokens) // 2
         self.keep_suffix = len(null_tokens) // 2
@@ -23,14 +23,22 @@ class Text(Masker):
         self.suffix_strlen = len(tokenizer.decode(null_tokens[-self.keep_suffix:]))
         if mask_token == "auto":
             if hasattr(self.tokenizer, "mask_token_id"):
-                self.mask_token = self.tokenizer.mask_token_id
-                self.mask_token_str = self.tokenizer.decode([self.tokenizer.mask_token_id])#[self.prefix_strlen:-self.suffix_strlen]
+                self.mask_token_id = self.tokenizer.mask_token_id
+                self.mask_token = " "+self.tokenizer.decode([self.tokenizer.mask_token_id])+" "#[self.prefix_strlen:-self.suffix_strlen]
             else:
-                self.mask_token = None
-                self.mask_token_str = ""
+                self.mask_token_id = None
+                self.mask_token = ""
+        elif mask_token == "":
+            self.mask_token_id = None
+            self.mask_token = ""
+        else:
+            self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:-self.keep_suffix]
+            self.mask_token = " "+mask_token+" "
+        
+        
 
         # note if this masker can use different background for different samples
-        self.fixed_background = self.mask_token is None
+        self.fixed_background = self.mask_token_id is None
 
         self.default_batch_size = 5
 
@@ -46,16 +54,20 @@ class Text(Masker):
             mask[-self.keep_suffix:] = True
         
         if self.output_type == "string":
-            if self.mask_token is None:
+            if self.mask_token_id is None:
                 out = self._segments_s[mask]
             else:
-                out = np.array([self._segments_s[i] if mask[i] else self.mask_token_str for i in range(len(mask))])
-            out = "".join(out)
+                out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
+
+            if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+                out = self.tokenizer.convert_tokens_to_string(out)
+            elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+                out = "".join(out)
         else:
-            if self.mask_token is None:
+            if self.mask_token_id is None:
                 out = self._tokenized_s[mask]
             else:
-                out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
+                out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token_id for i in range(len(mask))])
         
         return np.array([out])
 
@@ -79,17 +91,33 @@ class Text(Masker):
             return np.array([out])
 
     def data_transform(self, s):
-        return self.token_segments(s)
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+            out = self.token_segments(s)
+            out = [token+' ' for token in out]
+            return out
+        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+            return self.token_segments(s)
     
     def tokenize(self, s):
-        return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+            return self.tokenizer.encode_plus(s)
+        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+            return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
     
     def token_segments(self, s):
-        offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
-        offsets = [(0,0) if o is None else o for o in offsets]
-        parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
-        parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
-        return parts
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+            token_ids = self.tokenizer.encode_plus(s)['input_ids']
+            tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
+            special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
+            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))]
+            return tokens
+
+        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+            offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
+            offsets = [(0,0) if o is None else o for o in offsets]
+            parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
+            parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
+            return parts
 
     def clustering(self, s):
         self._update_s_cache(s)
@@ -119,13 +147,13 @@ class Text(Masker):
                 ltokens = recursive_mark(lind)
                 rtokens = recursive_mark(rind)
             
-            tmp = ltokens + [self.mask_token]
+            tmp = ltokens + [self.mask_token_id]
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
                 clustering[ind-M,2] = -1 # set the distance of this cluster negative so it can't be split
             
-            tmp = [self.mask_token] + rtokens
+            tmp = [self.mask_token_id] + rtokens
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
@@ -140,7 +168,7 @@ class Text(Masker):
             self._s = s
             self._tokenized_s_full = self.tokenize(s)
             self._tokenized_s = np.array(self._tokenized_s_full.data["input_ids"])
-            self._segments_s = self.token_segments(s)
+            self._segments_s = np.array(self.token_segments(s))
 
     def shape(self, s):
         self._update_s_cache(s)

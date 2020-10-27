@@ -5,6 +5,7 @@ from ._explainer import Explainer
 from ..utils import safe_isinstance, MaskedModel
 from .. import maskers
 
+
 class Additive(Explainer):
     """ Computes SHAP values for generalized additive models.
 
@@ -13,7 +14,7 @@ class Additive(Explainer):
     you will get incorrect answers that fail additivity).
     """
 
-    def __init__(self, model, masker):
+    def __init__(self, model, masker, link=None):
         """ Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
@@ -32,10 +33,29 @@ class Additive(Explainer):
         """
         super(Additive, self).__init__(model, masker)
 
-        assert safe_isinstance(self.masker, "shap.maskers.Tabular"), "The Additive explainer only supports the Tabular masker at the moment!"
+        
+
+        if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
+            self.model = model.decision_function
+
+            if self.masker is None:
+                self._expected_value = model.intercept_
+                # num_features = len(model.additive_terms_)
+
+                # fm = MaskedModel(self.model, self.masker, self.link, np.zeros(num_features))
+                # masks = np.ones((1, num_features), dtype=np.bool)
+                # outputs = fm(masks)
+                # self.model(np.zeros(num_features))
+                # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
+                # self._input_offsets = np.zeros(num_features) #* self._zero_offset
+                raise Exception("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
+                return
+
+        # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
+        assert safe_isinstance(self.masker, "shap.maskers.Independent"), "The Additive explainer only supports the Tabular masker at the moment!"
 
         # pre-compute per-feature offsets
-        fm = MaskedModel(self.model, self.masker, np.zeros(self.masker.shape[1]))
+        fm = MaskedModel(self.model, self.masker, self.link, np.zeros(self.masker.shape[1]))
         masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=np.bool)
         for i in range(1, self.masker.shape[1]+1):
             masks[i,i-1] = False
@@ -55,8 +75,20 @@ class Additive(Explainer):
         # from the function signature
         return super(Additive, self).__call__(*args, max_evals=max_evals, silent=silent)
 
+    @staticmethod
+    def supports_model_with_masker(model, masker):
+        """ Determines if this explainer can handle the given model.
 
-    def explain_row(self, *row_args, max_evals, silent):
+        This is an abstract static method meant to be implemented by each subclass.
+        """
+        if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
+            if model.interactions is not 0:
+                raise Exception("Need to add support for interaction effects!")
+            return True
+            
+        return False
+
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
 
@@ -66,8 +98,14 @@ class Additive(Explainer):
             inputs[i,i] = x[i]
         
         phi = self.model(inputs) - self._zero_offset - self._input_offsets
-        
-        return phi, self._expected_value, [a.shape for a in row_args]
+
+        return {
+            "values": phi,
+            "expected_values": self._expected_value,
+            "mask_shapes": [a.shape for a in row_args],
+            "main_effects": phi,
+            "clustering": getattr(self.masker, "clustering", None)
+        }
 
 # class AdditiveExplainer(Explainer):
 #     """ Computes SHAP values for generalized additive models.

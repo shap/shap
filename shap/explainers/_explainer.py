@@ -91,11 +91,11 @@ class Explainer():
             if algorithm == "auto":
 
                 # use implementation-aware methods if possible
-                if explainers.Linear.supports_model(model):
+                if explainers.Linear.supports_model_with_masker(model, self.masker):
                     algorithm = "linear"
-                elif explainers.Tree.supports_model(model): # TODO: check for Partition?
+                elif explainers.Tree.supports_model_with_masker(model, self.masker): # TODO: check for Partition?
                     algorithm = "tree"
-                elif explainers.Additive.supports_model(model):
+                elif explainers.Additive.supports_model_with_masker(model, self.masker):
                     algorithm = "additive"
 
                 # otherwise use a model agnostic method
@@ -122,7 +122,7 @@ class Explainer():
                 
                 # if we get here then we don't know how to handle what was given to us
                 else:
-                    raise Exception("The passed model is not callable and is not any known model type: " + str(model))
+                    raise Exception("The passed model is not callable and cannot be analyzed directly with the given masker: " + str(model))
 
             # build the right subclass
             if algorithm == "exact":
@@ -137,6 +137,9 @@ class Explainer():
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
                 explainers.Tree.__init__(self, model, self.masker, link=self.link)
+            elif algorithm == "additive":
+                self.__class__ = explainers.Additive
+                explainers.Additive.__init__(self, model, self.masker, link=self.link)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
@@ -307,7 +310,7 @@ class Explainer():
         return {}
 
     @staticmethod
-    def supports_model(model):
+    def supports_model_with_masker(model, masker):
         """ Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.

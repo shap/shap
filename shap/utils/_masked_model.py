@@ -42,13 +42,22 @@ class MaskedModel():
                 self._masker_cols = mshape[1]
         else:
             self._masker_rows = None# # just assuming...
-            self._masker_cols = sum(np.prod(a.shape[1:]) for a in self.args)
+            self._masker_cols = sum(np.prod(a.shape) for a in self.args)
 
     def __call__(self, masks, batch_size=None):
 
         # if we are passed a 1D array of indexes then we are delta masking and have a special implementation
         if len(masks.shape) == 1:
-            return self._delta_masking_call(masks, batch_size=batch_size)
+            if getattr(self.masker, "supports_delta_masking", False):
+                return self._delta_masking_call(masks, batch_size=batch_size)
+            
+            # we need to convert from delta masking to a full masking call because we were given a delta masking
+            # input but the masker does not support delta masking
+            else: 
+                full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=np.bool)
+                _convert_delta_mask_to_full(masks, full_masks)
+                return self._full_masking_call(full_masks, batch_size=batch_size)
+
         else:
             return self._full_masking_call(masks, batch_size=batch_size)
     
@@ -122,7 +131,8 @@ class MaskedModel():
         _assert_output_input_match(joined_masked_inputs, outputs)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
-        last_outs = np.zeros((self._masker_rows,) + outputs.shape[1:])
+        max_outs = self._masker_rows if self._masker_rows is not None else max(len(r) for r in varying_rows) 
+        last_outs = np.zeros((max_outs,) + outputs.shape[1:])
         varying_rows = np.array(varying_rows)
         
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
@@ -199,7 +209,10 @@ class MaskedModel():
         return self._masker_cols
 
     def varying_inputs(self):
-        return np.where(np.any(self._variants, axis=0))[0]
+        if self._variants is None:
+            return np.arange(self._masker_cols)
+        else:
+            return np.where(np.any(self._variants, axis=0))[0]
 
     def main_effects(self, inds=None):
         """ Compute the main effects for this model.
@@ -234,6 +247,25 @@ def _assert_output_input_match(inputs, outputs):
     assert len(outputs) == len(inputs[0]), \
         f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
 
+def _convert_delta_mask_to_full(masks, full_masks):
+    """ This converts a delta masking array to a full bool masking array.
+    """
+    
+    i = -1
+    masks_pos = 0
+    while masks_pos < len(masks):
+        i += 1
+
+        if i > 0:
+            full_masks[i] = full_masks[i-1]
+        
+        while masks[masks_pos] < 0:
+            full_masks[i,-masks[masks_pos]-1] = ~full_masks[i,-masks[masks_pos]-1] # -value - 1 is the original index that needs flipped
+            masks_pos += 1
+        
+        if masks[masks_pos] != MaskedModel.delta_mask_noop_value:
+            full_masks[i,masks[masks_pos]] = ~full_masks[i,masks[masks_pos]]
+        masks_pos += 1
 
 #@jit # TODO: figure out how to jit this function, or most of it
 def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_varying_rows, delta_indexes,

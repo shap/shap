@@ -1,11 +1,12 @@
 ''' This file contains tests for the Permutation explainer.
 '''
+import shap
+import pytest
+import numpy as np
 
 
 def test_single_class_independent():
-    import shap
-    import xgboost
-    import numpy as np
+    xgboost = pytest.importorskip('xgboost')
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
@@ -23,10 +24,7 @@ def test_single_class_independent():
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model.predict(X[:100])) < 1e6)
 
 def test_multi_class_independent():
-    import shap
-    import xgboost
-    import numpy as np
-
+    xgboost = pytest.importorskip('xgboost')
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
     X = X.iloc[:100]
@@ -44,9 +42,7 @@ def test_multi_class_independent():
 
 
 def test_single_class_partition():
-    import shap
-    import xgboost
-    import numpy as np
+    xgboost = pytest.importorskip('xgboost')
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
@@ -65,9 +61,7 @@ def test_single_class_partition():
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model.predict(X[:100])) < 1e6)
 
 def test_multi_class_partition():
-    import shap
-    import xgboost
-    import numpy as np
+    xgboost = pytest.importorskip('xgboost')
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
