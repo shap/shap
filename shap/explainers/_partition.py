@@ -19,7 +19,7 @@ from .. import links
 
 class Partition(Explainer):
     
-    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity):
+    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, fixed_context = 1):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
@@ -65,7 +65,7 @@ class Partition(Explainer):
         See :ref:`Partition Explainer Examples <partition_explainer_examples>`
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names)
+        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, fixed_context = fixed_context)
 
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         
@@ -142,8 +142,8 @@ class Partition(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        fixed_context = 1
-        self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, fixed_context, batch_size, silent)
+        # fixed_context = 1
+        self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, self.fixed_context, batch_size, silent)
 
         # if False:
         #     if self.multi_output:
