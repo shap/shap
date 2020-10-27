@@ -37,7 +37,7 @@ class Text(Masker):
             self.suffix_strlen = len(tokenizer.decode(null_tokens[-self.keep_suffix:]))
         if mask_token == "auto":
             if hasattr(self.tokenizer, "mask_token_id") and (self.tokenizer.mask_token_id is not None):
-                self.mask_token = self.tokenizer.mask_token_id
+                self.mask_token_id = self.tokenizer.mask_token_id
                 self.mask_token_str = self.tokenizer.decode([self.tokenizer.mask_token_id])#[self.prefix_strlen:-self.suffix_strlen]
             else:
                 self.mask_token_id = None
