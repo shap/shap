@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import scipy as sp
 from transformers import AutoTokenizer, AutoModelWithLMHead
+import math
 
 class GenerateLogits:
     def __init__(self,model="distilgpt2",tokenizer=None):
@@ -59,28 +60,54 @@ class GenerateLogits:
             # generate outputs and logits
             with torch.no_grad():
                 outputs = self.model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
-            logits=outputs.logits.detach().cpu().numpy()
+            logits=outputs.logits.detach().cpu().numpy().astype('float64')
         else:
+            # check if source sentence ids are null then add bos token id to decoder
+            if source_sentence_ids.shape[1]==0:
+                if hasattr(self.model.config.bos_token_id) and self.model.config.bos_token_id is not None:
+                    source_sentence_ids = torch.tensor([[self.model.config.bos_token_id]]).to(self.device)
+                else:
+                    raise ValueError(
+                    "Context ids (source sentence ids) are null and no bos token defined in model config"
+                )
             # combine source and target sentence ids  to pass into decoder eg: in case of distillgpt2
             combined_sentence_ids = torch.cat((source_sentence_ids,target_sentence_ids),dim=-1)
             # generate outputs and logits
             with torch.no_grad():
                 outputs = self.model(input_ids=combined_sentence_ids, return_dict=True)
             # extract only logits corresponding to target sentence ids
-            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:]
+            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
         del outputs
         return logits
 
     def get_sentence_ids(self, source_sentence,target_sentence):
-        source_sentence_ids = torch.tensor([self.tokenizer.encode(source_sentence)])
-        if self.keep_suffix > 0:
-            target_sentence_ids = torch.tensor([self.tokenizer.encode(target_sentence)])[:,self.keep_prefix:-self.keep_suffix]
+        # only encode source sentence if ids not provided
+        if isinstance(source_sentence,str):
+            source_sentence_ids = torch.tensor([self.tokenizer.encode(source_sentence)])
         else:
-            target_sentence_ids = torch.tensor([self.tokenizer.encode(target_sentence)])[:,self.keep_prefix:]
+            source_sentence_ids = source_sentence
+        # only encode target sentence if ids not provided
+        if isinstance(target_sentence,str):
+            if self.keep_suffix > 0:
+                target_sentence_ids = torch.tensor([self.tokenizer.encode(target_sentence)])[:,self.keep_prefix:-self.keep_suffix]
+            else:
+                target_sentence_ids = torch.tensor([self.tokenizer.encode(target_sentence)])[:,self.keep_prefix:]
+        else:
+            target_sentence_ids = target_sentence
         return source_sentence_ids.to(self.device), target_sentence_ids.to(self.device)
 
     def get_output_names(self, sentence):
-        return self.tokenizer.tokenize(sentence)
+        output_names = None
+        if isinstance(sentence,str):
+            output_names = self.tokenizer.tokenize(sentence) 
+        elif torch.is_tensor(sentence):
+            # sentence is a list of ids
+                output_names =  self.tokenizer.convert_ids_to_tokens(sentence[0,:])
+        else:
+            raise ValueError(
+                    "Sentence should be of type str or tensor of dim: (1,sentence length)"
+                )
+        return output_names
 
     def generate_logits(self,source_sentence, target_sentence):
         # get sentence ids
@@ -93,4 +120,9 @@ class GenerateLogits:
             probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
             logit_dist = sp.special.logit(probs)
             conditional_logits.append(logit_dist[target_sentence_ids[0,i].item()])
+        del source_sentence_ids
+        for item in conditional_logits:
+            if math.isnan(item) or math.isinf(item):
+                print(source_sentence, target_sentence)
+                break
         return np.array(conditional_logits)
