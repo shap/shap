@@ -109,10 +109,15 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     if clustering is None:
         partition_tree = getattr(shap_values, "clustering", None)
+        if partition_tree.var(0).sum() != 0:
+            partition_tree = None
+        else:
+            partition_tree = partition_tree[0]
     elif clustering is False:
         partition_tree = None
     else:
         partition_tree = clustering
+    
     if partition_tree is not None:
         assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
 
@@ -144,7 +149,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         else:
             max_display = min(len(feature_names), max_display)
 
-        sort_inds = order#np.argsort(-np.abs(values.sum(1)).sum(0))
+        interaction_sort_inds = order#np.argsort(-np.abs(values.sum(1)).sum(0))
 
         # get plotting limits
         delta = 1.0 / (values.shape[1] ** 2)
@@ -156,11 +161,11 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
         pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
         pl.subplot(1, max_display, 1)
-        proj_values = values[:, sort_inds[0], sort_inds]
+        proj_values = values[:, interaction_sort_inds[0], interaction_sort_inds]
         proj_values[:, 1:] *= 2  # because off diag effects are split in half
         beeswarm(
-            proj_values, features[:, sort_inds] if features is not None else None,
-            feature_names=feature_names[sort_inds],
+            proj_values, features[:, interaction_sort_inds] if features is not None else None,
+            feature_names=feature_names[interaction_sort_inds],
             sort=False, show=False, color_bar=False,
             plot_size=None,
             max_display=max_display
@@ -168,15 +173,15 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         pl.xlim((slow, shigh))
         pl.xlabel("")
         title_length_limit = 11
-        pl.title(shorten_text(feature_names[sort_inds[0]], title_length_limit))
-        for i in range(1, min(len(sort_inds), max_display)):
-            ind = sort_inds[i]
+        pl.title(shorten_text(feature_names[interaction_sort_inds[0]], title_length_limit))
+        for i in range(1, min(len(interaction_sort_inds), max_display)):
+            ind = interaction_sort_inds[i]
             pl.subplot(1, max_display, i + 1)
-            proj_values = values[:, ind, sort_inds]
+            proj_values = values[:, ind, interaction_sort_inds]
             proj_values *= 2
             proj_values[:, i] /= 2  # because only off diag effects are split in half
             summary(
-                proj_values, features[:, sort_inds] if features is not None else None,
+                proj_values, features[:, interaction_sort_inds] if features is not None else None,
                 sort=False,
                 feature_names=["" for i in range(len(feature_names))],
                 show=False,
@@ -186,7 +191,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             )
             pl.xlim((slow, shigh))
             pl.xlabel("")
-            if i == min(len(sort_inds), max_display) // 2:
+            if i == min(len(interaction_sort_inds), max_display) // 2:
                 pl.xlabel(labels['INTERACTION_VALUE'])
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)

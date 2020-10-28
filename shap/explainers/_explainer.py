@@ -137,6 +137,9 @@ class Explainer():
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
                 explainers.Tree.__init__(self, model, self.masker, link=self.link)
+            elif algorithm == "additive":
+                self.__class__ = explainers.Additive
+                explainers.Additive.__init__(self, model, self.masker, link=self.link)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
