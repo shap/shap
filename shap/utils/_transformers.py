@@ -121,8 +121,4 @@ class GenerateLogits:
             logit_dist = sp.special.logit(probs)
             conditional_logits.append(logit_dist[target_sentence_ids[0,i].item()])
         del source_sentence_ids
-        for item in conditional_logits:
-            if math.isnan(item) or math.isinf(item):
-                print(source_sentence, target_sentence)
-                break
         return np.array(conditional_logits)
