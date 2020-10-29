@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Explainer():
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, fixed_context = 1):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None):
         """ Uses Shapley values to explain any machine learning model or python function.
 
         This is the primary explainer interface for the SHAP library. It takes any combination
@@ -60,7 +60,6 @@ class Explainer():
 
         self.model = model
         self.output_names = output_names
-        self.fixed_context = fixed_context
         
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or (safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2):
@@ -134,7 +133,7 @@ class Explainer():
                 explainers.Permutation.__init__(self, model, self.masker, link=self.link)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, model, self.masker, link=self.link, output_names = self.output_names, fixed_context = self.fixed_context)
+                explainers.Partition.__init__(self, model, self.masker, link=self.link, output_names = self.output_names)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
                 explainers.Tree.__init__(self, model, self.masker, link=self.link)
@@ -146,7 +145,7 @@ class Explainer():
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
-                 outputs=None, silent=False, **kwargs):
+                 outputs=None, silent=False, fixed_context = "auto", **kwargs):
         """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
 
         Note this default version could be ois an abstract method that is implemented by each algorithm-specific
@@ -156,7 +155,14 @@ class Explainer():
 
         # if max_evals == "auto":
         #     self._brute_force_fallback
-
+        
+        if fixed_context == "auto":
+            fixed_context = None
+        elif fixed_context in [0,1,None]:
+            fixed_context = fixed_context 
+        else:
+            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+        
         # parse our incoming arguments
         num_rows = None
         args = list(args)
@@ -200,7 +206,7 @@ class Explainer():
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
             row_result = self.explain_row(
                 *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
-                batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
+                batch_size=batch_size, outputs=outputs, silent=silent, fixed_context = fixed_context, **kwargs
             )
             values.append(row_result.get("values", None))
             output_indices.append(row_result.get("output_indices", None))
