@@ -1,21 +1,27 @@
 import torch
 import numpy as np
 import scipy as sp
-from transformers import AutoTokenizer, AutoModelWithLMHead
-import math
 
 class GenerateLogits:
-    def __init__(self,model="distilgpt2",tokenizer=None):
-        if isinstance(model,str):
-            # load model and tokenizer from transformers library
-            self.model = AutoModelWithLMHead.from_pretrained(model)
-            self.tokenizer = AutoTokenizer.from_pretrained(model)
-        else:
-            # assign model and tokenizer
-            self.model = model
-            self.tokenizer = tokenizer
+    def __init__(self,model,tokenizer,device=None):
+        if model is None or tokenizer is None:
+            raise ValueError(
+                "Model or Tokenizer assigned is None."
+            )
+        # We cannot generate if the model does not have a LM head
+        if model.get_output_embeddings() is None:
+            raise AttributeError(
+                "You tried to generate sequences with a model that does not have a LM Head."
+                "Please use another model class (e.g. `OpenAIGPTLMHeadModel`, `XLNetLMHeadModel`, `GPT2LMHeadModel`, `CTRLLMHeadModel`, `T5WithLMHeadModel`, `TransfoXLLMHeadModel`, `XLMWithLMHeadModel`, `BartForConditionalGeneration` )"
+            )
+        # assign model and tokenizer
+        self.model = model
+        self.tokenizer = tokenizer
         # set device
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        if device is not None:
+            self.device = device
+        else:
+            self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         # load model onto device
         self.model = self.model.to(self.device)
         null_tokens = self.tokenizer.encode("")
