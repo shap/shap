@@ -145,7 +145,7 @@ class Explainer():
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
-                 outputs=None, silent=False, fixed_context = "auto", **kwargs):
+                 outputs=None, silent=False, **kwargs):
         """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
 
         Note this default version could be ois an abstract method that is implemented by each algorithm-specific
@@ -156,12 +156,6 @@ class Explainer():
         # if max_evals == "auto":
         #     self._brute_force_fallback
         
-        if fixed_context == "auto":
-            fixed_context = None
-        elif fixed_context in [0,1,None]:
-            fixed_context = fixed_context 
-        else:
-            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
         
         # parse our incoming arguments
         num_rows = None
@@ -206,7 +200,7 @@ class Explainer():
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
             row_result = self.explain_row(
                 *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
-                batch_size=batch_size, outputs=outputs, silent=silent, fixed_context = fixed_context, **kwargs
+                batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
             )
             values.append(row_result.get("values", None))
             output_indices.append(row_result.get("output_indices", None))
