@@ -14,17 +14,12 @@ class MaskedModel():
 
     delta_mask_noop_value = 2147483647 # used to encode a noop for delta masking
 
-    def __init__(self, model, model_kwargs, masker, link, *args):
+    def __init__(self, model, masker, link, *args, **kwargs):
         self.model = model
-        self.model_kwargs = model_kwargs
-        self.model_kwargs_params={}
+        self.model_kwargs = kwargs['model_kwargs'](*args) if 'model_kwargs' in kwargs else {}
         self.masker = masker
         self.link = link
         self.args = args
-
-        if model_kwargs is not None:
-            self.model_kwargs_params = self.model_kwargs(*args)
-
 
         # if the masker supports it, save what positions vary from the background
         if callable(getattr(self.masker, "invariants", None)):
@@ -133,7 +128,7 @@ class MaskedModel():
                 all_masked_inputs[i].append(masked_inputs[i])
         
         joined_masked_inputs = self._stack_inputs(all_masked_inputs)
-        outputs = self.model(*joined_masked_inputs,**self.model_kwargs_params)
+        outputs = self.model(*joined_masked_inputs,**self.model_kwargs)
         _assert_output_input_match(joined_masked_inputs, outputs)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])

@@ -19,7 +19,7 @@ from .. import links
 
 class Partition(Explainer):
     
-    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, model_kwargs=None):
+    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
@@ -65,7 +65,7 @@ class Partition(Explainer):
         See :ref:`Partition Explainer Examples <partition_explainer_examples>`
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, model_kwargs = model_kwargs)
+        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names)
 
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         
@@ -107,12 +107,12 @@ class Partition(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, **row_kwargs):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
 
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(self.model, self.model_kwargs, self.masker, self.link, *row_args)
+        fm = MaskedModel(self.model, self.masker, self.link, *row_args, **row_kwargs)
 
         # make sure we have the base value and current value outputs
         M = len(fm)
@@ -177,7 +177,7 @@ class Partition(Explainer):
             "hierarchical_values": self.dvalues.copy(),
             "clustering": self._clustering,
             "output_indices": outputs,
-            "output_names": fm.model_kwargs_params['output_names'] if 'output_names' in fm.model_kwargs_params else None
+            "output_names": fm.model_kwargs['output_names'] if 'output_names' in fm.model_kwargs else None
         }
 
     def owen(self, fm, f00, f11, npartitions, output_indexes, fixed_context, batch_size, silent):
