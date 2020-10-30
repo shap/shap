@@ -156,7 +156,6 @@ class Explainer():
         # if max_evals == "auto":
         #     self._brute_force_fallback
         
-        
         # parse our incoming arguments
         num_rows = None
         args = list(args)
