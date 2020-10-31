@@ -38,7 +38,7 @@ class Text(Masker):
         if mask_token == "auto":
             if hasattr(self.tokenizer, "mask_token_id") and (self.tokenizer.mask_token_id is not None):
                 self.mask_token_id = self.tokenizer.mask_token_id
-                self.mask_token_str = self.tokenizer.decode([self.tokenizer.mask_token_id])#[self.prefix_strlen:-self.suffix_strlen]
+                self.mask_token = " "+self.tokenizer.decode([self.tokenizer.mask_token_id])+" "#[self.prefix_strlen:-self.suffix_strlen]
             else:
                 self.mask_token_id = None
                 self.mask_token = ""
@@ -69,12 +69,12 @@ class Text(Masker):
         
         if self.output_type == "string":
             if self.mask_token is None:
-                out = np.array(self._segments_s)[mask]
+                out = self._segments_s[mask]
             else:
                 out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-                out = self.tokenizer.convert_tokens_to_string(out.tolist())
+                out = self.tokenizer.convert_tokens_to_string(out.tolist()) # convert "out" to list when passed as sentence piece tokenizer (eg. Marian MT) cannot accept np array
             elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
                 out = "".join(out)
         else:
