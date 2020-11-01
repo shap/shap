@@ -6,6 +6,7 @@ from __future__ import division
 import warnings
 import numpy as np
 from scipy.stats import gaussian_kde
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -14,17 +15,18 @@ except ImportError:
 from ._labels import labels
 from . import colors
 
+
 # TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def violin(shap_values, features=None, feature_names=None, max_display=None, plot_type="violin",
-                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
-                 class_inds=None,
-                 color_bar_label=labels["FEATURE_VALUE"],
-                 cmap=colors.red_blue,
-                 # depreciated
-                 auto_size_plot=None,
-                 use_log_scale=False):
+           color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+           color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
+           class_inds=None,
+           color_bar_label=labels["FEATURE_VALUE"],
+           cmap=colors.red_blue,
+           # depreciated
+           auto_size_plot=None,
+           use_log_scale=False):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -75,11 +77,11 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
     if isinstance(shap_values, list):
         multi_class = True
         if plot_type is None:
-            plot_type = "bar" # default for multi-output explanations
+            plot_type = "bar"  # default for multi-output explanations
         assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
     else:
         if plot_type is None:
-            plot_type = "dot" # default for single output explanations
+            plot_type = "dot"  # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
@@ -87,7 +89,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         if plot_type == 'layered_violin':
             color = "coolwarm"
         elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
+            color = lambda i: colors.red_blue_circle(i / len(shap_values))
         else:
             color = colors.blue_rgb
 
@@ -111,7 +113,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                     "provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
+                                      "constant offset? Of so just pass shap_values[:,:-1]."
         else:
             assert num_features == features.shape[1], shape_msg
 
@@ -134,7 +136,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                     if c1 == c2:
                         new_feature_names.append(c1)
                     else:
-                        new_feature_names.append(c1 + "* - " + c2)
+                        new_feature_names.append("{}* - ".format(c1, c2))
 
             return summary(
                 new_shap_values, new_features, new_feature_names,
@@ -341,7 +343,8 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue_no_bounds(smooth_values[i]),
+                                        [pos - ds[i], pos - ds[i + 1]],
+                                        color=colors.red_blue_no_bounds(smooth_values[i]),
                                         zorder=2)
 
         else:
@@ -425,7 +428,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
     elif multi_class and plot_type == "bar":
         if class_names is None:
-            class_names = ["Class "+str(i) for i in range(len(shap_values))]
+            class_names = ["Class {}".format(i) for i in range(len(shap_values))]
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         left_pos = np.zeros(len(feature_inds))
@@ -479,6 +482,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
     if show:
         pl.show()
 
+
 def _trim_crange(values, nan_mask):
     """Trim the color range, but prevent the color range from collapsing."""
     # Get vmin and vmax as 5. and 95. percentiles
@@ -491,7 +495,7 @@ def _trim_crange(values, nan_mask):
             vmin = np.min(values)
             vmax = np.max(values)
 
-    if vmin > vmax: # fixes rare numerical precision issues
+    if vmin > vmax:  # fixes rare numerical precision issues
         vmin = vmax
 
     # Get color values depnding on value range

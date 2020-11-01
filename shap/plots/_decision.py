@@ -20,6 +20,7 @@ from ._labels import labels
 from ..utils._legacy import convert_to_link, LogitLink
 from ..utils import hclust_ordering
 
+
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
 
@@ -44,24 +45,24 @@ def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndar
 
 
 def __decision_plot_matplotlib(
-    base_value,
-    cumsum,
-    ascending,
-    feature_display_count,
-    features,
-    feature_names,
-    highlight,
-    plot_color,
-    axis_color,
-    y_demarc_color,
-    xlim,
-    alpha,
-    color_bar,
-    auto_size_plot,
-    title,
-    show,
-    legend_labels,
-    legend_location,
+        base_value,
+        cumsum,
+        ascending,
+        feature_display_count,
+        features,
+        feature_names,
+        highlight,
+        plot_color,
+        axis_color,
+        y_demarc_color,
+        xlim,
+        alpha,
+        color_bar,
+        auto_size_plot,
+        title,
+        show,
+        legend_labels,
+        legend_location,
 ):
     """matplotlib rendering for decision_plot()"""
 
@@ -115,12 +116,16 @@ def __decision_plot_matplotlib(
         y_pos = y_pos + 0.5
         for i in range(feature_display_count):
             v = features[0, i]
-            if isinstance(v, str):
+            if v is None:
+                v = "(None)"
+            elif isinstance(v, bool):
+                v = "(True)" if v else "(False)"
+            elif isinstance(v, str):
                 v = "({})".format(str(v).strip())
             else:
                 v = "({})".format("{0:,.3f}".format(v).rstrip("0").rstrip("."))
             t = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
-                    horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
+                        horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
             bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
             if bb.xmax > xlim[1]:
                 t.set_text(v + "  ")
@@ -220,28 +225,28 @@ class DecisionPlotResult:
 
 
 def decision(
-    base_value,
-    shap_values,
-    features=None,
-    feature_names=None,
-    feature_order="importance",
-    feature_display_range=None,
-    highlight=None,
-    link="identity",
-    plot_color=None,
-    axis_color="#333333",
-    y_demarc_color="#333333",
-    alpha=None,
-    color_bar=True,
-    auto_size_plot=True,
-    title=None,
-    xlim=None,
-    show=True,
-    return_objects=False,
-    ignore_warnings=False,
-    new_base_value=None,
-    legend_labels=None,
-    legend_location="best",
+        base_value,
+        shap_values,
+        features=None,
+        feature_names=None,
+        feature_order="importance",
+        feature_display_range=None,
+        highlight=None,
+        link="identity",
+        plot_color=None,
+        axis_color="#333333",
+        y_demarc_color="#333333",
+        alpha=None,
+        color_bar=True,
+        auto_size_plot=True,
+        title=None,
+        xlim=None,
+        show=True,
+        return_objects=False,
+        ignore_warnings=False,
+        new_base_value=None,
+        legend_labels=None,
+        legend_location="best",
 ) -> Union[DecisionPlotResult, None]:
     """Visualize model decisions using cumulative SHAP values.
 
@@ -434,7 +439,7 @@ def decision(
         raise ValueError("The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
                          "of feature indices.")
 
-    if (feature_idx.shape != (feature_count, )) or (not np.issubdtype(feature_idx.dtype, np.integer)):
+    if (feature_idx.shape != (feature_count,)) or (not np.issubdtype(feature_idx.dtype, np.integer)):
         raise ValueError("A list or array has been specified for the feature_order arg. The length must match the "
                          "feature count and the data type must be integer.")
 

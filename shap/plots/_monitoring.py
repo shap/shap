@@ -1,6 +1,7 @@
 import numpy as np
 import scipy
 import warnings
+
 try:
     import matplotlib.pyplot as pl
     import matplotlib
@@ -13,9 +14,10 @@ from . import colors
 
 def truncate_text(text, max_len):
     if len(text) > max_len:
-        return text[:int(max_len/2)-2] + "..." + text[-int(max_len/2)+1:]
+        return text[:int(max_len / 2) - 2] + "..." + text[-int(max_len / 2) + 1:]
     else:
         return text
+
 
 def monitoring(ind, shap_values, features, feature_names=None, show=True):
     """ Create a SHAP monitoring plot.
@@ -40,7 +42,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     feature_names : list
         Names of the features (length # features)
     """
-    
+
     if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
         if feature_names is None:
             feature_names = features.columns
@@ -50,25 +52,25 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
-        
-    pl.figure(figsize=(10,3))
-    ys = shap_values[:,ind]
-    xs = np.arange(len(ys))#np.linspace(0, 12*2, len(ys))
-    
+
+    pl.figure(figsize=(10, 3))
+    ys = shap_values[:, ind]
+    xs = np.arange(len(ys))  # np.linspace(0, 12*2, len(ys))
+
     pvals = []
     inc = 50
-    for i in range(inc, len(ys)-inc, inc):
-        #stat, pval = scipy.stats.mannwhitneyu(v[:i], v[i:], alternative="two-sided")
+    for i in range(inc, len(ys) - inc, inc):
+        # stat, pval = scipy.stats.mannwhitneyu(v[:i], v[i:], alternative="two-sided")
         _, pval = scipy.stats.ttest_ind(ys[:i], ys[i:])
         pvals.append(pval)
     min_pval = np.min(pvals)
-    min_pval_ind = np.argmin(pvals)*inc + inc
-    
+    min_pval_ind = np.argmin(pvals) * inc + inc
+
     if min_pval < 0.05 / shap_values.shape[1]:
         pl.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
-        
-    pl.scatter(xs, ys, s=10, c=features[:,ind], cmap=colors.red_blue)
-    
+
+    pl.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
+
     pl.xlabel("Sample index")
     pl.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)
     pl.gca().xaxis.set_ticks_position('bottom')

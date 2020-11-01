@@ -2,6 +2,7 @@ from __future__ import division
 
 import numpy as np
 import warnings
+
 try:
     import matplotlib.pyplot as pl
     import matplotlib
@@ -72,10 +73,12 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     """
 
-    assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+    assert str(type(shap_values)).endswith(
+        "Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
     if len(shap_values.shape) != 1:
-        raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to shap.plots.dependence like: shap_values[:,column]")
-    
+        raise Exception(
+            "The passed Explanation object has multiple columns, please pass a single feature column to shap.plots.dependence like: shap_values[:,column]")
+
     # this unpacks the explanation object for the code that was written earlier
     feature_names = [shap_values.feature_names]
     ind = 0
@@ -100,34 +103,34 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # wrap np.arrays as Explanations
     if isinstance(color, np.ndarray):
         color = Explanation(values=color, base_values=None, data=color)
-    
+
     # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if str(type(color)).endswith("Explanation'>"):
         shap_values2 = color
         if issubclass(type(shap_values2.feature_names), (str, int)):
             feature_names.append(shap_values2.feature_names)
-            shap_values_arr = np.hstack([shap_values_arr, shap_values2.values.reshape(-1, len(feature_names)-1)])
-            features = np.hstack([features, shap_values2.data.reshape(-1, len(feature_names)-1)])
+            shap_values_arr = np.hstack([shap_values_arr, shap_values2.values.reshape(-1, len(feature_names) - 1)])
+            features = np.hstack([features, shap_values2.data.reshape(-1, len(feature_names) - 1)])
             if shap_values2.display_data is None:
-                display_features = np.hstack([display_features, shap_values2.data.reshape(-1, len(feature_names)-1)])
+                display_features = np.hstack([display_features, shap_values2.data.reshape(-1, len(feature_names) - 1)])
             else:
-                display_features = np.hstack([display_features, shap_values2.display_data.reshape(-1, len(feature_names)-1)])
+                display_features = np.hstack(
+                    [display_features, shap_values2.display_data.reshape(-1, len(feature_names) - 1)])
         else:
             feature_names2 = np.array(shap_values2.feature_names)
             mask = ~(feature_names[0] == feature_names2)
             feature_names.extend(feature_names2[mask])
-            shap_values_arr = np.hstack([shap_values_arr, shap_values2.values[:,mask]])
-            features = np.hstack([features, shap_values2.data[:,mask]])
+            shap_values_arr = np.hstack([shap_values_arr, shap_values2.values[:, mask]])
+            features = np.hstack([features, shap_values2.data[:, mask]])
             if shap_values2.display_data is None:
-                display_features = np.hstack([display_features, shap_values2.data[:,mask]])
+                display_features = np.hstack([display_features, shap_values2.data[:, mask]])
             else:
-                display_features = np.hstack([display_features, shap_values2.display_data[:,mask]])
+                display_features = np.hstack([display_features, shap_values2.display_data[:, mask]])
         color = None
         interaction_index = "auto"
 
-
     if type(shap_values_arr) is list:
-        raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try " \
+        raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try "
                         "passing shap_values_arr[0] instead to explain the first output class of a multi-output model.")
 
     # convert from DataFrames if we got any
@@ -148,23 +151,23 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     ind = convert_name(ind, shap_values_arr, feature_names)
 
     # pick jitter for categorical features
-    vals = np.sort(np.unique(features[:,ind]))
+    vals = np.sort(np.unique(features[:, ind]))
     min_dist = np.inf
-    for i in range(1,len(vals)):
-        d = vals[i] - vals[i-1]
-        if d > 1e-8 and d < min_dist:
+    for i in range(1, len(vals)):
+        d = vals[i] - vals[i - 1]
+        if 1e-8 < d < min_dist:
             min_dist = d
-    num_points_per_value = len(features[:,ind]) / len(vals)
+    num_points_per_value = len(features[:, ind]) / len(vals)
     if num_points_per_value < 10:
-        #categorical = False
+        # categorical = False
         if x_jitter == "auto":
             x_jitter = 0
     elif num_points_per_value < 100:
-        #categorical = True
+        # categorical = True
         if x_jitter == "auto":
             x_jitter = min_dist * 0.1
     else:
-        #categorical = True
+        # categorical = True
         if x_jitter == "auto":
             x_jitter = min_dist * 0.2
 
@@ -217,18 +220,19 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         "'shap_values_arr' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    oinds = np.arange(shap_values_arr.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
+    oinds = np.arange(
+        shap_values_arr.shape[0])  # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
     xv = encode_array_if_needed(features[oinds, ind])
     xd = display_features[oinds, ind]
-    
+
     s = shap_values_arr[oinds, ind]
     if type(xd[0]) == str:
         name_map = {}
         for i in range(len(xv)):
             name_map[xd[i]] = xv[i]
         xnames = list(name_map.keys())
-    
+
     # allow a single feature name to be passed alone
     if type(feature_names) == str:
         feature_names = [feature_names]
@@ -259,7 +263,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             clow = np.nanmin(cv.astype(np.float))
             chigh = np.nanmax(cv.astype(np.float))
             bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
-            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
+            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N - 1)
 
     # optionally add jitter to feature values
     xv_no_jitter = xv.copy()
@@ -269,13 +273,12 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if isinstance(xvals[0], float):
             xvals = xvals.astype(np.float)
             xvals = xvals[~np.isnan(xvals)]
-        xvals = np.unique(xvals) # returns a sorted array
+        xvals = np.unique(xvals)  # returns a sorted array
         if len(xvals) >= 2:
             smallest_diff = np.min(np.diff(xvals))
             jitter_amount = x_jitter * smallest_diff
-            xv += (np.random.random_sample(size = len(xv))*jitter_amount) - (jitter_amount/2)
+            xv += (np.random.random_sample(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
 
-    
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
@@ -326,9 +329,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             xmax = np.nanpercentile(xv, float(xmax[11:-1]))
 
         if xmin is None or xmin == np.nanmin(xv):
-            xmin = np.nanmin(xv) - (xmax - np.nanmin(xv))/20
+            xmin = np.nanmin(xv) - (xmax - np.nanmin(xv)) / 20
         if xmax is None or xmax == np.nanmax(xv):
-            xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
+            xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin) / 20
 
         ax.set_xlim(xmin, xmax)
 
@@ -339,9 +342,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         #     ymax = np.nanpercentile(xv, float(ymax[11:-1]))
 
         if ymin is None or ymin == np.nanmin(xv):
-            ymin = np.nanmin(xv) - (ymax - np.nanmin(xv))/20
+            ymin = np.nanmin(xv) - (ymax - np.nanmin(xv)) / 20
         if ymax is None or ymax == np.nanmax(xv):
-            ymax = np.nanmax(xv) + (np.nanmax(xv) - ymin)/20
+            ymax = np.nanmax(xv) + (np.nanmax(xv) - ymin) / 20
 
         ax.set_ylim(ymin, ymax)
 
@@ -364,18 +367,18 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # the histogram of the data
     if hist:
         ax2 = ax.twinx()
-        #n, bins, patches = 
+        # n, bins, patches =
         xlim = ax.get_xlim()
         xvals = np.unique(xv_no_jitter)
 
         if len(xvals) / len(xv_no_jitter) < 0.2 and len(xvals) < 75 and np.max(xvals) < 75 and np.min(xvals) >= 0:
             np.sort(xvals)
             bin_edges = []
-            for i in range(int(np.max(xvals)+1)):
-                bin_edges.append(i-0.5)
+            for i in range(int(np.max(xvals) + 1)):
+                bin_edges.append(i - 0.5)
 
-                #bin_edges.append((xvals[i] + xvals[i+1])/2)
-            bin_edges.append(int(np.max(xvals))+0.5)
+                # bin_edges.append((xvals[i] + xvals[i+1])/2)
+            bin_edges.append(int(np.max(xvals)) + 0.5)
 
             lim = np.floor(np.min(xvals) - 0.5) + 0.5, np.ceil(np.max(xvals) + 0.5) - 0.5
             ax.set_xlim(lim)
@@ -388,9 +391,10 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
                 bin_edges = 10
             else:
                 bin_edges = 5
-        
-        ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
-        ax2.set_ylim(0,len(xv))
+
+        ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]),
+                 zorder=-1)
+        ax2.set_ylim(0, len(xv))
 
         ax2.xaxis.set_ticks_position('bottom')
         ax2.yaxis.set_ticks_position('left')
@@ -418,11 +422,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         ax.set_xticks([name_map[n] for n in xnames])
         ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
     if show:
-        with warnings.catch_warnings(): # ignore expected matplotlib warnings
+        with warnings.catch_warnings():  # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
-
-
 
 
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,
@@ -489,7 +491,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         cmap = colors.red_blue
 
     if type(shap_values) is list:
-        raise TypeError("The passed shap_values are a list not an array! If you have a list of explanations try " \
+        raise TypeError("The passed shap_values are a list not an array! If you have a list of explanations try "
                         "passing shap_values[0] instead to explain the first output class of a multi-output model.")
 
     # convert from DataFrames if we got any
@@ -564,9 +566,10 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         "'shap_values' must have the same number of columns as 'features'!"
 
     # get both the raw and display feature values
-    oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
+    oinds = np.arange(
+        shap_values.shape[0])  # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-    
+
     xv = encode_array_if_needed(features[oinds, ind])
 
     xd = display_features[oinds, ind]
@@ -607,7 +610,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             clow = np.nanmin(cv.astype(np.float))
             chigh = np.nanmax(cv.astype(np.float))
             bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
-            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
+            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N - 1)
 
     # optionally add jitter to feature values
     if x_jitter > 0:
@@ -616,11 +619,11 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         if isinstance(xvals[0], float):
             xvals = xvals.astype(np.float)
             xvals = xvals[~np.isnan(xvals)]
-        xvals = np.unique(xvals) # returns a sorted array
+        xvals = np.unique(xvals)  # returns a sorted array
         if len(xvals) >= 2:
             smallest_diff = np.min(np.diff(xvals))
             jitter_amount = x_jitter * smallest_diff
-            xv += (np.random.random_sample(size = len(xv))*jitter_amount) - (jitter_amount/2)
+            xv += (np.random.random_sample(size=len(xv)) * jitter_amount) - (jitter_amount / 2)
 
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
@@ -673,9 +676,9 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             xmax = np.nanpercentile(xv, float(xmax[11:-1]))
 
         if xmin is None or xmin == np.nanmin(xv):
-            xmin = np.nanmin(xv) - (xmax - np.nanmin(xv))/20
+            xmin = np.nanmin(xv) - (xmax - np.nanmin(xv)) / 20
         if xmax is None or xmax == np.nanmax(xv):
-            xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
+            xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin) / 20
 
         ax.set_xlim(xmin, xmax)
 
@@ -711,6 +714,6 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         ax.set_xticks([name_map[n] for n in xnames])
         ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
     if show:
-        with warnings.catch_warnings(): # ignore expected matplotlib warnings
+        with warnings.catch_warnings():  # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()

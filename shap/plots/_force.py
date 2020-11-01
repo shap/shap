@@ -7,9 +7,11 @@ import io
 import string
 import json
 import random
+
 try:
     from IPython.core.display import display, HTML
     from IPython import get_ipython
+
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -17,10 +19,11 @@ import base64
 import numpy as np
 import scipy.cluster
 import sys
+
 if sys.version_info[0] >= 3:
     from collections.abc import Sequence
 else:
-    from collections import Sequence # pylint: disable=no-name-in-module
+    from collections import Sequence  # pylint: disable=no-name-in-module
 
 import warnings
 import re
@@ -29,9 +32,11 @@ from ..utils._legacy import convert_to_link, Instance, Model, Data, DenseData, L
 from ..utils import hclust_ordering
 from ..plots._force_matplotlib import draw_additive_plot
 
+
 def force(base_value, shap_values=None, features=None, feature_names=None, out_names=None, link="identity",
-               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
-               text_rotation=0):
+          plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20, 3), ordering_keys=None,
+          ordering_keys_time_format=None,
+          text_rotation=0):
     """ Visualize the given SHAP values with an additive force layout.
     
     Parameters
@@ -82,11 +87,10 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
     if (type(base_value) == np.ndarray or type(base_value) == list):
         if type(shap_values) != list or len(shap_values) != len(base_value):
-            raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
-                            "Try shap.force_plot(explainer.expected_value, shap_values) or " \
-                            "for multi-output models try " \
+            raise Exception("In v0.20 force_plot now requires the base value as the first parameter! "
+                            "Try shap.force_plot(explainer.expected_value, shap_values) or "
+                            "for multi-output models try "
                             "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
-
 
     assert not type(shap_values) == list, "The shap_values arg looks looks multi output, try shap_values[i]."
 
@@ -147,13 +151,13 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
             Model(None, out_names),
             DenseData(np.zeros((1, len(feature_names))), list(feature_names))
         )
-        
+
         return visualize(e, plot_cmap, matplotlib, figsize=figsize, show=show, text_rotation=text_rotation)
-        
+
     else:
         if matplotlib:
             raise Exception("matplotlib = True is not yet supported for force plots with multiple samples!")
-        
+
         if shap_values.shape[0] > 3000:
             warnings.warn("shap.plots.force is slow for many thousands of rows, try subsampling your data.")
 
@@ -162,7 +166,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
             if feature_names is None:
                 feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
             if features is None:
-                display_features = ["" for i in range(len(feature_names))]
+                display_features = ["" for _ in range(len(feature_names))]
             else:
                 display_features = features[k, :]
 
@@ -178,15 +182,15 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                 DenseData(np.ones((1, len(feature_names))), list(feature_names))
             )
             exps.append(e)
-        
+
         return visualize(
-                    exps, 
-                    plot_cmap=plot_cmap, 
-                    ordering_keys=ordering_keys, 
-                    ordering_keys_time_format=ordering_keys_time_format, 
-                    text_rotation=text_rotation
-                )
-            
+            exps,
+            plot_cmap=plot_cmap,
+            ordering_keys=ordering_keys,
+            ordering_keys_time_format=ordering_keys_time_format,
+            text_rotation=text_rotation
+        )
+
 
 class Explanation:
     def __init__(self):
@@ -207,6 +211,7 @@ class AdditiveExplanation(Explanation):
         self.model = model
         assert isinstance(data, Data)
         self.data = data
+
 
 err_msg = """
 <div style='color: #900; text-align: center;'>
@@ -257,10 +262,10 @@ def save_html(out_file, plot, full_html=True):
     if type(out_file) == str:
         out_file = open(out_file, "w", encoding="utf-8")
         internal_open = True
-    
+
     if full_html:
         out_file.write("<html><head><meta http-equiv='content-type' content='text/html'; charset='utf-8'>")
-    
+
     out_file.write("<script>\n")
 
     # dump the js code
@@ -269,12 +274,12 @@ def save_html(out_file, plot, full_html=True):
         bundle_data = f.read()
     out_file.write(bundle_data)
     out_file.write("</script>")
-    
+
     if full_html:
         out_file.write("</head><body>\n")
 
     out_file.write(plot.html())
-    
+
     if full_html:
         out_file.write("</body></html>\n")
 
@@ -283,7 +288,7 @@ def save_html(out_file, plot, full_html=True):
 
 
 def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
-    return "i"+''.join(random.choice(chars) for _ in range(size))
+    return "i" + ''.join(random.choice(chars) for _ in range(size))
 
 
 def ensure_not_numpy(x):
@@ -296,22 +301,26 @@ def ensure_not_numpy(x):
     else:
         return x
 
+
 def verify_valid_cmap(cmap):
     assert (isinstance(cmap, str) or isinstance(cmap, list) or str(type(cmap)).endswith("unicode'>")
-        ),"Plot color map must be string or list! not: " + str(type(cmap))
+            ), "Plot color map must be string or list! not: " + str(type(cmap))
     if isinstance(cmap, list):
         assert (len(cmap) > 1), "Color map must be at least two colors."
         _rgbstring = re.compile(r'#[a-fA-F0-9]{6}$')
         for color in cmap:
-             assert(bool(_rgbstring.match(color))),"Invalid color found in CMAP."
+            assert (bool(_rgbstring.match(color))), "Invalid color found in CMAP."
 
     return cmap
 
-def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, ordering_keys=None, ordering_keys_time_format=None, text_rotation=0):
+
+def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20, 3), show=True, ordering_keys=None,
+              ordering_keys_time_format=None, text_rotation=0):
     plot_cmap = verify_valid_cmap(plot_cmap)
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
-            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show, text_rotation=text_rotation)
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show,
+                                                                              text_rotation=text_rotation)
         else:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
     elif isinstance(e, Explanation):
@@ -323,12 +332,15 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, 
         if matplotlib:
             assert False, "Matplotlib plot is only supported for additive explanations"
         else:
-            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format)
+            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys,
+                                                ordering_keys_time_format=ordering_keys_time_format)
     else:
         assert False, "visualize() can only display Explanation objects (or arrays of them)!"
 
+
 class BaseVisualizer:
-    pass 
+    pass
+
 
 class SimpleListVisualizer(BaseVisualizer):
     def __init__(self, e):
@@ -347,7 +359,7 @@ class SimpleListVisualizer(BaseVisualizer):
             "link": str(e.link),
             "featureNames": e.data.group_names,
             "features": features,
-            "plot_cmap":e.plot_cmap.plot_cmap
+            "plot_cmap": e.plot_cmap.plot_cmap
         }
 
     def html(self):
@@ -398,15 +410,15 @@ class AdditiveForceVisualizer(BaseVisualizer):
     document.getElementById('{id}')
   );
 </script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
-    
+
     def matplotlib(self, figsize, show, text_rotation):
         fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation)
-        
+
         return fig
-    
+
     def _repr_html_(self):
         return self.html()
-        
+
 
 class AdditiveForceArrayVisualizer(BaseVisualizer):
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
@@ -421,10 +433,10 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
         # make sure that we put the higher predictions first...just for consistency
         if sum(arr[clustOrder[0]].effects) < sum(arr[clustOrder[-1]].effects):
-            np.flipud(clustOrder) # reverse
+            np.flipud(clustOrder)  # reverse
 
         # build the json data
-        clustOrder = np.argsort(clustOrder) # inverse permutation
+        clustOrder = np.argsort(clustOrder)  # inverse permutation
         self.data = {
             "outNames": arr[0].model.out_names,
             "baseValue": ensure_not_numpy(arr[0].base_value),
@@ -435,13 +447,13 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
             "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, '__iter__') else None,
             "ordering_keys_time_format": ordering_keys_time_format,
         }
-        for (ind,e) in enumerate(arr):
+        for (ind, e) in enumerate(arr):
             self.data["explanations"].append({
                 "outValue": ensure_not_numpy(e.out_value),
-                "simIndex": ensure_not_numpy(clustOrder[ind])+1,
+                "simIndex": ensure_not_numpy(clustOrder[ind]) + 1,
                 "features": {}
             })
-            for i in filter(lambda j: e.effects[j] != 0 or e.instance.x[0,j] != 0, range(len(e.data.group_names))):
+            for i in filter(lambda j: e.effects[j] != 0 or e.instance.x[0, j] != 0, range(len(e.data.group_names))):
                 self.data["explanations"][-1]["features"][i] = {
                     "effect": ensure_not_numpy(e.effects[i]),
                     "value": ensure_not_numpy(e.instance.group_display_values[i])

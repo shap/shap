@@ -6,6 +6,7 @@ from __future__ import division
 import warnings
 import numpy as np
 from scipy.stats import gaussian_kde
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -52,7 +53,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
-    
 
     # # deprecation warnings
     # if auto_size_plot is not None:
@@ -97,7 +97,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                     "provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
+                                      "constant offset? Of so just pass shap_values[:,:-1]."
         else:
             assert num_features == features.shape[1], shape_msg
 
@@ -117,9 +117,10 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         partition_tree = None
     else:
         partition_tree = clustering
-    
+
     if partition_tree is not None:
-        assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
+        assert partition_tree.shape[
+                   1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
 
     # plotting SHAP interaction values
     if len(values.shape) == 3:
@@ -134,7 +135,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                     if c1 == c2:
                         new_feature_names.append(c1)
                     else:
-                        new_feature_names.append(c1 + "* - " + c2)
+                        new_feature_names.append("{}* - {}".format(c1, c2))
 
             return beeswarm(
                 new_values, new_features, new_feature_names,
@@ -149,7 +150,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         else:
             max_display = min(len(feature_names), max_display)
 
-        interaction_sort_inds = order#np.argsort(-np.abs(values.sum(1)).sum(0))
+        interaction_sort_inds = order  # np.argsort(-np.abs(values.sum(1)).sum(0))
 
         # get plotting limits
         delta = 1.0 / (values.shape[1] ** 2)
@@ -219,14 +220,15 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
-        
+
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
-            if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= cluster_threshold:
-                #values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
+            if max_display < len(feature_order) and dist[
+                feature_order[max_display - 1], feature_order[max_display - 2]] <= cluster_threshold:
+                # values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values), partition_tree)
                 for i in range(len(values)):
-                    values[:,ind1] += values[:,ind2]
+                    values[:, ind1] += values[:, ind2]
                     values = np.delete(values, ind2, 1)
                     orig_inds[ind1] += orig_inds[ind2]
                     del orig_inds[ind2]
@@ -239,26 +241,28 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     feature_inds = feature_order[:max_display]
     y_pos = np.arange(len(feature_inds), 0, -1)
     feature_names_new = []
-    for pos,inds in enumerate(orig_inds):
+    for pos, inds in enumerate(orig_inds):
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
         elif len(inds) <= 2:
             feature_names_new.append(" + ".join([feature_names[i] for i in inds]))
         else:
             max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-            feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds)-1))
+            feature_names_new.append("{} + {} other features".format(feature_names[inds[max_ind]],
+                                                                     len(inds) - 1))
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
     if num_features < len(values[0]):
-        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
-        values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
-    
+        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features - 1, len(values[0]))])
+        values[:, feature_order[num_features - 1]] = np.sum(
+            [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))], 0)
+
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
     if num_features < len(values[0]):
-        yticklabels[-1] = "Sum of %d other features" % num_cut
-    
+        yticklabels[-1] = "Sum of {} other features".format(num_cut)
+
     row_height = 0.4
     if plot_size == "auto":
         pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
@@ -310,7 +314,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                 if vmin == vmax:
                     vmin = np.min(fvalues)
                     vmax = np.max(fvalues)
-            if vmin > vmax: # fixes rare numerical precision issues
+            if vmin > vmax:  # fixes rare numerical precision issues
                 vmin = vmax
 
             assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
@@ -318,8 +322,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
             pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                        vmax=vmax, s=16, alpha=alpha, linewidth=0,
-                        zorder=3, rasterized=len(shaps) > 500)
+                       vmax=vmax, s=16, alpha=alpha, linewidth=0,
+                       zorder=3, rasterized=len(shaps) > 500)
 
             # plot the non-nan fvalues colored by the trimmed feature value
             cvals = fvalues[np.invert(nan_mask)].astype(np.float64)
@@ -328,14 +332,13 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             cvals[cvals_imp > vmax] = vmax
             cvals[cvals_imp < vmin] = vmin
             pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                        cmap=color, vmin=vmin, vmax=vmax, s=16,
-                        c=cvals, alpha=alpha, linewidth=0,
-                        zorder=3, rasterized=len(shaps) > 500)
+                       cmap=color, vmin=vmin, vmax=vmax, s=16,
+                       c=cvals, alpha=alpha, linewidth=0,
+                       zorder=3, rasterized=len(shaps) > 500)
         else:
 
             pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                        color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
-
+                       color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
 
     # draw the color bar
     if safe_isinstance(color, "matplotlib.colors.Colormap") and color_bar and features is not None:
@@ -366,12 +369,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     if show:
         pl.show()
 
+
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
         return text[:length_limit - 3] + "..."
     else:
         return text
-
 
 
 def is_color_map(color):
@@ -381,14 +384,14 @@ def is_color_map(color):
 # TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def summary_legacy(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
-                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
-                 class_inds=None,
-                 color_bar_label=labels["FEATURE_VALUE"],
-                 cmap=colors.red_blue,
-                 # depreciated
-                 auto_size_plot=None,
-                 use_log_scale=False):
+                   color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
+                   color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
+                   class_inds=None,
+                   color_bar_label=labels["FEATURE_VALUE"],
+                   cmap=colors.red_blue,
+                   # depreciated
+                   auto_size_plot=None,
+                   use_log_scale=False):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -439,11 +442,11 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     if isinstance(shap_values, list):
         multi_class = True
         if plot_type is None:
-            plot_type = "bar" # default for multi-output explanations
+            plot_type = "bar"  # default for multi-output explanations
         assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
     else:
         if plot_type is None:
-            plot_type = "dot" # default for single output explanations
+            plot_type = "dot"  # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
@@ -451,7 +454,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         if plot_type == 'layered_violin':
             color = "coolwarm"
         elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
+            color = lambda i: colors.red_blue_circle(i / len(shap_values))
         else:
             color = colors.blue_rgb
 
@@ -475,7 +478,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     "provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
+                                      "constant offset? Of so just pass shap_values[:,:-1]."
         else:
             assert num_features == features.shape[1], shape_msg
 
@@ -498,7 +501,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     if c1 == c2:
                         new_feature_names.append(c1)
                     else:
-                        new_feature_names.append(c1 + "* - " + c2)
+                        new_feature_names.append("{}* - {}".format(c1, c2))
 
             return summary_legacy(
                 new_shap_values, new_features, new_feature_names,
@@ -628,7 +631,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     if vmin == vmax:
                         vmin = np.min(values)
                         vmax = np.max(values)
-                if vmin > vmax: # fixes rare numerical precision issues
+                if vmin > vmax:  # fixes rare numerical precision issues
                     vmin = vmax
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
@@ -726,7 +729,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
                         pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue_no_bounds(smooth_values[i]),
+                                        [pos - ds[i], pos - ds[i + 1]],
+                                        color=colors.red_blue_no_bounds(smooth_values[i]),
                                         zorder=2)
 
         else:
@@ -810,7 +814,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     elif multi_class and plot_type == "bar":
         if class_names is None:
-            class_names = ["Class "+str(i) for i in range(len(shap_values))]
+            class_names = ["Class " + str(i) for i in range(len(shap_values))]
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         left_pos = np.zeros(len(feature_inds))

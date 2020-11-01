@@ -9,18 +9,19 @@ import sklearn
 import importlib
 import copy
 
-
-if (sys.version_info < (3, 0)):
+if sys.version_info < (3, 0):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
 
 import_errors = {}
 
+
 def assert_import(package_name):
     global import_errors
     if package_name in import_errors:
-        msg,e = import_errors[package_name]
+        msg, e = import_errors[package_name]
         print(msg)
         raise e
+
 
 def record_import_error(package_name, msg, e):
     global import_errors
@@ -30,7 +31,7 @@ def record_import_error(package_name, msg, e):
 def shapley_coefficients(n):
     out = np.zeros(n)
     for i in range(n):
-        out[i] = 1 / (n * sp.special.comb(n-1,i))
+        out[i] = 1 / (n * sp.special.comb(n - 1, i))
     return out
 
 
@@ -44,7 +45,7 @@ def convert_name(ind, shap_values, input_names):
 
             # we allow the sum of all the SHAP values to be specified with "sum()"
             # assuming here that the calling method can deal with this case
-            elif ind == "sum()": 
+            elif ind == "sum()":
                 return "sum()"
             else:
                 raise ValueError("Could not find feature named: " + ind)
@@ -52,6 +53,7 @@ def convert_name(ind, shap_values, input_names):
             return nzinds[0]
     else:
         return ind
+
 
 def potential_interactions(shap_values_column, shap_values_matrix):
     """ Order other features by how much interaction they seem to have with the feature at the given index.
@@ -62,7 +64,7 @@ def potential_interactions(shap_values_column, shap_values_matrix):
 
     # ignore inds that are identical to the column 
     ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)
-    
+
     values = shap_values_matrix.values
     X = shap_values_matrix.data
 
@@ -154,6 +156,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
 
     return np.argsort(-np.abs(interactions))
 
+
 def encode_array_if_needed(arr, dtype=np.float64):
     try:
         return arr.astype(dtype)
@@ -163,11 +166,13 @@ def encode_array_if_needed(arr, dtype=np.float64):
         encoded_array = np.array([encoding_dict[string] for string in arr], dtype=dtype)
         return encoded_array
 
+
 def sample(X, nsamples=100, random_state=0):
     if nsamples >= X.shape[0]:
         return X
     else:
         return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
+
 
 def safe_isinstance(obj, class_path_str):
     """
@@ -194,7 +199,7 @@ def safe_isinstance(obj, class_path_str):
         class_path_strs = class_path_str
     else:
         class_path_strs = ['']
-    
+
     # try each module path in order
     for class_path_str in class_path_strs:
         if "." not in class_path_str:
@@ -211,13 +216,13 @@ def safe_isinstance(obj, class_path_str):
             continue
 
         module = sys.modules[module_name]
-        
-        #Get class
+
+        # Get class
         _class = getattr(module, class_name, None)
-        
+
         if _class is None:
             continue
-        
+
         if isinstance(obj, _class):
             return True
 
@@ -235,11 +240,13 @@ def format_value(s, format_str):
         s = u"\u2212" + s[1:]
     return s
 
+
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
 def ordinal_str(n):
     """ Converts a number to and ordinal string. 
     """
     return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
+
 
 class OpChain():
     """ A way to represent a set of dot chained operations on an object without actually running them.
@@ -248,12 +255,12 @@ class OpChain():
     def __init__(self, root_name=""):
         self._ops = []
         self._root_name = root_name
-    
+
     def apply(self, obj):
         """ Applies all our ops to the given object.
         """
         for o in self._ops:
-            op,args,kwargs = o
+            op, args, kwargs = o
             if args is not None:
                 obj = getattr(obj, op)(*args, **kwargs)
             else:
@@ -268,7 +275,7 @@ class OpChain():
         new_self._ops[-1][1] = args
         new_self._ops[-1][2] = kwargs
         return new_self
-        
+
     def __getitem__(self, item):
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -284,7 +291,7 @@ class OpChain():
     def __repr__(self):
         out = self._root_name
         for o in self._ops:
-            op,args,kwargs = o
+            op, args, kwargs = o
             out += "."
             out += op
             if (args is not None and len(args) > 0) or (kwargs is not None and len(kwargs) > 0):
@@ -292,6 +299,6 @@ class OpChain():
                 if args is not None and len(args) > 0:
                     out += ", ".join([str(v) for v in args])
                 if kwargs is not None and len(kwargs) > 0:
-                    out += ", " + ", ".join([str(k)+"="+str(kwargs[k]) for k in kwargs.keys()])
+                    out += ", " + ", ".join([str(k) + "=" + str(kwargs[k]) for k in kwargs.keys()])
                 out += ")"
         return out
