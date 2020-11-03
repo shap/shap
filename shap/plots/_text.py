@@ -669,10 +669,10 @@ def saliency_plot(shap_values):
     
     def get_colors(shap_values):
         input_colors = []
+        cmax = max(abs(shap_values.values.min()), abs(shap_values.values.max()))
         for row_index in range(shap_values.values.shape[0]):
             input_colors_row = []
             for col_index in range(shap_values.values.shape[1]):
-                cmax = max(abs(shap_values.values[:,col_index].min()), abs(shap_values.values[:,col_index].max()))
                 scaled_value = 0.5 + 0.5 * shap_values.values[row_index,col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
                 color = 'rgba'+str((color[0]*255, color[1]*255, color[2]*255, color[3]))
@@ -722,7 +722,7 @@ def saliency_plot(shap_values):
 def heatmap(shap_values):
     
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
-    
+
     def get_color(shap_value,cmax):
         scaled_value = 0.5 + 0.5 * shap_value / cmax
         color = colors.red_transparent_blue(scaled_value)
@@ -737,10 +737,10 @@ def heatmap(shap_values):
     # generate dictionary containing precomputed backgroud colors and shap values which are addresable by html token ids
     colors_dict = {}
     shap_values_dict = {}
+    cmax = max(abs(shap_values.values.min()), abs(shap_values.values.max()))
     
     for col_index in range(model_output.shape[0]):
         color_values = {}
-        cmax = max(abs(shap_values.values[:,col_index].min()), abs(shap_values.values[:,col_index].max()))
         for row_index in range(model_input.shape[0]):
             color_values[uuid+'_flat_token_input_'+str(row_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
         colors_dict[uuid+'_flat_token_output_'+str(col_index)] = color_values
@@ -748,7 +748,6 @@ def heatmap(shap_values):
     
     for row_index in range(model_input.shape[0]):
         color_values = {}
-        cmax = max(abs(shap_values.values[row_index,:].min()), abs(shap_values.values[row_index,:].max()))
         for col_index in range(model_output.shape[0]):
             color_values[uuid+'_flat_token_output_'+str(col_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
         colors_dict[uuid+'_flat_token_input_'+str(row_index)] = color_values
@@ -756,13 +755,13 @@ def heatmap(shap_values):
     for col_index in range(model_output.shape[0]):
         shap_values_list = {}
         for row_index in range(model_input.shape[0]):
-            shap_values_list[uuid+'_flat_value_label_input_'+str(row_index)] = shap_values.values[row_index][col_index]
+            shap_values_list[uuid+'_flat_value_label_input_'+str(row_index)] = round(shap_values.values[row_index][col_index],3)
         shap_values_dict[uuid+'_flat_token_output_'+str(col_index)] = shap_values_list
     
     for row_index in range(model_input.shape[0]):
         shap_values_list = {}
         for col_index in range(model_output.shape[0]):
-            shap_values_list[uuid+'_flat_value_label_output_'+str(col_index)] = shap_values.values[row_index][col_index]
+            shap_values_list[uuid+'_flat_value_label_output_'+str(col_index)] = round(shap_values.values[row_index][col_index],3)
         shap_values_dict[uuid+'_flat_token_input_'+str(row_index)] = shap_values_list
     
     # convert python disctionary into json to be inserted into the runtime javascript environment
