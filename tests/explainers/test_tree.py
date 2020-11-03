@@ -38,7 +38,6 @@ def test_front_page_xgboost():
 def test_front_page_sklearn():
     import sklearn.ensemble
     import shap
-    import numpy as np
 
     # load JS visualization code to notebook
     shap.initjs()
@@ -46,8 +45,8 @@ def test_front_page_sklearn():
     # train model
     X, y = shap.datasets.boston()
     models = [
-        sklearn.ensemble.RandomForestRegressor(n_estimators=100),
-        sklearn.ensemble.ExtraTreesRegressor(n_estimators=100),
+        sklearn.ensemble.RandomForestRegressor(n_estimators=10),
+        sklearn.ensemble.ExtraTreesRegressor(n_estimators=10),
     ]
     for model in models:
         model.fit(X, y)
@@ -167,7 +166,6 @@ def test_xgboost_ranking():
         print("Skipping test_xgboost_ranking!")
         return
     import shap
-    import numpy as np
 
     # train lightgbm ranker model
     x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
@@ -175,8 +173,7 @@ def test_xgboost_ranking():
               'gamma': 1.0, 'min_child_weight': 0.1,
               'max_depth': 4, 'n_estimators': 4}
     model = xgboost.sklearn.XGBRanker(**params)
-    model.fit(x_train, y_train, q_train.astype(int),
-              eval_set=[(x_test, y_test)], eval_group=[q_test.astype(int)])
+    model.fit(x_train, y_train, q_train.astype(int))
     _validate_shap_values(model, x_test)
 
 def test_xgboost_mixed_types():
@@ -343,7 +340,7 @@ def create_random_forest_vectorizer():
         def transform(self, X, y=None, **fit_params):
             return X.toarray()
 
-    rf = RandomForestClassifier(n_estimators=500, random_state=777)
+    rf = RandomForestClassifier(n_estimators=10, random_state=777)
     return Pipeline([('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)])
 
 def test_sklearn_random_forest_newsgroups():
@@ -431,6 +428,7 @@ def test_gpboost():
 def test_catboost():
     try:
         import catboost
+        from sklearn.datasets import load_breast_cancer
         from catboost.datasets import amazon
     except:
         print("Skipping test_catboost!")
@@ -441,7 +439,7 @@ def test_catboost():
     # train catboost model
     X, y = shap.datasets.boston()
     X["RAD"] = X["RAD"].astype(np.int)
-    model = catboost.CatBoostRegressor(iterations=300, learning_rate=0.1, random_seed=123)
+    model = catboost.CatBoostRegressor(iterations=30, learning_rate=0.1, random_seed=123)
     p = catboost.Pool(X, y, cat_features=["RAD"])
     model.fit(p, verbose=False, plot=False)
 
@@ -452,23 +450,22 @@ def test_catboost():
     predicted = model.predict(X)
 
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
-    
-    train_df, _ = amazon()
-    ix = 100
-    X_train = train_df.drop('ACTION', axis=1)[:ix]
-    y_train = train_df.ACTION[:ix]
-    X_val = train_df.drop('ACTION', axis=1)[ix:ix+20]
-    y_val = train_df.ACTION[ix:ix+20]
-    model = catboost.CatBoostClassifier(iterations=100, learning_rate=0.5, random_seed=12)
+        "SHAP values don't sum to modThisel output!"
+
+    X, y = load_breast_cancer(return_X_y=True)
+    model = catboost.CatBoostClassifier(iterations=10, learning_rate=0.5, random_seed=12)
     model.fit(
-        X_train,
-        y_train,
-        eval_set=(X_val, y_val),        
+        X,
+        y,
         verbose=False,
         plot=False
     )
-    shap.TreeExplainer(model)
+    ex = shap.TreeExplainer(model)
+    shap_values = ex.shap_values(X)
+
+    predicted = model.predict(X, prediction_type="RawFormulaVal")
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
+        "SHAP values don't sum to model output!"
 
 def test_catboost_categorical():
     try:
@@ -659,7 +656,6 @@ def test_sum_match_random_forest():
     import numpy as np
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import RandomForestClassifier
-    import sklearn
 
     X_train,X_test,Y_train,_ = train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
     clf = RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
