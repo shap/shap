@@ -35,10 +35,18 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     # loop when we get multi-row inputs
     if len(shap_values.shape) == 2 and shap_values.output_names is None:
-        tokens, values, group_sizes = process_shap_values(shap_values[0], group_threshold, separator)
+        
+        values = getattr(shap_values[0], "hierarchical_values", shap_values[0].values)
+        clustering = getattr(shap_values[0], "clustering", None)
+        tokens, values, group_sizes = process_shap_values(shap_values[0].data, getattr(shap_values[0], "hierarchical_values", shap_values[0].values), group_threshold, separator, clustering)
+
         xmin, xmax, cmax = values_min_max(values, shap_values[0].base_values)
         for i in range(1,len(shap_values)):
-            tokens, values, group_sizes = process_shap_values(shap_values[i], group_threshold, separator)
+
+            values = getattr(shap_values[i], "hierarchical_values", shap_values[i].values)
+            clustering = getattr(shap_values[i], "clustering", None)
+            tokens, values, group_sizes = process_shap_values(shap_values[i].data, getattr(shap_values[i], "hierarchical_values", shap_values[i].values), group_threshold, separator, clustering)
+
             xmin_i,xmax_i,cmax_i = values_min_max(values, shap_values[i].base_values)
             if xmin_i < xmin:
                 xmin = xmin_i
@@ -71,7 +79,9 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         cmax = cmax_new
     
 
-    tokens, values, group_sizes = process_shap_values(shap_values, group_threshold, separator)
+    values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    clustering = getattr(shap_values, "clustering", None)
+    tokens, values, group_sizes = process_shap_values(shap_values.data, getattr(shap_values, "hierarchical_values", shap_values.values), group_threshold, separator, clustering)
     
     # build out HTML output one word one at a time
     top_inds = np.argsort(-np.abs(values))[:num_starting_labels]
@@ -131,15 +141,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     display(HTML(out))
 
-def process_shap_values(shap_values, group_threshold, separator):
-
-    # unpack the Explanation object
-    tokens = shap_values.data
-    clustering = getattr(shap_values, "clustering", None)
-    if getattr(shap_values, "hierarchical_values", None) is not None:
-        values = shap_values.hierarchical_values
-    else:
-        values = shap_values.values
+def process_shap_values(tokens, values, group_threshold, separator, clustering = None):
 
     # See if we got hierarchical input data. If we did then we need to reprocess the 
     # shap_values and tokens to get the groups we want to display
