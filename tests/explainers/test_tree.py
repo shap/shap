@@ -186,6 +186,7 @@ def test_ngboost():
 def test_pyspark_classifier_decision_tree():
     # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
+    pytest.importorskip("pyspark.ml")
     try:
         spark = pyspark.sql.SparkSession.builder.config(
             conf=pyspark.SparkConf().set("spark.master", "local[*]")).getOrCreate()
@@ -240,6 +241,7 @@ def test_pyspark_classifier_decision_tree():
 def test_pyspark_regression_decision_tree():
     # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
+    pytest.importorskip("pyspark.ml")
     try:
         spark = pyspark.sql.SparkSession.builder.config(
             conf=pyspark.SparkConf().set("spark.master", "local[*]")).getOrCreate()
@@ -257,17 +259,17 @@ def test_pyspark_regression_decision_tree():
         iris)
 
     regressors = [
-        pyspark.ml.classification.GBTRegressor(labelCol="sepal_length", featuresCol="features"),
-        pyspark.ml.classification.RandomForestRegressor(labelCol="sepal_length",
+        pyspark.ml.regression.GBTRegressor(labelCol="sepal_length", featuresCol="features"),
+        pyspark.ml.regression.RandomForestRegressor(labelCol="sepal_length",
                                                         featuresCol="features"),
-        pyspark.ml.classification.DecisionTreeRegressor(labelCol="sepal_length",
+        pyspark.ml.regression.DecisionTreeRegressor(labelCol="sepal_length",
                                                         featuresCol="features")]
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
         X = pd.DataFrame(
             data=iris_sk.data, columns=iris_sk.feature_names).drop(  # pylint: disable=E1101
-                'sepal length (cm)', 1)[:100]
+            'sepal length (cm)', 1)[:100]
 
         shap_values = explainer.shap_values(X)
         expected_values = explainer.expected_value
