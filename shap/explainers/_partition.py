@@ -107,10 +107,18 @@ class Partition(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
-
+        
+        if fixed_context == "auto":
+            fixed_context = None
+        elif fixed_context in [0,1,None]:
+            fixed_context = fixed_context 
+        else:
+            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+        
+        
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
@@ -142,7 +150,6 @@ class Partition(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        fixed_context = 1
         self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, fixed_context, batch_size, silent)
 
         # if False:
