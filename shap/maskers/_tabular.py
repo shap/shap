@@ -47,7 +47,7 @@ class Tabular(Masker):
             data = data.values
             self.output_dataframe = True
 
-        if data is dict and "mean" in data:
+        if type(data) is dict and "mean" in data:
             self.mean = data.get("mean", None)
             self.cov = data.get("cov", None)
             data = np.expand_dims(data["mean"], 0)

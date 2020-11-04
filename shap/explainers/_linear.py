@@ -49,13 +49,6 @@ class Linear(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
-        if issubclass(type(masker), tuple) and len(masker) == 2:
-            masker = maskers.Independent({"mean": masker[0], "cov": masker[1]})
-        super(Linear, self).__init__(model, masker, link=link, **kwargs)
-
-        self.nsamples = nsamples
-        if feature_perturbation is not None:
-            raise Exception("The feature_perturbation option is now deprecated in favor of using the appropreiate masker None")
         if 'feature_dependence' in kwargs:
             warnings.warn('The option feature_dependence has been renamed to feature_perturbation!')
             feature_perturbation = kwargs["feature_dependence"]
@@ -68,7 +61,19 @@ class Linear(Explainer):
         elif feature_perturbation is None:
             #warnings.warn('The default value for feature_perturbation has been changed to "interventional"!')
             feature_perturbation = "interventional"
+        if feature_perturbation is not None:
+            warnings.warn("The feature_perturbation option is now deprecated in favor of using the appropriate masker (maskers.Independent, or maskers.Impute)")
         self.feature_perturbation = feature_perturbation
+
+        if issubclass(type(masker), tuple) and len(masker) == 2:
+            if self.feature_perturbation == "correlation_dependent":
+                masker = maskers.Impute({"mean": masker[0], "cov": masker[1]}, method="linear")
+            else:
+                masker = maskers.Independent({"mean": masker[0], "cov": masker[1]})
+        super(Linear, self).__init__(model, masker, link=link, **kwargs)
+
+        self.nsamples = nsamples
+        
 
         # extract what we need from the given model object
         self.coef, self.intercept = Linear._parse_model(model)
