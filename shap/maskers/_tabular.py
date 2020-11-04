@@ -47,7 +47,12 @@ class Tabular(Masker):
             data = data.values
             self.output_dataframe = True
 
-        if data.shape[0] > max_samples:
+        if data is dict and "mean" in data:
+            self.mean = data.get("mean", None)
+            self.cov = data.get("cov", None)
+            data = np.expand_dims(data["mean"], 0)
+
+        if hasattr(data, "shape") and data.shape[0] > max_samples:
             data = utils.sample(data, max_samples)
             
         self.data = data
@@ -251,3 +256,26 @@ class Partition(Tabular):
             If an array, then this is assumed to be the clustering of 
         """
         super(Partition, self).__init__(data, max_samples=max_samples, clustering=clustering)
+
+
+class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking
+    """ This imputes the values of missing features using the values of the observed features.
+
+    Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
+    """
+
+    def __init__(self, data, method="linear"):
+        """ Build a Partition masker with the given background data and clustering.
+
+        Parameters
+        ----------
+        data : numpy.ndarray, pandas.DataFrame or {"mean: numpy.ndarray, "cov": numpy.ndarray} dictionary
+            The background dataset that is used for masking.
+        """
+        if data is dict and "mean" in data:
+            self.mean = data.get("mean", None)
+            self.cov = data.get("cov", None)
+            data = np.expand_dims(data["mean"], 0)
+            
+        self.data = data
+        self.method = method

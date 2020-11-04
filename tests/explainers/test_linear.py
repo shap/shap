@@ -11,6 +11,17 @@ def test_tied_pair():
     explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="correlation")
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
+def test_tied_pair_new():
+    import numpy as np
+    import shap
+    np.random.seed(0)
+    beta = np.array([1, 0, 0])
+    mu = np.zeros(3)
+    Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
+    X = np.ones((1,3))
+    explainer = shap.LinearExplainer((beta, 0), shap.maskers.Impute({"mean": mu, "cov": Sigma}))
+    assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
+
 def test_tied_triple():
     import numpy as np
     import shap
@@ -32,6 +43,8 @@ def test_sklearn_linear():
 
     # train linear model
     X,y = shap.datasets.boston()
+    X = X[:100]
+    y = y[:100]
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -49,6 +62,8 @@ def test_sklearn_multiclass_no_intercept():
 
     # train linear model
     X,y = shap.datasets.boston()
+    X = X[:100]
+    y = y[:100]
 
     # make y multiclass
     multiclass_y = np.expand_dims(y, axis=-1)
@@ -66,6 +81,8 @@ def test_perfect_colinear():
     import numpy as np
 
     X,y = shap.datasets.boston()
+    X = X[:100]
+    y = y[:100]
     X.iloc[:,0] = X.iloc[:,4] # test duplicated features
     X.iloc[:,5] = X.iloc[:,6] - X.iloc[:,6] # test multiple colinear features
     X.iloc[:,3] = 0 # test null features
@@ -93,7 +110,7 @@ def test_shape_values_linear_many_features():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.LinearExplainer(model, X)
+    explainer = shap.LinearExplainer(model, X.mean(0).reshape(1,-1))
 
     values = explainer.shap_values(X)
 
@@ -112,8 +129,8 @@ def test_single_feature():
     np.random.seed(0)
 
     # generate linear data
-    X = np.random.normal(1, 10, size=(1000, 1))
-    y = 2 * X[:, 0] + 1 + np.random.normal(scale=0.1, size=1000)
+    X = np.random.normal(1, 10, size=(100, 1))
+    y = 2 * X[:, 0] + 1 + np.random.normal(scale=0.1, size=100)
 
     # train linear model
     model = sklearn.linear_model.Ridge(0.1)
