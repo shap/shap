@@ -15,6 +15,7 @@ except ImportError:
     have_ipython = False
 import base64
 import numpy as np
+import scipy as sp
 import scipy.cluster
 import sys
 if sys.version_info[0] >= 3:
@@ -67,12 +68,14 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
     # support passing an explanation object
     if str(type(base_value)).endswith("Explanation'>"):
         shap_exp = base_value
-        base_value = shap_exp.expected_value
+        base_value = shap_exp.base_values
         shap_values = shap_exp.values
         if features is None:
             features = shap_exp.data
+        if sp.sparse.issparse(features):
+            features = features.toarray().flatten()
         if feature_names is None:
-            feature_names = shap_exp.input_names
+            feature_names = shap_exp.feature_names
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
