@@ -929,7 +929,7 @@ def heatmap(shap_values):
               <span style="font-size: 20px;"> Input/Output - Heatmap </span>
             </div>
             <div style="display:inline;float:right">
-              Text-Box Alignment :
+              Layout :
               <select name="alignment" id="{uuid}_alignment" onchange="selectAlignment_{uuid}(this)">
                 <option value="left-right" selected="selected">Left/Right</option>
                 <option value="top-bottom">Top/Bottom</option>
@@ -1000,7 +1000,7 @@ def heatmap(shap_values):
                     label_content_id = token_id_to_node_id_mapping_{uuid}[{uuid}_heatmap_flat_state][id];
                     
                     if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none'){{
-                        document.getElementById(label_content_id).style.fontWeight  = "normal";
+                        document.getElementById(label_content_id).style.fontWeight  = "inherit";
                     }}
                     
                 }}
@@ -1052,7 +1052,7 @@ def heatmap(shap_values):
                                 else {{
                                     document.getElementById(label_content_id).previousElementSibling.style.display = 'none';
                                     document.getElementById(label_content_id).parentNode.style.display = 'inline';
-                                    document.getElementById(label_content_id).style.fontWeight  = "normal"; 
+                                    document.getElementById(label_content_id).style.fontWeight  = "inherit"; 
                                   }}
                                 
                             }}
@@ -1095,7 +1095,7 @@ def heatmap(shap_values):
                     document.getElementById(token).style.backgroundColor  = "transparent";
                     document.getElementById(token).previousElementSibling.style.display = 'none';
                     document.getElementById(token).parentNode.style.display = 'inline';
-                    document.getElementById(token).style.fontWeight = 'normal';
+                    document.getElementById(token).style.fontWeight = 'inherit';
                 }}
             }}
             
