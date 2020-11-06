@@ -709,6 +709,44 @@ def saliency_plot(shap_values):
             input_colors.append(input_colors_row)
         
         return input_colors
+    
+    
+    model_input = shap_values.data
+    model_output = shap_values.output_names
+    
+    input_colors = get_colors(shap_values)
+    
+    out = '<table border = "1" cellpadding = "5" cellspacing = "5" style="overflow-x:scroll;display:block;">'
+    
+    # add top row containing input tokens
+    out += '<tr>'
+    out += '<th></th>'
+    for j in range(model_input.shape[0]):
+        out += '<th>' + model_input[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+    out += '</tr>'
+    
+    for row_index in range(model_output.shape[0]):
+        out += '<tr>'
+        out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+        for col_index in range(model_input.shape[0]):
+            out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(shap_values.values[col_index][row_index],3)) + '</th>'
+        out += '</tr>'
+            
+    out += '</table>'
+            
+    saliency_plot_html = f"""
+        <div id="{uuid}_saliency_plot" class="{uuid}_viz_content">
+            <div style="margin:5px;font-family:sans-serif;font-weight:bold;">
+                <span style="font-size: 20px;"> Saliency Plot </span>
+                <br>
+                x-axis: Output Text
+                <br>
+                y-axis: Input Text
+            </div>
+            {out}
+        </div>
+    """
+    return saliency_plot_html
 
 
 def heatmap(shap_values):
