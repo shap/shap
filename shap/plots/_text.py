@@ -982,7 +982,7 @@ def heatmap(shap_values):
                     label_content_id = token_id_to_node_id_mapping_{uuid}[{uuid}_heatmap_flat_state][id];
                     
                     if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none'){{
-                        document.getElementById(label_content_id).style.fontWeight  = "bold";
+                        document.getElementById(label_content_id).style.textShadow = "0px 0px 1px #000000";
                     }}
                     
                 }}
@@ -1000,7 +1000,7 @@ def heatmap(shap_values):
                     label_content_id = token_id_to_node_id_mapping_{uuid}[{uuid}_heatmap_flat_state][id];
                     
                     if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none'){{
-                        document.getElementById(label_content_id).style.fontWeight  = "inherit";
+                        document.getElementById(label_content_id).style.textShadow = "inherit";
                     }}
                     
                 }}
@@ -1047,12 +1047,12 @@ def heatmap(shap_values):
                                 if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none') {{
                                     document.getElementById(label_content_id).previousElementSibling.style.display = 'block';
                                     document.getElementById(label_content_id).parentNode.style.display = 'inline-block';
-                                    document.getElementById(label_content_id).style.fontWeight  = "bold"; 
+                                    document.getElementById(label_content_id).style.textShadow = "0px 0px 1px #000000";
                                   }}
                                 else {{
                                     document.getElementById(label_content_id).previousElementSibling.style.display = 'none';
                                     document.getElementById(label_content_id).parentNode.style.display = 'inline';
-                                    document.getElementById(label_content_id).style.fontWeight  = "inherit"; 
+                                    document.getElementById(label_content_id).style.textShadow  = "inherit"; 
                                   }}
                                 
                             }}
@@ -1095,7 +1095,7 @@ def heatmap(shap_values):
                     document.getElementById(token).style.backgroundColor  = "transparent";
                     document.getElementById(token).previousElementSibling.style.display = 'none';
                     document.getElementById(token).parentNode.style.display = 'inline';
-                    document.getElementById(token).style.fontWeight = 'inherit';
+                    document.getElementById(token).style.textShadow  = "inherit"; 
                 }}
             }}
             
