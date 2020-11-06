@@ -696,15 +696,31 @@ def saliency_plot(shap_values):
     
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
     
+    clustering = getattr(shap_values, "clustering", None)
+    unpacked_values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(shap_values.data, unpacked_values[:,0], 1, '', clustering, True)
+    
+    
+    def compress_shap_matrix(shap_matrix,group_sizes):
+        compressed_martix = np.zeros((group_sizes.shape[0],shap_matrix.shape[1]))
+        counter = 0
+        for index in range(len(group_sizes)):
+            compressed_martix[index,:] = np.sum(shap_matrix[counter:counter+group_sizes[index],:],axis=0)
+            counter+=group_sizes[index]
+
+        return compressed_martix
+    
+    compressed_shap_matrix = compress_shap_matrix(shap_values.values,group_sizes)
+    
     # generate background colors of saliency plot
     
     def get_colors(shap_values):
         input_colors = []
-        cmax = max(abs(shap_values.values.min()), abs(shap_values.values.max()))
-        for row_index in range(shap_values.values.shape[0]):
+        cmax = max(abs(compressed_shap_matrix.min()), abs(compressed_shap_matrix.max()))
+        for row_index in range(compressed_shap_matrix.shape[0]):
             input_colors_row = []
-            for col_index in range(shap_values.values.shape[1]):
-                scaled_value = 0.5 + 0.5 * shap_values.values[row_index,col_index] / cmax
+            for col_index in range(compressed_shap_matrix.shape[1]):
+                scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index,col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
                 color = 'rgba'+str((color[0]*255, color[1]*255, color[2]*255, color[3]))
                 input_colors_row.append(color)
@@ -723,15 +739,15 @@ def saliency_plot(shap_values):
     # add top row containing input tokens
     out += '<tr>'
     out += '<th></th>'
-    for j in range(model_input.shape[0]):
-        out += '<th>' + model_input[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+    for j in range(compressed_shap_matrix.shape[0]):
+        out += '<th>' + tokens[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
     out += '</tr>'
     
-    for row_index in range(model_output.shape[0]):
+    for row_index in range(compressed_shap_matrix.shape[1]):
         out += '<tr>'
         out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
-        for col_index in range(model_input.shape[0]):
-            out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(shap_values.values[col_index][row_index],3)) + '</th>'
+        for col_index in range(compressed_shap_matrix.shape[0]):
+            out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(compressed_shap_matrix[col_index][row_index],3)) + '</th>'
         out += '</tr>'
             
     out += '</table>'
@@ -749,7 +765,6 @@ def saliency_plot(shap_values):
         </div>
     """
     return saliency_plot_html
-
 
 def heatmap(shap_values):
     
