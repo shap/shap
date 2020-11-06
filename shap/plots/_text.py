@@ -247,6 +247,8 @@ def process_shap_values(tokens, values, group_threshold, separator, clustering =
         M = len(tokens) 
     else:
         group_sizes = np.ones(M)
+        token_id_to_node_id_mapping = np.arange(M)
+        collapsed_node_ids = np.arange(M)
 
     if return_meta_data:
         return tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids
