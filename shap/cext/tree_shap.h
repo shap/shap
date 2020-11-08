@@ -71,6 +71,10 @@ struct TreeEnsemble {
         tree.num_outputs = num_outputs;
     }
 
+    bool is_leaf(unsigned pos){
+        return children_left[pos] < 0;
+    }
+
     void allocate(unsigned tree_limit_in, unsigned max_nodes_in, unsigned num_outputs_in) {
         tree_limit = tree_limit_in;
         max_nodes = max_nodes_in;
@@ -178,7 +182,7 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
         const unsigned feature = trees.features[pos];
         
         // we hit a leaf so return a pointer to the values
-        if (trees.children_left[pos] < 0) {
+        if (trees.is_leaf(pos) < 0) {
             return trees.values + pos * trees.num_outputs;
         }
         
@@ -301,7 +305,7 @@ inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const Explanation
 /**
  * This runs Tree SHAP with a per tree path conditional dependence assumption.
  */
-void dense_tree_saabas(tfloat *out_contribs, const TreeEnsemble& trees, const ExplanationDataset &data) {
+inline void dense_tree_saabas(tfloat *out_contribs, const TreeEnsemble& trees, const ExplanationDataset &data) {
     tfloat *instance_out_contribs;
     TreeEnsemble tree;
     ExplanationDataset instance;
@@ -543,7 +547,7 @@ inline void tree_shap(const TreeEnsemble& tree, const ExplanationDataset &data,
 }
 
 
-unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEnsemble &trees,
+inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEnsemble &trees,
                                      const tfloat *data, const bool *data_missing, int *data_inds,
                                      const unsigned num_background_data_inds, unsigned num_data_inds,
                                      unsigned M, unsigned row = 0, unsigned i = 0, unsigned pos = 0,
@@ -674,7 +678,7 @@ unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEnsemble 
 }
 
 
-void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &data, const TreeEnsemble &trees) {
+inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &data, const TreeEnsemble &trees) {
     
     // create a joint data matrix from both X and R matrices
     tfloat *joined_data = new tfloat[(data.num_X + data.num_R) * data.M];
@@ -1113,7 +1117,7 @@ inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i
 /**
  * Runs Tree SHAP with feature independence assumptions on dense data.
  */
-void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data,
+inline void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data,
                        tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
 
     // reformat the trees for faster access
@@ -1261,7 +1265,7 @@ void dense_independent(const TreeEnsemble& trees, const ExplanationDataset &data
 /**
  * This runs Tree SHAP with a per tree path conditional dependence assumption.
  */
-void dense_tree_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
+inline void dense_tree_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
                                tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
     tfloat *instance_out_contribs;
     TreeEnsemble tree;
@@ -1302,7 +1306,7 @@ void dense_tree_path_dependent(const TreeEnsemble& trees, const ExplanationDatas
 //         phi /= self.tree_limit
 //         return phi
 
-void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
+inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
                                             tfloat *out_contribs,
                                             tfloat transform(const tfloat, const tfloat)) {
 
@@ -1390,7 +1394,7 @@ void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, const Exp
  * this method allows arbitrary marginal transformations and also ensures that all the
  * evaluations of the model are consistent with some training data point.
  */
-void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
+inline void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDataset &data,
                                  tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
 
     // allocate space for our new merged tree (we save enough room to totally split all samples if need be)
@@ -1427,7 +1431,7 @@ void dense_global_path_dependent(const TreeEnsemble& trees, const ExplanationDat
 /**
  * The main method for computing Tree SHAP on models using dense data.
  */
-void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, tfloat *out_contribs,
+inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset &data, tfloat *out_contribs,
                      const int feature_dependence, unsigned model_transform, bool interactions) {
 
     // see what transform (if any) we have

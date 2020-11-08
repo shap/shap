@@ -4,7 +4,7 @@ import os
 import re
 import codecs
 import platform
-from distutils.sysconfig import get_config_var
+from distutils.sysconfig import get_config_var, get_python_inc
 from distutils.version import LooseVersion
 import sys
 
@@ -27,9 +27,11 @@ if sys.platform == 'darwin':
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+
 def read(*parts):
     with codecs.open(os.path.join(here, *parts), 'r') as fp:
         return fp.read()
+
 
 def find_version(*file_paths):
     version_file = read(*file_paths)
@@ -37,6 +39,7 @@ def find_version(*file_paths):
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
+
 
 # Extend the default build_ext class to bootstrap numpy installation
 # that are needed to build C extensions.
@@ -53,15 +56,41 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True, test_spark=True, test_pyod=True):
+def compile_cuda_module(host_args):
+    lib_extension = '.lib' if sys.platform == 'win32' else '.a'
+    lib_out = 'build/_cext_gpu' + lib_extension
+    os.system(
+        "nvcc shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} --extended-lambda".format(
+            lib_out,
+            ','.join(host_args),
+            get_python_inc()))
+    return 'build', '_cext_gpu'
+
+
+def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
+              test_spark=True, test_pyod=True, with_cuda=True):
     ext_modules = []
     if with_binary:
         compile_args = []
         if sys.platform == 'zos':
             compile_args.append('-qlonglong')
+        if sys.platform == 'win32':
+            compile_args.append('/MD')
+
         ext_modules.append(
-            Extension('shap._cext', sources=['shap/_cext.cc'], extra_compile_args=compile_args)
-        )
+            Extension('shap._cext', sources=['shap/cext/_cext.cc'],
+                      extra_compile_args=compile_args))
+        if with_cuda:
+            lib_dir, lib = compile_cuda_module(compile_args)
+            cudart_path = os.environ['CUDA_PATH'] + '/lib'
+            if sys.platform == 'win32':
+                cudart_path += '/x64'
+            ext_modules.append(
+                Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
+                          extra_compile_args=compile_args,
+                          library_dirs=[lib_dir, cudart_path],
+                          libraries=[lib, 'cudart'])
+            )
 
     tests_require = ['pytest', 'pytest-mpl', 'pytest-cov']
     if test_xgboost:
@@ -99,9 +128,12 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         name='shap',
         version=find_version("shap", "__init__.py"),
         description='A unified approach to explain the output of any machine learning model.',
-        long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain the output of " + \
-                         "any machine learning model. SHAP connects game theory with local explanations, uniting " + \
-                         "several previous methods and representing the only possible consistent and locally accurate " + \
+        long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain "
+                         "the output of " + \
+                         "any machine learning model. SHAP connects game theory with local "
+                         "explanations, uniting " + \
+                         "several previous methods and representing the only possible consistent "
+                         "and locally accurate " + \
                          "additive feature attribution method based on expectations.",
         long_description_content_type="text/markdown",
         url='http://github.com/slundberg/shap',
@@ -112,15 +144,16 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
             'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers._deep',
             'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils'
         ],
-        package_data={'shap': ['plots/resources/*', 'tree_shap.h']},
+        package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', 'slicer==0.0.3', 'numba'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
+                          'slicer==0.0.3', 'numba'],
         extras_require=extras_require,
         ext_modules=ext_modules,
         classifiers=[
-          'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.6',
         ],
         zip_safe=False
         # python_requires='>3.0' we will add this at some point
@@ -149,7 +182,14 @@ def try_run_setup(**kwargs):
             try_run_setup(**kwargs)
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
-            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+            print(
+                "WARNING: The C extension could not be compiled, sklearn tree models not "
+                "supported.")
+            try_run_setup(**kwargs)
+        elif kwargs["with_cuda"]:
+            kwargs["with_cuda"] = False
+            print(
+                "WARNING: Could not compile cuda extensions")
             try_run_setup(**kwargs)
         elif "pyod" in str(e).lower():
             kwargs["test_pyod"] = False
@@ -157,6 +197,7 @@ def try_run_setup(**kwargs):
             try_run_setup(**kwargs)
         else:
             print("ERROR: Failed to build!")
+
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
