@@ -53,7 +53,7 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True, test_spark=True):
+def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True, test_spark=True, test_pyod=True):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -72,6 +72,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         tests_require += ['catboost']
     if test_spark:
         tests_require += ['pyspark']
+    if test_pyod:
+        tests_require += ['pyod']
 
     extras_require = {
         'plots': [
