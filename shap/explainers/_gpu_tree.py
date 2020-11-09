@@ -103,7 +103,7 @@ class GPUTree(Tree):
                                                        "feature_perturbation=\"interventional\"."
 
         # run the core algorithm using the C extension
-        assert_import("cext")
+        assert_import("cext_gpu")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, self.model.num_outputs))
         _cext_gpu.dense_tree_shap(
             self.model.children_left, self.model.children_right, self.model.children_default,

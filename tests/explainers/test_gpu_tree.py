@@ -37,7 +37,7 @@ def test_xgboost_direct():
     xgboost = pytest.importorskip("xgboost")
     N = 100
     M = 4
-    X = np.random.randn(N,M)
+    X = np.random.randn(N, M)
     y = np.random.randn(N)
 
     model = xgboost.XGBRegressor()
@@ -46,4 +46,4 @@ def test_xgboost_direct():
     explainer = shap.GPUTreeExplainer(model)
     shap_values = explainer.shap_values(X)
 
-    assert np.allclose(shap_values[0,:], _brute_force_tree_shap(explainer.model, X[0,:]))
+    assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))

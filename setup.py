@@ -60,7 +60,8 @@ def compile_cuda_module(host_args):
     lib_extension = '.lib' if sys.platform == 'win32' else '.a'
     lib_out = 'build/_cext_gpu' + lib_extension
     os.system(
-        "nvcc shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} --extended-lambda".format(
+        "nvcc shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} --extended-lambda "
+        "--expt-relaxed-constexpr".format(
             lib_out,
             ','.join(host_args),
             get_python_inc()))
@@ -89,7 +90,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
                 Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
                           extra_compile_args=compile_args,
                           library_dirs=[lib_dir, cudart_path],
-                          libraries=[lib, 'cudart'])
+                          libraries=[lib, 'cudart'],
+                          depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h'])
             )
 
     tests_require = ['pytest', 'pytest-mpl', 'pytest-cov']

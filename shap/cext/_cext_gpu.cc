@@ -160,6 +160,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
 
     dense_tree_shap_gpu(trees, data, out_contribs, feature_dependence, model_output, interactions);
 
+
     // retrieve return value before python cleanup of objects
     tfloat ret_value = (double)values[0];
 

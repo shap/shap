@@ -71,7 +71,7 @@ struct TreeEnsemble {
         tree.num_outputs = num_outputs;
     }
 
-    bool is_leaf(unsigned pos){
+    bool is_leaf(unsigned pos)const {
         return children_left[pos] < 0;
     }
 
@@ -182,7 +182,7 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
         const unsigned feature = trees.features[pos];
         
         // we hit a leaf so return a pointer to the values
-        if (trees.is_leaf(pos) < 0) {
+        if (trees.is_leaf(pos)) {
             return trees.values + pos * trees.num_outputs;
         }
         
