@@ -151,9 +151,13 @@ def try_run_setup(**kwargs):
             kwargs["with_binary"] = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
             try_run_setup(**kwargs)
+        elif "pyod" in str(e).lower():
+            kwargs["test_pyod"] = False
+            print("Couldn't install PyOD for testing!")
+            try_run_setup(**kwargs)
         else:
             print("ERROR: Failed to build!")
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_spark=True)
+    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_spark=True, test_pyod=True)
