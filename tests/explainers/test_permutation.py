@@ -23,6 +23,24 @@ def test_single_class_independent():
     
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model.predict(X[:100])) < 1e6)
 
+def test_single_class_independent_auto_api():
+    xgboost = pytest.importorskip('xgboost')
+
+    # get a dataset on income prediction
+    X,y = shap.datasets.adult()
+    X = X.iloc[:100]
+    y = y[:100]
+    
+    # train an XGBoost model (but any other model type would also work)
+    model = xgboost.XGBClassifier()
+    model.fit(X, y)
+
+    # build an Exact explainer and explain the model predictions on the given dataset
+    explainer = shap.Explainer(model.predict, X, algorithm="permutation")
+    shap_values = explainer(X)
+    
+    assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model.predict(X[:100])) < 1e6)
+
 def test_multi_class_independent():
     xgboost = pytest.importorskip('xgboost')
     # get a dataset on income prediction

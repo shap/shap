@@ -19,7 +19,7 @@ from .. import links
 
 class Partition(Explainer):
     
-    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity):
+    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, feature_names=None):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
@@ -65,7 +65,7 @@ class Partition(Explainer):
         See :ref:`Partition Explainer Examples <partition_explainer_examples>`
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names)
+        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
 
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         
@@ -186,7 +186,7 @@ class Partition(Explainer):
             "output_indices": outputs
         }
 
-    def owen(self, fm, f00, f11, npartitions, output_indexes, fixed_context, batch_size, silent):
+    def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
         """
         
@@ -219,13 +219,13 @@ class Partition(Explainer):
         q = queue.PriorityQueue()
         q.put((0, 0, (m00, f00, f11, ind, 1.0)))
         eval_count = 0
-        total_evals = min(npartitions, (M-1)*M) # TODO: (len(x)-1)*len(x) is only right for balanced partition trees
+        total_evals = min(max_evals, (M-1)*M) # TODO: (len(x)-1)*len(x) is only right for balanced partition trees, but this is just for plotting progress...
         pbar = None
         start_time = time.time()
         while not q.empty():
 
             # if we passed our execution limit then leave everything else on the internal nodes
-            if eval_count >= npartitions:
+            if eval_count >= max_evals:
                 while not q.empty():
                     m00, f00, f11, ind, weight = q.get()[2]
                     self.dvalues[ind] += (f11 - f00) * weight
@@ -234,7 +234,7 @@ class Partition(Explainer):
             # create a batch of work to do
             batch_args = []
             batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count < npartitions:
+            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:
                 
                 # get our next set of arguments
                 m00, f00, f11, ind, weight = q.get()[2]

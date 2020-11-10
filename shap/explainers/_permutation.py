@@ -20,7 +20,7 @@ class Permutation(Explainer):
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
     """
 
-    def __init__(self, model, masker, link=links.identity):
+    def __init__(self, model, masker, link=links.identity, feature_names=None):
         """ Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
@@ -36,7 +36,7 @@ class Permutation(Explainer):
             instead of a function and that matrix will be used for masking. To use a clustering
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
-        super(Permutation, self).__init__(model, masker, link=link)
+        super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
 
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):

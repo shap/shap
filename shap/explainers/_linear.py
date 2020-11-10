@@ -267,7 +267,7 @@ class Linear(Explainer):
 
         try:
             Linear._parse_model(model)
-        except e:
+        except:
             return False
         return True
 

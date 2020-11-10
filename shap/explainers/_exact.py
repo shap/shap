@@ -25,7 +25,7 @@ class Exact(Explainer):
     and a greedly sorting method for hclustering structured maskers.
     """
 
-    def __init__(self, model, masker, link=links.identity):
+    def __init__(self, model, masker, link=links.identity, feature_names=None):
         """ Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
@@ -48,7 +48,7 @@ class Exact(Explainer):
             units. For more details on how link functions work see any overview of link functions for generalized
             linear models.
         """
-        super(Exact, self).__init__(model, masker, link=link)
+        super(Exact, self).__init__(model, masker, link=link, feature_names=feature_names)
 
         if getattr(masker, "clustering", None) is not None:
             self._partition_masks,self._partition_masks_inds = partition_masks(masker.clustering)

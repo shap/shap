@@ -260,16 +260,13 @@ def test_pyspark_regression_decision_tree():
 
     regressors = [
         pyspark.ml.regression.GBTRegressor(labelCol="sepal_length", featuresCol="features"),
-        pyspark.ml.regression.RandomForestRegressor(labelCol="sepal_length",
-                                                        featuresCol="features"),
-        pyspark.ml.regression.DecisionTreeRegressor(labelCol="sepal_length",
-                                                        featuresCol="features")]
+        pyspark.ml.regression.RandomForestRegressor(labelCol="sepal_length", featuresCol="features"),
+        pyspark.ml.regression.DecisionTreeRegressor(labelCol="sepal_length", featuresCol="features")
+    ]
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
-        X = pd.DataFrame(
-            data=iris_sk.data, columns=iris_sk.feature_names).drop(  # pylint: disable=E1101
-            'sepal length (cm)', 1)[:100]
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', 1)[:100] # pylint: disable=E1101
 
         shap_values = explainer.shap_values(X)
         expected_values = explainer.expected_value
@@ -745,12 +742,10 @@ def test_isolation_forest():
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 def test_pyod_isolation_forest():
-    import shap
-    import numpy as np
-    from pyod.models.iforest import IForest
-    from sklearn.ensemble.iforest import _average_path_length
+    IForest = pytest.importorskip("pyod.models.iforest.IForest")
+    _average_path_length = pytest.importorskip("sklearn.ensemble.iforest._average_path_length")
 
-    X,_ = shap.datasets.boston()
+    X, _ = shap.datasets.boston()
     for max_features in [1.0, 0.75]:
         iso = IForest(max_features=max_features)
         iso.fit(X)
