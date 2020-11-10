@@ -619,6 +619,11 @@ class TreeEnsemble:
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing) for e, f in zip(model.estimators_, model.estimators_features_)]
             self.tree_output = "raw_value"
+        elif safe_isinstance(model, ["pyod.models.iforest.IForest"]):
+            self.dtype = np.float32
+            scaling = 1.0 / len(model.estimators_) # output is average of trees
+            self.trees = [IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing) for e, f in zip(model.detector_.estimators_, model.detector_.estimators_features_)]
+            self.tree_output = "raw_value"
         elif safe_isinstance(model, "skopt.learning.forest.RandomForestRegressor"):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
