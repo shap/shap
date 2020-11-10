@@ -3,7 +3,6 @@ import numpy as np
 import warnings
 from ..utils import assert_import,  safe_isinstance
 from .. import _cext_gpu
-from .. import _cext
 
 
 class GPUTree(Tree):
@@ -137,5 +136,85 @@ class GPUTree(Tree):
         # then we do that here
         if self.model.model_output == "probability_doubled":
             out = [-out, out]
+
+        return out
+
+    def shap_interaction_values(self, X, y=None, tree_limit=None):
+        """ Estimate the SHAP interaction values for a set of samples.
+
+        Parameters
+        ----------
+        X : numpy.array, pandas.DataFrame or catboost.Pool (for catboost)
+            A matrix of samples (# samples x # features) on which to explain the model's output.
+
+        y : numpy.array
+            An array of label values for each sample. Used when explaining loss functions (not yet supported).
+
+        tree_limit : None (default) or int
+            Limit the number of trees used by the model. By default None means no use the limit of the
+            original model, and -1 means no limit.
+
+        Returns
+        -------
+        array or list
+            For models with a single output this returns a tensor of SHAP values
+            (# samples x # features x # features). The matrix (# features x # features) for each sample sums
+            to the difference between the model output for that sample and the expected value of the model output
+            (which is stored in the expected_value attribute of the explainer). Each row of this matrix sums to the
+            SHAP value for that feature for that sample. The diagonal entries of the matrix represent the
+            "main effect" of that feature on the prediction and the symmetric off-diagonal entries represent the
+            interaction effects between all pairs of features for that sample. For models with vector outputs
+            this returns a list of tensors, one for each output.
+        """
+
+        assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"
+        transform = "identity"
+
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
+
+        # convert dataframes
+        if safe_isinstance(X, "pandas.core.series.Series"):
+            X = X.values
+        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            X = X.values
+        flat_output = False
+        if len(X.shape) == 1:
+            flat_output = True
+            X = X.reshape(1, X.shape[0])
+        if X.dtype != self.model.input_dtype:
+            X = X.astype(self.model.input_dtype)
+        X_missing = np.isnan(X, dtype=np.bool)
+        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
+        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
+
+        if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
+            tree_limit = self.model.values.shape[0]
+
+        # run the core algorithm using the C extension
+        assert_import("cext_gpu")
+        phi = np.zeros((X.shape[0], X.shape[1]+1, X.shape[1]+1, self.model.num_outputs))
+        _cext_gpu.dense_tree_shap(
+            self.model.children_left, self.model.children_right, self.model.children_default,
+            self.model.features, self.model.thresholds, self.model.values, self.model.node_sample_weight,
+            self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
+            self.model.base_offset, phi, feature_perturbation_codes[self.feature_perturbation],
+            output_transform_codes[transform], True
+        )
+
+        # note we pull off the last column and keep it as our expected_value
+        if self.model.num_outputs == 1:
+            self.expected_value = phi[0, -1, -1, 0]
+            if flat_output:
+                out = phi[0, :-1, :-1, 0]
+            else:
+                out = phi[:, :-1, :-1, 0]
+        else:
+            self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
+            if flat_output:
+                out = [phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)]
+            else:
+                out = [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)]
 
         return out

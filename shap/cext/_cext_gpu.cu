@@ -114,15 +114,42 @@ inline void dense_tree_path_dependent_gpu(
   thrust::device_vector<float> phis((X.NumCols() + 1) * X.NumRows());
   gpu_treeshap::GPUTreeShap(X, paths.begin(), paths.end(), 1, phis.data().get(),
                             phis.size());
+  // Add the base offset term to bias
+  auto base_offset = trees.base_offset[0];
+  auto counting = thrust::make_counting_iterator(size_t(0));
+  auto d_phis = phis.data().get();
+  thrust::for_each(counting, counting + X.NumRows(),
+                   [=] __device__(size_t row_idx) {
+                     auto phi_idx = gpu_treeshap::IndexPhi(
+                         row_idx, 1, 0, X.NumCols(), X.NumCols());
+                     d_phis[phi_idx] += base_offset;
+                   });
   thrust::copy(phis.begin(), phis.end(), out_contribs);
-  //      for(auto e:paths){
-  //      std::cout << e.path_idx<<"\n";
-  //      std::cout << e.feature_idx<<"\n";
-  //      std::cout << e.feature_lower_bound<<"\n";
-  //      std::cout << e.feature_upper_bound<<"\n";
-  //      std::cout << e.v<<"\n";
-  //      std::cout << "\n";
-  //      }
+}
+
+inline void dense_tree_path_dependent_interactions_gpu(
+    const TreeEnsemble &trees, const ExplanationDataset &data,
+    tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
+  auto paths = ExtractPaths(trees);
+  DeviceExplanationDataset device_data(data);
+  DeviceExplanationDataset::DenseDatasetWrapper X =
+      device_data.GetDeviceAccessor();
+
+  thrust::device_vector<float> phis((X.NumCols() + 1) * (X.NumCols() + 1) *
+                                    X.NumRows());
+  gpu_treeshap::GPUTreeShapInteractions(X, paths.begin(), paths.end(), 1,
+                                        phis.data().get(), phis.size());
+  // Add the base offset term to bias
+  auto base_offset = trees.base_offset[0];
+  auto counting = thrust::make_counting_iterator(size_t(0));
+  auto d_phis = phis.data().get();
+  thrust::for_each(counting, counting + X.NumRows(),
+                   [=] __device__(size_t row_idx) {
+                     auto phi_idx = gpu_treeshap::IndexPhiInteractions(
+                         row_idx, 1, 0, X.NumCols(), X.NumCols(), X.NumCols());
+                     d_phis[phi_idx] += base_offset;
+                   });
+  thrust::copy(phis.begin(), phis.end(), out_contribs);
 }
 
 void dense_tree_shap_gpu(const TreeEnsemble &trees,
@@ -132,11 +159,6 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
   // see what transform (if any) we have
   transform_f transform = get_transform(model_transform);
 
-  if (interactions) {
-    std::cerr << "Interactions not yet supported\n";
-    return;
-  }
-
   // dispatch to the correct algorithm handler
   switch (feature_dependence) {
     case FEATURE_DEPENDENCE::independent:
@@ -145,7 +167,8 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
 
     case FEATURE_DEPENDENCE::tree_path_dependent:
       if (interactions) {
-        std::cerr << "Interactions not yet supported\n";
+        dense_tree_path_dependent_interactions_gpu(trees, data, out_contribs,
+                                                   transform);
       } else {
         dense_tree_path_dependent_gpu(trees, data, out_contribs, transform);
       }
