@@ -20,7 +20,7 @@ install:
 - pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint
 script:
   - python -m pytest tests
-  - pylint tests/explainers/tree.py
+  - pylint tests/explainers/test_tree.py
 after_success:
   - codecov
 deploy:
