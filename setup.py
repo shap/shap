@@ -203,4 +203,5 @@ def try_run_setup(**kwargs):
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_spark=True, test_pyod=True)
+    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_spark=True,
+                  test_pyod=True, with_cuda=True)

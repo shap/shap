@@ -4,6 +4,12 @@ import sklearn
 import pytest
 import numpy as np
 import shap
+from shap.utils import assert_import
+
+try:
+    assert_import("cext_gpu")
+except ImportError:
+    pytestmark = pytest.mark.skip("cuda module not built")
 
 
 def test_front_page_xgboost():

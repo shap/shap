@@ -1,8 +1,11 @@
 """GPU accelerated tree explanations"""
 import numpy as np
 from ._tree import Tree, feature_perturbation_codes, output_transform_codes
-from ..utils import assert_import
-from .. import _cext_gpu
+from ..utils import assert_import, record_import_error
+try:
+    from .. import _cext_gpu
+except ImportError as e:
+    record_import_error("cext_gpu", "cuda extension was not built during install!", e)
 
 
 class GPUTree(Tree):
