@@ -1,8 +1,9 @@
-import matplotlib
-import shap
+# pylint: disable=missing-function-docstring
+"""Test gpu accelerated tree functions."""
 import sklearn
 import pytest
 import numpy as np
+import shap
 
 
 def test_front_page_xgboost():
@@ -33,7 +34,7 @@ def test_front_page_xgboost():
     shap.summary_plot(shap_values, X, show=False)
 
 
-rs = np.random.RandomState(15921)
+rs = np.random.RandomState(15921)  # pylint: disable=no-member
 n = 100
 m = 4
 datasets = {'regression': (rs.randn(n, m), rs.randn(n)),
@@ -49,6 +50,7 @@ def task_xfail(func):
 
 
 def xgboost_base():
+    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -61,6 +63,7 @@ def xgboost_base():
 
 
 def xgboost_regressor():
+    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -74,6 +77,7 @@ def xgboost_regressor():
 
 
 def xgboost_binary_classifier():
+    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -88,6 +92,7 @@ def xgboost_binary_classifier():
 
 @task_xfail
 def xgboost_multiclass_classifier():
+    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -101,6 +106,7 @@ def xgboost_multiclass_classifier():
 
 
 def lightgbm_base():
+    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -113,6 +119,7 @@ def lightgbm_base():
 
 
 def lightgbm_regression():
+    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -125,6 +132,7 @@ def lightgbm_regression():
 
 
 def lightgbm_binary_classifier():
+    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -138,6 +146,7 @@ def lightgbm_binary_classifier():
 
 @task_xfail
 def lightgbm_multiclass_classifier():
+    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -180,7 +189,7 @@ tasks = [xgboost_base(), xgboost_regressor(), xgboost_binary_classifier(),
 
 # pretty print tasks
 def idfn(task):
-    model, X, margin = task
+    model, _, _ = task
     return type(model).__module__ + '.' + type(model).__qualname__
 
 
