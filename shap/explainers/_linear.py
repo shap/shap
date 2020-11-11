@@ -58,11 +58,10 @@ class Linear(Explainer):
         elif feature_perturbation == "correlation":
             warnings.warn('The option feature_perturbation="correlation" is has been renamed to feature_perturbation="correlation_dependent"!')
             feature_perturbation = "correlation_dependent"
-        elif feature_perturbation is None:
-            #warnings.warn('The default value for feature_perturbation has been changed to "interventional"!')
-            feature_perturbation = "interventional"
         if feature_perturbation is not None:
             warnings.warn("The feature_perturbation option is now deprecated in favor of using the appropriate masker (maskers.Independent, or maskers.Impute)")
+        else:
+            feature_perturbation = "interventional"
         self.feature_perturbation = feature_perturbation
 
         if issubclass(type(masker), tuple) and len(masker) == 2:

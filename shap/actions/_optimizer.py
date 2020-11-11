@@ -24,7 +24,7 @@ class ActionOptimizer():
                     v._grouped_index = i
                 self.action_groups.append(group)
             else:
-                raise Exception("A passed action was not an Action of list of actions!")
+                raise Exception("A passed action was not an Action or list of actions!")
         
     def __call__(self, *args, max_evals=10000):
         
@@ -72,15 +72,14 @@ class ActionOptimizer():
                     # we are adding a new action type
                     if prev_in_group == -1:
                         new_actions = actions + [group[next_ind]]
-                    
                     # we are moving from one action to a more expensive one in the same group
                     elif next_ind < len(group):
                         new_actions = copy.copy(actions)
                         new_actions[prev_in_group] = group[next_ind]
-                    
                     # we don't have a more expensive action left in this group
                     else:
-                        continue
+                        new_actions = None
                     
                     # add the new option to our queue
-                    q.put((sum([a.cost for a in new_actions]), new_actions))
+                    if new_actions is not None:
+                        q.put((sum([a.cost for a in new_actions]), new_actions))

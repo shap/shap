@@ -1,48 +1,60 @@
+""" Unit tests for the Linear explainer.
+"""
+
+# pylint: disable=missing-function-docstring
+import numpy as np
+import scipy
+import pytest
+import shap
 
 
 def test_tied_pair():
-    import numpy as np
-    import shap
     np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
-    X = np.ones((1,3))
+    X = np.ones((1, 3))
     explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="correlation")
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
-def test_tied_pair_new():
-    import numpy as np
-    import shap
+def test_tied_pair_independent():
     np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
-    X = np.ones((1,3))
-    explainer = shap.LinearExplainer((beta, 0), shap.maskers.Impute({"mean": mu, "cov": Sigma}))
+    X = np.ones((1, 3))
+    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="independent")
+    assert np.abs(explainer.shap_values(X) - np.array([1, 0, 0])).max() < 0.05
+
+def test_tied_pair_new():
+    np.random.seed(0)
+    beta = np.array([1, 0, 0])
+    mu = np.zeros(3)
+    Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
+    X = np.ones((1, 3))
+    explainer = shap.explainers.Linear((beta, 0), shap.maskers.Impute({"mean": mu, "cov": Sigma}))
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
+def test_wrong_masker():
+    with pytest.raises(Exception):
+        shap.explainers.Linear((0, 0), shap.maskers.Image("blur(10,10)", (10,10,3)))
+
 def test_tied_triple():
-    import numpy as np
-    import shap
     np.random.seed(0)
     beta = np.array([0, 1, 0, 0])
     mu = 1*np.ones(4)
     Sigma = np.array([[1, 0.999999, 0.999999, 0], [0.999999, 1, 0.999999, 0], [0.999999, 0.999999, 1, 0], [0, 0, 0, 1]])
-    X = 2*np.ones((1,4))
+    X = 2*np.ones((1, 4))
     explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="correlation")
     assert explainer.expected_value == 1
     assert np.abs(explainer.shap_values(X) - np.array([0.33333, 0.33333, 0.33333, 0])).max() < 0.05
 
 def test_sklearn_linear():
-    import numpy as np
-    import shap
     np.random.seed(0)
-    from sklearn.linear_model import Ridge
-    import shap
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X,y = shap.datasets.boston()
+    X, y = shap.datasets.boston()
     X = X[:100]
     y = y[:100]
     model = Ridge(0.1)
@@ -53,15 +65,45 @@ def test_sklearn_linear():
     assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
     explainer.shap_values(X)
 
-def test_sklearn_multiclass_no_intercept():
-    import numpy as np
-    import shap
+def test_sklearn_linear_old_style():
     np.random.seed(0)
-    from sklearn.linear_model import Ridge
-    import shap
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X,y = shap.datasets.boston()
+    X, y = shap.datasets.boston()
+    X = X[:100]
+    y = y[:100]
+    model = Ridge(0.1)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X, feature_perturbation="independent")
+    assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
+    explainer.shap_values(X)
+
+def test_sklearn_linear_new():
+    np.random.seed(0)
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
+
+    # train linear model
+    X, y = shap.datasets.boston()
+    X = X[:100]
+    y = y[:100]
+    model = Ridge(0.1)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.explainers.Linear(model, X)
+    shap_values = explainer(X)
+    assert np.abs(shap_values.values.sum(1) + shap_values.base_values - model.predict(X)).max() < 1e-6
+    assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6
+
+def test_sklearn_multiclass_no_intercept():
+    np.random.seed(0)
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
+
+    # train linear model
+    X, y = shap.datasets.boston()
     X = X[:100]
     y = y[:100]
 
@@ -76,16 +118,14 @@ def test_sklearn_multiclass_no_intercept():
     explainer.shap_values(X)
 
 def test_perfect_colinear():
-    import shap
-    from sklearn.linear_model import LinearRegression
-    import numpy as np
+    LinearRegression = pytest.importorskip('sklearn.linear_model').LinearRegression
 
-    X,y = shap.datasets.boston()
+    X, y = shap.datasets.boston()
     X = X[:100]
     y = y[:100]
-    X.iloc[:,0] = X.iloc[:,4] # test duplicated features
-    X.iloc[:,5] = X.iloc[:,6] - X.iloc[:,6] # test multiple colinear features
-    X.iloc[:,3] = 0 # test null features
+    X.iloc[:, 0] = X.iloc[:, 4] # test duplicated features
+    X.iloc[:, 5] = X.iloc[:, 6] - X.iloc[:, 6] # test multiple colinear features
+    X.iloc[:, 3] = 0 # test null features
     model = LinearRegression()
     model.fit(X, y)
     explainer = shap.LinearExplainer(model, X, feature_dependence="correlation")
@@ -93,9 +133,7 @@ def test_perfect_colinear():
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
 
 def test_shape_values_linear_many_features():
-    import numpy as np
-    import shap
-    from sklearn.linear_model import Ridge
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     np.random.seed(0)
 
@@ -110,7 +148,7 @@ def test_shape_values_linear_many_features():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.LinearExplainer(model, X.mean(0).reshape(1,-1))
+    explainer = shap.LinearExplainer(model, X.mean(0).reshape(1, -1))
 
     values = explainer.shap_values(X)
 
@@ -122,9 +160,7 @@ def test_shape_values_linear_many_features():
 def test_single_feature():
     """ Make sure things work with a univariate linear regression.
     """
-    import sklearn.linear_model
-    import numpy as np
-    import shap
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     np.random.seed(0)
 
@@ -133,7 +169,7 @@ def test_single_feature():
     y = 2 * X[:, 0] + 1 + np.random.normal(scale=0.1, size=100)
 
     # train linear model
-    model = sklearn.linear_model.Ridge(0.1)
+    model = Ridge(0.1)
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
@@ -145,11 +181,9 @@ def test_single_feature():
 def test_sparse():
     """ Validate running LinearExplainer on scipy sparse data
     """
-    import sklearn.linear_model
-    from sklearn.datasets import make_multilabel_classification
-    from scipy.special import expit
-    import numpy as np
-    import shap
+    #from scipy.special import expit
+    make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
+    LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
 
     np.random.seed(0)
     n_features = 20
@@ -160,10 +194,10 @@ def test_sparse():
                                           n_labels=2)
 
     # train linear model
-    model = sklearn.linear_model.LogisticRegression()
+    model = LogisticRegression()
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer.shap_values(X)
-    assert np.max(np.abs(expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
+    assert np.max(np.abs(scipy.special.expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
