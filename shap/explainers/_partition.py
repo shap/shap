@@ -19,7 +19,7 @@ from .. import links
 
 class Partition(Explainer):
     
-    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity):
+    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, feature_names=None):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
@@ -65,7 +65,7 @@ class Partition(Explainer):
         See :ref:`Partition Explainer Examples <partition_explainer_examples>`
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names)
+        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
 
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         
@@ -107,10 +107,18 @@ class Partition(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, **row_kwargs):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto", **row_kwargs):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
-
+        
+        if fixed_context == "auto":
+            fixed_context = None
+        elif fixed_context in [0,1,None]:
+            fixed_context = fixed_context 
+        else:
+            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+        
+        
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args, **row_kwargs)
 
@@ -142,7 +150,6 @@ class Partition(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        fixed_context = 1
         self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, fixed_context, batch_size, silent)
 
         # if False:
@@ -180,7 +187,7 @@ class Partition(Explainer):
             "output_names": fm.model_kwargs['output_names'] if 'output_names' in fm.model_kwargs else None
         }
 
-    def owen(self, fm, f00, f11, npartitions, output_indexes, fixed_context, batch_size, silent):
+    def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
         """
         
@@ -213,13 +220,13 @@ class Partition(Explainer):
         q = queue.PriorityQueue()
         q.put((0, 0, (m00, f00, f11, ind, 1.0)))
         eval_count = 0
-        total_evals = min(npartitions, (M-1)*M) # TODO: (len(x)-1)*len(x) is only right for balanced partition trees
+        total_evals = min(max_evals, (M-1)*M) # TODO: (len(x)-1)*len(x) is only right for balanced partition trees, but this is just for plotting progress...
         pbar = None
         start_time = time.time()
         while not q.empty():
 
             # if we passed our execution limit then leave everything else on the internal nodes
-            if eval_count >= npartitions:
+            if eval_count >= max_evals:
                 while not q.empty():
                     m00, f00, f11, ind, weight = q.get()[2]
                     self.dvalues[ind] += (f11 - f00) * weight
@@ -228,7 +235,7 @@ class Partition(Explainer):
             # create a batch of work to do
             batch_args = []
             batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count < npartitions:
+            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:
                 
                 # get our next set of arguments
                 m00, f00, f11, ind, weight = q.get()[2]

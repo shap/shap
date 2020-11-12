@@ -17,8 +17,10 @@ before_install:
 install:
 - python setup.py develop
 - pip install .[test]
-- pip install tensorflow xgboost matplotlib ipython codecov torch torchvision
-script: python -m pytest .
+- pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint
+script:
+  - python -m pytest tests
+  - pylint tests/explainers/test_tree.py
 after_success:
   - codecov
 deploy:

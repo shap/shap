@@ -3,10 +3,12 @@ from .. import links
 from ..utils import safe_isinstance, show_progress
 from .._explanation import Explanation
 import numpy as np
+import scipy as sp
+import copy
 
 
 class Explainer():
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, **kwargs):
         """ Uses Shapley values to explain any machine learning model or python function.
 
         This is the primary explainer interface for the SHAP library. It takes any combination
@@ -60,9 +62,10 @@ class Explainer():
 
         self.model = model
         self.output_names = output_names
+        self.feature_names = feature_names
         
         # wrap the incoming masker object as a shap.Masker object
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or (safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2):
+        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
@@ -71,6 +74,8 @@ class Explainer():
             self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
+        elif (masker is dict) and ("mean" in masker):
+            self.masker = maskers.Independent(masker)
         else:
             self.masker = masker
 
@@ -122,24 +127,27 @@ class Explainer():
                 
                 # if we get here then we don't know how to handle what was given to us
                 else:
-                    raise Exception("The passed model is not callable and cannot be analyzed directly with the given masker: " + str(model))
+                    raise Exception("The passed model is not callable and cannot be analyzed directly with the given masker! Model: " + str(model))
 
             # build the right subclass
             if algorithm == "exact":
                 self.__class__ = explainers.Exact
-                explainers.Exact.__init__(self, model, self.masker, link=self.link)
+                explainers.Exact.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "permutation":
                 self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, model, self.masker, link=self.link)
+                explainers.Permutation.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, model, self.masker, link=self.link, output_names = self.output_names)
+                explainers.Partition.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, output_names=self.output_names, **kwargs)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
-                explainers.Tree.__init__(self, model, self.masker, link=self.link)
+                explainers.Tree.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "additive":
                 self.__class__ = explainers.Additive
-                explainers.Additive.__init__(self, model, self.masker, link=self.link)
+                explainers.Additive.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+            elif algorithm == "linear":
+                self.__class__ = explainers.Linear
+                explainers.Linear.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
@@ -159,7 +167,12 @@ class Explainer():
         # parse our incoming arguments
         num_rows = None
         args = list(args)
-        feature_names = [None for _ in range(len(args))]
+        if self.feature_names is None:
+            feature_names = [None for _ in range(len(args))]
+        elif issubclass(type(self.feature_names[0]), (list, tuple)):
+            feature_names = copy.deepcopy(self.feature_names)
+        else:
+            feature_names = [copy.deepcopy(self.feature_names)]
         for i in range(len(args)):
 
             # try and see if we can get a length from any of the for our progress bar
