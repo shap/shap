@@ -7,6 +7,7 @@ import platform
 from distutils.sysconfig import get_config_var, get_python_inc
 from distutils.version import LooseVersion
 import sys
+import subprocess
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload
@@ -57,14 +58,15 @@ class build_ext(_build_ext):
 
 
 def compile_cuda_module(host_args):
-    lib_extension = '.lib' if sys.platform == 'win32' else '.a'
-    lib_out = 'build/_cext_gpu' + lib_extension
-    os.system(
-        "nvcc shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} --extended-lambda "
-        "--expt-relaxed-constexpr".format(
-            lib_out,
-            ','.join(host_args),
-            get_python_inc()))
+    libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
+    lib_out = 'build/' + libname
+    nvcc_command = "nvcc shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} --extended-lambda " \
+                   "--expt-relaxed-constexpr".format(
+        lib_out,
+        ','.join(host_args),
+        get_python_inc())
+    print(nvcc_command)
+    subprocess.run([nvcc_command], shell=True, check=True)
     return 'build', '_cext_gpu'
 
 
@@ -82,10 +84,14 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
             Extension('shap._cext', sources=['shap/cext/_cext.cc'],
                       extra_compile_args=compile_args))
         if with_cuda:
-            lib_dir, lib = compile_cuda_module(compile_args)
             cudart_path = os.environ['CUDA_PATH'] + '/lib'
             if sys.platform == 'win32':
                 cudart_path += '/x64'
+            else:
+                compile_args.append('-fPIC')
+
+            lib_dir, lib = compile_cuda_module(compile_args)
+
             ext_modules.append(
                 Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
                           extra_compile_args=compile_args,
@@ -182,16 +188,16 @@ def try_run_setup(**kwargs):
             kwargs["test_catboost"] = False
             print("Couldn't install CatBoost for testing!")
             try_run_setup(**kwargs)
+        elif "nvcc" in str(e).lower():
+            kwargs["with_cuda"] = False
+            print(
+                "WARNING: Could not compile cuda extensions")
+            try_run_setup(**kwargs)
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
             print(
                 "WARNING: The C extension could not be compiled, sklearn tree models not "
                 "supported.")
-            try_run_setup(**kwargs)
-        elif kwargs["with_cuda"]:
-            kwargs["with_cuda"] = False
-            print(
-                "WARNING: Could not compile cuda extensions")
             try_run_setup(**kwargs)
         elif "pyod" in str(e).lower():
             kwargs["test_pyod"] = False
