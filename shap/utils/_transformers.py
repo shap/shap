@@ -2,8 +2,25 @@ import torch
 import numpy as np
 import scipy as sp
 
-class GenerateLogits:
+class LogOddsGenerator:
     def __init__(self,model,tokenizer,device=None):
+        """ Generates scores (log odds) to compare semantic similarity between two sentences.
+
+        This class supports generation of log odds for decoder specific transformers (eg: distilgpt2) and encoder-decoder transformers (eg: BART).
+        It takes 2 sentences (source,target) in any combination of string or token ids and generates log odds of generating target sentence from source sentence.
+
+        Parameters
+        ----------
+        model: object
+            User supplied model object for any transformer model.
+
+        tokenizer: object
+            User supplied tokenizer object which is used to tokenize source and target sentences to use the model to generate log odds
+            for every tokenized target sentence ids from source sentences ids.
+
+        device: "cpu" or "cuda" or None
+            Used to generate scores either using cpu or gpu. By default, it infers if system has a gpu and accordingly sets device.
+        """
         if model is None or tokenizer is None:
             raise ValueError(
                 "Model or Tokenizer assigned is None."
@@ -21,7 +38,7 @@ class GenerateLogits:
         if device is not None:
             self.device = device
         else:
-            self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # load model onto device
         self.model = self.model.to(self.device)
         null_tokens = self.tokenizer.encode("")
@@ -40,12 +57,34 @@ class GenerateLogits:
             elif ('bos_token' in self.tokenizer.special_tokens_map) and (self.tokenizer.decode(null_token) == self.tokenizer.special_tokens_map['bos_token']):
                 self.keep_prefix = 1
                 self.keep_suffix = 0
+            else:
+                raise ValueError(
+                    "Unable to assign null tokens to prefix or suffix of a sentence as null tokens dont map to either of eos_token or bos_token"
+                )
         else:
             assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens greater than 2 are added to the null string!"
             self.keep_prefix = len(null_tokens) // 2
             self.keep_suffix = len(null_tokens) // 2
 
     def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+        """ The function generates logits for transformer models.
+
+        It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
+
+        Parameters:
+        ----------
+        source_sentence_ids: 2D tensor of shape (batch size, len of sequence)
+            Tokenized ids fed to the model.
+
+        target_sentence_ids: 2D tensor of shape (batch size, len of sequence)
+            Tokenized ids for which logits are generated using the decoder.
+
+        Returns:
+        -------
+        numpy array
+            Decoder output logits for target sentence ids.
+        """
+        # set model to eval mode
         self.model.eval()
         if self.model.config.is_encoder_decoder:
             # assigning decoder start token id as it is needed for encoder decoder model generation
@@ -87,6 +126,23 @@ class GenerateLogits:
         return logits
 
     def get_sentence_ids(self, source_sentence,target_sentence):
+        """ The function tokenizes source and target sentence.
+
+        It tokenizes entire source sentence into ids but only extracts ids not corresponding to null tokens for target sentence.
+
+        Parameters:
+        ----------
+        source_sentence: string or tensor
+            Source sentence or source sentence ids fed to the model.
+
+        target_sentence: string or tensor
+            Target sentence or target sentence ids for which logits are generated using the decoder.
+
+        Returns:
+        -------
+        tuple
+            Tuple of arrays including source sentence ids and target sentence ids.
+        """
         # only encode source sentence if ids not provided
         if isinstance(source_sentence,str):
             source_sentence_ids = torch.tensor([self.tokenizer.encode(source_sentence)])
@@ -103,6 +159,18 @@ class GenerateLogits:
         return source_sentence_ids.to(self.device), target_sentence_ids.to(self.device)
 
     def get_output_names(self, sentence):
+        """ The function returns tokens for sentence or sentence ids.
+
+        Parameters:
+        ----------
+        sentence: string or tensor
+            Sentence or sentence ids to tokenize.
+
+        Returns:
+        -------
+        list
+            List of tokens.
+        """
         output_names = None
         if isinstance(sentence,str):
             output_names = self.tokenizer.tokenize(sentence) 
@@ -115,13 +183,30 @@ class GenerateLogits:
                 )
         return output_names
 
-    def generate_logits(self,source_sentence, target_sentence):
+    def generate_logodds(self,source_sentence, target_sentence):
+        """ The function generates log odds.
+
+        Its produces the log odds for every token in the target sentence based on the source sentence.
+
+        Parameters:
+        ----------
+        source_sentence: string or tensor
+            Source sentence or source sentence ids fed to the model.
+
+        target_sentence: string or tensor
+            Target sentence or target sentence ids for which logits are generated using the decoder.
+
+        Returns:
+        -------
+        numpy array
+            Numpy array of log odds.
+        """
         # get sentence ids
         source_sentence_ids, target_sentence_ids = self.get_sentence_ids(source_sentence,target_sentence)
         # generate logits
         logits = self.get_teacher_forced_logits(source_sentence_ids,target_sentence_ids)
         conditional_logits = []
-        # pass logits through softmax, get the token corresponding score and convert back to logit (as one vs all)
+        # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         for i in range(0,logits.shape[1]-1):
             probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
             logit_dist = sp.special.logit(probs)
