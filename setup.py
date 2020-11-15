@@ -60,11 +60,17 @@ class build_ext(_build_ext):
 def compile_cuda_module(host_args):
     libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
     lib_out = 'build/' + libname
-    nvcc_command = "nvcc shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} --extended-lambda " \
-                   "--expt-relaxed-constexpr".format(
+    nvcc = os.environ['CUDA_PATH'] + '/bin/nvcc'
+    arch_flags = "-arch=sm_60 " + \
+                 "-gencode=arch=compute_70,code=sm_70 " + \
+                 "-gencode=arch=compute_75,code=sm_75 " + \
+                 "-gencode=arch=compute_75,code=compute_75 "
+    nvcc_command = nvcc + " shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
+                          "--extended-lambda " \
+                          "--expt-relaxed-constexpr {}".format(
         lib_out,
         ','.join(host_args),
-        get_python_inc())
+        get_python_inc(), arch_flags)
     print(nvcc_command)
     subprocess.run([nvcc_command], shell=True, check=True)
     return 'build', '_cext_gpu'
@@ -98,7 +104,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
                           extra_compile_args=compile_args,
                           library_dirs=[lib_dir, cudart_path],
                           libraries=[lib, 'cudart'],
-                          depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h'])
+                          depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h','setup.py'])
             )
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e))
