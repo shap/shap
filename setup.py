@@ -83,7 +83,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         ext_modules.append(
             Extension('shap._cext', sources=['shap/cext/_cext.cc'],
                       extra_compile_args=compile_args))
-        if with_cuda:
+    if with_cuda:
+        try:
             cudart_path = os.environ['CUDA_PATH'] + '/lib'
             if sys.platform == 'win32':
                 cudart_path += '/x64'
@@ -99,6 +100,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
                           libraries=[lib, 'cudart'],
                           depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h'])
             )
+        except Exception as e:
+            raise Exception("Error building cuda module: " + repr(e))
 
     tests_require = ['pytest', 'pytest-mpl', 'pytest-cov']
     if test_xgboost:
@@ -188,7 +191,7 @@ def try_run_setup(**kwargs):
             kwargs["test_catboost"] = False
             print("Couldn't install CatBoost for testing!")
             try_run_setup(**kwargs)
-        elif "nvcc" in str(e).lower():
+        elif "cuda" in str(e).lower():
             kwargs["with_cuda"] = False
             print(
                 "WARNING: Could not compile cuda extensions")
