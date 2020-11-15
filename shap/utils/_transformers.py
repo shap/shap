@@ -2,12 +2,13 @@ import torch
 import numpy as np
 import scipy as sp
 
-class LogOddsGenerator:
-    def __init__(self,model,tokenizer,device=None):
-        """ Generates scores (log odds) to compare semantic similarity between two sentences.
+class OutputTextScoringModel:
+    def __init__(self, f, model, tokenizer, device=None):
+        """ Generates scores (log odds) for output text explanation algorithms.
 
-        This class supports generation of log odds for decoder specific transformers (eg: distilgpt2) and encoder-decoder transformers (eg: BART).
-        It takes 2 sentences (source,target) in any combination of string or token ids and generates log odds of generating target sentence from source sentence.
+        This class supports generation of log odds for decoder specific transformers (eg: distilgpt2)
+        and encoder-decoder transformers (eg: BART).It takes 2 sentences (source,target) in any combination
+        of string or token ids and generates log odds of generating target sentence from source sentence.
 
         Parameters
         ----------
@@ -15,12 +16,18 @@ class LogOddsGenerator:
             User supplied model object for any transformer model.
 
         tokenizer: object
-            User supplied tokenizer object which is used to tokenize source and target sentences to use the model to generate log odds
-            for every tokenized target sentence ids from source sentences ids.
+            User supplied tokenizer object which is used to tokenize source and target sentences to use
+            the model to generate log odds for every tokenized target sentence ids from source sentences ids.
 
         device: "cpu" or "cuda" or None
             Used to generate scores either using cpu or gpu. By default, it infers if system has a gpu and accordingly sets device.
         """
+        #assigning function
+        self.f = f
+
+        self.source_sentence = None
+        self.target_sentence_ids = None
+
         if model is None or tokenizer is None:
             raise ValueError(
                 "Model or Tokenizer assigned is None."
@@ -125,29 +132,22 @@ class LogOddsGenerator:
         del outputs
         return logits
 
-    def get_sentence_ids(self, source_sentence,target_sentence):
-        """ The function tokenizes source and target sentence.
+    def get_target_sentence_ids(self, target_sentence):
+        """ The function tokenizes target sentence.
 
-        It tokenizes entire source sentence into ids but only extracts ids not corresponding to null tokens for target sentence.
+        It encodes entire target sentence into ids but only extracts ids not corresponding
+        to null tokens for target sentence.
 
         Parameters:
         ----------
-        source_sentence: string or tensor
-            Source sentence or source sentence ids fed to the model.
-
         target_sentence: string or tensor
             Target sentence or target sentence ids for which logits are generated using the decoder.
 
         Returns:
         -------
-        tuple
-            Tuple of arrays including source sentence ids and target sentence ids.
+        tensor
+            Tensor of target sentence ids.
         """
-        # only encode source sentence if ids not provided
-        if isinstance(source_sentence,str):
-            source_sentence_ids = torch.tensor([self.tokenizer.encode(source_sentence)])
-        else:
-            source_sentence_ids = source_sentence
         # only encode target sentence if ids not provided
         if isinstance(target_sentence,str):
             if self.keep_suffix > 0:
@@ -156,7 +156,29 @@ class LogOddsGenerator:
                 target_sentence_ids = torch.tensor([self.tokenizer.encode(target_sentence)])[:,self.keep_prefix:]
         else:
             target_sentence_ids = target_sentence
-        return source_sentence_ids.to(self.device), target_sentence_ids.to(self.device)
+
+        return target_sentence_ids.to(self.device)
+
+    def get_source_sentence_ids(self, source_sentence):
+        """ The function tokenizes source sentence.
+
+        Parameters:
+        ----------
+        source_sentence: string or tensor
+            Source sentence or source sentence ids fed to the model.
+
+        Returns:
+        -------
+        tensor
+            Tensor of source sentence ids.
+        """
+        # only encode source sentence if ids not provided
+        if isinstance(source_sentence,str):
+            source_sentence_ids = torch.tensor([self.tokenizer.encode(source_sentence)])
+        else:
+            source_sentence_ids = source_sentence
+
+        return source_sentence_ids.to(self.device)
 
     def get_output_names(self, sentence):
         """ The function returns tokens for sentence or sentence ids.
@@ -183,10 +205,29 @@ class LogOddsGenerator:
                 )
         return output_names
 
-    def generate_logodds(self,source_sentence, target_sentence):
-        """ The function generates log odds.
+    def update_source_sentence_cache(self, source_sentence):
+        """ The function updates source sentence and target sentence ids.
 
-        Its produces the log odds for every token in the target sentence based on the source sentence.
+        It mimics the caching mechanism to update the source sentence and target sentence ids
+        that are to be explained and which updates for every new row of explanation.
+
+        Parameters:
+        ----------
+        source_sentence: string
+            Source sentence for an explanation row.
+        """
+        # check if the source sentence has been updated (occurs when explaining a new row)
+        if self.source_sentence != source_sentence:
+            self.source_sentence = source_sentence
+            self.target_sentence_ids = self.f(source_sentence)
+            self.target_sentence_ids = self.get_target_sentence_ids(self.target_sentence_ids)
+
+    def __call__(self, masked_source_sentence, source_sentence):
+        """ The function generates scores to explain output text explantion algorithms.
+
+        Its produces the log odds of generating f(source_sentence) from f(masked_source sentence)
+        using the model when f is an api/outputs text and in case where f outputs decoder ids
+        it produces the log odds of generating decode ids from source sentence using model.
 
         Parameters:
         ----------
@@ -201,15 +242,17 @@ class LogOddsGenerator:
         numpy array
             Numpy array of log odds.
         """
-        # get sentence ids
-        source_sentence_ids, target_sentence_ids = self.get_sentence_ids(source_sentence,target_sentence)
+        # update cache for every new row
+        self.update_source_sentence_cache(source_sentence)
+        # get source sentence ids
+        source_sentence_ids = self.get_source_sentence_ids(source_sentence)
         # generate logits
-        logits = self.get_teacher_forced_logits(source_sentence_ids,target_sentence_ids)
+        logits = self.get_teacher_forced_logits(source_sentence_ids,self.target_sentence_ids)
         conditional_logits = []
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         for i in range(0,logits.shape[1]-1):
             probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
             logit_dist = sp.special.logit(probs)
-            conditional_logits.append(logit_dist[target_sentence_ids[0,i].item()])
+            conditional_logits.append(logit_dist[self.target_sentence_ids[0,i].item()])
         del source_sentence_ids
         return np.array(conditional_logits)
