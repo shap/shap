@@ -88,16 +88,6 @@ using RebindVector =
     thrust::device_vector<T,
                           typename DeviceAllocatorT::template rebind<T>::other>;
 
-template <typename PtrT>
-bool IsDeviceAccessible(PtrT ptr) {
-  cudaPointerAttributes attributes;
-  cudaPointerGetAttributes(&attributes, ptr);
-  auto error = cudaGetLastError();
-  if (error == cudaErrorInvalidValue) {
-    return false;
-  }
-  return attributes.type != cudaMemoryTypeUnregistered;
-}
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600 || defined(__clang__)
 __device__ __forceinline__ double atomicAddDouble(double* address,
                                                   double val) {
@@ -1026,10 +1016,6 @@ void GPUTreeShap(DatasetT X, PathIteratorT begin, PathIteratorT end,
         "num_groups");
   }
 
-  if (!detail ::IsDeviceAccessible(phis_out)) {
-    throw std::invalid_argument("phis_out must be device accessible");
-  }
-
   using size_vector = detail::RebindVector<size_t, DeviceAllocatorT>;
   using double_vector = detail::RebindVector<double, DeviceAllocatorT>;
   using path_vector = detail::RebindVector<PathElement, DeviceAllocatorT>;
@@ -1106,10 +1092,6 @@ void GPUTreeShapInteractions(DatasetT X, PathIteratorT begin, PathIteratorT end,
         "phis_out must be at least of size X.NumRows() * (X.NumCols() + 1)  * "
         "(X.NumCols() + 1) * "
         "num_groups");
-  }
-
-  if (!detail::IsDeviceAccessible(phis_out)) {
-    throw std::invalid_argument("phis_out must be device accessible");
   }
 
   using size_vector = detail::RebindVector<size_t, DeviceAllocatorT>;
@@ -1189,10 +1171,6 @@ void GPUTreeShapTaylorInteractions(DatasetT X, PathIteratorT begin,
         "phis_out must be at least of size X.NumRows() * (X.NumCols() + 1)  * "
         "(X.NumCols() + 1) * "
         "num_groups");
-  }
-
-  if (!detail ::IsDeviceAccessible(phis_out)) {
-    throw std::invalid_argument("phis_out must be device accessible");
   }
 
   using size_vector = detail::RebindVector<size_t, DeviceAllocatorT>;
