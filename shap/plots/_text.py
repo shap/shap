@@ -36,16 +36,18 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
     # loop when we get multi-row inputs
     if len(shap_values.shape) == 2 and shap_values.output_names is None:
         
-        values = getattr(shap_values[0], "hierarchical_values", shap_values[0].values)
-        clustering = getattr(shap_values[0], "clustering", None)
-        tokens, values, group_sizes = process_shap_values(shap_values[0].data, getattr(shap_values[0], "hierarchical_values", shap_values[0].values), group_threshold, separator, clustering)
+        xmin = 0
+        xmax = 0
+        cmax = 0
 
-        xmin, xmax, cmax = values_min_max(values, shap_values[0].base_values)
-        for i in range(1,len(shap_values)):
+        for i in range(0, len(shap_values)):
 
-            values = getattr(shap_values[i], "hierarchical_values", shap_values[i].values)
-            clustering = getattr(shap_values[i], "clustering", None)
-            tokens, values, group_sizes = process_shap_values(shap_values[i].data, getattr(shap_values[i], "hierarchical_values", shap_values[i].values), group_threshold, separator, clustering)
+            values, clustering = unpack_shap_explanation_contents(shap_values[i])
+            tokens, values, group_sizes = process_shap_values(shap_values[i].data, values, group_threshold, separator, clustering)
+
+            if i == 0:
+                xmin, xmax, cmax = values_min_max(values, shap_values[i].base_values)
+                continue
 
             xmin_i,xmax_i,cmax_i = values_min_max(values, shap_values[i].base_values)
             if xmin_i < xmin:
@@ -79,9 +81,8 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         cmax = cmax_new
     
 
-    values = getattr(shap_values, "hierarchical_values", shap_values.values)
-    clustering = getattr(shap_values, "clustering", None)
-    tokens, values, group_sizes = process_shap_values(shap_values.data, getattr(shap_values, "hierarchical_values", shap_values.values), group_threshold, separator, clustering)
+    values, clustering = unpack_shap_explanation_contents(shap_values)
+    tokens, values, group_sizes = process_shap_values(shap_values.data, values, group_threshold, separator, clustering)
     
     # build out HTML output one word one at a time
     top_inds = np.argsort(-np.abs(values))[:num_starting_labels]
@@ -221,7 +222,8 @@ def process_shap_values(tokens, values, group_threshold, separator, clustering =
                     new_values.append(group_values[i])
                     group_sizes.append(len(groups[i]))
 
-                    # meta data
+                    # setting collapsed node ids and token id to current node id mapping metadata
+
                     collapsed_node_ids.append(i)
                     for g in groups[li]:
                         token_id_to_node_id_mapping[g] = i
@@ -696,19 +698,18 @@ def saliency_plot(shap_values):
     
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
     
-    clustering = getattr(shap_values, "clustering", None)
-    unpacked_values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    unpacked_values, clustering = unpack_shap_explanation_contents(shap_values)
     tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(shap_values.data, unpacked_values[:,0], 1, '', clustering, True)
     
     
     def compress_shap_matrix(shap_matrix,group_sizes):
-        compressed_martix = np.zeros((group_sizes.shape[0],shap_matrix.shape[1]))
+        compressed_matrix = np.zeros((group_sizes.shape[0],shap_matrix.shape[1]))
         counter = 0
         for index in range(len(group_sizes)):
-            compressed_martix[index,:] = np.sum(shap_matrix[counter:counter+group_sizes[index],:],axis=0)
+            compressed_matrix[index,:] = np.sum(shap_matrix[counter:counter+group_sizes[index],:],axis=0)
             counter+=group_sizes[index]
 
-        return compressed_martix
+        return compressed_matrix
     
     compressed_shap_matrix = compress_shap_matrix(shap_values.values,group_sizes)
     
@@ -728,8 +729,6 @@ def saliency_plot(shap_values):
         
         return input_colors
     
-    
-    model_input = shap_values.data
     model_output = shap_values.output_names
     
     input_colors = get_colors(shap_values)
@@ -768,6 +767,12 @@ def saliency_plot(shap_values):
 
 def heatmap(shap_values):
     
+    # constants
+
+    TREE_NODE_KEY_TOKENS = 'tokens'
+    TREE_NODE_KEY_CHILDREN = 'children'
+
+
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
 
     def get_color(shap_value,cmax):
@@ -776,42 +781,10 @@ def heatmap(shap_values):
         color = (color[0]*255, color[1]*255, color[2]*255, color[3])
         return color
     
-    def generate_tree(shap_values):
-        num_tokens = shap_values.data.shape[0]
-        token_list = {}
-        max_vals = np.zeros(shap_values.values.shape[1])
-
-        for index in range(num_tokens):
-            node_content = {}
-            node_content['tokens'] = shap_values.data[index]
-            node_content['children'] = {}
-            token_list[str(index)] = node_content
-
-        counter = num_tokens
-        for pair in shap_values.clustering:
-            first_node = str(int(pair[0]))
-            second_node = str(int(pair[1]))
-
-            new_node_content = {}
-
-            new_node_content['tokens'] = token_list[first_node]['tokens'] + token_list[second_node]['tokens']
-            new_node_content['children'] = {
-                first_node:token_list[first_node],
-                second_node:token_list[second_node]
-            }
-
-            token_list[str(counter)] = new_node_content
-            counter += 1
-
-            del token_list[first_node]
-            del token_list[second_node]
-
-        return token_list
-
     def process_text_to_text_shap_values(shap_values):
         processed_values = []
-        clustering = getattr(shap_values, "clustering", None)
-        unpacked_values = getattr(shap_values, "hierarchical_values", shap_values.values)
+        
+        unpacked_values, clustering = unpack_shap_explanation_contents(shap_values)
         max_val = 0
 
         for index,output_token in enumerate(shap_values.output_names):
@@ -835,7 +808,7 @@ def heatmap(shap_values):
 
     processed_values, max_val = process_text_to_text_shap_values(shap_values)
     
-    # generate dictionary containing precomputed background colors and shap values which are addresable by html token ids
+    # generate dictionary containing precomputed background colors and shap values which are addressable by html token ids
     colors_dict = {}
     shap_values_dict = {}
     token_id_to_node_id_mapping = {}
@@ -894,12 +867,11 @@ def heatmap(shap_values):
     def generate_tree(shap_values):
         num_tokens = shap_values.data.shape[0]
         token_list = {}
-        max_vals = np.zeros(shap_values.values.shape[1])
 
         for index in range(num_tokens):
             node_content = {}
-            node_content['tokens'] = shap_values.data[index]
-            node_content['children'] = {}
+            node_content[TREE_NODE_KEY_TOKENS] = shap_values.data[index]
+            node_content[TREE_NODE_KEY_CHILDREN] = {}
             token_list[str(index)] = node_content
 
         counter = num_tokens
@@ -908,9 +880,7 @@ def heatmap(shap_values):
             second_node = str(int(pair[1]))
 
             new_node_content = {}
-
-            #new_node_content['tokens'] = token_list[first_node]['tokens'] + token_list[second_node]['tokens']
-            new_node_content['children'] = {
+            new_node_content[TREE_NODE_KEY_CHILDREN] = {
                 first_node:token_list[first_node],
                 second_node:token_list[second_node]
             }
@@ -938,10 +908,10 @@ def heatmap(shap_values):
 
         input_text_html +='</div>'
 
-        if token_list_subtree[input_index]['children']:
+        if token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN]:
             input_text_html += f'<div id="{uuid}_input_node_{input_index}_content" style="display:inline;">'
-            for child_index,child_content in token_list_subtree[input_index]['children'].items():
-                input_text_html = populate_input_tree(child_index,token_list_subtree[input_index]['children'],input_text_html)
+            for child_index,child_content in token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN].items():
+                input_text_html = populate_input_tree(child_index,token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN],input_text_html)
             input_text_html +='</div>'
         else:
             input_text_html += f'<div id="{uuid}_input_node_{input_index}_content"' \
@@ -950,7 +920,7 @@ def heatmap(shap_values):
                         + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                         + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
                         + ">"
-            input_text_html += content['tokens'].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '')
+            input_text_html += content[TREE_NODE_KEY_TOKENS].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '')
             input_text_html +='</div>'
 
         input_text_html +='</div>'
@@ -1085,7 +1055,7 @@ def heatmap(shap_values):
                     else {{
                         if (getIdSide_{uuid}({uuid}_heatmap_flat_state) === getIdSide_{uuid}(id)) {{
                         
-                            // Another token clicked on, on the side side on the previously selected token
+                            // User clicked a token on the same side as the currently selected token
                             
                             cleanValuesAndColors_{uuid}({uuid}_heatmap_flat_state)
                             document.getElementById({uuid}_heatmap_flat_state).style.backgroundColor  = "transparent";
@@ -1164,3 +1134,10 @@ def heatmap(shap_values):
     """
     
     return heatmap_html + heatmap_javascript + javascript_values
+
+
+def unpack_shap_explanation_contents(shap_values):
+    values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    clustering = getattr(shap_values, "clustering", None)
+
+    return values, clustering
