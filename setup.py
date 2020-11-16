@@ -60,19 +60,20 @@ class build_ext(_build_ext):
 def compile_cuda_module(host_args):
     libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
     lib_out = 'build/' + libname
-    nvcc = os.environ['CUDA_PATH'] + '/bin/nvcc'
+    nvcc = os.path.join(os.path.abspath(os.environ['CUDA_PATH']), 'bin/nvcc')
     arch_flags = "-arch=sm_60 " + \
                  "-gencode=arch=compute_70,code=sm_70 " + \
                  "-gencode=arch=compute_75,code=sm_75 " + \
-                 "-gencode=arch=compute_75,code=compute_75 "
-    nvcc_command = nvcc + " shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
-                          "--extended-lambda " \
-                          "--expt-relaxed-constexpr {}".format(
+                 "-gencode=arch=compute_75,code=compute_75"
+    nvcc_command = "shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
+                   "--extended-lambda " \
+                   "--expt-relaxed-constexpr {}".format(
         lib_out,
         ','.join(host_args),
         get_python_inc(), arch_flags)
-    print(nvcc_command)
-    subprocess.run([nvcc_command], shell=True, check=True)
+    print("Compiling cuda extension, calling nvcc with arguments:")
+    print([nvcc] + nvcc_command.split(' '))
+    subprocess.run([nvcc] + nvcc_command.split(' '), check=True)
     return 'build', '_cext_gpu'
 
 
