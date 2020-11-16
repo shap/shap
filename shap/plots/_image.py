@@ -1,5 +1,10 @@
 import numpy as np
 import warnings
+import json
+import numpy as np
+from ..utils import ordinal_str
+import random
+import string
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -127,3 +132,381 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
     cb.outline.set_visible(False)
     if show:
         pl.show()
+
+
+def image_to_text(shap_values):
+
+    from IPython.core.display import display, HTML
+
+    if len(shap_values.values.shape) == 5:
+        for i in range(shap_values.values.shape[0]):
+            display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
+            image_to_text(shap_values[i])
+        
+        return
+    
+
+    uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
+    
+    # creating input html tokens
+    
+
+    model_output = shap_values.output_names
+
+    output_text_html = ''
+
+    for i in range(model_output.shape[0]):
+        output_text_html += "<div style='display:inline; text-align:center;'>" \
+                + f"<div id='{uuid}_output_flat_value_label_"+ str(i) +"'" \
+                + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
+                + "</div>" \
+                + f"<div id='{uuid}_output_flat_token_"+ str(i) +"'" \
+                + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'" \
+                + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
+                + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
+                + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
+                + ">" \
+                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + " </div>" \
+                + "</div>"
+    
+    # computing gray scale images
+    
+    
+    image_data = shap_values.data
+    image_height = image_data.shape[0]
+    image_width = image_data.shape[1]
+    
+    
+    # computing gray scale image
+    
+    image_data_gray_scale = np.ones((image_height, image_width, 4)) * 255 * 0.5
+    image_data_gray_scale[:,:,0] = np.mean(image_data,axis=2).astype(int)
+    image_data_gray_scale[:,:,1] = image_data_gray_scale[:,:,0]
+    image_data_gray_scale[:,:,2] = image_data_gray_scale[:,:,0]
+        
+    # computing shap color values for every pixel and for every output token
+    
+    shap_values_color_maps = shap_values.values[:,:,0,:]
+    max_val = np.nanpercentile(np.abs(shap_values.values), 99.9)
+    
+    shap_values_color_dict = {}
+    
+    for index in range(model_output.shape[0]):        
+        shap_values_color_dict[f'{uuid}_output_flat_token_{index}'] = (colors.red_transparent_blue(0.5 + 0.5 * shap_values_color_maps[:,:,index]/ max_val) * 255).astype(int).tolist()
+
+    
+    # converting to json to be read in javascript
+    
+    image_data_json = json.dumps(shap_values.data.astype(int).tolist())
+    shap_values_color_dict_json = json.dumps(shap_values_color_dict)
+    image_data_gray_scale_json = json.dumps(image_data_gray_scale.astype(int).tolist())
+    
+    image_viz_html = f"""
+
+        <div id="{uuid}_image_viz" class="{uuid}_image_viz_content">
+          <div id="{uuid}_image_viz_header" style="padding:15px;margin:5px;font-family:sans-serif;font-weight:bold;">
+            <div style="display:inline">
+              <span style="font-size: 20px;"> Input/Output - Heatmap </span>
+            </div>
+          </div>
+          <div id="{uuid}_image_viz_content" style="display:flex;">
+            <div id="{uuid}_image_viz_input_container" style="padding:15px;border-style:solid;margin:5px;flex:2;">
+              <div id="{uuid}_image_viz_input_header" style="margin:5px;font-weight:bold;font-family:sans-serif;margin-bottom:10px">
+                Input Image
+              </div>
+              <div id="{uuid}_image_viz_input_content" style="margin:5px;font-family:sans-serif;">
+                  <canvas id="{uuid}_image_canvas" style="cursor:grab;width:100%;max-height:500px;"></canvas>
+                  <br>
+                  <br>
+                  <div id="{uuid}_tools">
+                      <div id="{uuid}_zoom">
+                        <span style="font-size:12px;margin-right:15px;"> Zoom </span>
+                        <button id="{uuid}_minus_button" class="zoom-button" onclick="{uuid}_zoom(-1)" style="background-color: #555555;color: white; border:none;font-size:15px;">-</button>
+                        <button id="{uuid}_plus_button" class="zoom-button" onclick="{uuid}_zoom(1)" style="background-color: #555555;color: white; border:none;font-size:15px;">+</button>
+                      </div>
+                      <br>
+                      <div id="{uuid}_opacity">
+                      <span style="font-size:12px;margin-right:15px;"> Image Opacity </span>
+                      <input type="range" min="1" max="100" value="35" style="width:100px" oninput="{uuid}_set_opacity(this.value)">
+                      </div>
+                  </div>
+              </div>
+            </div>
+            <div id="{uuid}_image_viz_output_container" style="padding:15px;border-style:solid;margin:5px;flex:1;">
+              <div id="{uuid}_image_viz_output_header" style="margin:5px;font-weight:bold;font-family:sans-serif;margin-bottom:10px">
+                Output Text
+              </div>
+              <div id="{uuid}_image_viz_output_content" style="margin:5px;font-family:sans-serif;">
+                  {output_text_html}
+              </div>
+            </div>
+          </div>
+        </div>
+
+    """
+    
+    
+    
+    image_viz_script = f"""
+        <script>
+            
+            var {uuid}_heatmap_flat_state = null;
+            var {uuid}_opacity = 0.35
+            
+            function onMouseHoverFlat_{uuid}(id) {{
+                if ({uuid}_heatmap_flat_state === null) {{
+                    document.getElementById(id).style.backgroundColor  = "grey";
+                    {uuid}_update_image_and_overlay(id);
+                }}            
+            }}
+            
+            function onMouseOutFlat_{uuid}(id) {{
+                if ({uuid}_heatmap_flat_state === null) {{
+                    document.getElementById(id).style.backgroundColor  = "transparent";
+                    {uuid}_update_image_and_overlay(null);
+                }}                
+            }}
+
+            function onMouseClickFlat_{uuid}(id) {{
+                if ({uuid}_heatmap_flat_state === null) {{
+                    document.getElementById(id).style.backgroundColor  = "grey";
+                    {uuid}_update_image_and_overlay(id);
+                    {uuid}_heatmap_flat_state = id;
+                }}
+                else {{
+                    if ({uuid}_heatmap_flat_state === id) {{
+                        document.getElementById(id).style.backgroundColor  = "transparent";
+                        {uuid}_update_image_and_overlay(null);
+                        {uuid}_heatmap_flat_state = null;
+                    }}
+                    else {{
+                        document.getElementById({uuid}_heatmap_flat_state).style.backgroundColor  = "transparent";
+                        document.getElementById(id).style.backgroundColor  = "grey";
+                        {uuid}_update_image_and_overlay(id)
+                        {uuid}_heatmap_flat_state = id
+                    }}
+                }}
+            }}         
+
+            const {uuid}_image_data_matrix = {image_data_json};
+            const {uuid}_image_data_gray_scale = {image_data_gray_scale_json};
+            const {uuid}_image_height = {image_height};
+            const {uuid}_image_width = {image_width};
+            const {uuid}_shap_values_color_dict = {shap_values_color_dict_json};
+            
+            {uuid}_canvas = document.getElementById('{uuid}_image_canvas');
+            {uuid}_context = {uuid}_canvas.getContext('2d');
+            
+            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);            
+            var {uuid}_currImagData = {uuid}_imageData;
+            
+            
+            {uuid}_trackTransforms({uuid}_context);
+            initial_scale_factor = Math.min({uuid}_canvas.height/{uuid}_image_height,{uuid}_canvas.width/{uuid}_image_width);
+            {uuid}_context.scale(initial_scale_factor, initial_scale_factor);
+            
+            function {uuid}_update_image_and_overlay(selected_id) {{
+                if (selected_id == null) {{
+                    {uuid}_currImagData = {uuid}_imageData;
+                    {uuid}_redraw();
+                }}
+                else {{
+                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[selected_id], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);
+                    {uuid}_redraw();
+                }}
+            }}
+            
+            function {uuid}_set_opacity(value) {{
+                {uuid}_opacity = value/100;
+                
+                if ({uuid}_heatmap_flat_state !== null ) {{
+                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);                    
+                    {uuid}_redraw();
+                }}
+            }}
+            
+            function {uuid}_redraw() {{
+
+                // Clear the entire canvas
+                var p1 = {uuid}_context.transformedPoint(0, 0);
+                var p2 = {uuid}_context.transformedPoint({uuid}_canvas.width, {uuid}_canvas.height);
+                {uuid}_context.clearRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+
+                {uuid}_context.save();
+                {uuid}_context.setTransform(1, 0, 0, 1, 0, 0);
+                {uuid}_context.clearRect(0, 0, {uuid}_canvas.width, {uuid}_canvas.height);
+                {uuid}_context.restore();
+
+                createImageBitmap({uuid}_currImagData, {{ premultiplyAlpha: 'premultiply' }}).then(function(imgBitmap) {{
+                    {uuid}_context.drawImage(imgBitmap, 0, 0);
+                }});
+            }}
+            {uuid}_redraw();
+
+            var lastX = {uuid}_canvas.width / 2,
+                lastY = {uuid}_canvas.height / 2;
+
+            var dragStart, dragged;
+
+            {uuid}_canvas.addEventListener('mousedown', function(evt) {{
+                document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
+                lastX = evt.offsetX || (evt.pageX - {uuid}_canvas.offsetLeft);
+                lastY = evt.offsetY || (evt.pageY - {uuid}_canvas.offsetTop);
+                dragStart = {uuid}_context.transformedPoint(lastX, lastY);
+                dragged = false;
+                document.getElementById('{uuid}_image_canvas').style.cursor = 'grabbing';
+            }}, false);
+
+            {uuid}_canvas.addEventListener('mousemove', function(evt) {{
+                lastX = evt.offsetX || (evt.pageX - {uuid}_canvas.offsetLeft);
+                lastY = evt.offsetY || (evt.pageY - {uuid}_canvas.offsetTop);
+                dragged = true;
+                if (dragStart) {{
+                    var pt = {uuid}_context.transformedPoint(lastX, lastY);
+                    {uuid}_context.translate(pt.x - dragStart.x, pt.y - dragStart.y);
+                    {uuid}_redraw();
+                }}
+            }}, false);
+
+            {uuid}_canvas.addEventListener('mouseup', function(evt) {{
+                dragStart = null;
+                if (!dragged) {uuid}_zoom(evt.shiftKey ? -1 : 1);
+                document.getElementById('{uuid}_image_canvas').style.cursor = 'grab';
+            }}, false);
+
+            var scaleFactor = 1.1;
+
+            var {uuid}_zoom = function(clicks) {{
+                var pt = {uuid}_context.transformedPoint(lastX, lastY);
+                {uuid}_context.translate(pt.x, pt.y);
+                var factor = Math.pow(scaleFactor, clicks);
+                {uuid}_context.scale(factor, factor);
+                {uuid}_context.translate(-pt.x, -pt.y);
+                {uuid}_redraw();
+            }}
+
+            var handleScroll = function(evt) {{
+                var delta = evt.wheelDelta ? evt.wheelDelta / 40 : evt.detail ? -evt.detail : 0;
+                if (delta) {uuid}_zoom(delta);
+                return evt.preventDefault() && false;
+            }}
+
+            {uuid}_canvas.addEventListener('DOMMouseScroll', handleScroll, false);
+            {uuid}_canvas.addEventListener('mousewheel', handleScroll, false);
+
+
+
+            function {uuid}_trackTransforms(ctx) {{
+                var svg = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+                var xform = svg.createSVGMatrix();
+                ctx.getTransform = function() {{
+                    return xform;
+                }}
+
+                var savedTransforms = [];
+                var save = ctx.save;
+                ctx.save = function() {{
+                    savedTransforms.push(xform.translate(0, 0));
+                    return save.call(ctx);
+                }}
+
+                var restore = ctx.restore;
+                ctx.restore = function() {{
+                    xform = savedTransforms.pop();
+                    return restore.call(ctx);
+                }}
+
+                var scale = ctx.scale;
+                ctx.scale = function(sx, sy) {{
+                    xform = xform.scaleNonUniform(sx, sy);
+                    return scale.call(ctx, sx, sy);
+                }}
+
+                var rotate = ctx.rotate;
+                ctx.rotate = function(radians) {{
+                    xform = xform.rotate(radians * 180 / Math.PI);
+                    return rotate.call(ctx, radians);
+                }}
+
+                var translate = ctx.translate;
+                ctx.translate = function(dx, dy) {{
+                    xform = xform.translate(dx, dy);
+                    return translate.call(ctx, dx, dy);
+                }}
+
+                var transform = ctx.transform;
+                ctx.transform = function(a, b, c, d, e, f) {{
+                    var m2 = svg.createSVGMatrix();
+                    m2.a = a;
+                    m2.b = b;
+                    m2.c = c;
+                    m2.d = d;
+                    m2.e = e;
+                    m2.f = f;
+                    xform = xform.multiply(m2);
+                    return transform.call(ctx, a, b, c, d, e, f);
+                }}
+
+                var setTransform = ctx.setTransform;
+                ctx.setTransform = function(a, b, c, d, e, f) {{
+                    xform.a = a;
+                    xform.b = b;
+                    xform.c = c;
+                    xform.d = d;
+                    xform.e = e;
+                    xform.f = f;
+                    return setTransform.call(ctx, a, b, c, d, e, f);
+                }}
+
+                var pt = svg.createSVGPoint();
+                ctx.transformedPoint = function(x, y) {{
+                    pt.x = x;
+                    pt.y = y;
+                    return pt.matrixTransform(xform.inverse());
+                }}
+            }}
+            
+
+            function {uuid}_convert_image_matrix_to_data(image_data_matrix, image_height, image_width, context) {{
+
+                var imageData = context.createImageData(image_height, image_width);
+
+                for(var row_index = 0; row_index < image_height; row_index++) {{
+                    for(var col_index = 0; col_index < image_width; col_index++) {{
+
+                        index = (row_index * image_width + col_index) * 4;
+
+                        imageData.data[index + 0] = image_data_matrix[row_index][col_index][0];
+                        imageData.data[index + 1] = image_data_matrix[row_index][col_index][1];
+                        imageData.data[index + 2] = image_data_matrix[row_index][col_index][2];
+                        imageData.data[index + 3] = 255;
+                    }}
+                }}
+                
+                return imageData;
+            }}
+            
+            function {uuid}_blend_image_shap_map(image_data_matrix, shap_color_map, image_height, image_width, alpha, context) {{
+                var blendedImageData = context.createImageData(image_height, image_width);
+
+                for(var row_index = 0; row_index < image_height; row_index++) {{
+                
+                    for(var col_index = 0; col_index < image_width; col_index++) {{
+                    
+                        index = (row_index * image_width + col_index) * 4;
+                    
+                        blendedImageData.data[index + 0] = image_data_matrix[row_index][col_index][0] * alpha + (shap_color_map[row_index][col_index][0]) * ( 1 - alpha);
+                        blendedImageData.data[index + 1] = image_data_matrix[row_index][col_index][1] * alpha + (shap_color_map[row_index][col_index][1]) * ( 1 - alpha);
+                        blendedImageData.data[index + 2] = image_data_matrix[row_index][col_index][2] * alpha + (shap_color_map[row_index][col_index][2]) * ( 1 - alpha);
+                        blendedImageData.data[index + 3] = image_data_matrix[row_index][col_index][3] * alpha + (shap_color_map[row_index][col_index][3]) * ( 1 - alpha);
+                    }}
+                }}
+
+                return blendedImageData;
+            }}
+
+        </script>
+    """
+
+    display(HTML(image_viz_html + image_viz_script))
