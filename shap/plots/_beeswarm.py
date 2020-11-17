@@ -5,6 +5,7 @@ from __future__ import division
 
 import warnings
 import numpy as np
+import scipy as sp
 from scipy.stats import gaussian_kde
 try:
     import matplotlib.pyplot as pl
@@ -47,6 +48,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         base_values = shap_exp.base_values
         values = shap_exp.values
         features = shap_exp.data
+        if sp.sparse.issparse(features):
+            features = features.toarray()
         feature_names = shap_exp.feature_names
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
@@ -109,10 +112,10 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     if clustering is None:
         partition_tree = getattr(shap_values, "clustering", None)
-        if partition_tree.var(0).sum() != 0:
-            partition_tree = None
-        else:
+        if partition_tree is not None and partition_tree.var(0).sum() == 0:
             partition_tree = partition_tree[0]
+        else:
+            partition_tree = None
     elif clustering is False:
         partition_tree = None
     else:
@@ -261,11 +264,11 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     
     row_height = 0.4
     if plot_size == "auto":
-        pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
     elif type(plot_size) in (list, tuple):
         pl.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
-        pl.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+        pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
     pl.axvline(x=0, color="#999999", zorder=-1)
 
     # make the beeswarm dots

@@ -14,7 +14,7 @@ class Additive(Explainer):
     you will get incorrect answers that fail additivity).
     """
 
-    def __init__(self, model, masker, link=None):
+    def __init__(self, model, masker, link=None, feature_names=None):
         """ Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
@@ -31,7 +31,7 @@ class Additive(Explainer):
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
         """
-        super(Additive, self).__init__(model, masker)
+        super(Additive, self).__init__(model, masker, feature_names=feature_names)
 
         
 

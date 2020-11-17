@@ -410,13 +410,16 @@ class Explanation(object, metaclass=MetaExplanation):
     def min(self, axis):
         return self._numpy_func("min", axis=axis)
 
-    def sum(self, axis, grouping=None):
+    def sum(self, axis=None, grouping=None):
         if grouping is None:
             return self._numpy_func("sum", axis=axis)
-        elif axis == 1:
+        elif axis == 1 or len(self.shape) == 1:
             return group_features(self, grouping)
         else:
             raise Exception("Only axis = 1 is supported for grouping right now...")
+
+    # def reshape(self, *args):
+    #     return self._numpy_func("reshape", newshape=args)
 
     @property
     def abs(self):
@@ -526,6 +529,7 @@ def group_features(shap_values, feature_map):
     shap_values_new = copy.deepcopy(shap_values)
     found = {}
     i = -1
+    rank1 = len(shap_values.shape) == 1
     for name in curr_names:
         new_name = feature_map.get(name, name)
         if new_name in found:
@@ -537,15 +541,19 @@ def group_features(shap_values, feature_map):
         cols_to_sum = reverse_map.get(new_name, [new_name])
         old_inds = [curr_names.index(v) for v in cols_to_sum]
         
-        shap_values_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
-        shap_values_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
+        if rank1:
+            shap_values_new.values[i] = shap_values.values[old_inds].sum()
+            shap_values_new.data[i] = shap_values.data[old_inds].sum()
+        else:
+            shap_values_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
+            shap_values_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
         shap_values_new.feature_names[i] = new_name
 
     return Explanation(
-        shap_values_new.values[:,:i],
+        shap_values_new.values[:i] if rank1 else shap_values_new.values[:,:i],
         base_values = shap_values_new.base_values,
-        data = shap_values_new.data[:,:i],
-        display_data = None if shap_values_new.display_data is None else shap_values_new.display_data[:,:i],
+        data = shap_values_new.data[:i] if rank1 else shap_values_new.data[:,:i],
+        display_data = None if shap_values_new.display_data is None else (shap_values_new.display_data[:,:i] if rank1 else shap_values_new.display_data[:,:i]),
         instance_names = None,
         feature_names = None if shap_values_new.feature_names is None else shap_values_new.feature_names[:i],
         output_names = None,
@@ -598,7 +606,7 @@ class Percentile(Op):
 def _compute_shape(x):
     if not hasattr(x, "__len__"):
         return tuple()
-    elif len(x) > 0 and isinstance(x[0], str):
+    elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(x[0], str):
         return (None,)
     else:
         if type(x) == dict:
