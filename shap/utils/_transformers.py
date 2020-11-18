@@ -2,8 +2,13 @@ import torch
 import numpy as np
 import scipy as sp
 
-class OutputTextScoringModel:
-    def __init__(self, f, model, tokenizer, device=None):
+class TeacherForcingLogits:
+    def __init__(self,  model, f, tokenizer, device=None):#model->, f-> make up generation function
+
+
+        #WARNING: ALL CODE BELOW WAS KEEPING IN MIND "f" WAS THE MODEL PASSED BY THE USER TO EXPLAIN AND "model" WAS THE LANGUAGE MODEL USED TO GENERATE LOG ODDS. 
+        # TO DO: UPDATE CODE BASED ON RECENT CHANGES 
+
         """ Generates scores (log odds) for output text explanation algorithms.
 
         This class supports generation of log odds for decoder specific transformers (eg: distilgpt2)
