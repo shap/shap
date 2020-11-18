@@ -227,7 +227,7 @@ class TeacherForcingLogits:
             self.target_sentence_ids = self.f(source_sentence)
             self.target_sentence_ids = self.get_target_sentence_ids(self.target_sentence_ids)
 
-    def __call__(self, masked_source_sentence, source_sentence):
+    def __call__(self, masked_X, X):
         """ The function generates scores to explain output text explantion algorithms.
 
         Its produces the log odds of generating f(source_sentence) from f(masked_source sentence)
@@ -236,17 +236,19 @@ class TeacherForcingLogits:
 
         Parameters:
         ----------
-        source_sentence: string or tensor
-            Source sentence or source sentence ids fed to the model.
+        masked_X: string or tensor
+            Masked input fed to the model.
 
-        target_sentence: string or tensor
-            Target sentence or target sentence ids for which logits are generated using the decoder.
+        X: string or tensor
+            Unmasked input.
 
         Returns:
         -------
         numpy array
             Numpy array of log odds.
         """
+        #WARNING: NEEDS TO BE UPDATED BASED ON NEW VARIABLE NAMING
+
         # update cache for every new row
         self.update_source_sentence_cache(source_sentence)
         # get source sentence ids
