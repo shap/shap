@@ -19,7 +19,7 @@ def test_image_to_text_single():
     """ Just make sure the image_to_text function doesn't crash.
     """
     
-    class MockImageExplaination:
+    class MockImageExplanation:
         def __init__(self, data, values, output_names):
             self.data = data
             self.values = values
@@ -34,6 +34,6 @@ def test_image_to_text_single():
     test_values = np.random.rand(test_image_height, test_image_width, 3, test_word_length)
     test_output_names = np.array([str(i) for i in range(test_word_length)])
             
-    shap_values_test =  MockImageExplaination(test_data, test_values, test_output_names)
+    shap_values_test =  MockImageExplanation(test_data, test_values, test_output_names)
     shap.plots.image_to_text(shap_values_test)
 
