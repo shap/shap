@@ -8,12 +8,13 @@ const float inf = std::numeric_limits<float>::infinity();
 void RecurseTree(unsigned pos, const TreeEnsemble &tree,
                  std::vector<gpu_treeshap::PathElement> *tmp_path,
                  std::vector<gpu_treeshap::PathElement> *paths,
-                 size_t *path_idx) {
+                 size_t *path_idx, int group, int num_outputs) {
   if (tree.is_leaf(pos)) {
-    auto v = tree.values[pos];
+    auto v = tree.values[pos * num_outputs + group];
     // Go back over path, setting v, path_idx
     for (auto &e : *tmp_path) {
       e.v = v;
+      e.group = group;
       e.path_idx = *path_idx;
     }
 
@@ -32,14 +33,15 @@ void RecurseTree(unsigned pos, const TreeEnsemble &tree,
                          static_cast<float>(tree.thresholds[pos]), false,
                          left_zero_fraction, 0.0f);
 
-  RecurseTree(left_child, tree, tmp_path, paths, path_idx);
+  RecurseTree(left_child, tree, tmp_path, paths, path_idx, group, num_outputs);
 
   // Add left split to the path
   tmp_path->back() = gpu_treeshap::PathElement(
       0, tree.features[pos], 0, static_cast<float>(tree.thresholds[pos]), inf,
       false, 1.0 - left_zero_fraction, 0.0f);
 
-  RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx);
+  RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx, group,
+              num_outputs);
 
   tmp_path->pop_back();
 }
@@ -50,10 +52,12 @@ std::vector<gpu_treeshap::PathElement> ExtractPaths(const TreeEnsemble &trees) {
   for (auto i = 0; i < trees.tree_limit; i++) {
     TreeEnsemble tree;
     trees.get_tree(tree, i);
-    std::vector<gpu_treeshap::PathElement> tmp_path;
-    tmp_path.reserve(tree.max_depth);
-    tmp_path.emplace_back(0, -1, 0, -inf, inf, false, 1.0, 0.0f);
-    RecurseTree(0, tree, &tmp_path, &paths, &path_idx);
+    for (auto j = 0ull; j < tree.num_outputs; j++) {
+      std::vector<gpu_treeshap::PathElement> tmp_path;
+      tmp_path.reserve(tree.max_depth);
+      tmp_path.emplace_back(0, -1, 0, -inf, inf, false, 1.0, 0.0f);
+      RecurseTree(0, tree, &tmp_path, &paths, &path_idx, j, tree.num_outputs);
+    }
   }
   return paths;
 }
@@ -64,13 +68,12 @@ class DeviceExplanationDataset {
   size_t num_features;
   size_t num_rows;
 
- public:
+public:
   DeviceExplanationDataset(const ExplanationDataset &host_data)
       : data(host_data.X, host_data.X + host_data.num_X * host_data.M),
         missing(host_data.X_missing,
                 host_data.X_missing + host_data.num_X * host_data.M),
-        num_features(host_data.M),
-        num_rows(host_data.num_X) {}
+        num_features(host_data.M), num_rows(host_data.num_X) {}
 
   class DenseDatasetWrapper {
     const float *data;
@@ -78,14 +81,12 @@ class DeviceExplanationDataset {
     int num_rows;
     int num_cols;
 
-   public:
+  public:
     DenseDatasetWrapper() = default;
     DenseDatasetWrapper(const float *data, const bool *missing, int num_rows,
                         int num_cols)
-        : data(data),
-          missing(missing),
-          num_rows(num_rows),
-          num_cols(num_cols) {}
+        : data(data), missing(missing), num_rows(num_rows), num_cols(num_cols) {
+    }
     __device__ float GetElement(size_t row_idx, size_t col_idx) const {
       auto idx = row_idx * num_cols + col_idx;
       if (missing[idx]) {
@@ -103,6 +104,39 @@ class DeviceExplanationDataset {
   }
 };
 
+// Helper function that accepts an index into a flat contiguous array and the
+// dimensions of a tensor and returns the indices with respect to the tensor
+template <typename T, size_t N>
+__device__ void flat_idx_to_tensor_idx(T flat_idx, const T (&shape)[N],
+                                       T (&out_idx)[N]) {
+  T current_size = shape[0];
+  for (auto i = 1ull; i < N; i++) {
+    current_size *= shape[i];
+  }
+  for (auto i = 0ull; i < N; i++) {
+    current_size /= shape[i];
+    out_idx[i] = flat_idx / current_size;
+    flat_idx -= current_size * out_idx[i];
+  }
+}
+
+// Given a shape and coordinates into a tensor, return the index into the
+// backing storage one-dimensional array
+template <typename T, size_t N>
+__device__ T tensor_idx_to_flat_idx(const T (&shape)[N],
+                                    const T (&tensor_idx)[N]) {
+  T current_size = shape[0];
+  for (auto i = 1ull; i < N; i++) {
+    current_size *= shape[i];
+  }
+  T idx = 0;
+  for (auto i = 0ull; i < N; i++) {
+    current_size /= shape[i];
+    idx += tensor_idx[i] * current_size;
+  }
+  return idx;
+}
+
 inline void dense_tree_path_dependent_gpu(
     const TreeEnsemble &trees, const ExplanationDataset &data,
     tfloat *out_contribs, tfloat transform(const tfloat, const tfloat)) {
@@ -111,20 +145,41 @@ inline void dense_tree_path_dependent_gpu(
   DeviceExplanationDataset::DenseDatasetWrapper X =
       device_data.GetDeviceAccessor();
 
-  thrust::device_vector<float> phis((X.NumCols() + 1) * X.NumRows());
-  gpu_treeshap::GPUTreeShap(X, paths.begin(), paths.end(), 1, phis.data().get(),
-                            phis.size());
+  thrust::device_vector<float> phis((X.NumCols() + 1) * X.NumRows() *
+                                    trees.num_outputs);
+  gpu_treeshap::GPUTreeShap(X, paths.begin(), paths.end(), trees.num_outputs,
+                            phis.data().get(), phis.size());
   // Add the base offset term to bias
-  auto base_offset = trees.base_offset[0];
+  thrust::device_vector<double> base_offset(
+      trees.base_offset, trees.base_offset + trees.num_outputs);
   auto counting = thrust::make_counting_iterator(size_t(0));
   auto d_phis = phis.data().get();
-  thrust::for_each(counting, counting + X.NumRows(),
-                   [=] __device__(size_t row_idx) {
+  auto d_base_offset = base_offset.data().get();
+  size_t num_groups = trees.num_outputs;
+  thrust::for_each(counting, counting + X.NumRows() * trees.num_outputs,
+                   [=] __device__(size_t idx) {
+                     size_t row_idx = idx / num_groups;
+                     size_t group = idx % num_groups;
                      auto phi_idx = gpu_treeshap::IndexPhi(
-                         row_idx, 1, 0, X.NumCols(), X.NumCols());
-                     d_phis[phi_idx] += base_offset;
+                         row_idx, num_groups, group, X.NumCols(), X.NumCols());
+                     d_phis[phi_idx] += d_base_offset[group];
                    });
-  thrust::copy(phis.begin(), phis.end(), out_contribs);
+
+  // Shap uses a slightly different layout for multiclass
+  thrust::device_vector<float> transposed_phis(phis.size());
+  auto d_transposed_phis = transposed_phis.data();
+  thrust::for_each(
+      counting, counting + phis.size(), [=] __device__(size_t idx) {
+        size_t old_shape[] = {X.NumRows(), num_groups, (X.NumCols() + 1)};
+        size_t old_idx[std::size(old_shape)];
+        flat_idx_to_tensor_idx(idx, old_shape, old_idx);
+        // Define new tensor format, switch num_groups axis to end
+        size_t new_shape[] = {X.NumRows(), (X.NumCols() + 1), num_groups};
+        size_t new_idx[] = {old_idx[0], old_idx[2], old_idx[1]};
+        size_t transposed_idx = tensor_idx_to_flat_idx(new_shape, new_idx);
+        d_transposed_phis[transposed_idx] = d_phis[idx];
+      });
+  thrust::copy(transposed_phis.begin(), transposed_phis.end(), out_contribs);
 }
 
 inline void dense_tree_path_dependent_interactions_gpu(
@@ -136,20 +191,43 @@ inline void dense_tree_path_dependent_interactions_gpu(
       device_data.GetDeviceAccessor();
 
   thrust::device_vector<float> phis((X.NumCols() + 1) * (X.NumCols() + 1) *
-                                    X.NumRows());
-  gpu_treeshap::GPUTreeShapInteractions(X, paths.begin(), paths.end(), 1,
-                                        phis.data().get(), phis.size());
+                                    X.NumRows() * trees.num_outputs);
+  gpu_treeshap::GPUTreeShapInteractions(X, paths.begin(), paths.end(),
+                                        trees.num_outputs, phis.data().get(),
+                                        phis.size());
   // Add the base offset term to bias
-  auto base_offset = trees.base_offset[0];
+  thrust::device_vector<double> base_offset(
+      trees.base_offset, trees.base_offset + trees.num_outputs);
   auto counting = thrust::make_counting_iterator(size_t(0));
   auto d_phis = phis.data().get();
-  thrust::for_each(counting, counting + X.NumRows(),
-                   [=] __device__(size_t row_idx) {
+  auto d_base_offset = base_offset.data().get();
+  size_t num_groups = trees.num_outputs;
+  thrust::for_each(counting, counting + X.NumRows() * num_groups,
+                   [=] __device__(size_t idx) {
+                     size_t row_idx = idx / num_groups;
+                     size_t group = idx % num_groups;
                      auto phi_idx = gpu_treeshap::IndexPhiInteractions(
-                         row_idx, 1, 0, X.NumCols(), X.NumCols(), X.NumCols());
-                     d_phis[phi_idx] += base_offset;
+                         row_idx, num_groups, group, X.NumCols(), X.NumCols(),
+                         X.NumCols());
+                     d_phis[phi_idx] += d_base_offset[group];
                    });
-  thrust::copy(phis.begin(), phis.end(), out_contribs);
+  // Shap uses a slightly different layout for multiclass
+  thrust::device_vector<float> transposed_phis(phis.size());
+  auto d_transposed_phis = transposed_phis.data();
+  thrust::for_each(
+      counting, counting + phis.size(), [=] __device__(size_t idx) {
+        size_t old_shape[] = {X.NumRows(), num_groups, (X.NumCols() + 1),
+                              (X.NumCols() + 1)};
+        size_t old_idx[std::size(old_shape)];
+        flat_idx_to_tensor_idx(idx, old_shape, old_idx);
+        // Define new tensor format, switch num_groups axis to end
+        size_t new_shape[] = {X.NumRows(), (X.NumCols() + 1), (X.NumCols() + 1),
+                              num_groups};
+        size_t new_idx[] = {old_idx[0], old_idx[2], old_idx[3], old_idx[1]};
+        size_t transposed_idx = tensor_idx_to_flat_idx(new_shape, new_idx);
+        d_transposed_phis[transposed_idx] = d_phis[idx];
+      });
+  thrust::copy(transposed_phis.begin(), transposed_phis.end(), out_contribs);
 }
 
 void dense_tree_shap_gpu(const TreeEnsemble &trees,
@@ -161,24 +239,24 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
 
   // dispatch to the correct algorithm handler
   switch (feature_dependence) {
-    case FEATURE_DEPENDENCE::independent:
-      std::cerr << "FEATURE_DEPENDENCE::independent not yet supported\n";
-      return;
+  case FEATURE_DEPENDENCE::independent:
+    std::cerr << "FEATURE_DEPENDENCE::independent not yet supported\n";
+    return;
 
-    case FEATURE_DEPENDENCE::tree_path_dependent:
-      if (interactions) {
-        dense_tree_path_dependent_interactions_gpu(trees, data, out_contribs,
-                                                   transform);
-      } else {
-        dense_tree_path_dependent_gpu(trees, data, out_contribs, transform);
-      }
-      return;
+  case FEATURE_DEPENDENCE::tree_path_dependent:
+    if (interactions) {
+      dense_tree_path_dependent_interactions_gpu(trees, data, out_contribs,
+                                                 transform);
+    } else {
+      dense_tree_path_dependent_gpu(trees, data, out_contribs, transform);
+    }
+    return;
 
-    case FEATURE_DEPENDENCE::global_path_dependent:
-      std::cerr << "FEATURE_DEPENDENCE::global_path_dependent not supported\n";
-      return;
-    default:
-      std::cerr << "Unknown feature dependence option\n";
-      return;
+  case FEATURE_DEPENDENCE::global_path_dependent:
+    std::cerr << "FEATURE_DEPENDENCE::global_path_dependent not supported\n";
+    return;
+  default:
+    std::cerr << "Unknown feature dependence option\n";
+    return;
   }
 }
