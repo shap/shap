@@ -916,6 +916,8 @@ class TreeEnsemble:
         elif safe_isinstance(model, "lightgbm.sklearn.LGBMClassifier"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
+            if model.n_classes_ > 2:
+                self.num_stacked_models = model.n_classes_
             self.original_model = model.booster_
             tree_info = self.original_model.dump_model()["tree_info"]
             try:
@@ -1005,7 +1007,7 @@ class TreeEnsemble:
                 self.features[i,:len(self.trees[i].features)] = self.trees[i].features
                 self.thresholds[i,:len(self.trees[i].thresholds)] = self.trees[i].thresholds
                 if self.num_stacked_models > 1:
-                    stack_pos = int(i // (num_trees / self.num_stacked_models))
+                    stack_pos = i % self.num_stacked_models
                     self.values[i,:len(self.trees[i].values[:,0]),stack_pos] = self.trees[i].values[:,0]
                 else:
                     self.values[i,:len(self.trees[i].values)] = self.trees[i].values

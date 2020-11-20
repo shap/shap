@@ -96,7 +96,6 @@ def xgboost_binary_classifier():
     return model, X, model.predict(X, output_margin=True)
 
 
-@task_xfail
 def xgboost_multiclass_classifier():
     # pylint: disable=import-outside-toplevel
     try:
@@ -171,20 +170,18 @@ def rf_regressor():
     return model, X, model.predict(X)
 
 
-@task_xfail
 def rf_binary_classifier():
     X, y = datasets['binary']
     model = sklearn.ensemble.RandomForestClassifier()
     model.fit(X, y)
-    return model, X, model.predict(X)
+    return model, X, model.predict_proba(X)
 
 
-@task_xfail
 def rf_multiclass_classifier():
     X, y = datasets['multiclass']
     model = sklearn.ensemble.RandomForestClassifier()
     model.fit(X, y)
-    return model, X, model.predict(X)
+    return model, X, model.predict_proba(X)
 
 
 tasks = [xgboost_base(), xgboost_regressor(), xgboost_binary_classifier(),
@@ -208,10 +205,7 @@ def idfn(task):
 def test_gpu_tree_explainer_shap(task, feature_perturbation):
     model, X, margin = task
     ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
-    shap_values = ex.shap_values(X, check_additivity=False)
-
-    assert np.abs(np.sum(shap_values, 1) + ex.expected_value - margin).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
+    ex.shap_values(X, check_additivity=True)
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
@@ -222,5 +216,5 @@ def test_gpu_tree_explainer_shap_interactions(task, feature_perturbation):
     shap_values = np.array(ex.shap_interaction_values(X), copy=False)
 
     assert np.abs(np.sum(shap_values, axis=(len(shap_values.shape) - 1, len(
-        shap_values.shape) - 2)) + ex.expected_value - margin).max() < 1e-4, \
+        shap_values.shape) - 2)).T + ex.expected_value - margin).max() < 1e-4, \
         "SHAP values don't sum to model output!"
