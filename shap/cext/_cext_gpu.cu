@@ -8,19 +8,25 @@ const float inf = std::numeric_limits<float>::infinity();
 void RecurseTree(unsigned pos, const TreeEnsemble &tree,
                  std::vector<gpu_treeshap::PathElement> *tmp_path,
                  std::vector<gpu_treeshap::PathElement> *paths,
-                 size_t *path_idx, int group, int num_outputs) {
+                 size_t *path_idx, int num_outputs) {
   if (tree.is_leaf(pos)) {
-    auto v = tree.values[pos * num_outputs + group];
-    // Go back over path, setting v, path_idx
-    for (auto &e : *tmp_path) {
-      e.v = v;
-      e.group = group;
-      e.path_idx = *path_idx;
-    }
+    for (auto j = 0ull; j < num_outputs; j++) {
+      auto v = tree.values[pos * num_outputs + j];
+      if (v == 0.0) {
+        // The tree has no output for this class, don't bother adding the path
+        continue;
+      }
+      // Go back over path, setting v, path_idx
+      for (auto &e : *tmp_path) {
+        e.v = v;
+        e.group = j;
+        e.path_idx = *path_idx;
+      }
 
-    paths->insert(paths->end(), tmp_path->begin(), tmp_path->end());
-    // Increment path index
-    (*path_idx)++;
+      paths->insert(paths->end(), tmp_path->begin(), tmp_path->end());
+      // Increment path index
+      (*path_idx)++;
+    }
     return;
   }
 
@@ -33,14 +39,14 @@ void RecurseTree(unsigned pos, const TreeEnsemble &tree,
                          static_cast<float>(tree.thresholds[pos]), false,
                          left_zero_fraction, 0.0f);
 
-  RecurseTree(left_child, tree, tmp_path, paths, path_idx, group, num_outputs);
+  RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
 
   // Add left split to the path
   tmp_path->back() = gpu_treeshap::PathElement(
       0, tree.features[pos], 0, static_cast<float>(tree.thresholds[pos]), inf,
       false, 1.0 - left_zero_fraction, 0.0f);
 
-  RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx, group,
+  RecurseTree(tree.children_right[pos], tree, tmp_path, paths, path_idx,
               num_outputs);
 
   tmp_path->pop_back();
@@ -52,12 +58,10 @@ std::vector<gpu_treeshap::PathElement> ExtractPaths(const TreeEnsemble &trees) {
   for (auto i = 0; i < trees.tree_limit; i++) {
     TreeEnsemble tree;
     trees.get_tree(tree, i);
-    for (auto j = 0ull; j < tree.num_outputs; j++) {
-      std::vector<gpu_treeshap::PathElement> tmp_path;
-      tmp_path.reserve(tree.max_depth);
-      tmp_path.emplace_back(0, -1, 0, -inf, inf, false, 1.0, 0.0f);
-      RecurseTree(0, tree, &tmp_path, &paths, &path_idx, j, tree.num_outputs);
-    }
+    std::vector<gpu_treeshap::PathElement> tmp_path;
+    tmp_path.reserve(tree.max_depth);
+    tmp_path.emplace_back(0, -1, 0, -inf, inf, false, 1.0, 0.0f);
+    RecurseTree(0, tree, &tmp_path, &paths, &path_idx, tree.num_outputs);
   }
   return paths;
 }
