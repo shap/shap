@@ -740,7 +740,7 @@ class TreeEnsemble:
                     self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
                 else:
                     self.model_output = "probability"
-            output_trees = [[] for i in range(self.num_stacked_models)]
+            self.trees = []
             for p in model._predictors:
                 for i in range(self.num_stacked_models):
                     nodes = p[i].nodes
@@ -754,8 +754,7 @@ class TreeEnsemble:
                         "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
                         "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
                     }
-                    output_trees[i].append(SingleTree(tree, data=data, data_missing=data_missing))
-            self.trees = list(itertools.chain.from_iterable(output_trees))
+                    self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(model.loss, None)
             self.tree_output = "log_odds"
         elif safe_isinstance(model, ["sklearn.ensemble.GradientBoostingClassifier","sklearn.ensemble._gb.GradientBoostingClassifier", "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier"]):
@@ -1007,6 +1006,7 @@ class TreeEnsemble:
                 self.features[i,:len(self.trees[i].features)] = self.trees[i].features
                 self.thresholds[i,:len(self.trees[i].thresholds)] = self.trees[i].thresholds
                 if self.num_stacked_models > 1:
+                    # stack_pos = int(i // (num_trees / self.num_stacked_models))
                     stack_pos = i % self.num_stacked_models
                     self.values[i,:len(self.trees[i].values[:,0]),stack_pos] = self.trees[i].values[:,0]
                 else:

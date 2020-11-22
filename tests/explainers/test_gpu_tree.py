@@ -203,7 +203,7 @@ def idfn(task):
                          [pytest.param("interventional", marks=pytest.mark.xfail),
                           "tree_path_dependent"])
 def test_gpu_tree_explainer_shap(task, feature_perturbation):
-    model, X, margin = task
+    model, X, _ = task
     ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
     ex.shap_values(X, check_additivity=True)
 
