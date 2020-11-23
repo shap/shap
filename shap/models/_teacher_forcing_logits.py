@@ -53,6 +53,15 @@ class TeacherForcingLogits(Model):
         else:
             return variables.to(device)
 
+    def get_logodds(self, logits):
+        logodds = []
+        # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
+        for i in range(0,logits.shape[1]-1):
+            probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
+            logit_dist = sp.special.logit(probs)
+            logodds.append(logit_dist[self.target_sentence_ids[0,i].item()])
+        return np.array(logodds)
+
     def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
         """ The function generates logits for transformer models.
         It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
