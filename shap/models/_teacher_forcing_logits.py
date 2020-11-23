@@ -43,3 +43,79 @@ class TeacherForcingLogits(Model):
             logodds = self.get_logodds(logits)
             output_batch.append(logodds)
         return output_batch
+
+    def to_device(self, variables, device=None):
+        if isinstance(variables, list):
+            deviced_variables = []
+            for variable in variables:
+                deviced_variables.append(variable.to(device))
+            return deviced_variables
+        else:
+            return variables.to(device)
+
+    def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+        """ The function generates logits for transformer models.
+        It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
+        Parameters:
+        ----------
+        source_sentence_ids: 2D tensor of shape (batch size, len of sequence)
+            Tokenized ids fed to the model.
+        target_sentence_ids: 2D tensor of shape (batch size, len of sequence)
+            Tokenized ids for which logits are generated using the decoder.
+        Returns:
+        -------
+        numpy array
+            Decoder output logits for target sentence ids.
+        """
+        # set model to eval mode
+        self.text_similarity_model.eval()
+        # check if type of model architecture assigned in model config
+        if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
+            and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
+            raise ValueError(
+                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+            )
+        if self.text_similarity_model.config.is_encoder_decoder:
+            # assigning decoder start token id as it is needed for encoder decoder model generation
+            decoder_start_token_id = None
+            if hasattr(self.text_similarity_model.config, "decoder_start_token_id") and self.text_similarity_model.config.decoder_start_token_id is not None:
+                decoder_start_token_id = self.text_similarity_model.config.decoder_start_token_id
+            elif hasattr(self.text_similarity_model.config, "bos_token_id") and self.text_similarity_model.config.bos_token_id is not None:
+                decoder_start_token_id = self.text_similarity_model.config.bos_token_id
+            elif (hasattr(self.text_similarity_model.config, "decoder") and hasattr(self.text_similarity_model.config.decoder, "bos_token_id") and self.text_similarity_model.config.decoder.bos_token_id is not None):
+                decoder_start_token_id = self.text_similarity_model.config.decoder.bos_token_id
+            else:
+                raise ValueError(
+                    "No decoder_start_token_id or bos_token_id defined in config for encoder-decoder generation"
+                )
+            # concat decoder start token id to target sentence ids
+            target_sentence_start_id = (
+                torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
+                * decoder_start_token_id
+            )
+            target_sentence_ids = torch.cat((target_sentence_start_id,target_sentence_ids),dim=-1)
+            # generate outputs and logits
+            with torch.no_grad():
+                outputs = self.text_similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+            logits=outputs.logits.detach().cpu().numpy().astype('float64')
+        else:
+            # check if source sentence ids are null then add bos token id to decoder
+            if source_sentence_ids.shape[1]==0:
+                if hasattr(self.text_similarity_model.config.bos_token_id) and self.text_similarity_model.config.bos_token_id is not None:
+                    source_sentence_ids = (
+                        torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
+                        * self.text_similarity_model.config.bos_token_id
+                    )
+                else:
+                    raise ValueError(
+                    "Context ids (source sentence ids) are null and no bos token defined in model config"
+                )
+            # combine source and target sentence ids  to pass into decoder eg: in case of distillgpt2
+            combined_sentence_ids = torch.cat((source_sentence_ids,target_sentence_ids),dim=-1)
+            # generate outputs and logits
+            with torch.no_grad():
+                outputs = self.text_similarity_model(input_ids=combined_sentence_ids, return_dict=True)
+            # extract only logits corresponding to target sentence ids
+            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
+        del outputs
+        return logits
