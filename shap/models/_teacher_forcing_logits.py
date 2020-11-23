@@ -53,6 +53,28 @@ class TeacherForcingLogits(Model):
         else:
             return variables.to(device)
 
+    def get_source_sentence_ids(self, X):
+        """ The function tokenizes source sentence.
+        Parameters:
+        ----------
+        X: string or tensor
+            X could be a text or image.
+        Returns:
+        -------
+        tensor
+            Tensor of source sentence ids.
+        """
+        # TODO: batch source_sentence_ids
+        if self.model_agnostic:
+            # In model agnostic case, we first pass the input through the model and then tokenize output sentence
+            source_sentence = self.model(X)
+            source_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(source_sentence)])
+        else:
+            # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
+            source_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(X)])
+        source_sentence_ids = self.to_device(source_sentence_ids, device=self.device)
+        return source_sentence_ids
+
     def get_logodds(self, logits):
         logodds = []
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
