@@ -44,6 +44,21 @@ class TeacherForcingLogits(Model):
             output_batch.append(logodds)
         return output_batch
 
+    def update_cache_X(self, X):
+        """ The function updates original input(X) and target sentence ids.
+        It mimics the caching mechanism to update the original input and target sentence ids
+        that are to be explained and which updates for every new row of explanation.
+        Parameters:
+        ----------
+        X: string or numpy array
+            Source sentence for an explanation row.
+        """
+        # check if the source sentence has been updated (occurs when explaining a new row)
+        if self.X != X:
+            self.X = X
+            self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
+            self.target_sentence_ids = self.to_device(self.target_sentence_ids, device=self.device)
+
     def to_device(self, variables, device=None):
         if isinstance(variables, list):
             deviced_variables = []
