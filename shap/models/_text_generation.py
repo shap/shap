@@ -1,6 +1,6 @@
 import torch
 from ._model import Model
-from ..utils import get_tokenizer_prefix_suffix
+from ..utils import parse_prefix_suffix_for_tokenizer
 
 class TextGeneration(Model):
     def __init__(self, model, tokenizer=None, text_similarity_tokenizer=None, device='cpu'):
@@ -17,7 +17,8 @@ class TextGeneration(Model):
         target_sentence_ids = None
         if self.model_agnostic:
             target_sentence = self.model(X)
-            keep_prefix, keep_suffix = get_tokenizer_prefix_suffix(self.text_similarity_tokenizer)
+            parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.text_similarity_tokenizer)
+            keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
             if keep_suffix > 0:
                 target_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
             else:
@@ -35,7 +36,8 @@ class TextGeneration(Model):
                     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
                 )
             if self.model.config.is_encoder_decoder:
-                keep_prefix, keep_suffix = get_tokenizer_prefix_suffix(self.tokenizer)
+                parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.tokenizer)
+                keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
                 if keep_suffix > 0:
                     target_sentence_ids = output[:, keep_prefix:-keep_suffix]
                 else:
