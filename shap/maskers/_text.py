@@ -1,6 +1,6 @@
 import numpy as np
 from ._masker import Masker
-from ..utils import safe_isinstance
+from ..utils import safe_isinstance, parse_prefix_suffix_for_tokenizer
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -13,14 +13,16 @@ class Text(Masker):
     def __init__(self, tokenizer, mask_token="auto", output_type="string"):
         self.mask_history = {}
         self.tokenizer = tokenizer
-        null_tokens = tokenizer.encode("")
         self.output_type = output_type
         
-        assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"
-        self.keep_prefix = len(null_tokens) // 2
-        self.keep_suffix = len(null_tokens) // 2
-        self.prefix_strlen = len(tokenizer.decode(null_tokens[:self.keep_prefix]))
-        self.suffix_strlen = len(tokenizer.decode(null_tokens[-self.keep_suffix:]))
+        parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
+        
+        self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
+        self.keep_suffix = parsed_tokenizer_dict['keep_suffix']
+        self.prefix_strlen = parsed_tokenizer_dict['prefix_strlen']
+        self.suffix_strlen = parsed_tokenizer_dict['suffix_strlen']
+        null_tokens = parsed_tokenizer_dict['null_tokens']
+
         if mask_token == "auto":
             if hasattr(self.tokenizer, "mask_token_id"):
                 self.mask_token_id = self.tokenizer.mask_token_id
