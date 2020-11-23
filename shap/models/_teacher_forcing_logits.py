@@ -31,3 +31,15 @@ class TeacherForcingLogits(Model):
         # initializing X which is the original input for every new row of explanation
         self.X = None
         self.target_sentence_ids = None
+
+    def __call__(self, masked_X, X):
+        output_batch=[]
+        for masked_x, x in zip(masked_X, X):
+            # update target sentence ids and original input for a new explanation row
+            self.update_cache_X(x)
+            # pass the masked input from which to generate source sentence ids
+            source_sentence_ids = self.get_source_sentence_ids(masked_x)
+            logits = self.get_teacher_forced_logits(source_sentence_ids, self.target_sentence_ids)
+            logodds = self.get_logodds(logits)
+            output_batch.append(logodds)
+        return output_batch
