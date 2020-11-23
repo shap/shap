@@ -72,21 +72,17 @@ class Explainer():
             else:
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
-            self.masker = maskers.Text(masker)
+            if safe_isinstance(model,"transformers.PreTrainedModel") and safe_isinstance(model,MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+                self.masker = maskers.createFixedCompositeClass(maskers.Text,masker)
+                self.model = TeacherForcingLogits(self.model, masker)
+            else:
+                self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
         elif (masker is dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
         else:
             self.masker = masker
-
-        # wrap masker and model if output text explanation algorithm
-        if safe_isinstance(model,"transformers.PreTrainedModel") and safe_isinstance(model,MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
-            self.masker = maskers.FixedComposite(self.masker)
-            self.model = TeacherForcingLogits(self.model, masker)
-        elif safe_isinstance(model, "shap.models.TeacherForcingLogits"):
-            self.masker = maskers.FixedComposite(self.masker)
-
 
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
 
