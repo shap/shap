@@ -62,7 +62,7 @@ class Text(Masker):
                 out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-                out = self.tokenizer.convert_tokens_to_string(out)
+                out = self.tokenizer.convert_tokens_to_string(out.tolist())
             elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
                 out = "".join(out)
         else:
