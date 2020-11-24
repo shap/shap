@@ -16,6 +16,7 @@ from .explainers._explainer import Explainer
 from .explainers._kernel import Kernel as KernelExplainer
 from .explainers._sampling import Sampling as SamplingExplainer
 from .explainers._tree import Tree as TreeExplainer
+from .explainers._gpu_tree import GPUTree as GPUTreeExplainer
 from .explainers._deep import Deep as DeepExplainer
 from .explainers._gradient import Gradient as GradientExplainer
 from .explainers._linear import Linear as LinearExplainer

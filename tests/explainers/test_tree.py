@@ -741,6 +741,7 @@ def test_isolation_forest():
         score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
+
 def test_pyod_isolation_forest():
     IForest = pytest.importorskip("pyod.models.iforest.IForest")
     _average_path_length = pytest.importorskip("sklearn.ensemble.iforest._average_path_length")
@@ -753,10 +754,8 @@ def test_pyod_isolation_forest():
         explainer = shap.TreeExplainer(iso)
         shap_values = explainer.shap_values(X)
 
-        score_from_shap = - 2**(
-            - (np.sum(shap_values, axis=1) + explainer.expected_value) /
-            _average_path_length(np.array([iso.max_samples_]))[0]
-            )
+        l = _average_path_length(np.array([iso.max_samples_]))[0]
+        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
         assert np.allclose(iso.detector_.score_samples(X), score_from_shap, atol=1e-7)
 
 
