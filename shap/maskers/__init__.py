@@ -3,4 +3,4 @@ from ._image import Image
 from ._text import Text
 from ._fixed import Fixed
 from ._composite import Composite
-from ._fixed_composite import createFixedCompositeClass
+from ._fixed_composite import createFixedCompositeMasker

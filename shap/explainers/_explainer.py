@@ -73,7 +73,7 @@ class Explainer():
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
             if safe_isinstance(model,"transformers.PreTrainedModel") and safe_isinstance(model,MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
-                self.masker = maskers.createFixedCompositeClass(maskers.Text,masker)
+                self.masker = maskers.createFixedCompositeMasker(maskers.Text,masker)
                 self.model = TeacherForcingLogits(self.model, masker)
             else:
                 self.masker = maskers.Text(masker)
