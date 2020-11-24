@@ -296,38 +296,9 @@ class OpChain():
                 out += ")"
         return out
 
-def get_tokenizer_prefix_suffix(tokenizer):
-        null_tokens = tokenizer.encode("")
-        keep_prefix, keep_suffix = None, None
-        # set prefix and sufix tokens based on null tokens
-        # example for distillgpt2: null_tokens=[], for BART: null_tokens = [0,2] and for MarianMT: null_tokens=[0] 
-        # used to slice tokens belonging to sentence after passing through tokenizer.encode()
-        if len(null_tokens) == 0:
-            keep_prefix = 0
-            keep_suffix = 0
-        elif len(null_tokens) == 1:
-            null_token = null_tokens[0]
-            assert (('eos_token' in tokenizer.special_tokens_map) or ('bos_token' in tokenizer.special_tokens_map)), "No eos token or bos token found in tokenizer. Cannot assign keep_prefix and keep_suffix for given tokenizer!"
-            if ('eos_token' in tokenizer.special_tokens_map) and (tokenizer.decode(null_token) == tokenizer.special_tokens_map['eos_token']):
-                keep_prefix = 0
-                keep_suffix = 1
-            elif ('bos_token' in tokenizer.special_tokens_map) and (tokenizer.decode(null_token) == tokenizer.special_tokens_map['bos_token']):
-                keep_prefix = 1
-                keep_suffix = 0
-            else:
-                raise ValueError(
-                    "Unable to assign null tokens to prefix or suffix of a sentence as null tokens dont map to either of eos_token or bos_token"
-                )
-        else:
-            assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens greater than 2 are added to the null string!"
-            keep_prefix = len(null_tokens) // 2
-            keep_suffix = len(null_tokens) // 2
-
-        return keep_prefix, keep_suffix
-
 def parse_prefix_suffix_for_tokenizer(tokenizer):
     null_tokens = tokenizer.encode("")
-    keep_prefix, keep_suffix, prefix_strlen, suffix_strlen = None, None
+    keep_prefix, keep_suffix, prefix_strlen, suffix_strlen = None, None, None, None
     # set prefix and sufix tokens based on null tokens
     # example for distillgpt2: null_tokens=[], for BART: null_tokens = [0,2] and for MarianMT: null_tokens=[0] 
     # used to slice tokens belonging to sentence after passing through tokenizer.encode()
