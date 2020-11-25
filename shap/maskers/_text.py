@@ -1,6 +1,7 @@
 import numpy as np
 from ._masker import Masker
-from ..utils import safe_isinstance, parse_prefix_suffix_for_tokenizer
+from ..utils import safe_isinstance
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.

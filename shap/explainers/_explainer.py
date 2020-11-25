@@ -1,7 +1,8 @@
 from .. import maskers
 from .. import links
-from ..utils import safe_isinstance, show_progress, MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
-from ..models import TeacherForcingLogits
+from ..utils import safe_isinstance, show_progress
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
+from .. import models
 from .._explanation import Explanation
 import numpy as np
 import scipy as sp
@@ -74,7 +75,7 @@ class Explainer():
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
             if safe_isinstance(model,"transformers.PreTrainedModel") and safe_isinstance(model,MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
                 self.masker = maskers.createFixedCompositeMasker(maskers.Text,masker)
-                self.model = TeacherForcingLogits(self.model, masker)
+                self.model = models.TeacherForcingLogits(self.model, masker)
             else:
                 self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:

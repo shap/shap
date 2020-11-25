@@ -1,6 +1,6 @@
 import torch
 from ._model import Model
-from ..utils import parse_prefix_suffix_for_tokenizer
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer
 
 class TextGeneration(Model):
     def __init__(self, model, tokenizer=None, text_similarity_tokenizer=None, device='cpu'):
