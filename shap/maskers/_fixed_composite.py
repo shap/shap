@@ -15,3 +15,9 @@ class FixedComposite(Masker):
 
     def invariants(self, *args):
         return invariants(self.masker, *args)
+
+    def clustering(self, *args):
+        if callable(self.masker.clustering):
+            return self.masker.clustering(*args)
+        else:
+            return self.masker.clustering
