@@ -1,5 +1,6 @@
 import numpy as np
 from ._masker import Masker
+from ..utils import shape
 
 class FixedComposite(Masker):
     def __init__(self, masker):
@@ -10,18 +11,4 @@ class FixedComposite(Masker):
         return (masked_X,) + args
 
     def shape(self, *args):
-        masker_rows , masker_cols = None, None
-        if hasattr(self.masker, "shape"):
-            if callable(self.masker.shape):
-                mshape = self.masker.shape(*args)
-                masker_rows = mshape[0]
-                masker_cols = mshape[1]
-            else:
-                mshape = self.masker.shape
-                masker_rows = mshape[0]
-                masker_cols = mshape[1]
-        else:
-            masker_rows = None# # just assuming...
-            masker_cols = sum(np.prod(a.shape) for a in args)
-
-        return masker_rows, masker_cols
+        return shape(self.masker, *args)
