@@ -8,7 +8,11 @@ class FixedComposite(Masker):
 
     def __call__(self, mask, *args):
         masked_X = self.masker(mask, *args)
-        return (masked_X,) + args
+        wrapped_args = []
+        for item in args:
+            wrapped_args.append(np.array([item]))
+        wrapped_args = tuple(wrapped_args)
+        return [(masked_X,) + wrapped_args]
 
     def shape(self, *args):
         return shape(self.masker, *args)
