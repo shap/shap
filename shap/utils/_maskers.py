@@ -15,9 +15,9 @@ def invariants(masker, *args):
 def variants(masker, *args):
     variants, variants_column_sums, variants_row_inds = None, None, None
     # if the masker supports it, save what positions vary from the background
-    invariants = invariants(masker, *args)
-    if invariants is not None:
-        variants = ~invariants
+    _invariants = invariants(masker, *args)
+    if _invariants is not None:
+        variants = ~_invariants
         variants_column_sums = variants.sum(0)
         variants_row_inds = [
             variants[:,i] for i in range(variants.shape[1])
