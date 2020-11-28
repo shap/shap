@@ -3,7 +3,7 @@ from ..utils import safe_isinstance
 
 def invariants(masker, *args):
     invariants = None
-    if isinstance(masker, "shap.maskers.FixedComposite"):
+    if safe_isinstance(masker, "shap.maskers.FixedComposite"):
         if callable(getattr(masker, "invariants", None)):
             return masker.invariants(*args)
         else:
@@ -29,7 +29,7 @@ def variants(masker, *args):
 
 def shape(masker, *args):
     masker_rows, masker_cols = None, None
-    if isinstance(masker, "shap.maskers.FixedComposite"):
+    if safe_isinstance(masker, "shap.maskers.FixedComposite"):
         if callable(getattr(masker, "shape", None)):
             return masker.shape(*args)
         else:
