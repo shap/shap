@@ -1,6 +1,6 @@
 import numpy as np
 from ._masker import Masker
-from ..utils import shape
+from ..utils import invariants, variants, shape
 
 class FixedComposite(Masker):
     def __init__(self, masker):
@@ -12,3 +12,6 @@ class FixedComposite(Masker):
 
     def shape(self, *args):
         return shape(self.masker, *args)
+
+    def invariants(self, *args):
+        return invariants(self.masker, *args)
