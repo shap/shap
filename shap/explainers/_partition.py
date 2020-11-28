@@ -101,7 +101,7 @@ class Partition(Explainer):
         else:
             self._reshaped_model = self.model
 
-        # if we don't have a dynamic clustering algorithm then can precowe mpute
+        # if we don't have a dynamic clustering algorithm then can precompute
         # a lot of information
         if not callable(self.masker.clustering):
             self._clustering = self.masker.clustering
@@ -136,6 +136,7 @@ class Partition(Explainer):
             except NameError:
                 prev_row_clustering = None
             self._clustering = self.masker.clustering(*row_args)
+            # to avoid recomputing masks for the same clustering
             if prev_row_clustering != self._clustering:
                 self._mask_matrix = make_masks(self._clustering)
 
