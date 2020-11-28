@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse
 from numba import jit
-
+from ._maskers import variants
 
 class MaskedModel():
     """ This is a utility class that combines a model, a masker object, and a current input.
@@ -20,15 +20,7 @@ class MaskedModel():
         self.link = link
         self.args = args
 
-        # if the masker supports it, save what positions vary from the background
-        if callable(getattr(self.masker, "invariants", None)):
-            self._variants = ~self.masker.invariants(*args)
-            self._variants_column_sums = self._variants.sum(0)
-            self._variants_row_inds = [
-                self._variants[:,i] for i in range(self._variants.shape[1])
-            ]
-        else:
-            self._variants = None
+        self._variants, self._variants_column_sums, self._variants_row_inds = variants(self.masker, *args)
         
         # compute the length of the mask (and hence our length)
         if hasattr(self.masker, "shape"):
