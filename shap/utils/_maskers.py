@@ -29,6 +29,11 @@ def variants(masker, *args):
 
 def shape(masker, *args):
     masker_rows, masker_cols = None, None
+    if isinstance(masker, "shap.maskers.FixedComposite"):
+        if callable(getattr(masker, "shape", None)):
+            return masker.shape(masker, *args)
+        else:
+            raise AttributeError("FixedComposite masker must define 'shape' attribute.")
     # compute the length of the mask (and hence our length)
     if hasattr(masker, "shape"):
         if callable(masker.shape):
