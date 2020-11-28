@@ -130,8 +130,14 @@ class Partition(Explainer):
         f11 = fm(~m00.reshape(1,-1))[0]
 
         if callable(self.masker.clustering):
+            try:
+                self._clustering
+                prev_row_clustering = self._clustering
+            except NameError:
+                prev_row_clustering = None
             self._clustering = self.masker.clustering(*row_args)
-            self._mask_matrix = make_masks(self._clustering)
+            if prev_row_clustering != self._clustering:
+                self._mask_matrix = make_masks(self._clustering)
 
         if hasattr(self._curr_base_value, 'shape') and len(self._curr_base_value.shape) > 0:
             if outputs is None:
