@@ -13,3 +13,21 @@ def variants(masker, *args):
         variants = None
 
     return variants, variants_column_sums, variants_row_inds
+
+def shape(masker, *args):
+    masker_rows, masker_cols = None, None
+    # compute the length of the mask (and hence our length)
+    if hasattr(masker, "shape"):
+        if callable(masker.shape):
+            mshape = masker.shape(*args)
+            masker_rows = mshape[0]
+            masker_cols = mshape[1]
+        else:
+            mshape = masker.shape
+            masker_rows = mshape[0]
+            masker_cols = mshape[1]
+    else:
+        masker_rows = None# # just assuming...
+        masker_cols = sum(np.prod(a.shape) for a in args)
+
+    return masker_rows, masker_cols
