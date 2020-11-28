@@ -1,10 +1,23 @@
 import numpy as np
+from ..utils import safe_isinstance
+
+def invariants(masker, *args):
+    invariants = None
+    if isinstance(masker, "shap.maskers.FixedComposite"):
+        if callable(getattr(masker, "invariants", None)):
+            return masker.invariants(masker, *args)
+        else:
+            raise AttributeError("FixedComposite masker must define 'invariants' attribute.")
+    if callable(getattr(masker, "invariants", None)):
+        invariants = masker.invariants(*args)
+    return invariants
 
 def variants(masker, *args):
     variants, variants_column_sums, variants_row_inds = None, None, None
     # if the masker supports it, save what positions vary from the background
-    if callable(getattr(masker, "invariants", None)):
-        variants = ~masker.invariants(*args)
+    invariants = invariants(masker, *args)
+    if invariants is not None:
+        variants = ~invariants
         variants_column_sums = variants.sum(0)
         variants_row_inds = [
             variants[:,i] for i in range(variants.shape[1])
