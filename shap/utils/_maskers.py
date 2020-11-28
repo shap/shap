@@ -5,7 +5,7 @@ def invariants(masker, *args):
     invariants = None
     if isinstance(masker, "shap.maskers.FixedComposite"):
         if callable(getattr(masker, "invariants", None)):
-            return masker.invariants(masker, *args)
+            return masker.invariants(*args)
         else:
             raise AttributeError("FixedComposite masker must define 'invariants' attribute.")
     if callable(getattr(masker, "invariants", None)):
@@ -31,7 +31,7 @@ def shape(masker, *args):
     masker_rows, masker_cols = None, None
     if isinstance(masker, "shap.maskers.FixedComposite"):
         if callable(getattr(masker, "shape", None)):
-            return masker.shape(masker, *args)
+            return masker.shape(*args)
         else:
             raise AttributeError("FixedComposite masker must define 'shape' attribute.")
     # compute the length of the mask (and hence our length)
