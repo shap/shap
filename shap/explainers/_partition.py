@@ -83,7 +83,7 @@ class Partition(Explainer):
         self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
         # self.output_names = output_names
 
-        self.model = lambda x: np.array(model(x))
+        self.model = lambda x: np.array(model(*x))
         self.expected_value = None
         self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
