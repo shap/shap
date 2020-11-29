@@ -84,6 +84,7 @@ class Partition(Explainer):
         # self.output_names = output_names
 
         self.model = lambda x: np.array(model(*x))
+        self.elemental_model = model
         self.expected_value = None
         self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
@@ -190,7 +191,8 @@ class Partition(Explainer):
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),
             "clustering": self._clustering,
-            "output_indices": outputs
+            "output_indices": outputs,
+            "output_names": self.elemental_model.output_names if hasattr(self.elemental_model, "output_names") else None
         }
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
