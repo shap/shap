@@ -61,7 +61,7 @@ class TeacherForcingLogits(Model):
             self.X = X
             self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
             self.output_names = self.get_output_names()
-            self.target_sentence_ids = self.to_device(self.target_sentence_ids, device=self.device)
+            self.target_sentence_ids = self.to_device(self.target_sentence_ids, device=self.device).to(torch.int64)
 
     def get_output_names(self):
         return self.text_similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
@@ -94,7 +94,7 @@ class TeacherForcingLogits(Model):
         else:
             # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
             source_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(X)])
-        source_sentence_ids = self.to_device(source_sentence_ids, device=self.device)
+        source_sentence_ids = self.to_device(source_sentence_ids, device=self.device).to(torch.int64)
         return source_sentence_ids
 
     def get_logodds(self, logits):
