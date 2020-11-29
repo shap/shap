@@ -154,7 +154,7 @@ class TeacherForcingLogits(Model):
         else:
             # check if source sentence ids are null then add bos token id to decoder
             if source_sentence_ids.shape[1]==0:
-                if hasattr(self.text_similarity_model.config.bos_token_id) and self.text_similarity_model.config.bos_token_id is not None:
+                if hasattr(self.text_similarity_model.config,"bos_token_id") and self.text_similarity_model.config.bos_token_id is not None:
                     source_sentence_ids = (
                         torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
                         * self.text_similarity_model.config.bos_token_id
