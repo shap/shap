@@ -33,6 +33,7 @@ class TeacherForcingLogits(Model):
         # initializing X which is the original input for every new row of explanation
         self.X = None
         self.target_sentence_ids = None
+        self.output_names = None
 
     def __call__(self, masked_X, X):
         output_batch=[]
@@ -59,7 +60,11 @@ class TeacherForcingLogits(Model):
         if self.X != X:
             self.X = X
             self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
+            self.output_names = self.get_output_names()
             self.target_sentence_ids = self.to_device(self.target_sentence_ids, device=self.device)
+
+    def get_output_names(self):
+        return self.text_similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
 
     def to_device(self, variables, device=None):
         if isinstance(variables, list):
