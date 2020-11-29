@@ -1,10 +1,14 @@
 import sys
-import torch
 import numpy as np
 import scipy as sp
 from ._model import Model
-from ..utils import safe_isinstance
+from ..utils import safe_isinstance, record_import_error
 from ._text_generation import TextGeneration
+
+try:
+    import torch
+except ImportError as e:
+    record_import_error("torch", "Torch could not be imported!", e)
 
 class TeacherForcingLogits(Model):
     def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, text_similarity_model=None, text_similarity_tokenizer=None, device=None):
