@@ -1,5 +1,5 @@
 from ._model import Model
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, record_import_error
 
 try:
     import torch
