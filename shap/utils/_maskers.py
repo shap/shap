@@ -49,3 +49,17 @@ def shape(masker, *args):
         masker_cols = sum(np.prod(a.shape) for a in args)
 
     return masker_rows, masker_cols
+
+def data_transform(masker, s):
+    if safe_isinstance(masker, "shap.maskers.FixedComposite"):
+        if callable(getattr(masker, "data_transform", None)):
+            return masker.data_transform(s)
+        else:
+            raise AttributeError("FixedComposite masker must define 'data_transform' attribute.")
+    # transform data
+    if hasattr(masker, "data_transform"):
+        data = np.array([masker.data_transform(v) for v in s])
+    else:
+        data = s
+    
+    return data
