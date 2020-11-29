@@ -31,3 +31,9 @@ class FixedComposite(Masker):
             return self.masker.mask_shapes(*args)
         else:
             return [a.shape for a in args]
+
+    def feature_names(self, *args):
+        if callable(getattr(self.masker, "feature_names", None)):
+            return self.masker.feature_names(*args)
+        else:
+            return None
