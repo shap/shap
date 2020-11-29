@@ -25,7 +25,7 @@ class Text(Masker):
         null_tokens = parsed_tokenizer_dict['null_tokens']
 
         if mask_token == "auto":
-            if hasattr(self.tokenizer, "mask_token_id"):
+            if hasattr(self.tokenizer, "mask_token_id") and self.tokenizer.mask_token_id is not None:
                 self.mask_token_id = self.tokenizer.mask_token_id
                 self.mask_token = " "+self.tokenizer.decode([self.tokenizer.mask_token_id])+" "#[self.prefix_strlen:-self.suffix_strlen]
             else:
