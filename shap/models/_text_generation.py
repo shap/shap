@@ -1,6 +1,10 @@
-import torch
 from ._model import Model
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer
+
+try:
+    import torch
+except ImportError as e:
+    record_import_error("torch", "Torch could not be imported!", e)
 
 class TextGeneration(Model):
     def __init__(self, model, tokenizer=None, text_similarity_tokenizer=None, device='cpu'):
