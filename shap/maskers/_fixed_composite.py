@@ -25,3 +25,9 @@ class FixedComposite(Masker):
             return self.masker.clustering(*args)
         else:
             return self.masker.clustering
+
+    def mask_shapes(self, *args):
+        if hasattr(self.masker, "mask_shapes") and callable(self.masker.mask_shapes):
+            return self.masker.mask_shapes(*args)
+        else:
+            return [a.shape for a in args]
