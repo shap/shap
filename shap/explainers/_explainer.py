@@ -1,6 +1,6 @@
 from .. import maskers
 from .. import links
-from ..utils import safe_isinstance, show_progress
+from ..utils import safe_isinstance, show_progress, data_transform
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
 from .._explanation import Explanation
@@ -309,10 +309,7 @@ class Explainer():
             
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)
-            if hasattr(self.masker, "data_transform"):
-                data = np.array([self.masker.data_transform(v) for v in args[j]])
-            else:
-                data = args[j]
+            data = data_transform(self.masker, args[j])
             
             # build an explanation object for this input argument
             out.append(Explanation(
