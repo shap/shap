@@ -133,11 +133,11 @@ class Partition(Explainer):
             try:
                 self._clustering
                 prev_row_clustering = self._clustering
-            except NameError:
+            except:
                 prev_row_clustering = None
             self._clustering = self.masker.clustering(*row_args)
             # to avoid recomputing masks for the same clustering
-            if prev_row_clustering != self._clustering:
+            if prev_row_clustering is None or (prev_row_clustering != self._clustering).all():
                 self._mask_matrix = make_masks(self._clustering)
 
         if hasattr(self._curr_base_value, 'shape') and len(self._curr_base_value.shape) > 0:
