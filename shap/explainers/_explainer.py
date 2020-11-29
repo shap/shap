@@ -234,8 +234,13 @@ class Explainer():
             
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
-                for i in range(len(row_args)):
-                    feature_names[i].append(row_feature_names[i])
+                if row_feature_names is not None:
+                    for i in range(len(row_args)):
+                        feature_names[i].append(row_feature_names[i])
+                else:
+                    # setting back to default value. This case occurs when masker has a callable 
+                    # method 'feature_names' which returns None
+                    feature_names = [None for _ in range(len(args))]
 
         # split the values up according to each input
         arg_values = [[] for a in args]
