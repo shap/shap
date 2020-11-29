@@ -83,8 +83,8 @@ class Explainer():
         
         # wrap self.masker and self.model for output text explanation algorithm
         if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+            self.model = models.TeacherForcingLogits(self.model, self.masker.tokenizer)
             self.masker = maskers.FixedComposite(self.masker)
-            self.model = models.TeacherForcingLogits(self.model, self.masker)
         elif safe_isinstance(self.model, "shap.models.TeacherForcingLogits") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
             self.masker = maskers.FixedComposite(self.masker)
 
