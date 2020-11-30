@@ -63,3 +63,20 @@ def data_transform(masker, s):
         data = s
     
     return data
+
+def clustering(masker, *args):
+    if safe_isinstance(masker, "shap.maskers.FixedComposite"):
+        if callable(getattr(masker, "clustering", None)):
+            return masker.clustering(*args)
+        else:
+            raise AttributeError("FixedComposite masker must define 'clustering' attribute.")
+    is_dynamic_clustering = False
+    if not callable(masker.clustering):
+        clustering = masker.clustering
+    else:
+        if bool(args):
+            clustering = masker.clustering(*args)
+        else:
+            clustering = None
+        is_dynamic_clustering = True
+    return clustering, is_dynamic_clustering
