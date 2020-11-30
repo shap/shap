@@ -13,7 +13,7 @@ except ImportError as e:
 class TeacherForcingLogits(Model):
     def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, text_similarity_model=None, text_similarity_tokenizer=None, device=None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
-        self.model = self.to_device(model, device=self.device)
+        self.model = model
         self.tokenizer = tokenizer
         # assign text generation function
         if safe_isinstance(model,"transformers.PreTrainedModel"):
@@ -22,6 +22,7 @@ class TeacherForcingLogits(Model):
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             self.model_agnostic = False
+            self.model = self.to_device(model, device=self.device)
             self.text_similarity_model = model
             self.text_similarity_tokenizer = tokenizer
         else:
@@ -29,6 +30,8 @@ class TeacherForcingLogits(Model):
                 self.generation_function_for_target_sentence_ids = TextGeneration(self.model, text_similarity_tokenizer=text_similarity_tokenizer, device=self.device)
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
+            self.text_similarity_model = self.to_device(text_similarity_model, device=self.device)
+            self.text_similarity_tokenizer = text_similarity_tokenizer
             self.model_agnostic = True
         # initializing X which is the original input for every new row of explanation
         self.X = None
