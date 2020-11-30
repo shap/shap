@@ -36,7 +36,10 @@ class Text(Masker):
             self.mask_token_id = None
             self.mask_token = ""
         else:
-            self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:-self.keep_suffix]
+            if self.keep_suffix > 0:
+                self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:-self.keep_suffix]
+            else:
+                self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:]
             self.mask_token = " "+mask_token+" "        
 
         # note if this masker can use different background for different samples
