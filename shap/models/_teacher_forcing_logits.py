@@ -126,8 +126,8 @@ class TeacherForcingLogits(Model):
         # set model to eval mode
         self.text_similarity_model.eval()
         # check if type of model architecture assigned in model config
-        if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
-            and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
+        if (hasattr(self.text_similarity_model.config, "is_encoder_decoder") and not self.text_similarity_model.config.is_encoder_decoder) \
+            and (hasattr(self.text_similarity_model.config, "is_decoder") and not self.text_similarity_model.config.is_decoder):
             raise ValueError(
                 "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
             )
