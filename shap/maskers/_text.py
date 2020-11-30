@@ -27,8 +27,11 @@ class Text(Masker):
 
         if mask_token == "auto":
             if hasattr(self.tokenizer, "mask_token_id") and self.tokenizer.mask_token_id is not None:
-                self.mask_token_id = self.tokenizer.mask_token_id
                 self.mask_token = " "+self.tokenizer.decode([self.tokenizer.mask_token_id])+" "#[self.prefix_strlen:-self.suffix_strlen]
+                if self.keep_suffix > 0:
+                    self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+                else:
+                    self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
             else:
                 self.mask_token_id = None
                 self.mask_token = ""
@@ -36,11 +39,12 @@ class Text(Masker):
             self.mask_token_id = None
             self.mask_token = ""
         else:
+            self.mask_token = " "+mask_token+" "
             if self.keep_suffix > 0:
-                self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:-self.keep_suffix]
+                self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
             else:
-                self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:]
-            self.mask_token = " "+mask_token+" "        
+                self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
+                    
 
         # note if this masker can use different background for different samples
         self.fixed_background = self.mask_token_id is None
@@ -62,7 +66,14 @@ class Text(Masker):
             if self.mask_token_id is None:
                 out = self._segments_s[mask]
             else:
-                out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
+                #out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
+                out = []
+                for i in range(len(mask)):
+                    if mask[i]:
+                        out.append(self._segments_s[i])
+                    else:
+                        out.extend(self.tokenizer.convert_ids_to_tokens(self.mask_token_id))
+                out=np.array(out)
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
                 out = self.tokenizer.convert_tokens_to_string(out.tolist())
