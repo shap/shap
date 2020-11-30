@@ -56,7 +56,7 @@ class MaskedModel():
         if self._variants is not None:
             delta_tmp = self._variants.copy().astype(np.int)
         for i,mask in enumerate(masks):
-
+            
             # mask the inputs
             delta_mask = mask ^ last_mask
             if do_delta_masking and delta_mask.sum() == 1:
@@ -99,7 +99,7 @@ class MaskedModel():
                     masked_inputs = [v[varying_rows[-1]] for v in zip(*masked_inputs)]
 
             # wrap the masked inputs if they are not already in a tuple
-            if isinstance(masked_inputs[0], tuple):
+            if bool(masked_inputs) and isinstance(masked_inputs[0], tuple):
                 masked_inputs = masked_inputs[0]
             else:
                 masked_inputs = (masked_inputs,)
