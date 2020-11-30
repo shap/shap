@@ -30,6 +30,7 @@ class TextGeneration(Model):
                 target_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
         else:
             self.model.eval()
+            # in non model agnostic case, the model is assumed to be a transformer model and hence we move to_device
             self.model = self.to_device(self.model, device=self.device)
             input_ids = torch.tensor([self.tokenizer.encode(X)])
             input_ids = self.to_device(input_ids, device=self.device)
