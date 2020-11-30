@@ -1,6 +1,6 @@
 import numpy as np
 from ._masker import Masker
-from ..utils import invariants, variants, shape, data_transform
+from ..utils import invariants, variants, shape, data_transform, clustering
 
 class FixedComposite(Masker):
     def __init__(self, masker):
@@ -21,10 +21,7 @@ class FixedComposite(Masker):
         return invariants(self.masker, *args)
 
     def clustering(self, *args):
-        if callable(self.masker.clustering):
-            return self.masker.clustering(*args)
-        else:
-            return self.masker.clustering
+        return clustering(self.masker, *args)
 
     def data_transform(self, s):
         return data_transform(self.masker, s)
