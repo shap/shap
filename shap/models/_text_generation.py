@@ -34,8 +34,17 @@ class TextGeneration(Model):
             self.model = self.to_device(self.model, device=self.device)
             input_ids = torch.tensor([self.tokenizer.encode(X)])
             input_ids = self.to_device(input_ids, device=self.device)
+            text_generation_params = {}
+            # check if user assigned any text generation specific kwargs
+            if "text_generation_params" in self.model.config.__dict__:
+                text_generation_params = self.model.config.text_generation_params
+                if not isinstance(text_generation_params, dict):
+                    raise ValueError(
+                    "Please assign text generation params as a dictionary"
+                )
+            # generate text
             with torch.no_grad():
-                output = self.model.generate(input_ids)
+                output = self.model.generate(input_ids, **text_generation_params)
             if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
                 and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
                 raise ValueError(
