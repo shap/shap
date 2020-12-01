@@ -2,7 +2,7 @@ import numpy as np
 import re
 from ._masker import Masker
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -84,6 +84,11 @@ class Text(Masker):
                 out = self._tokenized_s[mask]
             else:
                 out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token_id for i in range(len(mask))])
+
+        # replaces whitespace encoded as '_' with ' ' for sentence piece tokenizers
+        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
+            out = self.post_process_sentencepiece_tokenizer_output(out)
+
         #Text infilling
         if "<infill>" in self.mask_token:
             out = self.text_infill(out)
@@ -142,9 +147,34 @@ class Text(Masker):
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
 
+    def post_process_sentencepiece_tokenizer_output(self, s):
+        # checks if input is str or array of decoded tokens
+        if isinstance(s, list):
+            decoded_x = []
+            for i,x in enumerate(s):
+                if '▁' in x and len(x) > 1:
+                    # remove whitespace encoded as '_' in sentenpiece. Here we remove as this processed input is used to form clustering
+                    # as supposed to in the else statement where it is passed to the model
+                    processed_x = x.replace('▁', '')
+                elif x == '':
+                    # occurs in case of MarianMT where during decoding </s> is converted to ''
+                    # hence we restore such tokens
+                    processed_x = self.tokenizer.convert_ids_to_tokens(int(self._tokenized_s[i]))
+                else:
+                    processed_x = x
+                decoded_x.append(processed_x)
+            return decoded_x
+        else:
+            # replaces whitespace encoded as '_' with ' ' for sentence piece tokenizers
+            return s.replace('▁', ' ')
+
+
     def clustering(self, s):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
+        # replaces whitespace encoded as '_' with ' ' for sentence piece tokenizers
+        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
+            decoded_x = self.post_process_sentencepiece_tokenizer_output(decoded_x)
         pt = partition_tree(decoded_x)
         #self._mark_uninvertable(pt)
         return pt
