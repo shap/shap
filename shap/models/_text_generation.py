@@ -42,7 +42,7 @@ class TextGeneration(Model):
                     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
                 )
             if self.model.config.is_encoder_decoder:
-                parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.tokenizer)
+                parsed_tokenizer_dict = self.parse_prefix_suffix_for_encoder_decoder(output[0,:].detach().cpu().tolist())
                 keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
                 if keep_suffix > 0:
                     target_sentence_ids = output[:, keep_prefix:-keep_suffix]
@@ -62,3 +62,14 @@ class TextGeneration(Model):
             return deviced_variables
         else:
             return variables.to(device)
+
+    def parse_prefix_suffix_for_encoder_decoder(self, output):
+        keep_prefix, keep_suffix = 0, 0
+        if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():
+            keep_prefix = 1
+        if len(output) > 1 and self.tokenizer.convert_ids_to_tokens(output[-1]) in self.tokenizer.special_tokens_map.values():
+            keep_suffix = 1
+        return {
+            'keep_prefix' : keep_prefix,
+            'keep_suffix' : keep_suffix
+        }
