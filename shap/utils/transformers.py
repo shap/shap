@@ -30,6 +30,14 @@ MODELS_FOR_CAUSAL_LM = [
         "transformers.ProphetNetForCausalLM",
     ]
 
+SENTENCEPIECE_TOKENIZERS = [
+    "transformers.MarianTokenizer",
+    "transformers.T5Tokenizer",
+    "transformers.XLNetTokenizer",
+    "transformers.AlbertTokenizer"
+]
+
+
 def parse_prefix_suffix_for_tokenizer(tokenizer):
     null_tokens = tokenizer.encode("")
     keep_prefix, keep_suffix, prefix_strlen, suffix_strlen = None, None, None, None
