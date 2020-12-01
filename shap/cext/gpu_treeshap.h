@@ -159,15 +159,15 @@ class ContiguousGroup {
 // This functionality is available in cuda 11.0 on cc >=7.0
 // We reimplement for backwards compatibility
 // Assumes partitions are contiguous
-inline __device__ ContiguousGroup active_labeled_partition(int label) {
+inline __device__ ContiguousGroup active_labeled_partition(uint32_t mask,
+                                                           int label) {
 #if __CUDA_ARCH__ >= 700
-  uint32_t subgroup_mask = __match_any_sync(__activemask(), label);
+  uint32_t subgroup_mask = __match_any_sync(mask, label);
 #else
   uint32_t subgroup_mask = 0;
-  uint32_t active_mask = __activemask();
   for (int i = 0; i < 32;) {
-    int current_label = __shfl_sync(active_mask, label, i);
-    uint32_t ballot = __ballot_sync(active_mask, label == current_label);
+    int current_label = __shfl_sync(mask, label, i);
+    uint32_t ballot = __ballot_sync(mask, label == current_label);
     if (label == current_label) {
       subgroup_mask = ballot;
     }
@@ -175,7 +175,7 @@ inline __device__ ContiguousGroup active_labeled_partition(int label) {
         (1 << (32 - __clz(ballot))) - 1;  // Threads that have finished
     // Find the start of the next group, mask off completed threads from active
     // threads Then use ffs - 1 to find the position of the next group
-    int next_i = __ffs(active_mask & ~completed_mask) - 1;
+    int next_i = __ffs(mask & ~completed_mask) - 1;
     if (next_i == -1) break;  // -1 indicates all finished
     assert(next_i > i);  // Prevent infinite loops when the constraints not met
     i = next_i;
@@ -187,8 +187,7 @@ inline __device__ ContiguousGroup active_labeled_partition(int label) {
 template <typename DatasetT>
 __device__ float GetOneFraction(const PathElement& e, const DatasetT& X,
                                 size_t row_idx) {
-  // First element in path (bias term) is always zero
-  if (e.feature_idx == -1) return 0.0;
+  if (e.feature_idx == -1) return 1.0;
   // Test the split
   // Does the training instance continue down this path if the feature is
   // present?
@@ -369,6 +368,7 @@ void __device__ ConfigureThread(const DatasetT& X, const size_t bins_per_row,
 }
 
 #define GPUTREESHAP_MAX_THREADS_PER_BLOCK 256
+#define FULL_MASK 0xffffffff
 
 template <typename DatasetT, size_t kBlockSize, size_t kRowsPerWarp>
 __global__ void __launch_bounds__(GPUTREESHAP_MAX_THREADS_PER_BLOCK)
@@ -386,10 +386,11 @@ __global__ void __launch_bounds__(GPUTREESHAP_MAX_THREADS_PER_BLOCK)
   ConfigureThread<DatasetT, kBlockSize, kRowsPerWarp>(
       s_X, bins_per_row, path_elements, bin_segments, &start_row, &end_row, &e,
       &thread_active);
+  uint32_t mask = __ballot_sync(FULL_MASK, thread_active);
   if (!thread_active) return;
 
   float zero_fraction = e.zero_fraction;
-  auto labelled_group = active_labeled_partition(e.path_idx);
+  auto labelled_group = active_labeled_partition(mask, e.path_idx);
 
   for (int64_t row_idx = start_row; row_idx < end_row; row_idx++) {
     float phi = ComputePhi(e, row_idx, X, labelled_group, zero_fraction);
@@ -486,9 +487,10 @@ __global__ void __launch_bounds__(GPUTREESHAP_MAX_THREADS_PER_BLOCK)
   ConfigureThread<DatasetT, kBlockSize, kRowsPerWarp>(
       s_X, bins_per_row, path_elements, bin_segments, &start_row, &end_row, e,
       &thread_active);
+  uint32_t mask = __ballot_sync(FULL_MASK, thread_active);
   if (!thread_active) return;
 
-  auto labelled_group = active_labeled_partition(e->path_idx);
+  auto labelled_group = active_labeled_partition(mask, e->path_idx);
 
   for (int64_t row_idx = start_row; row_idx < end_row; row_idx++) {
     float phi = ComputePhi(*e, row_idx, X, labelled_group, e->zero_fraction);
@@ -562,9 +564,10 @@ __global__ void __launch_bounds__(GPUTREESHAP_MAX_THREADS_PER_BLOCK)
   ConfigureThread<DatasetT, kBlockSize, kRowsPerWarp>(
       s_X, bins_per_row, path_elements, bin_segments, &start_row, &end_row, e,
       &thread_active);
+  uint32_t mask = __ballot_sync(FULL_MASK, thread_active);
   if (!thread_active) return;
 
-  auto labelled_group = active_labeled_partition(e->path_idx);
+  auto labelled_group = active_labeled_partition(mask, e->path_idx);
 
   for (int64_t row_idx = start_row; row_idx < end_row; row_idx++) {
     for (auto condition_rank = 1ull; condition_rank < labelled_group.size();
@@ -622,6 +625,105 @@ void ComputeShapTaylorInteractions(
   ShapTaylorInteractionsKernel<DatasetT, kBlockThreads, kRowsPerWarp>
       <<<grid_size, kBlockThreads>>>(
           X, bins_per_row, path_elements.data().get(),
+          bin_segments.data().get(), num_groups, phis);
+}
+
+
+inline __host__ __device__ int64_t Factorial(int64_t x) {
+  int64_t y = 1;
+  for (auto i = 2; i <= x; i++) {
+    y *= i;
+  }
+  return y;
+}
+
+inline __host__ __device__ double W(int s, int n) {
+  assert(n - s - 1 >= 0);
+  return static_cast<double>(Factorial(s) * Factorial(n - s - 1)) /
+         Factorial(n);
+}
+
+template <typename DatasetT, size_t kBlockSize, size_t kRowsPerWarp>
+__global__ void __launch_bounds__(GPUTREESHAP_MAX_THREADS_PER_BLOCK)
+    ShapInterventionalKernel(DatasetT X, DatasetT R, size_t bins_per_row,
+                             const PathElement* path_elements,
+                             const size_t* bin_segments, size_t num_groups,
+                             double* phis) {
+  // Use shared memory for structs, otherwise nvcc puts in local memory
+  __shared__ DatasetT s_X;
+  s_X = X;
+  __shared__ PathElement s_elements[kBlockSize];
+  PathElement& e = s_elements[threadIdx.x];
+
+  size_t start_row, end_row;
+  bool thread_active;
+  ConfigureThread<DatasetT, kBlockSize, kRowsPerWarp>(
+      s_X, bins_per_row, path_elements, bin_segments, &start_row, &end_row, &e,
+      &thread_active);
+
+  // Don't need the root for this algorithm, return that thread
+  uint32_t mask = __ballot_sync(FULL_MASK, thread_active);
+  if (!thread_active) return;
+
+  auto labelled_group = active_labeled_partition(mask, e.path_idx);
+
+  for (int64_t x_idx = start_row; x_idx < end_row; x_idx++) {
+    double result = 0.0;
+    for (int64_t r_idx = 0; r_idx < R.NumRows(); r_idx++) {
+      bool x_cond = GetOneFraction(e, X, x_idx);
+      bool r_cond = GetOneFraction(e, R, r_idx);
+      assert(!e.IsRoot() ||
+             (x_cond == r_cond));  // These should be the same for the root
+
+      // If neither foreground or background go down this path, go to next
+      // sample
+      uint32_t early_exit = labelled_group.ballot(!x_cond && !r_cond);
+      if (early_exit) {
+        continue;
+      }
+      uint32_t s = __popc(labelled_group.ballot(x_cond && !r_cond));
+      uint32_t n = __popc(labelled_group.ballot(x_cond != r_cond));
+      // Theorem 1
+      if (x_cond && !r_cond) {
+        result += W(s - 1, n) * e.v;
+      } else if (x_cond != r_cond) {
+        result -= W(s, n) * e.v;
+      }
+
+      // No foreground samples make it to this leaf, increment bias
+      if (e.IsRoot() && s == 0) {
+        result += e.v;
+      }
+    }
+
+    if (result != 0.0) {
+      result /= R.NumRows();
+      // Root writes bias
+      auto feature = e.IsRoot() ? X.NumCols() : e.feature_idx;
+      atomicAddDouble(
+          &phis[IndexPhi(x_idx, num_groups, e.group, X.NumCols(), feature)],
+          result);
+    }
+  }
+}
+
+template <typename DatasetT, typename SizeTAllocatorT, typename PathAllocatorT>
+void ComputeShapInterventional(
+    DatasetT X, DatasetT R,
+    const thrust::device_vector<size_t, SizeTAllocatorT>& bin_segments,
+    const thrust::device_vector<PathElement, PathAllocatorT>& path_elements,
+    size_t num_groups, double* phis) {
+  size_t bins_per_row = bin_segments.size() - 1;
+  const int kBlockThreads = GPUTREESHAP_MAX_THREADS_PER_BLOCK;
+  const int warps_per_block = kBlockThreads / 32;
+  const int kRowsPerWarp = 1;
+  size_t warps_needed = bins_per_row * DivRoundUp(X.NumRows(), kRowsPerWarp);
+
+  const uint32_t grid_size = DivRoundUp(warps_needed, warps_per_block);
+
+  ShapInterventionalKernel<DatasetT, kBlockThreads, kRowsPerWarp>
+      <<<grid_size, kBlockThreads>>>(
+          X, R, bins_per_row, path_elements.data().get(),
           bin_segments.data().get(), num_groups, phis);
 }
 
@@ -1203,6 +1305,77 @@ void GPUTreeShapTaylorInteractions(DatasetT X, PathIteratorT begin,
   detail::ComputeShapTaylorInteractions(X, device_bin_segments,
                                         deduplicated_paths, num_groups,
                                         temp_phi.data().get());
+  thrust::copy(temp_phi.begin(), temp_phi.end(),
+               thrust::device_pointer_cast(phis_out));
+}
+
+/*!
+ * Compute feature contributions on the GPU given a set of unique paths through a tree ensemble
+ * and a dataset. Uses device memory proportional to the tree ensemble size. This variant
+ * implements the interventional tree shap algorithm described here:
+ * https://drafts.distill.pub/HughChen/its_blog/
+ * 
+ * It requires a background dataset R.
+ *
+ * \exception std::invalid_argument Thrown when an invalid argument error condition occurs.
+ * \tparam  PathIteratorT     Thrust type iterator, may be thrust::device_ptr for device memory, or
+ *                            stl iterator/raw pointer for host memory.
+ * \tparam  DatasetT          User-specified dataset container.
+ * \tparam  DeviceAllocatorT  Optional thrust style allocator.
+ *
+ * \param           X               Thin wrapper over a dataset allocated in device memory. X
+ *                                  should be trivially copyable as a kernel parameter (i.e.
+ *                                  contain only pointers to actual data) and must implement the
+ *                                  methods NumRows()/NumCols()/GetElement(size_t row_idx, size_t
+ *                                  col_idx) as __device__ functions. GetElement may return NaN
+ *                                  where the feature value is missing.
+ * \param           R               Background dataset in the same format as X
+ * \param           begin           Iterator to paths, where separate paths are delineated by
+ *                                  PathElement.path_idx. Each unique path should contain 1 root
+ *                                  with feature_idx = -1 and zero_fraction = 1.0. The ordering of
+ *                                  path elements inside a unique path does not matter - the result
+ *                                  will be the same. Paths may contain duplicate features. See the
+ *                                  PathElement class for more information.
+ * \param           end             Path end iterator.
+ * \param           num_groups      Number of output groups. In multiclass classification the
+ *                                  algorithm outputs feature contributions per output class.
+ * \param [in,out]  phis_out        Device memory buffer for returning the feature contributions.
+ *                                  The last feature column contains the bias term. Feature
+ *                                  contributions can be retrieved by phis_out[(row_idx *
+ *                                  num_groups + group) * (X.NumCols() + 1) + feature_idx]. Results
+ *                                  are added to the input buffer without zeroing memory - do not
+ *                                  pass uninitialised memory.
+ * \param           phis_out_length Length of the phis_out for bounds checking. Must be at least of
+ *                                  size X.NumRows() * (X.NumCols() + 1) * num_groups.
+ */
+template <typename DeviceAllocatorT = thrust::device_allocator<int>,
+          typename DatasetT, typename PathIteratorT>
+void GPUTreeShapInterventional(DatasetT X, DatasetT R, PathIteratorT begin,
+                               PathIteratorT end,
+                 size_t num_groups, float* phis_out, size_t phis_out_length) {
+  if (X.NumRows() == 0 || X.NumCols() == 0 || end - begin <= 0) return;
+
+  if (phis_out_length < X.NumRows() * (X.NumCols() + 1) * num_groups) {
+    throw std::invalid_argument(
+        "phis_out must be at least of size X.NumRows() * (X.NumCols() + 1) * "
+        "num_groups");
+  }
+
+  using size_vector = detail::RebindVector<size_t, DeviceAllocatorT>;
+  using double_vector = detail::RebindVector<double, DeviceAllocatorT>;
+  using path_vector = detail::RebindVector<PathElement, DeviceAllocatorT>;
+
+  // Compute the global bias
+  double_vector temp_phi(phis_out_length, 0.0);
+  path_vector device_paths(begin, end);
+
+  path_vector deduplicated_paths;
+  size_vector device_bin_segments;
+  detail::PreprocessPaths<DeviceAllocatorT>(&device_paths, &deduplicated_paths,
+                                            &device_bin_segments);
+  detail::ComputeShapInterventional(X, R, device_bin_segments,
+                                    deduplicated_paths, num_groups,
+                      temp_phi.data().get());
   thrust::copy(temp_phi.begin(), temp_phi.end(),
                thrust::device_pointer_cast(phis_out));
 }

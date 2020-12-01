@@ -149,7 +149,6 @@ def lightgbm_binary_classifier():
     return model, X, model.predict(X, raw_score=True)
 
 
-@task_xfail
 def lightgbm_multiclass_classifier():
     # pylint: disable=import-outside-toplevel
     try:
@@ -199,13 +198,17 @@ def idfn(task):
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
-@pytest.mark.parametrize("feature_perturbation",
-                         [pytest.param("interventional", marks=pytest.mark.xfail),
-                          "tree_path_dependent"])
+@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
 def test_gpu_tree_explainer_shap(task, feature_perturbation):
     model, X, _ = task
-    ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
-    ex.shap_values(X, check_additivity=True)
+    gpu_ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
+    ex = shap.TreeExplainer(model, X, feature_perturbation=feature_perturbation)
+    host_shap = ex.shap_values(X, check_additivity=True)
+    gpu_shap = gpu_ex.shap_values(X, check_additivity=True)
+
+    # Check outputs roughly the same as CPU algorithm
+    assert np.allclose(ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3)
+    assert np.allclose(host_shap, gpu_shap, 1e-3, 1e-3)
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
