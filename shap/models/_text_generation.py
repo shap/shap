@@ -50,16 +50,17 @@ class TextGeneration(Model):
                 raise ValueError(
                     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
                 )
-            if self.model.config.is_encoder_decoder:
-                parsed_tokenizer_dict = self.parse_prefix_suffix_for_encoder_decoder(output[0,:].detach().cpu().tolist())
-                keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
-                if keep_suffix > 0:
-                    target_sentence_ids = output[:, keep_prefix:-keep_suffix]
-                else:
-                    target_sentence_ids = output[:, keep_prefix:]
+            if self.model.config.is_decoder:
+                # slice the output ids after the input ids
+                output = output[:,input_ids.shape[1]:]
+            # parse output ids to find special tokens in prefix and suffix
+            parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].detach().cpu().tolist())
+            keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
+            # extract target sentence ids by slicing off prefix and suffix
+            if keep_suffix > 0:
+                target_sentence_ids = output[:, keep_prefix:-keep_suffix]
             else:
-                # incase of only decoder we slice target ids after the input ids
-                target_sentence_ids = output[:,input_ids.shape[1]:]
+                target_sentence_ids = output[:, keep_prefix:]
 
         return target_sentence_ids
 
@@ -72,7 +73,7 @@ class TextGeneration(Model):
         else:
             return variables.to(device)
 
-    def parse_prefix_suffix_for_encoder_decoder(self, output):
+    def parse_prefix_suffix_for_model_generate_output(self, output):
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():
             keep_prefix = 1
