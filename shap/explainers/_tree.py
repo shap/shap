@@ -86,13 +86,15 @@ class Tree(Explainer):
     --------
     See :ref:`Tree Explainer Examples <tree_explainer_examples>`
     """
-    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", **deprecated_options):
-
-        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional",feature_names=None, **deprecated_options):
+        
+        if feature_names is not None:
+            self.data_feature_names=feature_names
+        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
             self.data_feature_names = list(data.columns)
 
         masker = data
-        super(Tree, self).__init__(model, masker)
+        super(Tree, self).__init__(model, masker,feature_names=feature_names)
 
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
