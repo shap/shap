@@ -3,8 +3,7 @@
 
 def test_fixed_composite_masker_call():
     import numpy as np
-    from transformers import AutoTokenizer, AutoModelForCausalLM
-    import shap
+    from transformers import AutoTokenizer
     from shap import maskers
 
     args=("This is a test statement for fixed composite masker",)
