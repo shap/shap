@@ -9,6 +9,25 @@ except ImportError as e:
 
 class TextGeneration(Model):
     def __init__(self, model, tokenizer=None, text_similarity_tokenizer=None, device='cpu'):
+        """ Generates target sentence using model and returns tokenized ids.
+
+        It generates target sentence ids for a pretrained transformer model and a function. For a pretrained transformer model, 
+        tokenizer should be passed. In case model is a function, then the text_similarity_tokenizer is used to tokenize generated 
+        sentence to ids.
+
+        Parameters
+        ----------
+        model: object or function
+            A object of any pretrained transformer model or function for which target sentence and tokenized ids are to be generated.
+
+        tokenizer: object
+            A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast) which is used to tokenize sentence.
+
+        Returns
+        -------
+        tensor
+            A tensor of target sentence ids.
+        """
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
         self.model = model
         self.tokenizer = tokenizer
@@ -19,6 +38,18 @@ class TextGeneration(Model):
             self.model_agnostic = True
 
     def __call__(self, X):
+        """ Generates target sentence ids from X.
+
+        Parameters
+        ----------
+        X: str or numpy.array
+            Input in the form of text or image.
+
+        Returns
+        -------
+        tensor
+            Tensor of target sentence ids.
+        """
         target_sentence_ids = None
         if self.model_agnostic:
             target_sentence = self.model(X)
@@ -74,6 +105,8 @@ class TextGeneration(Model):
             return variables.to(device)
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
+        """ Calculates if special tokens are present in the begining/end of the output.
+        """
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():
             keep_prefix = 1
