@@ -41,7 +41,7 @@ SENTENCEPIECE_TOKENIZERS = [
 def parse_prefix_suffix_for_tokenizer(tokenizer):
     null_tokens = tokenizer.encode("")
     keep_prefix, keep_suffix, prefix_strlen, suffix_strlen = None, None, None, None
-    # set prefix and sufix tokens based on null tokens
+    # set prefix and suffix tokens based on null tokens
     # example for distillgpt2: null_tokens=[], for BART: null_tokens = [0,2] and for MarianMT: null_tokens=[0] 
     # used to slice tokens belonging to sentence after passing through tokenizer.encode()
     if len(null_tokens)==1:
