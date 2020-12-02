@@ -93,7 +93,7 @@ def test_masker_call_pretrained_tokenizer_fast():
     
     assert output_masked_text == correct_masked_text
 
-def test_text_infiling():
+def test_method_text_infill():
     from shap import maskers
     from transformers import AutoTokenizer
 
@@ -152,4 +152,22 @@ def test_method_post_process_sentencepiece_tokenizer_output():
 
     assert sentencepiece_tokenizer_output_processed == expected_sentencepiece_tokenizer_output_processed
 
-test_method_post_process_sentencepiece_tokenizer_output()
+def test_keep_prefix_suffix_tokenizer_parsing():
+    from transformers import AutoTokenizer
+    from shap import maskers
+
+    tokenizer_mt = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+    tokenizer_gpt = AutoTokenizer.from_pretrained("gpt2")
+    tokenizer_bart = AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
+
+    masker_mt = maskers.Text(tokenizer_mt)
+    masker_gpt = maskers.Text(tokenizer_gpt)
+    masker_bart = maskers.Text(tokenizer_bart)
+
+    masker_mt_expected_keep_prefix, masker_mt_expected_keep_suffix = 0, 1
+    masker_gpt_expected_keep_prefix, masker_gpt_expected_keep_suffix = 0, 0
+    masker_bart_expected_keep_prefix, masker_bart_expected_keep_suffix = 1, 1
+
+    assert masker_mt.keep_prefix == masker_mt_expected_keep_prefix and masker_mt.keep_suffix == masker_mt_expected_keep_suffix and \
+           masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix and \
+           masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
