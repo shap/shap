@@ -120,3 +120,36 @@ def test_text_infiling():
 
     assert  text_infilled_ex1 == expected_text_infilled_ex1 and text_infilled_ex2 == expected_text_infilled_ex2 and \
             text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4
+
+def test_method_post_process_sentencepiece_tokenizer_output():
+    import numpy as np
+    from transformers import AutoTokenizer
+    from shap import maskers
+    from shap.utils import safe_isinstance
+    
+    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+    masker = maskers.Text(tokenizer)
+
+    s="This is a test statement for sentencepiece tokenizer"
+    masker._update_s_cache(s)
+    mask = np.ones(masker._segments_s.shape, dtype=bool)
+
+    out = []
+    for i in range(len(mask)):
+        if mask[i]:
+            out.append(masker._segments_s[i])
+        else:
+            out.extend(masker.tokenizer.convert_ids_to_tokens(masker.mask_token_id))
+    out=np.array(out)
+
+    if safe_isinstance(masker.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
+        out = masker.tokenizer.convert_tokens_to_string(out.tolist())
+    elif safe_isinstance(masker.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+        out = "".join(out)
+
+    sentencepiece_tokenizer_output_processed = masker.post_process_sentencepiece_tokenizer_output(out).strip()
+    expected_sentencepiece_tokenizer_output_processed = "This is a test statement for sentencepiece tokenizer"
+
+    assert sentencepiece_tokenizer_output_processed == expected_sentencepiece_tokenizer_output_processed
+
+test_method_post_process_sentencepiece_tokenizer_output()
