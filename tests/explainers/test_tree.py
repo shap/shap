@@ -728,21 +728,26 @@ def test_multi_target_random_forest():
 
 
 def test_isolation_forest():
+    IsolationForest = pytest.importorskip("sklearn.ensemble.IsolationForest")
+    _average_path_length = pytest.importorskip("sklearn.ensemble.iforest._average_path_length")
     X, _ = shap.datasets.boston()
     for max_features in [1.0, 0.75]:
-        iso = sklearn.ensemble.IsolationForest(max_features=max_features)
+        iso = IsolationForest(max_features=max_features)
         iso.fit(X)
 
         explainer = shap.TreeExplainer(iso)
         shap_values = explainer.shap_values(X)
 
-        l = sklearn.ensemble.iforest._average_path_length(  # pylint: disable=protected-access
+        l = _average_path_length(  # pylint: disable=protected-access
             np.array([iso.max_samples_]))[0]
         score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 def test_pyod_isolation_forest():
-    IForest = pytest.importorskip("pyod.models.iforest.IForest")
+    try:
+        IForest = pytest.importorskip("pyod.models.iforest.IForest")
+    except e:
+        pytest.skip("Failed to import pyod.models.iforest.IForest")
     _average_path_length = pytest.importorskip("sklearn.ensemble.iforest._average_path_length")
 
     X, _ = shap.datasets.boston()
