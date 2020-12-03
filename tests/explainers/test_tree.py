@@ -747,7 +747,7 @@ def test_isolation_forest():
 def test_pyod_isolation_forest():
     try:
         IForest = pytest.importorskip("pyod.models.iforest.IForest")
-    except e:
+    except:
         pytest.skip("Failed to import pyod.models.iforest.IForest")
     _average_path_length = pytest.importorskip("sklearn.ensemble.iforest._average_path_length")
 
