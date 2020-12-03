@@ -86,7 +86,7 @@ class Tree(Explainer):
     --------
     See :ref:`Tree Explainer Examples <tree_explainer_examples>`
     """
-    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional",feature_names=None, **deprecated_options):
+    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, **deprecated_options):
         
         if feature_names is not None:
             self.data_feature_names=feature_names
