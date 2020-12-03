@@ -87,10 +87,10 @@ class Tree(Explainer):
     See :ref:`Tree Explainer Examples <tree_explainer_examples>`
     """
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", **deprecated_options):
-        
+
         if safe_isinstance(data, "pandas.core.frame.DataFrame"):
             self.data_feature_names = list(data.columns)
-        
+
         masker = data
         super(Tree, self).__init__(model, masker)
 
@@ -143,7 +143,7 @@ class Tree(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
-        
+
         if feature_perturbation not in feature_perturbation_codes:
             raise ValueError("Invalid feature_perturbation option!")
 
@@ -196,13 +196,13 @@ class Tree(Explainer):
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
     def __call__(self, X, y=None, interactions=False, check_additivity=True):
-        
+
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
             X = X.values
         else:
             feature_names = getattr(self, "data_feature_names", None)
-        
+
         if not interactions:
             v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity)
             output_shape = tuple()
@@ -221,6 +221,56 @@ class Tree(Explainer):
             v = self.shap_interaction_values(X)
             e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names, interaction_order=2)
         return e
+
+    def _validate_inputs(self, X, y, tree_limit, check_additivity):
+        # see if we have a default tree_limit in place.
+        if tree_limit is None:
+            tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
+
+        if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
+            tree_limit = self.model.values.shape[0]
+        # convert dataframes
+        if safe_isinstance(X, "pandas.core.series.Series"):
+            X = X.values
+        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            X = X.values
+        flat_output = False
+        if len(X.shape) == 1:
+            flat_output = True
+            X = X.reshape(1, X.shape[0])
+        if X.dtype != self.model.input_dtype:
+            X = X.astype(self.model.input_dtype)
+        X_missing = np.isnan(X, dtype=np.bool)
+        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
+        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
+
+        if self.model.model_output == "log_loss":
+            assert y is not None, "Both samples and labels must be provided when model_output = " \
+                                  "\"log_loss\" (i.e. `explainer.shap_values(X, y)`)!"
+            assert X.shape[0] == len(
+                y), "The number of labels (%d) does not match the number of samples to explain (" \
+                    "%d)!" % (
+                        len(y), X.shape[0])
+
+        if self.feature_perturbation == "tree_path_dependent":
+            assert self.model.fully_defined_weighting, "The background dataset you provided does " \
+                                                       "not cover all the leaves in the model, " \
+                                                       "so TreeExplainer cannot run with the " \
+                                                       "feature_perturbation=\"tree_path_dependent\" option! " \
+                                                       "Try providing a larger background " \
+                                                       "dataset, or using " \
+                                                       "feature_perturbation=\"interventional\"."
+
+        if check_additivity and self.model.model_type == "pyspark":
+            warnings.warn(
+                "check_additivity requires us to run predictions which is not supported with "
+                "spark, "
+                "ignoring."
+                " Set check_additivity=False to remove this warning")
+            check_additivity = False
+
+        return X, y, X_missing, flat_output, tree_limit, check_additivity
+
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
         """ Estimate the SHAP values for a set of samples.
@@ -257,11 +307,6 @@ class Tree(Explainer):
             attribute of the explainer when it is constant). For models with vector outputs this returns
             a list of such matrices, one for each output.
         """
-        if check_additivity and self.model.model_type == "pyspark":
-            warnings.warn("check_additivity requires us to run predictions which is not supported with spark, ignoring." 
-                          " Set check_additivity=False to remove this warning")
-            check_additivity = False
-
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -328,33 +373,10 @@ class Tree(Explainer):
 
                 return out
 
-        # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
-            X = X.values
-        flat_output = False
-        if len(X.shape) == 1:
-            flat_output = True
-            X = X.reshape(1, X.shape[0])
-        if X.dtype != self.model.input_dtype:
-            X = X.astype(self.model.input_dtype)
-        X_missing = np.isnan(X, dtype=np.bool)
-        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
-
-        if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
-            tree_limit = self.model.values.shape[0]
-
-        if self.model.model_output == "log_loss":
-            assert y is not None, "Both samples and labels must be provided when model_output = \"log_loss\" (i.e. `explainer.shap_values(X, y)`)!"
-            assert X.shape[0] == len(y), "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
+        X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(X, y,
+                                                                                           tree_limit,
+                                                                                           check_additivity)
         transform = self.model.get_transform()
-
-        if self.feature_perturbation == "tree_path_dependent":
-            assert self.model.fully_defined_weighting, "The background dataset you provided does not cover all the leaves in the model, " \
-                                                       "so TreeExplainer cannot run with the feature_perturbation=\"tree_path_dependent\" option! " \
-                                                       "Try providing a larger background dataset, or using feature_perturbation=\"interventional\"."
 
         # run the core algorithm using the C extension
         assert_import("cext")
@@ -375,7 +397,14 @@ class Tree(Explainer):
                 X, X_missing, y, phi
             )
 
-        # note we pull off the last column and keep it as our expected_value
+        out = self._get_shap_output(phi, flat_output)
+        if check_additivity and self.model.model_output == "raw":
+            self.assert_additivity(out, self.model.predict(X))
+
+        return out
+
+    # we pull off the last column and keep it as our expected_value
+    def _get_shap_output(self, phi, flat_output):
         if self.model.num_outputs == 1:
             if self.expected_value is None and self.model.model_output != "log_loss":
                 self.expected_value = phi[0, -1, 0]
@@ -391,14 +420,12 @@ class Tree(Explainer):
             else:
                 out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]
 
-        if check_additivity and self.model.model_output == "raw":
-            self.assert_additivity(out, self.model.predict(X))
 
         # if our output format requires binary classificaiton to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled":
             out = [-out, out]
-
         return out
+
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
         """ Estimate the SHAP interaction values for a set of samples.
@@ -453,24 +480,7 @@ class Tree(Explainer):
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
 
-        # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
-            X = X.values
-        flat_output = False
-        if len(X.shape) == 1:
-            flat_output = True
-            X = X.reshape(1, X.shape[0])
-        if X.dtype != self.model.input_dtype:
-            X = X.astype(self.model.input_dtype)
-        X_missing = np.isnan(X, dtype=np.bool)
-        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
-
-        if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
-            tree_limit = self.model.values.shape[0]
-
+        X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
         # run the core algorithm using the C extension
         assert_import("cext")
         phi = np.zeros((X.shape[0], X.shape[1]+1, X.shape[1]+1, self.model.num_outputs))
@@ -482,7 +492,10 @@ class Tree(Explainer):
             output_transform_codes[transform], True
         )
 
-        # note we pull off the last column and keep it as our expected_value
+        return self._get_shap_interactions_output(phi,flat_output)
+
+    # we pull off the last column and keep it as our expected_value
+    def _get_shap_interactions_output(self, phi, flat_output):
         if self.model.num_outputs == 1:
             self.expected_value = phi[0, -1, -1, 0]
             if flat_output:
@@ -495,8 +508,9 @@ class Tree(Explainer):
                 out = [phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)]
             else:
                 out = [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)]
-
         return out
+
+
 
     def assert_additivity(self, phi, model_output):
 
@@ -726,7 +740,7 @@ class TreeEnsemble:
                     self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
                 else:
                     self.model_output = "probability"
-            output_trees = [[] for i in range(self.num_stacked_models)]
+            self.trees = []
             for p in model._predictors:
                 for i in range(self.num_stacked_models):
                     nodes = p[i].nodes
@@ -740,8 +754,7 @@ class TreeEnsemble:
                         "values": np.array([[n[0]] for n in nodes], dtype=np.float64),
                         "node_sample_weight": np.array([n[1] for n in nodes], dtype=np.float64),
                     }
-                    output_trees[i].append(SingleTree(tree, data=data, data_missing=data_missing))
-            self.trees = list(itertools.chain.from_iterable(output_trees))
+                    self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(model.loss, None)
             self.tree_output = "log_odds"
         elif safe_isinstance(model, ["sklearn.ensemble.GradientBoostingClassifier","sklearn.ensemble._gb.GradientBoostingClassifier", "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier"]):
@@ -902,6 +915,8 @@ class TreeEnsemble:
         elif safe_isinstance(model, "lightgbm.sklearn.LGBMClassifier"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
+            if model.n_classes_ > 2:
+                self.num_stacked_models = model.n_classes_
             self.original_model = model.booster_
             tree_info = self.original_model.dump_model()["tree_info"]
             try:
@@ -991,7 +1006,8 @@ class TreeEnsemble:
                 self.features[i,:len(self.trees[i].features)] = self.trees[i].features
                 self.thresholds[i,:len(self.trees[i].thresholds)] = self.trees[i].thresholds
                 if self.num_stacked_models > 1:
-                    stack_pos = int(i // (num_trees / self.num_stacked_models))
+                    # stack_pos = int(i // (num_trees / self.num_stacked_models))
+                    stack_pos = i % self.num_stacked_models
                     self.values[i,:len(self.trees[i].values[:,0]),stack_pos] = self.trees[i].values[:,0]
                 else:
                     self.values[i,:len(self.trees[i].values)] = self.trees[i].values
