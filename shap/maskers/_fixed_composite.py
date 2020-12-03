@@ -26,7 +26,9 @@ class FixedComposite(Masker):
         for item in args:
             wrapped_args.append(np.array([item]))
         wrapped_args = tuple(wrapped_args)
-        return [(masked_X,) + wrapped_args]
+        if not isinstance(masked_X, tuple):
+            masked_X = (masked_X,)
+        return masked_X + wrapped_args
 
     def shape(self, *args):
         return shape(self.masker, *args)
