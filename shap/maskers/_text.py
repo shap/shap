@@ -93,7 +93,7 @@ class Text(Masker):
         if "<infill>" in self.mask_token:
             out = self.text_infill(out)
 
-        return np.array([out])
+        return (np.array([out]),)
 
         if self.output_type == "string":
             decoded_str = self.tokenizer.decode(out)[self.prefix_strlen:][:-self.suffix_strlen].strip()
