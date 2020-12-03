@@ -43,8 +43,9 @@ class TeacherForcingLogits(Model):
         array
             The scores (log odds) of generating target sentence ids using the model.
         """
+        super(TeacherForcingLogits, self).__init__(model)
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
-        self.model = model
         self.tokenizer = tokenizer
         # assign text generation function
         if safe_isinstance(model,"transformers.PreTrainedModel"):

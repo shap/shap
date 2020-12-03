@@ -28,8 +28,9 @@ class TextGeneration(Model):
         tensor
             A tensor of target sentence ids.
         """
+        super(TextGeneration, self).__init__(model)
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
-        self.model = model
         self.tokenizer = tokenizer
         self.text_similarity_tokenizer = text_similarity_tokenizer
         if text_similarity_tokenizer is None:
