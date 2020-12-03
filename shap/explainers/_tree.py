@@ -94,7 +94,7 @@ class Tree(Explainer):
             self.data_feature_names = list(data.columns)
 
         masker = data
-        super(Tree, self).__init__(model, masker,feature_names=feature_names)
+        super(Tree, self).__init__(model, masker, feature_names=feature_names)
 
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
