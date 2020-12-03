@@ -29,7 +29,7 @@ class Permutation(Explainer):
             A callable python object that executes the model given a set of input data samples.
 
         masker : function or numpy.array or pandas.DataFrame
-            A callable python object used to "mask" out hidden features of the form `masker(x, mask)`.
+            A callable python object used to "mask" out hidden features of the form `masker(binary_mask, x)`.
             It takes a single input sample and a binary mask and returns a matrix of masked samples. These
             masked samples are evaluated using the model function and the outputs are then averaged.
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
