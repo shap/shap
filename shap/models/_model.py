@@ -1,9 +1,10 @@
 
 
 class Model():
-    def __init__(self):
+    def __init__(self, model=None):
         """ This superclass of all model objects.
         """
+        self.model = model
     
     def __call__(self, *args):
-        pass
+        return self.model(*args)
