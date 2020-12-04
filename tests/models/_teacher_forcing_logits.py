@@ -16,15 +16,15 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     source_sentence = "This is a test statement for verifying working of teacher forcing logits functionality"
     target_sentence = "Testing teacher forcing logits functionality"
 
-    source_sentence_ids = torch.tensor([wrapped_model.text_similarity_tokenizer.encode(source_sentence)])
+    source_sentence_ids = torch.tensor([wrapped_model.similarity_tokenizer.encode(source_sentence)])
 
-    parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(wrapped_model.text_similarity_tokenizer)
+    parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(wrapped_model.similarity_tokenizer)
     keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
 
     if keep_suffix > 0:
-        target_sentence_ids = torch.tensor([wrapped_model.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
+        target_sentence_ids = torch.tensor([wrapped_model.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
     else:
-        target_sentence_ids = torch.tensor([wrapped_model.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
+        target_sentence_ids = torch.tensor([wrapped_model.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
 
     # call the get teacher forced logits function
     logits = wrapped_model.get_teacher_forced_logits(source_sentence_ids, target_sentence_ids)
@@ -47,18 +47,17 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
     source_sentence = "This is a test statement for verifying"
     target_sentence = "working of teacher forcing logits functionality"
 
-    source_sentence_ids = torch.tensor([wrapped_model.text_similarity_tokenizer.encode(source_sentence)])
+    source_sentence_ids = torch.tensor([wrapped_model.similarity_tokenizer.encode(source_sentence)])
 
-    parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(wrapped_model.text_similarity_tokenizer)
+    parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(wrapped_model.similarity_tokenizer)
     keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
 
     if keep_suffix > 0:
-        target_sentence_ids = torch.tensor([wrapped_model.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
+        target_sentence_ids = torch.tensor([wrapped_model.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
     else:
-        target_sentence_ids = torch.tensor([wrapped_model.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
+        target_sentence_ids = torch.tensor([wrapped_model.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
 
     # call the get teacher forced logits function
     logits = wrapped_model.get_teacher_forced_logits(source_sentence_ids, target_sentence_ids)
 
     assert not np.isnan(np.sum(logits))
-
