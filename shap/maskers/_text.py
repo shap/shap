@@ -12,7 +12,7 @@ class Text(Masker):
     output_type : "string" (default) or "token_ids"
         
     """
-    def __init__(self, tokenizer, mask_token="auto", collapse_mask_token=True, output_type="string"):
+    def __init__(self, tokenizer, mask_token="auto", collapse_mask_token=False, output_type="string"):
         self.mask_history = {}
         self.tokenizer = tokenizer
         self.output_type = output_type
