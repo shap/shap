@@ -119,10 +119,6 @@ class Text(Masker):
             return np.array([decoded_str])
         else:
             return np.array([out])
-
-    def text_infill(self, s):
-        out=re.sub(r"([\.\s]*<infill>[\.\s]*)+","... ",s)
-        return out.strip()
     
     def post_process_sentencepiece_tokenizer_output(self, s):
         # checks if input is str or array of decoded tokens
