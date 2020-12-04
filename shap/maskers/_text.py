@@ -2,7 +2,7 @@ import numpy as np
 import re
 from ._masker import Masker
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS, SENTENCEPIECE_LIKE_TOKENIZERS
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -12,10 +12,11 @@ class Text(Masker):
     output_type : "string" (default) or "token_ids"
         
     """
-    def __init__(self, tokenizer, mask_token="auto", output_type="string"):
+    def __init__(self, tokenizer, mask_token="auto", collapse_mask_token=True, output_type="string"):
         self.mask_history = {}
         self.tokenizer = tokenizer
         self.output_type = output_type
+        self.collapse_mask_token = collapse_mask_token
         
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
         
@@ -68,30 +69,35 @@ class Text(Masker):
             else:
                 #out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
                 out = []
+                is_previous_appended_token_mask_token = False
                 for i in range(len(mask)):
                     if mask[i]:
                         out.append(self._segments_s[i])
+                        is_previous_appended_token_mask_token = False
                     else:
-                        out.extend(self.tokenizer.convert_ids_to_tokens(self.mask_token_id))
+                        if self.collapse_mask_token and not is_previous_appended_token_mask_token:
+                            out.extend(self.tokenizer.convert_ids_to_tokens(self.mask_token_id))
+                            is_previous_appended_token_mask_token = True
+                        elif not self.collapse_mask_token:
+                            out.extend(self.tokenizer.convert_ids_to_tokens(self.mask_token_id))
+                            is_previous_appended_token_mask_token = True
                 out=np.array(out)
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-                out = self.tokenizer.convert_tokens_to_string(out.tolist())
+                out = self.tokenizer.convert_tokens_to_string(out.tolist()).strip()
             elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-                out = "".join(out)
+                out = "".join(out).strip()
         else:
             if self.mask_token_id is None:
                 out = self._tokenized_s[mask]
             else:
                 out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token_id for i in range(len(mask))])
 
-        # replaces whitespace encoded as '_' with ' ' for sentence piece tokenizers
-        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
+        # tokenizers which treat spaces like parts of the tokens need further postprocessing
+        # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
+        # with ' '
+        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS + SENTENCEPIECE_LIKE_TOKENIZERS):
             out = self.post_process_sentencepiece_tokenizer_output(out)
-
-        #Text infilling
-        if "<infill>" in self.mask_token:
-            out = self.text_infill(out)
 
         return (np.array([out]),)
 
@@ -117,6 +123,34 @@ class Text(Masker):
     def text_infill(self, s):
         out=re.sub(r"([\.\s]*<infill>[\.\s]*)+","... ",s)
         return out.strip()
+    
+    def post_process_sentencepiece_tokenizer_output(self, s):
+        # checks if input is str or array of decoded tokens
+        if isinstance(s, list):
+            decoded_x = []
+            for i,x in enumerate(s):
+                if '▁' in x and len(x) > 1:
+                    # remove whitespace encoded as '_' in sentenpiece. Here we remove as this processed input is used to form clustering
+                    # as supposed to in the else statement where it is passed to the model
+                    processed_x = x.replace('▁', '')
+                elif x == '':
+                    # occurs in case of MarianMT where during decoding </s> is converted to ''
+                    # hence we restore such tokens
+                    processed_x = self.tokenizer.convert_ids_to_tokens(int(self._tokenized_s[i]))
+                else:
+                    processed_x = x
+                decoded_x.append(processed_x)
+            return decoded_x
+        else:
+            if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
+                # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
+                s = s.replace('▁', ' ')
+            elif safe_isinstance(self.tokenizer, "transformers.GPT2TokenizerFast"):
+                # replaces whitespace encoded as 'Ġ' with ' ' for sentencepiece like encoding of whitespaces
+                s = s.replace('Ġ', ' ')
+            # replace sequence of spaces with a single space
+            s = re.sub(r"[\s]+"," ",s)
+            return s
 
     def data_transform(self, s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
@@ -146,28 +180,6 @@ class Text(Masker):
             parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
-
-    def post_process_sentencepiece_tokenizer_output(self, s):
-        # checks if input is str or array of decoded tokens
-        if isinstance(s, list):
-            decoded_x = []
-            for i,x in enumerate(s):
-                if '▁' in x and len(x) > 1:
-                    # remove whitespace encoded as '_' in sentenpiece. Here we remove as this processed input is used to form clustering
-                    # as supposed to in the else statement where it is passed to the model
-                    processed_x = x.replace('▁', '')
-                elif x == '':
-                    # occurs in case of MarianMT where during decoding </s> is converted to ''
-                    # hence we restore such tokens
-                    processed_x = self.tokenizer.convert_ids_to_tokens(int(self._tokenized_s[i]))
-                else:
-                    processed_x = x
-                decoded_x.append(processed_x)
-            return decoded_x
-        else:
-            # replaces whitespace encoded as '_' with ' ' for sentence piece tokenizers
-            return s.replace('▁', ' ')
-
 
     def clustering(self, s):
         self._update_s_cache(s)
