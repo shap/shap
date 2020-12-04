@@ -1,11 +1,13 @@
-from ..utils import partition_tree_shuffle, MaskedModel
+from ..utils import partition_tree_shuffle, MaskedModel, Model
 from .._explanation import Explanation
 from ._explainer import Explainer
 import numpy as np
 import pandas as pd
 import scipy as sp
+import pickle
 from .. import links
-
+from .. import maskers
+from ..maskers import Masker
 
 class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.
@@ -133,3 +135,39 @@ class Permutation(Explainer):
 
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
         return explanation._old_format()
+
+
+    def save(self, out_file):
+        """ Saves content of permutation explainer
+        """
+
+        super(Permutation, self).save(out_file)
+        if callable(self.model.save):
+            self.model.save(self.model.model, out_file)
+        else:
+            pickle.dump(None,out_file)
+        
+        if callable(self.masker.save):
+            self.masker.save(self.masker, out_file)
+        else:
+            pickle.dump(None,out_file)
+        
+        pickle.dump(self.link, out_file)
+        pickle.dump(self.feature_names, out_file)
+
+    @classmethod
+    def load(cls, in_file, custom_model_loader = None, custom_masker_loader = None):
+        if custom_model_loader is None:
+            model = Model.load(in_file)
+        else:
+            model = custom_model_loader(in_file)
+        
+        if custom_model_loader is None:
+            masker = Masker.load(in_file)
+        else:
+            masker = custom_masker_loader(in_file)
+
+        link = pickle.load(in_file)
+        feature_names = pickle.load(in_file)
+        return Permutation(model, masker, link, feature_names)
+        
