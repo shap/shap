@@ -23,7 +23,7 @@ def test_call_function_text_generation():
         return sentence
 
     text_generation_for_pretrained_model = TextGeneration(model, tokenizer=tokenizer)
-    text_generation_for_model_agnostic_scenario = TextGeneration(f, text_similarity_tokenizer=tokenizer)
+    text_generation_for_model_agnostic_scenario = TextGeneration(f, similarity_tokenizer=tokenizer)
 
     s = "This is a test statement for verifying text generation ids"
 
