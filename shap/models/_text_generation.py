@@ -8,11 +8,11 @@ except ImportError as e:
     record_import_error("torch", "Torch could not be imported!", e)
 
 class TextGeneration(Model):
-    def __init__(self, model, tokenizer=None, text_similarity_tokenizer=None, device='cpu'):
+    def __init__(self, model, tokenizer=None, similarity_tokenizer=None, device='cpu'):
         """ Generates target sentence using model and returns tokenized ids.
 
         It generates target sentence ids for a pretrained transformer model and a function. For a pretrained transformer model, 
-        tokenizer should be passed. In case model is a function, then the text_similarity_tokenizer is used to tokenize generated 
+        tokenizer should be passed. In case model is a function, then the similarity_tokenizer is used to tokenize generated 
         sentence to ids.
 
         Parameters
@@ -32,8 +32,8 @@ class TextGeneration(Model):
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
         self.tokenizer = tokenizer
-        self.text_similarity_tokenizer = text_similarity_tokenizer
-        if text_similarity_tokenizer is None:
+        self.similarity_tokenizer = similarity_tokenizer
+        if similarity_tokenizer is None:
             self.model_agnostic = False
         else:
             self.model_agnostic = True
@@ -54,12 +54,12 @@ class TextGeneration(Model):
         target_sentence_ids = None
         if self.model_agnostic:
             target_sentence = self.model(X)
-            parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.text_similarity_tokenizer)
+            parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.similarity_tokenizer)
             keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
             if keep_suffix > 0:
-                target_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
+                target_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
             else:
-                target_sentence_ids = torch.tensor([self.text_similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
+                target_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
         else:
             self.model.eval()
             # in non model agnostic case, the model is assumed to be a transformer model and hence we move to_device
