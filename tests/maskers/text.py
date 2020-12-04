@@ -93,34 +93,6 @@ def test_masker_call_pretrained_tokenizer_fast():
     
     assert output_masked_text == correct_masked_text
 
-def test_method_text_infill():
-    from shap import maskers
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    masker = maskers.Text(tokenizer, mask_token='<infill>')
-
-    s = "This is a test string to be infilled"
-    s_masked_with_infill_ex1 = "This is a test string <infill> <infill> <infill>"
-    s_masked_with_infill_ex2 = "This is a <infill> <infill> to be infilled"
-    s_masked_with_infill_ex3 = "<infill> <infill> <infill> test string to be infilled"
-    s_masked_with_infill_ex4 = "<infill> <infill> <infill> <infill> <infill> <infill> <infill> <infill>"
-
-    text_infilled_ex1 = masker.text_infill(s_masked_with_infill_ex1)
-    expected_text_infilled_ex1 = "This is a test string..."
-
-    text_infilled_ex2 = masker.text_infill(s_masked_with_infill_ex2)
-    expected_text_infilled_ex2 = "This is a... to be infilled"
-
-    text_infilled_ex3 = masker.text_infill(s_masked_with_infill_ex3)
-    expected_text_infilled_ex3 = "... test string to be infilled"
-
-    text_infilled_ex4 = masker.text_infill(s_masked_with_infill_ex4)
-    expected_text_infilled_ex4 = "..."
-
-    assert  text_infilled_ex1 == expected_text_infilled_ex1 and text_infilled_ex2 == expected_text_infilled_ex2 and \
-            text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4
-
 def test_method_post_process_sentencepiece_tokenizer_output():
     import numpy as np
     from transformers import AutoTokenizer
@@ -171,3 +143,4 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     assert masker_mt.keep_prefix == masker_mt_expected_keep_prefix and masker_mt.keep_suffix == masker_mt_expected_keep_suffix and \
            masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix and \
            masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
+
