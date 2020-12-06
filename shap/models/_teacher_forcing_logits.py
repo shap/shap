@@ -106,18 +106,30 @@ class TeacherForcingLogits(Model):
         Parameters
         ----------
         X: string or numpy array
-            Source sentence for an explanation row.
+            Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
         if self.X != X:
             self.X = X
-            self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
-            self.output_names = self.get_output_names()
+            self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
             self.target_sentence_ids = self.to_device(self.target_sentence_ids, device=self.device).to(torch.int64)
 
-    def get_output_names(self):
-        """ Gets the output tokens from target sentence ids using the similarity_tokenizer.
+    def get_output_names_and_update_target_sentence_ids(self, X):
+        """ Gets the output tokens from input(X) by computing the 
+            target sentence ids using the using the generation_function_for_target_sentence_ids()
+            and next getting output names using the similarity_tokenizer.
+        
+        Parameters
+        ----------
+        X: string or numpy array
+            Input(Text/Image) for an explanation row.
+
+        Returns
+        -------
+        list
+            A list of output tokens.
         """
+        self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
         return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
 
     def to_device(self, variables, device=None):
