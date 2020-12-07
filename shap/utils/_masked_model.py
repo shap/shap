@@ -5,7 +5,6 @@ from numba import jit
 
 class MaskedModel():
     """ This is a utility class that combines a model, a masker object, and a current input.
-
     The combination of a model, a masker object, and a current input produces a binary set
     function that can be called to mask out any set of inputs. This class attempts to be smart
     about only evaluating the model for background samples when the inputs changed (note this
@@ -14,8 +13,9 @@ class MaskedModel():
 
     delta_mask_noop_value = 2147483647 # used to encode a noop for delta masking
 
-    def __init__(self, model, masker, link, *args):
+    def __init__(self, model, masker, link, *args, **kwargs):
         self.model = model
+        self.model_kwargs = kwargs['model_kwargs'](*args) if 'model_kwargs' in kwargs else {}
         self.masker = masker
         self.link = link
         self.args = args
@@ -42,13 +42,22 @@ class MaskedModel():
                 self._masker_cols = mshape[1]
         else:
             self._masker_rows = None# # just assuming...
-            self._masker_cols = sum(np.prod(a.shape[1:]) for a in self.args)
+            self._masker_cols = sum(np.prod(a.shape) for a in self.args)
 
     def __call__(self, masks, batch_size=None):
 
         # if we are passed a 1D array of indexes then we are delta masking and have a special implementation
         if len(masks.shape) == 1:
-            return self._delta_masking_call(masks, batch_size=batch_size)
+            if getattr(self.masker, "supports_delta_masking", False):
+                return self._delta_masking_call(masks, batch_size=batch_size)
+            
+            # we need to convert from delta masking to a full masking call because we were given a delta masking
+            # input but the masker does not support delta masking
+            else: 
+                full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=np.bool)
+                _convert_delta_mask_to_full(masks, full_masks)
+                return self._full_masking_call(full_masks, batch_size=batch_size)
+
         else:
             return self._full_masking_call(masks, batch_size=batch_size)
     
@@ -118,15 +127,14 @@ class MaskedModel():
                 all_masked_inputs[i].append(masked_inputs[i])
         
         joined_masked_inputs = self._stack_inputs(all_masked_inputs)
-        outputs = self.model(*joined_masked_inputs)
+        outputs = self.model(*joined_masked_inputs,**self.model_kwargs)
         _assert_output_input_match(joined_masked_inputs, outputs)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
-        last_outs = np.zeros((self._masker_rows,) + outputs.shape[1:])
+        max_outs = self._masker_rows if self._masker_rows is not None else max(len(r) for r in varying_rows) 
+        last_outs = np.zeros((max_outs,) + outputs.shape[1:])
         varying_rows = np.array(varying_rows)
-        # print(varying_rows)
-        # for o in (averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows):
-        #     print(type(o), o.dtype)
+        
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
 
         return averaged_outs
@@ -194,14 +202,16 @@ class MaskedModel():
 
     def __len__(self):
         """ How many binary inputs there are to toggle.
-
         By default we just match what the masker tells us. But if the masker doesn't help us
         out by giving a length then we assume is the number of data inputs.
         """
         return self._masker_cols
 
     def varying_inputs(self):
-        return np.where(np.any(self._variants, axis=0))[0]
+        if self._variants is None:
+            return np.arange(self._masker_cols)
+        else:
+            return np.where(np.any(self._variants, axis=0))[0]
 
     def main_effects(self, inds=None):
         """ Compute the main effects for this model.
@@ -226,7 +236,7 @@ class MaskedModel():
         main_effects = outputs[1:] - outputs[0]
         
         # expand the vector to the full input size
-        expanded_main_effects = np.zeros(len(self))
+        expanded_main_effects = np.zeros((len(self),) + outputs.shape[1:])
         for i,ind in enumerate(inds):
             expanded_main_effects[ind] = main_effects[i]
         
@@ -236,6 +246,25 @@ def _assert_output_input_match(inputs, outputs):
     assert len(outputs) == len(inputs[0]), \
         f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
 
+def _convert_delta_mask_to_full(masks, full_masks):
+    """ This converts a delta masking array to a full bool masking array.
+    """
+    
+    i = -1
+    masks_pos = 0
+    while masks_pos < len(masks):
+        i += 1
+
+        if i > 0:
+            full_masks[i] = full_masks[i-1]
+        
+        while masks[masks_pos] < 0:
+            full_masks[i,-masks[masks_pos]-1] = ~full_masks[i,-masks[masks_pos]-1] # -value - 1 is the original index that needs flipped
+            masks_pos += 1
+        
+        if masks[masks_pos] != MaskedModel.delta_mask_noop_value:
+            full_masks[i,masks[masks_pos]] = ~full_masks[i,masks[masks_pos]]
+        masks_pos += 1
 
 #@jit # TODO: figure out how to jit this function, or most of it
 def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_varying_rows, delta_indexes,
@@ -301,12 +330,20 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
 
     return all_masked_inputs, i + 1 # i + 1 is the number of output rows after averaging
 
-#@jit
+
 def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+    if len(last_outs.shape) == 1:
+        _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link)
+    else:
+        _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link)
+
+@jit # we can't use this when using a custom link function...
+def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
     last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
     sample_count = last_outs.shape[0]
+    multi_output = len(last_outs.shape) > 1
     averaged_outs[0] = np.mean(last_outs)
     for i in range(1, len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
@@ -315,6 +352,28 @@ def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, vary
             else:
                 last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
             averaged_outs[i] = link(np.mean(last_outs))
+            averaged_outs[i] = np.mean(last_outs)
+        else:
+            averaged_outs[i] = averaged_outs[i-1]
+
+@jit
+def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+    # here we can assume that the outputs will always be the same size, and we need
+    # to carry over evaluation outputs
+    last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
+    sample_count = last_outs.shape[0]
+    multi_output = len(last_outs.shape) > 1
+    for j in range(last_outs.shape[-1]): # using -1 is important so 
+        averaged_outs[0,j] = np.mean(last_outs[:,j]) # we can't just do np.mean(last_outs, 0) because that fails to numba compile
+    for i in range(1, len(averaged_outs)):
+        if batch_positions[i] < batch_positions[i+1]:
+            if num_varying_rows[i] == sample_count:
+                last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
+            else:
+                last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
+            averaged_outs[i] = link(np.mean(last_outs))
+            for j in range(last_outs.shape[1]):
+                averaged_outs[i,j] = np.mean(last_outs[:,j])
         else:
             averaged_outs[i] = averaged_outs[i-1]
 

@@ -560,7 +560,6 @@ def _human_and(X, model_generator, method_name, fever, cough):
 
 def human_and_00(X, y, model_generator, method_name):
     """ AND (false/false)
-
     This tests how well a feature attribution method agrees with human intuition
     for an AND operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -568,7 +567,6 @@ def human_and_00(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever and cough: +6 points
-
     transform = "identity"
     sort_order = 0
     """
@@ -576,7 +574,6 @@ def human_and_00(X, y, model_generator, method_name):
 
 def human_and_01(X, y, model_generator, method_name):
     """ AND (false/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for an AND operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -584,7 +581,6 @@ def human_and_01(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever and cough: +6 points
-
     transform = "identity"
     sort_order = 1
     """
@@ -592,7 +588,6 @@ def human_and_01(X, y, model_generator, method_name):
 
 def human_and_11(X, y, model_generator, method_name):
     """ AND (true/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for an AND operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -600,7 +595,6 @@ def human_and_11(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever and cough: +6 points
-
     transform = "identity"
     sort_order = 2
     """
@@ -631,7 +625,6 @@ def _human_or(X, model_generator, method_name, fever, cough):
 
 def human_or_00(X, y, model_generator, method_name):
     """ OR (false/false)
-
     This tests how well a feature attribution method agrees with human intuition
     for an OR operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -639,7 +632,6 @@ def human_or_00(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever or cough: +6 points
-
     transform = "identity"
     sort_order = 0
     """
@@ -647,7 +639,6 @@ def human_or_00(X, y, model_generator, method_name):
 
 def human_or_01(X, y, model_generator, method_name):
     """ OR (false/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for an OR operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -655,7 +646,6 @@ def human_or_01(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever or cough: +6 points
-
     transform = "identity"
     sort_order = 1
     """
@@ -663,7 +653,6 @@ def human_or_01(X, y, model_generator, method_name):
 
 def human_or_11(X, y, model_generator, method_name):
     """ OR (true/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for an OR operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -671,7 +660,6 @@ def human_or_11(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever or cough: +6 points
-
     transform = "identity"
     sort_order = 2
     """
@@ -702,7 +690,6 @@ def _human_xor(X, model_generator, method_name, fever, cough):
 
 def human_xor_00(X, y, model_generator, method_name):
     """ XOR (false/false)
-
     This tests how well a feature attribution method agrees with human intuition
     for an eXclusive OR operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -710,7 +697,6 @@ def human_xor_00(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever or cough but not both: +6 points
-
     transform = "identity"
     sort_order = 3
     """
@@ -718,7 +704,6 @@ def human_xor_00(X, y, model_generator, method_name):
 
 def human_xor_01(X, y, model_generator, method_name):
     """ XOR (false/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for an eXclusive OR operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -726,7 +711,6 @@ def human_xor_01(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever or cough but not both: +6 points
-
     transform = "identity"
     sort_order = 4
     """
@@ -734,7 +718,6 @@ def human_xor_01(X, y, model_generator, method_name):
 
 def human_xor_11(X, y, model_generator, method_name):
     """ XOR (true/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for an eXclusive OR operation combined with linear effects. This metric deals
     specifically with the question of credit allocation for the following function
@@ -742,7 +725,6 @@ def human_xor_11(X, y, model_generator, method_name):
     if fever: +2 points
     if cough: +2 points
     if fever or cough but not both: +6 points
-
     transform = "identity"
     sort_order = 5
     """
@@ -773,14 +755,12 @@ def _human_sum(X, model_generator, method_name, fever, cough):
 
 def human_sum_00(X, y, model_generator, method_name):
     """ SUM (false/false)
-
     This tests how well a feature attribution method agrees with human intuition
     for a SUM operation. This metric deals
     specifically with the question of credit allocation for the following function
     when all three inputs are true:
     if fever: +2 points
     if cough: +2 points
-
     transform = "identity"
     sort_order = 0
     """
@@ -788,14 +768,12 @@ def human_sum_00(X, y, model_generator, method_name):
 
 def human_sum_01(X, y, model_generator, method_name):
     """ SUM (false/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for a SUM operation. This metric deals
     specifically with the question of credit allocation for the following function
     when all three inputs are true:
     if fever: +2 points
     if cough: +2 points
-
     transform = "identity"
     sort_order = 1
     """
@@ -803,14 +781,12 @@ def human_sum_01(X, y, model_generator, method_name):
 
 def human_sum_11(X, y, model_generator, method_name):
     """ SUM (true/true)
-
     This tests how well a feature attribution method agrees with human intuition
     for a SUM operation. This metric deals
     specifically with the question of credit allocation for the following function
     when all three inputs are true:
     if fever: +2 points
     if cough: +2 points
-
     transform = "identity"
     sort_order = 2
     """
