@@ -1,6 +1,6 @@
 from .. import maskers
 from .. import links
-from ..utils import safe_isinstance, show_progress, data_transform
+from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
 from .._explanation import Explanation
@@ -242,13 +242,8 @@ class Explainer():
             
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
-                if row_feature_names is not None:
-                    for i in range(len(row_args)):
-                        feature_names[i].append(row_feature_names[i])
-                else:
-                    # setting back to default value. This case occurs when masker has a callable 
-                    # method 'feature_names' which returns None
-                    feature_names = [None for _ in range(len(args))]
+                for i in range(len(row_args)):
+                    feature_names[i].append(row_feature_names[i])
 
         # split the values up according to each input
         arg_values = [[] for a in args]
@@ -315,7 +310,10 @@ class Explainer():
             
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)
-            data = data_transform(self.masker, args[j])
+            if hasattr(self.masker, "data_transform"):
+                data = np.array([self.masker.data_transform(v) for v in args[j]])
+            else:
+                data = args[j]
             
             # build an explanation object for this input argument
             out.append(Explanation(

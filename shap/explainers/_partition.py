@@ -6,7 +6,7 @@ import warnings
 import time
 from tqdm.auto import tqdm
 import queue
-from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain, clustering
+from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain
 from .. import Explanation
 from .. import maskers
 from ._explainer import Explainer
@@ -102,10 +102,10 @@ class Partition(Explainer):
         else:
             self._reshaped_model = self.model
 
-        # if we don't have a dynamic clustering algorithm then can precompute
+        # if we don't have a dynamic clustering algorithm then can precowe mpute
         # a lot of information
-        self._clustering, self._is_dynamic_clustering = clustering(self.masker)
-        if not self._is_dynamic_clustering:
+        if not callable(self.masker.clustering):
+            self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
@@ -131,8 +131,8 @@ class Partition(Explainer):
             self._curr_base_value = fm(m00.reshape(1,-1))[0]
         f11 = fm(~m00.reshape(1,-1))[0]
 
-        if self._is_dynamic_clustering:
-            self._clustering, _ = clustering(self.masker, *row_args)
+        if callable(self.masker.clustering):
+            self._clustering = self.masker.clustering(*row_args)
             self._mask_matrix = make_masks(self._clustering)
 
         if hasattr(self._curr_base_value, 'shape') and len(self._curr_base_value.shape) > 0:

@@ -1,6 +1,5 @@
 import numpy as np
 from ._masker import Masker
-from ..utils import invariants, variants, shape, data_transform, clustering
 
 class FixedComposite(Masker):
     def __init__(self, masker):
@@ -17,6 +16,12 @@ class FixedComposite(Masker):
             A wrapped tuple consisting of the masked input using the underlying masker appended with the original args in a list.
         """
         self.masker = masker
+        # define attributes to be dynamically set
+        masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names"]
+        # set attributes dynamically
+        for masker_attribute in masker_attributes:
+            if getattr(self.masker, masker_attribute, None) is not None:
+                setattr(self, masker_attribute, getattr(self.masker, masker_attribute))
 
     def __call__(self, mask, *args):
         """ Computes mask on the args using the masker data attribute and returns list having a wrapped tuple containing masked input with args.
@@ -29,6 +34,7 @@ class FixedComposite(Masker):
         if not isinstance(masked_X, tuple):
             masked_X = (masked_X,)
         return masked_X + wrapped_args
+    """
 
     def shape(self, *args):
         return shape(self.masker, *args)
@@ -53,5 +59,6 @@ class FixedComposite(Masker):
             return self.masker.feature_names(*args)
         else:
             return None
+    """
 
     
