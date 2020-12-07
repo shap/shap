@@ -2,7 +2,7 @@ import numpy as np
 import re
 from ._masker import Masker
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS, SENTENCEPIECE_LIKE_TOKENIZERS
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -100,7 +100,7 @@ class Text(Masker):
         # tokenizers which treat spaces like parts of the tokens and dont replace the special token while decoding need further postprocessing
         # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
         # with ' '
-        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS + SENTENCEPIECE_LIKE_TOKENIZERS):
+        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
             out = self.post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
         out = re.sub(r"[\s]+"," ",out).strip()
@@ -127,12 +127,8 @@ class Text(Masker):
             return np.array([out])
     
     def post_process_sentencepiece_tokenizer_output(self, s):
-        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
-            # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
-            s = s.replace('▁', ' ')
-        elif safe_isinstance(self.tokenizer, "transformers.GPT2TokenizerFast"):
-            # replaces whitespace encoded as 'Ġ' with ' ' for sentencepiece like encoding of whitespaces
-            s = s.replace('Ġ', ' ')
+        # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
+        s = s.replace('▁', ' ')
         return s
 
     def data_transform(self, s):

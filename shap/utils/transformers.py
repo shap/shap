@@ -37,11 +37,6 @@ SENTENCEPIECE_TOKENIZERS = [
     "transformers.AlbertTokenizer"
 ]
 
-SENTENCEPIECE_LIKE_TOKENIZERS = [
-    "transformers.GPT2TokenizerFast"
-]
-
-
 def parse_prefix_suffix_for_tokenizer(tokenizer):
     null_tokens = tokenizer.encode("")
     keep_prefix, keep_suffix, prefix_strlen, suffix_strlen = None, None, None, None
