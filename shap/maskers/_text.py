@@ -45,7 +45,11 @@ class Text(Masker):
                 self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
             else:
                 self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
-                    
+        # assign mask token segment
+        if self.keep_suffix > 0:
+            self.mask_token_segment = self.token_segments(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+        else:
+            self.mask_token_segment = self.token_segments(self.mask_token)[self.keep_prefix:]
 
         # note if this masker can use different background for different samples
         self.fixed_background = self.mask_token_id is None
@@ -76,28 +80,30 @@ class Text(Masker):
                         is_previous_appended_token_mask_token = False
                     else:
                         if self.collapse_mask_token and not is_previous_appended_token_mask_token:
-                            out.extend(self.tokenizer.convert_ids_to_tokens(self.mask_token_id))
+                            out.extend(self.mask_token_segment)
                             is_previous_appended_token_mask_token = True
                         elif not self.collapse_mask_token:
-                            out.extend(self.tokenizer.convert_ids_to_tokens(self.mask_token_id))
+                            out.extend(self.mask_token_segment)
                             is_previous_appended_token_mask_token = True
                 out=np.array(out)
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-                out = self.tokenizer.convert_tokens_to_string(out.tolist()).strip()
+                out = self.tokenizer.convert_tokens_to_string(out.tolist())
             elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-                out = "".join(out).strip()
+                out = "".join(out)
         else:
             if self.mask_token_id is None:
                 out = self._tokenized_s[mask]
             else:
                 out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token_id for i in range(len(mask))])
 
-        # tokenizers which treat spaces like parts of the tokens need further postprocessing
+        # tokenizers which treat spaces like parts of the tokens and dont replace the special token while decoding need further postprocessing
         # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
         # with ' '
         if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS + SENTENCEPIECE_LIKE_TOKENIZERS):
             out = self.post_process_sentencepiece_tokenizer_output(out)
+        # replace sequence of spaces with a single space and strip beginning and end spaces
+        out = re.sub(r"[\s]+"," ",out).strip()
 
         return (np.array([out]),)
 
@@ -121,32 +127,13 @@ class Text(Masker):
             return np.array([out])
     
     def post_process_sentencepiece_tokenizer_output(self, s):
-        # checks if input is str or array of decoded tokens
-        if isinstance(s, list):
-            decoded_x = []
-            for i,x in enumerate(s):
-                if '▁' in x and len(x) > 1:
-                    # remove whitespace encoded as '_' in sentenpiece. Here we remove as this processed input is used to form clustering
-                    # as supposed to in the else statement where it is passed to the model
-                    processed_x = x.replace('▁', '')
-                elif x == '':
-                    # occurs in case of MarianMT where during decoding </s> is converted to ''
-                    # hence we restore such tokens
-                    processed_x = self.tokenizer.convert_ids_to_tokens(int(self._tokenized_s[i]))
-                else:
-                    processed_x = x
-                decoded_x.append(processed_x)
-            return decoded_x
-        else:
-            if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
-                # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
-                s = s.replace('▁', ' ')
-            elif safe_isinstance(self.tokenizer, "transformers.GPT2TokenizerFast"):
-                # replaces whitespace encoded as 'Ġ' with ' ' for sentencepiece like encoding of whitespaces
-                s = s.replace('Ġ', ' ')
-            # replace sequence of spaces with a single space
-            s = re.sub(r"[\s]+"," ",s)
-            return s
+        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
+            # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
+            s = s.replace('▁', ' ')
+        elif safe_isinstance(self.tokenizer, "transformers.GPT2TokenizerFast"):
+            # replaces whitespace encoded as 'Ġ' with ' ' for sentencepiece like encoding of whitespaces
+            s = s.replace('Ġ', ' ')
+        return s
 
     def data_transform(self, s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
@@ -180,9 +167,6 @@ class Text(Masker):
     def clustering(self, s):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
-        # replaces whitespace encoded as '_' with ' ' for sentence piece tokenizers
-        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
-            decoded_x = self.post_process_sentencepiece_tokenizer_output(decoded_x)
         pt = partition_tree(decoded_x)
         #self._mark_uninvertable(pt)
         return pt
@@ -299,8 +283,7 @@ class TokenGroup():
 
 def merge_score(group1, group2):
     score = 0
-    
-    
+
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
         score += 20
@@ -311,8 +294,9 @@ def merge_score(group1, group2):
     if group1[-1].s == "'" and group2[0].s in ["t", "s"]:
         score += 15
     
-    start_ctrl = group1[0].s[0] == "[" and group1[0].s[-1] == "]"
-    end_ctrl = group2[-1].s[0] == "[" and group2[-1].s[-1] == "]"
+    start_ctrl = group1[0].s.startswith("[") and group1[0].s.endswith("]")
+    end_ctrl = group2[-1].s.startswith("[") and group2[-1].s.endswith("]")
+
     if (start_ctrl and not end_ctrl) or (end_ctrl and not start_ctrl):
         score -= 1000
     if group2[0].s in openers and not group2[0].balanced:
