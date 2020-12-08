@@ -382,6 +382,7 @@ def setup(app):
     # need to assign the names here, otherwise autodoc won't document these classes,
     # and will instead just say 'alias of ...'
     shap.TreeExplainer.__name__ = 'TreeExplainer'
+    shap.GPUTreeExplainer.__name__ = 'GPUTreeExplainer'
     shap.LinearExplainer.__name__ = 'LinearExplainer'
     shap.KernelExplainer.__name__ = 'KernelExplainer'
     shap.SamplingExplainer.__name__ = 'SamplingExplainer'
