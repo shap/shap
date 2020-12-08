@@ -40,7 +40,7 @@ class TeacherForcingLogits(Model):
 
         Returns
         -------
-        array
+        numpy.array
             The scores (log odds) of generating target sentence ids using the model.
         """
         super(TeacherForcingLogits, self).__init__(model)
@@ -105,7 +105,7 @@ class TeacherForcingLogits(Model):
 
         Parameters
         ----------
-        X: string or numpy array
+        X: string or numpy.array
             Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
@@ -203,7 +203,7 @@ class TeacherForcingLogits(Model):
 
         Returns
         -------
-        numpy array
+        numpy.array
             Decoder output logits for target sentence ids.
         """
         # set model to eval mode
