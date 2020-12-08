@@ -1517,7 +1517,11 @@ class XGBTreeModelLoader(object):
                     self.children_default[i,j] = self.node_cright[i][j]
                 self.features[i,j] = self.node_sindex[i][j] & ((np.uint32(1) << np.uint32(31)) - np.uint32(1))
                 if self.node_cleft[i][j] >= 0:
-                    self.thresholds[i,j] = self.node_info[i][j]
+                    # Xgboost uses < for thresholds where shap uses <=
+                    # Move the threshold down by the smallest possible increment
+                    self.thresholds[i, j] = np.nextafter(self.node_info[i][j],
+                                                         self.node_info[i][j] - np.float32(1.0))
+
                 else:
                     self.values[i,j] = self.node_info[i][j]
 

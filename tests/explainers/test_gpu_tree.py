@@ -63,7 +63,7 @@ def xgboost_base():
         return pytest.param("xgboost.XGBRegressor", marks=pytest.mark.skip)
     X, y = datasets['regression']
 
-    model = xgboost.XGBRegressor()
+    model = xgboost.XGBRegressor(tree_method="hist")
     model.fit(X, y)
     return model.get_booster(), X, model.predict(X)
 
