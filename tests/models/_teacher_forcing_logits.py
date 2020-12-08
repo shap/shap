@@ -2,6 +2,8 @@
 '''
 
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
+    """ Tests if get_teacher_forced_logits() works for encoder-decoder models.
+    """
     import torch
     import numpy as np
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -32,6 +34,8 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     assert not np.isnan(np.sum(logits))
 
 def test_method_get_teacher_forced_logits_for_decoder_model():
+    """ Tests if get_teacher_forced_logits() works for decoder only models.
+    """
     import torch
     import numpy as np
     from transformers import AutoTokenizer, AutoModelForCausalLM
