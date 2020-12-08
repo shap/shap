@@ -82,9 +82,10 @@ class Partition(Explainer):
         # will use for sampling
         self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
         # self.output_names = output_names
-
-        self.model = lambda *args: np.array(model(*args))
-        self.elemental_model = model
+        if safe_isinstance(model, "shap.models.Model"):
+            self.model = model
+        else:
+            self.model = lambda *args: np.array(model(*args))
         self.expected_value = None
         self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
@@ -186,7 +187,7 @@ class Partition(Explainer):
             "hierarchical_values": self.dvalues.copy(),
             "clustering": self._clustering,
             "output_indices": outputs,
-            "output_names": self.elemental_model.output_names if hasattr(self.elemental_model, "output_names") else None
+            "output_names": self.model.output_names if hasattr(self.model, "output_names") else None
         }
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):

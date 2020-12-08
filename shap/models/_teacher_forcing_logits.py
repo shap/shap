@@ -83,8 +83,8 @@ class TeacherForcingLogits(Model):
 
         Returns
         -------
-        array or list
-            List of log odds scores for every input pair (masked_X, X)
+        numpy.array
+            A numpy array of log odds scores for every input pair (masked_X, X)
         """
         output_batch=[]
         for masked_x, x in zip(masked_X, X):
@@ -95,7 +95,7 @@ class TeacherForcingLogits(Model):
             logits = self.get_teacher_forced_logits(source_sentence_ids, self.target_sentence_ids)
             logodds = self.get_logodds(logits)
             output_batch.append(logodds)
-        return output_batch
+        return np.array(output_batch)
 
     def update_cache_X(self, X):
         """ The function updates original input(X) and target sentence ids.
