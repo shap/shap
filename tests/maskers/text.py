@@ -94,6 +94,8 @@ def test_masker_call_pretrained_tokenizer_fast():
     assert output_masked_text == correct_masked_text
 
 def test_sentencepiece_tokenizer_output():
+    """ Tests for output for sentencepiece tokenizers to not have '_' in output of masker when passed a mask of ones.
+    """
     import numpy as np
     from transformers import AutoTokenizer
     from shap import maskers
@@ -112,6 +114,8 @@ def test_sentencepiece_tokenizer_output():
     assert sentencepiece_tokenizer_output_processed[0][0] == expected_sentencepiece_tokenizer_output_processed
 
 def test_keep_prefix_suffix_tokenizer_parsing():
+    """ Checks parsed keep prefix and keep suffix for different tokenizers.
+    """ 
     from transformers import AutoTokenizer
     from shap import maskers
 
@@ -130,3 +134,40 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     assert masker_mt.keep_prefix == masker_mt_expected_keep_prefix and masker_mt.keep_suffix == masker_mt_expected_keep_suffix and \
            masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix and \
            masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
+
+
+def test_text_infill_with_collapse_mask_token():
+    """ Tests for different text infilling output combinations with collapsing mask token.
+    """
+    import numpy as np
+    from shap import maskers
+    from transformers import AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    masker = maskers.Text(tokenizer, mask_token='...', collapse_mask_token=True)
+
+    s = "This is a test string to be infilled"
+
+    # s_masked_with_infill_ex1 = "This is a test string ... ... ..."
+    mask_ex1 = np.array([True, True, True, True, True, False, False, False, False])
+    # s_masked_with_infill_ex2 = "This is a ... ... to be infilled"
+    mask_ex2 = np.array([True, True, True, False, False, True, True, True, True])
+    # s_masked_with_infill_ex3 = "... ... ... test string to be infilled"
+    mask_ex3 = np.array([False, False, False, True, True, True, True, True, True])
+    # s_masked_with_infill_ex4 = "... ... ... ... ... ... ... ..."
+    mask_ex4 = np.array([False, False, False, False, False, False, False, False, False])
+
+    text_infilled_ex1 = masker(mask_ex1, s)[0][0]
+    expected_text_infilled_ex1 = "This is a test string ..."
+
+    text_infilled_ex2 = masker(mask_ex2, s)[0][0]
+    expected_text_infilled_ex2 = "This is a ... to be infilled"
+
+    text_infilled_ex3 = masker(mask_ex3, s)[0][0]
+    expected_text_infilled_ex3 = "... test string to be infilled"
+
+    text_infilled_ex4 = masker(mask_ex4, s)[0][0]
+    expected_text_infilled_ex4 = "..."
+
+    assert  text_infilled_ex1 == expected_text_infilled_ex1 and text_infilled_ex2 == expected_text_infilled_ex2 and \
+            text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4
