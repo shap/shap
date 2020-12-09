@@ -285,7 +285,7 @@ class Explainer():
         if self.output_names is None:
             if None not in output_names:
                 labels = np.array(output_names)
-                sliced_labels = np.array([labels[i][index_list] for i,index_list in enumerate(output_indices)])
+                sliced_labels = np.array([np.array(labels[i])[index_list] for i,index_list in enumerate(output_indices)])
             else:
                 sliced_labels = None
         else:
