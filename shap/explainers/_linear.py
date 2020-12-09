@@ -319,10 +319,10 @@ class Linear(Explainer):
                 #     return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
 
         return {
-            "values": phi,
+            "values": phi.T,
             "expected_values": self.expected_value,
             "mask_shapes": (X.shape[1:],),
-            "main_effects": phi,
+            "main_effects": phi.T,
             "clustering": None
         }
 

@@ -425,7 +425,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
-        base_value = shap_exp.base_value
+        base_value = shap_exp.base_values
         shap_values = shap_exp.values
         if features is None:
             features = shap_exp.data

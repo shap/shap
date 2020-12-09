@@ -63,9 +63,9 @@ class TextGeneration(Model):
         else:
             self.model.eval()
             # in non model agnostic case, the model is assumed to be a transformer model and hence we move to_device
-            self.model = self.to_device(self.model, device=self.device)
+            self.model = self.to_device(self.model)
             input_ids = torch.tensor([self.tokenizer.encode(X)])
-            input_ids = self.to_device(input_ids, device=self.device)
+            input_ids = self.to_device(input_ids)
             text_generation_params = {}
             # check if user assigned any text generation specific kwargs
             if "text_generation_params" in self.model.config.__dict__:
@@ -96,14 +96,14 @@ class TextGeneration(Model):
 
         return target_sentence_ids
 
-    def to_device(self, variables, device=None):
+    def to_device(self, variables):
         if isinstance(variables, list):
             deviced_variables = []
             for variable in variables:
-                deviced_variables.append(variable.to(device))
+                deviced_variables.append(variable.to(self.device))
             return deviced_variables
         else:
-            return variables.to(device)
+            return variables.to(self.device)
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
         """ Calculates if special tokens are present in the begining/end of the output.

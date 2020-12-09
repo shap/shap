@@ -91,9 +91,6 @@ class Explainer():
             self.masker = maskers.FixedComposite(self.masker)
         elif safe_isinstance(self.model, "shap.models.TeacherForcingLogits") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
             self.masker = maskers.FixedComposite(self.masker)
-        elif not safe_isinstance(self.model,"shap.models.Model"):
-            self.model = models.Model(self.model)
-
 
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
 
