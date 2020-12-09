@@ -267,8 +267,8 @@ class Explanation(object, metaclass=MetaExplanation):
                         new_self.values = np.array(new_values)
                         new_self.base_values = np.array(new_base_values)
                         new_self.data = np.array(new_data)
-                        new_self.feature_names = np.array(new_data)
                         new_self.output_names = t
+                        new_self.feature_names = np.array(new_data)
                         new_self.clustering = None
                     else: 
                         for i in range(len(self.values)):
