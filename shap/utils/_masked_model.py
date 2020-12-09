@@ -19,7 +19,6 @@ class MaskedModel():
         self.masker = masker
         self.link = link
         self.args = args
-
         # if the masker supports it, save what positions vary from the background
         if callable(getattr(self.masker, "invariants", None)):
             self._variants = ~self.masker.invariants(*args)
@@ -70,7 +69,7 @@ class MaskedModel():
         last_mask = np.zeros(masks.shape[1], dtype=np.bool)
         batch_positions = np.zeros(len(masks)+1, dtype=np.int)
         #masked_inputs = np.zeros((len(masks) * self.masker.max_output_samples, masks.shape[1]))
-        all_masked_inputs = [[] for a in self.args]
+        all_masked_inputs = []
         #batch_masked_inputs = []
         num_mask_samples = np.zeros(len(masks), dtype=np.int)
         num_varying_rows = np.zeros(len(masks), dtype=np.int)
@@ -78,17 +77,21 @@ class MaskedModel():
         if self._variants is not None:
             delta_tmp = self._variants.copy().astype(np.int)
         for i,mask in enumerate(masks):
-
+            
             # mask the inputs
             delta_mask = mask ^ last_mask
             if do_delta_masking and delta_mask.sum() == 1:
                 delta_ind = np.nonzero(delta_mask)[0][0]
                 masked_inputs = self.masker(delta_ind, *self.args).copy()
             else:
-                masked_inputs = self.masker(mask, *self.args).copy()
+                masked_inputs = self.masker(mask, *self.args)
 
+            # wrap the masked inputs if they are not already in a tuple
+            if not isinstance(masked_inputs, tuple):
+                masked_inputs = (masked_inputs,)
+                
             # masked_inputs = self.masker(mask, *self.args)
-            num_mask_samples[i] = len(masked_inputs)
+            num_mask_samples[i] = len(masked_inputs[0])
             
             # see which rows have been updated, so we can only evaluate the model on the rows we need to
             if i == 0 or self._variants is None:
@@ -108,25 +111,26 @@ class MaskedModel():
             last_mask[:] = mask
             
             batch_positions[i+1] = batch_positions[i] + num_varying_rows[i]
-            
 
             # subset the masked input to only the rows that vary
             if num_varying_rows[i] != num_mask_samples[i]:
-                if len(self.args) == 1:
+                if len(masked_inputs) == 1:
                     # _ = masked_inputs[varying_rows[-1]]
                     # _ = masked_inputs[varying_rows[-1]]
                     # _ = masked_inputs[varying_rows[-1]]
-                    masked_inputs = masked_inputs[varying_rows[-1]]
+                    masked_inputs_subset = masked_inputs[0][varying_rows[-1]]
                 else:
-                    masked_inputs = [v[varying_rows[-1]] for v in zip(*masked_inputs)]
+                    masked_inputs_subset = [v[varying_rows[-1]] for v in zip(*masked_inputs[0])]
+                masked_inputs = (masked_inputs_subset,) + masked_inputs[1:]
 
-            # wrap the masked inputs if they are not already in a tuple
-            if len(self.args) == 1:
-                masked_inputs = (masked_inputs,)
+            # define no. of list based on output of masked_inputs
+            if len(all_masked_inputs) != len(masked_inputs):
+                all_masked_inputs = [[] for m in range(len(masked_inputs))]
+
             for i in range(len(masked_inputs)):
                 all_masked_inputs[i].append(masked_inputs[i])
         
-        joined_masked_inputs = self._stack_inputs(all_masked_inputs)
+        joined_masked_inputs = self._stack_inputs(*all_masked_inputs)
         outputs = self.model(*joined_masked_inputs)
         _assert_output_input_match(joined_masked_inputs, outputs)
 
@@ -191,7 +195,7 @@ class MaskedModel():
         return averaged_outs
     
     def _stack_inputs(self, *inputs):
-        return [np.concatenate(tuple(*v)) for v in inputs]
+        return tuple([np.concatenate(v) for v in inputs])
 
     @property
     def mask_shapes(self):
