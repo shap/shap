@@ -82,8 +82,10 @@ class Partition(Explainer):
         # will use for sampling
         self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
         # self.output_names = output_names
-
-        self.model = lambda x: np.array(model(x))
+        if safe_isinstance(model, "shap.models.Model"):
+            self.model = model
+        else:
+            self.model = lambda *args: np.array(model(*args))
         self.expected_value = None
         self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
@@ -125,7 +127,8 @@ class Partition(Explainer):
         # make sure we have the base value and current value outputs
         M = len(fm)
         m00 = np.zeros(M, dtype=np.bool)
-        if self._curr_base_value is None or getattr(self.masker, "fixed_background", False):
+        # if not fixed background or no base value assigned then compute base value for a row
+        if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             self._curr_base_value = fm(m00.reshape(1,-1))[0]
         f11 = fm(~m00.reshape(1,-1))[0]
 
@@ -183,7 +186,8 @@ class Partition(Explainer):
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),
             "clustering": self._clustering,
-            "output_indices": outputs
+            "output_indices": outputs,
+            "output_names": self.model.output_names if hasattr(self.model, "output_names") else None
         }
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):

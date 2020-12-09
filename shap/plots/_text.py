@@ -693,12 +693,12 @@ def saliency_plot(shap_values):
     out += '<tr>'
     out += '<th></th>'
     for j in range(model_input.shape[0]):
-        out += '<th>' + model_input[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+        out += '<th>' + model_input[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
     out += '</tr>'
     
     for row_index in range(model_output.shape[0]):
         out += '<tr>'
-        out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+        out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
         for col_index in range(model_input.shape[0]):
             out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(shap_values.values[col_index][row_index],3)) + '</th>'
         out += '</tr>'
@@ -791,7 +791,7 @@ def heatmap(shap_values):
                 + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                 + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
                 + ">" \
-                + model_input[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + model_input[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
                 + " </div>" \
                 + "</div>"
         
@@ -810,7 +810,7 @@ def heatmap(shap_values):
                 + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                 + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
                 + ">" \
-                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
                 + " </div>" \
                 + "</div>"
     

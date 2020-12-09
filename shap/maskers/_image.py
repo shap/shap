@@ -85,7 +85,7 @@ class Image(Masker):
             out = x.copy()
             out[~mask] = self.mask_value[~mask]
 
-        return out.reshape(1, *in_shape)
+        return (out.reshape(1, *in_shape),)
         
     def blur(self, x, mask):
         cv2.blur()
