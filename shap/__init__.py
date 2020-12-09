@@ -71,7 +71,7 @@ from . import links
 
 from .actions._optimizer import ActionOptimizer
 
-#from . import benchmark
+from . import benchmark
 
 from .utils._legacy import kmeans
 from .utils import sample, approximate_interactions
