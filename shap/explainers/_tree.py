@@ -560,7 +560,6 @@ class TreeEnsemble:
     def __init__(self, model, data=None, data_missing=None, model_output=None):
         self.model_type = "internal"
         self.trees = None
-        less_than_or_equal = True
         self.base_offset = 0
         self.model_output = model_output
         self.objective = None # what we explain when explaining the loss of the model
@@ -811,7 +810,6 @@ class TreeEnsemble:
             xgb_loader = XGBTreeModelLoader(self.original_model)
             self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
             self.base_offset = xgb_loader.base_score
-            less_than_or_equal = False
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             if xgb_loader.num_class > 0:
@@ -824,7 +822,6 @@ class TreeEnsemble:
             xgb_loader = XGBTreeModelLoader(self.original_model)
             self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
             self.base_offset = xgb_loader.base_score
-            less_than_or_equal = False
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
@@ -842,7 +839,6 @@ class TreeEnsemble:
             xgb_loader = XGBTreeModelLoader(self.original_model)
             self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
             self.base_offset = xgb_loader.base_score
-            less_than_or_equal = False
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
             self.tree_limit = getattr(model, "best_ntree_limit", None)
@@ -855,7 +851,6 @@ class TreeEnsemble:
             xgb_loader = XGBTreeModelLoader(self.original_model)
             self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
             self.base_offset = xgb_loader.base_score
-            less_than_or_equal = False
             # Note: for ranker, leaving tree_output and objective as None as they
             # are not implemented in native code yet
             self.tree_limit = getattr(model, "best_ntree_limit", None)
@@ -1016,10 +1011,6 @@ class TreeEnsemble:
                 # ensure that the passed background dataset lands in every leaf
                 if np.min(self.trees[i].node_sample_weight) <= 0:
                     self.fully_defined_weighting = False
-
-            # If we should do <= then we nudge the thresholds to make our <= work like <
-            if not less_than_or_equal:
-                self.thresholds = np.nextafter(self.thresholds, np.inf)
 
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
             self.max_depth = np.max([t.max_depth for t in self.trees])
@@ -1519,9 +1510,7 @@ class XGBTreeModelLoader(object):
                 if self.node_cleft[i][j] >= 0:
                     # Xgboost uses < for thresholds where shap uses <=
                     # Move the threshold down by the smallest possible increment
-                    self.thresholds[i, j] = np.nextafter(self.node_info[i][j],
-                                                         self.node_info[i][j] - np.float32(1.0))
-
+                    self.thresholds[i, j] = np.nextafter(self.node_info[i][j], - np.float32(np.inf))
                 else:
                     self.values[i,j] = self.node_info[i][j]
 
