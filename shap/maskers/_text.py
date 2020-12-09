@@ -1,6 +1,8 @@
 import numpy as np
+import re
 from ._masker import Masker
 from ..utils import safe_isinstance
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
 
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
@@ -10,21 +12,27 @@ class Text(Masker):
     output_type : "string" (default) or "token_ids"
         
     """
-    def __init__(self, tokenizer, mask_token="auto", output_type="string"):
+    def __init__(self, tokenizer, mask_token="auto", collapse_mask_token=False, output_type="string"):
         self.mask_history = {}
         self.tokenizer = tokenizer
-        null_tokens = tokenizer.encode("")
         self.output_type = output_type
+        self.collapse_mask_token = collapse_mask_token
         
-        assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"
-        self.keep_prefix = len(null_tokens) // 2
-        self.keep_suffix = len(null_tokens) // 2
-        self.prefix_strlen = len(tokenizer.decode(null_tokens[:self.keep_prefix]))
-        self.suffix_strlen = len(tokenizer.decode(null_tokens[-self.keep_suffix:]))
+        parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
+        
+        self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
+        self.keep_suffix = parsed_tokenizer_dict['keep_suffix']
+        self.prefix_strlen = parsed_tokenizer_dict['prefix_strlen']
+        self.suffix_strlen = parsed_tokenizer_dict['suffix_strlen']
+        null_tokens = parsed_tokenizer_dict['null_tokens']
+
         if mask_token == "auto":
-            if hasattr(self.tokenizer, "mask_token_id"):
-                self.mask_token_id = self.tokenizer.mask_token_id
+            if hasattr(self.tokenizer, "mask_token_id") and self.tokenizer.mask_token_id is not None:
                 self.mask_token = " "+self.tokenizer.decode([self.tokenizer.mask_token_id])+" "#[self.prefix_strlen:-self.suffix_strlen]
+                if self.keep_suffix > 0:
+                    self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+                else:
+                    self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
             else:
                 self.mask_token_id = None
                 self.mask_token = ""
@@ -32,10 +40,16 @@ class Text(Masker):
             self.mask_token_id = None
             self.mask_token = ""
         else:
-            self.mask_token_id = tokenizer.encode(mask_token)[self.keep_prefix:-self.keep_suffix]
             self.mask_token = " "+mask_token+" "
-        
-        
+            if self.keep_suffix > 0:
+                self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+            else:
+                self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
+        # assign mask token segment
+        if self.keep_suffix > 0:
+            self.mask_token_segment = self.token_segments(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+        else:
+            self.mask_token_segment = self.token_segments(self.mask_token)[self.keep_prefix:]
 
         # note if this masker can use different background for different samples
         self.fixed_background = self.mask_token_id is None
@@ -57,10 +71,24 @@ class Text(Masker):
             if self.mask_token_id is None:
                 out = self._segments_s[mask]
             else:
-                out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
+                #out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
+                out = []
+                is_previous_appended_token_mask_token = False
+                for i in range(len(mask)):
+                    if mask[i]:
+                        out.append(self._segments_s[i])
+                        is_previous_appended_token_mask_token = False
+                    else:
+                        if self.collapse_mask_token and not is_previous_appended_token_mask_token:
+                            out.extend(self.mask_token_segment)
+                            is_previous_appended_token_mask_token = True
+                        elif not self.collapse_mask_token:
+                            out.extend(self.mask_token_segment)
+                            is_previous_appended_token_mask_token = True
+                out=np.array(out)
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-                out = self.tokenizer.convert_tokens_to_string(out)
+                out = self.tokenizer.convert_tokens_to_string(out.tolist())
             elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
                 out = "".join(out)
         else:
@@ -68,8 +96,16 @@ class Text(Masker):
                 out = self._tokenized_s[mask]
             else:
                 out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token_id for i in range(len(mask))])
-        
-        return np.array([out])
+
+        # tokenizers which treat spaces like parts of the tokens and dont replace the special token while decoding need further postprocessing
+        # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
+        # with ' '
+        if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
+            out = self.post_process_sentencepiece_tokenizer_output(out)
+        # replace sequence of spaces with a single space and strip beginning and end spaces
+        out = re.sub(r"[\s]+"," ",out).strip()
+
+        return (np.array([out]),)
 
         if self.output_type == "string":
             decoded_str = self.tokenizer.decode(out)[self.prefix_strlen:][:-self.suffix_strlen].strip()
@@ -89,6 +125,11 @@ class Text(Masker):
             return np.array([decoded_str])
         else:
             return np.array([out])
+    
+    def post_process_sentencepiece_tokenizer_output(self, s):
+        # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
+        s = s.replace('▁', ' ')
+        return s
 
     def data_transform(self, s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
@@ -238,8 +279,7 @@ class TokenGroup():
 
 def merge_score(group1, group2):
     score = 0
-    
-    
+
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
         score += 20
@@ -250,8 +290,9 @@ def merge_score(group1, group2):
     if group1[-1].s == "'" and group2[0].s in ["t", "s"]:
         score += 15
     
-    start_ctrl = group1[0].s[0] == "[" and group1[0].s[-1] == "]"
-    end_ctrl = group2[-1].s[0] == "[" and group2[-1].s[-1] == "]"
+    start_ctrl = group1[0].s.startswith("[") and group1[0].s.endswith("]")
+    end_ctrl = group2[-1].s.startswith("[") and group2[-1].s.endswith("]")
+
     if (start_ctrl and not end_ctrl) or (end_ctrl and not start_ctrl):
         score -= 1000
     if group2[0].s in openers and not group2[0].balanced:

@@ -738,13 +738,14 @@ def saliency_plot(shap_values):
     # add top row containing input tokens
     out += '<tr>'
     out += '<th></th>'
+
     for j in range(compressed_shap_matrix.shape[0]):
-        out += '<th>' + tokens[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+        out += '<th>' + tokens[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
     out += '</tr>'
     
     for row_index in range(compressed_shap_matrix.shape[1]):
         out += '<tr>'
-        out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') + '</th>'
+        out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
         for col_index in range(compressed_shap_matrix.shape[0]):
             out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(compressed_shap_matrix[col_index][row_index],3)) + '</th>'
         out += '</tr>'
@@ -920,7 +921,7 @@ def heatmap(shap_values):
                         + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                         + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
                         + ">"
-            input_text_html += content[TREE_NODE_KEY_TOKENS].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '')
+            input_text_html += content[TREE_NODE_KEY_TOKENS].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','')
             input_text_html +='</div>'
 
         input_text_html +='</div>'
@@ -943,7 +944,7 @@ def heatmap(shap_values):
                 + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                 + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
                 + ">" \
-                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
                 + " </div>" \
                 + "</div>"
     

@@ -1,6 +1,8 @@
 from .. import maskers
 from .. import links
 from ..utils import safe_isinstance, show_progress
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
+from .. import models
 from .._explanation import Explanation
 import numpy as np
 import scipy as sp
@@ -71,13 +73,24 @@ class Explainer():
             else:
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
-            self.masker = maskers.Text(masker)
+            if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+                # auto assign text infilling if model is a transformer model with lm head
+                self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
+            else:
+                self.masker = maskers.Text(masker)
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
         elif (masker is dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
         else:
             self.masker = masker
+        
+        # wrap self.masker and self.model for output text explanation algorithm
+        if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+            self.model = models.TeacherForcingLogits(self.model, self.masker.tokenizer)
+            self.masker = maskers.FixedComposite(self.masker)
+        elif safe_isinstance(self.model, "shap.models.TeacherForcingLogits") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
+            self.masker = maskers.FixedComposite(self.masker)
 
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
 
@@ -104,7 +117,7 @@ class Explainer():
                     algorithm = "additive"
 
                 # otherwise use a model agnostic method
-                elif callable(model):
+                elif callable(self.model):
                     if issubclass(type(self.masker), maskers.Independent):
                         if self.masker.shape[1] <= 10:
                             algorithm = "exact"
@@ -120,7 +133,7 @@ class Explainer():
                             algorithm = "permutation"
                         else:
                             algorithm = "partition" # TODO: should really only do this if there is more than just tab
-                    elif issubclass(type(self.masker), maskers.Image) or issubclass(type(self.masker), maskers.Text):
+                    elif issubclass(type(self.masker), maskers.Image) or issubclass(type(self.masker), maskers.Text) or issubclass(type(self.masker), maskers.FixedComposite):
                         algorithm = "partition"
                     else:
                         algorithm = "permutation"
@@ -132,22 +145,22 @@ class Explainer():
             # build the right subclass
             if algorithm == "exact":
                 self.__class__ = explainers.Exact
-                explainers.Exact.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Exact.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "permutation":
                 self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, output_names=self.output_names, **kwargs)
+                explainers.Partition.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, output_names=self.output_names, **kwargs)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
-                explainers.Tree.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Tree.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "additive":
                 self.__class__ = explainers.Additive
-                explainers.Additive.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Additive.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             elif algorithm == "linear":
                 self.__class__ = explainers.Linear
-                explainers.Linear.__init__(self, model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
@@ -207,6 +220,7 @@ class Explainer():
         main_effects = []
         hierarchical_values = []
         clustering = []
+        output_names = []
         if callable(getattr(self.masker, "feature_names", None)):
             feature_names = [[] for _ in range(len(args))]
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
@@ -221,6 +235,7 @@ class Explainer():
             main_effects.append(row_result.get("main_effects", None))
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
+            output_names.append(row_result.get("output_names", None))
             
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
@@ -268,7 +283,11 @@ class Explainer():
 
         # getting output labels 
         if self.output_names is None:
-            sliced_labels = None
+            if None not in output_names:
+                labels = np.array(output_names)
+                sliced_labels = np.array([labels[i][index_list] for i,index_list in enumerate(output_indices)])
+            else:
+                sliced_labels = None
         else:
             labels = np.array(self.output_names)
             sliced_labels = np.array([labels[index_list] for index_list in output_indices])

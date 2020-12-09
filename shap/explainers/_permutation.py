@@ -20,7 +20,7 @@ class Permutation(Explainer):
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
     """
 
-    def __init__(self, model, masker, link=links.identity):
+    def __init__(self, model, masker, link=links.identity, feature_names=None):
         """ Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
@@ -29,14 +29,14 @@ class Permutation(Explainer):
             A callable python object that executes the model given a set of input data samples.
 
         masker : function or numpy.array or pandas.DataFrame
-            A callable python object used to "mask" out hidden features of the form `masker(x, mask)`.
+            A callable python object used to "mask" out hidden features of the form `masker(binary_mask, x)`.
             It takes a single input sample and a binary mask and returns a matrix of masked samples. These
             masked samples are evaluated using the model function and the outputs are then averaged.
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. To use a clustering
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
-        super(Permutation, self).__init__(model, masker, link=link)
+        super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
 
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):

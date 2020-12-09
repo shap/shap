@@ -258,7 +258,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if categorical_interaction and clow != chigh:
             clow = np.nanmin(cv.astype(np.float))
             chigh = np.nanmax(cv.astype(np.float))
-            bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
+            bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
     # optionally add jitter to feature values
@@ -606,7 +606,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         if categorical_interaction and clow != chigh:
             clow = np.nanmin(cv.astype(np.float))
             chigh = np.nanmax(cv.astype(np.float))
-            bounds = np.linspace(clow, chigh, int(chigh - clow + 2))
+            bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
     # optionally add jitter to feature values
