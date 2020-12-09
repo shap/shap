@@ -159,6 +159,9 @@ class Explanation(object, metaclass=MetaExplanation):
     @property
     def output_names(self):
         return self._s.output_names
+    @output_names.setter 
+    def output_names(self, new_output_names):
+        self._s.output_names = new_output_names
 
     @property
     def output_indexes(self):
@@ -249,17 +252,35 @@ class Explanation(object, metaclass=MetaExplanation):
                     t = int(ind)
                 else:
                     new_values = []
+                    new_base_values = []
                     new_data = []
-                    for i in range(len(self.values)):
-                        for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
-                            if s == t:
-                                new_values.append(v)
-                                new_data.append(d)
-                    new_self = copy.deepcopy(self)
-                    new_self.values = new_values
-                    new_self.data = new_data
-                    new_self.feature_names = t
-                    new_self.clustering = None
+                    if self.output_names.ndim >= 2 or self.output_names.shape[0] >= 2: 
+                        new_self = copy.deepcopy(self)
+                        for i in range(len(self.values)):
+                            for j in range(len(self.output_names[i])): 
+                                s = self.output_names[i][j]
+                                if s == t: 
+                                    new_values.append(np.array(self.values[i][:,j]))
+                                    new_data.append(np.array(self.data[i]))
+                                    new_base_values.append(self.base_values[i][j])
+                        new_self = copy.deepcopy(self)
+                        new_self.values = np.array(new_values)
+                        new_self.base_values = np.array(new_base_values)
+                        new_self.data = np.array(new_data)
+                        new_self.feature_names = np.array(new_data)
+                        new_self.output_names = t
+                        new_self.clustering = None
+                    else: 
+                        for i in range(len(self.values)):
+                            for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
+                                if s == t:
+                                    new_values.append(v)
+                                    new_data.append(d)
+                        new_self = copy.deepcopy(self)
+                        new_self.values = new_values
+                        new_self.data = new_data
+                        new_self.feature_names = t
+                        new_self.clustering = None
                     return new_self
             if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)

@@ -161,7 +161,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         packages=[
             'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers._deep',
             'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils',
-            'shap.actions'
+            'shap.actions', 'shap.models'
         ],
         package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
         cmdclass={'build_ext': build_ext},
