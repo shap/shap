@@ -192,17 +192,8 @@ class SequentialPerturbation():
             auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign*(ys-ys[0]))
             return xs, ys, auc
         
-    def plot(self):
-        
-        for i in range(len(self.score_values)):
-            xs = np.linspace(0, 1, 100)
-            curves = np.zeros((len(self.score_values[i]), len(xs)))
-            for j in range(len(self.score_values[i])):
-                xp = np.linspace(0, 1, len(self.score_values[i][j]))
-                yp = self.score_values[i][j]
-                curves[j,:] = np.interp(xs, xp, yp)
-            ys = curves.mean(0)
-            pl.plot(xs, ys, label=self.labels[i] + " AUC %0.4f" % self.score_aucs[i].mean())
+    def plot(self, xs, ys, auc):
+        pl.plot(xs, ys, label="AUC %0.4f" % auc)
         if (self.sort_order == "negative") != (self.perturbation == "remove"):
             pl.gca().invert_yaxis()
         pl.legend()
