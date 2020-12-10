@@ -10,6 +10,7 @@ Core Explainers
 
     shap.Explainer
     shap.TreeExplainer
+    shap.GPUTreeExplainer
     shap.GradientExplainer
     shap.DeepExplainer
     shap.KernelExplainer
