@@ -6,16 +6,16 @@ import sklearn
 import shap 
 from sklearn.model_selection import train_test_split
 from shap.utils import safe_isinstance, MaskedModel
-from shap.benchmark import SequentialPerturbation
+from . import perturbation
 
-def update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores):
-    metric = perturbation + ' ' + sort_order
-    sp = SequentialPerturbation(model, masker, sort_order, score_function, perturbation)
+def update(f, X, y, explainer, masker, sort_order, perturbation_method, scores):
+    metric = perturbation_method + ' ' + sort_order
+    sp = perturbation.SequentialPerturbation(f, masker, sort_order, perturbation_method)
     x, y, auc = sp.score(explainer, X, y=y)
     scores['metrics'].append(metric)
     scores['values'][metric] = [x, y, auc] 
 
-def get_benchmark(model, X, y, explainer, masker, metrics, exp_num=1, *args):
+def get_benchmark(f, X, y, explainer, masker, metrics, exp_num=1, *args):
     # convert dataframes
     if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
         X = X.values
@@ -31,9 +31,8 @@ def get_benchmark(model, X, y, explainer, masker, metrics, exp_num=1, *args):
 
     # record scores per metric 
     scores = {'name': name, 'metrics': list(), 'values': dict()}
-    for sort_order, perturbation in list(it.product(metrics['sort_order'], metrics['perturbation'])):
-        score_function = lambda true, pred: np.mean(pred)
-        update(model, X, y, explainer, masker, sort_order, score_function, perturbation, scores)
+    for sort_order, perturbation_method in list(it.product(metrics['sort_order'], metrics['perturbation'])):
+        update(f, X, y, explainer, masker, sort_order, perturbation_method, scores)
 
     return scores 
 
