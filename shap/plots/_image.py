@@ -139,7 +139,7 @@ def image_to_text(shap_values):
 
     if len(shap_values.values.shape) == 5:
         for i in range(shap_values.values.shape[0]):
-            display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
+            display(HTML(f"<br/><b>{ordinal_str(i)} instance:</b><br/>"))
             image_to_text(shap_values[i])
         
         return
