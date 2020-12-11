@@ -92,10 +92,10 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
                       extra_compile_args=compile_args))
     if with_cuda:
         try:
-            cudart_path = os.environ['CUDA_PATH'] + '/lib'
             if sys.platform == 'win32':
-                cudart_path += '/x64'
+                cudart_path = os.environ['CUDA_PATH'] + '/lib/x64'
             else:
+                cudart_path = os.environ['CUDA_PATH'] + '/lib64'
                 compile_args.append('-fPIC')
 
             lib_dir, lib = compile_cuda_module(compile_args)
