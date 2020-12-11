@@ -56,10 +56,10 @@ class build_ext(_build_ext):
         print("numpy.get_include()", numpy.get_include())
         self.include_dirs.append(numpy.get_include())
 
+
 def find_in_path(name, path):
-    "Find a file in a search path"
-    # adapted from https://github.com/benfred/implicit/blob/master/cuda_setup.py, which is
-    # in turn adapted from:
+    """Find a file in a search path and return its full path."""
+    # adapted from:
     # http://code.activestate.com/recipes/52224-find-a-file-given-a-search-path/
     for dir in path.split(os.pathsep):
         binpath = os.path.join(dir, name)
@@ -67,9 +67,10 @@ def find_in_path(name, path):
             return os.path.abspath(binpath)
     return None
 
+
 def get_cuda_path():
-    """Returns a tuple with (base_cuda_directory, full_path_to_nvcc_compiler)"""
-    # Inspired by: https://github.com/benfred/implicit/blob/master/cuda_setup.py
+    """Return a tuple with (base_cuda_directory, full_path_to_nvcc_compiler)."""
+    # Inspired by https://github.com/benfred/implicit/blob/master/cuda_setup.py
     nvcc_bin = "nvcc.exe" if sys.platform == "win32" else "nvcc"
 
     if "CUDAHOME" in os.environ:
@@ -81,22 +82,24 @@ def get_cuda_path():
         found_nvcc = find_in_path(nvcc_bin, os.environ["PATH"])
         if found_nvcc is None:
             print(
-                "The nvcc binary could not be located in your $PATH. Either add it to "
-                "your path, or set $CUDAHOME to enable CUDA extensions"
+                "The nvcc binary could not be located in your $PATH. Either " +
+                " add it to your path, or set $CUDAHOME to enable CUDA"
             )
             return None
         cuda_home = os.path.dirname(os.path.dirname(found_nvcc))
     if not os.path.exists(os.path.join(cuda_home, "include")):
-        print("Failed to find cuda include directory, attempting /usr/local/cuda")
+        print("Failed to find cuda include directory, using /usr/local/cuda")
         cuda_home = "/usr/local/cuda"
 
     nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
     if not os.path.exists(nvcc):
-        print("Failed to find nvcc compiler in %s, attempting /usr/local/cuda" % nvcc)
+        print("Failed to find nvcc compiler in %s, trying /usr/local/cuda" %
+              nvcc)
         cuda_home = "/usr/local/cuda"
         nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
 
     return (cuda_home, nvcc)
+
 
 def compile_cuda_module(host_args):
     libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
