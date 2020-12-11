@@ -12,6 +12,7 @@ except ImportError:
     pass
 from . import colors
 from ..utils._legacy import kmeans
+from IPython.core.display import display, HTML
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -136,8 +137,6 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
 
 def image_to_text(shap_values):
 
-    from IPython.core.display import display, HTML
-
     if len(shap_values.values.shape) == 5:
         for i in range(shap_values.values.shape[0]):
             display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
@@ -150,7 +149,6 @@ def image_to_text(shap_values):
     
     # creating input html tokens
     
-
     model_output = shap_values.output_names
 
     output_text_html = ''
@@ -224,10 +222,11 @@ def image_to_text(shap_values):
                         <span style="font-size:12px;margin-right:15px;"> Zoom </span>
                         <button id="{uuid}_minus_button" class="zoom-button" onclick="{uuid}_zoom(-1)" style="background-color: #555555;color: white; border:none;font-size:15px;">-</button>
                         <button id="{uuid}_plus_button" class="zoom-button" onclick="{uuid}_zoom(1)" style="background-color: #555555;color: white; border:none;font-size:15px;">+</button>
+                        <button id="{uuid}_reset_button" class="zoom-button" onclick="{uuid}_reset()" style="background-color: #555555;color: white; border:none;font-size:15px;"> Reset </button>
                       </div>
                       <br>
-                      <div id="{uuid}_opacity">
-                      <span style="font-size:12px;margin-right:15px;"> Image Opacity </span>
+                      <div id="{uuid}_opacity" style="display:none">
+                      <span style="font-size:12px;margin-right:15px;"> Shap-Overlay Opacity </span>
                       <input type="range" min="1" max="100" value="35" style="width:100px" oninput="{uuid}_set_opacity(this.value)">
                       </div>
                   </div>
@@ -271,12 +270,14 @@ def image_to_text(shap_values):
             function onMouseClickFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "grey";
+                    document.getElementById('{uuid}_opacity').style.display  = "block";
                     {uuid}_update_image_and_overlay(id);
                     {uuid}_heatmap_flat_state = id;
                 }}
                 else {{
                     if ({uuid}_heatmap_flat_state === id) {{
                         document.getElementById(id).style.backgroundColor  = "transparent";
+                        document.getElementById('{uuid}_opacity').style.display  = "none";
                         {uuid}_update_image_and_overlay(null);
                         {uuid}_heatmap_flat_state = null;
                     }}
@@ -343,6 +344,7 @@ def image_to_text(shap_values):
                 }});
             }}
             {uuid}_redraw();
+            {uuid}_context.save();
 
             var lastX = {uuid}_canvas.width / 2,
                 lastY = {uuid}_canvas.height / 2;
@@ -371,7 +373,6 @@ def image_to_text(shap_values):
 
             {uuid}_canvas.addEventListener('mouseup', function(evt) {{
                 dragStart = null;
-                if (!dragged) {uuid}_zoom(evt.shiftKey ? -1 : 1);
                 document.getElementById('{uuid}_image_canvas').style.cursor = 'grab';
             }}, false);
 
@@ -385,7 +386,13 @@ def image_to_text(shap_values):
                 {uuid}_context.translate(-pt.x, -pt.y);
                 {uuid}_redraw();
             }}
-
+            
+            var {uuid}_reset = function(clicks) {{
+                {uuid}_context.restore();
+                {uuid}_redraw();
+                {uuid}_context.save();
+            }}
+            
             var handleScroll = function(evt) {{
                 var delta = evt.wheelDelta ? evt.wheelDelta / 40 : evt.detail ? -evt.detail : 0;
                 if (delta) {uuid}_zoom(delta);
