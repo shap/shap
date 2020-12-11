@@ -113,7 +113,7 @@ def compile_cuda_module(host_args):
                  "-gencode=arch=compute_75,code=sm_75 " + \
                  "-gencode=arch=compute_75,code=compute_75"
     nvcc_command = "shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
-                   "--std c++17 " \
+                   "--std c++14 " \
                    "--extended-lambda " \
                    "--expt-relaxed-constexpr {}".format(
                        lib_out,

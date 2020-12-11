@@ -39,6 +39,15 @@ struct ShapSplitCondition {
   }
 };
 
+
+// Inspired by: https://en.cppreference.com/w/cpp/iterator/size
+// Limited implementation of std::size fo arrays
+template <class T, size_t N>
+constexpr size_t array_size(const T (&array)[N]) noexcept
+{
+    return N;
+}
+
 void RecurseTree(
     unsigned pos, const TreeEnsemble &tree,
     std::vector<gpu_treeshap::PathElement<ShapSplitCondition>> *tmp_path,
@@ -195,7 +204,7 @@ inline void dense_tree_path_dependent_gpu(
   thrust::for_each(
       counting, counting + phis.size(), [=] __device__(size_t idx) {
         size_t old_shape[] = {X.NumRows(), num_groups, (X.NumCols() + 1)};
-        size_t old_idx[std::size(old_shape)];
+        size_t old_idx[array_size(old_shape)];
         gpu_treeshap::FlatIdxToTensorIdx(idx, old_shape, old_idx);
         // Define new tensor format, switch num_groups axis to end
         size_t new_shape[] = {X.NumRows(), (X.NumCols() + 1), num_groups};
@@ -246,7 +255,7 @@ dense_tree_independent_gpu(const TreeEnsemble &trees,
   thrust::for_each(
       counting, counting + phis.size(), [=] __device__(size_t idx) {
         size_t old_shape[] = {X.NumRows(), num_groups, (X.NumCols() + 1)};
-        size_t old_idx[std::size(old_shape)];
+        size_t old_idx[array_size(old_shape)];
         gpu_treeshap::FlatIdxToTensorIdx(idx, old_shape, old_idx);
         // Define new tensor format, switch num_groups axis to end
         size_t new_shape[] = {X.NumRows(), (X.NumCols() + 1), num_groups};
@@ -294,7 +303,7 @@ inline void dense_tree_path_dependent_interactions_gpu(
       counting, counting + phis.size(), [=] __device__(size_t idx) {
         size_t old_shape[] = {X.NumRows(), num_groups, (X.NumCols() + 1),
                               (X.NumCols() + 1)};
-        size_t old_idx[std::size(old_shape)];
+        size_t old_idx[array_size(old_shape)];
         gpu_treeshap::FlatIdxToTensorIdx(idx, old_shape, old_idx);
         // Define new tensor format, switch num_groups axis to end
         size_t new_shape[] = {X.NumRows(), (X.NumCols() + 1), (X.NumCols() + 1),
