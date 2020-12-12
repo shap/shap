@@ -67,3 +67,64 @@ class TFTeacherForcingLogits(Model):
         self.X = None
         self.target_sentence_ids = None
         self.output_names = None
+
+    def __call__(self, masked_X, X):
+        """ Computes log odds scores from a given batch of masked input and original input for text/image.
+
+        Parameters
+        ----------
+        masked_X: numpy.array
+            An array containing a list of masked inputs.
+
+        X: numpy.array
+            An array containing a list of original inputs
+
+        Returns
+        -------
+        numpy.array
+            A numpy array of log odds scores for every input pair (masked_X, X)
+        """
+        output_batch=[]
+        for masked_x, x in zip(masked_X, X):
+            # update target sentence ids and original input for a new explanation row
+            self.update_cache_X(x)
+            # pass the masked input from which to generate source sentence ids
+            source_sentence_ids = self.get_source_sentence_ids(masked_x)
+            logits = self.get_teacher_forced_logits(source_sentence_ids, self.target_sentence_ids)
+            logodds = self.get_logodds(logits)
+            output_batch.append(logodds)
+        return np.array(output_batch)
+
+    def update_cache_X(self, X):
+        """ The function updates original input(X) and target sentence ids.
+
+        It mimics the caching mechanism to update the original input and target sentence ids
+        that are to be explained and which updates for every new row of explanation.
+
+        Parameters
+        ----------
+        X: string or numpy.array
+            Input(Text/Image) for an explanation row.
+        """
+        # check if the source sentence has been updated (occurs when explaining a new row)
+        if (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
+            self.X = X
+            self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
+
+    def get_output_names_and_update_target_sentence_ids(self, X):
+        """ Gets the output tokens from input(X) by computing the 
+            target sentence ids using the using the generation_function_for_target_sentence_ids()
+            and next getting output names using the similarity_tokenizer.
+        
+        Parameters
+        ----------
+        X: string or numpy array
+            Input(Text/Image) for an explanation row.
+
+        Returns
+        -------
+        list
+            A list of output tokens.
+        """
+        self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
+        return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
