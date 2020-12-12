@@ -2,10 +2,10 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
-from ._text_generation import TFTextGeneration
+from ._tf_text_generation import TFTextGeneration
 
 try:
-    import tensorflow
+    import tensorflow as tf
 except ImportError as e:
     record_import_error("tensorflow", "TensorFlow could not be imported!", e)
 
@@ -45,5 +45,25 @@ class TFTeacherForcingLogits(Model):
         """
         super(TFTeacherForcingLogits, self).__init__(model)
 
-        self.device = False
+        self.device = device
         self.tokenizer = tokenizer
+        # assign text generation function
+        if safe_isinstance(model,"transformers.TFPreTrainedModel"):
+            if generation_function_for_target_sentence_ids is None:
+                self.generation_function_for_target_sentence_ids = TFTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+            else:
+                self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
+            self.model_agnostic = False
+            self.similarity_model = model
+            self.similarity_tokenizer = tokenizer
+        else:
+            if generation_function_for_target_sentence_ids is None:
+                self.generation_function_for_target_sentence_ids = TFTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+            else:
+                self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
+            self.similarity_tokenizer = similarity_tokenizer
+            self.model_agnostic = True
+        # initializing X which is the original input for every new row of explanation
+        self.X = None
+        self.target_sentence_ids = None
+        self.output_names = None
