@@ -128,3 +128,26 @@ class TFTeacherForcingLogits(Model):
         """
         self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
         return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
+
+    def get_source_sentence_ids(self, X):
+        """ The function tokenizes source sentence.
+
+        Parameters
+        ----------
+        X: string or tensor
+            X could be a text or image.
+
+        Returns
+        -------
+        tensor
+            Tensor of source sentence ids.
+        """
+        # TODO: batch source_sentence_ids
+        if self.model_agnostic:
+            # In model agnostic case, we first pass the input through the model and then tokenize output sentence
+            source_sentence = self.model(X)
+            source_sentence_ids = tf.convert_to_tensor([self.similarity_tokenizer.encode(source_sentence)])
+        else:
+            # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
+            source_sentence_ids = tf.convert_to_tensor([self.similarity_tokenizer.encode(X)])
+        return source_sentence_ids
