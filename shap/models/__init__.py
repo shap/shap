@@ -1,3 +1,5 @@
 from ._model import Model
 from ._teacher_forcing_logits import TeacherForcingLogits
 from ._text_generation import TextGeneration
+from ._tf_text_generation import TFTextGeneration
+from ._tf_teacher_forcing_logits import TFTeacherForcingLogits

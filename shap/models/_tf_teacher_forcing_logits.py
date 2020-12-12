@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
-
+from ._text_generation import TFTextGeneration
 
 try:
     import tensorflow
