@@ -134,12 +134,12 @@ class TFTeacherForcingLogits(Model):
 
         Parameters
         ----------
-        X: string or tensor
+        X: string or numpy.array
             X could be a text or image.
 
         Returns
         -------
-        tensor
+        tf.Tensor
             Tensor of source sentence ids.
         """
         # TODO: batch source_sentence_ids
@@ -151,3 +151,26 @@ class TFTeacherForcingLogits(Model):
             # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
             source_sentence_ids = tf.convert_to_tensor([self.similarity_tokenizer.encode(X)])
         return source_sentence_ids
+
+    def get_logodds(self, logits):
+        """ Calculates log odds from logits.
+
+        This function passes the logits through softmax and then computes log odds for the target sentence ids.
+
+        Parameters
+        ----------
+        logits: numpy.array
+            An array of logits generated from the model.
+
+        Returns
+        -------
+        numpy.array
+            Computes log odds for corresponding target sentence ids.
+        """
+        logodds = []
+        # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
+        for i in range(0,logits.shape[1]-1):
+            probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
+            logit_dist = sp.special.logit(probs)
+            logodds.append(logit_dist[self.target_sentence_ids[0,i].item()])
+        return np.array(logodds)
