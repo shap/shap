@@ -108,7 +108,7 @@ class TFTeacherForcingLogits(Model):
             Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
-        if (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
+        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
             self.X = X
             self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
 
@@ -173,7 +173,7 @@ class TFTeacherForcingLogits(Model):
         for i in range(0,logits.shape[1]-1):
             probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
             logit_dist = sp.special.logit(probs)
-            logodds.append(logit_dist[self.target_sentence_ids[0,i].item()])
+            logodds.append(logit_dist[self.target_sentence_ids[0,i].numpy()])
         return np.array(logodds)
 
     def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
@@ -221,14 +221,14 @@ class TFTeacherForcingLogits(Model):
             target_sentence_ids = tf.concat((target_sentence_start_id,target_sentence_ids), axis=-1)
             # generate outputs and logits
             if self.device is None:
-                outputs = self.similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+                outputs = self.similarity_model(source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
             else:
                 try:
                     with tf.device(self.device):
-                        outputs = self.similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+                        outputs = self.similarity_model(source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
                 except RuntimeError as e:
                     print(e)
-            logits=outputs.logits.detach().cpu().numpy().astype('float64')
+            logits=outputs.logits.numpy().astype('float64')
         else:
             # check if source sentence ids are null then add bos token id to decoder
             if source_sentence_ids.shape[1]==0:
@@ -245,14 +245,14 @@ class TFTeacherForcingLogits(Model):
             combined_sentence_ids = tf.concat((source_sentence_ids,target_sentence_ids),axis=-1)
             # generate outputs and logits
             if self.device is None:
-                outputs = self.similarity_model(input_ids=combined_sentence_ids, return_dict=True)
+                outputs = self.similarity_model(combined_sentence_ids, return_dict=True)
             else:
                 try:
                     with tf.device(self.device):
-                        outputs = self.similarity_model(input_ids=combined_sentence_ids, return_dict=True)
+                        outputs = self.similarity_model(combined_sentence_ids, return_dict=True)
                 except RuntimeError as e:
                     print(e)
             # extract only logits corresponding to target sentence ids
-            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
+            logits=outputs.logits.numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
         del outputs
         return logits

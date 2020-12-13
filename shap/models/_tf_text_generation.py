@@ -88,7 +88,7 @@ class TFTextGeneration(Model):
                 # slice the output ids after the input ids
                 output = output[:,input_ids.shape[1]:]
             # parse output ids to find special tokens in prefix and suffix
-            parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].detach().cpu().tolist())
+            parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].numpy().tolist())
             keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
             # extract target sentence ids by slicing off prefix and suffix
             if keep_suffix > 0:
