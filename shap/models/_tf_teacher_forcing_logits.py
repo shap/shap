@@ -61,6 +61,7 @@ class TFTeacherForcingLogits(Model):
                 self.generation_function_for_target_sentence_ids = TFTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
+            self.similarity_model = similarity_model
             self.similarity_tokenizer = similarity_tokenizer
             self.model_agnostic = True
         # initializing X which is the original input for every new row of explanation
@@ -174,3 +175,84 @@ class TFTeacherForcingLogits(Model):
             logit_dist = sp.special.logit(probs)
             logodds.append(logit_dist[self.target_sentence_ids[0,i].item()])
         return np.array(logodds)
+
+    def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+        """ The function generates logits for transformer models.
+
+        It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
+
+        Parameters
+        ----------
+        source_sentence_ids: tf.Tensor of shape (batch size, len of sequence)
+            Tokenized ids fed to the model.
+
+        target_sentence_ids: tf.Tensor of shape (batch size, len of sequence)
+            Tokenized ids for which logits are generated using the decoder.
+
+        Returns
+        -------
+        numpy.array
+            Decoder output logits for target sentence ids.
+        """
+        # check if type of model architecture assigned in model config
+        if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \
+            and (hasattr(self.similarity_model.config, "is_decoder") and not self.similarity_model.config.is_decoder):
+            raise ValueError(
+                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+            )
+        if self.similarity_model.config.is_encoder_decoder:
+            # assigning decoder start token id as it is needed for encoder decoder model generation
+            decoder_start_token_id = None
+            if hasattr(self.similarity_model.config, "decoder_start_token_id") and self.similarity_model.config.decoder_start_token_id is not None:
+                decoder_start_token_id = self.similarity_model.config.decoder_start_token_id
+            elif hasattr(self.similarity_model.config, "bos_token_id") and self.similarity_model.config.bos_token_id is not None:
+                decoder_start_token_id = self.similarity_model.config.bos_token_id
+            elif (hasattr(self.similarity_model.config, "decoder") and hasattr(self.similarity_model.config.decoder, "bos_token_id") and self.similarity_model.config.decoder.bos_token_id is not None):
+                decoder_start_token_id = self.similarity_model.config.decoder.bos_token_id
+            else:
+                raise ValueError(
+                    "No decoder_start_token_id or bos_token_id defined in config for encoder-decoder generation"
+                )
+            # concat decoder start token id to target sentence ids
+            target_sentence_start_id = (
+                tf.ones((source_sentence_ids.shape[0], 1), dtype=tf.int32)
+                * decoder_start_token_id
+            )
+            target_sentence_ids = tf.concat((target_sentence_start_id,target_sentence_ids), axis=-1)
+            # generate outputs and logits
+            if self.device is None:
+                outputs = self.similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+            else:
+                try:
+                    with tf.device(self.device):
+                        outputs = self.similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+                except RuntimeError as e:
+                    print(e)
+            logits=outputs.logits.detach().cpu().numpy().astype('float64')
+        else:
+            # check if source sentence ids are null then add bos token id to decoder
+            if source_sentence_ids.shape[1]==0:
+                if hasattr(self.similarity_model.config,"bos_token_id") and self.similarity_model.config.bos_token_id is not None:
+                    source_sentence_ids = (
+                        tf.ones((source_sentence_ids.shape[0], 1), dtype=tf.int32)
+                        * self.similarity_model.config.bos_token_id
+                    )
+                else:
+                    raise ValueError(
+                    "Context ids (source sentence ids) are null and no bos token defined in model config"
+                )
+            # combine source and target sentence ids  to pass into decoder eg: in case of distillgpt2
+            combined_sentence_ids = tf.concat((source_sentence_ids,target_sentence_ids),axis=-1)
+            # generate outputs and logits
+            if self.device is None:
+                outputs = self.similarity_model(input_ids=combined_sentence_ids, return_dict=True)
+            else:
+                try:
+                    with tf.device(self.device):
+                        outputs = self.similarity_model(input_ids=combined_sentence_ids, return_dict=True)
+                except RuntimeError as e:
+                    print(e)
+            # extract only logits corresponding to target sentence ids
+            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
+        del outputs
+        return logits
