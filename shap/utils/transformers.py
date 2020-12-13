@@ -11,6 +11,13 @@ MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM = [
         "transformers.EncoderDecoderModel",
         "transformers.XLMProphetNetForConditionalGeneration",
         "transformers.ProphetNetForConditionalGeneration",
+        "transformers.TFMT5ForConditionalGeneration",
+        "transformers.TFT5ForConditionalGeneration",
+        "transformers.TFMarianMTModel",
+        "transformers.TFMBartForConditionalGeneration",
+        "transformers.TFPegasusForConditionalGeneration",
+        "transformers.TFBlenderbotForConditionalGeneration",
+        "transformers.TFBartForConditionalGeneration"
     ]
 
 MODELS_FOR_CAUSAL_LM = [
@@ -28,6 +35,13 @@ MODELS_FOR_CAUSAL_LM = [
         "transformers.BertGenerationDecoder",
         "transformers.XLMProphetNetForCausalLM",
         "transformers.ProphetNetForCausalLM",
+        "transformers.TFBertLMHeadModel",
+        "transformers.TFOpenAIGPTLMHeadModel",
+        "transformers.TFGPT2LMHeadModel",
+        "transformers.TFTransfoXLLMHeadModel",
+        "transformers.TFXLNetLMHeadModel",
+        "transformers.TFXLMWithLMHeadModel",
+        "transformers.TFCTRLLMHeadModel",
     ]
 
 SENTENCEPIECE_TOKENIZERS = [
