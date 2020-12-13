@@ -2,15 +2,15 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
-from ._text_generation import TextGeneration
+from ._text_generation import PTTextGeneration
 
 try:
     import torch
 except ImportError as e:
     record_import_error("torch", "Torch could not be imported!", e)
 
-class TeacherForcingLogits(Model):
-    def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, similarity_model=None, similarity_tokenizer=None, device=None):
+class PTTeacherForcingLogits(Model):
+    def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, similarity_model=None, similarity_tokenizer=None, model_agnostic=True, device=None):
         """ Generates scores (log odds) for output text explanation algorithms.
 
         This class supports generation of log odds for transformer models as well as functions. It also provides 
@@ -43,14 +43,14 @@ class TeacherForcingLogits(Model):
         numpy.array
             The scores (log odds) of generating target sentence ids using the model.
         """
-        super(TeacherForcingLogits, self).__init__(model)
+        super(PTTeacherForcingLogits, self).__init__(model)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
         self.tokenizer = tokenizer
         # assign text generation function
         if safe_isinstance(model,"transformers.PreTrainedModel"):
             if generation_function_for_target_sentence_ids is None:
-                self.generation_function_for_target_sentence_ids = TextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                self.generation_function_for_target_sentence_ids = PTTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             self.model_agnostic = False
@@ -59,7 +59,7 @@ class TeacherForcingLogits(Model):
             self.similarity_tokenizer = tokenizer
         else:
             if generation_function_for_target_sentence_ids is None:
-                self.generation_function_for_target_sentence_ids = TextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                self.generation_function_for_target_sentence_ids = PTTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             self.similarity_model = self.to_device(similarity_model)
