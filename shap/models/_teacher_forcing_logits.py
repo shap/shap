@@ -10,7 +10,7 @@ except ImportError as e:
     record_import_error("torch", "Torch could not be imported!", e)
 
 class PTTeacherForcingLogits(Model):
-    def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, similarity_model=None, similarity_tokenizer=None, model_agnostic=True, device=None):
+    def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, similarity_model=None, similarity_tokenizer=None, device=None):
         """ Generates scores (log odds) for output text explanation algorithms.
 
         This class supports generation of log odds for transformer models as well as functions. It also provides 
