@@ -44,6 +44,37 @@ MODELS_FOR_CAUSAL_LM = [
         "transformers.TFCTRLLMHeadModel",
     ]
 
+MODELS_FOR_MASKED_LM = [
+    "transformers.LayoutLMForMaskedLM",
+    "transformers.DistilBertForMaskedLM",
+    "transformers.AlbertForMaskedLM",
+    "transformers.BartForConditionalGeneration",
+    "transformers.CamembertForMaskedLM",
+    "transformers.XLMRobertaForMaskedLM",
+    "transformers.LongformerForMaskedLM",
+    "transformers.RobertaForMaskedLM",
+    "transformers.SqueezeBertForMaskedLM",
+    "transformers.BertForMaskedLM",
+    "transformers.MobileBertForMaskedLM",
+    "transformers.FlaubertWithLMHeadModel",
+    "transformers.XLMWithLMHeadModel",
+    "transformers.ElectraForMaskedLM",
+    "transformers.ReformerForMaskedLM",
+    "transformers.FunnelForMaskedLM",
+    "transformers.TFDistilBertForMaskedLM",
+    "transformers.TFAlbertForMaskedLM",
+    "transformers.TFCamembertForMaskedLM",
+    "transformers.TFXLMRobertaForMaskedLM",
+    "transformers.TFLongformerForMaskedLM",
+    "transformers.TFRobertaForMaskedLM",
+    "transformers.TFBertForMaskedLM",
+    "transformers.TFMobileBertForMaskedLM",
+    "transformers.TFFlaubertWithLMHeadModel",
+    "transformers.TFXLMWithLMHeadModel",
+    "transformers.TFElectraForMaskedLM",
+    "transformers.TFFunnelForMaskedLM"
+]
+
 SENTENCEPIECE_TOKENIZERS = [
     "transformers.MarianTokenizer",
     "transformers.T5Tokenizer",
