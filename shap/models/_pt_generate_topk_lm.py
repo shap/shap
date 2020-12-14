@@ -1,7 +1,8 @@
 import numpy as np
 import scipy as sp
 from ._model import Model
-from ..utils import record_import_error
+from ..utils import safe_isinstance, record_import_error
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_MASKED_LM
 
 try:
     import torch
@@ -9,8 +10,8 @@ except ImportError as e:
     record_import_error("torch", "Torch could not be imported!", e)
 
 class PTGenerateTopKLM(Model):
-    def __init__(self, model, tokenizer, topk_token_ids=None, device=None):
-        """ Generates scores (log odds) for the top-k next word/blank word prediction.
+    def __init__(self, model, tokenizer, k=10, generation_function_for_topk_token_ids=None, device=None):
+        """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
 
          Parameters
         ----------
@@ -28,13 +29,16 @@ class PTGenerateTopKLM(Model):
         super(PTGenerateTopKLM, self).__init__(model)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
+        self.model = model.to(self.device)
         self.tokenizer = tokenizer
+        self.k = k
+        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids()
         self.X = None
-        self.topk_token_ids = topk_token_ids
+        self.topk_token_ids = None
         self.output_names = None
 
     def __call__(self, masked_X, X):
-        """ Computes log odds scores for a given batch of masked inputs for the topk tokens for Causal/Masked LM.
+        """ Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
 
         Parameters
         ----------
@@ -54,14 +58,30 @@ class PTGenerateTopKLM(Model):
             # update target sentence ids and original input for a new explanation row
             self.update_cache_X(x)
             # pass the masked input from which to generate source sentence ids
-            source_sentence_ids = self.get_source_sentence_ids(masked_x)
-            logits = self.get_teacher_forced_logits(source_sentence_ids, self.target_sentence_ids)
+            sentence_ids = self.get_sentence_ids(masked_x)
+            logits = self.get_teacher_forced_logits(sentence_ids, self.target_sentence_ids)
             logodds = self.get_logodds(logits)
             output_batch.append(logodds)
         return np.array(output_batch)
 
+    def get_sentence_ids(self, X):
+        """ The function tokenizes sentence.
+
+        Parameters
+        ----------
+        X: string
+            X is a sentence.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor of sentence ids.
+        """
+        sentence_ids = torch.tensor([self.tokenizer.encode(X)], device=self.device).to(torch.int64)
+        return sentence_ids
+
     def update_cache_X(self, X):
-        """ The function updates original input(X) and topk token ids for the Causal/Masked LM.
+        """ The function updates original input(X) and top-k token ids for the Causal/Masked LM.
 
         It mimics the caching mechanism to update the original input and topk token ids
         that are to be explained and which updates for every new row of explanation.
@@ -77,12 +97,12 @@ class PTGenerateTopKLM(Model):
             self.output_names = self.get_output_names_and_update_topk_token_ids(self.X)
 
     def get_output_names_and_update_topk_token_ids(self, X):
-        """ Gets the token names for top k token ids for Causal/Masked LM.
+        """ Gets the token names for top-k token ids for Causal/Masked LM.
         
         Parameters
         ----------
-        X: string or numpy array
-            Input(Text/Image) for an explanation row.
+        X: string
+            Input(Text) for an explanation row.
 
         Returns
         -------
@@ -91,3 +111,22 @@ class PTGenerateTopKLM(Model):
         """
         self.topk_token_ids = self.generate_topk_token_ids(X)
         return self.tokenizer.convert_ids_to_tokens(self.topk_token_ids)
+
+    def generate_topk_token_ids(self, X):
+        """ Generates top-k token ids for Causal/Masked LM.
+
+        Parameters
+        ----------
+        X: string
+            Input(Text) for an explanation row.
+
+        Returns
+        -------
+        list
+            A list of top-k token ids.
+        """
+        
+        sentence_ids = self.get_sentence_ids(X)
+        logits = self.get_lm_logits(sentence_ids)
+        topk_tokens_ids = torch.topk(logits, self.k, dim=1).indices[0].tolist()
+        return topk_tokens_ids
