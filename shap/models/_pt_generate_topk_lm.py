@@ -130,3 +130,38 @@ class PTGenerateTopKLM(Model):
         logits = self.get_lm_logits(sentence_ids)
         topk_tokens_ids = torch.topk(logits, self.k, dim=1).indices[0].tolist()
         return topk_tokens_ids
+
+    def get_lm_logits(self, sentence_ids):
+        """ Evaluates a Causal/Masked LM model and returns logits corresponding to next word/masked word.
+
+        Parameters
+        ----------
+        source_sentence_ids: torch.Tensor of shape (batch size, len of sequence)
+            Tokenized ids fed to the model.
+
+        Returns
+        -------
+        numpy.array
+            Logits corresponding to next word/masked word.
+        """
+        # set model to eval mode
+        self.model.eval()
+        if safe_isinstance(self.model, MODELS_FOR_CAUSAL_LM):
+            if sentence_ids.shape[1]==0:
+                if hasattr(self.model.config,"bos_token_id") and self.model.config.bos_token_id is not None:
+                    sentence_ids = (
+                        torch.ones((sentence_ids.shape[0], 1), dtype=sentence_ids.dtype, device=sentence_ids.device)
+                        * self.model.config.bos_token_id
+                    )
+                else:
+                    raise ValueError(
+                    "Context ids (source sentence ids) are null and no bos token defined in model config"
+                )
+            # generate outputs and logits
+            with torch.no_grad():
+                outputs = self.model(sentence_ids, return_dict=True)
+            # extract only logits corresponding to target sentence ids
+            logits=outputs.logits.detach().cpu()[:,sentence_ids.shape[1]-1,:]
+            del outputs
+            
+        return logits
