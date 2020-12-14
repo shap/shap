@@ -1,5 +1,5 @@
 from shap.utils import safe_isinstance
-from shap.maskers import Text, Image
+from shap.maskers import Independent, Partition, Impute, Text, Image, FixedComposite
 from shap import Explanation
 import matplotlib.pyplot as pl
 import sklearn
@@ -9,23 +9,11 @@ import time
 
 
 class SequentialPerturbation():
-    def __init__(self, f, masker, sort_order, perturbation, data_type=None, **kwargs):
+    def __init__(self, f, masker, sort_order, perturbation):
         self.f = f
         self.masker = masker
         self.sort_order = sort_order
         self.perturbation = perturbation
-        self.data_type = data_type
-
-        if "f_kwargs" in kwargs:
-            self.kwargs = kwargs['f_kwargs']
-        elif "kwargs" in kwargs:
-            self.kwargs = kwargs['kwargs']
-        else:
-            self.kwargs = None
-
-        # convert dataframe
-        if safe_isinstance(self.masker, "pandas.core.series.Series") or safe_isinstance(self.masker, "pandas.core.frame.DataFrame"):
-            self.masker = self.masker.values
         
         # define our sort order
         if self.sort_order == "positive":
@@ -41,28 +29,25 @@ class SequentialPerturbation():
         self.score_aucs = []
         self.labels = []
 
-    def score(self, explainer, X, percent=0.01, y=None, label=None, silent=False, debug_mode=False):
+    def score(self, explanation, X, percent=0.01, y=None, label=None, silent=False, debug_mode=False):
         # if explainer is already the attributions 
-        if safe_isinstance(explainer, "numpy.ndarray"):
-            attributions = explainer
-        elif isinstance(explainer, Explanation):
-            attributions = explainer.values
-        else:
-            attributions = explainer(X).values
+        if safe_isinstance(explanation, "numpy.ndarray"):
+            attributions = explanation
+        elif isinstance(explanation, Explanation):
+            attributions = explanation.values
 
-        # If the user just gave a dataset as the masker
-        # then we make a masker that perturbs features independently
-        if safe_isinstance(self.masker, "numpy.ndarray") and self.masker.ndim <= 2 and (self.data_type == "tabular" or self.data_type == None):
-            self.masker_data = self.masker
-            self.masker = lambda mask, x: x * mask + self.masker_data * np.invert(mask)
-            self.data_type = "tabular"
-        elif safe_isinstance(self.masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]) and (self.data_type == "text" or self.data_type == None):
-            self.masker_data = self.masker
-            self.masker = Text(self.masker_data)
-            self.data_type = "text"
-        elif safe_isinstance(self.masker, "numpy.ndarray") and self.masker.ndim > 2 and (self.data_type == "image" or self.data_type == None):
-            self.masker = Image("inpaint_telea", X[0].shape)
-            self.data_type = "image"
+        # user must give valid masker 
+        underlying_masker = self.masker.masker if isinstance(self.masker, FixedComposite) else self.masker
+        if isinstance(underlying_masker, (Independent, Partition, Impute)):
+            data_type = "tabular"
+        elif isinstance(underlying_masker, Text):
+            data_type = "text"
+        elif isinstance(underlying_masker, Image):
+            data_type = "image"
+        else: 
+            raise ValueError("masker is undefined!")
+
+        self.masker = FixedComposite(underlying_masker)
 
         if label is None:
             label = "Score %d" % len(self.score_values)
@@ -74,7 +59,7 @@ class SequentialPerturbation():
         # convert all single-sample vectors to matrices
         if not hasattr(attributions[0], "__len__"):
             attributions = np.array([attributions])
-        if not hasattr(X[0], "__len__") and self.data_type == "tabular":
+        if not hasattr(X[0], "__len__") and data_type == "tabular":
             X = np.array([X])
 
         pbar = None
@@ -83,27 +68,21 @@ class SequentialPerturbation():
         mask_vals = []
 
         for i in range(len(X)): 
-            if self.data_type == "image": 
+            if data_type == "image": 
                 x_shape, y_shape = attributions[i].shape[0], attributions[i].shape[1]
                 feature_size = np.prod([x_shape, y_shape])
                 sample_attributions = attributions[i].mean(2).reshape(feature_size, -1)
             else: 
                 feature_size = attributions[i].shape[0] 
                 sample_attributions = attributions[i] 
-            
-            # kwargs is function or parameter 
-            if callable(self.kwargs): 
-                kwargs = self.kwargs(X[i])
-            else:
-                kwargs = self.kwargs 
 
-            if len(attributions[i].shape) == 1 or self.data_type == "tabular": 
+            if len(attributions[i].shape) == 1 or data_type == "tabular": 
                 output_size = 1 
             else: 
                 output_size = attributions[i].shape[-1] 
             
             for k in range(output_size): 
-                if self.data_type == "image":
+                if data_type == "image":
                     mask_shape = X[i].shape 
                 else: 
                     mask_shape = feature_size 
@@ -112,12 +91,8 @@ class SequentialPerturbation():
                 masks = [mask.copy()]
 
                 values = np.zeros(feature_size+1)
-                masked = self.masker(mask, X[i])
-
-                if kwargs != None: 
-                    curr_val = self.f(masked, sentence_ids=kwargs, index=k).mean(0)
-                else: 
-                    curr_val = self.f(masked, index=k).mean(0)
+                masked, data = self.masker(mask, X[i])
+                curr_val = self.f(masked, data, k).mean(0)
                 
                 values[0] = curr_val 
 
@@ -134,18 +109,15 @@ class SequentialPerturbation():
                     for oind in oind_list: 
                         if not ((self.sort_order == "positive" and test_attributions[oind] <= 0) or \
                                 (self.sort_order == "negative" and test_attributions[oind] >= 0)):
-                            if self.data_type == "image":
+                            if data_type == "image":
                                 xoind, yoind = oind // attributions[i].shape[1], oind % attributions[i].shape[1]
                                 mask[xoind][yoind] = self.perturbation == "keep"
                             else: 
                                 mask[oind] = self.perturbation == "keep"
-                    masked = self.masker(mask, X[i])
+
                     masks.append(mask.copy())
-                
-                    if kwargs != None: 
-                        curr_val = self.f(masked, sentence_ids=kwargs, index=k).mean(0) 
-                    else:
-                        curr_val = self.f(masked, index=k).mean(0) 
+                    masked, data = self.masker(mask, X[i])
+                    curr_val = self.f(masked, data, k).mean(0)
                     
                     for l in range(j, min(feature_size, j+increment)): 
                         values[l+1] = curr_val 
