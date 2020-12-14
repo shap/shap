@@ -75,3 +75,19 @@ class PTGenerateTopKLM(Model):
         if (self.X is None) or (self.X != X):
             self.X = X
             self.output_names = self.get_output_names_and_update_topk_token_ids(self.X)
+
+    def get_output_names_and_update_topk_token_ids(self, X):
+        """ Gets the token names for top k token ids for Causal/Masked LM.
+        
+        Parameters
+        ----------
+        X: string or numpy array
+            Input(Text/Image) for an explanation row.
+
+        Returns
+        -------
+        list
+            A list of output tokens.
+        """
+        self.topk_token_ids = self.generate_topk_token_ids(X)
+        return self.tokenizer.convert_ids_to_tokens(self.topk_token_ids)
