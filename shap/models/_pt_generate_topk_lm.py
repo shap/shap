@@ -59,3 +59,19 @@ class PTGenerateTopKLM(Model):
             logodds = self.get_logodds(logits)
             output_batch.append(logodds)
         return np.array(output_batch)
+
+    def update_cache_X(self, X):
+        """ The function updates original input(X) and topk token ids for the Causal/Masked LM.
+
+        It mimics the caching mechanism to update the original input and topk token ids
+        that are to be explained and which updates for every new row of explanation.
+
+        Parameters
+        ----------
+        X: string
+            Input(Text) for an explanation row.
+        """
+        # check if the source sentence has been updated (occurs when explaining a new row)
+        if (self.X is None) or (self.X != X):
+            self.X = X
+            self.output_names = self.get_output_names_and_update_topk_token_ids(self.X)
