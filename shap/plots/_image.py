@@ -164,7 +164,7 @@ def image_to_text(shap_values):
                 + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                 + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
                 + ">" \
-                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '') \
+                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
                 + " </div>" \
                 + "</div>"
     
