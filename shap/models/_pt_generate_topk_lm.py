@@ -32,7 +32,7 @@ class PTGenerateTopKLM(Model):
         self.model = model.to(self.device)
         self.tokenizer = tokenizer
         self.k = k
-        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids()
+        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids
         self.X = None
         self.topk_token_ids = None
         self.output_names = None
@@ -59,7 +59,7 @@ class PTGenerateTopKLM(Model):
             self.update_cache_X(x)
             # pass the masked input from which to generate source sentence ids
             sentence_ids = self.get_sentence_ids(masked_x)
-            logits = self.get_lm_logits(sentence_ids).numpy()
+            logits = self.get_lm_logits(sentence_ids).numpy().astype('float64')
             logodds = self.get_logodds(logits)
             output_batch.append(logodds)
         return np.array(output_batch)
@@ -110,7 +110,10 @@ class PTGenerateTopKLM(Model):
             A list of output tokens.
         """
         self.topk_token_ids = self.generate_topk_token_ids(X)
-        return self.tokenizer.convert_ids_to_tokens(self.topk_token_ids)
+        output_names = self.tokenizer.convert_ids_to_tokens(self.topk_token_ids)
+        # adding \n to tokens for better asthetic in text-to-text viz
+        output_names = [output_name + " &#10;" for output_name in output_names]
+        return output_names
 
     def generate_topk_token_ids(self, X):
         """ Generates top-k token ids for Causal/Masked LM.
