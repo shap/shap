@@ -13,18 +13,18 @@ class PTGenerateTopKLM(Model):
     def __init__(self, model, tokenizer, k=10, generation_function_for_topk_token_ids=None, device=None):
         """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
 
-         Parameters
+        Parameters
         ----------
         model: object or function
-            A object of any pretrained transformer model or function which is to be explained.
+            A object of any pretrained transformer model which is to be explained.
 
         tokenizer: object
-            A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast) which is used to tokenize source and target sentence.
+            A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast).
 
         Returns
         -------
         numpy.array
-            The scores (log odds) of generating target sentence ids using the model.
+            The scores (log odds) of generating top-k token ids using the model.
         """
         super(PTGenerateTopKLM, self).__init__(model)
 
@@ -59,7 +59,7 @@ class PTGenerateTopKLM(Model):
             self.update_cache_X(x)
             # pass the masked input from which to generate source sentence ids
             sentence_ids = self.get_sentence_ids(masked_x)
-            logits = self.get_teacher_forced_logits(sentence_ids, self.target_sentence_ids)
+            logits = self.get_lm_logits(sentence_ids).numpy()
             logodds = self.get_logodds(logits)
             output_batch.append(logodds)
         return np.array(output_batch)
@@ -128,7 +128,7 @@ class PTGenerateTopKLM(Model):
         
         sentence_ids = self.get_sentence_ids(X)
         logits = self.get_lm_logits(sentence_ids)
-        topk_tokens_ids = torch.topk(logits, self.k, dim=1).indices[0].tolist()
+        topk_tokens_ids = torch.topk(logits, self.k, dim=1).indices[0]
         return topk_tokens_ids
 
     def get_lm_logits(self, sentence_ids):
@@ -162,6 +162,27 @@ class PTGenerateTopKLM(Model):
                 outputs = self.model(sentence_ids, return_dict=True)
             # extract only logits corresponding to target sentence ids
             logits=outputs.logits.detach().cpu()[:,sentence_ids.shape[1]-1,:]
-            del outputs
-            
+            del outputs    
         return logits
+
+    def get_logodds(self, logits):
+        """ Calculates log odds from logits.
+
+        This function passes the logits through softmax and then computes log odds for the top-k token ids.
+
+        Parameters
+        ----------
+        logits: numpy.array
+            An array of logits generated from the model.
+
+        Returns
+        -------
+        numpy.array
+            Computes log odds for corresponding target sentence ids.
+        """
+        # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
+        probs = (np.exp(logits).T / np.exp(logits).sum(-1)).T
+        logit_dist = sp.special.logit(probs)
+        indices = np.tile(self.topk_token_ids, (logits.shape[0],1))
+        logodds = np.take(logit_dist, indices)
+        return logodds[0]
