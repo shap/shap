@@ -169,15 +169,11 @@ def image_to_text(shap_values):
                 + "</div>"
     
     # computing gray scale images
-    
-    
     image_data = shap_values.data
     image_height = image_data.shape[0]
     image_width = image_data.shape[1]
     
-    
     # computing gray scale image
-    
     image_data_gray_scale = np.ones((image_height, image_width, 4)) * 255 * 0.5
     image_data_gray_scale[:,:,0] = np.mean(image_data,axis=2).astype(int)
     image_data_gray_scale[:,:,1] = image_data_gray_scale[:,:,0]
