@@ -110,9 +110,7 @@ class PTGenerateTopKLM(Model):
             A list of output tokens.
         """
         self.topk_token_ids = self.generate_topk_token_ids(X)
-        output_names = self.tokenizer.convert_ids_to_tokens(self.topk_token_ids)
-        # adding \n to tokens for better asthetic in text-to-text viz
-        output_names = [output_name + " &#10;" for output_name in output_names]
+        output_names = [self.tokenizer.decode([x]).strip() for x in self.topk_token_ids]
         return output_names
 
     def generate_topk_token_ids(self, X):
