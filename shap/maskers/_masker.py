@@ -20,4 +20,6 @@ class Masker():
         """ Deserializes the masker subtype, and calls respective load function
         """
         masker_type = pickle.load(in_file)
+        if masker_type is None:
+            return None
         return masker_type.load(in_file)

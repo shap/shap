@@ -1,8 +1,9 @@
 from .. import maskers
 from .. import links
-from ..utils import safe_isinstance, show_progress, Model
+from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
+from ..models import Model
 from .._explanation import Explanation
 import numpy as np
 import scipy as sp
@@ -385,4 +386,4 @@ class Explainer():
         """ Deserializes the explainer subtype, and calls respective load function
         """
         explainer_type = pickle.load(in_file)
-        return explainer_type.load(in_file)
+        return explainer_type._load(in_file)
