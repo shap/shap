@@ -18,7 +18,7 @@ import subprocess
 # For mac, ensure extensions are built for macos 10.9 when compiling on a
 # 10.9 system or above, overriding distuitls behavior which is to target
 # the version that python was built for. This may be overridden by setting
-# MACOSX_DEPLOYMENT_TARGET before calling setup.py
+# MACOSX_DEPLOYMENT_TARGET before calling setup.pcuda-comp-generalizey
 if sys.platform == 'darwin':
     if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
         current_system = LooseVersion(platform.mac_ver()[0])
@@ -141,10 +141,10 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
     if with_cuda:
         try:
             cuda_home, nvcc = get_cuda_path()
-            cudart_path = cuda_home + '/lib'
             if sys.platform == 'win32':
-                cudart_path += '/x64'
+                cudart_path = cuda_home + '/lib/x64'
             else:
+                cudart_path = cuda_home + '/lib64'
                 compile_args.append('-fPIC')
 
             lib_dir, lib = compile_cuda_module(compile_args)
