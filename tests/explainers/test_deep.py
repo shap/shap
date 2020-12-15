@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+from distutils.version import LooseVersion
 
 import shap
 from shap import DeepExplainer
@@ -14,6 +15,8 @@ def test_tf_eager():
     """ This is a basic eager example from keras.
     """
     tf = pytest.importorskip('tensorflow')
+    if LooseVersion(tf.__version__) >= LooseVersion("2.4.0"):
+        pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
 
     x = pd.DataFrame({ "B": np.random.random(size=(100,)) })
     y = x.B
