@@ -130,7 +130,8 @@ class PTTeacherForcingLogits(Model):
             A list of output tokens.
         """
         self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
-        return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
+        output_names = [self.similarity_tokenizer.decode([x]).strip() for x in self.target_sentence_ids[0,:].cpu().numpy()]
+        return output_names
 
     def to_device(self, variables):
         if isinstance(variables, list):
