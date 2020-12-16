@@ -30,6 +30,8 @@ class TFGenerateTopKLM(GenerateTopKLM):
         """
         super(TFGenerateTopKLM, self).__init__(model, tokenizer, k, generation_function_for_topk_token_ids, device)
 
+        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids
+
     def get_sentence_ids(self, X):
         """ The function tokenizes sentence.
 

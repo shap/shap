@@ -32,6 +32,7 @@ class PTGenerateTopKLM(GenerateTopKLM):
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device 
         self.model = model.to(self.device)
+        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids
 
     def get_sentence_ids(self, X):
         """ The function tokenizes sentence.

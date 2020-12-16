@@ -24,23 +24,21 @@ class GenerateTopKLM(Model):
         """
         super(GenerateTopKLM, self).__init__(model)
 
-        #self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
-        #self.model = model.to(self.device)
         self.tokenizer = tokenizer
         self.k = k
-        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids
         self.X = None
         self.topk_token_ids = None
         self.output_names = None
+        self.device = device
 
         if self.__class__ is GenerateTopKLM:
             # assign the right subclass
             if safe_isinstance(self.model,"transformers.PreTrainedModel"):
                 self.__class__ = models.PTGenerateTopKLM
-                models.PTGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, self.generation_function_for_topk_token_ids, self.device)
+                models.PTGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, generation_function_for_topk_token_ids, self.device)
             elif safe_isinstance(self.model,"transformers.TFPreTrainedModel"):
                 self.__class__ = models.TFGenerateTopKLM
-                models.TFGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, self.generation_function_for_topk_token_ids, self.device)
+                models.TFGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, generation_function_for_topk_token_ids, self.device)
             else:
                 raise Exception("Cannot determine subclass to be assigned in GenerateTopKLM. Please define model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
 
