@@ -89,7 +89,7 @@ class Explainer():
         if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel"))and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
             self.model = models.TeacherForcingLogits(self.model, self.masker.tokenizer)
             self.masker = maskers.FixedComposite(self.masker)
-        elif (safe_isinstance(self.model, "shap.models.TeacherForcingLogits") or safe_isinstance(self.model, "shap.models.PTGenerateTopKLM")) and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
+        elif (safe_isinstance(self.model, "shap.models.TeacherForcingLogits") or safe_isinstance(self.model, "shap.models.GenerateTopKLM")) and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
             self.masker = maskers.FixedComposite(self.masker)
 
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
