@@ -49,9 +49,9 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device
 
         if self.model_agnostic:
-            self.similarity_model = self.to_device(similarity_model)
+            self.similarity_model = similarity_model.to(self.device)
         else:
-            self.model = self.to_device(model)
+            self.model = model.to(self.device)
 
     def get_output_names_and_update_target_sentence_ids(self, X):
         """ Gets the output tokens from input(X) by computing the 
@@ -71,15 +71,6 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X).to(self.device).to(torch.int64)
         output_names = [self.similarity_tokenizer.decode([x]).strip() for x in self.target_sentence_ids[0,:].cpu().numpy()]
         return output_names
-
-    def to_device(self, variables):
-        if isinstance(variables, list):
-            deviced_variables = []
-            for variable in variables:
-                deviced_variables.append(variable.to(self.device))
-            return deviced_variables
-        else:
-            return variables.to(self.device)
 
     def get_source_sentence_ids(self, X):
         """ The function tokenizes source sentence.
@@ -102,7 +93,7 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         else:
             # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
             source_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(X)])
-        source_sentence_ids = self.to_device(source_sentence_ids).to(torch.int64)
+        source_sentence_ids = source_sentence_ids.to(self.device).to(torch.int64)
         return source_sentence_ids
 
     def get_logodds(self, logits):
