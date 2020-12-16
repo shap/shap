@@ -101,7 +101,7 @@ class GenerateTopKLM(Model):
             A list of output tokens.
         """
         self.topk_token_ids = self.generate_topk_token_ids(X)
-        output_names = [self.tokenizer.decode([x]).strip() for x in self.topk_token_ids]
+        output_names = [self.tokenizer.decode([x]) for x in self.topk_token_ids]
         return output_names
 
     def get_logodds(self, logits):
