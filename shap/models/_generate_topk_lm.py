@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 from ._model import Model
+from .. import models
 from ..utils import safe_isinstance, record_import_error
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_MASKED_LM
 
@@ -31,6 +32,17 @@ class GenerateTopKLM(Model):
         self.X = None
         self.topk_token_ids = None
         self.output_names = None
+
+        if self.__class__ is GenerateTopKLM:
+            # assign the right subclass
+            if safe_isinstance(self.model,"transformers.PreTrainedModel"):
+                self.__class__ = models.PTGenerateTopKLM
+                models.PTGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, self.generation_function_for_topk_token_ids, self.device)
+            elif safe_isinstance(self.model,"transformers.TFPreTrainedModel"):
+                self.__class__ = models.TFGenerateTopKLM
+                models.TFGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, self.generation_function_for_topk_token_ids, self.device)
+            else:
+                raise Exception("Cannot determine subclass to be assigned in GenerateTopKLM. Please define model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
 
     def __call__(self, masked_X, X):
         """ Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
@@ -113,3 +125,18 @@ class GenerateTopKLM(Model):
         indices = np.tile(self.topk_token_ids, (logits.shape[0],1))
         logodds = np.take(logit_dist, indices)
         return logodds[0]
+
+    def get_sentence_ids(self, X):
+        """ Implement in subclass.
+        """
+        pass
+
+    def generate_topk_token_ids(self, X):
+        """ Implement in subclass.
+        """
+        pass
+
+    def get_lm_logits(self, sentence_ids):
+        """ Implement in subclass.
+        """
+        pass
