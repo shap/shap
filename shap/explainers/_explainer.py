@@ -382,8 +382,8 @@ class Explainer():
         pickle.dump(type(self), out_file)
     
     @classmethod
-    def load(cls, in_file, custom_model_loader = None, custom_masker_loader = None):
+    def load(cls, in_file, model_loader = None, masker_loader = None):
         """ Deserializes the explainer subtype, and calls respective load function
         """
         explainer_type = pickle.load(in_file)
-        return explainer_type._load(in_file)
+        return explainer_type._load(in_file, model_loader, masker_loader)

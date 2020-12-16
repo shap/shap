@@ -41,9 +41,8 @@ class Permutation(Explainer):
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
         super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
-
-        if not type(model) == Model:
-            self.model = Model(model)
+        
+        self.model = Model(model)
 
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
@@ -149,12 +148,12 @@ class Permutation(Explainer):
         super(Permutation, self).save(out_file)
         
         if callable(self.model.save):
-            self.model.save(self.model.model, out_file)
+            self.model.save(out_file, self.model.model)
         else:
             pickle.dump(None,out_file)
         
         if callable(self.masker.save):
-            self.masker.save(self.masker, out_file)
+            self.masker.save(out_file, self.masker)
         else:
             pickle.dump(None,out_file)
         

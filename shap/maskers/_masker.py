@@ -21,5 +21,6 @@ class Masker():
         """
         masker_type = pickle.load(in_file)
         if masker_type is None:
+            print("Warning: masker was not found in saved file, please set masker before using explainer.")
             return None
-        return masker_type.load(in_file)
+        return masker_type._load(in_file)

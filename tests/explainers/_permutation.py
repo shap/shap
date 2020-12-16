@@ -100,7 +100,7 @@ def test_multi_class_partition():
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model.predict_proba(X[:100])) < 1e6)
 
 
-def test_serialization_permutation_dataframe():
+def test_serialization_permutation():
     import shap
     import xgboost
     import pickle
@@ -136,8 +136,7 @@ def test_serialization_permutation_dataframe():
     assert type(explainer_original) == type(explainer_new)
     assert type(explainer_original.masker) == type(explainer_new.masker)
 
-
-def test_serialization_permutation_numpy():
+def test_serialization_permutation_no_model_or_masker():
     import shap
     import xgboost
     import pickle
@@ -145,7 +144,6 @@ def test_serialization_permutation_numpy():
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
-    X = X.values
 
     # train an XGBoost model (but any other model type would also work)
     model = xgboost.XGBClassifier()
@@ -157,6 +155,8 @@ def test_serialization_permutation_numpy():
 
     # Serialization 
     out_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "wb")
+    explainer_original.model.save = None
+    explainer_original.masker.save = None
     explainer_original.save(out_file)
     out_file.close()
 
@@ -164,16 +164,21 @@ def test_serialization_permutation_numpy():
     in_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "rb")
     explainer_new = shap.Explainer.load(in_file)
     in_file.close()
+    
+    # manually insert model and masker
+    explainer_new.model = explainer_original.model
+    explainer_new.masker = explainer_original.masker
 
     shap_values_new = explainer_new(X[:1])
 
-    assert (getattr(explainer_original.masker, "feature_names", None) == None) and (getattr(explainer_original.masker, "feature_names", None) == None)
+    for i in range(len(explainer_original.masker.feature_names)):
+        assert explainer_original.masker.feature_names[i] == explainer_new.masker.feature_names[i] 
+
     assert np.array_equal(shap_values_original.base_values,shap_values_new.base_values)
     assert type(explainer_original) == type(explainer_new)
     assert type(explainer_original.masker) == type(explainer_new.masker)
 
-
-def test_serialization_permutation_numpy_custom_save():
+def test_serialization_permutation_numpy_custom_model_save():
     import shap
     import xgboost
     import pickle
@@ -193,14 +198,14 @@ def test_serialization_permutation_numpy_custom_save():
 
     # Serialization 
     out_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "wb")
-    explainer_original.model.save = lambda model, out_file: pickle.dump(model, out_file)
+    explainer_original.model.save = lambda out_file, model: pickle.dump(model, out_file)
     explainer_original.save(out_file)
     out_file.close()
 
     # Deserialization
     in_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "rb")
-    custom_explainer_loader = lambda in_file: pickle.load(in_file)
-    explainer_new = shap.Explainer.load(in_file, custom_explainer_loader)
+    model_loader = lambda in_file: pickle.load(in_file)
+    explainer_new = shap.Explainer.load(in_file, model_loader = model_loader)
     in_file.close()
 
     shap_values_new = explainer_new(X[:1])
