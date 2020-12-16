@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from ._model import Model
+from ._generate_topk_lm import GenerateTopKLM
 from ..utils import safe_isinstance, record_import_error
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_MASKED_LM
 
@@ -9,9 +9,11 @@ try:
 except ImportError as e:
     record_import_error("torch", "Torch could not be imported!", e)
 
-class PTGenerateTopKLM(Model):
+class PTGenerateTopKLM(GenerateTopKLM):
     def __init__(self, model, tokenizer, k=10, generation_function_for_topk_token_ids=None, device=None):
-        """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
+        """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM for PyTorch models.
+
+        This model inherits from GenerateTopKLM. Check the superclass documentation for the generic methods the library implements for all its model.
 
         Parameters
         ----------
@@ -26,16 +28,10 @@ class PTGenerateTopKLM(Model):
         numpy.array
             The scores (log odds) of generating top-k token ids using the model.
         """
-        super(PTGenerateTopKLM, self).__init__(model)
+        super(PTGenerateTopKLM, self).__init__(model, tokenizer, k, generation_function_for_topk_token_ids, device)
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device 
         self.model = model.to(self.device)
-        self.tokenizer = tokenizer
-        self.k = k
-        self.generate_topk_token_ids = generation_function_for_topk_token_ids if generation_function_for_topk_token_ids is not None else self.generate_topk_token_ids
-        self.X = None
-        self.topk_token_ids = None
-        self.output_names = None
 
     def __call__(self, masked_X, X):
         """ Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
