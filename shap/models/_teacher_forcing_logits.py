@@ -50,6 +50,8 @@ class TeacherForcingLogits(Model):
                     self.generation_function_for_target_sentence_ids = models.PTTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
                 elif safe_isinstance(model,"transformers.TFPreTrainedModel"):
                     self.generation_function_for_target_sentence_ids = models.TFTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                else:
+                    raise Exception("Cannot determine generation_function_for_target_sentence_ids to be assigned in TeacherForcingLogits. Please define model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             self.model_agnostic = False
@@ -58,10 +60,12 @@ class TeacherForcingLogits(Model):
             self.similarity_tokenizer = tokenizer
         else:
             if generation_function_for_target_sentence_ids is None:
-                if safe_isinstance(model,"transformers.PreTrainedModel"):
+                if safe_isinstance(similarity_model,"transformers.PreTrainedModel"):
                     self.generation_function_for_target_sentence_ids = models.PTTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
-                elif safe_isinstance(model,"transformers.TFPreTrainedModel"):
+                elif safe_isinstance(similarity_model,"transformers.TFPreTrainedModel"):
                     self.generation_function_for_target_sentence_ids = models.TFTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                else:
+                    raise Exception("Cannot determine generation_function_for_target_sentence_ids to be assigned in TeacherForcingLogits. Please define similarity_model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             #self.similarity_model = self.to_device(similarity_model)
@@ -147,16 +151,16 @@ class TeacherForcingLogits(Model):
         return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
 
     def get_source_sentence_ids(self, X):
-        """ Implement in subclass.
+        """ Implement in subclass. Returns a tensor of sentence ids.
         """
         pass
 
     def get_logodds(self, logits):
-        """ Implement in subclass.
+        """ Implement in subclass. Returns a np.array of logodds.
         """
         pass
 
     def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
-        """ Implement in subclass.
+        """ Implement in subclass. Returns a np.array of logits.
         """
         pass
