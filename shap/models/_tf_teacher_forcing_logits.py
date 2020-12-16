@@ -44,40 +44,6 @@ class TFTeacherForcingLogits(TeacherForcingLogits):
         """
         super(TFTeacherForcingLogits, self).__init__(model, tokenizer, generation_function_for_target_sentence_ids, similarity_model, similarity_tokenizer, device)
 
-    def update_cache_X(self, X):
-        """ The function updates original input(X) and target sentence ids.
-
-        It mimics the caching mechanism to update the original input and target sentence ids
-        that are to be explained and which updates for every new row of explanation.
-
-        Parameters
-        ----------
-        X: string or numpy.array
-            Input(Text/Image) for an explanation row.
-        """
-        # check if the source sentence has been updated (occurs when explaining a new row)
-        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
-            self.X = X
-            self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
-
-    def get_output_names_and_update_target_sentence_ids(self, X):
-        """ Gets the output tokens from input(X) by computing the 
-            target sentence ids using the using the generation_function_for_target_sentence_ids()
-            and next getting output names using the similarity_tokenizer.
-        
-        Parameters
-        ----------
-        X: string or numpy array
-            Input(Text/Image) for an explanation row.
-
-        Returns
-        -------
-        list
-            A list of output tokens.
-        """
-        self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
-        return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
-
     def get_source_sentence_ids(self, X):
         """ The function tokenizes source sentence.
 

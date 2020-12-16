@@ -53,23 +53,6 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         else:
             self.model = self.to_device(model)
 
-    def update_cache_X(self, X):
-        """ The function updates original input(X) and target sentence ids.
-
-        It mimics the caching mechanism to update the original input and target sentence ids
-        that are to be explained and which updates for every new row of explanation.
-
-        Parameters
-        ----------
-        X: string or numpy.array
-            Input(Text/Image) for an explanation row.
-        """
-        # check if the source sentence has been updated (occurs when explaining a new row)
-        if self.X != X:
-            self.X = X
-            self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
-            self.target_sentence_ids = self.to_device(self.target_sentence_ids).to(torch.int64)
-
     def get_output_names_and_update_target_sentence_ids(self, X):
         """ Gets the output tokens from input(X) by computing the 
             target sentence ids using the using the generation_function_for_target_sentence_ids()
@@ -85,7 +68,7 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         list
             A list of output tokens.
         """
-        self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
+        self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X).to(self.device).to(torch.int64)
         output_names = [self.similarity_tokenizer.decode([x]).strip() for x in self.target_sentence_ids[0,:].cpu().numpy()]
         return output_names
 
