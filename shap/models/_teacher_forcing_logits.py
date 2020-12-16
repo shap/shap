@@ -144,3 +144,18 @@ class TeacherForcingLogits(Model):
         """
         self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
         return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
+
+    def get_source_sentence_ids(self, X):
+        """ Implement in subclass.
+        """
+        pass
+
+    def get_logodds(self, logits):
+        """ Implement in subclass.
+        """
+        pass
+
+    def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+        """ Implement in subclass.
+        """
+        pass
