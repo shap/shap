@@ -2,18 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
-from ._pt_text_generation import PTTextGeneration
-from ._tf_text_generation import TFTextGeneration
-
-try:
-    import torch
-except ImportError as e:
-    record_import_error("torch", "Torch could not be imported!", e)
-
-try:
-    import tensorflow as tf
-except ImportError as e:
-    record_import_error("tensorflow", "TensorFlow could not be imported!", e)
+from .. import models
 
 class TeacherForcingLogits(Model):
     def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, similarity_model=None, similarity_tokenizer=None, device=None):
@@ -58,9 +47,9 @@ class TeacherForcingLogits(Model):
         if safe_isinstance(model,"transformers.PreTrainedModel") or safe_isinstance(model,"transformers.TFPreTrainedModel"):
             if generation_function_for_target_sentence_ids is None:
                 if safe_isinstance(model,"transformers.PreTrainedModel"):
-                    self.generation_function_for_target_sentence_ids = PTTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                    self.generation_function_for_target_sentence_ids = models.PTTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
                 elif safe_isinstance(model,"transformers.TFPreTrainedModel"):
-                    self.generation_function_for_target_sentence_ids = TFTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                    self.generation_function_for_target_sentence_ids = models.TFTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             self.model_agnostic = False
@@ -70,9 +59,9 @@ class TeacherForcingLogits(Model):
         else:
             if generation_function_for_target_sentence_ids is None:
                 if safe_isinstance(model,"transformers.PreTrainedModel"):
-                    self.generation_function_for_target_sentence_ids = PTTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                    self.generation_function_for_target_sentence_ids = models.PTTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
                 elif safe_isinstance(model,"transformers.TFPreTrainedModel"):
-                    self.generation_function_for_target_sentence_ids = TFTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                    self.generation_function_for_target_sentence_ids = models.TFTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             #self.similarity_model = self.to_device(similarity_model)
@@ -83,6 +72,18 @@ class TeacherForcingLogits(Model):
         self.X = None
         self.target_sentence_ids = None
         self.output_names = None
+
+        if self.__class__ is TeacherForcingLogits:
+            # assign the right subclass
+            if safe_isinstance(self.similarity_model,"transformers.PreTrainedModel"):
+                self.__class__ = models.PTTeacherForcingLogits
+                models.PTTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.generation_function_for_target_sentence_ids, self.similarity_model, self.similarity_tokenizer, self.device)
+            elif safe_isinstance(self.similarity_model,"transformers.TFPreTrainedModel"):
+                self.__class__ = models.TFTeacherForcingLogits
+                models.TFTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.generation_function_for_target_sentence_ids, self.similarity_model, self.similarity_tokenizer, self.device)
+            else:
+                raise Exception("Cannot determine subclass to be assigned in TeacherForcingLogits. Please define similarity model or model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
+
 
     def __call__(self, masked_X, X):
         """ Computes log odds scores from a given batch of masked input and original input for text/image.
