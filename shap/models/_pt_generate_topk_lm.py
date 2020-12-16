@@ -1,8 +1,6 @@
-import numpy as np
-import scipy as sp
 from ._generate_topk_lm import GenerateTopKLM
 from ..utils import safe_isinstance, record_import_error
-from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_MASKED_LM
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM
 
 try:
     import torch
@@ -22,6 +20,9 @@ class PTGenerateTopKLM(GenerateTopKLM):
 
         tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast).
+
+        generation_function_for_topk_token_ids: function
+            A function which is used to generate top-k token ids. Log odds will be generated for these custom token ids.
 
         Returns
         -------
@@ -60,8 +61,8 @@ class PTGenerateTopKLM(GenerateTopKLM):
 
         Returns
         -------
-        list
-            A list of top-k token ids.
+        torch.Tensor
+            A tensor of top-k token ids.
         """
         
         sentence_ids = self.get_sentence_ids(X)
@@ -79,7 +80,7 @@ class PTGenerateTopKLM(GenerateTopKLM):
 
         Returns
         -------
-        numpy.array
+        torch.Tensor
             Logits corresponding to next word/masked word.
         """
         # set model to eval mode

@@ -1,8 +1,6 @@
-import numpy as np
-import scipy as sp
 from ._generate_topk_lm import GenerateTopKLM
 from ..utils import safe_isinstance, record_import_error
-from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_MASKED_LM
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM
 
 try:
     import tensorflow as tf
@@ -23,6 +21,9 @@ class TFGenerateTopKLM(GenerateTopKLM):
         tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast).
 
+        generation_function_for_topk_token_ids: function
+            A function which is used to generate top-k token ids. Log odds will be generated for these custom token ids.
+
         Returns
         -------
         numpy.array
@@ -42,7 +43,7 @@ class TFGenerateTopKLM(GenerateTopKLM):
 
         Returns
         -------
-        torch.Tensor
+        tf.Tensor
             Tensor of sentence ids.
         """
         sentence_ids = tf.convert_to_tensor([self.tokenizer.encode(X)])
@@ -58,8 +59,8 @@ class TFGenerateTopKLM(GenerateTopKLM):
 
         Returns
         -------
-        list
-            A list of top-k token ids.
+        tf.Tensor
+            A tensor of top-k token ids.
         """
         
         sentence_ids = self.get_sentence_ids(X)
@@ -72,12 +73,12 @@ class TFGenerateTopKLM(GenerateTopKLM):
 
         Parameters
         ----------
-        source_sentence_ids: torch.Tensor of shape (batch size, len of sequence)
+        source_sentence_ids: tf.Tensor of shape (batch size, len of sequence)
             Tokenized ids fed to the model.
 
         Returns
         -------
-        numpy.array
+        tf.Tensor
             Logits corresponding to next word/masked word.
         """
         if safe_isinstance(self.model, MODELS_FOR_CAUSAL_LM):

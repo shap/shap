@@ -2,8 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from .. import models
-from ..utils import safe_isinstance, record_import_error
-from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_MASKED_LM
+from ..utils import safe_isinstance
 
 class GenerateTopKLM(Model):
     def __init__(self, model, tokenizer, k=10, generation_function_for_topk_token_ids=None, device=None):
@@ -16,6 +15,9 @@ class GenerateTopKLM(Model):
 
         tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast).
+
+        generation_function_for_topk_token_ids: function
+            A function which is used to generate top-k token ids. Log odds will be generated for these custom token ids.
 
         Returns
         -------
@@ -125,16 +127,16 @@ class GenerateTopKLM(Model):
         return logodds[0]
 
     def get_sentence_ids(self, X):
-        """ Implement in subclass.
+        """ Implement in subclass. Returns a tensor of sentence ids.
         """
         pass
 
     def generate_topk_token_ids(self, X):
-        """ Implement in subclass.
+        """ Implement in subclass. Returns a tensor of top-k token ids.
         """
         pass
 
     def get_lm_logits(self, sentence_ids):
-        """ Implement in subclass.
+        """ Implement in subclass. Returns a tensor of logits.
         """
         pass
