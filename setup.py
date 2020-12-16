@@ -104,6 +104,8 @@ def get_cuda_path():
 def compile_cuda_module(host_args):
     libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
     lib_out = 'build/' + libname
+    if not os.path.exists('build/'):
+        os.makedirs('build/')
 
     cuda_home, nvcc = get_cuda_path()
 
