@@ -11,6 +11,13 @@ MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM = [
         "transformers.EncoderDecoderModel",
         "transformers.XLMProphetNetForConditionalGeneration",
         "transformers.ProphetNetForConditionalGeneration",
+        "transformers.TFMT5ForConditionalGeneration",
+        "transformers.TFT5ForConditionalGeneration",
+        "transformers.TFMarianMTModel",
+        "transformers.TFMBartForConditionalGeneration",
+        "transformers.TFPegasusForConditionalGeneration",
+        "transformers.TFBlenderbotForConditionalGeneration",
+        "transformers.TFBartForConditionalGeneration"
     ]
 
 MODELS_FOR_CAUSAL_LM = [
@@ -28,7 +35,45 @@ MODELS_FOR_CAUSAL_LM = [
         "transformers.BertGenerationDecoder",
         "transformers.XLMProphetNetForCausalLM",
         "transformers.ProphetNetForCausalLM",
+        "transformers.TFBertLMHeadModel",
+        "transformers.TFOpenAIGPTLMHeadModel",
+        "transformers.TFGPT2LMHeadModel",
+        "transformers.TFTransfoXLLMHeadModel",
+        "transformers.TFXLNetLMHeadModel",
+        "transformers.TFXLMWithLMHeadModel",
+        "transformers.TFCTRLLMHeadModel",
     ]
+
+MODELS_FOR_MASKED_LM = [
+    "transformers.LayoutLMForMaskedLM",
+    "transformers.DistilBertForMaskedLM",
+    "transformers.AlbertForMaskedLM",
+    "transformers.BartForConditionalGeneration",
+    "transformers.CamembertForMaskedLM",
+    "transformers.XLMRobertaForMaskedLM",
+    "transformers.LongformerForMaskedLM",
+    "transformers.RobertaForMaskedLM",
+    "transformers.SqueezeBertForMaskedLM",
+    "transformers.BertForMaskedLM",
+    "transformers.MobileBertForMaskedLM",
+    "transformers.FlaubertWithLMHeadModel",
+    "transformers.XLMWithLMHeadModel",
+    "transformers.ElectraForMaskedLM",
+    "transformers.ReformerForMaskedLM",
+    "transformers.FunnelForMaskedLM",
+    "transformers.TFDistilBertForMaskedLM",
+    "transformers.TFAlbertForMaskedLM",
+    "transformers.TFCamembertForMaskedLM",
+    "transformers.TFXLMRobertaForMaskedLM",
+    "transformers.TFLongformerForMaskedLM",
+    "transformers.TFRobertaForMaskedLM",
+    "transformers.TFBertForMaskedLM",
+    "transformers.TFMobileBertForMaskedLM",
+    "transformers.TFFlaubertWithLMHeadModel",
+    "transformers.TFXLMWithLMHeadModel",
+    "transformers.TFElectraForMaskedLM",
+    "transformers.TFFunnelForMaskedLM"
+]
 
 SENTENCEPIECE_TOKENIZERS = [
     "transformers.MarianTokenizer",
