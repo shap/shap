@@ -2,29 +2,36 @@
 
 API Reference
 =============
+This page contains the API reference for public objects and functions in SHAP.
+There are also :ref:`example notebooks <_api_examples>` available that demonstrate how
+to use the API of each object/function.
 
-Core Explainers
----------------
+
+.. _explanation_api:
+
+Explanation
+-----------
+.. autosummary::
+    :toctree: generated/
+
+    shap.Explanation
+
+
+.. _explainers_api:
+
+explainers
+----------
 .. autosummary::
     :toctree: generated/
 
     shap.Explainer
-    shap.TreeExplainer
-    shap.GPUTreeExplainer
-    shap.GradientExplainer
-    shap.DeepExplainer
-    shap.KernelExplainer
-    shap.SamplingExplainer
-    shap.PartitionExplainer
-    shap.LinearExplainer
-    shap.PermutationExplainer
-    shap.AdditiveExplainer
-
-Other Explainers
-----------------
-.. autosummary::
-    :toctree: generated/
-
+    shap.explainers.Tree
+    shap.explainers.GPUTree
+    shap.explainers.Linear
+    shap.explainers.Permutation
+    shap.explainers.Partition
+    shap.explainers.Sampling
+    shap.explainers.Additive
     shap.explainers.other.Coefficent
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
@@ -32,30 +39,78 @@ Other Explainers
     shap.explainers.other.TreeMaple
     shap.explainers.other.TreeGain
 
-.. _plot_api:
 
-Plots
+.. _plots_api:
+
+plots
 -----
-For usage examples, see :ref:`Plotting Examples <plots_examples>`
-
 .. autosummary::
     :toctree: generated/
 
-    summary_plot
-    decision_plot
-    multioutput_decision_plot
-    dependence_plot
-    force_plot
-    image_plot
-    monitoring_plot
-    embedding_plot
-    partial_dependence_plot
-    bar_plot
-    waterfall_plot
-    group_difference_plot
-    text_plot
+    shap.plots.bar
+    shap.plots.waterfall
+    shap.plots.scatter
+    shap.plots.heatmap
+    shap.plots.force
+    shap.plots.text
+    shap.plots.image
+    shap.plots.partial_dependence
 
-Datasets
+
+.. _maskers_api:
+
+maskers
+-------
+.. autosummary::
+    :toctree: generated/
+
+    shap.maskers.Masker
+    shap.maskers.Independent
+    shap.maskers.Partition
+    shap.maskers.Text
+    shap.maskers.Image
+
+
+.. _models_api:
+
+models
+------
+.. autosummary::
+    :toctree: generated/
+
+    shap.models.Model
+    shap.models.TeacherForcingLogits
+    shap.models.TextGeneration
+
+
+.. _utils_api:
+
+utils
+-----
+.. autosummary::
+    :toctree: generated/
+
+    shap.utils.hclust
+    shap.utils.sample
+    shap.utils.shapley_coefficients
+    shap.utils.MaskedModel
+
+
+.. _datasets_api:
+
+datasets
 --------
-.. automodule:: shap.datasets
-    :members:
+.. autosummary::
+    :toctree: generated/
+
+    shap.datasets.adult
+    shap.datasets.boston
+    shap.datasets.adult
+    shap.datasets.communitiesandcrime
+    shap.datasets.corrgroups60
+    shap.datasets.diabetes
+    shap.datasets.imagenet50
+    shap.datasets.imdb
+    shap.datasets.independentlinear60
+    shap.datasets.iris
+    shap.datasets.nhanesi

@@ -13,13 +13,16 @@ from .. import explainers
 
 
 class Explainer():
+    """ Uses Shapley values to explain any machine learning model or python function.
+
+    This is the primary explainer interface for the SHAP library. It takes any combination
+    of a model and masker and returns a callable subclass object that implements
+    the particular estimation algorithm that was chosen.
+    """
+
     def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, **kwargs):
-        """ Uses Shapley values to explain any machine learning model or python function.
-
-        This is the primary explainer interface for the SHAP library. It takes any combination
-        of a model and masker and returns a callable subclass object that implements
-        the particular estimation algorithm that was chosen.
-
+        """ Build a new explainer for the passed model.
+        
         Parameters
         ----------
         model : object or function
@@ -76,7 +79,7 @@ class Explainer():
             else:
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
-            if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+            if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
                 # auto assign text infilling if model is a transformer model with lm head
                 self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
             else:
@@ -89,10 +92,10 @@ class Explainer():
             self.masker = masker
         
         # wrap self.masker and self.model for output text explanation algorithm
-        if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel"))and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
             self.model = models.TeacherForcingLogits(self.model, self.masker.tokenizer)
             self.masker = maskers.FixedComposite(self.masker)
-        elif safe_isinstance(self.model, "shap.models.TeacherForcingLogits") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
+        elif (safe_isinstance(self.model, "shap.models.TeacherForcingLogits") or safe_isinstance(self.model, "shap.models.GenerateTopKLM")) and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
             self.masker = maskers.FixedComposite(self.masker)
 
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
@@ -254,35 +257,13 @@ class Explainer():
                 arg_values[j].append(values[i][pos:pos+mask_length])
                 pos += mask_length
 
-        # collapse the expected values if they are the same for each sample
-        expected_values = np.array(expected_values)
-        # if np.allclose(expected_values, expected_values[0]):
-        #     expected_values = expected_values[0]
-
-        # collapse the output_indices if they are the same for each sample
-        output_indices = np.array(output_indices)
-        
-        # collapse the main effects if we didn't compute them
-        if main_effects[0] is None:
-            main_effects = None
-        else:
-            main_effects = np.array(main_effects)
-
-        # collapse the hierarchical values if we didn't compute them
-        if hierarchical_values[0] is None:
-            hierarchical_values = None
-        else:
-            hierarchical_values = np.array(hierarchical_values)
-
-        # collapse the hierarchical values if we didn't compute them
-        if clustering[0] is None:
-            clustering = None
-        else:
-            clustering = np.array(clustering)
-
-            # collapse across all the sample if we have just one clustering
-            # if len(clustering.shape) == 3 and clustering.std(0).sum() < 1e-8:
-            #     clustering = clustering[0]
+        # collapse the arrays as possible
+        expected_values = pack_values(expected_values)
+        main_effects = pack_values(main_effects)
+        output_indices = pack_values(output_indices)
+        main_effects = pack_values(main_effects)
+        hierarchical_values = pack_values(hierarchical_values)
+        clustering = pack_values(clustering)
 
         # getting output labels 
         if self.output_names is None:
@@ -306,12 +287,12 @@ class Explainer():
                     tmp.append(v.reshape(*mask_shapes[i][j], -1))
                 else:
                     tmp.append(v.reshape(*mask_shapes[i][j]))
-            arg_values[j] = np.array(tmp)
+            arg_values[j] = pack_values(tmp)
             
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)
             if hasattr(self.masker, "data_transform"):
-                data = np.array([self.masker.data_transform(v) for v in args[j]])
+                data = pack_values([self.masker.data_transform(v) for v in args[j]])
             else:
                 data = args[j]
             
@@ -387,3 +368,17 @@ class Explainer():
         """
         explainer_type = pickle.load(in_file)
         return explainer_type._load(in_file, model_loader, masker_loader)
+        
+def pack_values(values):
+    """ Used the clean up arrays before putting them into an Explanation object.
+    """
+
+    # collapse the values if we didn't compute them
+    if values is None or values[0] is None:
+        return None
+
+    # convert to a single numpy matrix when the array is not ragged
+    elif np.issubdtype(type(values[0]), np.number) or len(np.unique([len(v) for v in values])) == 1:
+        return np.array(values)
+    else:
+        return np.array(values, dtype=np.object)

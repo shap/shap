@@ -5,7 +5,7 @@ from ._scatter import scatter
 from ._embedding import embedding
 from ._force import force, initjs
 from ._group_difference import group_difference
-from ._image import image
+from ._image import image, image_to_text
 from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
 from ._beeswarm import beeswarm

@@ -7,7 +7,7 @@ def test_call_function_text_generation():
     '''
     import torch
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-    from shap.models import TextGeneration
+    from shap.models import PTTextGeneration
 
     tokenizer = AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
     model =  AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-xsum-12-6")
@@ -22,8 +22,8 @@ def test_call_function_text_generation():
         del input_ids, out
         return sentence
 
-    text_generation_for_pretrained_model = TextGeneration(model, tokenizer=tokenizer)
-    text_generation_for_model_agnostic_scenario = TextGeneration(f, similarity_tokenizer=tokenizer)
+    text_generation_for_pretrained_model = PTTextGeneration(model, tokenizer=tokenizer)
+    text_generation_for_model_agnostic_scenario = PTTextGeneration(f, similarity_tokenizer=tokenizer)
 
     s = "This is a test statement for verifying text generation ids"
 

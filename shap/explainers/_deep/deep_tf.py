@@ -91,6 +91,9 @@ class TFDeep(Explainer):
                 warnings.warn("keras is no longer supported, please use tf.keras instead.")
             except:
                 pass
+        
+        if LooseVersion(tf.__version__) >= LooseVersion("2.4.0"):
+            warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode. See PR #1483 for discussion.")
 
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)

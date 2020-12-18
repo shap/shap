@@ -18,7 +18,7 @@ import subprocess
 # For mac, ensure extensions are built for macos 10.9 when compiling on a
 # 10.9 system or above, overriding distuitls behavior which is to target
 # the version that python was built for. This may be overridden by setting
-# MACOSX_DEPLOYMENT_TARGET before calling setup.py
+# MACOSX_DEPLOYMENT_TARGET before calling setup.pcuda-comp-generalizey
 if sys.platform == 'darwin':
     if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
         current_system = LooseVersion(platform.mac_ver()[0])
@@ -57,20 +57,70 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
+def find_in_path(name, path):
+    """Find a file in a search path and return its full path."""
+    # adapted from:
+    # http://code.activestate.com/recipes/52224-find-a-file-given-a-search-path/
+    for dir in path.split(os.pathsep):
+        binpath = os.path.join(dir, name)
+        if os.path.exists(binpath):
+            return os.path.abspath(binpath)
+    return None
+
+
+def get_cuda_path():
+    """Return a tuple with (base_cuda_directory, full_path_to_nvcc_compiler)."""
+    # Inspired by https://github.com/benfred/implicit/blob/master/cuda_setup.py
+    nvcc_bin = "nvcc.exe" if sys.platform == "win32" else "nvcc"
+
+    if "CUDAHOME" in os.environ:
+        cuda_home = os.environ["CUDAHOME"]
+    elif "CUDA_PATH" in os.environ:
+        cuda_home = os.environ["CUDA_PATH"]
+    else:
+        # otherwise, search the PATH for NVCC
+        found_nvcc = find_in_path(nvcc_bin, os.environ["PATH"])
+        if found_nvcc is None:
+            print(
+                "The nvcc binary could not be located in your $PATH. Either " +
+                " add it to your path, or set $CUDAHOME to enable CUDA"
+            )
+            return None
+        cuda_home = os.path.dirname(os.path.dirname(found_nvcc))
+    if not os.path.exists(os.path.join(cuda_home, "include")):
+        print("Failed to find cuda include directory, using /usr/local/cuda")
+        cuda_home = "/usr/local/cuda"
+
+    nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
+    if not os.path.exists(nvcc):
+        print("Failed to find nvcc compiler in %s, trying /usr/local/cuda" %
+              nvcc)
+        cuda_home = "/usr/local/cuda"
+        nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
+
+    return (cuda_home, nvcc)
+
+
 def compile_cuda_module(host_args):
     libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
     lib_out = 'build/' + libname
-    nvcc = os.path.join(os.path.abspath(os.environ['CUDA_PATH']), 'bin/nvcc')
+    if not os.path.exists('build/'):
+        os.makedirs('build/')
+
+    cuda_home, nvcc = get_cuda_path()
+
+    print("NVCC ==> ", nvcc)
     arch_flags = "-arch=sm_60 " + \
                  "-gencode=arch=compute_70,code=sm_70 " + \
                  "-gencode=arch=compute_75,code=sm_75 " + \
                  "-gencode=arch=compute_75,code=compute_75"
     nvcc_command = "shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
-                   "--extended-lambda " \
+                   "--std c++14 " \
+                   "--expt-extended-lambda " \
                    "--expt-relaxed-constexpr {}".format(
-        lib_out,
-        ','.join(host_args),
-        get_python_inc(), arch_flags)
+                       lib_out,
+                       ','.join(host_args),
+                       get_python_inc(), arch_flags)
     print("Compiling cuda extension, calling nvcc with arguments:")
     print([nvcc] + nvcc_command.split(' '))
     subprocess.run([nvcc] + nvcc_command.split(' '), check=True)
@@ -92,10 +142,11 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
                       extra_compile_args=compile_args))
     if with_cuda:
         try:
-            cudart_path = os.environ['CUDA_PATH'] + '/lib'
+            cuda_home, nvcc = get_cuda_path()
             if sys.platform == 'win32':
-                cudart_path += '/x64'
+                cudart_path = cuda_home + '/lib/x64'
             else:
+                cudart_path = cuda_home + '/lib64'
                 compile_args.append('-fPIC')
 
             lib_dir, lib = compile_cuda_module(compile_args)
@@ -167,7 +218,7 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
         install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
-                          'slicer==0.0.3', 'numba', 'cloudpickle'],
+                          'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
         classifiers=[

@@ -817,11 +817,11 @@ def heatmap(shap_values):
     
     # input token -> output token color and label value mapping
     
-    for row_index in range(model_input.shape[0]):
+    for row_index in range(len(model_input)):
         color_values = {}
         shap_values_list = {}
         
-        for col_index in range(model_output.shape[0]):
+        for col_index in range(len(model_output)):
             color_values[uuid+'_output_flat_token_'+str(col_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
             shap_values_list[uuid+'_output_flat_value_label_'+str(col_index)] = round(shap_values.values[row_index][col_index],3)
         
@@ -830,7 +830,7 @@ def heatmap(shap_values):
     
     # output token -> input token color and label value mapping
     
-    for col_index in range(model_output.shape[0]):
+    for col_index in range(len(model_output)):
         color_values = {}
         shap_values_list = {}
         
@@ -866,7 +866,7 @@ def heatmap(shap_values):
             +  "</script> \n "
     
     def generate_tree(shap_values):
-        num_tokens = shap_values.data.shape[0]
+        num_tokens = len(shap_values.data)
         token_list = {}
 
         for index in range(num_tokens):
@@ -933,7 +933,7 @@ def heatmap(shap_values):
     # generates the output token html elements
     output_text_html = ''
 
-    for i in range(model_output.shape[0]):
+    for i in range(len(model_output)):
         output_text_html += "<div style='display:inline; text-align:center;'>" \
                 + f"<div id='{uuid}_output_flat_value_label_"+ str(i) +"'" \
                 + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \

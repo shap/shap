@@ -287,9 +287,15 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
         cvals[cvals_imp < clow] = clow
+        if color_norm is None:
+            vmin = clow
+            vmax = chigh
+        else:
+            vmin = vmax = None
+        ax.axhline(0, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
         p = ax.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
-            cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
+            cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax,
             norm=color_norm, rasterized=len(xv) > 500
         )
         p.set_array(cvals[xv_notnan])
@@ -608,6 +614,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             chigh = np.nanmax(cv.astype(np.float))
             bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
+            clow = chigh = None # there are not needed now since they are encoded in the color norm
 
     # optionally add jitter to feature values
     if x_jitter > 0:

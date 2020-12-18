@@ -34,6 +34,9 @@ if os.path.exists(NOTEBOOKS_DIR):
     warnings.warn('example_notebooks directory exists, replacing...')
     shutil.rmtree(NOTEBOOKS_DIR)
 shutil.copytree(os.path.abspath('../notebooks'), NOTEBOOKS_DIR, )
+if os.path.exists(NOTEBOOKS_DIR + "/local_scratch"):
+    shutil.rmtree(NOTEBOOKS_DIR + "/local_scratch")
+
 
 # -- General configuration ------------------------------------------------
 
@@ -381,16 +384,30 @@ def setup(app):
     import shap
     # need to assign the names here, otherwise autodoc won't document these classes,
     # and will instead just say 'alias of ...'
-    shap.TreeExplainer.__name__ = 'TreeExplainer'
-    shap.GPUTreeExplainer.__name__ = 'GPUTreeExplainer'
-    shap.LinearExplainer.__name__ = 'LinearExplainer'
-    shap.KernelExplainer.__name__ = 'KernelExplainer'
-    shap.SamplingExplainer.__name__ = 'SamplingExplainer'
-    shap.DeepExplainer.__name__ = 'DeepExplainer'
-    shap.GradientExplainer.__name__ = 'GradientExplainer'
-    shap.PartitionExplainer.__name__ = 'PartitionExplainer'
-    shap.PermutationExplainer.__name__ = 'PermutationExplainer'
-    shap.AdditiveExplainer.__name__ = 'AdditiveExplainer'
+    shap.explainers.Tree.__name__ = "Tree"
+    shap.explainers.Tree.__module__ = "shap.explainers"
+    shap.explainers.GPUTree.__name__ = "GPUTree"
+    shap.explainers.GPUTree.__module__ = "shap.explainers"
+    shap.explainers.Linear.__name__ = "Linear"
+    shap.explainers.Linear.__module__ = "shap.explainers"
+    shap.explainers.Permutation.__name__ = "Permutation"
+    shap.explainers.Permutation.__module__ = "shap.explainers"
+    shap.explainers.Partition.__name__ = "Partition"
+    shap.explainers.Partition.__module__ = "shap.explainers"
+    shap.explainers.Sampling.__name__ = "Sampling"
+    shap.explainers.Sampling.__module__ = "shap.explainers"
+    shap.explainers.Additive.__name__ = "Additive"
+    shap.explainers.Additive.__module__ = "shap.explainers"
+    # shap.TreeExplainer.__name__ = 'TreeExplainer'
+    # shap.GPUTreeExplainer.__name__ = 'GPUTreeExplainer'
+    # shap.LinearExplainer.__name__ = 'LinearExplainer'
+    # shap.KernelExplainer.__name__ = 'KernelExplainer'
+    # shap.SamplingExplainer.__name__ = 'SamplingExplainer'
+    # shap.DeepExplainer.__name__ = 'DeepExplainer'
+    # shap.GradientExplainer.__name__ = 'GradientExplainer'
+    # shap.PartitionExplainer.__name__ = 'PartitionExplainer'
+    # shap.PermutationExplainer.__name__ = 'PermutationExplainer'
+    # shap.AdditiveExplainer.__name__ = 'AdditiveExplainer'
     app.connect('build-finished', build_finished)
 
 

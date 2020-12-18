@@ -61,7 +61,7 @@ class MetaExplanation(type):
 
 
 class Explanation(object, metaclass=MetaExplanation):
-    """ This is currently an experimental feature don't depend on this object yet! :)
+    """ A slicable set of parallel arrays representing a SHAP explanation.
     """
     def __init__(
         self,
@@ -254,7 +254,7 @@ class Explanation(object, metaclass=MetaExplanation):
                     new_values = []
                     new_base_values = []
                     new_data = []
-                    if self.output_names.ndim >= 2 or self.output_names.shape[0] >= 2: 
+                    if self.output_names is not None and (self.output_names.ndim >= 2 or self.output_names.shape[0] >= 2):
                         new_self = copy.deepcopy(self)
                         for i in range(len(self.values)):
                             for j in range(len(self.output_names[i])): 
@@ -649,8 +649,9 @@ def _compute_shape(x):
             else: # we have an array of arrays...
                 for i in range(1,len(x)):
                     shape = _compute_shape(x[i])
-                    if shape != first_shape:
-                        return (len(x), None)
+                    if shape != first_shape: # TODO: detect when some inner dims match and some don't (right now we assume they all don't)
+                        assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
+                        return (len(x),) + (None,) * len(shape)
                 return (len(x),) + first_shape
 
 class Cohorts():
