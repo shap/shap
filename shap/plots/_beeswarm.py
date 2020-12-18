@@ -44,6 +44,16 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
+        if len(shap_values.shape) == 1:
+            raise ValueError(
+                "The beeswarm plot does not support plotting a single instance, please pass "
+                "an explanation matrix with many instances!"
+            )
+        elif len(shap_values.shape) > 2:
+            raise ValueError(
+                "The beeswarm plot does not support plotting explanations with instances that have more "
+                "than one dimension!"
+            )
         shap_exp = shap_values
         base_values = shap_exp.base_values
         values = shap_exp.values

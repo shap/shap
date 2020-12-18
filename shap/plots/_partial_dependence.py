@@ -32,8 +32,9 @@ def compute_bounds(xmin, xmax, xv):
 
 def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(100)",
                        npoints=None, feature_names=None, hist=True, model_expected_value=False,
-                       feature_expected_value=False, shap_values=None, shap_value_features=None,
-                       ylabel=None, ice=True, ace_opacity=1, pd_opacity=1, pd_linewidth=2, ace_linewidth='auto', ax=None, show=True):
+                       feature_expected_value=False, shap_values=None,
+                       ylabel=None, ice=True, ace_opacity=1, pd_opacity=1, pd_linewidth=2,
+                       ace_linewidth='auto', ax=None, show=True):
     """ A basic partial dependence plot function.
     """
 
