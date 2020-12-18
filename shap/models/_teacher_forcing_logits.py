@@ -2,12 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
-from ._text_generation import TextGeneration
-
-try:
-    import torch
-except ImportError as e:
-    record_import_error("torch", "Torch could not be imported!", e)
+from .. import models
 
 class TeacherForcingLogits(Model):
     def __init__(self, model, tokenizer=None, generation_function_for_target_sentence_ids=None, similarity_model=None, similarity_tokenizer=None, device=None):
@@ -45,30 +40,54 @@ class TeacherForcingLogits(Model):
         """
         super(TeacherForcingLogits, self).__init__(model)
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
+        #self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
         self.tokenizer = tokenizer
+        self.device = device
         # assign text generation function
-        if safe_isinstance(model,"transformers.PreTrainedModel"):
+        if safe_isinstance(model,"transformers.PreTrainedModel") or safe_isinstance(model,"transformers.TFPreTrainedModel"):
             if generation_function_for_target_sentence_ids is None:
-                self.generation_function_for_target_sentence_ids = TextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                if safe_isinstance(model,"transformers.PreTrainedModel"):
+                    self.generation_function_for_target_sentence_ids = models.PTTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                elif safe_isinstance(model,"transformers.TFPreTrainedModel"):
+                    self.generation_function_for_target_sentence_ids = models.TFTextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+                else:
+                    raise Exception("Cannot determine generation_function_for_target_sentence_ids to be assigned in TeacherForcingLogits. Please define model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
             self.model_agnostic = False
-            self.model = self.to_device(model)
+            #self.model = self.to_device(model)
             self.similarity_model = model
             self.similarity_tokenizer = tokenizer
         else:
             if generation_function_for_target_sentence_ids is None:
-                self.generation_function_for_target_sentence_ids = TextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                if safe_isinstance(similarity_model,"transformers.PreTrainedModel"):
+                    self.generation_function_for_target_sentence_ids = models.PTTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                elif safe_isinstance(similarity_model,"transformers.TFPreTrainedModel"):
+                    self.generation_function_for_target_sentence_ids = models.TFTextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+                else:
+                    raise Exception("Cannot determine generation_function_for_target_sentence_ids to be assigned in TeacherForcingLogits. Please define similarity_model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
             else:
                 self.generation_function_for_target_sentence_ids = generation_function_for_target_sentence_ids
-            self.similarity_model = self.to_device(similarity_model)
+            #self.similarity_model = self.to_device(similarity_model)
+            self.similarity_model = similarity_model
             self.similarity_tokenizer = similarity_tokenizer
             self.model_agnostic = True
         # initializing X which is the original input for every new row of explanation
         self.X = None
         self.target_sentence_ids = None
         self.output_names = None
+
+        if self.__class__ is TeacherForcingLogits:
+            # assign the right subclass
+            if safe_isinstance(self.similarity_model,"transformers.PreTrainedModel"):
+                self.__class__ = models.PTTeacherForcingLogits
+                models.PTTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.generation_function_for_target_sentence_ids, self.similarity_model, self.similarity_tokenizer, self.device)
+            elif safe_isinstance(self.similarity_model,"transformers.TFPreTrainedModel"):
+                self.__class__ = models.TFTeacherForcingLogits
+                models.TFTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.generation_function_for_target_sentence_ids, self.similarity_model, self.similarity_tokenizer, self.device)
+            else:
+                raise Exception("Cannot determine subclass to be assigned in TeacherForcingLogits. Please define similarity model or model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
+
 
     def __call__(self, masked_X, X):
         """ Computes log odds scores from a given batch of masked input and original input for text/image.
@@ -109,11 +128,10 @@ class TeacherForcingLogits(Model):
             Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
-        if self.X != X:
+        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
             self.X = X
             self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
-            self.target_sentence_ids = self.to_device(self.target_sentence_ids).to(torch.int64)
-
+    
     def get_output_names_and_update_target_sentence_ids(self, X):
         """ Gets the output tokens from input(X) by computing the 
             target sentence ids using the using the generation_function_for_target_sentence_ids()
@@ -132,129 +150,17 @@ class TeacherForcingLogits(Model):
         self.target_sentence_ids = self.generation_function_for_target_sentence_ids(X)
         return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
 
-    def to_device(self, variables):
-        if isinstance(variables, list):
-            deviced_variables = []
-            for variable in variables:
-                deviced_variables.append(variable.to(self.device))
-            return deviced_variables
-        else:
-            return variables.to(self.device)
-
     def get_source_sentence_ids(self, X):
-        """ The function tokenizes source sentence.
-
-        Parameters
-        ----------
-        X: string or tensor
-            X could be a text or image.
-
-        Returns
-        -------
-        tensor
-            Tensor of source sentence ids.
+        """ Implement in subclass. Returns a tensor of sentence ids.
         """
-        # TODO: batch source_sentence_ids
-        if self.model_agnostic:
-            # In model agnostic case, we first pass the input through the model and then tokenize output sentence
-            source_sentence = self.model(X)
-            source_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(source_sentence)])
-        else:
-            # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
-            source_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(X)])
-        source_sentence_ids = self.to_device(source_sentence_ids).to(torch.int64)
-        return source_sentence_ids
+        pass
 
     def get_logodds(self, logits):
-        """ Calculates log odds from logits.
-
-        This function passes the logits through softmax and then computes log odds for the target sentence ids.
-
-        Parameters
-        ----------
-        logits: numpy.array
-            An array of logits generated from the model.
-
-        Returns
-        -------
-        numpy.array
-            Computes log odds for corresponding target sentence ids.
+        """ Implement in subclass. Returns a np.array of logodds.
         """
-        logodds = []
-        # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
-        for i in range(0,logits.shape[1]-1):
-            probs = (np.exp(logits[0][i]).T / np.exp(logits[0][i]).sum(-1)).T
-            logit_dist = sp.special.logit(probs)
-            logodds.append(logit_dist[self.target_sentence_ids[0,i].item()])
-        return np.array(logodds)
+        pass
 
     def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
-        """ The function generates logits for transformer models.
-
-        It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
-
-        Parameters
-        ----------
-        source_sentence_ids: 2D tensor of shape (batch size, len of sequence)
-            Tokenized ids fed to the model.
-
-        target_sentence_ids: 2D tensor of shape (batch size, len of sequence)
-            Tokenized ids for which logits are generated using the decoder.
-
-        Returns
-        -------
-        numpy.array
-            Decoder output logits for target sentence ids.
+        """ Implement in subclass. Returns a np.array of logits.
         """
-        # set model to eval mode
-        self.similarity_model.eval()
-        # check if type of model architecture assigned in model config
-        if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \
-            and (hasattr(self.similarity_model.config, "is_decoder") and not self.similarity_model.config.is_decoder):
-            raise ValueError(
-                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
-            )
-        if self.similarity_model.config.is_encoder_decoder:
-            # assigning decoder start token id as it is needed for encoder decoder model generation
-            decoder_start_token_id = None
-            if hasattr(self.similarity_model.config, "decoder_start_token_id") and self.similarity_model.config.decoder_start_token_id is not None:
-                decoder_start_token_id = self.similarity_model.config.decoder_start_token_id
-            elif hasattr(self.similarity_model.config, "bos_token_id") and self.similarity_model.config.bos_token_id is not None:
-                decoder_start_token_id = self.similarity_model.config.bos_token_id
-            elif (hasattr(self.similarity_model.config, "decoder") and hasattr(self.similarity_model.config.decoder, "bos_token_id") and self.similarity_model.config.decoder.bos_token_id is not None):
-                decoder_start_token_id = self.similarity_model.config.decoder.bos_token_id
-            else:
-                raise ValueError(
-                    "No decoder_start_token_id or bos_token_id defined in config for encoder-decoder generation"
-                )
-            # concat decoder start token id to target sentence ids
-            target_sentence_start_id = (
-                torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
-                * decoder_start_token_id
-            )
-            target_sentence_ids = torch.cat((target_sentence_start_id,target_sentence_ids),dim=-1)
-            # generate outputs and logits
-            with torch.no_grad():
-                outputs = self.similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
-            logits=outputs.logits.detach().cpu().numpy().astype('float64')
-        else:
-            # check if source sentence ids are null then add bos token id to decoder
-            if source_sentence_ids.shape[1]==0:
-                if hasattr(self.similarity_model.config,"bos_token_id") and self.similarity_model.config.bos_token_id is not None:
-                    source_sentence_ids = (
-                        torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
-                        * self.similarity_model.config.bos_token_id
-                    )
-                else:
-                    raise ValueError(
-                    "Context ids (source sentence ids) are null and no bos token defined in model config"
-                )
-            # combine source and target sentence ids  to pass into decoder eg: in case of distillgpt2
-            combined_sentence_ids = torch.cat((source_sentence_ids,target_sentence_ids),dim=-1)
-            # generate outputs and logits
-            with torch.no_grad():
-                outputs = self.similarity_model(input_ids=combined_sentence_ids, return_dict=True)
-            # extract only logits corresponding to target sentence ids
-            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
-        del outputs
-        return logits
+        pass

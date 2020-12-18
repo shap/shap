@@ -7,7 +7,7 @@ try:
 except ImportError as e:
     record_import_error("torch", "Torch could not be imported!", e)
 
-class TextGeneration(Model):
+class PTTextGeneration(Model):
     def __init__(self, model, tokenizer=None, similarity_tokenizer=None, device='cpu'):
         """ Generates target sentence using model and returns tokenized ids.
 
@@ -28,7 +28,7 @@ class TextGeneration(Model):
         tensor
             A tensor of target sentence ids.
         """
-        super(TextGeneration, self).__init__(model)
+        super(PTTextGeneration, self).__init__(model)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device 
         self.tokenizer = tokenizer
