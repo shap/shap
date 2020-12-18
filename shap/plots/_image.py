@@ -136,6 +136,15 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
 
 
 def image_to_text(shap_values):
+    """ Plots SHAP values for image inputs with test outputs.
+
+    Parameters
+    ----------
+    shap_values : [numpy.array]
+        List of arrays of SHAP values. Each array has the shap (# width x height x channels x num output tokens). One array
+        for each sample
+
+    """
 
     if len(shap_values.values.shape) == 5:
         for i in range(shap_values.values.shape[0]):

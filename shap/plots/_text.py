@@ -14,6 +14,31 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
     
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
+
+    Parameters
+    ----------
+    shap_values : [numpy.array]
+        List of arrays of SHAP values. Each array has the shap values for a string(# input_tokens x output_tokens).
+
+    num_starting_labels : int
+        Number of tokens (sorted in decending order by corresponding SHAP values) that are uncovered in the initial view. When set to 0 all tokens
+        covered. 
+
+    group_threshold : float
+        The threshold used to group tokens based on interaction affects of SHAP values.
+
+    separator : string
+        The string seperator that joins tokens grouped by interation effects and unbroken string spans.
+
+    xmin : float
+        Minimum shap value bound. 
+
+    xmax : float
+        Maximum shap value bound.
+    
+    cmax : float
+        Maximum absolute shap value for sample. Used for scaling colors for input tokens. 
+
     """
     from IPython.core.display import display, HTML
 
