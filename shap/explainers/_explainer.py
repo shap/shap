@@ -73,7 +73,7 @@ class Explainer():
             else:
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
-            if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+            if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
                 # auto assign text infilling if model is a transformer model with lm head
                 self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
             else:
@@ -86,10 +86,10 @@ class Explainer():
             self.masker = masker
         
         # wrap self.masker and self.model for output text explanation algorithm
-        if safe_isinstance(self.model, "transformers.PreTrainedModel") and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel"))and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
             self.model = models.TeacherForcingLogits(self.model, self.masker.tokenizer)
             self.masker = maskers.FixedComposite(self.masker)
-        elif safe_isinstance(self.model, "shap.models.TeacherForcingLogits") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
+        elif (safe_isinstance(self.model, "shap.models.TeacherForcingLogits") or safe_isinstance(self.model, "shap.models.GenerateTopKLM")) and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
             self.masker = maskers.FixedComposite(self.masker)
 
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
