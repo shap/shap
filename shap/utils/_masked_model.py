@@ -88,7 +88,7 @@ class MaskedModel():
 
             # wrap the masked inputs if they are not already in a tuple
             if not isinstance(masked_inputs, tuple):
-                masked_inputs = (masked_inputs,)
+                masked_inputs = (masked_inputs.copy(),)
                 
             # masked_inputs = self.masker(mask, *self.args)
             num_mask_samples[i] = len(masked_inputs[0])
@@ -114,7 +114,7 @@ class MaskedModel():
 
             # subset the masked input to only the rows that vary
             if num_varying_rows[i] != num_mask_samples[i]:
-                if len(masked_inputs) == 1:
+                if len(self.args) == 1:
                     # _ = masked_inputs[varying_rows[-1]]
                     # _ = masked_inputs[varying_rows[-1]]
                     # _ = masked_inputs[varying_rows[-1]]
