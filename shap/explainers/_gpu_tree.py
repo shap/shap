@@ -11,13 +11,7 @@ except ImportError as e:
 class GPUTree(Tree):
     """
     Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
-    cuda available.
-
-    Currently only supports feature_perturbation="tree_path_dependent" with following models:
-    Xgboost - regression, binary classification
-    LightGBM - regression, binary classification
-    LightGBM - regression, binary classification
-    sklearn rf - regression
+    cuda available and 'CUDA_PATH' environment variable defined.
 
     Parameters
     ----------

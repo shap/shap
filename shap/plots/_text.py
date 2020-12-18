@@ -35,10 +35,20 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     # loop when we get multi-row inputs
     if len(shap_values.shape) == 2 and shap_values.output_names is None:
-        tokens, values, group_sizes = process_shap_values(shap_values[0], group_threshold, separator)
-        xmin, xmax, cmax = values_min_max(values, shap_values[0].base_values)
-        for i in range(1,len(shap_values)):
-            tokens, values, group_sizes = process_shap_values(shap_values[i], group_threshold, separator)
+        
+        xmin = 0
+        xmax = 0
+        cmax = 0
+
+        for i in range(0, len(shap_values)):
+
+            values, clustering = unpack_shap_explanation_contents(shap_values[i])
+            tokens, values, group_sizes = process_shap_values(shap_values[i].data, values, group_threshold, separator, clustering)
+
+            if i == 0:
+                xmin, xmax, cmax = values_min_max(values, shap_values[i].base_values)
+                continue
+
             xmin_i,xmax_i,cmax_i = values_min_max(values, shap_values[i].base_values)
             if xmin_i < xmin:
                 xmin = xmin_i
@@ -71,7 +81,8 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         cmax = cmax_new
     
 
-    tokens, values, group_sizes = process_shap_values(shap_values, group_threshold, separator)
+    values, clustering = unpack_shap_explanation_contents(shap_values)
+    tokens, values, group_sizes = process_shap_values(shap_values.data, values, group_threshold, separator, clustering)
     
     # build out HTML output one word one at a time
     top_inds = np.argsort(-np.abs(values))[:num_starting_labels]
@@ -131,15 +142,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     display(HTML(out))
 
-def process_shap_values(shap_values, group_threshold, separator):
-
-    # unpack the Explanation object
-    tokens = shap_values.data
-    clustering = getattr(shap_values, "clustering", None)
-    if getattr(shap_values, "hierarchical_values", None) is not None:
-        values = shap_values.hierarchical_values
-    else:
-        values = shap_values.values
+def process_shap_values(tokens, values, group_threshold, separator, clustering = None, return_meta_data  = False):
 
     # See if we got hierarchical input data. If we did then we need to reprocess the 
     # shap_values and tokens to get the groups we want to display
@@ -189,6 +192,11 @@ def process_shap_values(shap_values, group_threshold, separator):
         new_tokens = []
         new_values = []
         group_sizes = []
+
+        # meta data
+        token_id_to_node_id_mapping = np.zeros((M,))
+        collapsed_node_ids = []
+
         def merge_tokens(new_tokens, new_values, group_sizes, i):
             
             # return at the leaves
@@ -196,6 +204,11 @@ def process_shap_values(shap_values, group_threshold, separator):
                 new_tokens.append(tokens[i])
                 new_values.append(group_values[i])
                 group_sizes.append(1)
+
+                # meta data
+                collapsed_node_ids.append(i)
+                token_id_to_node_id_mapping[i] = i
+
             else:
 
                 # compute the dividend at internal nodes
@@ -208,6 +221,16 @@ def process_shap_values(shap_values, group_threshold, separator):
                     new_tokens.append(separator.join([tokens[g] for g in groups[li]]) + separator + separator.join([tokens[g] for g in groups[ri]]))
                     new_values.append(group_values[i])
                     group_sizes.append(len(groups[i]))
+
+                    # setting collapsed node ids and token id to current node id mapping metadata
+
+                    collapsed_node_ids.append(i)
+                    for g in groups[li]:
+                        token_id_to_node_id_mapping[g] = i
+                    
+                    for g in groups[ri]:
+                        token_id_to_node_id_mapping[g] = i
+                    
                 # if interaction level is not too high we recurse
                 else:
                     merge_tokens(new_tokens, new_values, group_sizes, li)
@@ -218,11 +241,21 @@ def process_shap_values(shap_values, group_threshold, separator):
         tokens = np.array(new_tokens)
         values = np.array(new_values)
         group_sizes = np.array(group_sizes)
+
+        # meta data
+        token_id_to_node_id_mapping = np.array(token_id_to_node_id_mapping)
+        collapsed_node_ids = np.array(collapsed_node_ids)
+
         M = len(tokens) 
     else:
         group_sizes = np.ones(M)
+        token_id_to_node_id_mapping = np.arange(M)
+        collapsed_node_ids = np.arange(M)
 
-    return tokens, values, group_sizes
+    if return_meta_data:
+        return tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids
+    else:
+        return tokens, values, group_sizes
 
 def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax):
     
@@ -665,15 +698,30 @@ def saliency_plot(shap_values):
     
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
     
+    unpacked_values, clustering = unpack_shap_explanation_contents(shap_values)
+    tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(shap_values.data, unpacked_values[:,0], 1, '', clustering, True)
+    
+    
+    def compress_shap_matrix(shap_matrix,group_sizes):
+        compressed_matrix = np.zeros((group_sizes.shape[0],shap_matrix.shape[1]))
+        counter = 0
+        for index in range(len(group_sizes)):
+            compressed_matrix[index,:] = np.sum(shap_matrix[counter:counter+group_sizes[index],:],axis=0)
+            counter+=group_sizes[index]
+
+        return compressed_matrix
+    
+    compressed_shap_matrix = compress_shap_matrix(shap_values.values,group_sizes)
+    
     # generate background colors of saliency plot
     
     def get_colors(shap_values):
         input_colors = []
-        for row_index in range(shap_values.values.shape[0]):
+        cmax = max(abs(compressed_shap_matrix.min()), abs(compressed_shap_matrix.max()))
+        for row_index in range(compressed_shap_matrix.shape[0]):
             input_colors_row = []
-            for col_index in range(shap_values.values.shape[1]):
-                cmax = max(abs(shap_values.values[:,col_index].min()), abs(shap_values.values[:,col_index].max()))
-                scaled_value = 0.5 + 0.5 * shap_values.values[row_index,col_index] / cmax
+            for col_index in range(compressed_shap_matrix.shape[1]):
+                scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index,col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
                 color = 'rgba'+str((color[0]*255, color[1]*255, color[2]*255, color[3]))
                 input_colors_row.append(color)
@@ -681,8 +729,6 @@ def saliency_plot(shap_values):
         
         return input_colors
     
-    
-    model_input = shap_values.data
     model_output = shap_values.output_names
     
     input_colors = get_colors(shap_values)
@@ -692,15 +738,16 @@ def saliency_plot(shap_values):
     # add top row containing input tokens
     out += '<tr>'
     out += '<th></th>'
-    for j in range(model_input.shape[0]):
-        out += '<th>' + model_input[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
+
+    for j in range(compressed_shap_matrix.shape[0]):
+        out += '<th>' + tokens[j].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
     out += '</tr>'
     
-    for row_index in range(model_output.shape[0]):
+    for row_index in range(compressed_shap_matrix.shape[1]):
         out += '<tr>'
         out += '<th>' + model_output[row_index].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') + '</th>'
-        for col_index in range(model_input.shape[0]):
-            out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(shap_values.values[col_index][row_index],3)) + '</th>'
+        for col_index in range(compressed_shap_matrix.shape[0]):
+            out += '<th style="background:' + input_colors[col_index][row_index]+ '">' + str(round(compressed_shap_matrix[col_index][row_index],3)) + '</th>'
         out += '</tr>'
             
     out += '</table>'
@@ -721,91 +768,178 @@ def saliency_plot(shap_values):
 
 def heatmap(shap_values):
     
+    # constants
+
+    TREE_NODE_KEY_TOKENS = 'tokens'
+    TREE_NODE_KEY_CHILDREN = 'children'
+
+
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
-    
+
     def get_color(shap_value,cmax):
         scaled_value = 0.5 + 0.5 * shap_value / cmax
         color = colors.red_transparent_blue(scaled_value)
         color = (color[0]*255, color[1]*255, color[2]*255, color[3])
         return color
     
-    
+    def process_text_to_text_shap_values(shap_values):
+        processed_values = []
+        
+        unpacked_values, clustering = unpack_shap_explanation_contents(shap_values)
+        max_val = 0
+
+        for index,output_token in enumerate(shap_values.output_names):
+            tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(shap_values.data, unpacked_values[:,index], 1, '', clustering, True)
+            processed_value = {
+                'tokens':tokens,
+                'values':values,
+                'group_sizes':group_sizes,
+                'token_id_to_node_id_mapping':token_id_to_node_id_mapping,
+                'collapsed_node_ids':collapsed_node_ids
+            }
+
+            processed_values.append(processed_value)
+            max_val = max(max_val,np.max(values))
+        
+        return processed_values,max_val
+
     # unpack input tokens and output tokens
     model_input = shap_values.data
     model_output = shap_values.output_names
+
+    processed_values, max_val = process_text_to_text_shap_values(shap_values)
     
-    # generate dictionary containing precomputed backgroud colors and shap values which are addresable by html token ids
+    # generate dictionary containing precomputed background colors and shap values which are addressable by html token ids
     colors_dict = {}
     shap_values_dict = {}
+    token_id_to_node_id_mapping = {}
+    cmax = max(abs(shap_values.values.min()), abs(shap_values.values.max()),max_val)
     
-    for col_index in range(model_output.shape[0]):
-        color_values = {}
-        cmax = max(abs(shap_values.values[:,col_index].min()), abs(shap_values.values[:,col_index].max()))
-        for row_index in range(model_input.shape[0]):
-            color_values[uuid+'_flat_token_input_'+str(row_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
-        colors_dict[uuid+'_flat_token_output_'+str(col_index)] = color_values
-    
+    # input token -> output token color and label value mapping
     
     for row_index in range(model_input.shape[0]):
         color_values = {}
-        cmax = max(abs(shap_values.values[row_index,:].min()), abs(shap_values.values[row_index,:].max()))
-        for col_index in range(model_output.shape[0]):
-            color_values[uuid+'_flat_token_output_'+str(col_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
-        colors_dict[uuid+'_flat_token_input_'+str(row_index)] = color_values
+        shap_values_list = {}
         
-    for col_index in range(model_output.shape[0]):
-        shap_values_list = {}
-        for row_index in range(model_input.shape[0]):
-            shap_values_list[uuid+'_flat_value_label_input_'+str(row_index)] = shap_values.values[row_index][col_index]
-        shap_values_dict[uuid+'_flat_token_output_'+str(col_index)] = shap_values_list
-    
-    for row_index in range(model_input.shape[0]):
-        shap_values_list = {}
         for col_index in range(model_output.shape[0]):
-            shap_values_list[uuid+'_flat_value_label_output_'+str(col_index)] = shap_values.values[row_index][col_index]
-        shap_values_dict[uuid+'_flat_token_input_'+str(row_index)] = shap_values_list
+            color_values[uuid+'_output_flat_token_'+str(col_index)] = 'rgba' + str(get_color(shap_values.values[row_index][col_index],cmax))
+            shap_values_list[uuid+'_output_flat_value_label_'+str(col_index)] = round(shap_values.values[row_index][col_index],3)
+        
+        colors_dict[f'{uuid}_input_node_{row_index}_content'] = color_values
+        shap_values_dict[f'{uuid}_input_node_{row_index}_content'] = shap_values_list
     
-    # convert python disctionary into json to be inserted into the runtime javascript environment
+    # output token -> input token color and label value mapping
+    
+    for col_index in range(model_output.shape[0]):
+        color_values = {}
+        shap_values_list = {}
+        
+        for row_index in range(processed_values[col_index]['collapsed_node_ids'].shape[0]):
+            color_values[uuid+'_input_node_'+str(processed_values[col_index]['collapsed_node_ids'][row_index])+'_content'] = 'rgba' + str(get_color(processed_values[col_index]['values'][row_index],cmax)) 
+            shap_label_value_str = str(round(processed_values[col_index]['values'][row_index],3))
+            if processed_values[col_index]['group_sizes'][row_index] > 1:
+                shap_label_value_str += ('/' + str(processed_values[col_index]['group_sizes'][row_index]))
+            
+            shap_values_list[uuid+'_input_node_'+str(processed_values[col_index]['collapsed_node_ids'][row_index])+'_label'] = shap_label_value_str
+                
+            
+        colors_dict[uuid+'_output_flat_token_'+str(col_index)] = color_values
+        shap_values_dict[uuid+'_output_flat_token_'+str(col_index)] = shap_values_list
+
+        token_id_to_node_id_mapping_dict = {}
+        
+        for index,node_id in enumerate(processed_values[col_index]['token_id_to_node_id_mapping'].tolist()):
+            token_id_to_node_id_mapping_dict[f'{uuid}_input_node_{index}_content'] = f'{uuid}_input_node_{int(node_id)}_content'
+        
+        token_id_to_node_id_mapping[uuid+'_output_flat_token_'+str(col_index)] = token_id_to_node_id_mapping_dict
+    
+    
+    # convert python dictionary into json to be inserted into the runtime javascript environment
     colors_json = json.dumps(colors_dict)
     shap_values_json = json.dumps(shap_values_dict)
-    
+    token_id_to_node_id_mapping_json = json.dumps(token_id_to_node_id_mapping)
     
     javascript_values = "<script> " \
             + f"colors_{uuid} = " + colors_json + "\n" \
             + f" shap_values_{uuid} = " + shap_values_json + "\n"\
+            + f" token_id_to_node_id_mapping_{uuid} = " + token_id_to_node_id_mapping_json + "\n"\
             +  "</script> \n "
     
+    def generate_tree(shap_values):
+        num_tokens = shap_values.data.shape[0]
+        token_list = {}
+
+        for index in range(num_tokens):
+            node_content = {}
+            node_content[TREE_NODE_KEY_TOKENS] = shap_values.data[index]
+            node_content[TREE_NODE_KEY_CHILDREN] = {}
+            token_list[str(index)] = node_content
+
+        counter = num_tokens
+        for pair in shap_values.clustering:
+            first_node = str(int(pair[0]))
+            second_node = str(int(pair[1]))
+
+            new_node_content = {}
+            new_node_content[TREE_NODE_KEY_CHILDREN] = {
+                first_node:token_list[first_node],
+                second_node:token_list[second_node]
+            }
+
+            token_list[str(counter)] = new_node_content
+            counter += 1
+
+            del token_list[first_node]
+            del token_list[second_node]
+
+        return token_list
+    
+    tree = generate_tree(shap_values)
     
     # generates the input token html elements
     # each element contains the label value (initially hidden) and the token text
+    
     input_text_html = ''
 
-    for i in range(model_input.shape[0]):
-        input_text_html += "<div style='display:inline; text-align:center;'>" \
-                + f"<div id='{uuid}_flat_value_label_input_"+ str(i) +"'" \
-                + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
-                + "</div>" \
-                + f"<div id='{uuid}_flat_token_input_"+ str(i) +"'" \
-                + "style='display: inline; background:white; border-radius: 3px; padding: 0px;cursor: default;'" \
-                + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
-                + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
-                + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
-                + ">" \
-                + model_input[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
-                + " </div>" \
-                + "</div>"
-        
+    def populate_input_tree(input_index,token_list_subtree,input_text_html):
+        content = token_list_subtree[input_index]
+        input_text_html += f'<div id="{uuid}_input_node_{input_index}_container" style="display:inline;text-align:center">'
+
+        input_text_html += f'<div id="{uuid}_input_node_{input_index}_label" style="display:none; padding-top: 0px; font-size:12px;">'
+
+        input_text_html +='</div>'
+
+        if token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN]:
+            input_text_html += f'<div id="{uuid}_input_node_{input_index}_content" style="display:inline;">'
+            for child_index,child_content in token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN].items():
+                input_text_html = populate_input_tree(child_index,token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN],input_text_html)
+            input_text_html +='</div>'
+        else:
+            input_text_html += f'<div id="{uuid}_input_node_{input_index}_content"' \
+                        + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'" \
+                        + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
+                        + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
+                        + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
+                        + ">"
+            input_text_html += content[TREE_NODE_KEY_TOKENS].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','')
+            input_text_html +='</div>'
+
+        input_text_html +='</div>'
+
+        return input_text_html
+
+    input_text_html = populate_input_tree(list(tree.keys())[0],tree,input_text_html)
         
     # generates the output token html elements
     output_text_html = ''
 
     for i in range(model_output.shape[0]):
         output_text_html += "<div style='display:inline; text-align:center;'>" \
-                + f"<div id='{uuid}_flat_value_label_output_"+ str(i) +"'" \
+                + f"<div id='{uuid}_output_flat_value_label_"+ str(i) +"'" \
                 + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
                 + "</div>" \
-                + f"<div id='{uuid}_flat_token_output_"+ str(i) +"'" \
-                + "style='display: inline; background:white; border-radius: 3px; padding: 0px;cursor: default;'" \
+                + f"<div id='{uuid}_output_flat_token_"+ str(i) +"'" \
+                + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'" \
                 + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
                 + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
                 + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
@@ -821,7 +955,7 @@ def heatmap(shap_values):
               <span style="font-size: 20px;"> Input/Output - Heatmap </span>
             </div>
             <div style="display:inline;float:right">
-              Alignment :
+              Layout :
               <select name="alignment" id="{uuid}_alignment" onchange="selectAlignment_{uuid}(this)">
                 <option value="left-right" selected="selected">Left/Right</option>
                 <option value="top-bottom">Top/Bottom</option>
@@ -865,27 +999,54 @@ def heatmap(shap_values):
             
             function onMouseHoverFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
-                    document.getElementById(id).style.backgroundColor  = "grey";
-                    document.getElementById(id).style.backgroundColor  = "grey";
                     setBackgroundColors_{uuid}(id);
+                    document.getElementById(id).style.backgroundColor  = "grey";
                 }}
+                
+                if (getIdSide_{uuid}(id) === 'input' && getIdSide_{uuid}({uuid}_heatmap_flat_state) === 'output'){{
+                
+                    label_content_id = token_id_to_node_id_mapping_{uuid}[{uuid}_heatmap_flat_state][id];
+                    
+                    if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none'){{
+                        document.getElementById(label_content_id).style.textShadow = "0px 0px 1px #000000";
+                    }}
+                    
+                }}
+                
             }}
             
             function onMouseOutFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
-                    document.getElementById(id).style.backgroundColor  = "white";
                     cleanValuesAndColors_{uuid}(id);
+                    document.getElementById(id).style.backgroundColor  = "transparent";
                 }}
+                
+                if (getIdSide_{uuid}(id) === 'input' && getIdSide_{uuid}({uuid}_heatmap_flat_state) === 'output'){{
+                
+                    label_content_id = token_id_to_node_id_mapping_{uuid}[{uuid}_heatmap_flat_state][id];
+                    
+                    if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none'){{
+                        document.getElementById(label_content_id).style.textShadow = "inherit";
+                    }}
+                    
+                }}
+                
             }}
 
             function onMouseClickFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === id) {{
-                    document.getElementById(id).style.backgroundColor  = "white";
-                    cleanValuesAndColors_{uuid}();
+                    
+                    // If the clicked token was already selected
+                    
+                    document.getElementById(id).style.backgroundColor  = "transparent";
+                    cleanValuesAndColors_{uuid}(id);
                     {uuid}_heatmap_flat_state = null;
                 }}
                 else {{
                     if ({uuid}_heatmap_flat_state === null) {{
+                    
+                        // No token previously selected, new token clicked on
+                    
                         cleanValuesAndColors_{uuid}(id)
                         {uuid}_heatmap_flat_state = id;
                         document.getElementById(id).style.backgroundColor  = "grey";
@@ -894,22 +1055,44 @@ def heatmap(shap_values):
                     }}
                     else {{
                         if (getIdSide_{uuid}({uuid}_heatmap_flat_state) === getIdSide_{uuid}(id)) {{
-                            document.getElementById({uuid}_heatmap_flat_state).style.backgroundColor  = "white";
-                            cleanValuesAndColors_{uuid}(id)
+                        
+                            // User clicked a token on the same side as the currently selected token
+                            
+                            cleanValuesAndColors_{uuid}({uuid}_heatmap_flat_state)
+                            document.getElementById({uuid}_heatmap_flat_state).style.backgroundColor  = "transparent";
                             {uuid}_heatmap_flat_state = id;
                             document.getElementById(id).style.backgroundColor  = "grey";
                             setLabelValues_{uuid}(id);
                             setBackgroundColors_{uuid}(id);
                         }}
                         else{{
-                            if (document.getElementById(id).previousElementSibling.style.display == 'none') {{
-                                document.getElementById(id).previousElementSibling.style.display = 'block';
-                                document.getElementById(id).parentNode.style.display = 'inline-block';
-                              }}
+                            
+                            if (getIdSide_{uuid}(id) === 'input') {{
+                                label_content_id = token_id_to_node_id_mapping_{uuid}[{uuid}_heatmap_flat_state][id];
+                                
+                                if (document.getElementById(label_content_id).previousElementSibling.style.display == 'none') {{
+                                    document.getElementById(label_content_id).previousElementSibling.style.display = 'block';
+                                    document.getElementById(label_content_id).parentNode.style.display = 'inline-block';
+                                    document.getElementById(label_content_id).style.textShadow = "0px 0px 1px #000000";
+                                  }}
+                                else {{
+                                    document.getElementById(label_content_id).previousElementSibling.style.display = 'none';
+                                    document.getElementById(label_content_id).parentNode.style.display = 'inline';
+                                    document.getElementById(label_content_id).style.textShadow  = "inherit"; 
+                                  }}
+                                
+                            }}
                             else {{
-                                document.getElementById(id).previousElementSibling.style.display = 'none';
-                                document.getElementById(id).parentNode.style.display = 'inline';
-                              }}
+                                if (document.getElementById(id).previousElementSibling.style.display == 'none') {{
+                                    document.getElementById(id).previousElementSibling.style.display = 'block';
+                                    document.getElementById(id).parentNode.style.display = 'inline-block';
+                                  }}
+                                else {{
+                                    document.getElementById(id).previousElementSibling.style.display = 'none';
+                                    document.getElementById(id).parentNode.style.display = 'inline';
+                                  }}
+                            }}
+                        
                         }}
                     }}
                 
@@ -919,6 +1102,7 @@ def heatmap(shap_values):
             function setLabelValues_{uuid}(id) {{
                 for(const token in shap_values_{uuid}[id]){{
                     document.getElementById(token).innerHTML = shap_values_{uuid}[id][token];
+                    document.getElementById(token).nextElementSibling.title = 'SHAP Value : ' + shap_values_{uuid}[id][token];
                 }}
             }}
 
@@ -931,9 +1115,13 @@ def heatmap(shap_values):
             function cleanValuesAndColors_{uuid}(id) {{
                 for(const token in shap_values_{uuid}[id]){{
                     document.getElementById(token).innerHTML = "";
+                    document.getElementById(token).nextElementSibling.title = "";
                 }}
                  for(const token in colors_{uuid}[id]){{
-                    document.getElementById(token).style.backgroundColor  = "white";
+                    document.getElementById(token).style.backgroundColor  = "transparent";
+                    document.getElementById(token).previousElementSibling.style.display = 'none';
+                    document.getElementById(token).parentNode.style.display = 'inline';
+                    document.getElementById(token).style.textShadow  = "inherit"; 
                 }}
             }}
             
@@ -941,9 +1129,16 @@ def heatmap(shap_values):
                 if (id === null) {{
                     return 'null'
                 }}
-                return id.split("_")[3];
+                return id.split("_")[1];
             }}
         </script>
     """
     
     return heatmap_html + heatmap_javascript + javascript_values
+
+
+def unpack_shap_explanation_contents(shap_values):
+    values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    clustering = getattr(shap_values, "clustering", None)
+
+    return values, clustering
