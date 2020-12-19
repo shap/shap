@@ -8,31 +8,24 @@ from sklearn.model_selection import train_test_split
 from shap.utils import safe_isinstance, MaskedModel
 from . import perturbation
 
-def update(f, X, y, explainer, masker, sort_order, perturbation_method, scores):
+def update(model, attributions, X, y, masker, sort_order, perturbation_method, scores):
     metric = perturbation_method + ' ' + sort_order
-    sp = perturbation.SequentialPerturbation(f, masker, sort_order, perturbation_method)
-    x, y, auc = sp.score(explainer, X, y=y)
+    sp = perturbation.SequentialPerturbation(model, masker, sort_order, perturbation_method)
+    xs, ys, auc = sp.model_score(attributions, X, y=y)
     scores['metrics'].append(metric)
-    scores['values'][metric] = [x, y, auc] 
+    scores['values'][metric] = [xs, ys, auc] 
 
-def get_benchmark(f, X, y, explainer, masker, metrics, exp_num=1, *args):
+def get_benchmark(model, attributions, X, y, masker, metrics):
     # convert dataframes
     if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
         X = X.values
     if safe_isinstance(masker, "pandas.core.series.Series") or safe_isinstance(masker, "pandas.core.frame.DataFrame"):
         masker = masker.values
-    
-    # in case the explainer doesn't have a name
-    try: 
-        name = explainer.name 
-    except: 
-        name = 'explainer' + str(exp_num) 
-        exp_num += 1 
 
     # record scores per metric 
-    scores = {'name': name, 'metrics': list(), 'values': dict()}
+    scores = {'metrics': list(), 'values': dict()}
     for sort_order, perturbation_method in list(it.product(metrics['sort_order'], metrics['perturbation'])):
-        update(f, X, y, explainer, masker, sort_order, perturbation_method, scores)
+        update(model, attributions, X, y, masker, sort_order, perturbation_method, scores)
 
     return scores 
 
@@ -61,14 +54,13 @@ def trend_plot(benchmarks):
                 x, y, auc = scores['values'][metric]
                 plt.plot(x, y, label='{} - {}'.format(round(auc, 3), explainer))
 
-        metric_passive = ''
         if 'keep' in metric: 
-            metric_passive = 'Kept'
+            xlabel = 'Percent Unmasked'
         if 'remove' in metric:
-            metric_passive = 'Removed'
+            xlabel = 'Percent Masked'
 
-        plt.ylabel('Mean Model Output')
-        plt.xlabel('Max Fraction of Features {}'.format(metric_passive))
+        plt.ylabel('Model Output')
+        plt.xlabel(xlabel)
         plt.title(metric)
         plt.legend()
         plt.show()

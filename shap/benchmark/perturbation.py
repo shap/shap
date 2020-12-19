@@ -294,4 +294,7 @@ class SequentialPerturbation():
     def plot(self, xs, ys, auc):
         pl.plot(xs, ys, label="AUC %0.4f" % auc)
         pl.legend()
+        xlabel = "Percent Unmasked" if self.perturbation == "keep" else "Percent Masked"
+        pl.xlabel(xlabel)
+        pl.ylabel("Model Output")
         pl.show()
