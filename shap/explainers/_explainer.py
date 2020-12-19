@@ -31,8 +31,6 @@ class Explainer():
             It takes input in the same form as the model, but for just a single sample with a binary
             mask, then returns an iterable of masked samples. These
             masked samples will then be evaluated using the model function and the outputs averaged.
-            slice()
-            model(*masker(*args, mask=mask)).mean()
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. Domain specific masking
             functions are available in shap such as shap.ImageMasker for images and shap.TokenMasker
