@@ -1,5 +1,6 @@
 import numpy as np
 from ._masker import Masker
+import pickle
 
 class FixedComposite(Masker):
     def __init__(self, masker):
@@ -35,3 +36,21 @@ class FixedComposite(Masker):
             masked_X = (masked_X,)
         return masked_X + wrapped_args
     
+    def save(self, out_file, *args):
+        super(FixedComposite, self).save(out_file)
+        pickle.dump(type(self.masker), out_file)
+        self.masker.save(out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        masker_type = pickle.load(in_file)
+        if not masker_type == cls:
+            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
+        return FixedComposite._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        masker_type = pickle.load(in_file)
+        masker = masker_type.load(in_file)
+        fixedcomposite_masker = FixedComposite(masker)
+        return fixedcomposite_masker
