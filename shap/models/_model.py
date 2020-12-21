@@ -1,4 +1,5 @@
 import pickle
+import cloudpickle
 
 class Model():
     def __init__(self, model=None):
@@ -14,7 +15,7 @@ class Model():
     
     def save(self, out_file, *args):
         pickle.dump(type(self), out_file)
-        pickle.dump(self.model, out_file) # TODO change serialization methods based on model
+        cloudpickle.dump(self.model, out_file)
     
     @classmethod
     def load(cls, in_file):
@@ -23,4 +24,4 @@ class Model():
             print("Warning: model was not found in saved file, please set model before using explainer.")
             return None
             
-        return pickle.load(in_file)
+        return cloudpickle.load(in_file)
