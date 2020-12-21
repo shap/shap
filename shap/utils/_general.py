@@ -276,6 +276,9 @@ class OpChain():
         return new_self
 
     def __getattr__(self, name):
+        # Don't chain special attributes
+        if name.startswith("__") and name.endswith("__"):
+            return None
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops.append([name, None, None])
