@@ -358,13 +358,13 @@ class Explainer():
         return expanded_main_effects
 
     def save(self, out_file):
-        """ Serializes the type of subclass of explainer used, this will be used during deserialization
+        """ Serializes the type of subclass of explainer used, this will be used during deserialization.
         """
         pickle.dump(type(self), out_file)
     
     @classmethod
     def load(cls, in_file, model_loader = None, masker_loader = None):
-        """ Deserializes the explainer subtype, and calls respective load function
+        """ Deserializes the explainer subtype, and calls respective load function.
         """
         explainer_type = pickle.load(in_file)
         return explainer_type._load(in_file, model_loader, masker_loader)
