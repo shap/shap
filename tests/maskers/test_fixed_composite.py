@@ -25,21 +25,22 @@ def test_serialization_fixedcomposite_masker():
     import shap
     import numpy as np
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import tempfile
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=False)
     underlying_masker = shap.maskers.Text(tokenizer)
     original_masker = shap.maskers.FixedComposite(underlying_masker)
 
-    out_file = open(r'test_serialization_fixedcomposite_masker.bin', "wb")
-    original_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    original_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_fixedcomposite_masker.bin', "rb")
-    new_masker = shap.maskers.FixedComposite.load(in_file)
-    in_file.close()
+    new_masker = shap.maskers.FixedComposite.load(temp_serialization_file)
 
+    temp_serialization_file.close()
 
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])

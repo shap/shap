@@ -1,6 +1,7 @@
 def test_serialization_image_masker_inpaint_telea():
     import shap
     import numpy as np
+    import tempfile
 
     test_image_height = 500
     test_image_width = 500
@@ -9,16 +10,17 @@ def test_serialization_image_masker_inpaint_telea():
     # initialize image masker
     original_image_masker = shap.maskers.Image("inpaint_telea", test_shape)
 
-    # serialize independent masker
-    out_file = open(r'test_serialization_image_masker.bin', "wb")
-    original_image_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    # serialize independent masker
+    original_image_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_image_masker.bin', "rb")
-    new_image_masker = shap.maskers.Image.load(in_file)
-    in_file.close()
+    new_image_masker = shap.maskers.Image.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
     mask = np.ones((test_image_height, test_image_width, 3))
     mask = mask.astype(int)
@@ -31,6 +33,7 @@ def test_serialization_image_masker_inpaint_telea():
 def test_serialization_image_masker_inpaint_ns():
     import shap
     import numpy as np
+    import tempfile
 
     test_image_height = 500
     test_image_width = 500
@@ -39,16 +42,17 @@ def test_serialization_image_masker_inpaint_ns():
     # initialize image masker
     original_image_masker = shap.maskers.Image("inpaint_ns", test_shape)
 
-    # serialize independent masker
-    out_file = open(r'test_serialization_image_masker.bin', "wb")
-    original_image_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    # serialize independent masker
+    original_image_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_image_masker.bin', "rb")
-    new_image_masker = shap.maskers.Image.load(in_file)
-    in_file.close()
+    new_image_masker = shap.maskers.Image.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
     mask = np.ones((test_image_height, test_image_width, 3))
     mask = mask.astype(int)
@@ -61,6 +65,7 @@ def test_serialization_image_masker_inpaint_ns():
 def test_serialization_image_masker_blur():
     import shap
     import numpy as np
+    import tempfile
 
     test_image_height = 500
     test_image_width = 500
@@ -69,16 +74,17 @@ def test_serialization_image_masker_blur():
     # initialize image masker
     original_image_masker = shap.maskers.Image("blur(10,10)", test_shape)
 
-    # serialize independent masker
-    out_file = open(r'test_serialization_image_masker.bin', "wb")
-    original_image_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    # serialize independent masker
+    original_image_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_image_masker.bin', "rb")
-    new_image_masker = shap.maskers.Image.load(in_file)
-    in_file.close()
+    new_image_masker = shap.maskers.Image.load(temp_serialization_file)
+    
+    temp_serialization_file.close()
 
     mask = np.ones((test_image_height, test_image_width, 3))
     mask = mask.astype(int)
@@ -91,6 +97,7 @@ def test_serialization_image_masker_blur():
 def test_serialization_image_masker_mask():
     import shap
     import numpy as np
+    import tempfile
 
     test_image_height = 500
     test_image_width = 500
@@ -100,16 +107,17 @@ def test_serialization_image_masker_mask():
     # initialize image masker
     original_image_masker = shap.maskers.Image(test_mask, test_shape)
 
-    # serialize independent masker
-    out_file = open(r'test_serialization_image_masker.bin', "wb")
-    original_image_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    # serialize independent masker
+    original_image_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_image_masker.bin', "rb")
-    new_image_masker = shap.maskers.Image.load(in_file)
-    in_file.close()
+    new_image_masker = shap.maskers.Image.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
     mask = np.ones((test_image_height, test_image_width, 3))
     mask = mask.astype(int)

@@ -176,19 +176,22 @@ def test_serialization_text_masker():
     import shap
     import numpy as np
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import tempfile
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=False)
     original_masker = shap.maskers.Text(tokenizer)
 
-    out_file = open(r'test_serialization_text_masker.bin', "wb")
-    original_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
+
+    original_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
 
     # deserialize masker
-    in_file = open(r'test_serialization_text_masker.bin', "rb")
-    new_masker = shap.maskers.Text.load(in_file)
-    in_file.close()
+    new_masker = shap.maskers.Text.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
 
     test_text = "I ate a Cannoli"
@@ -203,19 +206,21 @@ def test_serialization_text_masker_custom_mask():
     import shap
     import numpy as np
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import tempfile
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, mask_token = '[CUSTOM-MASK]')
 
-    out_file = open(r'test_serialization_text_masker.bin', "wb")
-    original_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    original_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_text_masker.bin', "rb")
-    new_masker = shap.maskers.Text.load(in_file)
-    in_file.close()
+    new_masker = shap.maskers.Text.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
 
     test_text = "I ate a Cannoli"
@@ -230,19 +235,21 @@ def test_serialization_text_masker_collapse_mask_token():
     import shap
     import numpy as np
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import tempfile
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, collapse_mask_token=True)
 
-    out_file = open(r'test_serialization_text_masker.bin', "wb")
-    original_masker.save(out_file)
-    out_file.close()
+    temp_serialization_file = tempfile.TemporaryFile()
 
+    original_masker.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # deserialize masker
-    in_file = open(r'test_serialization_text_masker.bin', "rb")
-    new_masker = shap.maskers.Text.load(in_file)
-    in_file.close()
+    new_masker = shap.maskers.Text.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
 
     test_text = "I ate a Cannoli"
