@@ -66,7 +66,7 @@ class Explainer():
             downstream plots.
         """
 
-        self.model = Model(model)
+        self.model = model
         self.output_names = output_names
         self.feature_names = feature_names
         
