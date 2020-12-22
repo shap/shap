@@ -3,10 +3,13 @@ from .. import links
 from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
+from ..models import Model
 from .._explanation import Explanation
 import numpy as np
 import scipy as sp
 import copy
+import pickle
+from .. import explainers
 
 
 class Explainer():
@@ -31,8 +34,6 @@ class Explainer():
             It takes input in the same form as the model, but for just a single sample with a binary
             mask, then returns an iterable of masked samples. These
             masked samples will then be evaluated using the model function and the outputs averaged.
-            slice()
-            model(*masker(*args, mask=mask)).mean()
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. Domain specific masking
             functions are available in shap such as shap.ImageMasker for images and shap.TokenMasker
@@ -354,6 +355,17 @@ class Explainer():
         
         return expanded_main_effects
 
+    def save(self, out_file):
+        """ Serializes the type of subclass of explainer used, this will be used during deserialization.
+        """
+        pickle.dump(type(self), out_file)
+    
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        """ Deserializes the explainer subtype, and calls respective load function.
+        """
+        explainer_type = pickle.load(in_file)
+        return explainer_type._load(in_file, model_loader, masker_loader)
         
 def pack_values(values):
     """ Used the clean up arrays before putting them into an Explanation object.

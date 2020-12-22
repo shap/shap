@@ -614,7 +614,6 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             chigh = np.nanmax(cv.astype(np.float))
             bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
-            clow = chigh = None # there are not needed now since they are encoded in the color norm
 
     # optionally add jitter to feature values
     if x_jitter > 0:

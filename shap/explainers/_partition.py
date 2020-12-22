@@ -62,11 +62,11 @@ class Partition(Explainer):
         
         Examples
         --------
-        See :ref:`Partition Explainer Examples <partition_explainer_examples>`
+        See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
         """
 
         super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
-
+        
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
         
         # convert dataframes

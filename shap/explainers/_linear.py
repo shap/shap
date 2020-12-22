@@ -45,7 +45,7 @@ class Linear(Explainer):
 
     Examples
     --------
-    See :ref:`Linear Explainer Examples <linear_explainer_examples>`
+    See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Linear.html>`_
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):

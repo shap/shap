@@ -110,7 +110,12 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = [
+    '_build', 'Thumbs.db', '.DS_Store',
+    'example_notebooks/tabular_examples/tree_based_models/tree_shap_paper',
+    'user_studies',
+    'local'
+]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.

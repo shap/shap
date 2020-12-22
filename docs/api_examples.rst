@@ -1,3 +1,5 @@
+.. currentmodule:: shap
+
 .. _api_examples:
 
 API Examples

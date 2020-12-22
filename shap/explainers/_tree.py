@@ -43,51 +43,53 @@ feature_perturbation_codes = {
 }
 
 class Tree(Explainer):
-    """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
+    """ Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
     Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles of trees,
     under several different possible assumptions about feature dependence. It depends on fast C++
     implementations either inside an externel model package or in the local compiled C extention.
-
-    Parameters
-    ----------
-    model : model object
-        The tree based machine learning model that we want to explain. XGBoost, LightGBM, CatBoost, Pyspark
-        and most tree-based scikit-learn models are supported.
-
-    data : numpy.array or pandas.DataFrame
-        The background dataset to use for integrating out features. This argument is optional when
-        feature_perturbation="tree_path_dependent", since in that case we can use the number of training
-        samples that went down each tree path as our background dataset (this is recorded in the model object).
-
-    feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
-        Since SHAP values rely on conditional expectations we need to decide how to handle correlated
-        (or otherwise dependent) input features. The "interventional" approach breaks the dependencies between
-        features according to the rules dictated by casual inference (Janzing et al. 2019). Note that the
-        "interventional" option requires a background dataset and its runtime scales linearly with the size
-        of the background dataset you use. Anywhere from 100 to 1000 random background samples are good
-        sizes to use. The "tree_path_dependent" approach is to just follow the trees and use the number
-        of training examples that went down each leaf to represent the background distribution. This approach
-        does not require a background dataset and so is used by default when no background dataset is provided.
-
-    model_output : "raw", "probability", "log_loss", or model method name
-        What output of the model should be explained. If "raw" then we explain the raw output of the
-        trees, which varies by model. For regression models "raw" is the standard output, for binary
-        classification in XGBoost this is the log odds ratio. If model_output is the name of a supported
-        prediction method on the model object then we explain the output of that model method name.
-        For example model_output="predict_proba" explains the result of calling model.predict_proba.
-        If "probability" then we explain the output of the model transformed into probability space
-        (note that this means the SHAP values now sum to the probability output of the model). If "logloss"
-        then we explain the log base e of the model loss function, so that the SHAP values sum up to the
-        log loss of the model for each sample. This is helpful for breaking down model performance by feature.
-        Currently the probability and logloss options are only supported when feature_dependence="independent".
-
-    Examples
-    --------
-    See :ref:`Tree Explainer Examples <tree_explainer_examples>`
     """
+
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, **deprecated_options):
-        
+        """ Build a new Tree explainer for the passed model.
+
+        Parameters
+        ----------
+        model : model object
+            The tree based machine learning model that we want to explain. XGBoost, LightGBM, CatBoost, Pyspark
+            and most tree-based scikit-learn models are supported.
+
+        data : numpy.array or pandas.DataFrame
+            The background dataset to use for integrating out features. This argument is optional when
+            feature_perturbation="tree_path_dependent", since in that case we can use the number of training
+            samples that went down each tree path as our background dataset (this is recorded in the model object).
+
+        feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
+            Since SHAP values rely on conditional expectations we need to decide how to handle correlated
+            (or otherwise dependent) input features. The "interventional" approach breaks the dependencies between
+            features according to the rules dictated by casual inference (Janzing et al. 2019). Note that the
+            "interventional" option requires a background dataset and its runtime scales linearly with the size
+            of the background dataset you use. Anywhere from 100 to 1000 random background samples are good
+            sizes to use. The "tree_path_dependent" approach is to just follow the trees and use the number
+            of training examples that went down each leaf to represent the background distribution. This approach
+            does not require a background dataset and so is used by default when no background dataset is provided.
+
+        model_output : "raw", "probability", "log_loss", or model method name
+            What output of the model should be explained. If "raw" then we explain the raw output of the
+            trees, which varies by model. For regression models "raw" is the standard output, for binary
+            classification in XGBoost this is the log odds ratio. If model_output is the name of a supported
+            prediction method on the model object then we explain the output of that model method name.
+            For example model_output="predict_proba" explains the result of calling model.predict_proba.
+            If "probability" then we explain the output of the model transformed into probability space
+            (note that this means the SHAP values now sum to the probability output of the model). If "logloss"
+            then we explain the log base e of the model loss function, so that the SHAP values sum up to the
+            log loss of the model for each sample. This is helpful for breaking down model performance by feature.
+            Currently the probability and logloss options are only supported when feature_dependence="independent".
+
+        Examples
+        --------
+        See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
+        """
         if feature_names is not None:
             self.data_feature_names=feature_names
         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
@@ -621,7 +623,7 @@ class TreeEnsemble:
             self.trees = [SingleTree(t, data=data, data_missing=data_missing) for t in model["trees"]]
         elif type(model) is list and type(model[0]) == SingleTree: # old-style direct-load format
             self.trees = model
-        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor"]):
+        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor", "econml.grf._base_grf.BaseGRF"]):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -663,7 +665,7 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"]):
+        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor", "econml.grf._base_grftree.GRFTree"]):
             self.internal_dtype = model.tree_.value.dtype.type
             self.input_dtype = np.float32
             self.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
@@ -1122,7 +1124,7 @@ class SingleTree:
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
 
-        if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
+        if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree"]):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
             self.children_default = self.children_left # missing values not supported in sklearn

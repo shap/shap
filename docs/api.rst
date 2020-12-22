@@ -3,7 +3,7 @@
 API Reference
 =============
 This page contains the API reference for public objects and functions in SHAP.
-There are also :ref:`example notebooks <_api_examples>` available that demonstrate how
+There are also :ref:`example notebooks <api_examples>` available that demonstrate how
 to use the API of each object/function.
 
 
@@ -80,7 +80,6 @@ models
 
     shap.models.Model
     shap.models.TeacherForcingLogits
-    shap.models.TextGeneration
 
 
 .. _utils_api:

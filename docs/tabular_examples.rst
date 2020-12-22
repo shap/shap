@@ -6,7 +6,7 @@ notebooks `available on GitHub <https://github.com/slundberg/shap/tree/master/no
 
 
 Tree-based models
-==============
+=================
 Examples demonstrating how to explain tree-based machine learning models.
 
 .. toctree::
@@ -17,7 +17,7 @@ Examples demonstrating how to explain tree-based machine learning models.
 
 
 Linear models
-================
+=============
 Examples demonstrating how to explain linear machine learning models.
 
 .. toctree::
@@ -28,7 +28,7 @@ Examples demonstrating how to explain linear machine learning models.
 
 
 Neural networks
-================
+===============
 Examples demonstrating how to explain machine learning models based on neural networks.
 
 .. toctree::
@@ -39,7 +39,7 @@ Examples demonstrating how to explain machine learning models based on neural ne
 
 
 Model agnostic
-================
+==============
 Examples demonstrating how to explain arbitrary machine learning pipelines.
 
 .. toctree::
@@ -47,47 +47,3 @@ Examples demonstrating how to explain arbitrary machine learning pipelines.
     :maxdepth: 1
 
     example_notebooks/tabular_examples/model_agnostic/*
-
-
-.. Partition explainer
-.. ================
-.. Examples using :class:`shap.explainers.Partition` to produce explanations in a model agnostic manner based on a hierarchical grouping of the features.
-
-.. .. toctree::
-..     :glob:
-..     :maxdepth: 1
-
-..     example_notebooks/tabular_examples/partition/*
-
-
-.. Kernel explainer
-.. ================
-.. Examples using :class:`shap.explainers.Kernel` to produce explanations in a model agnostic manner.
-
-.. .. toctree::
-..     :glob:
-..     :maxdepth: 1
-
-..     example_notebooks/tabular_examples/kernel/*
-
-
-.. Deep explainer
-.. ================
-.. Examples using :class:`shap.explainers.Deep` to produce approximate explanations of PyTorch or TensorFlow models.
-
-.. .. toctree::
-..     :glob:
-..     :maxdepth: 1
-
-..     example_notebooks/tabular_examples/deep/*
-
-
-.. Gradient explainer
-.. ================
-.. Examples using :class:`shap.explainers.Gradient` to produce approximate explanations of PyTorch or TensorFlow models.
-
-.. .. toctree::
-..     :glob:
-..     :maxdepth: 1
-
-..     example_notebooks/tabular_examples/gradient/*
