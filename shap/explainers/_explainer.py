@@ -3,10 +3,13 @@ from .. import links
 from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
+from ..models import Model
 from .._explanation import Explanation
 import numpy as np
 import scipy as sp
 import copy
+import pickle
+from .. import explainers
 
 
 class Explainer():
@@ -63,7 +66,7 @@ class Explainer():
             downstream plots.
         """
 
-        self.model = model
+        self.model = Model(model)
         self.output_names = output_names
         self.feature_names = feature_names
         
@@ -352,6 +355,17 @@ class Explainer():
         
         return expanded_main_effects
 
+    def save(self, out_file):
+        """ Serializes the type of subclass of explainer used, this will be used during deserialization.
+        """
+        pickle.dump(type(self), out_file)
+    
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        """ Deserializes the explainer subtype, and calls respective load function.
+        """
+        explainer_type = pickle.load(in_file)
+        return explainer_type._load(in_file, model_loader, masker_loader)
         
 def pack_values(values):
     """ Used the clean up arrays before putting them into an Explanation object.

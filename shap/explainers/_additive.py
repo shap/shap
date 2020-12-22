@@ -15,7 +15,7 @@ class Additive(Explainer):
     """
 
     def __init__(self, model, masker, link=None, feature_names=None):
-        """ Build an explainers.Exact object for the given model using the given masker object.
+        """ Build an Additive explainer for the given model using the given masker object.
 
         Parameters
         ----------
