@@ -29,7 +29,7 @@ def test_null_model():
 
 
 def test_front_page_model_agnostic():
-    sklearn = pytest.importorskip('sklearn').Ridge
+    sklearn = pytest.importorskip('sklearn')
     train_test_split = pytest.importorskip('sklearn.model_selection').train_test_split
 
     # print the JS visualization code to the notebook

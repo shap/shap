@@ -75,7 +75,7 @@ def test_masker_call_pretrained_tokenizer():
     output_masked_text = masker(test_input_mask,test_text)
     correct_masked_text = '[MASK] ate a [MASK]noli'
 
-    assert output_masked_text == correct_masked_text
+    assert output_masked_text[0] == correct_masked_text
 
 def test_masker_call_pretrained_tokenizer_fast():
     import shap
@@ -91,7 +91,7 @@ def test_masker_call_pretrained_tokenizer_fast():
     output_masked_text = masker(test_input_mask,test_text)
     correct_masked_text = '[MASK]ate a [MASK]noli'
     
-    assert output_masked_text == correct_masked_text
+    assert output_masked_text[0] == correct_masked_text
 
 def test_sentencepiece_tokenizer_output():
     """ Tests for output for sentencepiece tokenizers to not have '_' in output of masker when passed a mask of ones.
