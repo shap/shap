@@ -103,7 +103,7 @@ class Text(Masker):
         if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
             out = self.post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
-        if type(out) == str::
+        if type(out) == str:
             out = re.sub(r"[\s]+"," ",out).strip()
 
         return (np.array([out]),)
