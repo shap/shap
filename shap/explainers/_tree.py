@@ -623,8 +623,7 @@ class TreeEnsemble:
             self.trees = [SingleTree(t, data=data, data_missing=data_missing) for t in model["trees"]]
         elif type(model) is list and type(model[0]) == SingleTree: # old-style direct-load format
             self.trees = model
-        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor",
-                                     "econml.grf._base_grf.BaseGRF"]):
+        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor", "econml.grf._base_grf.BaseGRF"]):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -666,8 +665,7 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor",
-                                     "econml.grf._base_grftree.GRFTree"]):
+        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor", "econml.grf._base_grftree.GRFTree"]):
             self.internal_dtype = model.tree_.value.dtype.type
             self.input_dtype = np.float32
             self.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
