@@ -128,7 +128,7 @@ def compile_cuda_module(host_args):
 
 
 def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
-              test_spark=True, test_pyod=True, with_cuda=True):
+              test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -172,6 +172,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         tests_require += ['pyspark']
     if test_pyod:
         tests_require += ['pyod']
+    if test_transformers:
+        tests_require += ['transformers']
 
     extras_require = {
         'plots': [
@@ -264,6 +266,10 @@ def try_run_setup(**kwargs):
         elif "pyod" in str(e).lower():
             kwargs["test_pyod"] = False
             print("Couldn't install PyOD for testing!")
+            try_run_setup(**kwargs)
+        elif "transformers" in str(e).lower():
+            kwargs["test_transformers"] = False
+            print("Couldn't install Transformers for testing!")
             try_run_setup(**kwargs)
         else:
             print("ERROR: Failed to build!")
