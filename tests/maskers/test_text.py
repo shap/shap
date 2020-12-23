@@ -109,6 +109,7 @@ def test_sentencepiece_tokenizer_output():
     """
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
+    pytest.importorskip("sentencepiece")
 
     tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
     masker = shap.maskers.Text(tokenizer)

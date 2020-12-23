@@ -1,10 +1,12 @@
+""" Tests for the Deep explainer.
+"""
+
 import os
 
+from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 import pytest
-from distutils.version import LooseVersion
-
 import shap
 from shap import DeepExplainer
 
@@ -14,11 +16,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 def test_tf_eager():
     """ This is a basic eager example from keras.
     """
+
     tf = pytest.importorskip('tensorflow')
     if LooseVersion(tf.__version__) >= LooseVersion("2.4.0"):
         pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
 
-    x = pd.DataFrame({ "B": np.random.random(size=(100,)) })
+    x = pd.DataFrame({"B": np.random.random(size=(100,))})
     y = x.B
     y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
 
@@ -31,10 +34,10 @@ def test_tf_eager():
 
     e = DeepExplainer(model, x.values[:1])
     sv = e.shap_values(x.values)
-    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:,0]).max() < 1e-4
+    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
 
 
-def test_tf_keras_mnist_cnn():
+def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     """ This is the basic mnist cnn example from keras.
     """
     tf = pytest.importorskip('tensorflow')
@@ -92,21 +95,21 @@ def test_tf_keras_mnist_cnn():
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    model.fit(x_train[:1000,:], y_train[:1000,:],
+    model.fit(x_train[:1000, :], y_train[:1000, :],
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test[:1000,:], y_test[:1000,:]))
+              validation_data=(x_test[:1000, :], y_test[:1000, :]))
 
     # explain by passing the tensorflow inputs and outputs
     np.random.seed(0)
     inds = np.random.choice(x_train.shape[0], 10, replace=False)
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds,:,:])
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
     sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds,:,:]}).mean(0)
+    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
@@ -117,7 +120,7 @@ def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.
     """
     tf = pytest.importorskip('tensorflow')
-    
+
     from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.optimizers import SGD
@@ -174,8 +177,8 @@ def test_tf_keras_imdb_lstm():
     np.random.seed(7)
     max_features = 1000
     try:
-        (X_train, y_train), (X_test, _) = imdb.load_data(num_words=max_features)
-    except:
+        (X_train, _), (X_test, _) = imdb.load_data(num_words=max_features)
+    except Exception: # pylint: disable=broad-except
         return # this hides a bug in the most recent version of keras that prevents data loading
     X_train = sequence.pad_sequences(X_train, maxlen=100)
     X_test = sequence.pad_sequences(X_test, maxlen=100)
@@ -206,7 +209,7 @@ def test_tf_keras_imdb_lstm():
     e = shap.DeepExplainer((mod.layers[0].input, mod.layers[-1].output), background)
     shap_values = e.shap_values(testx)
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0,:] - \
+    diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - \
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
@@ -224,6 +227,9 @@ def test_pytorch_mnist_cnn(tmpdir):
     def run_test(train_loader, test_loader, interim):
 
         class Net(nn.Module):
+            """ Basic conv net.
+            """
+
             def __init__(self):
                 super(Net, self).__init__()
                 # Testing several different activations
@@ -269,21 +275,21 @@ def test_pytorch_mnist_cnn(tmpdir):
                 if batch_idx % 10 == 0:
                     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                         epoch, batch_idx * len(data), len(train_loader.dataset),
-                               100. * batch_idx / len(train_loader), loss.item()))
+                        100. * batch_idx / len(train_loader), loss.item()))
                 if num_examples > cutoff:
                     break
 
         device = torch.device('cpu')
         train(model, device, train_loader, optimizer, 1)
 
-        next_x, next_y = next(iter(train_loader))
+        next_x, _ = next(iter(train_loader))
         np.random.seed(0)
         inds = np.random.choice(next_x.shape[0], 20, replace=False)
         if interim:
             e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
         else:
             e = shap.DeepExplainer(model, next_x[inds, :, :, :])
-        test_x, test_y = next(iter(test_loader))
+        test_x, _ = next(iter(test_loader))
         input_tensor = test_x[:1]
         input_tensor.requires_grad = True
         shap_values = e.shap_values(input_tensor)
@@ -294,8 +300,7 @@ def test_pytorch_mnist_cnn(tmpdir):
             diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
-        assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
-                d / np.abs(diff).sum())
+        assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
     batch_size = 128
 
@@ -314,9 +319,9 @@ def test_pytorch_mnist_cnn(tmpdir):
                        ])),
         batch_size=batch_size, shuffle=True)
 
-    print ('Running test on interim layer')
+    #print('Running test on interim layer')
     run_test(train_loader, test_loader, interim=True)
-    print ('Running test on whole model')
+    #print('Running test on whole model')
     run_test(train_loader, test_loader, interim=False)
 
 
@@ -389,16 +394,16 @@ def test_pytorch_custom_nested_models():
             if batch_idx % 2 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader), loss.item()))
+                    100. * batch_idx / len(train_loader), loss.item()))
 
     device = torch.device('cpu')
     train(model, device, loader, optimizer, 1)
 
-    next_x, next_y = next(iter(loader))
+    next_x, _ = next(iter(loader))
     np.random.seed(0)
     inds = np.random.choice(next_x.shape[0], 20, replace=False)
     e = shap.DeepExplainer(model, next_x[inds, :])
-    test_x, test_y = next(iter(loader))
+    test_x, _ = next(iter(loader))
     shap_values = e.shap_values(test_x[:1])
 
     model.eval()
@@ -407,8 +412,7 @@ def test_pytorch_custom_nested_models():
         diff = (model(test_x[:1]) - model(next_x[inds, :])).detach().numpy().mean(0)
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
-            d / np.abs(diff).sum())
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
 def test_pytorch_single_output():
@@ -457,16 +461,16 @@ def test_pytorch_single_output():
             if batch_idx % 2 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader), loss.item()))
+                    100. * batch_idx / len(train_loader), loss.item()))
 
     device = torch.device('cpu')
     train(model, device, loader, optimizer, 1)
 
-    next_x, next_y = next(iter(loader))
+    next_x, _ = next(iter(loader))
     np.random.seed(0)
     inds = np.random.choice(next_x.shape[0], 20, replace=False)
     e = shap.DeepExplainer(model, next_x[inds, :])
-    test_x, test_y = next(iter(loader))
+    test_x, _ = next(iter(loader))
     shap_values = e.shap_values(test_x[:1])
 
     model.eval()
@@ -475,8 +479,7 @@ def test_pytorch_single_output():
         diff = (model(test_x[:1]) - model(next_x[inds, :])).detach().numpy().mean(0)
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
-            d / np.abs(diff).sum())
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
 def test_pytorch_multiple_inputs():
@@ -535,17 +538,17 @@ def test_pytorch_multiple_inputs():
                 if batch_idx % 2 == 0:
                     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                         epoch, batch_idx * len(data), len(train_loader.dataset),
-                               100. * batch_idx / len(train_loader), loss.item()))
+                        100. * batch_idx / len(train_loader), loss.item()))
 
         device = torch.device('cpu')
         train(model, device, loader, optimizer, 1)
 
-        next_x1, next_x2, next_y = next(iter(loader))
+        next_x1, next_x2, _ = next(iter(loader))
         np.random.seed(0)
         inds = np.random.choice(next_x1.shape[0], 20, replace=False)
         background = [next_x1[inds, :], next_x2[inds, :]]
         e = shap.DeepExplainer(model, background)
-        test_x1, test_x2, test_y = next(iter(loader))
+        test_x1, test_x2, _ = next(iter(loader))
         shap_x1, shap_x2 = e.shap_values([test_x1[:1], test_x2[:1]])
 
         model.eval()
@@ -554,8 +557,7 @@ def test_pytorch_multiple_inputs():
             diff = (model(test_x1[:1], test_x2[:1]) - model(*background)).detach().numpy().mean(0)
         sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
         d = np.abs(sums - diff).sum()
-        assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (
-                d / np.abs(diff).sum())
+        assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
     _run_pytorch_multiple_inputs_test(disconnected=True)
     _run_pytorch_multiple_inputs_test(disconnected=False)

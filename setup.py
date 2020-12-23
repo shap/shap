@@ -128,7 +128,8 @@ def compile_cuda_module(host_args):
 
 
 def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
-              test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True):
+              test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True, test_pytorch=True,
+              test_sentencepiece=True):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -174,6 +175,10 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catb
         tests_require += ['pyod']
     if test_transformers:
         tests_require += ['transformers']
+    if test_pytorch:
+        tests_require += ['pytorch']
+    if test_sentencepiece:
+        tests_require += ['sentencepiece']
 
     extras_require = {
         'plots': [
@@ -271,11 +276,18 @@ def try_run_setup(**kwargs):
             kwargs["test_transformers"] = False
             print("Couldn't install Transformers for testing!")
             try_run_setup(**kwargs)
+        elif "pytorch" in str(e).lower():
+            kwargs["test_pytorch"] = False
+            print("Couldn't install PyTorch for testing!")
+            try_run_setup(**kwargs)
+        elif "sentencepiece" in str(e).lower():
+            kwargs["test_sentencepiece"] = False
+            print("Couldn't install sentencepiece for testing!")
+            try_run_setup(**kwargs)
         else:
             print("ERROR: Failed to build!")
 
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_spark=True,
-                  test_pyod=True, with_cuda=True)
+    try_run_setup()
