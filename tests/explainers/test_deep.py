@@ -10,7 +10,7 @@ import pytest
 import shap
 from shap import DeepExplainer
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 def test_tf_eager():

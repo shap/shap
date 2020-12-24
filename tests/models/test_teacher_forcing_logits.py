@@ -4,6 +4,7 @@
 import pytest
 import numpy as np
 import shap
+from shap.utils.transformers import parse_prefix_suffix_for_tokenizer
 
 
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
@@ -12,7 +13,6 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
 
     torch = pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
-    from shap.utils.transformers import parse_prefix_suffix_for_tokenizer
 
     tokenizer = transformers.AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
     model = transformers.AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-xsum-12-6")
@@ -43,7 +43,6 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
 
     torch = pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
-    from shap.utils.transformers import parse_prefix_suffix_for_tokenizer
 
     tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
     model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
