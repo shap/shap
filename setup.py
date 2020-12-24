@@ -93,8 +93,7 @@ def get_cuda_path():
 
     nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
     if not os.path.exists(nvcc):
-        print("Failed to find nvcc compiler in %s, trying /usr/local/cuda" %
-              nvcc)
+        print("Failed to find nvcc compiler in %s, trying /usr/local/cuda" % nvcc)
         cuda_home = "/usr/local/cuda"
         nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
 
@@ -127,9 +126,8 @@ def compile_cuda_module(host_args):
     return 'build', '_cext_gpu'
 
 
-def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
-              test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True, test_pytorch=True,
-              test_sentencepiece=True):
+def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spark, test_pyod,
+              with_cuda, test_transformers, test_pytorch, test_sentencepiece):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -259,14 +257,11 @@ def try_run_setup(**kwargs):
             try_run_setup(**kwargs)
         elif "cuda" in str(e).lower():
             kwargs["with_cuda"] = False
-            print(
-                "WARNING: Could not compile cuda extensions")
+            print("WARNING: Could not compile cuda extensions")
             try_run_setup(**kwargs)
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
-            print(
-                "WARNING: The C extension could not be compiled, sklearn tree models not "
-                "supported.")
+            print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
             try_run_setup(**kwargs)
         elif "pyod" in str(e).lower():
             kwargs["test_pyod"] = False
@@ -290,4 +285,8 @@ def try_run_setup(**kwargs):
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup()
+    try_run_setup(
+        with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
+        test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True, test_pytorch=True,
+        test_sentencepiece=True
+    )
