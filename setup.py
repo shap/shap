@@ -127,7 +127,7 @@ def compile_cuda_module(host_args):
 
 
 def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spark, test_pyod,
-              with_cuda, test_transformers, test_torch, test_sentencepiece):
+              with_cuda, test_transformers, test_pytorch, test_sentencepiece):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -173,7 +173,7 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         tests_require += ['pyod']
     if test_transformers:
         tests_require += ['transformers']
-    if test_torch:
+    if test_pytorch:
         tests_require += ['torch']
     if test_sentencepiece:
         tests_require += ['sentencepiece']
