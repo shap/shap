@@ -174,7 +174,7 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
     if test_transformers:
         tests_require += ['transformers']
     if test_pytorch:
-        tests_require += ['pytorch']
+        tests_require += ['torch']
     if test_sentencepiece:
         tests_require += ['sentencepiece']
 
