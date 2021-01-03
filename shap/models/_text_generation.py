@@ -1,7 +1,6 @@
 import numpy as np
 from ._model import Model
 from .. import models
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer
 from ..utils import record_import_error, safe_isinstance
 
 try:

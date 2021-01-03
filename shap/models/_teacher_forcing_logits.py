@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer
 from .. import models
 
 try:
@@ -73,10 +74,10 @@ class TeacherForcingLogits(Model):
             # assign the right subclass
             if safe_isinstance(self.similarity_model,"transformers.PreTrainedModel"):
                 self.__class__ = models.PTTeacherForcingLogits
-                models.PTTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.text_generate, self.similarity_model, self.similarity_tokenizer, self.device)
+                models.PTTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.similarity_model, self.similarity_tokenizer, self.device)
             elif safe_isinstance(self.similarity_model,"transformers.TFPreTrainedModel"):
                 self.__class__ = models.TFTeacherForcingLogits
-                models.TFTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.text_generate, self.similarity_model, self.similarity_tokenizer, self.device)
+                models.TFTeacherForcingLogits.__init__(self, self.model, self.tokenizer, self.similarity_model, self.similarity_tokenizer, self.device)
             else:
                 raise Exception("Cannot determine subclass to be assigned in TeacherForcingLogits. Please define similarity model or model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
 
@@ -86,26 +87,24 @@ class TeacherForcingLogits(Model):
 
         Parameters
         ----------
-        masked_X: numpy.array
+        masked_X: numpy.ndarray
             An array containing a list of masked inputs.
 
-        X: numpy.array
+        X: numpy.ndarray
             An array containing a list of original inputs
 
         Returns
         -------
-        numpy.array
+        numpy.ndarray
             A numpy array of log odds scores for every input pair (masked_X, X)
         """
         output_batch=[]
-        for masked_x, x in zip(masked_X, X):
-            # update target sentence ids and original input for a new explanation row
-            self.update_cache_X(x)
-            # pass the masked input from which to generate source sentence ids
-            source_sentence_ids = self.get_source_sentence_ids(masked_x)
-            logits = self.get_teacher_forced_logits(source_sentence_ids, self.target_sentence_ids)
-            logodds = self.get_logodds(logits)
-            output_batch.append(logodds)
+        # caching updates output names and target sentence ids
+        self.update_cache_X(X[:1])
+        source_sentence_ids, attention_mask = self.get_source_sentence_ids(masked_X)
+        logits = self.get_teacher_forced_logits(source_sentence_ids, attention_mask, self.target_sentence_ids)
+        logodds = self.get_logodds(logits)
+        output_batch.append(logodds)
         return np.array(output_batch)
 
     def update_cache_X(self, X):
@@ -120,11 +119,11 @@ class TeacherForcingLogits(Model):
             Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
-        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
+        if (self.X is None) or (self.X != X).all():
             self.X = X
-            self.output_names = self.get_output_names_and_update_target_sentence_ids(self.X)
+            self.output_names, self.target_sentence_ids = self.get_output_names_and_target_sentence_ids(self.X)
     
-    def get_output_names_and_update_target_sentence_ids(self, X):
+    def get_output_names_and_target_sentence_ids(self, X):
         """ Gets the output tokens from input(X) by computing the 
             target sentence ids using the using the text_generate()
             and next getting output names using the similarity_tokenizer.
@@ -139,26 +138,59 @@ class TeacherForcingLogits(Model):
         list
             A list of output tokens.
         """
-        self.target_sentence_ids = self.text_generate(X)
-        return self.similarity_tokenizer.convert_ids_to_tokens(self.target_sentence_ids[0,:])
+        target_sentence_ids = self.get_target_sentence_ids(X)
+        output_names = [self.similarity_tokenizer.decode([x]).strip() for x in target_sentence_ids[0,:]]
+        return output_names, target_sentence_ids
 
-    def get_source_sentence_ids(self, X):
+    def get_target_sentence_ids(self, X):
         """ Implement in subclass. Returns a tensor of sentence ids.
         """
-        pass
+        # check if X is a sentence or already parsed target ids
+        if X.dtype.type is np.str_:
+            parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.similarity_tokenizer)
+            keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
+            if keep_suffix > 0:
+                target_sentence_ids = np.array([self.similarity_tokenizer.encode(X)])[:,keep_prefix:-keep_suffix]
+            else:
+                target_sentence_ids = np.array([self.similarity_tokenizer.encode(X)])[:,keep_prefix:]
+        else:
+            target_sentence_ids = X
+        return target_sentence_ids
+
+    def get_source_sentence_ids(self, X):
+        """ The function tokenizes source sentence.
+
+        Parameters
+        ----------
+        X: numpy.ndarray
+            X could be a batch of text or images.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array of padded source sentence ids and attention mask.
+        """
+        if self.model_agnostic:
+            # In model agnostic case, we first pass the input through the model and then tokenize output sentence
+            source_sentences = np.array(self.model(X))
+        else:
+            source_sentences = np.array(X)
+        padded_sequences = self.similarity_tokenizer(source_sentences.tolist(), padding=True)
+        input_ids, attention_mask = padded_sequences["input_ids"], padded_sequences["attention_mask"]
+        return input_ids, attention_mask
 
     def get_logodds(self, logits):
         """ Implement in subclass. Returns a np.array of logodds.
         """
         pass
 
-    def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+    def get_teacher_forced_logits(self,source_sentence_ids, attention_mask, target_sentence_ids):
         """ Implement in subclass. Returns a np.array of logits.
         """
         pass
 
 class PTTeacherForcingLogits(TeacherForcingLogits):
-    def __init__(self, model, tokenizer=None, text_generate=None, similarity_model=None, similarity_tokenizer=None, device=None):
+    def __init__(self, model, tokenizer=None, similarity_model=None, similarity_tokenizer=None, device=None):
         """ Generates scores (log odds) for output text explanation algorithms.
 
         This model inherits from TeacherForcingLogits. Check the superclass documentation for the generic methods the library implements for all its model.
@@ -193,7 +225,7 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         numpy.array
             The scores (log odds) of generating target sentence ids using the model.
         """
-        super(PTTeacherForcingLogits, self).__init__(model, tokenizer, text_generate, similarity_model, similarity_tokenizer, device)
+        super(PTTeacherForcingLogits, self).__init__(model, tokenizer, similarity_model, similarity_tokenizer, device)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device
 
@@ -201,49 +233,6 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
             self.similarity_model = similarity_model.to(self.device)
         else:
             self.model = model.to(self.device)
-
-    def get_output_names_and_update_target_sentence_ids(self, X):
-        """ Gets the output tokens from input(X) by computing the 
-            target sentence ids using the using the text_generate()
-            and next getting output names using the similarity_tokenizer.
-        
-        Parameters
-        ----------
-        X: string or numpy array
-            Input(Text/Image) for an explanation row.
-
-        Returns
-        -------
-        list
-            A list of output tokens.
-        """
-        self.target_sentence_ids = self.text_generate(X).to(self.device).to(torch.int64)
-        output_names = [self.similarity_tokenizer.decode([x]).strip() for x in self.target_sentence_ids[0,:].cpu().numpy()]
-        return output_names
-
-    def get_source_sentence_ids(self, X):
-        """ The function tokenizes source sentence.
-
-        Parameters
-        ----------
-        X: string or tensor
-            X could be a text or image.
-
-        Returns
-        -------
-        tensor
-            Tensor of source sentence ids.
-        """
-        # TODO: batch source_sentence_ids
-        if self.model_agnostic:
-            # In model agnostic case, we first pass the input through the model and then tokenize output sentence
-            source_sentence = self.model(X)
-            source_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(source_sentence)])
-        else:
-            # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
-            source_sentence_ids = torch.tensor([self.similarity_tokenizer.encode(X)])
-        source_sentence_ids = source_sentence_ids.to(self.device).to(torch.int64)
-        return source_sentence_ids
 
     def get_logodds(self, logits):
         """ Calculates log odds from logits.
@@ -268,7 +257,7 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
             logodds.append(logit_dist[self.target_sentence_ids[0,i].item()])
         return np.array(logodds)
 
-    def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+    def get_teacher_forced_logits(self,source_sentence_ids, attention_mask, target_sentence_ids):
         """ The function generates logits for transformer models.
 
         It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
@@ -286,6 +275,10 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
         numpy.array
             Decoder output logits for target sentence ids.
         """
+        # convert ids to tensor and move to device
+        source_sentence_ids = torch.tensor(source_sentence_ids).to(self.device).to(torch.int64)
+        attention_mask = torch.tensor(attention_mask).to(self.device).to(torch.int64)
+        target_sentence_ids = torch.tensor(target_sentence_ids).to(self.device).to(torch.int64)
         # set model to eval mode
         self.similarity_model.eval()
         # check if type of model architecture assigned in model config
@@ -315,7 +308,7 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
             target_sentence_ids = torch.cat((target_sentence_start_id,target_sentence_ids),dim=-1)
             # generate outputs and logits
             with torch.no_grad():
-                outputs = self.similarity_model(input_ids=source_sentence_ids, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+                outputs = self.similarity_model(input_ids=source_sentence_ids, attention_mask=attention_mask, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
             logits=outputs.logits.detach().cpu().numpy().astype('float64')
         else:
             # check if source sentence ids are null then add bos token id to decoder
@@ -333,14 +326,14 @@ class PTTeacherForcingLogits(TeacherForcingLogits):
             combined_sentence_ids = torch.cat((source_sentence_ids,target_sentence_ids),dim=-1)
             # generate outputs and logits
             with torch.no_grad():
-                outputs = self.similarity_model(input_ids=combined_sentence_ids, return_dict=True)
+                outputs = self.similarity_model(input_ids=combined_sentence_ids, attention_mask=attention_mask, return_dict=True)
             # extract only logits corresponding to target sentence ids
             logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
         del outputs
         return logits
 
 class TFTeacherForcingLogits(TeacherForcingLogits):
-    def __init__(self, model, tokenizer=None, text_generate=None, similarity_model=None, similarity_tokenizer=None, device=None):
+    def __init__(self, model, tokenizer=None, similarity_model=None, similarity_tokenizer=None, device=None):
         """ Generates scores (log odds) for output text explanation algorithms.
 
         This class supports generation of log odds for transformer models as well as functions. It also provides 
@@ -373,30 +366,7 @@ class TFTeacherForcingLogits(TeacherForcingLogits):
         numpy.array
             The scores (log odds) of generating target sentence ids using the model.
         """
-        super(TFTeacherForcingLogits, self).__init__(model, tokenizer, text_generate, similarity_model, similarity_tokenizer, device)
-
-    def get_source_sentence_ids(self, X):
-        """ The function tokenizes source sentence.
-
-        Parameters
-        ----------
-        X: string or numpy.array
-            X could be a text or image.
-
-        Returns
-        -------
-        tf.Tensor
-            Tensor of source sentence ids.
-        """
-        # TODO: batch source_sentence_ids
-        if self.model_agnostic:
-            # In model agnostic case, we first pass the input through the model and then tokenize output sentence
-            source_sentence = self.model(X)
-            source_sentence_ids = tf.convert_to_tensor([self.similarity_tokenizer.encode(source_sentence)])
-        else:
-            # TODO: check if X is text/image cause presently only when X=text is supported to use model decoder
-            source_sentence_ids = tf.convert_to_tensor([self.similarity_tokenizer.encode(X)])
-        return source_sentence_ids
+        super(TFTeacherForcingLogits, self).__init__(model, tokenizer, similarity_model, similarity_tokenizer, device)
 
     def get_logodds(self, logits):
         """ Calculates log odds from logits.
@@ -421,7 +391,7 @@ class TFTeacherForcingLogits(TeacherForcingLogits):
             logodds.append(logit_dist[self.target_sentence_ids[0,i].numpy()])
         return np.array(logodds)
 
-    def get_teacher_forced_logits(self,source_sentence_ids,target_sentence_ids):
+    def get_teacher_forced_logits(self,source_sentence_ids, attention_mask, target_sentence_ids):
         """ The function generates logits for transformer models.
 
         It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
