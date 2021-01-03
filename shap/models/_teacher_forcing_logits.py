@@ -65,9 +65,8 @@ class TeacherForcingLogits(Model):
             self.similarity_model = similarity_model
             self.similarity_tokenizer = similarity_tokenizer
             self.model_agnostic = True
-        # initializing X which is the original input for every new row of explanation
-        self.X = None
-        self.target_sentence_ids = None
+        # initializing target which is the target sentence/ids for every new row of explanation
+        self.output = None
         self.output_names = None
 
         if self.__class__ is TeacherForcingLogits:
@@ -82,7 +81,7 @@ class TeacherForcingLogits(Model):
                 raise Exception("Cannot determine subclass to be assigned in TeacherForcingLogits. Please define similarity model or model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
 
 
-    def __call__(self, masked_X, X):
+    def __call__(self, X, Y):
         """ Computes log odds scores from a given batch of masked input and original input for text/image.
 
         Parameters
@@ -100,14 +99,14 @@ class TeacherForcingLogits(Model):
         """
         output_batch=[]
         # caching updates output names and target sentence ids
-        self.update_cache_X(X[:1])
-        source_sentence_ids, attention_mask = self.get_source_sentence_ids(masked_X)
-        logits = self.get_teacher_forced_logits(source_sentence_ids, attention_mask, self.target_sentence_ids)
+        self.update_output_names(Y[:1])
+        #source_sentence_ids, attention_mask = self.get_source_sentence_ids(masked_X)
+        logits = self.get_teacher_forced_logits(X, Y)
         logodds = self.get_logodds(logits)
         output_batch.append(logodds)
         return np.array(output_batch)
 
-    def update_cache_X(self, X):
+    def update_output_names(self, output):
         """ The function updates original input(X) and target sentence ids.
 
         It mimics the caching mechanism to update the original input and target sentence ids
@@ -119,18 +118,17 @@ class TeacherForcingLogits(Model):
             Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
-        if (self.X is None) or (self.X != X).all():
-            self.X = X
-            self.output_names, self.target_sentence_ids = self.get_output_names_and_target_sentence_ids(self.X)
+        if (self.output is None) or (self.output != output).all():
+            self.output = output
+            self.output_names= self.get_output_names(output)
     
-    def get_output_names_and_target_sentence_ids(self, X):
-        """ Gets the output tokens from input(X) by computing the 
-            target sentence ids using the using the text_generate()
-            and next getting output names using the similarity_tokenizer.
+    def get_output_names(self, output):
+        """ Gets the output tokens by computing the 
+            output sentence ids and getting output names using the similarity_tokenizer.
         
         Parameters
         ----------
-        X: string or numpy array
+        output: numpy.ndarray
             Input(Text/Image) for an explanation row.
 
         Returns
@@ -138,26 +136,26 @@ class TeacherForcingLogits(Model):
         list
             A list of output tokens.
         """
-        target_sentence_ids = self.get_target_sentence_ids(X)
-        output_names = [self.similarity_tokenizer.decode([x]).strip() for x in target_sentence_ids[0,:]]
-        return output_names, target_sentence_ids
+        output_ids = self.get_output_ids(output)
+        output_names = [self.similarity_tokenizer.decode([x]).strip() for x in get_outputs[0,:]]
+        return output_names
 
-    def get_target_sentence_ids(self, X):
+    def get_outputs(self, outputs):
         """ Implement in subclass. Returns a tensor of sentence ids.
         """
-        # check if X is a sentence or already parsed target ids
-        if X.dtype.type is np.str_:
+        # check if output is a sentence or already parsed target ids
+        if output.dtype.type is np.str_:
             parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.similarity_tokenizer)
             keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
             if keep_suffix > 0:
-                target_sentence_ids = np.array([self.similarity_tokenizer.encode(X)])[:,keep_prefix:-keep_suffix]
+                output_ids = np.array(self.similarity_tokenizer(outputs.tolist(), padding=True)["input_ids"])[:,keep_prefix:-keep_suffix]
             else:
-                target_sentence_ids = np.array([self.similarity_tokenizer.encode(X)])[:,keep_prefix:]
+                output_ids = np.array(self.similarity_tokenizer(outputs.tolist(), padding=True)["input_ids"])[:,keep_prefix:]
         else:
-            target_sentence_ids = X
-        return target_sentence_ids
+            output_ids = outputs
+        return output_ids
 
-    def get_source_sentence_ids(self, X):
+    def get_inputs(self, inputs, padding_side='right'):
         """ The function tokenizes source sentence.
 
         Parameters
@@ -172,11 +170,16 @@ class TeacherForcingLogits(Model):
         """
         if self.model_agnostic:
             # In model agnostic case, we first pass the input through the model and then tokenize output sentence
-            source_sentences = np.array(self.model(X))
+            input_sentences = np.array(self.model(inputs))
         else:
-            source_sentences = np.array(X)
-        padded_sequences = self.similarity_tokenizer(source_sentences.tolist(), padding=True)
+            input_sentences = np.array(inputs)
+        # set tokenizer padding to prepare inputs for batch inferencing
+        # padding_side="left" for only decoder models text generation eg. GPT2
+        self.similarity_tokenizer.padding_side = padding_side
+        padded_sequences = self.similarity_tokenizer(input_sentences.tolist(), padding=True)
         input_ids, attention_mask = padded_sequences["input_ids"], padded_sequences["attention_mask"]
+        # set tokenizer padding to default
+        self.similarity_tokenizer.padding_side = 'right'
         return input_ids, attention_mask
 
     def get_logodds(self, logits):
@@ -184,10 +187,91 @@ class TeacherForcingLogits(Model):
         """
         pass
 
-    def get_teacher_forced_logits(self,source_sentence_ids, attention_mask, target_sentence_ids):
-        """ Implement in subclass. Returns a np.array of logits.
+    def get_teacher_forced_logits(self, X, Y):
+        """ The function generates logits for transformer models.
+
+        It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
+
+        Parameters
+        ----------
+        source_sentence_ids: 2D tensor of shape (batch size, len of sequence)
+            Tokenized ids fed to the model.
+
+        target_sentence_ids: 2D tensor of shape (batch size, len of sequence)
+            Tokenized ids for which logits are generated using the decoder.
+
+        Returns
+        -------
+        numpy.array
+            Decoder output logits for target sentence ids.
         """
-        pass
+        
+        #source_sentence_ids = torch.tensor(source_sentence_ids).to(self.device).to(torch.int64)
+        #attention_mask = torch.tensor(attention_mask).to(self.device).to(torch.int64)
+        #target_sentence_ids = torch.tensor(target_sentence_ids).to(self.device).to(torch.int64)
+        # set model to eval mode
+        #self.similarity_model.eval()
+
+
+
+
+
+        # check if type of model architecture assigned in model config
+        if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \
+            and (hasattr(self.similarity_model.config, "is_decoder") and not self.similarity_model.config.is_decoder):
+            raise ValueError(
+                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+            )
+
+
+        if self.similarity_model.config.is_encoder_decoder:
+
+            
+
+
+            # assigning decoder start token id as it is needed for encoder decoder model generation
+            decoder_start_token_id = None
+            if hasattr(self.similarity_model.config, "decoder_start_token_id") and self.similarity_model.config.decoder_start_token_id is not None:
+                decoder_start_token_id = self.similarity_model.config.decoder_start_token_id
+            elif hasattr(self.similarity_model.config, "bos_token_id") and self.similarity_model.config.bos_token_id is not None:
+                decoder_start_token_id = self.similarity_model.config.bos_token_id
+            elif (hasattr(self.similarity_model.config, "decoder") and hasattr(self.similarity_model.config.decoder, "bos_token_id") and self.similarity_model.config.decoder.bos_token_id is not None):
+                decoder_start_token_id = self.similarity_model.config.decoder.bos_token_id
+            else:
+                raise ValueError(
+                    "No decoder_start_token_id or bos_token_id defined in config for encoder-decoder generation"
+                )
+            # concat decoder start token id to target sentence ids
+            target_sentence_start_id = (
+                torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
+                * decoder_start_token_id
+            )
+            target_sentence_ids = torch.cat((target_sentence_start_id,target_sentence_ids),dim=-1)
+            # generate outputs and logits
+            with torch.no_grad():
+                outputs = self.similarity_model(input_ids=source_sentence_ids, attention_mask=attention_mask, decoder_input_ids=target_sentence_ids, labels=target_sentence_ids, return_dict=True)
+            logits=outputs.logits.detach().cpu().numpy().astype('float64')
+        else:
+            # check if source sentence ids are null then add bos token id to decoder
+            if source_sentence_ids.shape[1]==0:
+                if hasattr(self.similarity_model.config,"bos_token_id") and self.similarity_model.config.bos_token_id is not None:
+                    source_sentence_ids = (
+                        torch.ones((source_sentence_ids.shape[0], 1), dtype=source_sentence_ids.dtype, device=source_sentence_ids.device)
+                        * self.similarity_model.config.bos_token_id
+                    )
+                else:
+                    raise ValueError(
+                    "Context ids (source sentence ids) are null and no bos token defined in model config"
+                )
+            # combine source and target sentence ids  to pass into decoder eg: in case of distillgpt2
+            combined_sentence_ids = torch.cat((source_sentence_ids,target_sentence_ids),dim=-1)
+            # generate outputs and logits
+            with torch.no_grad():
+                outputs = self.similarity_model(input_ids=combined_sentence_ids, attention_mask=attention_mask, return_dict=True)
+            # extract only logits corresponding to target sentence ids
+            logits=outputs.logits.detach().cpu().numpy()[:,source_sentence_ids.shape[1]-1:,:].astype('float64')
+        del outputs
+        return logits
 
 class PTTeacherForcingLogits(TeacherForcingLogits):
     def __init__(self, model, tokenizer=None, similarity_model=None, similarity_tokenizer=None, device=None):
