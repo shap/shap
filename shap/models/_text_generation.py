@@ -34,17 +34,18 @@ class TextGeneration(Model):
         Returns
         -------
         np.ndarray
-            Array of target sentence ids.
+            Array of target sentence or ids.
         """
         super(TextGeneration, self).__init__(model)
 
         self.tokenizer = tokenizer
         self.similarity_tokenizer = similarity_tokenizer
-        if similarity_tokenizer is None:
-            self.model_agnostic = False
-        else:
-            self.model_agnostic = True
         self.device = device
+        # X is input used to generate target sentence
+        # used for caching
+        self.X = None
+        # target sentence/ids generated from the model using X 
+        self.target_X = None
 
         if self.__class__ is TextGeneration:
             if safe_isinstance(self.model, "transformers.PreTrainedModel"):
@@ -66,18 +67,16 @@ class TextGeneration(Model):
         Returns
         -------
         np.ndarray
-            Array of target sentence ids.
+            Array of target sentence.
         """
         # generate target sentence ids in model agnostic scenario
-        target_sentence = self.model(X)
-        parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.similarity_tokenizer)
-        keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
-        if keep_suffix > 0:
-            target_sentence_ids = np.array([self.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:-keep_suffix]
-        else:
-            target_sentence_ids = np.array([self.similarity_tokenizer.encode(target_sentence)])[:,keep_prefix:]
-        
-        return target_sentence_ids
+        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
+            self.X = X
+            # wrap text input in a numpy array
+            if isinstance(X, str):
+                X = np.array([X])
+            self.target_X = self.model(X)
+        return np.array(self.target_X)
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
         """ Calculates if special tokens are present in the begining/end of the model generated output.
@@ -127,44 +126,50 @@ class PTTextGeneration(TextGeneration):
 
         Returns
         -------
-        tensor
-            Tensor of target sentence ids.
+        np.ndarray
+            Array of target sentence ids.
         """
-        target_sentence_ids = None
-        self.model.eval()
-        # in non model agnostic case, the model is assumed to be a transformer model and hence we move to device
-        self.model = self.model.to(self.device)
-        input_ids = torch.tensor([self.tokenizer.encode(X)])
-        input_ids = input_ids.to(self.device)
-        text_generation_params = {}
-        # check if user assigned any text generation specific kwargs
-        if "text_generation_params" in self.model.config.__dict__:
-            text_generation_params = self.model.config.text_generation_params
-            if not isinstance(text_generation_params, dict):
+        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
+            self.X = X
+            # in non model agnostic case, the model is assumed to be a transformer model and hence we move to device
+            self.model.eval()
+            self.model = self.model.to(self.device)
+            # wrap text input in a numpy array
+            if isinstance(X, str):
+                X = np.array([X])
+            # presently supports only text input for hugging face models
+            padded_sequences = self.tokenizer(X.tolist(), padding=True)
+            input_ids = torch.tensor(padded_sequences["input_ids"]).to(self.device)
+            attention_mask = torch.tensor(padded_sequences["attention_mask"]).to(self.device)
+            # check if user assigned any text generation specific kwargs
+            text_generation_params = {}
+            if "text_generation_params" in self.model.config.__dict__:
+                text_generation_params = self.model.config.text_generation_params
+                if not isinstance(text_generation_params, dict):
+                    raise ValueError(
+                    "Please assign text generation params as a dictionary"
+                )
+            # generate text
+            with torch.no_grad():
+                output = self.model.generate(input_ids, attention_mask=attention_mask, **text_generation_params).detach().cpu()
+            if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
+                and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
                 raise ValueError(
-                "Please assign text generation params as a dictionary"
-            )
-        # generate text
-        with torch.no_grad():
-            output = self.model.generate(input_ids, **text_generation_params).detach().cpu()
-        if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
-            and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
-            raise ValueError(
-                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
-            )
-        if self.model.config.is_decoder:
-            # slice the output ids after the input ids
-            output = output[:,input_ids.shape[1]:]
-        # parse output ids to find special tokens in prefix and suffix
-        parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].tolist())
-        keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
-        # extract target sentence ids by slicing off prefix and suffix
-        if keep_suffix > 0:
-            target_sentence_ids = output[:, keep_prefix:-keep_suffix]
-        else:
-            target_sentence_ids = output[:, keep_prefix:]
+                    "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+                )
+            if self.model.config.is_decoder:
+                # slice the output ids after the input ids
+                output = output[:,input_ids.shape[1]:]
+            # parse output ids to find special tokens in prefix and suffix
+            parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].tolist())
+            keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
+            # extract target sentence ids by slicing off prefix and suffix
+            if keep_suffix > 0:
+                self.target_X = output[:, keep_prefix:-keep_suffix]
+            else:
+                self.target_X = output[:, keep_prefix:]
 
-        return target_sentence_ids.numpy()
+        return self.target_X.numpy()
 
 class TFTextGeneration(TextGeneration):
     def __init__(self, model, tokenizer=None, similarity_tokenizer=None, device=None):
@@ -184,8 +189,8 @@ class TFTextGeneration(TextGeneration):
 
         Returns
         -------
-        tf.Tensor
-            A tensor of target sentence ids.
+        np.ndarray
+            Array of target sentence ids.
         """
         super(TFTextGeneration, self).__init__(model, tokenizer, similarity_tokenizer, device)
 
@@ -202,40 +207,46 @@ class TFTextGeneration(TextGeneration):
         np.ndarray
             Array of target sentence ids.
         """
-        target_sentence_ids = None
-        input_ids = tf.convert_to_tensor([self.tokenizer.encode(X)])
-        text_generation_params = {}
-        # check if user assigned any text generation specific kwargs
-        if "text_generation_params" in self.model.config.__dict__:
-            text_generation_params = self.model.config.text_generation_params
-            if not isinstance(text_generation_params, dict):
+        if (self.X is None) or (isinstance(self.X, np.ndarray) and (self.X != X).all()) or (isinstance(self.X, str) and (self.X != X)):
+            self.X = X
+            # wrap text input in a numpy array
+            if isinstance(X, str):
+                X = np.array([X])
+            padded_sequences = self.tokenizer(X.tolist(), padding=True)
+            input_ids = tf.convert_to_tensor(padded_sequences["input_ids"])
+            attention_mask = tf.convert_to_tensor(padded_sequences["attention_mask"])
+            text_generation_params = {}
+            # check if user assigned any text generation specific kwargs
+            if "text_generation_params" in self.model.config.__dict__:
+                text_generation_params = self.model.config.text_generation_params
+                if not isinstance(text_generation_params, dict):
+                    raise ValueError(
+                    "Please assign text generation params as a dictionary"
+                )
+            # generate text
+            if self.device is None:
+                output = self.model.generate(input_ids, attention_mask=attention_mask, **text_generation_params)
+            else:
+                try:
+                    with tf.device(self.device):
+                        output = self.model.generate(input_ids, attention_mask=attention_mask, **text_generation_params)
+                except RuntimeError as e:
+                    print(e)
+            if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
+                and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
                 raise ValueError(
-                "Please assign text generation params as a dictionary"
-            )
-        # generate text
-        if self.device is None:
-            output = self.model.generate(input_ids, **text_generation_params)
-        else:
-            try:
-                with tf.device(self.device):
-                    output = self.model.generate(input_ids, **text_generation_params)
-            except RuntimeError as e:
-                print(e)
-        if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
-            and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
-            raise ValueError(
-                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
-            )
-        if self.model.config.is_decoder:
-            # slice the output ids after the input ids
-            output = output[:,input_ids.shape[1]:]
-        # parse output ids to find special tokens in prefix and suffix
-        parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].numpy().tolist())
-        keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
-        # extract target sentence ids by slicing off prefix and suffix
-        if keep_suffix > 0:
-            target_sentence_ids = output[:, keep_prefix:-keep_suffix]
-        else:
-            target_sentence_ids = output[:, keep_prefix:]
+                    "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+                )
+            if self.model.config.is_decoder:
+                # slice the output ids after the input ids
+                output = output[:,input_ids.shape[1]:]
+            # parse output ids to find special tokens in prefix and suffix
+            parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(output[0,:].numpy().tolist())
+            keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
+            # extract target sentence ids by slicing off prefix and suffix
+            if keep_suffix > 0:
+                self.target_X = output[:, keep_prefix:-keep_suffix]
+            else:
+                self.target_X = output[:, keep_prefix:]
 
-        return target_sentence_ids.numpy()
+        return self.target_X.numpy()
