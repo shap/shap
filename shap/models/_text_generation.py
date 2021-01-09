@@ -136,6 +136,10 @@ class PTTextGeneration(TextGeneration):
             # wrap text input in a numpy array
             if isinstance(X, str):
                 X = np.array([X])
+
+            # set pad token if not defined
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
             # presently supports only text input for hugging face models
             padded_sequences = self.tokenizer(X.tolist(), padding=True)
             input_ids = torch.tensor(padded_sequences["input_ids"]).to(self.device)
