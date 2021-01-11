@@ -225,6 +225,8 @@ class TeacherForcing(Model):
                     inputs["input_ids"] = torch.cat((inputs["input_ids"],output_ids),dim=-1)
                     attention_mask_for_output_ids = torch.ones(output_ids.shape, dtype=output_ids.dtype, device=device)
                     inputs["attention_mask"] = torch.cat((inputs["attention_mask"],attention_mask_for_output_ids),dim=-1)
+                    inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
+                    inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
                     outputs = self.similarity_model(**inputs, return_dict=True)
                 logits=outputs.logits.detach().cpu().numpy().astype('float64')
         elif self.similarity_model_type == "tf":
