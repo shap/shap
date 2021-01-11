@@ -24,7 +24,7 @@ def test_serialization_independent_masker_dataframe():
     original_independent_masker.save(temp_serialization_file)
 
 
-    temp_serialization_file.close()
+    temp_serialization_file.seek(0)
 
     # deserialize masker
     new_independent_masker = shap.maskers.Independent.load(temp_serialization_file)
