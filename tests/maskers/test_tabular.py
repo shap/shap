@@ -1,12 +1,19 @@
-''' This file contains tests for the Tabular maskers.
-'''
+""" This file contains tests for the Tabular maskers.
+"""
+
+import numpy as np
+import shap
+
 
 def test_serialization_independent_masker_dataframe():
     import shap
     import numpy as np
     import tempfile
 
-    X, y = shap.datasets.boston()
+    """ Test the serialization of an Independent masker based on a data frame.
+    """
+
+    X, _ = shap.datasets.boston()
 
     # initialize independent masker
     original_independent_masker = shap.maskers.Independent(X)
@@ -15,6 +22,7 @@ def test_serialization_independent_masker_dataframe():
 
     # serialize independent masker
     original_independent_masker.save(temp_serialization_file)
+
 
     temp_serialization_file.close()
 
@@ -35,7 +43,11 @@ def test_serialization_independent_masker_numpy():
     import numpy as np
     import tempfile
 
-    X, y = shap.datasets.boston()
+    """ Test the serialization of an Independent masker based on a numpy array.
+    """
+
+
+    X, _ = shap.datasets.boston()
     X = X.values
 
     # initialize independent masker
@@ -45,6 +57,7 @@ def test_serialization_independent_masker_numpy():
 
     # serialize independent masker
     original_independent_masker.save(temp_serialization_file)
+
 
     temp_serialization_file.seek(0)
 
@@ -60,13 +73,15 @@ def test_serialization_independent_masker_numpy():
     # comparing masked values
     assert np.array_equal(original_independent_masker(mask, X[0])[0], new_independent_masker(mask, X[0])[0])
 
-
 def test_serialization_partion_masker_dataframe():
     import shap
     import numpy as np
     import tempfile
 
-    X, y = shap.datasets.boston()
+    """ Test the serialization of a Partition masker based on a DataFrame.
+    """
+
+    X, _ = shap.datasets.boston()
 
     # initialize partition masker
     original_partition_masker = shap.maskers.Partition(X)
@@ -95,7 +110,11 @@ def test_serialization_partion_masker_numpy():
     import numpy as np
     import tempfile
 
-    X, y = shap.datasets.boston()
+    """ Test the serialization of a Partition masker based on a numpy array.
+    """
+
+
+    X, _ = shap.datasets.boston()
     X = X.values
 
     # initialize partition masker
