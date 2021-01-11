@@ -1,3 +1,10 @@
+from shap.utils import assert_import
+
+try:
+    assert_import("cv2")
+except ImportError:
+    pytestmark = pytest.mark.skip("opencv not installed")
+
 def test_serialization_image_masker_inpaint_telea():
     import shap
     import numpy as np
