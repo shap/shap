@@ -1,3 +1,10 @@
+""" This file contains tests for the Image masker.
+"""
+
+import tempfile
+import pytest
+import numpy as np
+import shap
 from shap.utils import assert_import
 
 try:
@@ -6,9 +13,8 @@ except ImportError:
     pytestmark = pytest.mark.skip("opencv not installed")
 
 def test_serialization_image_masker_inpaint_telea():
-    import shap
-    import numpy as np
-    import tempfile
+    """ Make sure image serialization works with inpaint telea mask.
+    """
 
     test_image_height = 500
     test_image_width = 500
@@ -38,9 +44,8 @@ def test_serialization_image_masker_inpaint_telea():
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
 def test_serialization_image_masker_inpaint_ns():
-    import shap
-    import numpy as np
-    import tempfile
+    """ Make sure image serialization works with inpaint ns mask.
+    """
 
     test_image_height = 500
     test_image_width = 500
@@ -70,9 +75,8 @@ def test_serialization_image_masker_inpaint_ns():
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
 def test_serialization_image_masker_blur():
-    import shap
-    import numpy as np
-    import tempfile
+    """ Make sure image serialization works with blur mask.
+    """
 
     test_image_height = 500
     test_image_width = 500
@@ -90,7 +94,7 @@ def test_serialization_image_masker_blur():
 
     # deserialize masker
     new_image_masker = shap.maskers.Image.load(temp_serialization_file)
-    
+
     temp_serialization_file.close()
 
     mask = np.ones((test_image_height, test_image_width, 3))
@@ -102,9 +106,8 @@ def test_serialization_image_masker_blur():
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
 def test_serialization_image_masker_mask():
-    import shap
-    import numpy as np
-    import tempfile
+    """ Make sure image serialization works.
+    """
 
     test_image_height = 500
     test_image_width = 500

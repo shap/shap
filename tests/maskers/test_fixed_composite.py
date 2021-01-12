@@ -1,6 +1,7 @@
 """ This file contains tests for the FixedComposite masker.
 """
 
+import tempfile
 import pytest
 import numpy as np
 import shap
@@ -26,10 +27,10 @@ def test_fixed_composite_masker_call():
     assert fixed_composite_masked_output == expected_fixed_composite_masked_output
 
 def test_serialization_fixedcomposite_masker():
-    import shap
-    import numpy as np
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
-    import tempfile
+    """ Make sure fixedcomposite serialization works.
+    """
+
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=False)
     underlying_masker = shap.maskers.Text(tokenizer)

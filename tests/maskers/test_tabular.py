@@ -1,15 +1,12 @@
 """ This file contains tests for the Tabular maskers.
 """
 
+import tempfile
 import numpy as np
 import shap
 
 
 def test_serialization_independent_masker_dataframe():
-    import shap
-    import numpy as np
-    import tempfile
-
     """ Test the serialization of an Independent masker based on a data frame.
     """
 
@@ -39,10 +36,6 @@ def test_serialization_independent_masker_dataframe():
     assert np.array_equal(original_independent_masker(mask, X[:1].values[0])[1], new_independent_masker(mask, X[:1].values[0])[1])
 
 def test_serialization_independent_masker_numpy():
-    import shap
-    import numpy as np
-    import tempfile
-
     """ Test the serialization of an Independent masker based on a numpy array.
     """
 
@@ -74,10 +67,6 @@ def test_serialization_independent_masker_numpy():
     assert np.array_equal(original_independent_masker(mask, X[0])[0], new_independent_masker(mask, X[0])[0])
 
 def test_serialization_partion_masker_dataframe():
-    import shap
-    import numpy as np
-    import tempfile
-
     """ Test the serialization of a Partition masker based on a DataFrame.
     """
 
@@ -106,10 +95,6 @@ def test_serialization_partion_masker_dataframe():
     assert np.array_equal(original_partition_masker(mask, X[:1].values[0])[1], new_partition_masker(mask, X[:1].values[0])[1])
 
 def test_serialization_partion_masker_numpy():
-    import shap
-    import numpy as np
-    import tempfile
-
     """ Test the serialization of a Partition masker based on a numpy array.
     """
 

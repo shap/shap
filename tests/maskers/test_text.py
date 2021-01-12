@@ -1,11 +1,10 @@
 """ This file contains tests for the Text masker.
 """
 
+import tempfile
 import pytest
 import numpy as np
 import shap
-
-
 
 def test_method_tokenize_pretrained_tokenizer():
     """ Check that the Text masker produces the same ids as its non-fast pretrained tokenizer.
@@ -182,10 +181,10 @@ def test_text_infill_with_collapse_mask_token():
             text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4
 
 def test_serialization_text_masker():
-    import shap
-    import numpy as np
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
-    import tempfile
+    """ Make sure text serialization works.
+    """
+
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=False)
     original_masker = shap.maskers.Text(tokenizer)
@@ -212,10 +211,10 @@ def test_serialization_text_masker():
     assert original_masked_output == new_masked_output
 
 def test_serialization_text_masker_custom_mask():
-    import shap
-    import numpy as np
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
-    import tempfile
+    """ Make sure text serialization works with custom mask.
+    """
+
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, mask_token = '[CUSTOM-MASK]')
@@ -241,10 +240,10 @@ def test_serialization_text_masker_custom_mask():
     assert original_masked_output == new_masked_output
 
 def test_serialization_text_masker_collapse_mask_token():
-    import shap
-    import numpy as np
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
-    import tempfile
+    """ Make sure text serialization works with collapse mask token.
+    """
+
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, collapse_mask_token=True)
