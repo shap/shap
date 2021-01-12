@@ -115,7 +115,7 @@ class TeacherForcing(Model):
             Input(Text/Image) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
-        if (self.output is None) or (not np.array_equal(self.output,output)):
+        if (self.output is None) or (not np.array_equal(self.output, output)):
             self.output = output
             self.output_names= self.get_output_names(output)
     

@@ -4,8 +4,8 @@ from ._model import Model
 from .. import models
 from ..utils import safe_isinstance
 
-class GenerateTopKLM(Model):
-    def __init__(self, model, tokenizer, k=10, generation_function_for_topk_token_ids=None, device=None):
+class TopKLM(Model):
+    def __init__(self, model, tokenizer, k=10, generate_topk_token_ids=None, device=None):
         """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
 
         Parameters
@@ -24,7 +24,7 @@ class GenerateTopKLM(Model):
         numpy.array
             The scores (log odds) of generating top-k token ids using the model.
         """
-        super(GenerateTopKLM, self).__init__(model)
+        super(TopKLM, self).__init__(model)
 
         self.tokenizer = tokenizer
         self.k = k
@@ -32,17 +32,7 @@ class GenerateTopKLM(Model):
         self.topk_token_ids = None
         self.output_names = None
         self.device = device
-
-        if self.__class__ is GenerateTopKLM:
-            # assign the right subclass
-            if safe_isinstance(self.model,"transformers.PreTrainedModel"):
-                self.__class__ = models.PTGenerateTopKLM
-                models.PTGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, generation_function_for_topk_token_ids, self.device)
-            elif safe_isinstance(self.model,"transformers.TFPreTrainedModel"):
-                self.__class__ = models.TFGenerateTopKLM
-                models.TFGenerateTopKLM.__init__(self, self.model, self.tokenizer, self.k, generation_function_for_topk_token_ids, self.device)
-            else:
-                raise Exception("Cannot determine subclass to be assigned in GenerateTopKLM. Please define model of instance transformers.PreTrainedModel or transformers.TFPreTrainedModel.")
+        self.generate_topk_token_ids = generate_topk_token_ids if generate_topk_token_ids is not None else self.generate_topk_token_ids
 
     def __call__(self, masked_X, X):
         """ Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
@@ -60,16 +50,11 @@ class GenerateTopKLM(Model):
         numpy.array
             A numpy array of log odds scores for topk tokens for every input pair (masked_X, X)
         """
-        output_batch=[]
-        for masked_x, x in zip(masked_X, X):
-            # update target sentence ids and original input for a new explanation row
-            self.update_cache_X(x)
-            # pass the masked input from which to generate source sentence ids
-            sentence_ids = self.get_sentence_ids(masked_x)
-            logits = self.get_lm_logits(sentence_ids).numpy().astype('float64')
-            logodds = self.get_logodds(logits)
-            output_batch.append(logodds)
-        return np.array(output_batch)
+        #output_batch=[]
+        self.update_cache_X(X[:1])
+        logits = self.get_lm_logits(masked_X)
+        logodds = self.get_logodds(logits)
+        return np.array(logodds)
 
     def update_cache_X(self, X):
         """ The function updates original input(X) and top-k token ids for the Causal/Masked LM.
@@ -83,7 +68,7 @@ class GenerateTopKLM(Model):
             Input(Text) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
-        if (self.X is None) or (self.X != X):
+        if (self.X is None) or (not np.array_equal(self.X, X)):
             self.X = X
             self.output_names = self.get_output_names_and_update_topk_token_ids(self.X)
 
