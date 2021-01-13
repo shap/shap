@@ -1,6 +1,5 @@
 import numpy as np
 from ._model import Model
-from .. import models
 from ..utils import record_import_error, safe_isinstance
 
 try:
@@ -18,22 +17,24 @@ class TextGeneration(Model):
     def __init__(self, model, tokenizer=None, device=None):
         """ Generates target sentence/ids using model.
 
-        It generates target sentence ids for a pretrained transformer model and a function. For a pretrained transformer model, 
-        tokenizer should be passed. In case model is a function, then the similarity_tokenizer is used to tokenize generated 
-        sentence to ids.
+        It generates target sentence/ids for a model(pretrained transformer model or a function). For a pretrained transformer model, 
+        tokenizer should be passed.
 
         Parameters
         ----------
         model: object or function
-            A object of any pretrained transformer model or function for which target sentence and tokenized ids are to be generated.
+            A object of any pretrained transformer model or function for which target sentence/ids are to be generated.
 
         tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast) which is used to tokenize sentence.
 
+        device: str
+            By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'cuda' or pytorch models.
+
         Returns
         -------
-        np.ndarray
-            Array of target sentence or ids.
+        numpy.ndarray
+            Array of target sentence/ids.
         """
         super(TextGeneration, self).__init__(model)
 
@@ -48,24 +49,23 @@ class TextGeneration(Model):
         else:
             self.model_agnostic = True
             self.model_type = None
-        # X is input used to generate target sentence
-        # used for caching
+        # X is input used to generate target sentence used for caching
         self.X = None
         # target sentence/ids generated from the model using X 
         self.target_X = None
 
     def __call__(self, X):
-        """ Generates target sentence ids from X.
+        """ Generates target sentence/ids from X.
 
         Parameters
         ----------
-        X: str or np.ndarray
+        X: str or numpy.ndarray
             Input in the form of text or image.
 
         Returns
         -------
-        np.ndarray
-            Array of target sentence.
+        numpy.ndarray
+            Array of target sentence/ids.
         """
         if (self.X is None) or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X)) or (isinstance(self.X, str) and (self.X != X)):
             self.X = X
@@ -80,28 +80,42 @@ class TextGeneration(Model):
         return np.array(self.target_X)
 
     def get_inputs(self, X, padding_side='right'):
-        """ The function tokenizes source sentence.
+        """ The function tokenizes source sentences.
+
+        In model agnostic case, the function calls model(X) which is expected to 
+        return a batch of output sentences which is tokenized to compute inputs.
 
         Parameters
         ----------
         X: numpy.ndarray
-            X could be a batch of text or images.
+            X is a batch of sentences.
 
         Returns
         -------
-        numpy.ndarray
-            Array of padded source sentence ids and attention mask.
+        dict
+            Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on model_type).
         """
         # set tokenizer padding to prepare inputs for batch inferencing
         # padding_side="left" for only decoder models text generation eg. GPT2
         self.tokenizer.padding_side = padding_side
         inputs = self.tokenizer(X.tolist(), return_tensors=self.model_type, padding=True)
-        #input_ids, attention_mask = np.array(padded_sequences["input_ids"]), np.array(padded_sequences["attention_mask"])
         # set tokenizer padding to default
         self.tokenizer.padding_side = 'right'
         return inputs
 
     def model_inference(self, X):
+        """ This function performs model inference for tensorflow and pytorch models.
+
+        Parameters
+        ----------
+        X: dict
+            Dictionary of padded source sentence ids and attention mask as tensors.
+
+        Returns
+        -------
+        numpy.ndarray
+            Returns target sentence ids.
+        """
         if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
                 and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
                 raise ValueError(
@@ -115,12 +129,11 @@ class TextGeneration(Model):
                 raise ValueError(
                 "Please assign text generation params as a dictionary"
             )
-
         if self.model_type == "pt":
             # create torch tensors and move to device
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
-            self.model.eval()
             self.model = self.model.to(device)
+            self.model.eval()
             with torch.no_grad():
                 if self.model.config.is_encoder_decoder:
                     inputs = self.get_inputs(X).to(device)
@@ -155,6 +168,16 @@ class TextGeneration(Model):
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
         """ Calculates if special tokens are present in the begining/end of the model generated output.
+
+        Parameters
+        ----------
+        output: list
+            A list of output token ids.
+
+        Returns
+        -------
+        dict
+            Dictionary of prefix and suffix lengths concerning special tokens in output ids. 
         """
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():

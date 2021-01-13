@@ -37,8 +37,8 @@ class TeacherForcing(Model):
         similarity_tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast) which is used to tokenize sentence in model agnostic scenario.
 
-        device: "cpu" or "cuda" or None
-            By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'gpu'.
+        device: str
+            By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'cuda' or pytorch models.
 
         Returns
         -------
