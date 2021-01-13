@@ -76,7 +76,7 @@ class TextGeneration(Model):
             if self.model_agnostic:
                 self.target_X = self.model(X)
             else:
-                self.target_X = self.model_inference(X)
+                self.target_X = self.model_generate(X)
         return np.array(self.target_X)
 
     def get_inputs(self, X, padding_side='right'):
@@ -103,8 +103,8 @@ class TextGeneration(Model):
         self.tokenizer.padding_side = 'right'
         return inputs
 
-    def model_inference(self, X):
-        """ This function performs model inference for tensorflow and pytorch models.
+    def model_generate(self, X):
+        """ This function performs text generation for tensorflow and pytorch models.
 
         Parameters
         ----------
