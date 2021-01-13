@@ -29,9 +29,12 @@ class TopKLM(Model):
         generation_function_for_topk_token_ids: function
             A function which is used to generate top-k token ids. Log odds will be generated for these custom token ids.
 
+        device: str
+            By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'cuda' or pytorch models.
+
         Returns
         -------
-        numpy.array
+        numpy.ndarray
             The scores (log odds) of generating top-k token ids using the model.
         """
         super(TopKLM, self).__init__(model)
@@ -60,16 +63,16 @@ class TopKLM(Model):
 
         Parameters
         ----------
-        masked_X: numpy.array
+        masked_X: numpy.ndarray
             An array containing a list of masked inputs.
 
-        X: numpy.array
+        X: numpy.ndarray
             An array containing a list of original inputs
 
         Returns
         -------
-        numpy.array
-            A numpy array of log odds scores for topk tokens for every input pair (masked_X, X)
+        numpy.ndarray
+            A numpy array of log odds scores for top-k tokens for every input pair (masked_X, X)
         """
         #output_batch=[]
         self.update_cache_X(X[:1])
@@ -85,7 +88,7 @@ class TopKLM(Model):
 
         Parameters
         ----------
-        X: string
+        X: np.ndarray
             Input(Text) for an explanation row.
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
@@ -98,7 +101,7 @@ class TopKLM(Model):
         
         Parameters
         ----------
-        X: string
+        X: np.ndarray
             Input(Text) for an explanation row.
 
         Returns
@@ -117,13 +120,13 @@ class TopKLM(Model):
 
         Parameters
         ----------
-        logits: numpy.array
+        logits: numpy.ndarray
             An array of logits generated from the model.
 
         Returns
         -------
-        numpy.array
-            Computes log odds for corresponding target sentence ids.
+        numpy.ndarray
+            Computes log odds for corresponding top-k token ids.
         """
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
@@ -146,8 +149,8 @@ class TopKLM(Model):
 
         Returns
         -------
-        torch.Tensor or tf.Tensor
-            Array of padded source sentence ids and attention mask.
+        dict
+            Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on similarity_model_type).
         """
         self.tokenizer.padding_side = padding_side
         inputs = self.tokenizer(X.tolist(), return_tensors=self.model_type, padding=True)
@@ -156,7 +159,17 @@ class TopKLM(Model):
         return inputs
 
     def generate_topk_token_ids(self, X):
-        """ Implement in subclass. Returns a tensor of top-k token ids.
+        """ Generates top-k token ids for Causal/Masked LM.
+
+        Parameters
+        ----------
+        X: numpy.ndarray
+            X is the original input sentence for an explanation row.
+
+        Returns
+        -------
+        np.ndarray
+            An array of top-k token ids.
         """
         logits = self.get_lm_logits(X)
         topk_tokens_ids = (-logits).argsort()[0,:self.k]
@@ -164,13 +177,15 @@ class TopKLM(Model):
 
     def get_lm_logits(self, X):
         """ Evaluates a Causal/Masked LM model and returns logits corresponding to next word/masked word.
+
         Parameters
         ----------
-        source_sentence_ids: torch.Tensor of shape (batch size, len of sequence)
-            Tokenized ids fed to the model.
+        X: numpy.ndarray
+            An array containing a list of masked inputs.
+
         Returns
         -------
-        torch.Tensor
+        numpy.ndarray
             Logits corresponding to next word/masked word.
         """
         if safe_isinstance(self.model, MODELS_FOR_CAUSAL_LM):
