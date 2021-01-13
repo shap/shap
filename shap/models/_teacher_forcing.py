@@ -55,7 +55,7 @@ class TeacherForcing(Model):
         self.tokenizer = tokenizer
         # set pad token if not defined
         if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.bos_token
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.device = device
         # assign text generation function
@@ -65,7 +65,7 @@ class TeacherForcing(Model):
             self.similarity_tokenizer = tokenizer
             self.model_agnostic = False
         else:
-            self.text_generate = models.TextGeneration(self.model, similarity_tokenizer=similarity_tokenizer, device=self.device)
+            self.text_generate = models.TextGeneration(self.model, device=self.device)
             self.similarity_model = similarity_model
             self.similarity_tokenizer = similarity_tokenizer
             self.model_agnostic = True
@@ -75,6 +75,8 @@ class TeacherForcing(Model):
         
         if safe_isinstance(self.similarity_model,"transformers.PreTrainedModel"):
             self.similarity_model_type = "pt"
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
+            self.similarity_model = self.similarity_model.to(self.device)
         else:
             self.similarity_model_type = "tf"
 
@@ -174,7 +176,6 @@ class TeacherForcing(Model):
         # padding_side="left" for only decoder models text generation eg. GPT2
         self.similarity_tokenizer.padding_side = padding_side
         inputs = self.similarity_tokenizer(input_sentences.tolist(), return_tensors=self.similarity_model_type, padding=True)
-        #input_ids, attention_mask = np.array(padded_sequences["input_ids"]), np.array(padded_sequences["attention_mask"])
         # set tokenizer padding to default
         self.similarity_tokenizer.padding_side = 'right'
         return inputs
@@ -212,10 +213,11 @@ class TeacherForcing(Model):
     def model_inference(self, inputs, output_ids):
         if self.similarity_model_type == "pt":
             # create torch tensors and move to device
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
-            inputs = inputs.to(device)
+            
+            inputs = inputs.to(self.device)
+            self.similarity_model
             if output_ids is not None:
-                output_ids = torch.tensor(output_ids, dtype=torch.int64, device=device)
+                output_ids = torch.tensor(output_ids, dtype=torch.int64, device=self.device)
             self.similarity_model.eval()
             with torch.no_grad():
                 if self.similarity_model.config.is_encoder_decoder:
@@ -223,7 +225,7 @@ class TeacherForcing(Model):
                 else:
                     # combine source and target sentence ids to pass into decoder eg: in case of distillgpt2
                     inputs["input_ids"] = torch.cat((inputs["input_ids"],output_ids),dim=-1)
-                    attention_mask_for_output_ids = torch.ones(output_ids.shape, dtype=output_ids.dtype, device=device)
+                    attention_mask_for_output_ids = torch.ones(output_ids.shape, dtype=output_ids.dtype, device=self.device)
                     inputs["attention_mask"] = torch.cat((inputs["attention_mask"],attention_mask_for_output_ids),dim=-1)
                     inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
                     inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
@@ -247,6 +249,8 @@ class TeacherForcing(Model):
                 inputs["input_ids"] = tf.concat((inputs["input_ids"],output_ids),axis=-1)
                 attention_mask_for_output_ids = tf.ones(output_ids.shape, dtype=output_ids.dtype)
                 inputs["attention_mask"] = tf.concat((inputs["attention_mask"],attention_mask_for_output_ids),axis=-1)
+                inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
+                inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
                 if self.device is None:
                     outputs = self.similarity_model(inputs, return_dict=True)
                 else:
