@@ -52,7 +52,7 @@ class TeacherForcing(Model):
 
         self.tokenizer = tokenizer
         # set pad token if not defined
-        if self.tokenizer.pad_token is None:
+        if self.tokenizer is not None and self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.device = device
@@ -67,6 +67,9 @@ class TeacherForcing(Model):
             self.text_generate = models.TextGeneration(self.model, device=self.device)
             self.similarity_model = similarity_model
             self.similarity_tokenizer = similarity_tokenizer
+            # set pad token for a similarity tokenizer(in a model agnostic scenario) if not defined
+            if self.similarity_tokenizer is not None and self.similarity_tokenizer.pad_token is None:
+                self.similarity_tokenizer.pad_token = self.similarity_tokenizer.eos_token
             self.model_agnostic = True
         # initializing target which is the target sentence/ids for every new row of explanation
         self.output = None
