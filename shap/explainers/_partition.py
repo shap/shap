@@ -11,7 +11,9 @@ from .. import Explanation
 from .. import maskers
 from ._explainer import Explainer
 from .. import links
-
+import cloudpickle
+from ..maskers import Masker
+from ..models import Model
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -82,9 +84,7 @@ class Partition(Explainer):
         # will use for sampling
         self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
         # self.output_names = output_names
-        if safe_isinstance(model, "shap.models.Model"):
-            self.model = model
-        else:
+        if not safe_isinstance(self.model, "shap.models.Model"):
             self.model = lambda *args: np.array(model(*args))
         self.expected_value = None
         self._curr_base_value = None
@@ -327,6 +327,68 @@ class Partition(Explainer):
         
         return output_indexes, base_value
         
+    def save(self, out_file):
+        """ Saves content of permutation explainer
+        """
+
+        super(Partition, self).save(out_file)
+        
+        if callable(self.model.save):
+            self.model.save(out_file, self.model.model)
+        else:
+            pickle.dump(None,out_file)
+        
+        if callable(self.masker.save):
+            self.masker.save(out_file, self.masker)
+        else:
+            pickle.dump(None,out_file)
+        
+        if hasattr(self, 'partition_tree'):
+            cloudpickle.dump(self.partition_tree, out_file)
+        else:
+            cloudpickle.dump(None, out_file)
+        
+        if hasattr(self, 'output_names'):
+            cloudpickle.dump(self.output_names, out_file)
+        else:
+            cloudpickle.dump(None, out_file)
+
+        cloudpickle.dump(self.link, out_file)
+        cloudpickle.dump(self.link.inverse,out_file)
+
+        if hasattr(self, 'feature_names'):
+            cloudpickle.dump(self.feature_names, out_file)
+        else:
+            cloudpickle.dump(None, out_file)
+
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        explainer_type = pickle.load(in_file)
+        if not explainer_type == cls:
+            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
+        
+        return Partition._load(in_file, model_loader, masker_loader)
+    
+    @classmethod
+    def _load(cls, in_file, model_loader = None, masker_loader = None):
+        if model_loader is None:
+            model = Model.load(in_file)
+        else:
+            model = model_loader(in_file)
+        
+        if masker_loader is None:
+            masker = Masker.load(in_file)
+        else:
+            masker = masker_loader(in_file)
+
+        partition_tree = cloudpickle.load(in_file)
+        output_names = cloudpickle.load(in_file)
+        link = cloudpickle.load(in_file)
+        link_inverse = cloudpickle.load(in_file)
+        link.inverse = link_inverse
+        feature_names = cloudpickle.load(in_file)
+        return Partition(model, masker, partition_tree=partition_tree, output_names=output_names, link=link, feature_names=feature_names)
+
 
 def output_indexes_len(output_indexes):
     if output_indexes.startswith("max("):
