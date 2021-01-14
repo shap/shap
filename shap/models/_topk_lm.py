@@ -15,7 +15,7 @@ except ImportError as e:
     record_import_error("tensorflow", "TensorFlow could not be imported!", e)
 
 class TopKLM(Model):
-    def __init__(self, model, tokenizer, k=10, generate_topk_token_ids=None, device=None):
+    def __init__(self, model, tokenizer, k=10, generate_topk_token_ids=None, batch_size=128, device=None):
         """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
 
         Parameters
@@ -28,6 +28,9 @@ class TopKLM(Model):
 
         generation_function_for_topk_token_ids: function
             A function which is used to generate top-k token ids. Log odds will be generated for these custom token ids.
+
+        batch_size: int
+            Batch size for model inferencing and computing logodds (default=128).
 
         device: str
             By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'cuda' or pytorch models.
@@ -44,11 +47,14 @@ class TopKLM(Model):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.k = k
+        self.generate_topk_token_ids = generate_topk_token_ids if generate_topk_token_ids is not None else self.generate_topk_token_ids
+        self.batch_size = batch_size
+        self.device = device
+
         self.X = None
         self.topk_token_ids = None
         self.output_names = None
-        self.device = device
-        self.generate_topk_token_ids = generate_topk_token_ids if generate_topk_token_ids is not None else self.generate_topk_token_ids
+        
         self.model_type = None
         if safe_isinstance(self.model,"transformers.PreTrainedModel"):
             self.model_type = "pt"
@@ -74,11 +80,18 @@ class TopKLM(Model):
         numpy.ndarray
             A numpy array of log odds scores for top-k tokens for every input pair (masked_X, X)
         """
-        #output_batch=[]
+        output_batch = None
         self.update_cache_X(X[:1])
-        logits = self.get_lm_logits(masked_X)
-        logodds = self.get_logodds(logits)
-        return np.array(logodds)
+        start_batch_idx, end_batch_idx = 0, len(masked_X)
+        while start_batch_idx <= end_batch_idx:
+            logits = self.get_lm_logits(masked_X[start_batch_idx:start_batch_idx+self.batch_size])
+            logodds = self.get_logodds(logits)
+            if output_batch is None:
+                output_batch = logodds
+            else:
+                output_batch = np.concatenate((output_batch, logodds))
+            start_batch_idx += self.batch_size
+        return output_batch
 
     def update_cache_X(self, X):
         """ The function updates original input(X) and top-k token ids for the Causal/Masked LM.

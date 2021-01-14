@@ -16,7 +16,7 @@ except ImportError as e:
     record_import_error("tensorflow", "TensorFlow could not be imported!", e)
 
 class TeacherForcing(Model):
-    def __init__(self, model, tokenizer=None, similarity_model=None, similarity_tokenizer=None, device=None):
+    def __init__(self, model, tokenizer=None, similarity_model=None, similarity_tokenizer=None, batch_size=128, device=None):
         """ Generates scores (log odds) for output text explanation algorithms using Teacher Forcing technique.
 
         This class supports generation of log odds for transformer models as well as functions. In model agnostic
@@ -37,6 +37,9 @@ class TeacherForcing(Model):
         similarity_tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast) which is used to tokenize sentence in model agnostic scenario.
 
+        batch_size: int
+            Batch size for model inferencing and computing logodds (default=128).
+
         device: str
             By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'cuda' or pytorch models.
 
@@ -53,6 +56,7 @@ class TeacherForcing(Model):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.device = device
+        self.batch_size = batch_size
         # assign text generation function
         if safe_isinstance(model,"transformers.PreTrainedModel") or safe_isinstance(model,"transformers.TFPreTrainedModel"):
             self.text_generate = models.TextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
@@ -92,13 +96,19 @@ class TeacherForcing(Model):
         numpy.ndarray
             A numpy array of log odds scores for every input pair (masked_X, X)
         """
-        #output_batch=[]
+        output_batch = None
         # caching updates output names and target sentence ids
         self.update_output_names(Y[:1])
-        logits = self.get_teacher_forced_logits(X, Y)
-        logodds = self.get_logodds(logits)
-        #output_batch.append(logodds)
-        return np.array(logodds)
+        start_batch_idx, end_batch_idx = 0, len(X)
+        while start_batch_idx <= end_batch_idx:
+            logits = self.get_teacher_forced_logits(X[start_batch_idx:start_batch_idx+self.batch_size], Y[start_batch_idx:start_batch_idx+self.batch_size])
+            logodds = self.get_logodds(logits)
+            if output_batch is None:
+                output_batch = logodds
+            else:
+                output_batch = np.concatenate((output_batch, logodds))
+            start_batch_idx += self.batch_size
+        return output_batch
 
     def update_output_names(self, output):
         """ The function updates output tokens.

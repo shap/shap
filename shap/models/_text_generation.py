@@ -28,6 +28,9 @@ class TextGeneration(Model):
         tokenizer: object
             A tokenizer object(PreTrainedTokenizer/PreTrainedTokenizerFast) which is used to tokenize sentence.
 
+        target_sentences: list
+            A target sentence for every explanation row.
+
         device: str
             By default, it infers if system has a gpu and accordingly sets device. Should be 'cpu' or 'cuda' or pytorch models.
 
