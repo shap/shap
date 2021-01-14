@@ -1,8 +1,7 @@
-import numpy as np
 from ._masker import Masker
 
 class OutputComposite(Masker):
-    def __init__(self, masker, model, input_args=-1):
+    def __init__(self, masker, model):
         """ Creates a Composite masker from an underlying masker and returns the masked input along with the model output for passed args.
 
         Parameters
@@ -13,10 +12,6 @@ class OutputComposite(Masker):
         model: object
             An object shap.models.Model base class used to generate output.
 
-        input_args: int
-            Number of input arguments to be masked. If input_args < number of arguments passed to call function, then we consider the 
-            remaining arguments to be 'y' passed by the user (conceptually similar to teacher forcing technique).
-
         Returns
         -------
         tuple
@@ -24,7 +19,6 @@ class OutputComposite(Masker):
         """
         self.masker = masker
         self.model = model
-        self.input_args = input_args
         # define attributes to be dynamically set
         masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names"]
         # set attributes dynamically
@@ -35,12 +29,8 @@ class OutputComposite(Masker):
     def __call__(self, mask, *args):
         """ Computes mask on the args using the masker data attribute and returns tuple containing masked input with model output for passed args.
         """
-        if self.input_args == -1:
-            masked_X = self.masker(mask, *args)
-            y = self.model(*args)
-        else:
-            masked_X = self.masker(mask, *args[:self.input_args])
-            y = args[self.input_args:]
+        masked_X = self.masker(mask, *args)
+        y = self.model(*args)
         # wrap model output
         if not isinstance(y, tuple):
             y = (y,)

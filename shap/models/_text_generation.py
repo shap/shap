@@ -14,7 +14,7 @@ except ImportError as e:
 
 
 class TextGeneration(Model):
-    def __init__(self, model, tokenizer=None, device=None):
+    def __init__(self, model=None, tokenizer=None, target_sentences=None, device=None):
         """ Generates target sentence/ids using model.
 
         It generates target sentence/ids for a model(pretrained transformer model or a function). For a pretrained transformer model, 
@@ -37,6 +37,10 @@ class TextGeneration(Model):
             Array of target sentence/ids.
         """
         super(TextGeneration, self).__init__(model)
+
+        self.explanation_row = 0
+        if target_sentences is not None:
+            self.model = lambda _ : np.array([target_sentences[self.explanation_row]]) 
 
         self.tokenizer = tokenizer
         self.device = device
@@ -77,6 +81,8 @@ class TextGeneration(Model):
                 self.target_X = self.model(X)
             else:
                 self.target_X = self.model_generate(X)
+            # update explanation row count
+            self.explanation_row += 1
         return np.array(self.target_X)
 
     def get_inputs(self, X, padding_side='right'):
@@ -123,11 +129,11 @@ class TextGeneration(Model):
                 )
         # check if user assigned any text generation specific kwargs
         text_generation_params = {}
-        if "text_generation_params" in self.model.config.__dict__:
-            text_generation_params = self.model.config.text_generation_params
+        if "task_specific_params" in self.model.config.__dict__ and "text-generation" in self.model.config.task_specific_params:
+            text_generation_params = self.model.config.task_specific_params["text-generation"]
             if not isinstance(text_generation_params, dict):
                 raise ValueError(
-                "Please assign text generation params as a dictionary"
+                "Please assign text generation params as a dictionary under task_specific_params with key 'text-generation' "
             )
         if self.model_type == "pt":
             # create torch tensors and move to device
