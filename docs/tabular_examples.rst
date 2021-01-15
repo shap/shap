@@ -35,7 +35,7 @@ Examples demonstrating how to explain machine learning models based on neural ne
     :glob:
     :maxdepth: 1
 
-    example_notebooks/tabular_examples/neural_network_model/*
+    example_notebooks/tabular_examples/neural_networks/*
 
 
 Model agnostic
