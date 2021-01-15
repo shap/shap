@@ -10,6 +10,7 @@
 [![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
 
 Project for extending SHAP to support Textual Entailment, which uses 2 inputs, and multi-input functionality in general.
+Uses *args to accept multiple inputs.
 
 **SHAP (SHapley Additive exPlanations)** is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions (see [papers](#citations) for details and citations).
 
