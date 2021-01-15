@@ -12,6 +12,7 @@ from .. import maskers
 from ._explainer import Explainer
 from .. import links
 import cloudpickle
+import pickle
 from ..maskers import Masker
 from ..models import Model
 
