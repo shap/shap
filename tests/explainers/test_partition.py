@@ -1,8 +1,15 @@
+""" This file contains tests for partition explainer.
+"""
+import tempfile
+import pytest
+import numpy as np
+import shap
+
 def test_serialization_partition():
-    import shap
-    import numpy as np
-    from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-    import tempfile
+    """ This tests the serialization of partition explainers.
+    """
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
+    AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
     tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
     model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-es").cuda()
@@ -17,9 +24,9 @@ def test_serialization_partition():
     shap_values_original = explainer_original(data)
 
     temp_serialization_file = tempfile.TemporaryFile()
-    # Serialization 
+    # Serialization
     explainer_original.save(temp_serialization_file)
-    
+
     temp_serialization_file.seek(0)
 
     # Deserialization
