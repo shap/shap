@@ -2,6 +2,7 @@ import numpy as np
 import queue
 from ..utils import assert_import, record_import_error
 from ._masker import Masker
+import pickle
 try:
     import cv2
 except ImportError as e:
@@ -28,6 +29,8 @@ class Image(Masker):
         else:
             self.input_shape = shape
         
+        self.input_mask_value = mask_value
+
         # This is the shape of the masks we expect
         self.shape = (1, np.prod(self.input_shape)) # the (1, ...) is because we only return a single masked sample to average over
         
@@ -180,3 +183,32 @@ class Image(Masker):
             lsize = 1 if li < M else self.clustering[li-M,3]
             rsize = 1 if ri < M else self.clustering[ri-M,3]
             self.clustering[i,3] = lsize + rsize
+
+    def save(self, out_file, *args):
+        super(Image, self).save(out_file)
+        pickle.dump(type(self.input_mask_value), out_file)
+        if issubclass(type(self.input_mask_value), np.ndarray):
+            np.save(out_file, self.input_mask_value)
+        else:
+            pickle.dump(self.input_mask_value, out_file)
+        pickle.dump(self.input_shape, out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        masker_type = pickle.load(in_file)
+        if not masker_type == cls:
+            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
+        return Image._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        mask_value_type = pickle.load(in_file)
+        mask_value = None
+        if issubclass(mask_value_type, np.ndarray):
+            mask_value = np.load(in_file)
+        else:
+            mask_value = pickle.load(in_file)
+        shape = pickle.load(in_file)
+        image_masker = Image(mask_value, shape)
+
+        return image_masker

@@ -16,3 +16,18 @@ class Fixed(Masker):
     
     def __call__(self, x, mask):
         return x
+    
+    def save(self, out_file, *args):
+        super(Fixed, self).save(out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        masker_type = pickle.load(in_file)
+        if not masker_type == cls:
+            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
+        return Fixed._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        fixed_masker = Fixed()
+        return fixed_masker
