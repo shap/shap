@@ -10,9 +10,13 @@ try:
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
+try:
+    from IPython.core.display import display, HTML
+except ImportError:
+    warnings.warn("IPython could not be loaded!")
+    pass
 from . import colors
 from ..utils._legacy import kmeans
-from IPython.core.display import display, HTML
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
