@@ -12,7 +12,7 @@ def test_serialization_partition():
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
     tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
-    model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-es").cuda()
+    model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-es")
 
     # define the input sentences we want to translate
     data = [
