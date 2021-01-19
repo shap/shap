@@ -21,14 +21,14 @@ from ..models import Model
 
 
 class Partition(Explainer):
-    
+
     def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, feature_names=None):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
         hierarchy defines feature coalitions and results in the Owen values from game theory. The
         PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
-        model-agnostic but when using a balanced partition tree only has quadradic exact runtime 
+        model-agnostic but when using a balanced partition tree only has quadradic exact runtime
         (in term of the number of input features). This is in contrast to the exponential exact
         runtime of KernalExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
         correlated features the credit that set of features would have had if treated as a group. This
@@ -62,16 +62,16 @@ class Partition(Explainer):
             example. If you are using a standard SHAP masker object then you can pass masker.clustering
             to use that masker's built-in clustering of the features, or if partition_tree is None then
             masker.clustering will be used by default.
-        
+
         Examples
         --------
         See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
         """
 
         super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
-        
+
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
-        
+
         # convert dataframes
         # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
         #     masker = TabularMasker(masker)
@@ -97,7 +97,7 @@ class Partition(Explainer):
         #     self.partition_tree = masker.clustering
         # else:
         #     self.partition_tree = partition_tree
-        
+
         # handle higher dimensional tensor inputs
         if self.input_shape is not None and len(self.input_shape) > 1:
             self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *self.input_shape))
@@ -113,15 +113,15 @@ class Partition(Explainer):
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
-        
+
         if fixed_context == "auto":
             fixed_context = None
         elif fixed_context in [0,1,None]:
-            fixed_context = fixed_context 
+            fixed_context = fixed_context
         else:
             raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
-        
-        
+
+
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
@@ -142,7 +142,7 @@ class Partition(Explainer):
                 outputs = np.arange(len(self._curr_base_value))
             elif isinstance(outputs, OpChain):
                 outputs = outputs.apply(Explanation(f11)).values
-            
+
             out_shape = (2*self._clustering.shape[0]+1, len(outputs))
         else:
             out_shape = (2*self._clustering.shape[0]+1,)
@@ -271,7 +271,7 @@ class Partition(Explainer):
                 batch_args.append((m00, m10, m01, f00, f11, ind, lind, rind, weight))
                 batch_masks.append(m10)
                 batch_masks.append(m01)
-            
+
             batch_masks = np.array(batch_masks)
                 
             # run the batch
@@ -281,18 +281,18 @@ class Partition(Explainer):
                     fout = fout[:,output_indexes]
                     
                 eval_count += len(batch_masks)
-                    
+
                 if pbar is None and time.time() - start_time > 5:
                     pbar = tqdm(total=total_evals, disable=silent, leave=False)
                     pbar.update(eval_count)
                 if pbar is not None:
                     pbar.update(len(batch_masks))
-            
+
             # use the results of the batch to add new nodes
             for i in range(len(batch_args)):
                 
                 m00, m10, m01, f00, f11, ind, lind, rind, weight = batch_args[i]
-                
+
                 # get the evaluated model output on the two new masked inputs
                 f10 = fout[2*i]
                 f01 = fout[2*i+1]
@@ -327,7 +327,7 @@ class Partition(Explainer):
             pbar.close()
         
         return output_indexes, base_value
-        
+
     def save(self, out_file):
         """ Saves content of permutation explainer
         """
