@@ -171,7 +171,7 @@ def test_pytorch_mnist_cnn(tmpdir):
                 diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
             sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
             d = np.abs(sums - diff).sum()
-            assert d / np.abs(diff).sum() < 0.05, "Sum of SHAP values " \
+            assert d / np.abs(diff).sum() < 0.06, "Sum of SHAP values " \
                                                   "does not match difference! %f" % (d / np.abs(diff).sum())
 
     print ('Running test from interim layer')

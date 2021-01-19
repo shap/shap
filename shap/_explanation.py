@@ -150,6 +150,8 @@ class Explanation(object, metaclass=MetaExplanation):
         return self._s.display_data
     @display_data.setter
     def display_data(self, new_display_data):
+        if issubclass(type(new_display_data), pd.DataFrame):
+            new_display_data = new_display_data.values
         self._s.display_data = new_display_data
 
     @property
