@@ -83,7 +83,7 @@ class TopKLM(Model):
         output_batch = None
         self.update_cache_X(X[:1])
         start_batch_idx, end_batch_idx = 0, len(masked_X)
-        while start_batch_idx <= end_batch_idx:
+        while start_batch_idx < end_batch_idx:
             logits = self.get_lm_logits(masked_X[start_batch_idx:start_batch_idx+self.batch_size])
             logodds = self.get_logodds(logits)
             if output_batch is None:

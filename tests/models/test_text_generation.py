@@ -18,7 +18,6 @@ def test_call_function_text_generation():
 
     # Define function
     def f(x):
-        model.eval()
         inputs = tokenizer(x.tolist(), return_tensors="pt", padding=True)
         with torch.no_grad():
             out = model.generate(**inputs)

@@ -103,7 +103,7 @@ class TeacherForcing(Model):
         # caching updates output names and target sentence ids
         self.update_output_names(Y[:1])
         start_batch_idx, end_batch_idx = 0, len(X)
-        while start_batch_idx <= end_batch_idx:
+        while start_batch_idx < end_batch_idx:
             logits = self.get_teacher_forced_logits(X[start_batch_idx:start_batch_idx+self.batch_size], Y[start_batch_idx:start_batch_idx+self.batch_size])
             logodds = self.get_logodds(logits)
             if output_batch is None:
