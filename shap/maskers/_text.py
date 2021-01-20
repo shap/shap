@@ -1,7 +1,5 @@
 import numpy as np
 import re
-import cloudpickle
-import pickle
 from ._masker import Masker
 from ..utils import safe_isinstance
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
@@ -19,7 +17,7 @@ class Text(Masker):
         self.tokenizer = tokenizer
         self.output_type = output_type
         self.collapse_mask_token = collapse_mask_token
-        self.input_mask_token = mask_token
+        
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
         
         self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
@@ -60,8 +58,8 @@ class Text(Masker):
 
         self._s = None
     
-    def __call__(self, mask, s):
-        self._update_s_cache(s)
+    def __call__(self, mask, *s):
+        self._update_s_cache(*s)
 
         # if we have a fixed prefix or suffix then we need to grow the mask to account for that
         if self.keep_prefix > 0 or self.keep_suffix > 0:
@@ -69,6 +67,7 @@ class Text(Masker):
             mask[:self.keep_prefix] = True
             mask[-self.keep_suffix:] = True
         
+
         if self.output_type == "string":
             if self.mask_token_id is None:
                 out = self._segments_s[mask]
@@ -77,7 +76,9 @@ class Text(Masker):
                 out = []
                 is_previous_appended_token_mask_token = False
                 for i in range(len(mask)):
-                    if mask[i]:
+                    # TODO HACK!!! ignores mask for sep tokens
+                    # check if sep_token exists?
+                    if self._segments_s[i] == self.tokenizer.sep_token and i > 0 and i < len(self._segments_s) - 1 or mask[i]:
                         out.append(self._segments_s[i])
                         is_previous_appended_token_mask_token = False
                     else:
@@ -133,40 +134,44 @@ class Text(Masker):
         s = s.replace('▁', ' ')
         return s
 
-    def data_transform(self, s):
+    def data_transform(self, *s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            out = self.token_segments(s)
+            out = self.token_segments(*s)
             out = [token+' ' for token in out]
             return out
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            return self.token_segments(s)
+            return self.token_segments(*s)
     
-    def tokenize(self, s):
+    def tokenize(self, *s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            return self.tokenizer.encode_plus(s)
+            return self.tokenizer.encode_plus(*s)
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
+            return self.tokenizer.encode_plus(*s, return_offsets_mapping=True)
     
-    def token_segments(self, s):
+    def token_segments(self, *s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            token_ids = self.tokenizer.encode_plus(s)['input_ids']
+            token_ids = self.tokenizer.encode_plus(*s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
-            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))]
+            # tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))] 
+            tokens = [tokens[i] if (i > 0 and i < len(tokens) - 1 or special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))] # TODO possibly keep separator tokens inside
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
+            offsets_ = offsets = self.tokenizer.encode_plus(*s, return_offsets_mapping=True) # ADDED
+            offsets = self.tokenizer.encode_plus(*s, return_offsets_mapping=True)["offset_mapping"]
             offsets = [(0,0) if o is None else o for o in offsets]
+            s = ''.join(s) # TODO check if joining s with empty is allowed 
+            # TODO bug with offsets mapping being reset to 0 index when we want it to continue off 1st sentence index; ignoring for now
             parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
 
-    def clustering(self, s):
-        self._update_s_cache(s)
+    def clustering(self, *s):
+        self._update_s_cache(*s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         pt = partition_tree(decoded_x)
-        #self._mark_uninvertable(pt)
+        self._mark_uninvertable(pt)
         return pt
 
 
@@ -190,13 +195,15 @@ class Text(Masker):
                 ltokens = recursive_mark(lind)
                 rtokens = recursive_mark(rind)
             
-            tmp = ltokens + [self.mask_token_id]
+            # tmp = ltokens + [self.mask_token_id]
+            tmp = ltokens + self.mask_token_id
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
                 clustering[ind-M,2] = -1 # set the distance of this cluster negative so it can't be split
             
-            tmp = [self.mask_token_id] + rtokens
+            # tmp = [self.mask_token_id] + rtokens
+            tmp = self.mask_token_id + rtokens
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
@@ -206,59 +213,39 @@ class Text(Masker):
         
         recursive_mark(M+len(clustering)-1)
 
-    def _update_s_cache(self, s):
+    def _update_s_cache(self, *s):
         if self._s != s:
             self._s = s
-            self._tokenized_s_full = self.tokenize(s)
+            self._tokenized_s_full = self.tokenize(*s)
             self._tokenized_s = np.array(self._tokenized_s_full.data["input_ids"])
-            self._segments_s = np.array(self.token_segments(s))
+            self._segments_s = np.array(self.token_segments(*s))
 
-    def shape(self, s):
-        self._update_s_cache(s)
+    def shape(self, *s):
+        self._update_s_cache(*s)
         return (1,len(self._tokenized_s))
 
-    def mask_shapes(self, s):
-        self._update_s_cache(s)
+    def mask_shapes(self, *s):
+        self._update_s_cache(*s)
         return [(len(self._tokenized_s),)]
 
-    def invariants(self, s):
-        self._update_s_cache(s)
+    def invariants(self, *s):
+        self._update_s_cache(*s)
 
         invariants = np.zeros(len(self._tokenized_s), dtype=np.bool)
         if self.keep_prefix > 0:
             invariants[:self.keep_prefix] = True
         if self.keep_suffix > 0:
             invariants[-self.keep_suffix:] = True
-
+        # ADDED: separator token
+        for i in range(len(self._tokenized_s)):
+            if self._tokenized_s[i] == self.tokenizer.sep_token_id: # TODO check if exists
+                invariants[i] = True
         return invariants.reshape(1,-1)
 
-    def feature_names(self, s):
+    def feature_names(self, *s):
         self._update_s_cache(s)
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 
-    def save(self, out_file, *args):
-        super(Text, self).save(out_file)
-        cloudpickle.dump(self.tokenizer, out_file)
-        pickle.dump(self.input_mask_token, out_file)
-        pickle.dump(self.collapse_mask_token, out_file)
-        pickle.dump(self.output_type, out_file)
-
-    @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Text._load(in_file)
-
-    @classmethod
-    def _load(cls, in_file):
-        tokenizer = cloudpickle.load(in_file)
-        mask_token = pickle.load(in_file)
-        collapse_mask_token = pickle.load(in_file)
-        output_type = pickle.load(in_file)
-
-        text_masker = Text(tokenizer, mask_token, collapse_mask_token, output_type)
-        return text_masker   
 
 openers = {
     "(": ")"
@@ -268,6 +255,7 @@ closers = {
 }
 enders = [".", ","]
 connectors = ["but", "and", "or"]
+separators = ["</s>"] # TODO added, need way to get separator tokens?
 
 class Token():
     def __init__(self, value):
@@ -304,6 +292,9 @@ class TokenGroup():
 
 def merge_score(group1, group2):
     score = 0
+    # TODO check that this ensures sep tokens are combined last
+    if group1[-1].s in separators and group2[0].s in separators:
+        score -= 10000000000
 
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
