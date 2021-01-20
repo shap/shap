@@ -132,7 +132,7 @@ class TextGeneration(Model):
                 )
         # check if user assigned any text generation specific kwargs
         text_generation_params = {}
-        if "task_specific_params" in self.model.config.__dict__ and "text-generation" in self.model.config.task_specific_params:
+        if self.model.config.__dict__.get("task_specific_params") is not None and self.model.config.task_specific_params.get("text-generation") is not None:
             text_generation_params = self.model.config.task_specific_params["text-generation"]
             if not isinstance(text_generation_params, dict):
                 raise ValueError(
