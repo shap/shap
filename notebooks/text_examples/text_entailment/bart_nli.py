@@ -63,6 +63,13 @@ def f(x): # TODO takes in the already - masked string which is the concatenation
 print('EXPLAINER')
 explainer = shap.Explainer(f, tokenizer)
 
-print('SHAP VALUES')
-shap_values = explainer([premise], [hypothesis]) # wrap in list, otherwise zip would iterate across letters
+encoded = tokenizer(premise, hypothesis)['input_ids'][1:-1]
+decoded = tokenizer.decode(encoded)
+print(decoded)
+
+# shap_values = explainer([premise], [hypothesis]) # wrap in list, otherwise zip would iterate across letters
+shap_values = explainer([decoded]) # wrap in list, otherwise zip would iterate across letters
+
+# print('SHAP VALUES')
+# shap_values = explainer([premise], [hypothesis]) # wrap in list, otherwise zip would iterate across letters
 print(shap_values)
