@@ -9,7 +9,6 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """ Tests if get_teacher_forced_logits() works for encoder-decoder models.
     """
 
-    torch = pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
 
     tokenizer = transformers.AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
@@ -29,7 +28,6 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
     """ Tests if get_teacher_forced_logits() works for decoder only models.
     """
 
-    torch = pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
 
     tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
