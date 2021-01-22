@@ -9,7 +9,13 @@ import numpy as np
 import itertools
 import sys
 from numba import jit
+import pickle
+import cloudpickle
 from .. import links
+from .. import maskers
+from ..maskers import Masker
+from ..models import Model
+
 
 log = logging.getLogger('shap')
 
@@ -49,6 +55,8 @@ class Exact(Explainer):
             linear models.
         """
         super(Exact, self).__init__(model, masker, link=link, feature_names=feature_names)
+        
+        self.model = Model(model)
 
         if getattr(masker, "clustering", None) is not None:
             self._partition_masks,self._partition_masks_inds = partition_masks(masker.clustering)
@@ -149,6 +157,52 @@ class Exact(Explainer):
             "main_effects": main_effect_values,
             "clustering": getattr(self.masker, "clustering", None)
         }
+    
+    def save(self, out_file):
+        """ Saves content of exact explainer
+        """
+
+        super(Exact, self).save(out_file)
+        
+        if callable(self.model.save):
+            self.model.save(out_file, self.model.model)
+        else:
+            pickle.dump(None,out_file)
+        
+        if callable(self.masker.save):
+            self.masker.save(out_file, self.masker)
+        else:
+            pickle.dump(None,out_file)
+        
+        cloudpickle.dump(self.link, out_file)
+        cloudpickle.dump(self.link.inverse,out_file)
+        pickle.dump(self.feature_names, out_file)
+
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        explainer_type = pickle.load(in_file)
+        if not explainer_type == cls:
+            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
+        
+        return Exact._load(in_file, model_loader, masker_loader)
+
+    @classmethod
+    def _load(cls, in_file, model_loader = None, masker_loader = None):
+        if model_loader is None:
+            model = Model.load(in_file)
+        else:
+            model = model_loader(in_file)
+        
+        if masker_loader is None:
+            masker = Masker.load(in_file)
+        else:
+            masker = masker_loader(in_file)
+
+        link = cloudpickle.load(in_file)
+        link_inverse = cloudpickle.load(in_file)
+        link.inverse = link_inverse
+        feature_names = pickle.load(in_file)
+        return Exact(model, masker, link, feature_names)
 
 @jit
 def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
