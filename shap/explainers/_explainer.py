@@ -243,11 +243,8 @@ class Explainer():
             
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
-                # TODO hack: we can't use len row_args, since both sentences part of same input
                 for i in range(len(row_args)):
-                # for i in range(1): 
                     feature_names[i].append(row_feature_names[i])
-        # TODO shap issues; since 2 items in arg but part of 1 input
         # split the values up according to each input
         arg_values = [[] for a in args]
         for i in range(len(values)):
@@ -256,14 +253,6 @@ class Explainer():
                 mask_length = np.prod(mask_shapes[i][j])
                 arg_values[j].append(values[i][pos:pos+mask_length])
                 pos += mask_length
-
-        # arg_values = [[] for i in range(len(args[0]))]
-        # for i in range(len(values)):
-        #     pos = 0
-        #     for j in range(len(args[0])):
-        #         mask_length = np.prod(mask_shapes[i][j])
-        #         arg_values[j].append(values[i][pos:pos+mask_length])
-        #         pos += mask_length
 
         # collapse the arrays as possible
         expected_values = pack_values(expected_values)
@@ -287,7 +276,6 @@ class Explainer():
         # build the explanation objects
         out = []
         for j in range(len(args)):
-        # for j in range(len(args[0])): # TODO Same args length issue
             # reshape the attribution values using the mask_shapes
             tmp = []
             for i,v in enumerate(arg_values[j]):
@@ -300,10 +288,9 @@ class Explainer():
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)
             if hasattr(self.masker, "data_transform"):
-                data = pack_values([self.masker.data_transform(v) for v in args[j]]) # TODO args shape issue: added args[1]
+                data = pack_values([self.masker.data_transform(v) for v in args[j]])
             else:
-                data = args[j] # TODO args shape issue
-                # data = args[0] + args[1]
+                data = args[j]
             
             # build an explanation object for this input argument
             out.append(Explanation(
