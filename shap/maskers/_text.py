@@ -58,8 +58,8 @@ class Text(Masker):
 
         self._s = None
     
-    def __call__(self, mask, *s):
-        self._update_s_cache(*s)
+    def __call__(self, mask, s):
+        self._update_s_cache(s)
 
         # if we have a fixed prefix or suffix then we need to grow the mask to account for that
         if self.keep_prefix > 0 or self.keep_suffix > 0:
@@ -107,7 +107,7 @@ class Text(Masker):
             out = self.post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
         out = re.sub(r"[\s]+"," ",out).strip()
-
+        out = re.sub("[\s]*" + self.tokenizer.sep_token + "[\s]*",self.tokenizer.sep_token,out) # TODO replace extra spaces around separator token
         return (np.array([out]),)
 
         if self.output_type == "string":
@@ -134,23 +134,23 @@ class Text(Masker):
         s = s.replace('▁', ' ')
         return s
 
-    def data_transform(self, *s):
+    def data_transform(self, s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            out = self.token_segments(*s)
+            out = self.token_segments(s)
             out = [token+' ' for token in out]
             return out
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            return self.token_segments(*s)
+            return self.token_segments(s)
     
-    def tokenize(self, *s):
+    def tokenize(self, s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            return self.tokenizer.encode_plus(*s)
+            return self.tokenizer.encode_plus(s)
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            return self.tokenizer.encode_plus(*s, return_offsets_mapping=True)
+            return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
     
-    def token_segments(self, *s):
+    def token_segments(self, s):
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            token_ids = self.tokenizer.encode_plus(*s)['input_ids']
+            token_ids = self.tokenizer.encode_plus(s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
             # tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))] 
@@ -158,8 +158,8 @@ class Text(Masker):
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            offsets_ = offsets = self.tokenizer.encode_plus(*s, return_offsets_mapping=True) # ADDED
-            offsets = self.tokenizer.encode_plus(*s, return_offsets_mapping=True)["offset_mapping"]
+            offsets_ = offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True) # ADDED
+            offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
             offsets = [(0,0) if o is None else o for o in offsets]
             s = ''.join(s) # TODO check if joining s with empty is allowed 
             # TODO bug with offsets mapping being reset to 0 index when we want it to continue off 1st sentence index; ignoring for now
@@ -167,8 +167,8 @@ class Text(Masker):
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
 
-    def clustering(self, *s):
-        self._update_s_cache(*s)
+    def clustering(self, s):
+        self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         pt = partition_tree(decoded_x)
         self._mark_uninvertable(pt)
@@ -213,23 +213,23 @@ class Text(Masker):
         
         recursive_mark(M+len(clustering)-1)
 
-    def _update_s_cache(self, *s):
+    def _update_s_cache(self, s):
         if self._s != s:
             self._s = s
-            self._tokenized_s_full = self.tokenize(*s)
+            self._tokenized_s_full = self.tokenize(s)
             self._tokenized_s = np.array(self._tokenized_s_full.data["input_ids"])
-            self._segments_s = np.array(self.token_segments(*s))
+            self._segments_s = np.array(self.token_segments(s))
 
-    def shape(self, *s):
-        self._update_s_cache(*s)
+    def shape(self, s):
+        self._update_s_cache(s)
         return (1,len(self._tokenized_s))
 
-    def mask_shapes(self, *s):
-        self._update_s_cache(*s)
+    def mask_shapes(self, s):
+        self._update_s_cache(s)
         return [(len(self._tokenized_s),)]
 
-    def invariants(self, *s):
-        self._update_s_cache(*s)
+    def invariants(self, s):
+        self._update_s_cache(s)
 
         invariants = np.zeros(len(self._tokenized_s), dtype=np.bool)
         if self.keep_prefix > 0:
@@ -242,7 +242,7 @@ class Text(Masker):
                 invariants[i] = True
         return invariants.reshape(1,-1)
 
-    def feature_names(self, *s):
+    def feature_names(self, s):
         self._update_s_cache(s)
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 
