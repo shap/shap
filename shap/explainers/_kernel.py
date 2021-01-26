@@ -5,6 +5,7 @@ from scipy.sparse import issparse
 import numpy as np
 import pandas as pd
 import scipy as sp
+import tensorflow as tf
 import logging
 import copy
 import itertools
@@ -88,6 +89,8 @@ class Kernel(Explainer):
         # find E_x[f(x)]
         if isinstance(model_null, (pd.DataFrame, pd.Series)):
             model_null = np.squeeze(model_null.values)
+        if isinstance(model_null, tf.python.framework.ops.EagerTensor):
+            model_null = model_null.numpy()
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
 
