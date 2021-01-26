@@ -171,7 +171,7 @@ class Text(Masker):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         pt = partition_tree(decoded_x)
-        self._mark_uninvertable(pt)
+        # self._mark_uninvertable(pt)
         return pt
 
 
