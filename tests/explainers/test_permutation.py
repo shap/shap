@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 import shap
 
-
 def test_single_class_independent():
     xgboost = pytest.importorskip('xgboost')
 
@@ -105,6 +104,7 @@ def test_serialization_permutation():
     import xgboost
     import pickle
     import numpy as np
+    import tempfile
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
@@ -116,16 +116,16 @@ def test_serialization_permutation():
     explainer_original = shap.Explainer(model.predict_proba, X, algorithm='permutation')
     shap_values_original = explainer_original(X[:1])
 
-
+    temp_serialization_file = tempfile.TemporaryFile()
     # Serialization 
-    out_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "wb")
-    explainer_original.save(out_file)
-    out_file.close()
+    explainer_original.save(temp_serialization_file)
+    
+    temp_serialization_file.seek(0)
 
     # Deserialization
-    in_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "rb")
-    explainer_new = shap.Explainer.load(in_file)
-    in_file.close()
+    explainer_new = shap.Explainer.load(temp_serialization_file)
+
+    temp_serialization_file.close()
 
     shap_values_new = explainer_new(X[:1])
 
@@ -141,6 +141,7 @@ def test_serialization_permutation_no_model_or_masker():
     import xgboost
     import pickle
     import numpy as np
+    import tempfile
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
@@ -152,18 +153,19 @@ def test_serialization_permutation_no_model_or_masker():
     explainer_original = shap.Explainer(model.predict_proba, X, algorithm='permutation')
     shap_values_original = explainer_original(X[:1])
 
+    temp_serialization_file = tempfile.TemporaryFile()
 
     # Serialization 
-    out_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "wb")
     explainer_original.model.save = None
     explainer_original.masker.save = None
-    explainer_original.save(out_file)
-    out_file.close()
+    explainer_original.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # Deserialization
-    in_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "rb")
-    explainer_new = shap.Explainer.load(in_file)
-    in_file.close()
+    explainer_new = shap.Explainer.load(temp_serialization_file)
+
+    temp_serialization_file.close()
     
     # manually insert model and masker
     explainer_new.model = explainer_original.model
@@ -183,6 +185,7 @@ def test_serialization_permutation_numpy_custom_model_save():
     import xgboost
     import pickle
     import numpy as np
+    import tempfile
 
     # get a dataset on income prediction
     X,y = shap.datasets.adult()
@@ -195,18 +198,20 @@ def test_serialization_permutation_numpy_custom_model_save():
     explainer_original = shap.Explainer(model.predict_proba, X, algorithm='permutation')
     shap_values_original = explainer_original(X[:1])
 
+    temp_serialization_file = tempfile.TemporaryFile()
 
     # Serialization 
-    out_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "wb")
     explainer_original.model.save = lambda out_file, model: pickle.dump(model, out_file)
-    explainer_original.save(out_file)
-    out_file.close()
+    explainer_original.save(temp_serialization_file)
+
+    temp_serialization_file.seek(0)
 
     # Deserialization
-    in_file = open(r'test_serialization_permutation_dataframe_scratch_file.bin', "rb")
     model_loader = lambda in_file: pickle.load(in_file)
-    explainer_new = shap.Explainer.load(in_file, model_loader = model_loader)
-    in_file.close()
+    explainer_new = shap.Explainer.load(temp_serialization_file, model_loader = model_loader)
+
+    temp_serialization_file.close()
+
 
     shap_values_new = explainer_new(X[:1])
 
