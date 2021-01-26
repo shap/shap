@@ -12,7 +12,13 @@ except ImportError:
     pass
 from . import colors
 from ..utils._legacy import kmeans
-from IPython.core.display import display, HTML
+
+try:
+    from IPython.core.display import display, HTML
+except ImportError:
+    warnings.warn("IPython could not be loaded!")
+    pass
+
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
