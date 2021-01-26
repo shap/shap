@@ -179,14 +179,6 @@ class Partition(Explainer):
             lower_credit(ri, self.values[i] * rsize / group_size)
         lower_credit(len(self.dvalues) - 1)
         
-        # TODO ensure no negative values in weights
-        def fix_negative_clustering():
-            minimum = self._clustering.min()
-            if minimum < 0:
-                self._clustering[:, 2] += abs(minimum) # only add to distances, at index 2
-
-        fix_negative_clustering()
-
         return {
             "values": self.values[:M].copy(),
             "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],
