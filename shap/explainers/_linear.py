@@ -87,7 +87,7 @@ class Linear(Explainer):
         data = getattr(self.masker, "data", None)
 
         # convert DataFrame's to numpy arrays
-        if str(type(data)).endswith("'pandas.core.frame.DataFrame'>"):
+        if safe_isinstance(type(data), 'pandas.core.frame.DataFrame'):
             data = data.values
 
         # get the mean and covariance of the model
