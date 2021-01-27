@@ -170,7 +170,7 @@ class Text(Masker):
     def clustering(self, s):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
-        pt = partition_tree(decoded_x)
+        pt = partition_tree(decoded_x, [self.tokenizer.sep_token])
         # self._mark_uninvertable(pt)
         return pt
 
@@ -290,11 +290,13 @@ class TokenGroup():
     def __len__(self):
         return len(self.g)
 
-def merge_score(group1, group2):
+# special_tokens: tokens (such as separator tokens) that should be grouped last
+def merge_score(group1, group2, special_tokens=None):
     score = 0
-    # TODO check that this ensures sep tokens are combined last
-    if group1[-1].s in separators and group2[0].s in separators:
-        score -= 10000000000
+    # ensures special tokens are combined last, so 1st subtree is 1st sentence and 2nd subtree is 2nd sentence
+    if special_tokens is not None:
+        if group1[-1].s in special_tokens and group2[0].s in special_tokens:
+            score -= 10000
 
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
@@ -346,8 +348,8 @@ def merge_score(group1, group2):
     #print(group1, group2, score)
     return score
     
-def merge_closest_groups(groups):
-    scores = [merge_score(groups[i], groups[i+1]) for i in range(len(groups)-1)]
+def merge_closest_groups(groups, special_tokens=None):
+    scores = [merge_score(groups[i], groups[i+1], special_tokens) for i in range(len(groups)-1)]
     #print(scores)
     ind = np.argmax(scores)
     groups[ind] = groups[ind] + groups[ind+1]
@@ -359,14 +361,14 @@ def merge_closest_groups(groups):
     
     groups.pop(ind+1)    
     
-def partition_tree(decoded_tokens):
+def partition_tree(decoded_tokens, special_tokens=None):
     token_groups = [TokenGroup([Token(t)], i) for i,t in enumerate(decoded_tokens)]
 #     print(token_groups)
     M = len(decoded_tokens)
     new_index = M
     clustm = np.zeros((M-1, 4))
     for i in range(len(token_groups)-1):
-        scores = [merge_score(token_groups[i], token_groups[i+1]) for i in range(len(token_groups)-1)]
+        scores = [merge_score(token_groups[i], token_groups[i+1], special_tokens) for i in range(len(token_groups)-1)]
 #         print(scores)
         ind = np.argmax(scores)
 
