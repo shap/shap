@@ -66,7 +66,7 @@ class Text(Masker):
             mask = mask.copy()
             mask[:self.keep_prefix] = True
             mask[-self.keep_suffix:] = True
-
+        
         if self.output_type == "string":
             if self.mask_token_id is None:
                 out = self._segments_s[mask]
@@ -153,7 +153,7 @@ class Text(Masker):
             token_ids = self.tokenizer.encode_plus(s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
-            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))] 
+            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))]
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
