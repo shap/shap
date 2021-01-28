@@ -153,7 +153,7 @@ class Text(Masker):
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
             # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
-            tokens = [tokens[i] if (tokens[i] == self.tokenizer.sep_token and i > 0 and i < len(special_tokens_mask) - 1 or special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))]
+            tokens = [tokens[i] if (tokens[i] == self.tokenizer.sep_token and i > 0 and i < len(special_tokens_mask) - 1) or (special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))]
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
@@ -239,6 +239,29 @@ class Text(Masker):
         self._update_s_cache(s)
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 
+    def save(self, out_file, *args):
+        super(Text, self).save(out_file)
+        cloudpickle.dump(self.tokenizer, out_file)
+        pickle.dump(self.input_mask_token, out_file)
+        pickle.dump(self.collapse_mask_token, out_file)
+        pickle.dump(self.output_type, out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        masker_type = pickle.load(in_file)
+        if not masker_type == cls:
+            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
+        return Text._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        tokenizer = cloudpickle.load(in_file)
+        mask_token = pickle.load(in_file)
+        collapse_mask_token = pickle.load(in_file)
+        output_type = pickle.load(in_file)
+
+        text_masker = Text(tokenizer, mask_token, collapse_mask_token, output_type)
+        return text_masker   
 
 openers = {
     "(": ")"
