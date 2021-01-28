@@ -105,9 +105,8 @@ class Text(Masker):
             out = self.post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
         out = re.sub(r"[\s]+"," ",out).strip()
-        # delete extra spaces around separator tokens
-        if self.tokenizer.sep_token != None:
-            out = re.sub("[\s]*" + self.tokenizer.sep_token + "[\s]*", self.tokenizer.sep_token, out)
+        # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain extra unnecessary tokens, for example ''.
+        # you may want to strip out spaces adjacent to separator tokens. Refer to PR for more details.
         return (np.array([out]),)
 
         if self.output_type == "string":
@@ -168,10 +167,9 @@ class Text(Masker):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         pt = partition_tree(decoded_x, [self.tokenizer.sep_token])
-        # self._mark_uninvertable(pt) # unused because restricts meaningful perturbations
         return pt
 
-
+    # unused because restricts meaningful perturbations
     def _mark_uninvertable(self, clustering):
         """ This marks which clusters have non-invertable mappings through the tokenizer when masked.
 
@@ -284,13 +282,15 @@ class TokenGroup():
     def __len__(self):
         return len(self.g)
 
+import math 
+
 # special_tokens: tokens (such as separator tokens) that should be grouped last
 def merge_score(group1, group2, special_tokens=None):
     score = 0
     # ensures special tokens are combined last, so 1st subtree is 1st sentence and 2nd subtree is 2nd sentence
     if special_tokens is not None:
         if group1[-1].s in special_tokens and group2[0].s in special_tokens:
-            score -= 10000
+            score -= math.inf # subtracting infinity to create lowest score and ensure combining these groups last
 
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
