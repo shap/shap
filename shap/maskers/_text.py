@@ -17,7 +17,7 @@ class Text(Masker):
         self.tokenizer = tokenizer
         self.output_type = output_type
         self.collapse_mask_token = collapse_mask_token
-        
+        self.input_mask_token = mask_token
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
         
         self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
@@ -66,7 +66,6 @@ class Text(Masker):
             mask = mask.copy()
             mask[:self.keep_prefix] = True
             mask[-self.keep_suffix:] = True
-        
 
         if self.output_type == "string":
             if self.mask_token_id is None:
@@ -76,9 +75,8 @@ class Text(Masker):
                 out = []
                 is_previous_appended_token_mask_token = False
                 for i in range(len(mask)):
-                    # TODO HACK!!! ignores mask for sep tokens
-                    # check if sep_token exists?
-                    if self._segments_s[i] == self.tokenizer.sep_token and i > 0 and i < len(self._segments_s) - 1 or mask[i]:
+                    # mask ignores sep tokens and keeps them unmasked
+                    if self._segments_s[i] == self.tokenizer.sep_token or mask[i]:
                         out.append(self._segments_s[i])
                         is_previous_appended_token_mask_token = False
                     else:
@@ -107,7 +105,9 @@ class Text(Masker):
             out = self.post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
         out = re.sub(r"[\s]+"," ",out).strip()
-        out = re.sub("[\s]*" + self.tokenizer.sep_token + "[\s]*",self.tokenizer.sep_token,out) # TODO replace extra spaces around separator token
+        # delete extra spaces around separator tokens
+        if self.tokenizer.sep_token != None:
+            out = re.sub("[\s]*" + self.tokenizer.sep_token + "[\s]*", self.tokenizer.sep_token, out)
         return (np.array([out]),)
 
         if self.output_type == "string":
@@ -153,16 +153,12 @@ class Text(Masker):
             token_ids = self.tokenizer.encode_plus(s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
-            # tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))] 
-            tokens = [tokens[i] if (i > 0 and i < len(tokens) - 1 or special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))] # TODO possibly keep separator tokens inside
+            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))] 
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            offsets_ = offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True) # ADDED
             offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
             offsets = [(0,0) if o is None else o for o in offsets]
-            s = ''.join(s) # TODO check if joining s with empty is allowed 
-            # TODO bug with offsets mapping being reset to 0 index when we want it to continue off 1st sentence index; ignoring for now
             parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
@@ -171,7 +167,7 @@ class Text(Masker):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         pt = partition_tree(decoded_x, [self.tokenizer.sep_token])
-        # self._mark_uninvertable(pt)
+        # self._mark_uninvertable(pt) # unused because restricts meaningful perturbations
         return pt
 
 
@@ -195,15 +191,13 @@ class Text(Masker):
                 ltokens = recursive_mark(lind)
                 rtokens = recursive_mark(rind)
             
-            # tmp = ltokens + [self.mask_token_id]
-            tmp = ltokens + self.mask_token_id
+            tmp = ltokens + [self.mask_token_id]
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
                 clustering[ind-M,2] = -1 # set the distance of this cluster negative so it can't be split
             
-            # tmp = [self.mask_token_id] + rtokens
-            tmp = self.mask_token_id + rtokens
+            tmp = [self.mask_token_id] + rtokens
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
@@ -236,9 +230,9 @@ class Text(Masker):
             invariants[:self.keep_prefix] = True
         if self.keep_suffix > 0:
             invariants[-self.keep_suffix:] = True
-        # ADDED: separator token
+        # mark sep tokens as invariant
         for i in range(len(self._tokenized_s)):
-            if self._tokenized_s[i] == self.tokenizer.sep_token_id: # TODO check if exists
+            if self._tokenized_s[i] == self.tokenizer.sep_token_id:
                 invariants[i] = True
         return invariants.reshape(1,-1)
 
@@ -255,7 +249,6 @@ closers = {
 }
 enders = [".", ","]
 connectors = ["but", "and", "or"]
-separators = ["</s>"] # TODO added, need way to get separator tokens?
 
 class Token():
     def __init__(self, value):

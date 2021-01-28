@@ -178,7 +178,7 @@ class Partition(Explainer):
             lower_credit(li, self.values[i] * lsize / group_size)
             lower_credit(ri, self.values[i] * rsize / group_size)
         lower_credit(len(self.dvalues) - 1)
-        
+            
         return {
             "values": self.values[:M].copy(),
             "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],

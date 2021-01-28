@@ -245,6 +245,7 @@ class Explainer():
                 row_feature_names = self.masker.feature_names(*row_args)
                 for i in range(len(row_args)):
                     feature_names[i].append(row_feature_names[i])
+
         # split the values up according to each input
         arg_values = [[] for a in args]
         for i in range(len(values)):
@@ -276,6 +277,7 @@ class Explainer():
         # build the explanation objects
         out = []
         for j in range(len(args)):
+
             # reshape the attribution values using the mask_shapes
             tmp = []
             for i,v in enumerate(arg_values[j]):
