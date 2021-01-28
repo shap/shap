@@ -75,7 +75,7 @@ class Text(Masker):
                 out = []
                 is_previous_appended_token_mask_token = False
                 for i in range(len(mask)):
-                    # mask ignores sep tokens and keeps them unmasked
+                    # mask ignores separator tokens and keeps them unmasked
                     if self._segments_s[i] == self.tokenizer.sep_token or mask[i]:
                         out.append(self._segments_s[i])
                         is_previous_appended_token_mask_token = False
@@ -153,7 +153,7 @@ class Text(Masker):
             token_ids = self.tokenizer.encode_plus(s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
-            # avoid masking sep tokens, but still mask bos and eos tokens
+            # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
             tokens = [tokens[i] if (tokens[i] == self.tokenizer.sep_token and i > 0 and i < len(special_tokens_mask) - 1 or special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))]
             return tokens
 
@@ -231,7 +231,7 @@ class Text(Masker):
             invariants[:self.keep_prefix] = True
         if self.keep_suffix > 0:
             invariants[-self.keep_suffix:] = True
-        # mark sep tokens as invariant
+        # mark separator tokens as invariant
         for i in range(len(self._tokenized_s)):
             if self._tokenized_s[i] == self.tokenizer.sep_token_id:
                 invariants[i] = True
