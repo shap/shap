@@ -1,5 +1,7 @@
 import numpy as np
 import re
+import pickle 
+import cloudpickle
 from ._masker import Masker
 from ..utils import safe_isinstance
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
