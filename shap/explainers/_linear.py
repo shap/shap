@@ -307,7 +307,6 @@ class Linear(Explainer):
             full_phi = np.zeros(((phi.shape[0], self.M)))
             full_phi[:,self.valid_inds] = phi
             phi = full_phi
-            return full_phi
 
         elif self.feature_perturbation == "interventional":
             if sp.sparse.issparse(X):
