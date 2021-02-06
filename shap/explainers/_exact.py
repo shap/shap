@@ -162,7 +162,7 @@ class Exact(Explainer):
         """ Saves content of exact explainer
         """
 
-        super(Exact, self).save(out_file)
+        pickle.dump(type(self), out_file)
         
         if callable(self.model.save):
             self.model.save(out_file, self.model.model)
