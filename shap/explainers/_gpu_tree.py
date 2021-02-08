@@ -7,7 +7,7 @@ try:
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
 # pylint: disable=W0223
-    
+
 
 class GPUTree(Tree):
     """
