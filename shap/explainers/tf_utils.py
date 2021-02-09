@@ -43,7 +43,9 @@ def _get_graph(explainer):
     if not tf.executing_eagerly():
         return explainer.session.graph
     else:
-        return explainer.model_output.graph
+        from tensorflow.python.keras import backend
+        graph = backend.get_graph()
+        return graph
 
 def _get_model_inputs(model):
     """ Common utility to determine the model inputs.
