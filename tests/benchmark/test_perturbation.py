@@ -8,7 +8,7 @@ def test_init():
     model = lambda x, y: x 
     sort_order = 'positive'
     perturbation = 'keep'
-    X = np.random.random((10,13))
+    X = np.random.random((10, 13))
 
     tabular_masker = Independent(X)
     sequential_perturbation = benchmark.perturbation.SequentialPerturbation(model, tabular_masker, sort_order, perturbation)
