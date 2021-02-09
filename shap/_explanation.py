@@ -114,7 +114,7 @@ class Explanation(object, metaclass=MetaExplanation):
             output_names =  output_names, # None if output_names is None else Alias(output_names, output_dims),
             output_indexes = None if output_indexes is None else (output_dims, output_indexes),
             lower_bounds = lower_bounds,
-            upper_bounds = lower_bounds,
+            upper_bounds = upper_bounds,
             main_effects = main_effects,
             hierarchical_values = hierarchical_values,
             clustering = None if clustering is None else Obj(clustering, [0])
@@ -150,6 +150,8 @@ class Explanation(object, metaclass=MetaExplanation):
         return self._s.display_data
     @display_data.setter
     def display_data(self, new_display_data):
+        if issubclass(type(new_display_data), pd.DataFrame):
+            new_display_data = new_display_data.values
         self._s.display_data = new_display_data
 
     @property

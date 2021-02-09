@@ -17,10 +17,10 @@ before_install:
 install:
 - python setup.py develop
 - pip install .[test]
-- pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint
+- pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint sentencepiece
 script:
   - python -m pytest tests
-  - pylint tests/explainers/test_tree.py tests/explainers/test_gpu_tree.py shap/explainers/_gpu_tree.py
+  - pylint tests/explainers/test_tree.py tests/explainers/test_gpu_tree.py shap/explainers/_gpu_tree.py tests/maskers tests/models
 after_success:
   - codecov
 deploy:

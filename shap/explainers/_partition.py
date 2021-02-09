@@ -11,21 +11,24 @@ from .. import Explanation
 from .. import maskers
 from ._explainer import Explainer
 from .. import links
-
+import cloudpickle
+import pickle
+from ..maskers import Masker
+from ..models import Model
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
 
 
 class Partition(Explainer):
-    
+
     def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, feature_names=None):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
         hierarchy defines feature coalitions and results in the Owen values from game theory. The
         PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
-        model-agnostic but when using a balanced partition tree only has quadradic exact runtime 
+        model-agnostic but when using a balanced partition tree only has quadradic exact runtime
         (in term of the number of input features). This is in contrast to the exponential exact
         runtime of KernalExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
         correlated features the credit that set of features would have had if treated as a group. This
@@ -59,16 +62,16 @@ class Partition(Explainer):
             example. If you are using a standard SHAP masker object then you can pass masker.clustering
             to use that masker's built-in clustering of the features, or if partition_tree is None then
             masker.clustering will be used by default.
-        
+
         Examples
         --------
         See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
         """
 
         super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
-        
+
         warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
-        
+
         # convert dataframes
         # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
         #     masker = TabularMasker(masker)
@@ -82,9 +85,7 @@ class Partition(Explainer):
         # will use for sampling
         self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
         # self.output_names = output_names
-        if safe_isinstance(model, "shap.models.Model"):
-            self.model = model
-        else:
+        if not safe_isinstance(self.model, "shap.models.Model"):
             self.model = lambda *args: np.array(model(*args))
         self.expected_value = None
         self._curr_base_value = None
@@ -96,7 +97,7 @@ class Partition(Explainer):
         #     self.partition_tree = masker.clustering
         # else:
         #     self.partition_tree = partition_tree
-        
+
         # handle higher dimensional tensor inputs
         if self.input_shape is not None and len(self.input_shape) > 1:
             self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *self.input_shape))
@@ -112,15 +113,15 @@ class Partition(Explainer):
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
-        
+
         if fixed_context == "auto":
             fixed_context = None
         elif fixed_context in [0,1,None]:
-            fixed_context = fixed_context 
+            fixed_context = fixed_context
         else:
             raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
-        
-        
+
+
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
 
@@ -141,7 +142,7 @@ class Partition(Explainer):
                 outputs = np.arange(len(self._curr_base_value))
             elif isinstance(outputs, OpChain):
                 outputs = outputs.apply(Explanation(f11)).values
-            
+
             out_shape = (2*self._clustering.shape[0]+1, len(outputs))
         else:
             out_shape = (2*self._clustering.shape[0]+1,)
@@ -270,7 +271,7 @@ class Partition(Explainer):
                 batch_args.append((m00, m10, m01, f00, f11, ind, lind, rind, weight))
                 batch_masks.append(m10)
                 batch_masks.append(m01)
-            
+
             batch_masks = np.array(batch_masks)
                 
             # run the batch
@@ -280,18 +281,18 @@ class Partition(Explainer):
                     fout = fout[:,output_indexes]
                     
                 eval_count += len(batch_masks)
-                    
+
                 if pbar is None and time.time() - start_time > 5:
                     pbar = tqdm(total=total_evals, disable=silent, leave=False)
                     pbar.update(eval_count)
                 if pbar is not None:
                     pbar.update(len(batch_masks))
-            
+
             # use the results of the batch to add new nodes
             for i in range(len(batch_args)):
                 
                 m00, m10, m01, f00, f11, ind, lind, rind, weight = batch_args[i]
-                
+
                 # get the evaluated model output on the two new masked inputs
                 f10 = fout[2*i]
                 f01 = fout[2*i+1]
@@ -326,7 +327,69 @@ class Partition(Explainer):
             pbar.close()
         
         return output_indexes, base_value
+
+    def save(self, out_file):
+        """ Saves content of permutation explainer
+        """
+
+        pickle.dump(type(self), out_file)
         
+        if callable(self.model.save):
+            self.model.save(out_file, self.model.model)
+        else:
+            pickle.dump(None,out_file)
+        
+        if callable(self.masker.save):
+            self.masker.save(out_file, self.masker)
+        else:
+            pickle.dump(None,out_file)
+        
+        if hasattr(self, 'partition_tree'):
+            cloudpickle.dump(self.partition_tree, out_file)
+        else:
+            cloudpickle.dump(None, out_file)
+        
+        if hasattr(self, 'output_names'):
+            cloudpickle.dump(self.output_names, out_file)
+        else:
+            cloudpickle.dump(None, out_file)
+
+        cloudpickle.dump(self.link, out_file)
+        cloudpickle.dump(self.link.inverse,out_file)
+
+        if hasattr(self, 'feature_names'):
+            cloudpickle.dump(self.feature_names, out_file)
+        else:
+            cloudpickle.dump(None, out_file)
+
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        explainer_type = pickle.load(in_file)
+        if not explainer_type == cls:
+            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
+        
+        return Partition._load(in_file, model_loader, masker_loader)
+    
+    @classmethod
+    def _load(cls, in_file, model_loader = None, masker_loader = None):
+        if model_loader is None:
+            model = Model.load(in_file)
+        else:
+            model = model_loader(in_file)
+        
+        if masker_loader is None:
+            masker = Masker.load(in_file)
+        else:
+            masker = masker_loader(in_file)
+
+        partition_tree = cloudpickle.load(in_file)
+        output_names = cloudpickle.load(in_file)
+        link = cloudpickle.load(in_file)
+        link_inverse = cloudpickle.load(in_file)
+        link.inverse = link_inverse
+        feature_names = cloudpickle.load(in_file)
+        return Partition(model, masker, partition_tree=partition_tree, output_names=output_names, link=link, feature_names=feature_names)
+
 
 def output_indexes_len(output_indexes):
     if output_indexes.startswith("max("):

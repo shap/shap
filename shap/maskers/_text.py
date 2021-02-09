@@ -1,5 +1,7 @@
 import numpy as np
 import re
+import pickle 
+import cloudpickle
 from ._masker import Masker
 from ..utils import safe_isinstance
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
@@ -17,7 +19,7 @@ class Text(Masker):
         self.tokenizer = tokenizer
         self.output_type = output_type
         self.collapse_mask_token = collapse_mask_token
-        
+        self.input_mask_token = mask_token
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
         
         self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
@@ -75,7 +77,8 @@ class Text(Masker):
                 out = []
                 is_previous_appended_token_mask_token = False
                 for i in range(len(mask)):
-                    if mask[i]:
+                    # mask ignores separator tokens and keeps them unmasked
+                    if self._segments_s[i] == self.tokenizer.sep_token or mask[i]:
                         out.append(self._segments_s[i])
                         is_previous_appended_token_mask_token = False
                     else:
@@ -105,7 +108,8 @@ class Text(Masker):
         # replace sequence of spaces with a single space and strip beginning and end spaces
         if type(out) == str:
             out = re.sub(r"[\s]+"," ",out).strip()
-
+        # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain extra unnecessary tokens, for example ''.
+        # you may want to strip out spaces adjacent to separator tokens. Refer to PR for more details.
         return (np.array([out]),)
 
         if self.output_type == "string":
@@ -151,7 +155,8 @@ class Text(Masker):
             token_ids = self.tokenizer.encode_plus(s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
-            tokens = [tokens[i] if special_tokens_mask[i] == 0 else '' for i in range(len(special_tokens_mask))]
+            # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
+            tokens = [tokens[i] if (tokens[i] == self.tokenizer.sep_token and i > 0 and i < len(special_tokens_mask) - 1) or (special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))]
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
@@ -164,11 +169,10 @@ class Text(Masker):
     def clustering(self, s):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
-        pt = partition_tree(decoded_x)
-        #self._mark_uninvertable(pt)
+        pt = partition_tree(decoded_x, [self.tokenizer.sep_token])
         return pt
 
-
+    # unused because restricts meaningful perturbations
     def _mark_uninvertable(self, clustering):
         """ This marks which clusters have non-invertable mappings through the tokenizer when masked.
 
@@ -228,13 +232,39 @@ class Text(Masker):
             invariants[:self.keep_prefix] = True
         if self.keep_suffix > 0:
             invariants[-self.keep_suffix:] = True
-
+        # mark separator tokens as invariant
+        for i in range(len(self._tokenized_s)):
+            if self._tokenized_s[i] == self.tokenizer.sep_token_id:
+                invariants[i] = True
         return invariants.reshape(1,-1)
 
     def feature_names(self, s):
         self._update_s_cache(s)
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 
+    def save(self, out_file, *args):
+        super(Text, self).save(out_file)
+        cloudpickle.dump(self.tokenizer, out_file)
+        pickle.dump(self.input_mask_token, out_file)
+        pickle.dump(self.collapse_mask_token, out_file)
+        pickle.dump(self.output_type, out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        masker_type = pickle.load(in_file)
+        if not masker_type == cls:
+            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
+        return Text._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        tokenizer = cloudpickle.load(in_file)
+        mask_token = pickle.load(in_file)
+        collapse_mask_token = pickle.load(in_file)
+        output_type = pickle.load(in_file)
+
+        text_masker = Text(tokenizer, mask_token, collapse_mask_token, output_type)
+        return text_masker   
 
 openers = {
     "(": ")"
@@ -278,8 +308,15 @@ class TokenGroup():
     def __len__(self):
         return len(self.g)
 
-def merge_score(group1, group2):
+import math 
+
+# special_tokens: tokens (such as separator tokens) that should be grouped last
+def merge_score(group1, group2, special_tokens=None):
     score = 0
+    # ensures special tokens are combined last, so 1st subtree is 1st sentence and 2nd subtree is 2nd sentence
+    if special_tokens is not None:
+        if group1[-1].s in special_tokens and group2[0].s in special_tokens:
+            score -= math.inf # subtracting infinity to create lowest score and ensure combining these groups last
 
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
@@ -331,8 +368,8 @@ def merge_score(group1, group2):
     #print(group1, group2, score)
     return score
     
-def merge_closest_groups(groups):
-    scores = [merge_score(groups[i], groups[i+1]) for i in range(len(groups)-1)]
+def merge_closest_groups(groups, special_tokens=None):
+    scores = [merge_score(groups[i], groups[i+1], special_tokens) for i in range(len(groups)-1)]
     #print(scores)
     ind = np.argmax(scores)
     groups[ind] = groups[ind] + groups[ind+1]
@@ -344,14 +381,14 @@ def merge_closest_groups(groups):
     
     groups.pop(ind+1)    
     
-def partition_tree(decoded_tokens):
+def partition_tree(decoded_tokens, special_tokens=None):
     token_groups = [TokenGroup([Token(t)], i) for i,t in enumerate(decoded_tokens)]
 #     print(token_groups)
     M = len(decoded_tokens)
     new_index = M
     clustm = np.zeros((M-1, 4))
     for i in range(len(token_groups)-1):
-        scores = [merge_score(token_groups[i], token_groups[i+1]) for i in range(len(token_groups)-1)]
+        scores = [merge_score(token_groups[i], token_groups[i+1], special_tokens) for i in range(len(token_groups)-1)]
 #         print(scores)
         ind = np.argmax(scores)
 

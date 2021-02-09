@@ -4,8 +4,12 @@ from ._explainer import Explainer
 import numpy as np
 import pandas as pd
 import scipy as sp
+import pickle
+import cloudpickle
 from .. import links
-
+from .. import maskers
+from ..maskers import Masker
+from ..models import Model
 
 class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.
@@ -37,6 +41,8 @@ class Permutation(Explainer):
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
         super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
+        
+        self.model = Model(model)
 
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
@@ -133,3 +139,51 @@ class Permutation(Explainer):
 
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
         return explanation._old_format()
+
+
+    def save(self, out_file):
+        """ Saves content of permutation explainer
+        """
+
+        pickle.dump(type(self), out_file)
+        
+        if callable(self.model.save):
+            self.model.save(out_file, self.model.model)
+        else:
+            pickle.dump(None,out_file)
+        
+        if callable(self.masker.save):
+            self.masker.save(out_file, self.masker)
+        else:
+            pickle.dump(None,out_file)
+        
+        cloudpickle.dump(self.link, out_file)
+        cloudpickle.dump(self.link.inverse,out_file)
+        pickle.dump(self.feature_names, out_file)
+
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        explainer_type = pickle.load(in_file)
+        if not explainer_type == cls:
+            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
+        
+        return Permutation._load(in_file, model_loader, masker_loader)
+    
+    @classmethod
+    def _load(cls, in_file, model_loader = None, masker_loader = None):
+        if model_loader is None:
+            model = Model.load(in_file)
+        else:
+            model = model_loader(in_file)
+        
+        if masker_loader is None:
+            masker = Masker.load(in_file)
+        else:
+            masker = masker_loader(in_file)
+
+        link = cloudpickle.load(in_file)
+        link_inverse = cloudpickle.load(in_file)
+        link.inverse = link_inverse
+        feature_names = pickle.load(in_file)
+        return Permutation(model, masker, link, feature_names)
+        

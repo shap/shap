@@ -3,10 +3,13 @@ from .. import links
 from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
+from ..models import Model
 from .._explanation import Explanation
 import numpy as np
 import scipy as sp
 import copy
+import pickle
+from .. import explainers
 
 
 class Explainer():
@@ -88,11 +91,13 @@ class Explainer():
         
         # wrap self.masker and self.model for output text explanation algorithm
         if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel"))and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
-            self.model = models.TeacherForcingLogits(self.model, self.masker.tokenizer)
-            self.masker = maskers.FixedComposite(self.masker)
+            if not safe_isinstance(self.masker, "shap.maskers.FixedComposite"):
+                self.masker = maskers.FixedComposite(self.masker)
+            self.model = models.TeacherForcingLogits(self.model, self.masker.masker.tokenizer) 
         elif (safe_isinstance(self.model, "shap.models.TeacherForcingLogits") or safe_isinstance(self.model, "shap.models.GenerateTopKLM")) and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
-            self.masker = maskers.FixedComposite(self.masker)
-
+            if not safe_isinstance(self.masker, "shap.maskers.FixedComposite"):
+                self.masker = maskers.FixedComposite(self.masker)
+        
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
 
         # validate and save the link function
@@ -352,6 +357,17 @@ class Explainer():
         
         return expanded_main_effects
 
+    def save(self, out_file):
+        """ Serializes the type of subclass of explainer used, this will be used during deserialization.
+        """
+        raise NotImplementedError(f"The {type(self)} explainer doesn't yet implement save/load")
+    
+    @classmethod
+    def load(cls, in_file, model_loader = None, masker_loader = None):
+        """ Deserializes the explainer subtype, and calls respective load function.
+        """
+        explainer_type = pickle.load(in_file)
+        return explainer_type._load(in_file, model_loader, masker_loader)
         
 def pack_values(values):
     """ Used the clean up arrays before putting them into an Explanation object.

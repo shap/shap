@@ -9,7 +9,7 @@ class MaskedModel():
     The combination of a model, a masker object, and a current input produces a binary set
     function that can be called to mask out any set of inputs. This class attempts to be smart
     about only evaluating the model for background samples when the inputs changed (note this
-    requires the masker object to have a .invarients method).
+    requires the masker object to have a .invariants method).
     """
 
     delta_mask_noop_value = 2147483647 # used to encode a noop for delta masking
@@ -88,7 +88,7 @@ class MaskedModel():
 
             # wrap the masked inputs if they are not already in a tuple
             if not isinstance(masked_inputs, tuple):
-                masked_inputs = (masked_inputs,)
+                masked_inputs = (masked_inputs.copy(),)
                 
             # masked_inputs = self.masker(mask, *self.args)
             num_mask_samples[i] = len(masked_inputs[0])
