@@ -183,7 +183,6 @@ class Explainer():
         # if max_evals == "auto":
         #     self._brute_force_fallback
 
-        
         if issubclass(type(self.masker), maskers.OutputComposite) and len(args)==2:
             self.masker.model = models.TextGeneration(target_sentences=args[1])
             args = args[:1]
