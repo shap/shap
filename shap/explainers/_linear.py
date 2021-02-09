@@ -78,7 +78,7 @@ class Linear(Explainer):
             else:
                 masker = maskers.Independent({"mean": masker[0], "cov": masker[1]})
 
-        super(Linear, self).__init__(model, masker, link=link, algorithm="linear", **kwargs)
+        super(Linear, self).__init__(model, masker, link=link, **kwargs)
 
         self.nsamples = nsamples
         
