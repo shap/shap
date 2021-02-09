@@ -31,8 +31,8 @@ from ..utils import hclust_ordering
 from ..plots._force_matplotlib import draw_additive_plot
 
 def force(base_value, shap_values=None, features=None, feature_names=None, out_names=None, link="identity",
-               plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
-               text_rotation=0):
+          plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
+          text_rotation=0, contribution_threshold=0.05):
     """ Visualize the given SHAP values with an additive force layout.
     
     Parameters
@@ -63,6 +63,10 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         Whether to use the default Javascript output, or the (less developed) matplotlib output. Using matplotlib
         can be helpful in scenarios where rendering Javascript/HTML is inconvenient. 
 
+    contribution_threshold : float
+        Controls the feature names/values that are displayed on force plot.
+        Only features that the magnitude of their shap value is larger than min_perc * (sum of all abs shap values)
+        will be displayed.
     """
 
     # support passing an explanation object
@@ -151,7 +155,13 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
             DenseData(np.zeros((1, len(feature_names))), list(feature_names))
         )
         
-        return visualize(e, plot_cmap, matplotlib, figsize=figsize, show=show, text_rotation=text_rotation)
+        return visualize(e,
+                         plot_cmap,
+                         matplotlib,
+                         figsize=figsize,
+                         show=show,
+                         text_rotation=text_rotation,
+                         min_perc=contribution_threshold)
         
     else:
         if matplotlib:
@@ -310,11 +320,15 @@ def verify_valid_cmap(cmap):
 
     return cmap
 
-def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True, ordering_keys=None, ordering_keys_time_format=None, text_rotation=0):
+def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
+              ordering_keys=None, ordering_keys_time_format=None, text_rotation=0, min_perc=0.05):
     plot_cmap = verify_valid_cmap(plot_cmap)
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
-            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize, show=show, text_rotation=text_rotation)
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize,
+                                                                    show=show,
+                                                                    text_rotation=text_rotation,
+                                                                    min_perc=min_perc)
         else:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
     elif isinstance(e, Explanation):
@@ -402,8 +416,12 @@ class AdditiveForceVisualizer(BaseVisualizer):
   );
 </script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
     
-    def matplotlib(self, figsize, show, text_rotation):
-        fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation)
+    def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
+        fig = draw_additive_plot(self.data,
+                                 figsize=figsize,
+                                 show=show,
+                                 text_rotation=text_rotation,
+                                 min_perc=min_perc)
         
         return fig
     
