@@ -51,7 +51,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         if sp.sparse.issparse(features):
             features = features.toarray()
         feature_names = shap_exp.feature_names
-        # if out_names is None: # TODO: waiting for slicer support of this
+        # if out_names is None: # TODO: waiting for slicer support
         #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
