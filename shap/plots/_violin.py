@@ -91,10 +91,13 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
         else:
             color = colors.blue_rgb
 
+    idx2cat = None
     # convert from a DataFrame or other types
     if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
         if feature_names is None:
             feature_names = features.columns
+        # feature index to category flag
+        idx2cat = features.dtypes.astype(str).isin(["object", "category"]).tolist()
         features = features.values
     elif isinstance(features, list):
         if feature_names is None:
@@ -234,7 +237,10 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
             shaps = shaps[inds]
             colored_feature = True
             try:
-                values = np.array(values, dtype=np.float64)  # make sure this can be numeric
+                if idx2cat is not None and idx2cat[i]: # check categorical feature
+                    colored_feature = False
+                else:
+                    values = np.array(values, dtype=np.float64)  # make sure this can be numeric
             except:
                 colored_feature = False
             N = len(shaps)
