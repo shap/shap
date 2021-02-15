@@ -20,23 +20,18 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
             ax=None, show=True):
     """ Create a SHAP dependence scatter plot, colored by an interaction feature.
-
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
     richer extenstion of classical parital dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
-
     Note that if you want to change the data being displayed you can update the
     shap_values.display_features attribute and it will then be used for plotting instead of
     shap_values.data.
-
-
     Parameters
     ----------
     shap_values : shap.Explanation
         A single column of a SHAP Explanation object (i.e. shap_values[:,"Feature A"]).
-
     color : string or shap.Explanation
         How to color the scatter plot points. This can be a fixed color string, or a Explanation object.
         If it is an explanation object then the scatter plot points are colored by the feature that
@@ -44,32 +39,25 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         This is calculated using shap.utils.approximate_interactions.
         If only a single column of an Explanation object is passed then that feature column will be used
         to color the data points.
-
     hist : bool
         Whether to show a light histogram along the x-axis to show the density of the data. Note that the
         histogram is normalized that that if all the point were in a single bin then that bin would span
         the full height of the plot.
-
     x_jitter : 'auto' or float (0 - 1)
         Adds random jitter to feature values. May increase plot readability when a feature
         is discrete. By default x_jitter is chosen base on auto-detection of categorical features
-
     alpha : float
         The transparency of the data points (between 0 and 1). This can be useful to the
         show density of the data points when using a large dataset.
-
     xmin : float or string
         Represents the lower bound of the plot's x-axis. It can be a string of the format
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
-
     xmax : float or string
         Represents the upper bound of the plot's x-axis. It can be a string of the format
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
-
     ax : matplotlib Axes object
          Optionally specify an existing matplotlib Axes object, into which the plot will be placed.
          In this case we do not create a Figure, otherwise we do.
-
     """
 
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
@@ -83,8 +71,10 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     features = shap_values.data.reshape(-1, 1)
     if shap_values.display_data is None:
         display_features = features
+        no_display_data = True
     else:
         display_features = shap_values.display_data.reshape(-1, 1)
+        no_display_data = False
     interaction_index = None
 
     # unwrap explanation objects used for bounds
@@ -200,7 +190,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         dependence_legacy(
             ind1, proj_shap_values_arr, features, feature_names=feature_names,
             interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
-            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha, cmap=cmap
         )
         if ind1 == ind2:
             ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
@@ -237,22 +227,34 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # get both the raw and display color values
     color_norm = None
     if interaction_index is not None:
-        interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
-        cv = interaction_feature_values
-        cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(cv.astype(np.float), 5)
-        chigh = np.nanpercentile(cv.astype(np.float), 95)
-        if clow == chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
-        if type(cd[0]) == str:
-            cname_map = {}
-            for i in range(len(cv)):
-                cname_map[cd[i]] = cv[i]
-            cnames = list(cname_map.keys())
-            categorical_interaction = True
-        elif clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
-            categorical_interaction = True
+        if no_display_data or type(display_features[:, interaction_index][0]) == str:
+            interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
+            cv = interaction_feature_values
+            cd = display_features[:, interaction_index]
+            clow = np.nanpercentile(cv.astype(np.float), 5)
+            chigh = np.nanpercentile(cv.astype(np.float), 95)
+            if clow == chigh:
+                clow = np.nanmin(cv.astype(np.float))
+                chigh = np.nanmax(cv.astype(np.float))
+            if type(cd[0]) == str:
+                cname_map = {}
+                for i in range(len(cv)):
+                    cname_map[cd[i]] = cv[i]
+                cnames = list(cname_map.keys())
+                categorical_interaction = True
+            elif clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
+                categorical_interaction = True
+        else:
+            interaction_feature_values = encode_array_if_needed(display_features[:, interaction_index])
+            cv = interaction_feature_values
+            cd = display_features[:, interaction_index]
+            clow = np.nanpercentile(cv.astype(np.float), 5)
+            chigh = np.nanpercentile(cv.astype(np.float), 95)
+            if clow == chigh:
+                clow = np.nanmin(cv.astype(np.float))
+                chigh = np.nanmax(cv.astype(np.float))
+            if clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
+                categorical_interaction = True
 
         # discritize colors for categorical features
         if categorical_interaction and clow != chigh:
@@ -280,9 +282,12 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
     if interaction_index is not None:
-
         # plot the nan values in the interaction feature as grey
-        cvals = features[oinds, interaction_index].astype(np.float64)
+        if no_display_data or type(display_features[oinds, interaction_index][0]) == str:
+            cvals = features[oinds, interaction_index].astype(np.float64)
+        else:
+            cvals = display_features[oinds, interaction_index].astype(np.float64)
+
         cvals_imp = cvals.copy()
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
@@ -293,15 +298,39 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         else:
             vmin = vmax = None
         ax.axhline(0, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
-        p = ax.scatter(
+
+        if no_display_data or type(xd[0]) == str:
+            p = ax.scatter(
+                xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+                cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax,
+                norm=color_norm, rasterized=len(xv) > 500
+            )
+            p.set_array(cvals[xv_notnan])
+
+        else:
+            p = ax.scatter(
+                xd[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+                cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax,
+                norm=color_norm, rasterized=len(xd) > 500
+            )
+            p.set_array(cvals[xv_notnan])
+
+            ax_t = ax.twiny()
+            ax_t.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
             cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax,
             norm=color_norm, rasterized=len(xv) > 500
-        )
-        p.set_array(cvals[xv_notnan])
+            )
     else:
-        p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
-                       alpha=alpha, rasterized=len(xv) > 500)
+        if no_display_data or type(xd[0]) == str:
+            p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xv) > 500)
+        else:
+            p = ax.scatter(xd, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xd) > 500)
+            ax_t = ax.twiny()
+            ax_t.scatter(xv, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xv) > 500)
 
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
@@ -395,7 +424,11 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             else:
                 bin_edges = 5
         
-        ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
+        if no_display_data or type(xd[0]) == str:
+            ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
+        else:
+            ax2.hist(xd[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
+        
         ax2.set_ylim(0,len(xv))
 
         ax2.xaxis.set_ticks_position('bottom')
@@ -410,6 +443,8 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     # make the plot more readable
     ax.set_xlabel(name, color=axis_color, fontsize=13)
+    if not (no_display_data or type(xd[0]) == str):
+        ax_t.set_xlabel(name+' (Model Input)', color=axis_color, fontsize=13)
     ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
     if title is not None:
         ax.set_title(title, color=axis_color, fontsize=13)
@@ -422,7 +457,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -436,59 +471,45 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
                       color="#1E88E5", axis_color="#333333", cmap=None,
                       dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
     """ Create a SHAP dependence plot, colored by an interaction feature.
-
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
     richer extenstion of the classical parital dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
-
-
     Parameters
     ----------
     ind : int or string
         If this is an int it is the index of the feature to plot. If this is a string it is
         either the name of the feature to plot, or it can have the form "rank(int)" to specify
         the feature with that rank (ordered by mean absolute SHAP value over all the samples).
-
     shap_values : numpy.array
         Matrix of SHAP values (# samples x # features).
-
     features : numpy.array or pandas.DataFrame
         Matrix of feature values (# samples x # features).
-
     feature_names : list
         Names of the features (length # features).
-
     display_features : numpy.array or pandas.DataFrame
         Matrix of feature values for visual display (such as strings instead of coded values).
-
     interaction_index : "auto", None, int, or string
         The index of the feature used to color the plot. The name of a feature can also be passed
         as a string. If "auto" then shap.common.approximate_interactions is used to pick what
         seems to be the strongest interaction (note that to find to true stongest interaction you
         need to compute the SHAP interaction values).
-
     x_jitter : float (0 - 1)
         Adds random jitter to feature values. May increase plot readability when feature
         is discrete.
-
     alpha : float
         The transparency of the data points (between 0 and 1). This can be useful to the
         show density of the data points when using a large dataset.
-
     xmin : float or string
         Represents the lower bound of the plot's x-axis. It can be a string of the format
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
-
     xmax : float or string
         Represents the upper bound of the plot's x-axis. It can be a string of the format
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
-
     ax : matplotlib Axes object
          Optionally specify an existing matplotlib Axes object, into which the plot will be placed.
          In this case we do not create a Figure, otherwise we do.
-
     """
 
     if cmap is None:
@@ -509,6 +530,11 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         display_features = display_features.values
     elif display_features is None:
         display_features = features
+
+    if display_features is None:
+        no_display_data = True
+    else:
+        no_display_data = False
 
     if feature_names is None:
         feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
@@ -553,7 +579,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         dependence_legacy(
             ind1, proj_shap_values, features, feature_names=feature_names,
             interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
-            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha, cmap=cmap
         )
         if ind1 == ind2:
             ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
@@ -591,22 +617,34 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # get both the raw and display color values
     color_norm = None
     if interaction_index is not None:
-        interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
-        cv = interaction_feature_values
-        cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(cv.astype(np.float), 5)
-        chigh = np.nanpercentile(cv.astype(np.float), 95)
-        if clow == chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
-        if type(cd[0]) == str:
-            cname_map = {}
-            for i in range(len(cv)):
-                cname_map[cd[i]] = cv[i]
-            cnames = list(cname_map.keys())
-            categorical_interaction = True
-        elif clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
-            categorical_interaction = True
+        if no_display_data or type(display_features[:, interaction_index][0]) == str:
+            interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
+            cv = interaction_feature_values
+            cd = display_features[:, interaction_index]
+            clow = np.nanpercentile(cv.astype(np.float), 5)
+            chigh = np.nanpercentile(cv.astype(np.float), 95)
+            if clow == chigh:
+                clow = np.nanmin(cv.astype(np.float))
+                chigh = np.nanmax(cv.astype(np.float))
+            if type(cd[0]) == str:
+                cname_map = {}
+                for i in range(len(cv)):
+                    cname_map[cd[i]] = cv[i]
+                cnames = list(cname_map.keys())
+                categorical_interaction = True
+            elif clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
+                categorical_interaction = True
+        else:
+            interaction_feature_values = encode_array_if_needed(display_features[:, interaction_index])
+            cv = interaction_feature_values
+            cd = display_features[:, interaction_index]
+            clow = np.nanpercentile(cv.astype(np.float), 5)
+            chigh = np.nanpercentile(cv.astype(np.float), 95)
+            if clow == chigh:
+                clow = np.nanmin(cv.astype(np.float))
+                chigh = np.nanmax(cv.astype(np.float))
+            if clow % 1 == 0 and chigh % 1 == 0 and chigh - clow < 10:
+                categorical_interaction = True
 
         # discritize colors for categorical features
         if categorical_interaction and clow != chigh:
@@ -632,30 +670,56 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
     if interaction_index is not None:
-
         # plot the nan values in the interaction feature as grey
-        cvals = interaction_feature_values[oinds].astype(np.float64)
+        if no_display_data or type(display_features[oinds, interaction_index][0]) == str:
+            cvals = interaction_feature_values[oinds].astype(np.float64)
+        else:
+            cvals = display_features[oinds, interaction_index].astype(np.float64)
+
         cvals_imp = cvals.copy()
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
         cvals[cvals_imp < clow] = clow
-        p = ax.scatter(
+        
+        if no_display_data or type(xd[0]) == str:
+            p = ax.scatter(
+                xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+                cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
+                norm=color_norm, rasterized=len(xv) > 500
+            )
+            p.set_array(cvals[xv_notnan])
+        else:
+            p = ax.scatter(
+                xd[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+                cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
+                norm=color_norm, rasterized=len(xd) > 500
+            )
+            p.set_array(cvals[xv_notnan])
+
+            ax_t = ax.twiny()
+            ax_t.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
             cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
             norm=color_norm, rasterized=len(xv) > 500
-        )
-        p.set_array(cvals[xv_notnan])
+            )
     else:
-        p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
-                       alpha=alpha, rasterized=len(xv) > 500)
+        if no_display_data or type(xd[0]) == str:
+            p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xv) > 500)
+        else:
+            p = ax.scatter(xd, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xd) > 500)
+            ax_t = ax.twiny()
+            ax_t.scatter(xv, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xv) > 500)
+
 
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
         if type(cd[0]) == str:
-            tick_positions = [cname_map[n] for n in cnames]
-            if len(tick_positions) == 2:
-                tick_positions[0] -= 0.25
-                tick_positions[1] += 0.25
+            tick_positions = np.array([cname_map[n] for n in cnames])
+            tick_positions *= 1 - 1 / len(cnames)
+            tick_positions += 0.5 * (chigh - clow) / (chigh - clow + 1)
             cb = pl.colorbar(p, ticks=tick_positions, ax=ax)
             cb.set_ticklabels(cnames)
         else:
@@ -703,6 +767,8 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     # make the plot more readable
     ax.set_xlabel(name, color=axis_color, fontsize=13)
+    if not (no_display_data or type(xd[0]) == str):
+        ax_t.set_xlabel(name+' (Model Input)', color=axis_color, fontsize=13)
     ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
     if title is not None:
         ax.set_title(title, color=axis_color, fontsize=13)
@@ -715,7 +781,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
