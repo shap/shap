@@ -3,3 +3,4 @@ from ._general import approximate_interactions, potential_interactions, sample, 
 from ._general import shapley_coefficients, convert_name, format_value, ordinal_str, OpChain
 from ._show_progress import show_progress
 from ._masked_model import MaskedModel, make_masks
+from ._tabular import to_dataframe
