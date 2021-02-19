@@ -1348,7 +1348,7 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
             tree_shap(tree, instance, diag_contribs, 0, 0);
 
             const int *unique_features_row = unique_features + j * amount_of_unique_features;
-            for (unsigned k = 0; k < trees.max_nodes; ++k) {
+            for (unsigned k = 0; k < amount_of_unique_features; ++k) {
                 const int ind = unique_features_row[k];
                 if (ind < 0) break; // < 0 means we have seen all the features for this tree
 
