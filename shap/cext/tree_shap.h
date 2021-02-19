@@ -1311,7 +1311,7 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
                                             tfloat transform(const tfloat, const tfloat)) {
 
     // build a list of all the unique features in each tree
-    int amount_of_unique_features = min(data.M, trees.max_nodes)
+    int amount_of_unique_features = min(data.M, trees.max_nodes);
     int *unique_features = new int[trees.tree_limit * amount_of_unique_features];
     std::fill(unique_features, unique_features + trees.tree_limit * amount_of_unique_features, -1);
     for (unsigned j = 0; j < trees.tree_limit; ++j) {
