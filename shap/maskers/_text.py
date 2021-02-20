@@ -78,7 +78,7 @@ class Text(Masker):
                 is_previous_appended_token_mask_token = False
                 for i in range(len(mask)):
                     # mask ignores separator tokens and keeps them unmasked
-                    if self._segments_s[i] == self.tokenizer.sep_token or mask[i]:
+                    if (('sep_token' in self.tokenizer.special_tokens_map) and (self._segments_s[i] == self.tokenizer.sep_token)) or mask[i]:
                         out.append(self._segments_s[i])
                         is_previous_appended_token_mask_token = False
                     else:
@@ -168,7 +168,8 @@ class Text(Masker):
     def clustering(self, s):
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
-        pt = partition_tree(decoded_x, [self.tokenizer.sep_token])
+        special_tokens = [self.tokenizer.sep_token] if 'sep_token' in self.tokenizer.special_tokens_map else None
+        pt = partition_tree(decoded_x, special_tokens)
         return pt
 
     # unused because restricts meaningful perturbations
