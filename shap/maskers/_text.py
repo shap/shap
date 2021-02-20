@@ -155,7 +155,7 @@ class Text(Masker):
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
             # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
-            tokens = [tokens[i] if (tokens[i] == self.tokenizer.sep_token and i > 0 and i < len(special_tokens_mask) - 1) or (special_tokens_mask[i] == 0) else '' for i in range(len(special_tokens_mask))]
+            tokens = [tokens[i] if ((special_tokens_mask[i] == 0) or ('sep_token' in self.tokenizer.special_tokens_map) and (tokens[i] == self.tokenizer.sep_token) and (i > 0 and i < len(special_tokens_mask) - 1)) else '' for i in range(len(special_tokens_mask))]
             return tokens
 
         elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
