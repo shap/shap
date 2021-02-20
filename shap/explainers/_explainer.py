@@ -364,7 +364,7 @@ class Explainer():
     def save(self, out_file):
         """ Serializes the type of subclass of explainer used, this will be used during deserialization.
         """
-        pickle.dump(type(self), out_file)
+        raise NotImplementedError(f"The {type(self)} explainer doesn't yet implement save/load")
     
     @classmethod
     def load(cls, in_file, model_loader = None, masker_loader = None):

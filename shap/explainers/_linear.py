@@ -64,11 +64,20 @@ class Linear(Explainer):
             feature_perturbation = "interventional"
         self.feature_perturbation = feature_perturbation
 
-        if issubclass(type(masker), tuple) and len(masker) == 2:
+        # wrap the incoming masker object as a shap.Masker object before calling
+        # parent class constructor, which does the same but without respecting
+        # the user-provided feature_perturbation choice
+        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+            if self.feature_perturbation == "correlation_dependent":
+                masker = maskers.Impute(masker)
+            else:
+                masker = maskers.Independent(masker)
+        elif issubclass(type(masker), tuple) and len(masker) == 2:
             if self.feature_perturbation == "correlation_dependent":
                 masker = maskers.Impute({"mean": masker[0], "cov": masker[1]}, method="linear")
             else:
                 masker = maskers.Independent({"mean": masker[0], "cov": masker[1]})
+
         super(Linear, self).__init__(model, masker, link=link, **kwargs)
 
         self.nsamples = nsamples
@@ -298,7 +307,6 @@ class Linear(Explainer):
             full_phi = np.zeros(((phi.shape[0], self.M)))
             full_phi[:,self.valid_inds] = phi
             phi = full_phi
-            return full_phi
 
         elif self.feature_perturbation == "interventional":
             if sp.sparse.issparse(X):
