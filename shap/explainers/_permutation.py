@@ -155,7 +155,7 @@ class Permutation(Explainer):
         """ Saves content of permutation explainer
         """
 
-        super(Permutation, self).save(out_file)
+        pickle.dump(type(self), out_file)
         
         if callable(self.model.save):
             self.model.save(out_file, self.model.model)

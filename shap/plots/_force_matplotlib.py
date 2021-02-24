@@ -337,7 +337,7 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg,
             spine.set_visible(False)
 
 
-def draw_additive_plot(data, figsize, show, text_rotation=0):
+def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
     """Draw additive plot."""
     # Turn off interactive plot
     if show is False:
@@ -383,10 +383,10 @@ def draw_additive_plot(data, figsize, show, text_rotation=0):
     # Add labels
     total_effect = np.abs(total_neg) + total_pos
     fig, ax = draw_labels(fig, ax, out_value, neg_features, 'negative',
-                          offset_text, total_effect, min_perc=0.05, text_rotation=text_rotation)
+                          offset_text, total_effect, min_perc=min_perc, text_rotation=text_rotation)
     
     fig, ax = draw_labels(fig, ax, out_value, pos_features, 'positive',
-                          offset_text, total_effect, min_perc=0.05, text_rotation=text_rotation)
+                          offset_text, total_effect, min_perc=min_perc, text_rotation=text_rotation)
     
     # higher lower legend
     draw_higher_lower_element(out_value, offset_text)

@@ -201,3 +201,28 @@ def test_sparse():
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer.shap_values(X)
     assert np.max(np.abs(scipy.special.expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
+
+
+@pytest.mark.parametrize("feature_pertubation,masker",
+    [
+        (None, shap.maskers.Independent),
+        ("interventional", shap.maskers.Independent),
+        ("independent", shap.maskers.Independent),
+        ("correlation_dependent", shap.maskers.Impute),
+        ("correlation", shap.maskers.Impute)
+    ]
+)
+def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
+    np.random.seed(0)
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
+
+    # train linear model
+    X, y = shap.datasets.boston()
+    X = X[:100]
+    y = y[:100]
+    model = Ridge(0.1)
+    model.fit(X, y)
+
+    explainer = shap.explainers.Linear(model, X, feature_perturbation=feature_pertubation)
+    assert isinstance(explainer.masker, masker)
+
