@@ -106,7 +106,8 @@ class Text(Masker):
         if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
             out = self.post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
-        out = re.sub(r"[\s]+"," ",out).strip()
+        if type(out) == str:
+            out = re.sub(r"[\s]+"," ",out).strip()
         # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain extra unnecessary tokens, for example ''.
         # you may want to strip out spaces adjacent to separator tokens. Refer to PR for more details.
         return (np.array([out]),)
