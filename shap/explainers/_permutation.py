@@ -56,6 +56,16 @@ class Permutation(Explainer):
         if max_evals == "auto":
             max_evals = 10 * 2 * len(fm)
 
+        # compute any custom clustering for this row
+        row_clustering = None
+        if getattr(self.masker, "clustering", None) is not None:
+            if isinstance(self.masker.clustering, np.ndarray):
+                row_clustering = self.masker.clustering
+            elif callable(self.masker.clustering):
+                row_clustering = self.masker.clustering(*row_args)
+            else:
+                raise Exception("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
+
         # loop over many permutations
         inds = fm.varying_inputs()
         inds_mask = np.zeros(len(fm), dtype=np.bool)
@@ -69,10 +79,10 @@ class Permutation(Explainer):
             for _ in range(npermutations):
 
                 # shuffle the indexes so we get a random permutation ordering
-                if getattr(self.masker, "clustering", None) is not None:
+                if row_clustering is not None:
                     # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M TODO: still true?
                     #assert len(inds) == len(fm), "Need to support partition shuffle when not all the inds vary!!"
-                    partition_tree_shuffle(inds, inds_mask, self.masker.clustering)
+                    partition_tree_shuffle(inds, inds_mask, row_clustering)
                 else:
                     np.random.shuffle(inds)
 
@@ -108,7 +118,7 @@ class Permutation(Explainer):
             "expected_values": expected_value,
             "mask_shapes": fm.mask_shapes,
             "main_effects": main_effect_values,
-            "clustering": getattr(self.masker, "clustering", None)
+            "clustering": row_clustering
         }
     
 
