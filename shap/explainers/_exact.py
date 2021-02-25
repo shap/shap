@@ -64,7 +64,7 @@ class Exact(Explainer):
 
         self._gray_code_cache = {} # used to avoid regenerating the same gray code patterns
 
-    def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, batch_size="auto", silent=False):
+    def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, batch_size="auto", interactions=1, silent=False):
         """ Explains the output of model(*args), where args represents one or more parallel iterators.
         """
 
@@ -72,7 +72,7 @@ class Exact(Explainer):
         # from the function signature
         return super(Exact, self).__call__(
             *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, 
-            batch_size=batch_size, silent=silent
+            batch_size=batch_size, interactions=interactions, silent=silent
         )
     
     def _cached_gray_codes(self, n):
@@ -80,7 +80,7 @@ class Exact(Explainer):
             self._gray_code_cache[n] = gray_code_indexes(n)
         return self._gray_code_cache[n]
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, interactions, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
 
@@ -114,12 +114,26 @@ class Exact(Explainer):
             # run the model
             outputs = fm(extended_delta_indexes, batch_size=batch_size)
             
-            # loop over all the outputs to update the rows
-            coeff = shapley_coefficients(len(inds))
-            row_values = np.zeros((len(fm),) + outputs.shape[1:])
-            mask = np.zeros(len(fm), dtype=np.bool)
-            _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
+            # Shapley values
+            if interactions is False or interactions is 1:
 
+                # loop over all the outputs to update the rows
+                coeff = shapley_coefficients(len(inds))
+                row_values = np.zeros((len(fm),) + outputs.shape[1:])
+                mask = np.zeros(len(fm), dtype=np.bool)
+                _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
+
+            # Shapley-Taylor interaction values
+            elif interactions is True or interactions is 2:
+
+                # loop over all the outputs to update the rows
+                coeff = shapley_coefficients(len(inds))
+                row_values = np.zeros((len(fm),len(fm)) + outputs.shape[1:])
+                mask = np.zeros(len(fm), dtype=np.bool)
+                _compute_grey_code_row_values_st(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
+
+            elif interactions > 2:
+                raise Exception("Currently the Exact explainer does not support interactions higher than order 2!")
 
         # do a partition tree constrained version of Shapley values 
         else:
@@ -145,16 +159,19 @@ class Exact(Explainer):
 
         # compute the main effects if we need to
         main_effect_values = None
-        if main_effects:
+        if main_effects or interactions is True or interactions is 2:
             if inds is None:
                 inds = np.arange(len(fm))
             main_effect_values = fm.main_effects(inds)
+            if interactions is True or interactions is 2:
+                for i in range(len(fm)):
+                    row_values[i,i] = main_effect_values[i]
         
         return {
             "values": row_values,
             "expected_values": outputs[0],
             "mask_shapes": fm.mask_shapes,
-            "main_effects": main_effect_values,
+            "main_effects": main_effect_values if main_effects else None,
             "clustering": getattr(self.masker, "clustering", None)
         }
     
@@ -229,6 +246,34 @@ def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff
                 row_values[j] += out * on_coeff
             else:
                 row_values[j] -= out * off_coeff
+
+@jit
+def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
+    set_size = 0
+    M = len(inds)
+    for i in range(2**M):
+
+        # update the mask
+        delta_ind = extended_delta_indexes[i]
+        if delta_ind != noop_code:
+            mask[delta_ind] = ~mask[delta_ind]
+            if mask[delta_ind]:
+                set_size += 1
+            else:
+                set_size -= 1
+
+        # distribute the effect of this mask set over all the terms it impacts
+        out = outputs[i]
+        for j in range(M):
+            for k in range(j+1, M):
+                if not mask[j] and not mask[k]:
+                    delta = out * shapley_coeff[set_size] # * 2
+                elif (not mask[j] and mask[k]) or (mask[j] and not mask[k]):
+                    delta = -out * shapley_coeff[set_size - 1] # * 2
+                else: # both true
+                    delta = out * shapley_coeff[set_size - 2] # * 2
+                row_values[j,k] += delta
+                row_values[k,j] += delta
 
 def partition_delta_indexes(partition_tree, all_masks):
     """ Return an delta index encoded array of all the masks possible while following the given partition tree.
