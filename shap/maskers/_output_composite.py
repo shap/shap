@@ -1,9 +1,14 @@
-from ._masker import Masker
 import pickle
+from ._masker import Masker
 
 class OutputComposite(Masker):
+    """ A masker that is a combination of a masker and a model and outputs both masked args and the model's output.
+    """
+
     def __init__(self, masker, model):
-        """ Creates a Composite masker from an underlying masker and returns the masked input along with the model output for passed args.
+        """ Creates a masker from an underlying masker and and model.
+
+        This masker returns the masked input along with the model output for the passed args.
 
         Parameters
         ----------
@@ -28,7 +33,7 @@ class OutputComposite(Masker):
                 setattr(self, masker_attribute, getattr(self.masker, masker_attribute))
 
     def __call__(self, mask, *args):
-        """ Computes mask on the args using the masker data attribute and returns tuple containing masked input with model output for passed args.
+        """ Mask the args using the masker and return a tuple containing the masked input and the model output on the args.
         """
         masked_X = self.masker(mask, *args)
         y = self.model(*args)
@@ -50,7 +55,7 @@ class OutputComposite(Masker):
     @classmethod
     def load(cls, in_file):
         masker_type = pickle.load(in_file)
-        if not masker_type == cls:
+        if not masker_type == OutputComposite:
             print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
         return OutputComposite._load(in_file)
 

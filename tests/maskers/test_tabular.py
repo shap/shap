@@ -98,7 +98,6 @@ def test_serialization_partion_masker_numpy():
     """ Test the serialization of a Partition masker based on a numpy array.
     """
 
-
     X, _ = shap.datasets.boston()
     X = X.values
 

@@ -36,7 +36,7 @@ def test_serialization_partition():
 
     shap_values_new = explainer_new(data)
 
-    assert np.array_equal(shap_values_original[0].base_values,shap_values_new[0].base_values)
-    assert np.array_equal(shap_values_original[0].values,shap_values_new[0].values)
-    assert type(explainer_original) == type(explainer_new)
-    assert type(explainer_original.masker) == type(explainer_new.masker)
+    assert np.array_equal(shap_values_original[0].base_values, shap_values_new[0].base_values)
+    assert np.array_equal(shap_values_original[0].values, shap_values_new[0].values)
+    assert isinstance(explainer_original, type(explainer_new))
+    assert isinstance(explainer_original.masker, type(explainer_new.masker))

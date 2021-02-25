@@ -15,8 +15,11 @@ except ImportError as e:
     record_import_error("tensorflow", "TensorFlow could not be imported!", e)
 
 class TopKLM(Model):
+    """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
+    """
+
     def __init__(self, model, tokenizer, k=10, generate_topk_token_ids=None, batch_size=128, device=None):
-        """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
+        """ Take Causal/Masked LM model and tokenizer and build a log odds output model for the top-k tokens.
 
         Parameters
         ----------
@@ -47,20 +50,20 @@ class TopKLM(Model):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.k = k
-        self.generate_topk_token_ids = generate_topk_token_ids if generate_topk_token_ids is not None else self.generate_topk_token_ids
+        self._custom_generate_topk_token_ids = generate_topk_token_ids
         self.batch_size = batch_size
         self.device = device
 
         self.X = None
         self.topk_token_ids = None
         self.output_names = None
-        
+
         self.model_type = None
-        if safe_isinstance(self.model,"transformers.PreTrainedModel"):
+        if safe_isinstance(self.model, "transformers.PreTrainedModel"):
             self.model_type = "pt"
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             self.model = self.model.to(self.device)
-        elif safe_isinstance(self.model,"transformers.TFPreTrainedModel"):
+        elif safe_isinstance(self.model, "transformers.TFPreTrainedModel"):
             self.model_type = "tf"
 
 
@@ -111,7 +114,7 @@ class TopKLM(Model):
 
     def get_output_names_and_update_topk_token_ids(self, X):
         """ Gets the token names for top-k token ids for Causal/Masked LM.
-        
+
         Parameters
         ----------
         X: np.ndarray
@@ -122,6 +125,12 @@ class TopKLM(Model):
         list
             A list of output tokens.
         """
+
+        # see if the user gave a custom token generator
+        if self._custom_generate_topk_token_ids is not None:
+            return self._custom_generate_topk_token_ids(X)
+
+        # otherwise we pick the top k tokens from the model
         self.topk_token_ids = self.generate_topk_token_ids(X)
         output_names = [self.tokenizer.decode([x]) for x in self.topk_token_ids]
         return output_names
@@ -185,7 +194,7 @@ class TopKLM(Model):
             An array of top-k token ids.
         """
         logits = self.get_lm_logits(X)
-        topk_tokens_ids = (-logits).argsort()[0,:self.k]
+        topk_tokens_ids = (-logits).argsort()[0, :self.k]
         return topk_tokens_ids
 
     def get_lm_logits(self, X):
@@ -211,7 +220,7 @@ class TopKLM(Model):
                 with torch.no_grad():
                     outputs = self.model(**inputs, return_dict=True)
                 # extract only logits corresponding to target sentence ids
-                logits=outputs.logits.detach().cpu().numpy().astype('float64')[:,-1,:]
+                logits = outputs.logits.detach().cpu().numpy().astype('float64')[:, -1, :]
             elif self.model_type == "tf":
                 inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
                 inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
@@ -223,5 +232,5 @@ class TopKLM(Model):
                             outputs = self.model(inputs, return_dict=True)
                     except RuntimeError as e:
                         print(e)
-                logits=outputs.logits.numpy().astype('float64')[:,-1,:]
+                logits = outputs.logits.numpy().astype('float64')[:, -1, :]
         return logits

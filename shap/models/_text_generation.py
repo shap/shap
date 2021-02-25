@@ -1,5 +1,5 @@
-import numpy as np
 import pickle
+import numpy as np
 import cloudpickle
 from ._model import Model
 from ..utils import record_import_error, safe_isinstance
@@ -16,11 +16,15 @@ except ImportError as e:
 
 
 class TextGeneration(Model):
-    def __init__(self, model=None, tokenizer=None, target_sentences=None, device=None):
-        """ Generates target sentence/ids using model.
+    """ Generates target sentence/ids using a base model.
 
-        It generates target sentence/ids for a model(pretrained transformer model or a function). For a pretrained transformer model, 
-        tokenizer should be passed.
+    It generates target sentence/ids for a model (a pretrained transformer model or a function).
+    """
+
+    def __init__(self, model=None, tokenizer=None, target_sentences=None, device=None):
+        """ Create a text generator model from a pretrained transformer model or a function.
+
+        For a pretrained transformer model, a tokenizer should be passed.
 
         Parameters
         ----------
@@ -45,14 +49,14 @@ class TextGeneration(Model):
 
         self.explanation_row = 0
         if target_sentences is not None:
-            self.model = lambda _ : np.array([target_sentences[self.explanation_row]]) 
+            self.model = lambda _: np.array([target_sentences[self.explanation_row]])
 
         self.tokenizer = tokenizer
         self.device = device
-        if safe_isinstance(model,"transformers.PreTrainedModel"):
+        if safe_isinstance(model, "transformers.PreTrainedModel"):
             self.model_agnostic = False
             self.model_type = "pt"
-        elif safe_isinstance(model,"transformers.TFPreTrainedModel"):
+        elif safe_isinstance(model, "transformers.TFPreTrainedModel"):
             self.model_agnostic = False
             self.model_type = "tf"
         else:
@@ -60,7 +64,7 @@ class TextGeneration(Model):
             self.model_type = None
         # X is input used to generate target sentence used for caching
         self.X = None
-        # target sentence/ids generated from the model using X 
+        # target sentence/ids generated from the model using X
         self.target_X = None
 
     def __call__(self, X):
@@ -76,7 +80,8 @@ class TextGeneration(Model):
         numpy.ndarray
             Array of target sentence/ids.
         """
-        if (self.X is None) or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X)) or (isinstance(self.X, str) and (self.X != X)):
+        if (self.X is None) or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X)) or \
+                (isinstance(self.X, str) and (self.X != X)):
             self.X = X
             # wrap text input in a numpy array
             if isinstance(X, str):
@@ -93,7 +98,7 @@ class TextGeneration(Model):
     def get_inputs(self, X, padding_side='right'):
         """ The function tokenizes source sentences.
 
-        In model agnostic case, the function calls model(X) which is expected to 
+        In model agnostic case, the function calls model(X) which is expected to
         return a batch of output sentences which is tokenized to compute inputs.
 
         Parameters
@@ -129,17 +134,18 @@ class TextGeneration(Model):
         """
         if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
                 and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
-                raise ValueError(
-                    "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
-                )
+            raise ValueError(
+                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+            )
         # check if user assigned any text generation specific kwargs
         text_generation_params = {}
-        if self.model.config.__dict__.get("task_specific_params") is not None and self.model.config.task_specific_params.get("text-generation") is not None:
+        if self.model.config.__dict__.get("task_specific_params") is not None and \
+                self.model.config.task_specific_params.get("text-generation") is not None:
             text_generation_params = self.model.config.task_specific_params["text-generation"]
             if not isinstance(text_generation_params, dict):
                 raise ValueError(
-                "Please assign text generation params as a dictionary under task_specific_params with key 'text-generation' "
-            )
+                    "Please assign text generation params as a dictionary under task_specific_params with key 'text-generation' "
+                )
         if self.model_type == "pt":
             # create torch tensors and move to device
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
@@ -166,9 +172,9 @@ class TextGeneration(Model):
                     print(e)
         if self.model.config.is_decoder:
             # slice the output ids after the input ids
-            outputs = outputs[:,inputs["input_ids"].shape[1]:]
+            outputs = outputs[:, inputs["input_ids"].shape[1]:]
         # parse output ids to find special tokens in prefix and suffix
-        parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(outputs[0,:].tolist())
+        parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(outputs[0, :].tolist())
         keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
         # extract target sentence ids by slicing off prefix and suffix
         if keep_suffix > 0:
@@ -188,7 +194,7 @@ class TextGeneration(Model):
         Returns
         -------
         dict
-            Dictionary of prefix and suffix lengths concerning special tokens in output ids. 
+            Dictionary of prefix and suffix lengths concerning special tokens in output ids.
         """
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():
@@ -200,7 +206,7 @@ class TextGeneration(Model):
             'keep_suffix' : keep_suffix
         }
 
-    def save(self, out_file, *args):
+    def save(self, out_file):
         pickle.dump(type(self), out_file)
         cloudpickle.dump(self.model, out_file)
         cloudpickle.dump(self.tokenizer, out_file)

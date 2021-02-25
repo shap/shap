@@ -86,7 +86,7 @@ def test_multi_class_partition():
 def test_serialization_exact():
     xgboost = pytest.importorskip('xgboost')
     # get a dataset on income prediction
-    X,y = shap.datasets.adult()
+    X, y = shap.datasets.adult()
 
     # train an XGBoost model (but any other model type would also work)
     model = xgboost.XGBClassifier()
@@ -111,15 +111,15 @@ def test_serialization_exact():
     for i in range(len(explainer_original.masker.feature_names)):
         assert explainer_original.masker.feature_names[i] == explainer_new.masker.feature_names[i]
 
-    assert np.array_equal(shap_values_original.base_values,shap_values_new.base_values)
-    assert type(explainer_original) == type(explainer_new)
-    assert type(explainer_original.masker) == type(explainer_new.masker)
+    assert np.array_equal(shap_values_original.base_values, shap_values_new.base_values)
+    assert isinstance(explainer_original, type(explainer_new))
+    assert isinstance(explainer_original.masker, type(explainer_new.masker))
 
 def test_serialization_exact_no_model_or_masker():
     xgboost = pytest.importorskip('xgboost')
 
     # get a dataset on income prediction
-    X,y = shap.datasets.adult()
+    X, y = shap.datasets.adult()
 
     # train an XGBoost model (but any other model type would also work)
     model = xgboost.XGBClassifier()
@@ -151,16 +151,16 @@ def test_serialization_exact_no_model_or_masker():
     for i in range(len(explainer_original.masker.feature_names)):
         assert explainer_original.masker.feature_names[i] == explainer_new.masker.feature_names[i]
 
-    assert np.array_equal(shap_values_original.base_values,shap_values_new.base_values)
-    assert type(explainer_original) == type(explainer_new)
-    assert type(explainer_original.masker) == type(explainer_new.masker)
+    assert np.array_equal(shap_values_original.base_values, shap_values_new.base_values)
+    assert isinstance(explainer_original, type(explainer_new))
+    assert isinstance(explainer_original.masker, type(explainer_new.masker))
 
 def test_serialization_exact_numpy_custom_model_save():
     xgboost = pytest.importorskip('xgboost')
     pickle = pytest.importorskip('pickle')
 
     # get a dataset on income prediction
-    X,y = shap.datasets.adult()
+    X, y = shap.datasets.adult()
     X = X.values
 
     # train an XGBoost model (but any other model type would also work)
@@ -179,14 +179,13 @@ def test_serialization_exact_numpy_custom_model_save():
     temp_serialization_file.seek(0)
 
     # Deserialization
-    model_loader = lambda in_file: pickle.load(in_file)
-    explainer_new = shap.Explainer.load(temp_serialization_file, model_loader = model_loader)
+    explainer_new = shap.Explainer.load(temp_serialization_file, model_loader=pickle.load)
 
     temp_serialization_file.close()
 
 
     shap_values_new = explainer_new(X[:1])
 
-    assert np.array_equal(shap_values_original.base_values,shap_values_new.base_values)
-    assert type(explainer_original) == type(explainer_new)
-    assert type(explainer_original.masker) == type(explainer_new.masker)
+    assert np.array_equal(shap_values_original.base_values, shap_values_new.base_values)
+    assert isinstance(explainer_original, type(explainer_new))
+    assert isinstance(explainer_original.masker, type(explainer_new.masker))

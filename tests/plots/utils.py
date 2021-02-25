@@ -1,13 +1,11 @@
 import numpy as np
 import pytest
-
 import shap
 
 
 @pytest.fixture()
 def explainer():
-    """
-    A simple explainer to be used as a test fixture
+    """ A simple explainer to be used as a test fixture.
     """
     xgboost = pytest.importorskip('xgboost')
     np.random.seed(0)
@@ -20,5 +18,4 @@ def explainer():
     model = xgboost.XGBClassifier().fit(X, y)
 
     # build an Exact explainer and explain the model predictions on the given dataset
-    explainer = shap.TreeExplainer(model, X)
-    return explainer
+    return shap.TreeExplainer(model, X)

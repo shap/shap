@@ -1,8 +1,11 @@
+import pickle
 import numpy as np
 from ._masker import Masker
-import pickle
 
 class FixedComposite(Masker):
+    """ A masker that outputs both the masked data and the original data as a pair.
+    """
+
     def __init__(self, masker):
         """ Creates a Composite masker from an underlying masker and returns the original args along with the masked output.
 
@@ -35,8 +38,8 @@ class FixedComposite(Masker):
         if not isinstance(masked_X, tuple):
             masked_X = (masked_X,)
         return masked_X + wrapped_args
-    
-    def save(self, out_file, *args):
+
+    def save(self, out_file):
         super(FixedComposite, self).save(out_file)
         pickle.dump(type(self.masker), out_file)
         self.masker.save(out_file)

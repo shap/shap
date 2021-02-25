@@ -1,6 +1,7 @@
-import numpy as np
 import re
-import pickle 
+import pickle
+import math
+import numpy as np
 import cloudpickle
 from ._masker import Masker
 from ..utils import safe_isinstance
@@ -9,10 +10,10 @@ from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIEC
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
 
-    The masked variables are 
-    
+    The masked variables are
+
     output_type : "string" (default) or "token_ids"
-        
+
     """
     def __init__(self, tokenizer, mask_token="auto", collapse_mask_token=False, output_type="string"):
         self.mask_history = {}
@@ -21,12 +22,12 @@ class Text(Masker):
         self.collapse_mask_token = collapse_mask_token
         self.input_mask_token = mask_token
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
-        
+
         self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
         self.keep_suffix = parsed_tokenizer_dict['keep_suffix']
         self.prefix_strlen = parsed_tokenizer_dict['prefix_strlen']
         self.suffix_strlen = parsed_tokenizer_dict['suffix_strlen']
-        null_tokens = parsed_tokenizer_dict['null_tokens']
+        #null_tokens = parsed_tokenizer_dict['null_tokens']
 
         if mask_token == "auto":
             if hasattr(self.tokenizer, "mask_token_id") and self.tokenizer.mask_token_id is not None:
@@ -58,8 +59,12 @@ class Text(Masker):
 
         self.default_batch_size = 5
 
+        # cache variables
         self._s = None
-    
+        self._tokenized_s_full = None
+        self._tokenized_s = None
+        self._segments_s = None
+
     def __call__(self, mask, s):
         self._update_s_cache(s)
 
@@ -68,7 +73,7 @@ class Text(Masker):
             mask = mask.copy()
             mask[:self.keep_prefix] = True
             mask[-self.keep_suffix:] = True
-        
+
         if self.output_type == "string":
             if self.mask_token_id is None:
                 out = self._segments_s[mask]
@@ -76,9 +81,9 @@ class Text(Masker):
                 #out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
                 out = []
                 is_previous_appended_token_mask_token = False
-                for i in range(len(mask)):
+                for i, v in enumerate(mask):
                     # mask ignores separator tokens and keeps them unmasked
-                    if (('sep_token' in self.tokenizer.special_tokens_map) and (self._segments_s[i] == self.tokenizer.sep_token)) or mask[i]:
+                    if (('sep_token' in self.tokenizer.special_tokens_map) and (self._segments_s[i] == self.tokenizer.sep_token)) or v:
                         out.append(self._segments_s[i])
                         is_previous_appended_token_mask_token = False
                     else:
@@ -88,7 +93,7 @@ class Text(Masker):
                         elif not self.collapse_mask_token:
                             out.extend(self.mask_token_segment)
                             is_previous_appended_token_mask_token = True
-                out=np.array(out)
+                out = np.array(out)
 
             if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
                 out = self.tokenizer.convert_tokens_to_string(out.tolist())
@@ -104,68 +109,81 @@ class Text(Masker):
         # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
         # with ' '
         if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
-            out = self.post_process_sentencepiece_tokenizer_output(out)
+            out = post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
-        out = re.sub(r"[\s]+"," ",out).strip()
-        # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain extra unnecessary tokens, for example ''.
-        # you may want to strip out spaces adjacent to separator tokens. Refer to PR for more details.
+        out = re.sub(r"[\s]+", " ", out).strip()
+        # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain
+        # extra unnecessary tokens, for example ''. you may want to strip out spaces adjacent to separator tokens. Refer to PR
+        # for more details.
         return (np.array([out]),)
 
-        if self.output_type == "string":
-            decoded_str = self.tokenizer.decode(out)[self.prefix_strlen:][:-self.suffix_strlen].strip()
-            
-            if True:
-                out2 = np.array(self.tokenizer.encode(decoded_str))
-                if not np.all(out2 == out):
-                    print(decoded_str)
-                    print(self.tokenizer.decode(out))
-                    print(out2)
-                    print(out)
-                    print(type(out2))
-                    print(type(out))
-                    print(out2.shape)
-                    print(out.shape)
-                    raise Exception("The string tokenizer is not symmetric?")
-            return np.array([decoded_str])
-        else:
-            return np.array([out])
-    
-    def post_process_sentencepiece_tokenizer_output(self, s):
-        # replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers
-        s = s.replace('▁', ' ')
-        return s
+        # if self.output_type == "string":
+        #     decoded_str = self.tokenizer.decode(out)[self.prefix_strlen:][:-self.suffix_strlen].strip()
+
+        #     if True:
+        #         out2 = np.array(self.tokenizer.encode(decoded_str))
+        #         if not np.all(out2 == out):
+        #             print(decoded_str)
+        #             print(self.tokenizer.decode(out))
+        #             print(out2)
+        #             print(out)
+        #             print(type(out2))
+        #             print(type(out))
+        #             print(out2.shape)
+        #             print(out.shape)
+        #             raise Exception("The string tokenizer is not symmetric?")
+        #     return np.array([decoded_str])
+        # else:
+        #     return np.array([out])
 
     def data_transform(self, s):
+        """ Called by explainers to allow us to convert data to better match masking (here this mean tokenizing).
+        """
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
             out = self.token_segments(s)
             out = [token+' ' for token in out]
             return out
-        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
             return self.token_segments(s)
-    
+        raise Exception("Unknown tokenizer type!", self.tokenizer)
+
     def tokenize(self, s):
+        """ Calls the underlying tokenizer on the given string.
+        """
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
             return self.tokenizer.encode_plus(s)
-        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
             return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
-    
+        raise Exception("Unknown tokenizer type!", self.tokenizer)
+
     def token_segments(self, s):
+        """ Returns the substrings associated with each token in the given string.
+        """
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
             token_ids = self.tokenizer.encode_plus(s)['input_ids']
             tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
-            special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens = True)
+            special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens=True)
             # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
-            tokens = [tokens[i] if ((special_tokens_mask[i] == 0) or ('sep_token' in self.tokenizer.special_tokens_map) and (tokens[i] == self.tokenizer.sep_token) and (i > 0 and i < len(special_tokens_mask) - 1)) else '' for i in range(len(special_tokens_mask))]
+            tokens = []
+            for i, v in enumerate(special_tokens_mask):
+                if ((v == 0) or ('sep_token' in self.tokenizer.special_tokens_map) and \
+                        (tokens[i] == self.tokenizer.sep_token) and (0 < i < len(special_tokens_mask) - 1)):
+                    tokens.append(tokens[i])
+                else:
+                    tokens.append("")
             return tokens
 
-        elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
+        if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
             offsets = self.tokenizer.encode_plus(s, return_offsets_mapping=True)["offset_mapping"]
-            offsets = [(0,0) if o is None else o for o in offsets]
-            parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)] 
+            offsets = [(0, 0) if o is None else o for o in offsets]
+            parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)]
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
+        raise Exception("Unknown tokenizer type!", self.tokenizer)
 
     def clustering(self, s):
+        """ Compute the clustering of tokens for the given string.
+        """
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         special_tokens = [self.tokenizer.sep_token] if 'sep_token' in self.tokenizer.special_tokens_map else None
@@ -180,33 +198,33 @@ class Text(Masker):
         you started with...but this is possible with word endings in the transformers implementation
         of BERT for example. So here we mark such uninvertable clusters with negative values.
         """
-    
+
         M = len(self._tokenized_s)
         assert len(clustering)+1 == M
-        
+
         def recursive_mark(ind):
             if ind < M:
                 return list(self._tokenized_s[ind:ind+1])
-            else:
-                lind = int(clustering[ind-M,0])
-                rind = int(clustering[ind-M,1])
-                ltokens = recursive_mark(lind)
-                rtokens = recursive_mark(rind)
-            
+
+            lind = int(clustering[ind-M, 0])
+            rind = int(clustering[ind-M, 1])
+            ltokens = recursive_mark(lind)
+            rtokens = recursive_mark(rind)
+
             tmp = ltokens + [self.mask_token_id]
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
-                clustering[ind-M,2] = -1 # set the distance of this cluster negative so it can't be split
-            
+                clustering[ind-M, 2] = -1 # set the distance of this cluster negative so it can't be split
+
             tmp = [self.mask_token_id] + rtokens
             s2 = self.tokenizer.decode(tmp)
             e2 = self.tokenizer.encode(s2)
             if not np.all(e2[1:-1] == tmp):
-                clustering[ind-M,2] = -1 # set the distance of this cluster negative so it can't be split
-            
+                clustering[ind-M, 2] = -1 # set the distance of this cluster negative so it can't be split
+
             return ltokens + rtokens
-        
+
         recursive_mark(M+len(clustering)-1)
 
     def _update_s_cache(self, s):
@@ -217,14 +235,22 @@ class Text(Masker):
             self._segments_s = np.array(self.token_segments(s))
 
     def shape(self, s):
+        """ The shape of what we return as a masker.
+
+        Note we only return a single sample, so there is no expectation averaging.
+        """
         self._update_s_cache(s)
-        return (1,len(self._tokenized_s))
+        return (1, len(self._tokenized_s))
 
     def mask_shapes(self, s):
+        """ The shape of the masks we expect.
+        """
         self._update_s_cache(s)
         return [(len(self._tokenized_s),)]
 
     def invariants(self, s):
+        """ The names of the features for each mask position for the given input string.
+        """
         self._update_s_cache(s)
 
         invariants = np.zeros(len(self._tokenized_s), dtype=np.bool)
@@ -236,13 +262,15 @@ class Text(Masker):
         for i in range(len(self._tokenized_s)):
             if self._tokenized_s[i] == self.tokenizer.sep_token_id:
                 invariants[i] = True
-        return invariants.reshape(1,-1)
+        return invariants.reshape(1, -1)
 
     def feature_names(self, s):
+        """ The names of the features for each mask position for the given input string.
+        """
         self._update_s_cache(s)
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 
-    def save(self, out_file, *args):
+    def save(self, out_file):
         super(Text, self).save(out_file)
         cloudpickle.dump(self.tokenizer, out_file)
         pickle.dump(self.input_mask_token, out_file)
@@ -262,9 +290,13 @@ class Text(Masker):
         mask_token = pickle.load(in_file)
         collapse_mask_token = pickle.load(in_file)
         output_type = pickle.load(in_file)
+        return Text(tokenizer, mask_token, collapse_mask_token, output_type)
 
-        text_masker = Text(tokenizer, mask_token, collapse_mask_token, output_type)
-        return text_masker   
+def post_process_sentencepiece_tokenizer_output(s):
+    """ replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers.
+    """
+    s = s.replace('▁', ' ')
+    return s
 
 openers = {
     "(": ")"
@@ -276,42 +308,47 @@ enders = [".", ","]
 connectors = ["but", "and", "or"]
 
 class Token():
+    """ A token representation used for token clustering.
+    """
     def __init__(self, value):
         self.s = value
         if value in openers or value in closers:
             self.balanced = False
         else:
             self.balanced = True
-            
+
     def __str__(self):
         return self.s
-    
+
     def __repr__(self):
         if not self.balanced:
             return self.s + "!"
         return self.s
-    
+
 class TokenGroup():
+    """ A token group (substring) representation used for token clustering.
+    """
     def __init__(self, group, index=None):
         self.g = group
         self.index = index
-    
+
     def __repr__(self):
         return self.g.__repr__()
-    
+
     def __getitem__(self, index):
         return self.g[index]
-    
+
     def __add__(self, o):
         return TokenGroup(self.g + o.g)
-    
+
     def __len__(self):
         return len(self.g)
 
-import math 
-
-# special_tokens: tokens (such as separator tokens) that should be grouped last
 def merge_score(group1, group2, special_tokens=None):
+    """ Compute the score of merging two token groups.
+
+    special_tokens: tokens (such as separator tokens) that should be grouped last
+    """
     score = 0
     # ensures special tokens are combined last, so 1st subtree is 1st sentence and 2nd subtree is 2nd sentence
     if special_tokens is not None:
@@ -321,13 +358,13 @@ def merge_score(group1, group2, special_tokens=None):
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
         score += 20
-        
+
     # merge apostrophe endings next
     if group2[0].s == "'" and (len(group2) == 1 or (len(group2) == 2 and group2[1].s in ["t", "s"])):
         score += 15
     if group1[-1].s == "'" and group2[0].s in ["t", "s"]:
         score += 15
-    
+
     start_ctrl = group1[0].s.startswith("[") and group1[0].s.endswith("]")
     end_ctrl = group2[-1].s.startswith("[") and group2[-1].s.endswith("]")
 
@@ -337,15 +374,15 @@ def merge_score(group1, group2, special_tokens=None):
         score -= 100
     if group1[-1].s in closers and not group1[-1].balanced:
         score -= 100
-    
+
     # attach surrounding an openers and closers a bit later
     if group1[0].s in openers and not group2[-1] in closers:
         score -= 2
-    
+
     # reach across connectors later
     if group1[-1].s in connectors or group2[0].s in connectors:
         score -= 2
-        
+
     # reach across commas later
     if group1[-1].s == ",":
         score -= 10
@@ -354,7 +391,7 @@ def merge_score(group1, group2, special_tokens=None):
             score -= 10
         else:
             score -= 1
-        
+
     # reach across sentence endings later
     if group1[-1].s in [".", "?", "!"]:
         score -= 20
@@ -363,12 +400,14 @@ def merge_score(group1, group2, special_tokens=None):
             score -= 20
         else:
             score -= 1
-    
+
     score -= len(group1) + len(group2)
     #print(group1, group2, score)
     return score
-    
+
 def merge_closest_groups(groups, special_tokens=None):
+    """ Finds the two token groups with the best merge score and merges them.
+    """
     scores = [merge_score(groups[i], groups[i+1], special_tokens) for i in range(len(groups)-1)]
     #print(scores)
     ind = np.argmax(scores)
@@ -377,12 +416,17 @@ def merge_closest_groups(groups, special_tokens=None):
     if groups[ind][0].s in openers and groups[ind+1][-1].s == openers[groups[ind][0].s]:
         groups[ind][0].balanced = True
         groups[ind+1][-1].balanced = True
-        
-    
-    groups.pop(ind+1)    
-    
+
+
+    groups.pop(ind+1)
+
 def partition_tree(decoded_tokens, special_tokens=None):
-    token_groups = [TokenGroup([Token(t)], i) for i,t in enumerate(decoded_tokens)]
+    """ Build a heriarchial clustering of tokens that align with sentence structure.
+
+    Note that this is fast and heuristic right now.
+    TODO: Build this using a real constituency parser.
+    """
+    token_groups = [TokenGroup([Token(t)], i) for i, t in enumerate(decoded_tokens)]
 #     print(token_groups)
     M = len(decoded_tokens)
     new_index = M
@@ -394,10 +438,10 @@ def partition_tree(decoded_tokens, special_tokens=None):
 
         lind = token_groups[ind].index
         rind = token_groups[ind+1].index
-        clustm[new_index-M,0] = token_groups[ind].index
-        clustm[new_index-M,1] = token_groups[ind+1].index
-        clustm[new_index-M,2] = -scores[ind]
-        clustm[new_index-M,3] = (clustm[lind-M,3] if lind >= M else 1) + (clustm[rind-M,3] if rind >= M else 1)
+        clustm[new_index-M, 0] = token_groups[ind].index
+        clustm[new_index-M, 1] = token_groups[ind+1].index
+        clustm[new_index-M, 2] = -scores[ind]
+        clustm[new_index-M, 3] = (clustm[lind-M, 3] if lind >= M else 1) + (clustm[rind-M, 3] if rind >= M else 1)
 
         token_groups[ind] = token_groups[ind] + token_groups[ind+1]
         token_groups[ind].index = new_index
@@ -412,6 +456,6 @@ def partition_tree(decoded_tokens, special_tokens=None):
 
     # negative means we should never split a group, so we add 10 to ensure these are very tight groups
     # (such as parts of the same word)
-    clustm[:,2] = clustm[:,2] + 10
+    clustm[:, 2] = clustm[:, 2] + 10
 
     return clustm
