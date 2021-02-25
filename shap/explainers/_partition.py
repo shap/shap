@@ -335,12 +335,12 @@ class Partition(Explainer):
         pickle.dump(type(self), out_file)
         
         if callable(self.model.save):
-            self.model.save(out_file, self.model.model)
+            self.model.save(out_file)
         else:
             pickle.dump(None,out_file)
         
         if callable(self.masker.save):
-            self.masker.save(out_file, self.masker)
+            self.masker.save(out_file)
         else:
             pickle.dump(None,out_file)
         

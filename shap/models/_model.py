@@ -15,7 +15,6 @@ class Model():
     
     def save(self, out_file, *args):
         pickle.dump(type(self), out_file)
-        cloudpickle.dump(self.model, out_file)
     
     @classmethod
     def load(cls, in_file):
@@ -23,5 +22,5 @@ class Model():
         if model_type is None:
             print("Warning: model was not found in saved file, please set model before using explainer.")
             return None
-            
-        return cloudpickle.load(in_file)
+        return model_type._load(in_file)
+        

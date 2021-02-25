@@ -1,4 +1,6 @@
 import numpy as np
+import pickle
+import cloudpickle
 from ._model import Model
 from ..utils import record_import_error, safe_isinstance
 
@@ -197,3 +199,24 @@ class TextGeneration(Model):
             'keep_prefix' : keep_prefix,
             'keep_suffix' : keep_suffix
         }
+
+    def save(self, out_file, *args):
+        super(TextGeneration, self).save(out_file)
+        cloudpickle.dump(self.model, out_file)
+        cloudpickle.dump(self.tokenizer, out_file)
+        pickle.dump(self.device, out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        model_type = pickle.load(in_file)
+        if not model_type == cls:
+            print("Warning: Saved model type not same as the one that's attempting to be loaded. Saved model type: ", model_type)
+        return TextGeneration._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        return TextGeneration(
+            model=cloudpickle.load(in_file),
+            tokenizer=cloudpickle.load(in_file),
+            device=pickle.load(in_file)
+        )

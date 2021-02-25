@@ -40,9 +40,10 @@ class OutputComposite(Masker):
             masked_X = (masked_X,)
         return masked_X + y
 
-    def save(self, out_file, *args):
+    def save(self, out_file):
         super(OutputComposite, self).save(out_file)
         pickle.dump(type(self.masker), out_file)
+        pickle.dump(type(self.model), out_file)
         self.masker.save(out_file)
         self.model.save(out_file)
 
@@ -55,9 +56,10 @@ class OutputComposite(Masker):
 
     @classmethod
     def _load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        masker = masker_type.load(in_file)
-        model= masker_type.load(in_file)
+        sub_masker_type = pickle.load(in_file)
+        sub_model_type = pickle.load(in_file)
+        masker = sub_masker_type.load(in_file)
+        model = sub_model_type.load(in_file)
         outputcomposite_masker = OutputComposite(masker, model)
         return outputcomposite_masker
     

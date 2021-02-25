@@ -1,5 +1,7 @@
 import numpy as np
 import scipy as sp
+import pickle
+import cloudpickle
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer
@@ -351,4 +353,31 @@ class TeacherForcing(Model):
             # extract only logits corresponding to target sentence ids
             logits=logits[:,-output_ids.shape[1]-1:-1,:]
         return logits
+
+    def save(self, out_file, *args):
+        super(TeacherForcing, self).save(out_file)
+        cloudpickle.dump(self.model, out_file)
+        cloudpickle.dump(self.tokenizer, out_file)
+        cloudpickle.dump(self.similarity_model, out_file)
+        cloudpickle.dump(self.similarity_tokenizer, out_file)
+        pickle.dump(self.batch_size, out_file)
+        pickle.dump(self.device, out_file)
+
+    @classmethod
+    def load(cls, in_file):
+        model_type = pickle.load(in_file)
+        if not model_type == cls:
+            print("Warning: Saved model type not same as the one that's attempting to be loaded. Saved model type: ", model_type)
+        return TeacherForcing._load(in_file)
+
+    @classmethod
+    def _load(cls, in_file):
+        return TeacherForcing(
+            model=cloudpickle.load(in_file),
+            tokenizer=cloudpickle.load(in_file),
+            similarity_model=cloudpickle.load(in_file),
+            similarity_tokenizer=cloudpickle.load(in_file),
+            batch_size=pickle.load(in_file),
+            device=pickle.load(in_file)
+        )
 
