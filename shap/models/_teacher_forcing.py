@@ -355,7 +355,7 @@ class TeacherForcing(Model):
         return logits
 
     def save(self, out_file, *args):
-        super(TeacherForcing, self).save(out_file)
+        pickle.dump(type(self), out_file)
         cloudpickle.dump(self.model, out_file)
         cloudpickle.dump(self.tokenizer, out_file)
         cloudpickle.dump(self.similarity_model, out_file)
