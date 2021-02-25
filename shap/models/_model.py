@@ -1,5 +1,7 @@
 import pickle
 import cloudpickle
+import inspect
+import warnings
 
 class Model():
     def __init__(self, model=None):
@@ -20,10 +22,13 @@ class Model():
     @classmethod
     def load(cls, in_file):
         model_type = pickle.load(in_file)
-        if not issubclass(model_type, Model):
-            print("Warning: A shap.Model was not found in saved file, please set model before using explainer.")
+        if model_type is None:
+            warnings.warn("A shap.Model was not found in saved file, please set model before using explainer.")
             return None
-        return model_type._load(in_file)
+        elif inspect.isclass(model_type) and issubclass(model_type, Model):
+            return model_type._load(in_file)
+        else:
+            raise Exception("Invalid model type loaded from file:", model_type)
 
     @classmethod
     def _load(cls, in_file):
