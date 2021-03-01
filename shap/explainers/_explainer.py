@@ -3,7 +3,6 @@ from .. import links
 from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
-import inspect
 from ..models import Model
 from ..maskers import Masker
 from .._explanation import Explanation
@@ -11,8 +10,6 @@ from .._serializable import Serializable
 import numpy as np
 import scipy as sp
 import copy
-import pickle
-import cloudpickle
 from .. import explainers
 from .._serializable import Serializer, Deserializer
 
@@ -77,13 +74,15 @@ class Explainer(Serializable):
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
+                ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
-            if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+            if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and \
+                    safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
                 # auto assign text infilling if model is a transformer model with lm head
                 self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
             else:
@@ -96,7 +95,8 @@ class Explainer(Serializable):
             self.masker = masker
 
         # wrap self.masker and self.model for output text explanation algorithm
-        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and \
+                safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
             self.model = models.TeacherForcing(self.model, self.masker.tokenizer)
             self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
         elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
@@ -117,7 +117,7 @@ class Explainer(Serializable):
         if self.__class__ is Explainer:
 
             # do automatic algorithm selection
-            from .. import explainers
+            #from .. import explainers
             if algorithm == "auto":
 
                 # use implementation-aware methods if possible
@@ -144,8 +144,9 @@ class Explainer(Serializable):
                         if getattr(self.masker, "partition_tree", None) is None:
                             algorithm = "permutation"
                         else:
-                            algorithm = "partition" # TODO: should really only do this if there is more than just tab
-                    elif issubclass(type(self.masker), maskers.Image) or issubclass(type(self.masker), maskers.Text) or issubclass(type(self.masker), maskers.OutputComposite) or issubclass(type(self.masker), maskers.FixedComposite):
+                            algorithm = "partition" # TODO: should really only do this if there is more than just tabular
+                    elif issubclass(type(self.masker), maskers.Image) or issubclass(type(self.masker), maskers.Text) or \
+                            issubclass(type(self.masker), maskers.OutputComposite) or issubclass(type(self.masker), maskers.FixedComposite):
                         algorithm = "partition"
                     else:
                         algorithm = "permutation"
@@ -207,9 +208,9 @@ class Explainer(Serializable):
             if num_rows is None:
                 try:
                     num_rows = len(args[i])
-                except:
+                except Exception: # pylint: disable=broad-except
                     pass
-            
+
             # convert DataFrames to numpy arrays
             if safe_isinstance(args[i], "pandas.core.frame.DataFrame"):
                 feature_names[i] = list(args[i].columns)
@@ -220,7 +221,7 @@ class Explainer(Serializable):
                 args[i] = args[i]["text"]
             elif issubclass(type(args[i]), dict) and "text" in args[i]:
                 args[i] = args[i]["text"]
-        
+
         if batch_size == "auto":
             if hasattr(self.masker, "default_batch_size"):
                 batch_size = self.masker.default_batch_size
@@ -251,7 +252,7 @@ class Explainer(Serializable):
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
             output_names.append(row_result.get("output_names", None))
-            
+
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
                 for i in range(len(row_args)):
@@ -259,7 +260,7 @@ class Explainer(Serializable):
 
         # split the values up according to each input
         arg_values = [[] for a in args]
-        for i in range(len(values)):
+        for i, v in enumerate(values):
             pos = 0
             for j in range(len(args)):
                 mask_length = np.prod(mask_shapes[i][j])

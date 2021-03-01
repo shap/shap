@@ -74,7 +74,7 @@ class Serializer():
             encoder(value, self.out_stream)
         elif isinstance(value, Serializable):
             pickle.dump("serializable.save", self.out_stream)
-            if len(inspect.getfullargspec(value.save)[0]) == 2: # backward compat for MLflow, can remove 4/1/2021
+            if len(inspect.getfullargspec(value.save)[0]) == 3: # backward compat for MLflow, can remove 4/1/2021
                 value.save(self.out_stream, value)
             else:
                 value.save(self.out_stream)
