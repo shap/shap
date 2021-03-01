@@ -72,7 +72,10 @@ class Serializer():
             encoder(value, self.out_stream)
         elif isinstance(value, Serializable):
             pickle.dump("serializable.save", self.out_stream)
-            value.save(self.out_stream)
+            if len(inspect.getfullargspec(value.save)[0]) == 2: # backward compat for MLflow, can remove 4/1/2021
+                value.save(self.out_stream, value)
+            else:
+                value.save(self.out_stream)
         elif isinstance(value, np.ndarray):
             pickle.dump("numpy.save", self.out_stream)
             np.save(self.out_stream, value)
