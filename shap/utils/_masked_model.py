@@ -49,7 +49,7 @@ class MaskedModel():
         if len(masks.shape) == 1:
             if getattr(self.masker, "supports_delta_masking", False):
                 return self._delta_masking_call(masks, batch_size=batch_size)
-            
+
             # we need to convert from delta masking to a full masking call because we were given a delta masking
             # input but the masker does not support delta masking
             else: 
@@ -59,7 +59,7 @@ class MaskedModel():
 
         else:
             return self._full_masking_call(masks, batch_size=batch_size)
-    
+
     def _full_masking_call(self, masks, batch_size=None):
 
         # # TODO: we need to do batching here
@@ -76,8 +76,8 @@ class MaskedModel():
         varying_rows = []
         if self._variants is not None:
             delta_tmp = self._variants.copy().astype(np.int)
-        for i,mask in enumerate(masks):
-            
+        for i, mask in enumerate(masks):
+
             # mask the inputs
             delta_mask = mask ^ last_mask
             if do_delta_masking and delta_mask.sum() == 1:
@@ -89,10 +89,10 @@ class MaskedModel():
             # wrap the masked inputs if they are not already in a tuple
             if not isinstance(masked_inputs, tuple):
                 masked_inputs = (masked_inputs.copy(),)
-                
+ 
             # masked_inputs = self.masker(mask, *self.args)
             num_mask_samples[i] = len(masked_inputs[0])
-            
+
             # see which rows have been updated, so we can only evaluate the model on the rows we need to
             if i == 0 or self._variants is None:
                 varying_rows.append(np.ones(num_mask_samples[i], dtype=np.bool))
@@ -102,7 +102,7 @@ class MaskedModel():
                 # a = np.any(self._variants & delta_mask, axis=1)
                 # a = np.any(self._variants & delta_mask, axis=1)
                 # (self._variants & delta_mask).sum(1) > 0
-                
+
                 np.bitwise_and(self._variants, delta_mask, out=delta_tmp)
                 varying_rows.append(np.any(delta_tmp, axis=1))#np.any(self._variants & delta_mask, axis=1))
                 num_varying_rows[i] = varying_rows[-1].sum()

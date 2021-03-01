@@ -3,6 +3,7 @@ import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM
+from .._serializable import Serializer, Deserializer
 
 try:
     import torch
@@ -234,3 +235,28 @@ class TopKLM(Model):
                         print(e)
                 logits = outputs.logits.numpy().astype('float64')[:, -1, :]
         return logits
+
+    def save(self, out_file):
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.models.TextGeneration", version=0) as s:
+            s.save("tokenizer", self.tokenizer)
+            s.save("k", self.k)
+            s.save("generate_topk_token_ids", self._custom_generate_topk_token_ids)
+            s.save("batch_size", self.batch_size)
+            s.save("device", self.device)
+
+    @classmethod
+    def load(cls, in_file, instantiate=True):
+        if instantiate:
+            return cls._instantiated_load(in_file)
+
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.models.TextGeneration", min_version=0, max_version=0) as s:
+            kwargs["tokenizer"] = s.load("tokenizer")
+            kwargs["k"] = s.load("k")
+            kwargs["generate_topk_token_ids"] = s.load("generate_topk_token_ids")
+            kwargs["batch_size"] = s.load("batch_size")
+            kwargs["device"] = s.load("device")
+        return kwargs

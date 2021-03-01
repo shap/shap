@@ -1,9 +1,8 @@
 import re
-import pickle
 import math
 import numpy as np
-import cloudpickle
 from ._masker import Masker
+from .._serializable import Serializer, Deserializer
 from ..utils import safe_isinstance
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
 
@@ -162,14 +161,14 @@ class Text(Masker):
         """
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
             token_ids = self.tokenizer.encode_plus(s)['input_ids']
-            tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
+            all_tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens=True)
             # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
             tokens = []
             for i, v in enumerate(special_tokens_mask):
                 if ((v == 0) or ('sep_token' in self.tokenizer.special_tokens_map) and \
-                        (tokens[i] == self.tokenizer.sep_token) and (0 < i < len(special_tokens_mask) - 1)):
-                    tokens.append(tokens[i])
+                        (all_tokens[i] == self.tokenizer.sep_token) and (0 < i < len(special_tokens_mask) - 1)):
+                    tokens.append(all_tokens[i])
                 else:
                     tokens.append("")
             return tokens
@@ -272,26 +271,29 @@ class Text(Masker):
         return [[self.tokenizer.decode([v]) for v in self._tokenized_s]]
 
     def save(self, out_file):
+        """ Save a Text masker to a file stream.
+        """
         super(Text, self).save(out_file)
-        cloudpickle.dump(self.tokenizer, out_file)
-        pickle.dump(self.input_mask_token, out_file)
-        pickle.dump(self.collapse_mask_token, out_file)
-        pickle.dump(self.output_type, out_file)
+        with Serializer(out_file, "shap.maskers.Text", version=0) as s:
+            s.save("tokenizer", self.tokenizer)
+            s.save("mask_token", self.input_mask_token)
+            s.save("collapse_mask_token", self.collapse_mask_token)
+            s.save("output_type", self.output_type)
 
     @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Text._load(in_file)
+    def load(cls, in_file, instantiate=True):
+        """ Load a Text masker from a file stream.
+        """
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-    @classmethod
-    def _load(cls, in_file):
-        tokenizer = cloudpickle.load(in_file)
-        mask_token = pickle.load(in_file)
-        collapse_mask_token = pickle.load(in_file)
-        output_type = pickle.load(in_file)
-        return Text(tokenizer, mask_token, collapse_mask_token, output_type)
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.maskers.Text", min_version=0, max_version=0) as s:
+            kwargs["tokenizer"] = s.load("tokenizer")
+            kwargs["mask_token"] = s.load("mask_token")
+            kwargs["collapse_mask_token"] = s.load("collapse_mask_token")
+            kwargs["output_type"] = s.load("output_type")
+        return kwargs
 
 def post_process_sentencepiece_tokenizer_output(s):
     """ replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers.

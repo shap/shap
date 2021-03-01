@@ -6,6 +6,7 @@ import tempfile
 import numpy as np
 import pytest
 import shap
+import types
 
 
 def test_single_class_independent():
@@ -192,7 +193,7 @@ def test_serialization_exact_numpy_custom_model_save():
     temp_serialization_file = tempfile.TemporaryFile()
 
     # Serialization
-    explainer_original.model.save = lambda out_file, model: pickle.dump(model, out_file)
+    explainer_original.model.save = pickle.dump
     explainer_original.save(temp_serialization_file)
 
     temp_serialization_file.seek(0)
@@ -201,7 +202,6 @@ def test_serialization_exact_numpy_custom_model_save():
     explainer_new = shap.Explainer.load(temp_serialization_file, model_loader=pickle.load)
 
     temp_serialization_file.close()
-
 
     shap_values_new = explainer_new(X[:1])
 

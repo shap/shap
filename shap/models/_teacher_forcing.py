@@ -1,11 +1,10 @@
-import pickle
 import numpy as np
 import scipy as sp
-import cloudpickle
 from ._model import Model
 from ..utils import safe_isinstance, record_import_error
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer
 from .. import models
+from .._serializable import Serializer, Deserializer
 
 try:
     import torch
@@ -362,28 +361,26 @@ class TeacherForcing(Model):
         return logits
 
     def save(self, out_file):
-        pickle.dump(type(self), out_file)
-        cloudpickle.dump(self.model, out_file)
-        cloudpickle.dump(self.tokenizer, out_file)
-        cloudpickle.dump(self.similarity_model, out_file)
-        cloudpickle.dump(self.similarity_tokenizer, out_file)
-        pickle.dump(self.batch_size, out_file)
-        pickle.dump(self.device, out_file)
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.models.TeacherForcing", version=0) as s:
+            s.save("tokenizer", self.tokenizer)
+            s.save("similarity_model", self.similarity_model)
+            s.save("similarity_tokenizer", self.similarity_tokenizer)
+            s.save("batch_size", self.batch_size)
+            s.save("device", self.device)
 
     @classmethod
-    def load(cls, in_file):
-        model_type = pickle.load(in_file)
-        if not model_type == cls:
-            print("Warning: Saved model type not same as the one that's attempting to be loaded. Saved model type: ", model_type)
-        return TeacherForcing._load(in_file)
+    def load(cls, in_file, instantiate=True):
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-    @classmethod
-    def _load(cls, in_file):
-        return TeacherForcing(
-            model=cloudpickle.load(in_file),
-            tokenizer=cloudpickle.load(in_file),
-            similarity_model=cloudpickle.load(in_file),
-            similarity_tokenizer=cloudpickle.load(in_file),
-            batch_size=pickle.load(in_file),
-            device=pickle.load(in_file)
-        )
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.models.TeacherForcing", min_version=0, max_version=0) as s:
+            kwargs["tokenizer"] = s.load("tokenizer")
+            kwargs["similarity_model"] = s.load("similarity_model")
+            kwargs["similarity_tokenizer"] = s.load("similarity_tokenizer")
+            kwargs["batch_size"] = s.load("batch_size")
+            kwargs["device"] = s.load("device")
+        return kwargs

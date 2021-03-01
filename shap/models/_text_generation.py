@@ -1,8 +1,7 @@
-import pickle
 import numpy as np
-import cloudpickle
 from ._model import Model
 from ..utils import record_import_error, safe_isinstance
+from .._serializable import Serializer, Deserializer
 
 try:
     import torch
@@ -207,22 +206,20 @@ class TextGeneration(Model):
         }
 
     def save(self, out_file):
-        pickle.dump(type(self), out_file)
-        cloudpickle.dump(self.model, out_file)
-        cloudpickle.dump(self.tokenizer, out_file)
-        pickle.dump(self.device, out_file)
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.models.TextGeneration", version=0) as s:
+            s.save("tokenizer", self.tokenizer)
+            s.save("device", self.device)
 
     @classmethod
-    def load(cls, in_file):
-        model_type = pickle.load(in_file)
-        if not model_type == cls:
-            print("Warning: Saved model type not same as the one that's attempting to be loaded. Saved model type: ", model_type)
-        return TextGeneration._load(in_file)
+    def load(cls, in_file, instantiate=True):
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-    @classmethod
-    def _load(cls, in_file):
-        return TextGeneration(
-            model=cloudpickle.load(in_file),
-            tokenizer=cloudpickle.load(in_file),
-            device=pickle.load(in_file)
-        )
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.models.TextGeneration", min_version=0, max_version=0) as s:
+            kwargs["tokenizer"] = s.load("tokenizer")
+            kwargs["device"] = s.load("device")
+        return kwargs

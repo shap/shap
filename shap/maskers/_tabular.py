@@ -1,11 +1,11 @@
 import logging
-import pickle
 import pandas as pd
 import numpy as np
 from numba import jit
 from .. import utils
 from ..utils import safe_isinstance, MaskedModel
 from ._masker import Masker
+from .._serializable import Serializer, Deserializer
 
 log = logging.getLogger('shap')
 
@@ -147,8 +147,38 @@ class Tabular(Masker):
 
         return np.isclose(x, self.data)
 
-    # def save(self, out_file):
-    #     super(Tabular, self).save(out_file)
+    def save(self, out_file):
+        """ Write a Tabular masker to a file stream.
+        """
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.maskers.Tabular", version=0) as s:
+
+            # save the data in the format it was given to us
+            if self.output_dataframe:
+                s.save("data", pd.DataFrame(self.data, columns=self.feature_names))
+            elif getattr(self, "mean", None) is not None:
+                s.save("data", (self.mean, self.cov))
+            else:
+                s.save("data", self.data)
+
+            s.save("max_samples", self.max_samples)
+            s.save("clustering", self.clustering)
+
+    @classmethod
+    def load(cls, in_file, instantiate=True):
+        """ Load a Tabular masker from a file stream.
+        """
+        if instantiate:
+            return cls._instantiated_load(in_file)
+
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.maskers.Tabular", min_version=0, max_version=0) as s:
+            kwargs["data"] = s.load("data")
+            kwargs["max_samples"] = s.load("max_samples")
+            kwargs["clustering"] = s.load("clustering")
+        return kwargs
 
 @jit
 def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
@@ -229,49 +259,6 @@ class Independent(Tabular):
         """
         super(Independent, self).__init__(data, max_samples=max_samples, clustering=None)
 
-    def save(self, out_file):
-        super(Independent, self).save(out_file)
-        np.save(out_file, self.data)
-        pickle.dump(self.max_samples, out_file)
-
-        # saving these independently since original 'data' parameter might be unpacked in constructor
-        pickle.dump(getattr(self, "output_dataframe", None), out_file)
-        pickle.dump(getattr(self, "feature_names", None), out_file)
-        pickle.dump(getattr(self, "mean", None), out_file)
-        pickle.dump(getattr(self, "cov", None), out_file)
-
-    @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Independent._load(in_file)
-
-    @classmethod
-    def _load(cls, in_file):
-        data = np.load(in_file)
-        max_samples = pickle.load(in_file)
-        independent_masker = Independent(data, max_samples)
-
-        output_dataframe = pickle.load(in_file)
-        if output_dataframe is not None:
-            independent_masker.output_dataframe = output_dataframe
-
-        feature_names = pickle.load(in_file)
-        if feature_names is not None:
-            independent_masker.feature_names = feature_names
-
-        mean = pickle.load(in_file)
-        if mean is not None:
-            independent_masker.mean = mean
-
-        cov = pickle.load(in_file)
-        if cov is not None:
-            independent_masker.cov = cov
-
-        return independent_masker
-
-
 
 class Partition(Tabular):
     """ This masks out tabular features by integrating over the given background dataset.
@@ -306,50 +293,6 @@ class Partition(Tabular):
             If an array, then this is assumed to be the clustering of the features.
         """
         super(Partition, self).__init__(data, max_samples=max_samples, clustering=clustering)
-
-    def save(self, out_file):
-        super(Partition, self).save(out_file)
-        np.save(out_file, self.data)
-        pickle.dump(self.max_samples, out_file)
-        pickle.dump(self.clustering, out_file)
-
-        # saving these independently since original 'data' parameter might be unpacked in constructor
-        pickle.dump(getattr(self, "output_dataframe", None), out_file)
-        pickle.dump(getattr(self, "feature_names", None), out_file)
-        pickle.dump(getattr(self, "mean", None), out_file)
-        pickle.dump(getattr(self, "cov", None), out_file)
-
-    @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Partition._load(in_file)
-
-    @classmethod
-    def _load(cls, in_file):
-        data = np.load(in_file)
-        max_samples = pickle.load(in_file)
-        clustering = pickle.load(in_file)
-        partition_masker = Partition(data, max_samples, clustering)
-
-        output_dataframe = pickle.load(in_file)
-        if output_dataframe is not None:
-            partition_masker.output_dataframe = output_dataframe
-
-        feature_names = pickle.load(in_file)
-        if feature_names is not None:
-            partition_masker.feature_names = feature_names
-
-        mean = pickle.load(in_file)
-        if mean is not None:
-            partition_masker.mean = mean
-
-        cov = pickle.load(in_file)
-        if cov is not None:
-            partition_masker.cov = cov
-
-        return partition_masker
 
 
 class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking

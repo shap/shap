@@ -114,7 +114,7 @@ class Partition(Explainer):
 
         if fixed_context == "auto":
             fixed_context = None
-        elif fixed_context in [0,1,None]:
+        elif fixed_context in [0, 1, None]:
             fixed_context = fixed_context
         else:
             raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
@@ -128,8 +128,8 @@ class Partition(Explainer):
         m00 = np.zeros(M, dtype=np.bool)
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
-            self._curr_base_value = fm(m00.reshape(1,-1))[0]
-        f11 = fm(~m00.reshape(1,-1))[0]
+            self._curr_base_value = fm(m00.reshape(1, -1))[0]
+        f11 = fm(~m00.reshape(1, -1))[0]
 
         if callable(self.masker.clustering):
             self._clustering = self.masker.clustering(*row_args)
@@ -320,73 +320,11 @@ class Partition(Explainer):
                     # recurse on the right node with one context
                     args = (m10, f10, f11, rind, new_weight)
                     q.put((-np.max(np.abs(f11 - f10)) * new_weight, np.random.randn(), args))
-                    
+
         if pbar is not None:
             pbar.close()
-        
+
         return output_indexes, base_value
-
-    def save(self, out_file):
-        """ Saves content of permutation explainer
-        """
-
-        pickle.dump(type(self), out_file)
-        
-        if callable(self.model.save):
-            self.model.save(out_file)
-        else:
-            pickle.dump(None,out_file)
-        
-        if callable(self.masker.save):
-            self.masker.save(out_file)
-        else:
-            pickle.dump(None,out_file)
-        
-        if hasattr(self, 'partition_tree'):
-            cloudpickle.dump(self.partition_tree, out_file)
-        else:
-            cloudpickle.dump(None, out_file)
-        
-        if hasattr(self, 'output_names'):
-            cloudpickle.dump(self.output_names, out_file)
-        else:
-            cloudpickle.dump(None, out_file)
-
-        cloudpickle.dump(self.link, out_file)
-        cloudpickle.dump(self.link.inverse,out_file)
-
-        if hasattr(self, 'feature_names'):
-            cloudpickle.dump(self.feature_names, out_file)
-        else:
-            cloudpickle.dump(None, out_file)
-
-    @classmethod
-    def load(cls, in_file, model_loader = None, masker_loader = None):
-        explainer_type = pickle.load(in_file)
-        if not explainer_type == cls:
-            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
-        
-        return Partition._load(in_file, model_loader, masker_loader)
-    
-    @classmethod
-    def _load(cls, in_file, model_loader = None, masker_loader = None):
-        if model_loader is None:
-            model = Model.load(in_file)
-        else:
-            model = model_loader(in_file)
-        
-        if masker_loader is None:
-            masker = Masker.load(in_file)
-        else:
-            masker = masker_loader(in_file)
-
-        partition_tree = cloudpickle.load(in_file)
-        output_names = cloudpickle.load(in_file)
-        link = cloudpickle.load(in_file)
-        link_inverse = cloudpickle.load(in_file)
-        link.inverse = link_inverse
-        feature_names = cloudpickle.load(in_file)
-        return Partition(model, masker, partition_tree=partition_tree, output_names=output_names, link=link, feature_names=feature_names)
 
 
 def output_indexes_len(output_indexes):
@@ -396,5 +334,5 @@ def output_indexes_len(output_indexes):
         return int(output_indexes[4:-1])
     elif output_indexes.startswith("max(abs("):
         return int(output_indexes[8:-2])
-    elif type(output_indexes) is not str:
+    elif not isinstance(output_indexes, str):
         return len(output_indexes)

@@ -1,8 +1,8 @@
-import pickle
 import queue
 import numpy as np
 from ..utils import assert_import, record_import_error
 from ._masker import Masker
+from .._serializable import Serializer, Deserializer
 
 try:
     import cv2
@@ -188,30 +188,24 @@ class Image(Masker):
             self.clustering[i, 3] = lsize + rsize
 
     def save(self, out_file):
-        super(Image, self).save(out_file)
-        pickle.dump(type(self.input_mask_value), out_file)
-        if issubclass(type(self.input_mask_value), np.ndarray):
-            np.save(out_file, self.input_mask_value)
-        else:
-            pickle.dump(self.input_mask_value, out_file)
-        pickle.dump(self.input_shape, out_file)
+        """ Write a Image masker to a file stream.
+        """
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.maskers.Image", version=0) as s:
+            s.save("mask_value", self.input_mask_value)
+            s.save("shape", self.input_shape)
 
     @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Image._load(in_file)
+    def load(cls, in_file, instantiate=True):
+        """ Load a Image masker from a file stream.
+        """
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-    @classmethod
-    def _load(cls, in_file):
-        mask_value_type = pickle.load(in_file)
-        mask_value = None
-        if issubclass(mask_value_type, np.ndarray):
-            mask_value = np.load(in_file)
-        else:
-            mask_value = pickle.load(in_file)
-        shape = pickle.load(in_file)
-        image_masker = Image(mask_value, shape)
-
-        return image_masker
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.maskers.Image", min_version=0, max_version=0) as s:
+            kwargs["mask_value"] = s.load("mask_value")
+            kwargs["shape"] = s.load("shape")
+        return kwargs

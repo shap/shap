@@ -1,5 +1,6 @@
-import pickle
 from ._masker import Masker
+from .._serializable import Serializer, Deserializer
+
 
 class OutputComposite(Masker):
     """ A masker that is a combination of a masker and a model and outputs both masked args and the model's output.
@@ -46,25 +47,24 @@ class OutputComposite(Masker):
         return masked_X + y
 
     def save(self, out_file):
-        super(OutputComposite, self).save(out_file)
-        pickle.dump(type(self.masker), out_file)
-        pickle.dump(type(self.model), out_file)
-        self.masker.save(out_file)
-        self.model.save(out_file)
+        """ Write a OutputComposite masker to a file stream.
+        """
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.maskers.OutputComposite", version=0) as s:
+            s.save("masker", self.masker)
+            s.save("model", self.model)
 
     @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == OutputComposite:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return OutputComposite._load(in_file)
+    def load(cls, in_file, instantiate=True):
+        """ Load a OutputComposite masker from a file stream.
+        """
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-    @classmethod
-    def _load(cls, in_file):
-        sub_masker_type = pickle.load(in_file)
-        sub_model_type = pickle.load(in_file)
-        masker = sub_masker_type.load(in_file)
-        model = sub_model_type.load(in_file)
-        outputcomposite_masker = OutputComposite(masker, model)
-        return outputcomposite_masker
-    
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.maskers.OutputComposite", min_version=0, max_version=0) as s:
+            kwargs["masker"] = s.load("masker")
+            kwargs["model"] = s.load("model")
+        return kwargs

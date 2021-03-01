@@ -1,9 +1,7 @@
-import pickle
-import inspect
-import warnings
-import cloudpickle
+from .._serializable import Serializable, Serializer, Deserializer
 
-class Model():
+
+class Model(Serializable):
     """ This is the superclass of all models.
     """
 
@@ -21,26 +19,16 @@ class Model():
     def save(self, out_file):
         """ Save the model to the given file stream.
         """
-        pickle.dump(type(self), out_file)
-        cloudpickle.dump(self.model, out_file)
+        super().save(out_file)
+        with Serializer(out_file, "shap.Model", version=0) as s:
+            s.save("model", self.model)
 
     @classmethod
-    def load(cls, in_file):
-        """ Load a model from the given file stream.
-        """
-        model_type = pickle.load(in_file)
-        if model_type is None:
-            warnings.warn("A shap.Model was not found in saved file, please set model before using explainer.")
-            return None
+    def load(cls, in_file, instantiate=True):
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-        if inspect.isclass(model_type) and issubclass(model_type, Model):
-            return model_type._load(in_file) # pylint: disable=protected-access
-
-        raise Exception("Invalid model type loaded from file:", model_type)
-
-    @classmethod
-    def _load(cls, in_file):
-        return Model(
-            model=cloudpickle.load(in_file)
-        )
-        
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.Model", min_version=0, max_version=0) as s:
+            kwargs["model"] = s.load("model")
+        return kwargs

@@ -1,4 +1,3 @@
-import pickle
 from ._masker import Masker
 
 class Fixed(Masker):
@@ -16,17 +15,3 @@ class Fixed(Masker):
 
     def __call__(self, x, mask):
         return x
-
-    def save(self, out_file):
-        pickle.dump(type(self), out_file)
-
-    @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == Fixed:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Fixed._load(in_file)
-
-    @classmethod
-    def _load(cls, _):
-        return Fixed() # note we have not parameters to load

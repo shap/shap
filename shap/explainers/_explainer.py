@@ -3,16 +3,22 @@ from .. import links
 from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
 from .. import models
+import inspect
 from ..models import Model
+from ..maskers import Masker
 from .._explanation import Explanation
+from .._serializable import Serializable
 import numpy as np
 import scipy as sp
 import copy
 import pickle
+import cloudpickle
 from .. import explainers
+from .._serializable import Serializer, Deserializer
 
 
-class Explainer():
+
+class Explainer(Serializable):
     """ Uses Shapley values to explain any machine learning model or python function.
 
     This is the primary explainer interface for the SHAP library. It takes any combination
@@ -22,7 +28,7 @@ class Explainer():
 
     def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, **kwargs):
         """ Build a new explainer for the passed model.
-        
+ 
         Parameters
         ----------
         model : object or function
@@ -42,7 +48,7 @@ class Explainer():
             shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchial clustering
             of coalitions for the game (in this special case the attributions are known as the Owen values).
 
-        link : function 
+        link : function
             The link function used to map between the output units of the model and the SHAP value units. By
             default it is shap.links.identity, but shap.links.logit can be useful so that expectations are
             computed in probability units while explanations remain in the (more naturally additive) log-odds
@@ -69,7 +75,7 @@ class Explainer():
         self.model = model
         self.output_names = output_names
         self.feature_names = feature_names
-        
+
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
@@ -88,9 +94,9 @@ class Explainer():
             self.masker = maskers.Independent(masker)
         else:
             self.masker = masker
-        
+
         # wrap self.masker and self.model for output text explanation algorithm
-        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel"))and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
             self.model = models.TeacherForcing(self.model, self.masker.tokenizer)
             self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
         elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
@@ -352,26 +358,41 @@ class Explainer():
 
         # compute the main effects for the given indexes
         main_effects = fm(masks) - expected_value
-        
+
         # expand the vector to the full input size
         expanded_main_effects = np.zeros(len(fm))
-        for i,ind in enumerate(inds):
+        for i, ind in enumerate(inds):
             expanded_main_effects[ind] = main_effects[i]
-        
+
         return expanded_main_effects
 
-    def save(self, out_file):
-        """ Serializes the type of subclass of explainer used, this will be used during deserialization.
+    def save(self, out_file, model_saver=None, masker_saver=None):
+        """ Write the explainer to the given file stream.
         """
-        raise NotImplementedError(f"The {type(self)} explainer doesn't yet implement save/load")
-    
+        super().save(out_file)
+        with Serializer(out_file, "shap.Explainer", version=0) as s:
+            s.save("model", self.model, model_saver)
+            s.save("masker", self.masker, masker_saver)
+            s.save("link", self.link)
+
     @classmethod
-    def load(cls, in_file, model_loader = None, masker_loader = None):
-        """ Deserializes the explainer subtype, and calls respective load function.
+    def load(cls, in_file, model_loader=Model.load, masker_loader=Masker.load, instantiate=True):
+        """ Load an Explainer from the given file stream.
+
+        Parameters
+        ----------
+        in_file : The file stream to load objects from.
         """
-        explainer_type = pickle.load(in_file)
-        return explainer_type._load(in_file, model_loader, masker_loader)
-        
+        if instantiate:
+            return cls._instantiated_load(in_file, model_loader=model_loader, masker_loader=masker_loader)
+
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.Explainer", min_version=0, max_version=0) as s:
+            kwargs["model"] = s.load("model", model_loader)
+            kwargs["masker"] = s.load("masker", masker_loader)
+            kwargs["link"] = s.load("link")
+        return kwargs
+
 def pack_values(values):
     """ Used the clean up arrays before putting them into an Explanation object.
     """

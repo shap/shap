@@ -1,21 +1,10 @@
-from ..utils import MaskedModel, shapley_coefficients, make_masks, delta_minimization_order
-from .._explanation import Explanation
-from ._explainer import Explainer
-import numpy as np
-import pandas as pd
 import logging
-import scipy.special
 import numpy as np
-import itertools
-import sys
 from numba import jit
-import pickle
-import cloudpickle
 from .. import links
-from .. import maskers
-from ..maskers import Masker
 from ..models import Model
-
+from ..utils import MaskedModel, shapley_coefficients, make_masks, delta_minimization_order
+from ._explainer import Explainer
 
 log = logging.getLogger('shap')
 
@@ -24,7 +13,7 @@ class Exact(Explainer):
     """ Computes SHAP values via an optimized exact enumeration.
 
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
-    from the background per sample. It also works well for Owen values from hclustering structured 
+    from the background per sample. It also works well for Owen values from hclustering structured
     maskers when there are less than ~100 features that vary from the background per sample. This
     explainer minmizes the number of function evaluations needed by ordering the masking sets to
     minimize sequential differences. This is done using gray codes for standard Shapley values
@@ -55,11 +44,11 @@ class Exact(Explainer):
             linear models.
         """
         super(Exact, self).__init__(model, masker, link=link, feature_names=feature_names)
-        
+
         self.model = Model(model)
 
         if getattr(masker, "clustering", None) is not None:
-            self._partition_masks,self._partition_masks_inds = partition_masks(masker.clustering)
+            self._partition_masks, self._partition_masks_inds = partition_masks(masker.clustering)
             self._partition_delta_indexes = partition_delta_indexes(masker.clustering, self._partition_masks)
 
         self._gray_code_cache = {} # used to avoid regenerating the same gray code patterns
@@ -71,10 +60,10 @@ class Exact(Explainer):
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
         return super(Exact, self).__call__(
-            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, 
+            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
             batch_size=batch_size, interactions=interactions, silent=silent
         )
-    
+
     def _cached_gray_codes(self, n):
         if n not in self._gray_code_cache:
             self._gray_code_cache[n] = gray_code_indexes(n)
@@ -96,7 +85,9 @@ class Exact(Explainer):
 
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < 2**len(inds):
-                raise Exception("It takes %d masked evaluations to run the Exact explainer on this instance, but max_evals=%d" %(2**len(inds), max_evals))
+                raise Exception(
+                    f"It takes {2**len(inds)} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
+                )
 
             # generate the masks in gray code order (so that we change the inputs as little
             # as possible while we iterate to minimize the need to re-eval when the inputs
@@ -113,9 +104,9 @@ class Exact(Explainer):
 
             # run the model
             outputs = fm(extended_delta_indexes, batch_size=batch_size)
-            
+
             # Shapley values
-            if interactions is False or interactions is 1:
+            if interactions is False or interactions == 1:
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
@@ -124,29 +115,31 @@ class Exact(Explainer):
                 _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             # Shapley-Taylor interaction values
-            elif interactions is True or interactions is 2:
+            elif interactions is True or interactions == 2:
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
-                row_values = np.zeros((len(fm),len(fm)) + outputs.shape[1:])
+                row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:])
                 mask = np.zeros(len(fm), dtype=np.bool)
                 _compute_grey_code_row_values_st(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             elif interactions > 2:
                 raise Exception("Currently the Exact explainer does not support interactions higher than order 2!")
 
-        # do a partition tree constrained version of Shapley values 
+        # do a partition tree constrained version of Shapley values
         else:
 
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < len(fm)**2:
-                raise Exception("It takes %d masked evaluations to run the Exact explainer on this instance, but max_evals=%d" %(len(fm)**2, max_evals))
+                raise Exception(
+                    f"It takes {len(fm)**2} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
+                )
 
             # generate the masks in a hclust order (so that we change the inputs as little
             # as possible while we iterate to minimize the need to re-eval when the inputs
             # don't vary from the background)
             delta_indexes = self._partition_delta_indexes
-            
+
             # run the model
             outputs = fm(delta_indexes, batch_size=batch_size)
 
@@ -159,14 +152,14 @@ class Exact(Explainer):
 
         # compute the main effects if we need to
         main_effect_values = None
-        if main_effects or interactions is True or interactions is 2:
+        if main_effects or interactions is True or interactions == 2:
             if inds is None:
                 inds = np.arange(len(fm))
             main_effect_values = fm.main_effects(inds)
             if interactions is True or interactions is 2:
                 for i in range(len(fm)):
-                    row_values[i,i] = main_effect_values[i]
-        
+                    row_values[i, i] = main_effect_values[i]
+
         return {
             "values": row_values,
             "expected_values": outputs[0],
@@ -174,52 +167,6 @@ class Exact(Explainer):
             "main_effects": main_effect_values if main_effects else None,
             "clustering": getattr(self.masker, "clustering", None)
         }
-    
-    def save(self, out_file):
-        """ Saves content of exact explainer
-        """
-
-        pickle.dump(type(self), out_file)
-        
-        if callable(self.model.save):
-            self.model.save(out_file, self.model.model)
-        else:
-            pickle.dump(None,out_file)
-        
-        if callable(self.masker.save):
-            self.masker.save(out_file, self.masker)
-        else:
-            pickle.dump(None,out_file)
-        
-        cloudpickle.dump(self.link, out_file)
-        cloudpickle.dump(self.link.inverse,out_file)
-        pickle.dump(self.feature_names, out_file)
-
-    @classmethod
-    def load(cls, in_file, model_loader = None, masker_loader = None):
-        explainer_type = pickle.load(in_file)
-        if not explainer_type == cls:
-            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
-        
-        return Exact._load(in_file, model_loader, masker_loader)
-
-    @classmethod
-    def _load(cls, in_file, model_loader = None, masker_loader = None):
-        if model_loader is None:
-            model = Model.load(in_file)
-        else:
-            model = model_loader(in_file)
-        
-        if masker_loader is None:
-            masker = Masker.load(in_file)
-        else:
-            masker = masker_loader(in_file)
-
-        link = cloudpickle.load(in_file)
-        link_inverse = cloudpickle.load(in_file)
-        link.inverse = link_inverse
-        feature_names = pickle.load(in_file)
-        return Exact(model, masker, link, feature_names)
 
 @jit
 def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
