@@ -131,7 +131,7 @@ def test_kernel_shap_with_high_dim_sparse():
     x_train = vectorizer.transform(x_train)
     x_test = vectorizer.transform(x_test)
     # Fit a linear regression model
-    linear_model = sklearn.linear_modelLinearRegression()
+    linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)
     _, cols = x_train.shape
     shape = 1, cols
@@ -144,7 +144,7 @@ def test_kernel_sparse_vs_dense_multirow_background():
     """
 
     # train a logistic regression classifier
-    X_train, X_test, Y_train, _ = sklearn.model_selectiontrain_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
+    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
     lr.fit(X_train, Y_train)
 

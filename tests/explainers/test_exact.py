@@ -6,7 +6,6 @@ import tempfile
 import numpy as np
 import pytest
 import shap
-import types
 
 
 def test_single_class_independent():
