@@ -151,8 +151,6 @@ def test_serialization_exact_no_model_or_masker():
     temp_serialization_file = tempfile.TemporaryFile()
 
     # Serialization
-    explainer_original.model.save = None
-    explainer_original.masker.save = None
     explainer_original.save(temp_serialization_file)
 
     temp_serialization_file.seek(0)
@@ -193,8 +191,7 @@ def test_serialization_exact_numpy_custom_model_save():
     temp_serialization_file = tempfile.TemporaryFile()
 
     # Serialization
-    explainer_original.model.save = pickle.dump
-    explainer_original.save(temp_serialization_file)
+    explainer_original.save(temp_serialization_file, model_saver=pickle.dump)
 
     temp_serialization_file.seek(0)
 

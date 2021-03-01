@@ -106,7 +106,7 @@ class Exact(Explainer):
             outputs = fm(extended_delta_indexes, batch_size=batch_size)
 
             # Shapley values
-            if interactions is False or interactions == 1:
+            if interactions is False or interactions is 1: # pylint: disable=literal-comparison
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
@@ -115,7 +115,7 @@ class Exact(Explainer):
                 _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             # Shapley-Taylor interaction values
-            elif interactions is True or interactions == 2:
+            elif interactions is True or interactions is 2: # pylint: disable=literal-comparison
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
@@ -152,7 +152,7 @@ class Exact(Explainer):
 
         # compute the main effects if we need to
         main_effect_values = None
-        if main_effects or interactions is True or interactions == 2:
+        if main_effects or interactions is True or interactions is 2: # pylint: disable=literal-comparison
             if inds is None:
                 inds = np.arange(len(fm))
             main_effect_values = fm.main_effects(inds)
