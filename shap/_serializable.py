@@ -67,7 +67,9 @@ class Serializer():
         """ Dump a data item to the current input stream.
         """
         pickle.dump(name, self.out_stream)
-        if encoder is not None:
+        if encoder is False:
+            pickle.dump("no_encoder", self.out_stream)
+        elif encoder is not None:
             pickle.dump("custom_encoder", self.out_stream)
             encoder(value, self.out_stream)
         elif isinstance(value, Serializable):
@@ -159,9 +161,12 @@ class Deserializer():
             ) # We should eventually add support for skipping over unused data items in old formats...
 
         encoder_name = pickle.load(self.in_stream)
+
         if encoder_name == "custom_encoder" or decoder is not None:
             assert callable(decoder), "You must provide a callable custom decoder for the data item {name}!"
             return decoder(self.in_stream)
+        if encoder_name == "no_encoder":
+            return None
         if encoder_name == "serializable.save":
             return Serializable.load(self.in_stream)
         if encoder_name == "numpy.save":
