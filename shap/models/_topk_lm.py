@@ -44,7 +44,7 @@ class TopKLM(Model):
         numpy.ndarray
             The scores (log odds) of generating top-k token ids using the model.
         """
-        super(TopKLM, self).__init__(model)
+        super().__init__(model)
 
         self.tokenizer = tokenizer
         # set pad token if not defined
@@ -60,11 +60,11 @@ class TopKLM(Model):
         self.output_names = None
 
         self.model_type = None
-        if safe_isinstance(self.model, "transformers.PreTrainedModel"):
+        if safe_isinstance(self.inner_model, "transformers.PreTrainedModel"):
             self.model_type = "pt"
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
-            self.model = self.model.to(self.device)
-        elif safe_isinstance(self.model, "transformers.TFPreTrainedModel"):
+            self.inner_model = self.inner_model.to(self.device)
+        elif safe_isinstance(self.inner_model, "transformers.TFPreTrainedModel"):
             self.model_type = "tf"
 
 
@@ -211,7 +211,7 @@ class TopKLM(Model):
         numpy.ndarray
             Logits corresponding to next word/masked word.
         """
-        if safe_isinstance(self.model, MODELS_FOR_CAUSAL_LM):
+        if safe_isinstance(self.inner_model, MODELS_FOR_CAUSAL_LM):
             inputs = self.get_inputs(X, padding_side="left")
             if self.model_type == "pt":
                 inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
@@ -219,18 +219,18 @@ class TopKLM(Model):
                 inputs = inputs.to(self.device)
                 # generate outputs and logits
                 with torch.no_grad():
-                    outputs = self.model(**inputs, return_dict=True)
+                    outputs = self.inner_model(**inputs, return_dict=True)
                 # extract only logits corresponding to target sentence ids
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')[:, -1, :]
             elif self.model_type == "tf":
                 inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
                 inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
                 if self.device is None:
-                    outputs = self.model(inputs, return_dict=True)
+                    outputs = self.inner_model(inputs, return_dict=True)
                 else:
                     try:
                         with tf.device(self.device):
-                            outputs = self.model(inputs, return_dict=True)
+                            outputs = self.inner_model(inputs, return_dict=True)
                     except RuntimeError as e:
                         print(e)
                 logits = outputs.logits.numpy().astype('float64')[:, -1, :]

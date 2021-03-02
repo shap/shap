@@ -52,7 +52,7 @@ class TeacherForcing(Model):
         numpy.ndarray
             The scores (log odds) of generating target sentence ids using the model.
         """
-        super(TeacherForcing, self).__init__(model)
+        super().__init__(model)
 
         self.tokenizer = tokenizer
         # set pad token if not defined
@@ -63,12 +63,12 @@ class TeacherForcing(Model):
         self.batch_size = batch_size
         # assign text generation function
         if safe_isinstance(model, "transformers.PreTrainedModel") or safe_isinstance(model, "transformers.TFPreTrainedModel"):
-            self.text_generate = models.TextGeneration(self.model, tokenizer=self.tokenizer, device=self.device)
+            self.text_generate = models.TextGeneration(self.inner_model, tokenizer=self.tokenizer, device=self.device)
             self.similarity_model = model
             self.similarity_tokenizer = tokenizer
             self.model_agnostic = False
         else:
-            self.text_generate = models.TextGeneration(self.model, device=self.device)
+            self.text_generate = models.TextGeneration(self.inner_model, device=self.device)
             self.similarity_model = similarity_model
             self.similarity_tokenizer = similarity_tokenizer
             # set pad token for a similarity tokenizer(in a model agnostic scenario) if not defined
@@ -195,7 +195,7 @@ class TeacherForcing(Model):
         """
         if self.model_agnostic:
             # In model agnostic case, we first pass the input through the model and then tokenize output sentence
-            input_sentences = np.array(self.model(X))
+            input_sentences = np.array(self.inner_model(X))
         else:
             input_sentences = np.array(X)
         # set tokenizer padding to prepare inputs for batch inferencing

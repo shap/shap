@@ -145,7 +145,10 @@ disable=print-statement,
         no-member,
         not-callable,
         missing-module-docstring,
-        arguments-differ
+        arguments-differ,
+        unexpected-keyword-arg,
+        no-value-for-parameter,
+        duplicate-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -368,7 +371,7 @@ ignore-docstrings=yes
 ignore-imports=yes
 
 # Minimum lines number of a similarity.
-min-similarity-lines=100
+min-similarity-lines=50
 
 
 [SPELLING]

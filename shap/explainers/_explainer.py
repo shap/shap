@@ -1,3 +1,6 @@
+import copy
+import numpy as np
+import scipy as sp
 from .. import maskers
 from .. import links
 from ..utils import safe_isinstance, show_progress
@@ -7,9 +10,6 @@ from ..models import Model
 from ..maskers import Masker
 from .._explanation import Explanation
 from .._serializable import Serializable
-import numpy as np
-import scipy as sp
-import copy
 from .. import explainers
 from .._serializable import Serializer, Deserializer
 
@@ -25,7 +25,7 @@ class Explainer(Serializable):
 
     def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, **kwargs):
         """ Build a new explainer for the passed model.
- 
+
         Parameters
         ----------
         model : object or function
@@ -55,7 +55,7 @@ class Explainer(Serializable):
         algorithm : "auto", "permutation", "partition", "tree", "kernel", "sampling", "linear", "deep", or "gradient"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
-            of these algorithms have various tradeoffs and are preferrable in different situations. By 
+            of these algorithms have various tradeoffs and are preferrable in different situations. By
             default the "auto" options attempts to make the best choice given the passed model and masker,
             but this choice can always be overriden by passing the name of a specific algorithm. The type of
             algorithm used will determine what type of subclass object is returned by this constructor, and
@@ -91,8 +91,20 @@ class Explainer(Serializable):
             self.masker = maskers.Composite(*masker)
         elif (masker is dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
+        elif masker is None and isinstance(self.model, models.TransformersPipeline):
+            return self.__init__( # pylint: disable=non-parent-init-called
+                self.model, self.model.inner_model.tokenizer,
+                link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, **kwargs
+            )
         else:
             self.masker = masker
+
+        # Check for transformer pipeline objects and wrap them
+        if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
+            return self.__init__( # pylint: disable=non-parent-init-called
+                models.TransformersPipeline(self.model), self.masker,
+                link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, **kwargs
+            )
 
         # wrap self.masker and self.model for output text explanation algorithm
         if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and \
@@ -150,7 +162,7 @@ class Explainer(Serializable):
                         algorithm = "partition"
                     else:
                         algorithm = "permutation"
-                
+
                 # if we get here then we don't know how to handle what was given to us
                 else:
                     raise Exception("The passed model is not callable and cannot be analyzed directly with the given masker! Model: " + str(model))
@@ -230,7 +242,7 @@ class Explainer(Serializable):
 
         # loop over each sample, filling in the values array
         values = []
-        output_indices = [] 
+        output_indices = []
         expected_values = []
         mask_shapes = []
         main_effects = []
@@ -275,16 +287,22 @@ class Explainer(Serializable):
         hierarchical_values = pack_values(hierarchical_values)
         clustering = pack_values(clustering)
 
-        # getting output labels 
+        
+
+        # getting output labels
+        ragged_outputs = not all(len(x) == len(output_indices[0]) for x in output_indices)
         if self.output_names is None:
             if None not in output_names:
-                labels = np.array(output_names)
-                sliced_labels = np.array([np.array(labels[i])[index_list] for i,index_list in enumerate(output_indices)])
+                sliced_labels = [np.array(output_names[i])[index_list] for i,index_list in enumerate(output_indices)]
+                if not ragged_outputs:
+                    sliced_labels = np.array(sliced_labels)
             else:
                 sliced_labels = None
         else:
             labels = np.array(self.output_names)
-            sliced_labels = np.array([labels[index_list] for index_list in output_indices])
+            sliced_labels = [labels[index_list] for index_list in output_indices]
+            if not ragged_outputs:
+                sliced_labels = np.array(sliced_labels)
 
         # build the explanation objects
         out = []
@@ -292,27 +310,27 @@ class Explainer(Serializable):
 
             # reshape the attribution values using the mask_shapes
             tmp = []
-            for i,v in enumerate(arg_values[j]):
+            for i, v in enumerate(arg_values[j]):
                 if np.prod(mask_shapes[i][j]) != np.prod(v.shape): # see if we have multiple outputs
                     tmp.append(v.reshape(*mask_shapes[i][j], -1))
                 else:
                     tmp.append(v.reshape(*mask_shapes[i][j]))
             arg_values[j] = pack_values(tmp)
-            
+
             # allow the masker to transform the input data to better match the masking pattern
             # (such as breaking text into token segments)
             if hasattr(self.masker, "data_transform"):
                 data = pack_values([self.masker.data_transform(v) for v in args[j]])
             else:
                 data = args[j]
-            
+
             # build an explanation object for this input argument
             out.append(Explanation(
                 arg_values[j], expected_values, data,
                 feature_names=feature_names[j], main_effects=main_effects,
                 clustering=clustering,
                 hierarchical_values=hierarchical_values,
-                output_names= sliced_labels # self.output_names
+                output_names=sliced_labels # self.output_names
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))
@@ -367,7 +385,7 @@ class Explainer(Serializable):
 
         return expanded_main_effects
 
-    def save(self, out_file, model_saver=None, masker_saver=None):
+    def save(self, out_file, model_saver=".save", masker_saver=".save"):
         """ Write the explainer to the given file stream.
         """
         super().save(out_file)

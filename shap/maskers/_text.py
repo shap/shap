@@ -273,7 +273,7 @@ class Text(Masker):
     def save(self, out_file):
         """ Save a Text masker to a file stream.
         """
-        super(Text, self).save(out_file)
+        super().save(out_file)
         with Serializer(out_file, "shap.maskers.Text", version=0) as s:
             s.save("tokenizer", self.tokenizer)
             s.save("mask_token", self.input_mask_token)

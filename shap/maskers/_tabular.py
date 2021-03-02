@@ -257,7 +257,7 @@ class Independent(Tabular):
             the background dataset. This means larger background dataset cause longer runtimes. Normally
             about 1, 10, 100, or 1000 background samples are reasonable choices.
         """
-        super(Independent, self).__init__(data, max_samples=max_samples, clustering=None)
+        super().__init__(data, max_samples=max_samples, clustering=None)
 
 
 class Partition(Tabular):
@@ -292,7 +292,7 @@ class Partition(Tabular):
             the options from scipy.spatial.distance.pdist's metric argument.
             If an array, then this is assumed to be the clustering of the features.
         """
-        super(Partition, self).__init__(data, max_samples=max_samples, clustering=clustering)
+        super().__init__(data, max_samples=max_samples, clustering=clustering)
 
 
 class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking

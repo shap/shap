@@ -1,4 +1,3 @@
-import pickle
 import numpy as np
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer

@@ -66,18 +66,18 @@ class Explanation(object, metaclass=MetaExplanation):
     def __init__(
         self,
         values,
-        base_values = None,
-        data = None,
-        display_data = None,
-        instance_names = None,
-        feature_names = None,
-        output_names = None,
-        output_indexes = None,
-        lower_bounds = None,
-        upper_bounds = None,
-        main_effects = None,
-        hierarchical_values = None,
-        clustering = None
+        base_values=None,
+        data=None,
+        display_data=None,
+        instance_names=None,
+        feature_names=None,
+        output_names=None,
+        output_indexes=None,
+        lower_bounds=None,
+        upper_bounds=None,
+        main_effects=None,
+        hierarchical_values=None,
+        clustering=None
     ):
         self.op_history = []
 
@@ -87,7 +87,7 @@ class Explanation(object, metaclass=MetaExplanation):
             values = e.values
             base_values = e.base_values
             data = e.data
-            
+
         output_dims = compute_output_dims(values, base_values, data)
 
         if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
@@ -96,28 +96,28 @@ class Explanation(object, metaclass=MetaExplanation):
                 feature_names = Alias(list(feature_names), 0)
             elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
                 feature_names = Alias(list(feature_names), 1)
-        
+
         if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
             if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
                 output_names = Alias(list(output_names), 0)
             elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
                 output_names = Alias(list(output_names), 1)
-                
+
         self._s = Slicer(
-            values = values,
-            base_values = None if base_values is None else Obj(base_values, [0] + list(output_dims)),
-            data = data,
-            display_data = display_data,
-            instance_names = None if instance_names is None else Alias(instance_names, 0),
-            feature_names = feature_names, 
-            output_names =  output_names, # None if output_names is None else Alias(output_names, output_dims),
-            output_indexes = None if output_indexes is None else (output_dims, output_indexes),
-            lower_bounds = lower_bounds,
-            upper_bounds = upper_bounds,
-            main_effects = main_effects,
-            hierarchical_values = hierarchical_values,
-            clustering = None if clustering is None else Obj(clustering, [0])
+            values=values,
+            base_values=None if base_values is None else Obj(base_values, [0] + list(output_dims)),
+            data=data,
+            display_data=display_data,
+            instance_names=None if instance_names is None else Alias(instance_names, 0),
+            feature_names=feature_names,
+            output_names= output_names, # None if output_names is None else Alias(output_names, output_dims),
+            output_indexes=None if output_indexes is None else (output_dims, output_indexes),
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
+            main_effects=main_effects,
+            hierarchical_values=hierarchical_values,
+            clustering=None if clustering is None else Obj(clustering, [0])
         )
 
     @property
@@ -623,7 +623,6 @@ class Percentile(Op):
     def add_repr(self, s, verbose=False):
         return "percentile("+s+", "+str(self.percentile)+")"
 
-    
 
 
 def _compute_shape(x):
@@ -643,18 +642,19 @@ def _compute_shape(x):
         if len(x) == 0:
             return (0,)
         elif len(x) == 1:
-            return (len(x),) + _compute_shape(x[0])
+            return (1,) + _compute_shape(x[0])
         else:
             first_shape = _compute_shape(x[0])
             if first_shape == tuple():
                 return (len(x),)
             else: # we have an array of arrays...
-                for i in range(1,len(x)):
+                matches = np.ones(len(first_shape), dtype=np.bool)
+                for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
-                    if shape != first_shape: # TODO: detect when some inner dims match and some don't (right now we assume they all don't)
-                        assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
-                        return (len(x),) + (None,) * len(shape)
-                return (len(x),) + first_shape
+                    assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
+                    for j in range(0, len(shape)):
+                        matches[j] &= shape[j] == first_shape[j]
+                return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
 
 class Cohorts():
     def __init__(self, **kwargs):

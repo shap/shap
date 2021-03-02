@@ -10,6 +10,7 @@ from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+# pylint: disable=import-outside-toplevel
 
 def test_tf_eager():
     """ This is a basic eager example from keras.
@@ -230,7 +231,7 @@ def test_pytorch_mnist_cnn(tmpdir):
             """
 
             def __init__(self):
-                super(Net, self).__init__()
+                super().__init__()
                 # Testing several different activations
                 self.conv_layers = nn.Sequential(
                     nn.Conv2d(1, 10, kernel_size=5),
@@ -346,7 +347,7 @@ def test_pytorch_custom_nested_models():
         """ Model 1.
         """
         def __init__(self):
-            super(CustomNet1, self).__init__()
+            super().__init__()
             self.net = nn.Sequential(
                 nn.Sequential(
                     nn.Conv1d(1, 1, 1),
@@ -364,7 +365,7 @@ def test_pytorch_custom_nested_models():
         """ Model 2.
         """
         def __init__(self, num_features):
-            super(CustomNet2, self).__init__()
+            super().__init__()
             self.net = nn.Sequential(
                 nn.LeakyReLU(),
                 nn.Linear(num_features // 2, 2)
@@ -379,7 +380,7 @@ def test_pytorch_custom_nested_models():
         """ Model 3.
         """
         def __init__(self, num_features):
-            super(CustomNet, self).__init__()
+            super().__init__()
             self.net1 = CustomNet1()
             self.net2 = CustomNet2(num_features)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
@@ -448,7 +449,7 @@ def test_pytorch_single_output():
         """ Test model.
         """
         def __init__(self, num_features):
-            super(Net, self).__init__()
+            super().__init__()
             self.linear = nn.Linear(num_features // 2, 2)
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.convt1d = nn.ConvTranspose1d(1, 1, 1)
@@ -525,7 +526,7 @@ def test_pytorch_multiple_inputs():
             """ Testing model.
             """
             def __init__(self, num_features, disconnected):
-                super(Net, self).__init__()
+                super().__init__()
                 self.disconnected = disconnected
                 if disconnected:
                     num_features = num_features // 2 + 1

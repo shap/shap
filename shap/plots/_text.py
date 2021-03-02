@@ -35,7 +35,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     xmax : float
         Maximum shap value bound.
-    
+
     cmax : float
         Maximum absolute shap value for sample. Used for scaling colors for input tokens. 
 
@@ -60,7 +60,6 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     # loop when we get multi-row inputs
     if len(shap_values.shape) == 2 and shap_values.output_names is None:
-        
         xmin = 0
         xmax = 0
         cmax = 0
@@ -85,7 +84,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
             display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
             text(shap_values[i], num_starting_labels=num_starting_labels, group_threshold=group_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
         return
-    
+
     elif len(shap_values.shape) == 2 and shap_values.output_names is not None:
         text_to_text(shap_values)
         return
@@ -95,7 +94,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
             text(shap_values[i])
         return
 
-    
+
     # set any unset bounds
     xmin_new, xmax_new, cmax_new = values_min_max(shap_values.values, shap_values.base_values)
     if xmin is None:
@@ -104,7 +103,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         xmax = xmax_new
     if cmax is None:
         cmax = cmax_new
-    
+
 
     values, clustering = unpack_shap_explanation_contents(shap_values)
     tokens, values, group_sizes = process_shap_values(shap_values.data, values, group_threshold, separator, clustering)

@@ -44,11 +44,11 @@ class TextGeneration(Model):
         numpy.ndarray
             Array of target sentence/ids.
         """
-        super(TextGeneration, self).__init__(model)
+        super().__init__(model)
 
         self.explanation_row = 0
         if target_sentences is not None:
-            self.model = lambda _: np.array([target_sentences[self.explanation_row]])
+            self.inner_model = lambda _: np.array([target_sentences[self.explanation_row]])
 
         self.tokenizer = tokenizer
         self.device = device
@@ -87,7 +87,7 @@ class TextGeneration(Model):
                 X = np.array([X])
             # generate target sentence ids in model agnostic scenario
             if self.model_agnostic:
-                self.target_X = self.model(X)
+                self.target_X = self.inner_model(X)
             else:
                 self.target_X = self.model_generate(X)
             # update explanation row count
@@ -131,16 +131,16 @@ class TextGeneration(Model):
         numpy.ndarray
             Returns target sentence ids.
         """
-        if (hasattr(self.model.config, "is_encoder_decoder") and not self.model.config.is_encoder_decoder) \
-                and (hasattr(self.model.config, "is_decoder") and not self.model.config.is_decoder):
+        if (hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder) \
+                and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
             raise ValueError(
                 "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
             )
         # check if user assigned any text generation specific kwargs
         text_generation_params = {}
-        if self.model.config.__dict__.get("task_specific_params") is not None and \
-                self.model.config.task_specific_params.get("text-generation") is not None:
-            text_generation_params = self.model.config.task_specific_params["text-generation"]
+        if self.inner_model.config.__dict__.get("task_specific_params") is not None and \
+                self.inner_model.config.task_specific_params.get("text-generation") is not None:
+            text_generation_params = self.inner_model.config.task_specific_params["text-generation"]
             if not isinstance(text_generation_params, dict):
                 raise ValueError(
                     "Please assign text generation params as a dictionary under task_specific_params with key 'text-generation' "
@@ -148,28 +148,28 @@ class TextGeneration(Model):
         if self.model_type == "pt":
             # create torch tensors and move to device
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
-            self.model = self.model.to(device)
-            self.model.eval()
+            self.inner_model = self.inner_model.to(device)
+            self.inner_model.eval()
             with torch.no_grad():
-                if self.model.config.is_encoder_decoder:
+                if self.inner_model.config.is_encoder_decoder:
                     inputs = self.get_inputs(X).to(device)
                 else:
                     inputs = self.get_inputs(X, padding_side="left").to(device)
-                outputs = self.model.generate(**inputs, **text_generation_params).detach().cpu().numpy()
+                outputs = self.inner_model.generate(**inputs, **text_generation_params).detach().cpu().numpy()
         elif self.model_type == "tf":
-            if self.model.config.is_encoder_decoder:
+            if self.inner_model.config.is_encoder_decoder:
                 inputs = self.get_inputs(X)
             else:
                 inputs = self.get_inputs(X, padding_side="left")
             if self.device is None:
-                outputs = self.model.generate(inputs, **text_generation_params).numpy()
+                outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
             else:
                 try:
                     with tf.device(self.device):
-                        outputs = self.model.generate(inputs, **text_generation_params).numpy()
+                        outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
                 except RuntimeError as e:
                     print(e)
-        if self.model.config.is_decoder:
+        if self.inner_model.config.is_decoder:
             # slice the output ids after the input ids
             outputs = outputs[:, inputs["input_ids"].shape[1]:]
         # parse output ids to find special tokens in prefix and suffix

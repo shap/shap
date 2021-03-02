@@ -1,42 +1,42 @@
 """ This file contains tests for partition explainer.
 """
-import tempfile
-import pytest
-import numpy as np
+
+# pylint: disable=missing-function-docstring
+import pickle
 import shap
+from . import common
 
-def test_serialization_partition():
-    """ This tests the serialization of partition explainers.
-    """
-    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
-    AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
+def test_translation():
+    model, tokenizer, data = common.basic_translation_scenario()
+    common.test_additivity(shap.explainers.Partition, model, tokenizer, data)
 
-    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
-    model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+def test_translation_auto():
+    model, tokenizer, data = common.basic_translation_scenario()
+    common.test_additivity(shap.Explainer, model, tokenizer, data)
 
-    # define the input sentences we want to translate
-    data = [
-        "In this picture, there are four persons: my father, my mother, my brother and my sister.",
-        "Transformers have rapidly become the model of choice for NLP problems, replacing older recurrent neural network models"
-    ]
+def test_translation_algorithm_arg():
+    model, tokenizer, data = common.basic_translation_scenario()
+    common.test_additivity(shap.Explainer, model, tokenizer, data, algorithm="partition")
 
-    explainer_original = shap.Explainer(model, tokenizer)
-    shap_values_original = explainer_original(data)
+def test_tabular_single_output():
+    model, data = common.basic_xgboost_scenario(100)
+    common.test_additivity(shap.explainers.Partition, model.predict, shap.maskers.Partition(data), data)
 
-    temp_serialization_file = tempfile.TemporaryFile()
-    # Serialization
-    explainer_original.save(temp_serialization_file)
+def test_tabular_multi_output():
+    model, data = common.basic_xgboost_scenario(100)
+    common.test_additivity(shap.explainers.Partition, model.predict_proba, shap.maskers.Partition(data), data)
 
-    temp_serialization_file.seek(0)
+def test_serialization():
+    model, tokenizer, data = common.basic_translation_scenario()
+    common.test_serialization(shap.explainers.Partition, model, tokenizer, data)
 
-    # Deserialization
-    explainer_new = shap.Explainer.load(temp_serialization_file)
+def test_serialization_no_model_or_masker():
+    model, tokenizer, data = common.basic_translation_scenario()
+    common.test_serialization(
+        shap.explainers.Partition, model, tokenizer, data, model_saver=None, masker_saver=None,
+        model_loader=lambda _: model, masker_loader=lambda _: tokenizer
+    )
 
-    temp_serialization_file.close()
-
-    shap_values_new = explainer_new(data)
-
-    assert np.array_equal(shap_values_original[0].base_values, shap_values_new[0].base_values)
-    assert np.array_equal(shap_values_original[0].values, shap_values_new[0].values)
-    assert isinstance(explainer_original, type(explainer_new))
-    assert isinstance(explainer_original.masker, type(explainer_new.masker))
+def test_serialization_custom_model_save():
+    model, tokenizer, data = common.basic_translation_scenario()
+    common.test_serialization(shap.explainers.Partition, model, tokenizer, data, model_saver=pickle.dump, model_loader=pickle.load)
