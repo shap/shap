@@ -18,7 +18,7 @@ def test_serialization_image_masker_inpaint_telea():
 
     test_image_height = 500
     test_image_width = 500
-    test_data = np.ones((test_image_height,test_image_width,3)) * 50
+    test_data = np.ones((test_image_height, test_image_width, 3)) * 50
     test_shape = (test_image_height, test_image_width, 3)
     # initialize image masker
     original_image_masker = shap.maskers.Image("inpaint_telea", test_shape)
@@ -49,7 +49,7 @@ def test_serialization_image_masker_inpaint_ns():
 
     test_image_height = 500
     test_image_width = 500
-    test_data = np.ones((test_image_height,test_image_width,3)) * 50
+    test_data = np.ones((test_image_height, test_image_width, 3)) * 50
     test_shape = (test_image_height, test_image_width, 3)
     # initialize image masker
     original_image_masker = shap.maskers.Image("inpaint_ns", test_shape)
@@ -80,7 +80,7 @@ def test_serialization_image_masker_blur():
 
     test_image_height = 500
     test_image_width = 500
-    test_data = np.ones((test_image_height,test_image_width,3)) * 50
+    test_data = np.ones((test_image_height, test_image_width, 3)) * 50
     test_shape = (test_image_height, test_image_width, 3)
     # initialize image masker
     original_image_masker = shap.maskers.Image("blur(10,10)", test_shape)
@@ -111,7 +111,7 @@ def test_serialization_image_masker_mask():
 
     test_image_height = 500
     test_image_width = 500
-    test_data = np.ones((test_image_height,test_image_width,3)) * 50
+    test_data = np.ones((test_image_height, test_image_width, 3)) * 50
     test_shape = (test_image_height, test_image_width, 3)
     test_mask = np.ones((test_image_height, test_image_width, 3))
     # initialize image masker

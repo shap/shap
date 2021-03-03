@@ -37,7 +37,7 @@ def test_tied_pair_new():
 
 def test_wrong_masker():
     with pytest.raises(Exception):
-        shap.explainers.Linear((0, 0), shap.maskers.Image("blur(10,10)", (10,10,3)))
+        shap.explainers.Linear((0, 0), shap.maskers.Image("blur(10,10)", (10, 10, 3)))
 
 def test_tied_triple():
     np.random.seed(0)
@@ -203,15 +203,13 @@ def test_sparse():
     assert np.max(np.abs(scipy.special.expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
 
 
-@pytest.mark.parametrize("feature_pertubation,masker",
-    [
-        (None, shap.maskers.Independent),
-        ("interventional", shap.maskers.Independent),
-        ("independent", shap.maskers.Independent),
-        ("correlation_dependent", shap.maskers.Impute),
-        ("correlation", shap.maskers.Impute)
-    ]
-)
+@pytest.mark.parametrize("feature_pertubation,masker", [
+    (None, shap.maskers.Independent),
+    ("interventional", shap.maskers.Independent),
+    ("independent", shap.maskers.Independent),
+    ("correlation_dependent", shap.maskers.Impute),
+    ("correlation", shap.maskers.Impute)
+])
 def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
     np.random.seed(0)
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
@@ -225,4 +223,3 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
 
     explainer = shap.explainers.Linear(model, X, feature_perturbation=feature_pertubation)
     assert isinstance(explainer.masker, masker)
-

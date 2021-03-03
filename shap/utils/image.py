@@ -7,9 +7,10 @@ import requests
 import shap
 from textwrap import wrap
 
-def is_empty(path): 
-    """
-    Function to check if folder at given path exists and is not empty. Returns True if folder is empty or does not exist.
+def is_empty(path):
+    """ Function to check if folder at given path exists and is not empty.
+    
+    Returns True if folder is empty or does not exist.
     """
     empty = False
     if os.path.exists(path) and not os.path.isfile(path): 
