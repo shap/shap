@@ -67,7 +67,7 @@ class Tree(Explainer):
         feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
             Since SHAP values rely on conditional expectations we need to decide how to handle correlated
             (or otherwise dependent) input features. The "interventional" approach breaks the dependencies between
-            features according to the rules dictated by casual inference (Janzing et al. 2019). Note that the
+            features according to the rules dictated by causal inference (Janzing et al. 2019). Note that the
             "interventional" option requires a background dataset and its runtime scales linearly with the size
             of the background dataset you use. Anywhere from 100 to 1000 random background samples are good
             sizes to use. The "tree_path_dependent" approach is to just follow the trees and use the number
