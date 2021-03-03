@@ -214,7 +214,7 @@ class Explanation(object, metaclass=MetaExplanation):
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
         """
-        
+
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         elif isinstance(cohorts, (list, tuple, np.ndarray)):
@@ -222,7 +222,7 @@ class Explanation(object, metaclass=MetaExplanation):
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
         else:
             raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
-        
+
     def __repr__(self):
         out = ".values =\n"+self.values.__repr__()
         if self.base_values is not None:
@@ -230,15 +230,15 @@ class Explanation(object, metaclass=MetaExplanation):
         if self.data is not None:
             out += "\n\n.data =\n"+self.data.__repr__()
         return out
-    
+
     def __getitem__(self, item):
         """ This adds support for magic string indexes like "rank(0)".
         """
         if not isinstance(item, tuple):
             item = (item,)
-        
+
         # convert any OpChains or magic strings
-        for i,t in enumerate(item):
+        for i, t in enumerate(item):
             orig_t = t
             if issubclass(type(t), OpChain):
                 t = t.apply(self)
@@ -248,7 +248,7 @@ class Explanation(object, metaclass=MetaExplanation):
                     t = [int(v) for v in t] # slicer wants lists not numpy arrays for indexing
             elif issubclass(type(t), Explanation):
                 t = t.values
-            elif type(t) is str:
+            elif isinstance(t, str):
                 if is_1d(self.feature_names):
                     ind = np.where(np.array(self.feature_names) == t)[0][0]
                     t = int(ind)
@@ -286,12 +286,12 @@ class Explanation(object, metaclass=MetaExplanation):
                     return new_self
             if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
-            
+
             if t is not orig_t:
                 tmp = list(item)
                 tmp[i] = t
                 item = tuple(tmp)
-        
+
         # call slicer for the real work
         new_self = copy.copy(self)
         new_self._s = self._s.__getitem__(item)
