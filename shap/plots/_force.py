@@ -34,7 +34,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
           plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
           text_rotation=0, contribution_threshold=0.05):
     """ Visualize the given SHAP values with an additive force layout.
-    
+
     Parameters
     ----------
     base_value : float
@@ -54,7 +54,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
     out_names : str
         The name of the output of the model (plural to support multi-output plotting in the future).
-    
+
     link : "identity" or "logit"
         The transformation used when drawing the tick mark labels. Using logit will change log-odds numbers
         into probabilities. 
@@ -84,11 +84,14 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         #     out_names = shap_exp.output_names
 
     # auto unwrap the base_value
-    if type(base_value) == np.ndarray and len(base_value) == 1:
-        base_value = base_value[0]
+    if isinstance(base_value, np.ndarray):
+        if len(base_value) == 1:
+            base_value = base_value[0]
+        elif len(base_value) > 1 and np.all(base_value == base_value[0]):
+            base_value = base_value[0]
 
-    if (type(base_value) == np.ndarray or type(base_value) == list):
-        if type(shap_values) != list or len(shap_values) != len(base_value):
+    if (isinstance(base_value, np.ndarray) or type(base_value) == list):
+        if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
             raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
                             "Try shap.force_plot(explainer.expected_value, shap_values) or " \
                             "for multi-output models try " \
