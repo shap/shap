@@ -287,10 +287,9 @@ class Explainer(Serializable):
         hierarchical_values = pack_values(hierarchical_values)
         clustering = pack_values(clustering)
 
-        
-
         # getting output labels
-        ragged_outputs = not all(len(x) == len(output_indices[0]) for x in output_indices)
+        if output_indices is not None:
+            ragged_outputs = not all(len(x) == len(output_indices[0]) for x in output_indices)
         if self.output_names is None:
             if None not in output_names:
                 sliced_labels = [np.array(output_names[i])[index_list] for i,index_list in enumerate(output_indices)]

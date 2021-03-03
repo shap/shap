@@ -66,9 +66,7 @@ class Partition(Explainer):
         See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
-
-        warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
+        super().__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
 
         # convert dataframes
         # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
