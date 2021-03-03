@@ -186,7 +186,7 @@ def test_serialization_text_masker():
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)
     original_masker = shap.maskers.Text(tokenizer)
 
     temp_serialization_file = tempfile.TemporaryFile()
@@ -205,8 +205,8 @@ def test_serialization_text_masker():
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
-    original_masked_output = original_masker(test_input_mask,test_text)
-    new_masked_output = new_masker(test_input_mask,test_text)
+    original_masked_output = original_masker(test_input_mask, test_text)
+    new_masked_output = new_masker(test_input_mask, test_text)
 
     assert original_masked_output == new_masked_output
 
@@ -216,8 +216,8 @@ def test_serialization_text_masker_custom_mask():
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=True)
-    original_masker = shap.maskers.Text(tokenizer, mask_token = '[CUSTOM-MASK]')
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
+    original_masker = shap.maskers.Text(tokenizer, mask_token='[CUSTOM-MASK]')
 
     temp_serialization_file = tempfile.TemporaryFile()
 
@@ -245,7 +245,7 @@ def test_serialization_text_masker_collapse_mask_token():
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, collapse_mask_token=True)
 
     temp_serialization_file = tempfile.TemporaryFile()

@@ -7,7 +7,7 @@ notebooks `available on GitHub <https://github.com/slundberg/shap/tree/master/no
 
 Image classification
 ====================
-Examples using :class:`shap.explainers.Tree` to explain tree-based machine learning models.
+Examples using :class:`shap.explainers.Partition` to explain image classifiers.
 
 .. toctree::
     :glob:

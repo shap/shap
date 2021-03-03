@@ -1,6 +1,4 @@
 from ..utils import MaskedModel
-import pandas as pd
-import scipy as sp
 import numpy as np
 import warnings
 import time
@@ -68,9 +66,7 @@ class Partition(Explainer):
         See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
         """
 
-        super(Partition, self).__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
-
-        warnings.warn("explainers.Partition is still in an alpha state, so use with caution...")
+        super().__init__(model, masker, algorithm="partition", output_names = output_names, feature_names=feature_names)
 
         # convert dataframes
         # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
@@ -115,12 +111,12 @@ class Partition(Explainer):
         """
 
         if fixed_context == "auto":
+            # if isinstance(self.masker, maskers.Text):
+            #     fixed_context = 1 # we err on the side of speed for text models
+            # else:
             fixed_context = None
-        elif fixed_context in [0,1,None]:
-            fixed_context = fixed_context
-        else:
+        elif fixed_context not in [0, 1, None]:
             raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
-
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
@@ -130,8 +126,8 @@ class Partition(Explainer):
         m00 = np.zeros(M, dtype=np.bool)
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
-            self._curr_base_value = fm(m00.reshape(1,-1))[0]
-        f11 = fm(~m00.reshape(1,-1))[0]
+            self._curr_base_value = fm(m00.reshape(1, -1))[0]
+        f11 = fm(~m00.reshape(1, -1))[0]
 
         if callable(self.masker.clustering):
             self._clustering = self.masker.clustering(*row_args)
@@ -146,7 +142,6 @@ class Partition(Explainer):
             out_shape = (2*self._clustering.shape[0]+1, len(outputs))
         else:
             out_shape = (2*self._clustering.shape[0]+1,)
-
 
         if max_evals == "auto":
             max_evals = 100
@@ -164,7 +159,7 @@ class Partition(Explainer):
         # else:
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
-        
+
         def lower_credit(i, value=0):
             if i < M:
                 self.values[i] += value
@@ -179,7 +174,7 @@ class Partition(Explainer):
             lower_credit(li, self.values[i] * lsize / group_size)
             lower_credit(ri, self.values[i] * rsize / group_size)
         lower_credit(len(self.dvalues) - 1)
-            
+
         return {
             "values": self.values[:M].copy(),
             "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],
@@ -194,7 +189,7 @@ class Partition(Explainer):
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
         """
-        
+
         #f = self._reshaped_model
         #r = self.masker
         #masks = np.zeros(2*len(inds)+1, dtype=np.int)
@@ -267,19 +262,19 @@ class Partition(Explainer):
                 m10[:] += self._mask_matrix[lind, :]
                 m01 = m00.copy()
                 m01[:] += self._mask_matrix[rind, :]
-                
+
                 batch_args.append((m00, m10, m01, f00, f11, ind, lind, rind, weight))
                 batch_masks.append(m10)
                 batch_masks.append(m01)
 
             batch_masks = np.array(batch_masks)
-                
+
             # run the batch
             if len(batch_args) > 0:
                 fout = fm(batch_masks)
                 if output_indexes is not None:
                     fout = fout[:,output_indexes]
-                    
+
                 eval_count += len(batch_masks)
 
                 if pbar is None and time.time() - start_time > 5:
@@ -290,7 +285,7 @@ class Partition(Explainer):
 
             # use the results of the batch to add new nodes
             for i in range(len(batch_args)):
-                
+
                 m00, m10, m01, f00, f11, ind, lind, rind, weight = batch_args[i]
 
                 # get the evaluated model output on the two new masked inputs
@@ -322,73 +317,11 @@ class Partition(Explainer):
                     # recurse on the right node with one context
                     args = (m10, f10, f11, rind, new_weight)
                     q.put((-np.max(np.abs(f11 - f10)) * new_weight, np.random.randn(), args))
-                    
+
         if pbar is not None:
             pbar.close()
-        
+
         return output_indexes, base_value
-
-    def save(self, out_file):
-        """ Saves content of permutation explainer
-        """
-
-        pickle.dump(type(self), out_file)
-        
-        if callable(self.model.save):
-            self.model.save(out_file, self.model.model)
-        else:
-            pickle.dump(None,out_file)
-        
-        if callable(self.masker.save):
-            self.masker.save(out_file, self.masker)
-        else:
-            pickle.dump(None,out_file)
-        
-        if hasattr(self, 'partition_tree'):
-            cloudpickle.dump(self.partition_tree, out_file)
-        else:
-            cloudpickle.dump(None, out_file)
-        
-        if hasattr(self, 'output_names'):
-            cloudpickle.dump(self.output_names, out_file)
-        else:
-            cloudpickle.dump(None, out_file)
-
-        cloudpickle.dump(self.link, out_file)
-        cloudpickle.dump(self.link.inverse,out_file)
-
-        if hasattr(self, 'feature_names'):
-            cloudpickle.dump(self.feature_names, out_file)
-        else:
-            cloudpickle.dump(None, out_file)
-
-    @classmethod
-    def load(cls, in_file, model_loader = None, masker_loader = None):
-        explainer_type = pickle.load(in_file)
-        if not explainer_type == cls:
-            print("Warning: Saved explainer type not same as the one that's attempting to be loaded. Saved explainer type: ", explainer_type)
-        
-        return Partition._load(in_file, model_loader, masker_loader)
-    
-    @classmethod
-    def _load(cls, in_file, model_loader = None, masker_loader = None):
-        if model_loader is None:
-            model = Model.load(in_file)
-        else:
-            model = model_loader(in_file)
-        
-        if masker_loader is None:
-            masker = Masker.load(in_file)
-        else:
-            masker = masker_loader(in_file)
-
-        partition_tree = cloudpickle.load(in_file)
-        output_names = cloudpickle.load(in_file)
-        link = cloudpickle.load(in_file)
-        link_inverse = cloudpickle.load(in_file)
-        link.inverse = link_inverse
-        feature_names = cloudpickle.load(in_file)
-        return Partition(model, masker, partition_tree=partition_tree, output_names=output_names, link=link, feature_names=feature_names)
 
 
 def output_indexes_len(output_indexes):
@@ -398,5 +331,5 @@ def output_indexes_len(output_indexes):
         return int(output_indexes[4:-1])
     elif output_indexes.startswith("max(abs("):
         return int(output_indexes[8:-2])
-    elif type(output_indexes) is not str:
+    elif not isinstance(output_indexes, str):
         return len(output_indexes)

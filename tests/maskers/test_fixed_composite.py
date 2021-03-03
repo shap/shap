@@ -32,7 +32,7 @@ def test_serialization_fixedcomposite_masker():
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased",use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)
     underlying_masker = shap.maskers.Text(tokenizer)
     original_masker = shap.maskers.FixedComposite(underlying_masker)
 
@@ -50,7 +50,7 @@ def test_serialization_fixedcomposite_masker():
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
-    original_masked_output = original_masker(test_input_mask,test_text)
-    new_masked_output = new_masker(test_input_mask,test_text)
+    original_masked_output = original_masker(test_input_mask, test_text)
+    new_masked_output = new_masker(test_input_mask, test_text)
 
     assert original_masked_output == new_masked_output
