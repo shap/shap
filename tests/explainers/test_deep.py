@@ -2,6 +2,7 @@
 """
 
 from distutils.version import LooseVersion
+from urllib.error import HTTPError
 import numpy as np
 import pandas as pd
 import pytest
@@ -306,20 +307,23 @@ def test_pytorch_mnist_cnn(tmpdir):
 
     batch_size = 128
 
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(tmpdir, train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=batch_size, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(tmpdir, train=False, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=batch_size, shuffle=True)
+    try:
+        train_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(tmpdir, train=True, download=True,
+                        transform=transforms.Compose([
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.1307,), (0.3081,))
+                        ])),
+            batch_size=batch_size, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(tmpdir, train=False, download=True,
+                        transform=transforms.Compose([
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.1307,), (0.3081,))
+                        ])),
+            batch_size=batch_size, shuffle=True)
+    except HTTPError:
+        pytest.skip()
 
     #print('Running test on interim layer')
     run_test(train_loader, test_loader, interim=True)

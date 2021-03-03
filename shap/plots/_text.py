@@ -11,7 +11,7 @@ import json
 # the force plot and the coloring to update based on mouseovers (or clicks to make it fixed) of the output text
 def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xmin=None, xmax=None, cmax=None):
     """ Plots an explanation of a string of text using coloring and interactive labels.
-    
+
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
 
@@ -59,7 +59,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         return xmin, xmax, cmax
 
     # loop when we get multi-row inputs
-    if len(shap_values.shape) == 2 and shap_values.output_names is None:
+    if len(shap_values.shape) == 2 and (shap_values.output_names is None or isinstance(shap_values.output_names, str)):
         xmin = 0
         xmax = 0
         cmax = 0
@@ -1162,7 +1162,9 @@ def heatmap(shap_values):
 
 
 def unpack_shap_explanation_contents(shap_values):
-    values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    values = getattr(shap_values, "hierarchical_values", None)
+    if values is None:
+        values = shap_values.values
     clustering = getattr(shap_values, "clustering", None)
 
     return values, clustering

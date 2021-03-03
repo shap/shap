@@ -111,12 +111,12 @@ class Partition(Explainer):
         """
 
         if fixed_context == "auto":
+            # if isinstance(self.masker, maskers.Text):
+            #     fixed_context = 1 # we err on the side of speed for text models
+            # else:
             fixed_context = None
-        elif fixed_context in [0, 1, None]:
-            fixed_context = fixed_context
-        else:
+        elif fixed_context not in [0, 1, None]:
             raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
-
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)
@@ -143,7 +143,6 @@ class Partition(Explainer):
         else:
             out_shape = (2*self._clustering.shape[0]+1,)
 
-
         if max_evals == "auto":
             max_evals = 100
 
@@ -160,7 +159,7 @@ class Partition(Explainer):
         # else:
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
-        
+
         def lower_credit(i, value=0):
             if i < M:
                 self.values[i] += value
@@ -175,7 +174,7 @@ class Partition(Explainer):
             lower_credit(li, self.values[i] * lsize / group_size)
             lower_credit(ri, self.values[i] * rsize / group_size)
         lower_credit(len(self.dvalues) - 1)
-            
+
         return {
             "values": self.values[:M].copy(),
             "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],
@@ -190,7 +189,7 @@ class Partition(Explainer):
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
         """
-        
+
         #f = self._reshaped_model
         #r = self.masker
         #masks = np.zeros(2*len(inds)+1, dtype=np.int)
@@ -263,19 +262,19 @@ class Partition(Explainer):
                 m10[:] += self._mask_matrix[lind, :]
                 m01 = m00.copy()
                 m01[:] += self._mask_matrix[rind, :]
-                
+
                 batch_args.append((m00, m10, m01, f00, f11, ind, lind, rind, weight))
                 batch_masks.append(m10)
                 batch_masks.append(m01)
 
             batch_masks = np.array(batch_masks)
-                
+
             # run the batch
             if len(batch_args) > 0:
                 fout = fm(batch_masks)
                 if output_indexes is not None:
                     fout = fout[:,output_indexes]
-                    
+
                 eval_count += len(batch_masks)
 
                 if pbar is None and time.time() - start_time > 5:
@@ -286,7 +285,7 @@ class Partition(Explainer):
 
             # use the results of the batch to add new nodes
             for i in range(len(batch_args)):
-                
+
                 m00, m10, m01, f00, f11, ind, lind, rind, weight = batch_args[i]
 
                 # get the evaluated model output on the two new masked inputs

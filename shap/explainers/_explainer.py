@@ -288,13 +288,15 @@ class Explainer(Serializable):
         clustering = pack_values(clustering)
 
         # getting output labels
+        ragged_outputs = False
         if output_indices is not None:
             ragged_outputs = not all(len(x) == len(output_indices[0]) for x in output_indices)
         if self.output_names is None:
             if None not in output_names:
-                sliced_labels = [np.array(output_names[i])[index_list] for i,index_list in enumerate(output_indices)]
                 if not ragged_outputs:
-                    sliced_labels = np.array(sliced_labels)
+                    sliced_labels = np.array(output_names)
+                else:
+                    sliced_labels = [np.array(output_names[i])[index_list] for i,index_list in enumerate(output_indices)]
             else:
                 sliced_labels = None
         else:
@@ -302,6 +304,10 @@ class Explainer(Serializable):
             sliced_labels = [labels[index_list] for index_list in output_indices]
             if not ragged_outputs:
                 sliced_labels = np.array(sliced_labels)
+
+        if isinstance(sliced_labels, np.ndarray) and len(sliced_labels.shape) == 2:
+            if np.all(sliced_labels[0,:] == sliced_labels):
+                sliced_labels = sliced_labels[0]
 
         # build the explanation objects
         out = []

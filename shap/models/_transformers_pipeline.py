@@ -32,5 +32,5 @@ class TransformersPipeline(Model):
             if not isinstance(val, list):
                 val = [val]
             for obj in val:
-                output[i, self.label2id[obj["label"]]] = sp.special.logit(obj["score"])
+                output[i, self.label2id[obj["label"]]] = sp.special.logit(obj["score"]) if self.rescale_to_logits else obj["score"]
         return output

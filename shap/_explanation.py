@@ -99,10 +99,22 @@ class Explanation(object, metaclass=MetaExplanation):
 
         if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
-            if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
-                output_names = Alias(list(output_names), 0)
-            elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
-                output_names = Alias(list(output_names), 1)
+            output_names = Alias(list(output_names), output_dims[0])
+            # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
+            #     output_names = Alias(list(output_names), 0)
+            # elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
+            #     output_names = Alias(list(output_names), 1)
+
+        if output_names is not None and not isinstance(output_names, Alias):
+            l = len(_compute_shape(output_names))
+            if l == 0:
+                pass
+            elif l == 1:
+                output_names = Obj(output_names, output_dims)
+            elif l == 2:
+                output_names = Obj(output_names, [0] + list(output_dims))
+            else:
+                raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
 
         self._s = Slicer(
             values=values,
@@ -111,7 +123,7 @@ class Explanation(object, metaclass=MetaExplanation):
             display_data=display_data,
             instance_names=None if instance_names is None else Alias(instance_names, 0),
             feature_names=feature_names,
-            output_names= output_names, # None if output_names is None else Alias(output_names, output_dims),
+            output_names=output_names,
             output_indexes=None if output_indexes is None else (output_dims, output_indexes),
             lower_bounds=lower_bounds,
             upper_bounds=upper_bounds,
@@ -232,13 +244,13 @@ class Explanation(object, metaclass=MetaExplanation):
         return out
 
     def __getitem__(self, item):
-        """ This adds support for magic string indexes like "rank(0)".
+        """ This adds support for OpChain indexing.
         """
         if not isinstance(item, tuple):
             item = (item,)
 
         # convert any OpChains or magic strings
-        for i, t in enumerate(item):
+        for pos, t in enumerate(item):
             orig_t = t
             if issubclass(type(t), OpChain):
                 t = t.apply(self)
@@ -249,47 +261,56 @@ class Explanation(object, metaclass=MetaExplanation):
             elif issubclass(type(t), Explanation):
                 t = t.values
             elif isinstance(t, str):
-                if is_1d(self.feature_names):
-                    ind = np.where(np.array(self.feature_names) == t)[0][0]
-                    t = int(ind)
-                else:
+
+                # work around for 2D output_names since they are not yet slicer supported
+                output_names_dims = []
+                if "output_names" in self._s._objects:
+                    output_names_dims = self._s._objects["output_names"].dim
+                if pos != 0 and pos in output_names_dims and len(output_names_dims) == 2:
                     new_values = []
                     new_base_values = []
                     new_data = []
-                    if self.output_names is not None and (self.output_names.ndim >= 2 or self.output_names.shape[0] >= 2):
-                        new_self = copy.deepcopy(self)
-                        for i in range(len(self.values)):
-                            for j in range(len(self.output_names[i])): 
-                                s = self.output_names[i][j]
-                                if s == t: 
-                                    new_values.append(np.array(self.values[i][:,j]))
-                                    new_data.append(np.array(self.data[i]))
-                                    new_base_values.append(self.base_values[i][j])
-                        new_self = copy.deepcopy(self)
-                        new_self.values = np.array(new_values)
-                        new_self.base_values = np.array(new_base_values)
-                        new_self.data = np.array(new_data)
-                        new_self.output_names = t
-                        new_self.feature_names = np.array(new_data)
-                        new_self.clustering = None
-                    else: 
-                        for i in range(len(self.values)):
-                            for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
-                                if s == t:
-                                    new_values.append(v)
-                                    new_data.append(d)
-                        new_self = copy.deepcopy(self)
-                        new_self.values = new_values
-                        new_self.data = new_data
-                        new_self.feature_names = t
-                        new_self.clustering = None
+                    new_self = copy.deepcopy(self)
+                    for i in range(len(self.values)):
+                        for j in range(len(self.output_names[i])):
+                            s = self.output_names[i][j]
+                            if s == t:
+                                new_values.append(np.array(self.values[i][:,j]))
+                                new_data.append(np.array(self.data[i]))
+                                new_base_values.append(self.base_values[i][j])
+                    new_self = copy.deepcopy(self)
+                    new_self.values = np.array(new_values)
+                    new_self.base_values = np.array(new_base_values)
+                    new_self.data = np.array(new_data)
+                    new_self.output_names = t
+                    new_self.feature_names = np.array(new_data)
+                    new_self.clustering = None
+
+                # work around for 2D feature_names since they are not yet slicer supported
+                feature_names_dims = []
+                if "feature_names" in self._s._objects:
+                    feature_names_dims = self._s._objects["feature_names"].dim
+                if pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2:
+                    new_values = []
+                    new_data = []
+                    for i in range(len(self.values)):
+                        for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
+                            if s == t:
+                                new_values.append(v)
+                                new_data.append(d)
+                    new_self = copy.deepcopy(self)
+                    new_self.values = new_values
+                    new_self.data = new_data
+                    new_self.feature_names = t
+                    new_self.clustering = None
                     return new_self
+
             if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
 
             if t is not orig_t:
                 tmp = list(item)
-                tmp[i] = t
+                tmp[pos] = t
                 item = tuple(tmp)
 
         # call slicer for the real work
@@ -626,7 +647,7 @@ class Percentile(Op):
 
 
 def _compute_shape(x):
-    if not hasattr(x, "__len__"):
+    if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
     elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(x[0], str):
         return (None,)

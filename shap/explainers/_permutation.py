@@ -41,9 +41,9 @@ class Permutation(Explainer):
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
         super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
-        
-        self.model = Model(model)
 
+        if not isinstance(model, Model):
+            self.model = Model(model)
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
@@ -94,33 +94,37 @@ class Permutation(Explainer):
                 for ind in inds:
                     masks[i] = ind
                     i += 1
-                
+
                 # evaluate the masked model
                 outputs = fm(masks, batch_size=batch_size)
 
                 if row_values is None:
                     row_values = np.zeros((len(fm),) + outputs.shape[1:])
-                
+
                 # update our SHAP value estimates
                 for i,ind in enumerate(inds):
                     row_values[ind] += outputs[i+1] - outputs[i]
                 for i,ind in enumerate(inds):
                     row_values[ind] += outputs[i+1] - outputs[i]
-            
+
+            if npermutations == 0:
+                raise Exception("max_evals is too low for the Permutation explainer, it must be at least 2 * num_features + 1!")
+
             expected_value = outputs[0]
 
             # compute the main effects if we need to
             if main_effects:
                 main_effect_values = fm.main_effects(inds)
-        
+
         return {
             "values": row_values / (2 * npermutations),
             "expected_values": expected_value,
             "mask_shapes": fm.mask_shapes,
             "main_effects": main_effect_values,
-            "clustering": row_clustering
+            "clustering": row_clustering,
+            "output_names": self.model.output_names if hasattr(self.model, "output_names") else None
         }
-    
+
 
     def shap_values(self, X, npermutations=10, main_effects=False, error_bounds=False, batch_evals=True, silent=False):
         """ Legacy interface to estimate the SHAP values for a set of samples.

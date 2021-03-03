@@ -53,7 +53,7 @@ class Text(Masker):
         else:
             self.mask_token_segment = self.token_segments(self.mask_token)[self.keep_prefix:]
 
-        # note if this masker can use different background for different samples
+        # note if this masker can use a different background for different samples
         self.fixed_background = self.mask_token_id is None
 
         self.default_batch_size = 5
@@ -188,6 +188,12 @@ class Text(Masker):
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
         special_tokens = [self.tokenizer.sep_token] if 'sep_token' in self.tokenizer.special_tokens_map else None
         pt = partition_tree(decoded_x, special_tokens)
+
+        # use the rescaled size of the clusters as their height since the merge scores are just a
+        # heuristic and not scaled well
+        pt[:, 2] = pt[:, 3]
+        pt[:, 2] /= pt[:, 2].max()
+
         return pt
 
     # unused because restricts meaningful perturbations
