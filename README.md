@@ -17,7 +17,7 @@
 
 ## Install
 
-Shap can be installed from either [PyPI](https://pypi.org/project/shap) or [conda-forge](https://anaconda.org/conda-forge/shap):
+SHAP can be installed from either [PyPI](https://pypi.org/project/shap) or [conda-forge](https://anaconda.org/conda-forge/shap):
 
 <pre>
 pip install shap
@@ -25,7 +25,7 @@ pip install shap
 conda install -c conda-forge shap
 </pre>
 
-## Tree ensemble example with TreeExplainer (XGBoost/LightGBM/CatBoost/scikit-learn/pyspark models)
+## Tree ensemble example (XGBoost/LightGBM/CatBoost/scikit-learn/pyspark models)
 
 While SHAP can explain the output of any machine learning model, we have developed a high-speed exact algorithm for tree ensemble methods (see our [Nature MI paper](https://rdcu.be/b0z70)). Fast C++ implementations are supported for *XGBoost*, *LightGBM*, *CatBoost*, *scikit-learn* and *pyspark* tree models:
 
@@ -33,78 +33,54 @@ While SHAP can explain the output of any machine learning model, we have develop
 import xgboost
 import shap
 
-# load JS visualization code to notebook
-shap.initjs()
-
-# train XGBoost model
-X,y = shap.datasets.boston()
-model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+# train an XGBoost model
+X, y = shap.datasets.boston()
+model = xgboost.XGBRegressor().fit(X, y)
 
 # explain the model's predictions using SHAP
-# (same syntax works for LightGBM, CatBoost, scikit-learn and spark models)
-explainer = shap.TreeExplainer(model)
-shap_values = explainer.shap_values(X)
+# (same syntax works for LightGBM, CatBoost, scikit-learn, transformers, Spark, etc.)
+explainer = shap.Explainer(model)
+shap_values = explainer(X)
 
-# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
-shap.force_plot(explainer.expected_value, shap_values[0,:], X.iloc[0,:])
+# visualize the first prediction's explanation
+shap.plots.waterfall(shap_values[0])
+```
+
+<p align="center">
+  <img width="616" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_waterfall.png" />
+</p>
+
+The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue. Another way to visualize the same explanation is to use a force plot (these are introduced in our [Nature BME paper](https://rdcu.be/baVbR)):
+
+```python
+# visualize the first prediction's explanation with a force plot
+shap.plots.force(shap_values[0])
 ```
 
 <p align="center">
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_instance.png" />
 </p>
 
-<!--If you want to use `matplotlib` backend in place of javascript, you can do so as shown below. You can also rotate the feature names using `text_rotation` parameter, if your dataset has really long feature names.
-```python
-%matplotlib inline
-import xgboost
-import shap
-
-# train XGBoost model
-X,y = shap.datasets.boston()
-
-model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
-# explain the model's predictions using SHAP
-# (same syntax works for LightGBM, CatBoost, scikit-learn and spark models)
-explainer = shap.TreeExplainer(model)
-shap_values = explainer.shap_values(X)
-# visualize the first prediction's explanation using matplotlib (no javascript needed)
-# rotate the annotations so that they are legible when you have really long attribute names
-shap.force_plot(
-    explainer.expected_value, 
-    shap_values[0, :], 
-    X.iloc[0, :], 
-    matplotlib=True, 
-    text_rotation=30, 
-    show=True
-)
-```
-
-<p align="center">
-  <img width="811" src="https://raw.githubusercontent.com/vatsan/shap/master/docs/artwork/force_plot_matplotlib_rotate.png" />
-</p>-->
-
-The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue (these force plots are introduced in our [Nature BME paper](https://rdcu.be/baVbR)).
-
-If we take many explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset (in the notebook this plot is interactive):
+If we take many force plot explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset (in the notebook this plot is interactive):
 
 ```python
-# visualize the training set predictions
-shap.force_plot(explainer.expected_value, shap_values, X)
+# visualize all the training set predictions
+shap.plots.force(shap_values)
 ```
 
 <p align="center">
   <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
-To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as RM (the average number of rooms per house in an area) changes. Vertical dispersion at a single value of RM represents interaction effects with other features. To help reveal these interactions `dependence_plot` automatically selects another feature for coloring. In this case coloring by RAD (index of accessibility to radial highways) highlights that the average number of rooms per house has less impact on home price for areas with a high RAD value.
+To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as RM (the average number of rooms per house in an area) changes. Vertical dispersion at a single value of RM represents interaction effects with other features. To help reveal these interactions we can color by another feature. If we pass the whole explanation tensor to the `color` argument the scatter plot will pick the best feature to color by. In this case it picks RAD (index of accessibility to radial highways) since that highlights that the average number of rooms per house has less impact on home price for areas with a high RAD value.
 
 ```python
-# create a dependence plot to show the effect of a single feature across the whole dataset
-shap.dependence_plot("RM", shap_values, X)
+# create a dependence scatter plot to show the effect of a single feature across the whole dataset
+shap.plots.scatter(shap_values[:,"RM"], color=shap_values)
 ```
 
 <p align="center">
-  <img width="544" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_dependence_plot.png" />
+  <img width="544" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_scatter.png" />
 </p>
 
 
@@ -112,21 +88,21 @@ To get an overview of which features are most important for a model we can plot 
 
 ```python
 # summarize the effects of all the features
-shap.summary_plot(shap_values, X)
+shap.plots.beeswarm(shap_values)
 ```
 
 <p align="center">
-  <img width="483" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot.png" />
+  <img width="583" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_beeswarm.png" />
 </p>
 
 We can also just take the mean absolute value of the SHAP values for each feature to get a standard bar plot (produces stacked bars for multi-class outputs):
 
 ```python
-shap.summary_plot(shap_values, X, plot_type="bar")
+shap.plots.bar(shap_values)
 ```
 
 <p align="center">
-  <img width="470" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_summary_plot_bar.png" />
+  <img width="570" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_global_bar.png" />
 </p>
 
 ## Deep learning example with DeepExplainer (TensorFlow/Keras models)
