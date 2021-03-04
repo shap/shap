@@ -105,6 +105,29 @@ shap.plots.bar(shap_values)
   <img width="570" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/boston_global_bar.png" />
 </p>
 
+## Natural language example (transformers)
+
+SHAP has specific support for natural language models like those in the Hugging Face transformers library. By adding coalitional rules to traditional Shapley values we can form games that explain large modern NLP model using very few function evaluations. Using this functionality is as simple as passing a supported transformers pipeline to SHAP:
+
+```python
+import transformers
+import shap
+
+# load a transformers pipeline model
+model = transformers.pipeline('sentiment-analysis', return_all_scores=True)
+
+# explain the model on two sample inputs
+explainer = shap.Explainer(model) 
+shap_values = explainer(["What a great movie! ...if you have no taste."])
+
+# visualize the first prediction's explanation for the POSITIVE output class
+shap.plots.text(shap_values[0, :, "POSITIVE"])
+```
+
+<p align="center">
+  <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/sentiment_text_analysis.png" />
+</p>
+
 ## Deep learning example with DeepExplainer (TensorFlow/Keras models)
 
 Deep SHAP is a high-speed approximation algorithm for SHAP values in deep learning models that builds on a connection with [DeepLIFT](https://arxiv.org/abs/1704.02685) described in the SHAP NIPS paper. The implementation here differs from the original DeepLIFT by using a distribution of background samples instead of a single reference value, and using Shapley equations to linearize components such as max, softmax, products, divisions, etc. Note that some of these enhancements have also been since integrated into DeepLIFT. TensorFlow models and Keras models using the TensorFlow backend are supported (there is also preliminary support for PyTorch):
