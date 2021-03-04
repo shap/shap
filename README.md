@@ -125,7 +125,7 @@ shap.plots.text(shap_values[0, :, "POSITIVE"])
 ```
 
 <p align="center">
-  <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/sentiment_text_analysis.png" />
+  <img width="811" src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/sentiment_analysis_plot.png" />
 </p>
 
 ## Deep learning example with DeepExplainer (TensorFlow/Keras models)
