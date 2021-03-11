@@ -88,7 +88,7 @@ class Tree(Explainer):
 
         Examples
         --------
-        See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
+        See `API examples <https://shap.readthedocs.io/en/latest/api_examples.html>`_
         """
         if feature_names is not None:
             self.data_feature_names=feature_names
