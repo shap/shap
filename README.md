@@ -8,6 +8,7 @@
 <a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.org/slundberg/shap.svg?branch=master"></a>
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/slundberg/shap/master)
 [![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
+[![Codecov](https://codecov.io/gh/slundberg/shap/branch/master/graph/badge.svg)](https://codecov.io/gh/slundberg/shap)
 
 **SHAP (SHapley Additive exPlanations)** is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions (see [papers](#citations) for details and citations).
 
@@ -117,7 +118,7 @@ import shap
 model = transformers.pipeline('sentiment-analysis', return_all_scores=True)
 
 # explain the model on two sample inputs
-explainer = shap.Explainer(model) 
+explainer = shap.Explainer(model)
 shap_values = explainer(["What a great movie! ...if you have no taste."])
 
 # visualize the first prediction's explanation for the POSITIVE output class
@@ -273,7 +274,7 @@ An implementation of Deep SHAP, a faster (but only approximate) algorithm to com
 
 - [**MNIST Digit classification with Keras**](https://slundberg.github.io/shap/notebooks/deep_explainer/Front%20Page%20DeepExplainer%20MNIST%20Example.html) - Using the MNIST handwriting recognition dataset, this notebook trains a neural network with Keras and then explains predictions using `shap`.
 
-- [**Keras LSTM for IMDB Sentiment Classification**](https://slundberg.github.io/shap/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.html) - This notebook trains an LSTM with Keras on the IMDB text sentiment analysis dataset and then explains predictions using `shap`. 
+- [**Keras LSTM for IMDB Sentiment Classification**](https://slundberg.github.io/shap/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.html) - This notebook trains an LSTM with Keras on the IMDB text sentiment analysis dataset and then explains predictions using `shap`.
 
 ### GradientExplainer
 
@@ -299,7 +300,7 @@ An implementation of Kernel SHAP, a model agnostic method to estimate SHAP value
 
 ## Documentation notebooks
 
-These notebooks comprehensively demonstrate how to use specific functions and objects. 
+These notebooks comprehensively demonstrate how to use specific functions and objects.
 
 - [`shap.decision_plot` and `shap.multioutput_decision_plot`](https://slundberg.github.io/shap/notebooks/plots/decision_plot.html)
 
@@ -325,7 +326,7 @@ These notebooks comprehensively demonstrate how to use specific functions and ob
 
 The algorithms and visualizations used in this package came primarily out of research in [Su-In Lee's lab](https://suinlee.cs.washington.edu) at the University of Washington, and Microsoft Research. If you use SHAP in your research we would appreciate a citation to the appropriate paper(s):
 
-- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)). 
+- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)).
 - For TreeExplainer you can read/cite our [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-019-0138-9) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/tree_explainer.bib); [free access](https://rdcu.be/b0z70)).
 - For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
 
