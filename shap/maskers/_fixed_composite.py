@@ -1,8 +1,12 @@
 import numpy as np
 from ._masker import Masker
-import pickle
+from .._serializable import Serializer, Deserializer
+
 
 class FixedComposite(Masker):
+    """ A masker that outputs both the masked data and the original data as a pair.
+    """
+
     def __init__(self, masker):
         """ Creates a Composite masker from an underlying masker and returns the original args along with the masked output.
 
@@ -35,22 +39,24 @@ class FixedComposite(Masker):
         if not isinstance(masked_X, tuple):
             masked_X = (masked_X,)
         return masked_X + wrapped_args
-    
-    def save(self, out_file, *args):
-        super(FixedComposite, self).save(out_file)
-        pickle.dump(type(self.masker), out_file)
-        self.masker.save(out_file)
+
+    def save(self, out_file):
+        """ Write a FixedComposite masker to a file stream.
+        """
+        super().save(out_file)
+
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.maskers.FixedComposite", version=0) as s:
+            s.save("masker", self.masker)
 
     @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return FixedComposite._load(in_file)
+    def load(cls, in_file, instantiate=True):
+        """ Load a FixedComposite masker from a file stream.
+        """
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-    @classmethod
-    def _load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        masker = masker_type.load(in_file)
-        fixedcomposite_masker = FixedComposite(masker)
-        return fixedcomposite_masker
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.maskers.FixedComposite", min_version=0, max_version=0) as s:
+            kwargs["masker"] = s.load("masker")
+        return kwargs

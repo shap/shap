@@ -11,7 +11,7 @@ import json
 # the force plot and the coloring to update based on mouseovers (or clicks to make it fixed) of the output text
 def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xmin=None, xmax=None, cmax=None):
     """ Plots an explanation of a string of text using coloring and interactive labels.
-    
+
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
 
@@ -35,7 +35,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
 
     xmax : float
         Maximum shap value bound.
-    
+
     cmax : float
         Maximum absolute shap value for sample. Used for scaling colors for input tokens. 
 
@@ -59,8 +59,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         return xmin, xmax, cmax
 
     # loop when we get multi-row inputs
-    if len(shap_values.shape) == 2 and shap_values.output_names is None:
-        
+    if len(shap_values.shape) == 2 and (shap_values.output_names is None or isinstance(shap_values.output_names, str)):
         xmin = 0
         xmax = 0
         cmax = 0
@@ -85,7 +84,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
             display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
             text(shap_values[i], num_starting_labels=num_starting_labels, group_threshold=group_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
         return
-    
+
     elif len(shap_values.shape) == 2 and shap_values.output_names is not None:
         text_to_text(shap_values)
         return
@@ -95,7 +94,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
             text(shap_values[i])
         return
 
-    
+
     # set any unset bounds
     xmin_new, xmax_new, cmax_new = values_min_max(shap_values.values, shap_values.base_values)
     if xmin is None:
@@ -104,7 +103,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
         xmax = xmax_new
     if cmax is None:
         cmax = cmax_new
-    
+
 
     values, clustering = unpack_shap_explanation_contents(shap_values)
     tokens, values, group_sizes = process_shap_values(shap_values.data, values, group_threshold, separator, clustering)
@@ -1163,7 +1162,9 @@ def heatmap(shap_values):
 
 
 def unpack_shap_explanation_contents(shap_values):
-    values = getattr(shap_values, "hierarchical_values", shap_values.values)
+    values = getattr(shap_values, "hierarchical_values", None)
+    if values is None:
+        values = shap_values.values
     clustering = getattr(shap_values, "clustering", None)
 
     return values, clustering

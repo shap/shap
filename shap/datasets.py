@@ -141,11 +141,11 @@ def adult(display=False):
 def nhanesi(display=False):
     """ A nicely packaged version of NHANES I data with surivival times as labels.
     """
-    X = pd.read_csv(cache(github_data_url + "NHANESI_subset_X.csv"))
-    y = pd.read_csv(cache(github_data_url + "NHANESI_subset_y.csv"))["y"]
+    X = pd.read_csv(cache(github_data_url + "NHANESI_X.csv"), index_col=0)
+    y = pd.read_csv(cache(github_data_url + "NHANESI_y.csv"), index_col=0)["y"]
     if display:
         X_display = X.copy()
-        X_display["Sex"] = ["Male" if v == 1 else "Female" for v in X["Sex"]]
+        #X_display["sex_isFemale"] = ["Female" if v else "Male" for v in X["sex_isFemale"]]
         return X_display, np.array(y)
     else:
         return X, np.array(y)

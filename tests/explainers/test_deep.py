@@ -1,9 +1,8 @@
 """ Tests for the Deep explainer.
 """
 
-import os
-
 from distutils.version import LooseVersion
+from urllib.error import HTTPError
 import numpy as np
 import pandas as pd
 import pytest
@@ -12,6 +11,7 @@ from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+# pylint: disable=import-outside-toplevel
 
 def test_tf_eager():
     """ This is a basic eager example from keras.
@@ -219,8 +219,9 @@ def test_pytorch_mnist_cnn(tmpdir):
     """
     torch = pytest.importorskip('torch')
     torchvision = pytest.importorskip('torchvision')
+    datasets = torchvision.datasets
+    transforms = torchvision.transforms
 
-    from torchvision import datasets, transforms
     from torch import nn
     from torch.nn import functional as F
 
@@ -231,7 +232,7 @@ def test_pytorch_mnist_cnn(tmpdir):
             """
 
             def __init__(self):
-                super(Net, self).__init__()
+                super().__init__()
                 # Testing several different activations
                 self.conv_layers = nn.Sequential(
                     nn.Conv2d(1, 10, kernel_size=5),
@@ -252,6 +253,8 @@ def test_pytorch_mnist_cnn(tmpdir):
                 )
 
             def forward(self, x):
+                """ Run the model.
+                """
                 x = self.conv_layers(x)
                 x = x.view(-1, 320)
                 x = self.fc_layers(x)
@@ -304,20 +307,23 @@ def test_pytorch_mnist_cnn(tmpdir):
 
     batch_size = 128
 
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(tmpdir, train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=batch_size, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(tmpdir, train=False, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=batch_size, shuffle=True)
+    try:
+        train_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(tmpdir, train=True, download=True,
+                        transform=transforms.Compose([
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.1307,), (0.3081,))
+                        ])),
+            batch_size=batch_size, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(tmpdir, train=False, download=True,
+                        transform=transforms.Compose([
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.1307,), (0.3081,))
+                        ])),
+            batch_size=batch_size, shuffle=True)
+    except HTTPError:
+        pytest.skip()
 
     #print('Running test on interim layer')
     run_test(train_loader, test_loader, interim=True)
@@ -342,8 +348,10 @@ def test_pytorch_custom_nested_models():
     loader = DataLoader(data, batch_size=128)
 
     class CustomNet1(nn.Module):
+        """ Model 1.
+        """
         def __init__(self):
-            super(CustomNet1, self).__init__()
+            super().__init__()
             self.net = nn.Sequential(
                 nn.Sequential(
                     nn.Conv1d(1, 1, 1),
@@ -353,27 +361,37 @@ def test_pytorch_custom_nested_models():
             )
 
         def forward(self, X):
+            """ Run the model.
+            """
             return self.net(X.unsqueeze(1)).squeeze(1)
 
     class CustomNet2(nn.Module):
+        """ Model 2.
+        """
         def __init__(self, num_features):
-            super(CustomNet2, self).__init__()
+            super().__init__()
             self.net = nn.Sequential(
                 nn.LeakyReLU(),
                 nn.Linear(num_features // 2, 2)
             )
 
         def forward(self, X):
+            """ Run the model.
+            """
             return self.net(X).unsqueeze(1)
 
     class CustomNet(nn.Module):
+        """ Model 3.
+        """
         def __init__(self, num_features):
-            super(CustomNet, self).__init__()
+            super().__init__()
             self.net1 = CustomNet1()
             self.net2 = CustomNet2(num_features)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
+            """ Run the model.
+            """
             x = self.net1(X)
             return self.maxpool2(self.net2(x)).squeeze(1)
 
@@ -432,8 +450,10 @@ def test_pytorch_single_output():
     loader = DataLoader(data, batch_size=128)
 
     class Net(nn.Module):
+        """ Test model.
+        """
         def __init__(self, num_features):
-            super(Net, self).__init__()
+            super().__init__()
             self.linear = nn.Linear(num_features // 2, 2)
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.convt1d = nn.ConvTranspose1d(1, 1, 1)
@@ -442,6 +462,8 @@ def test_pytorch_single_output():
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
+            """ Run the model.
+            """
             x = self.aapool1d(self.convt1d(self.conv1d(X.unsqueeze(1)))).squeeze(1)
             return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
     model = Net(num_features)
@@ -483,10 +505,12 @@ def test_pytorch_single_output():
 
 
 def test_pytorch_multiple_inputs():
+    """ Check a multi-input scenario.
+    """
     torch = pytest.importorskip('torch')
 
     def _run_pytorch_multiple_inputs_test(disconnected):
-        """Testing multiple inputs
+        """ Testing multiple inputs
         """
         from torch import nn
         from torch.nn import functional as F
@@ -503,8 +527,10 @@ def test_pytorch_multiple_inputs():
         loader = DataLoader(data, batch_size=128)
 
         class Net(nn.Module):
+            """ Testing model.
+            """
             def __init__(self, num_features, disconnected):
-                super(Net, self).__init__()
+                super().__init__()
                 self.disconnected = disconnected
                 if disconnected:
                     num_features = num_features // 2 + 1
@@ -515,6 +541,8 @@ def test_pytorch_multiple_inputs():
                 )
 
             def forward(self, x1, x2):
+                """ Run the model.
+                """
                 if self.disconnected:
                     x = self.linear(x1).unsqueeze(1)
                 else:

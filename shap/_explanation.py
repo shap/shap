@@ -66,18 +66,18 @@ class Explanation(object, metaclass=MetaExplanation):
     def __init__(
         self,
         values,
-        base_values = None,
-        data = None,
-        display_data = None,
-        instance_names = None,
-        feature_names = None,
-        output_names = None,
-        output_indexes = None,
-        lower_bounds = None,
-        upper_bounds = None,
-        main_effects = None,
-        hierarchical_values = None,
-        clustering = None
+        base_values=None,
+        data=None,
+        display_data=None,
+        instance_names=None,
+        feature_names=None,
+        output_names=None,
+        output_indexes=None,
+        lower_bounds=None,
+        upper_bounds=None,
+        main_effects=None,
+        hierarchical_values=None,
+        clustering=None
     ):
         self.op_history = []
 
@@ -87,7 +87,7 @@ class Explanation(object, metaclass=MetaExplanation):
             values = e.values
             base_values = e.base_values
             data = e.data
-            
+
         output_dims = compute_output_dims(values, base_values, data)
 
         if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
@@ -96,28 +96,40 @@ class Explanation(object, metaclass=MetaExplanation):
                 feature_names = Alias(list(feature_names), 0)
             elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
                 feature_names = Alias(list(feature_names), 1)
-        
+
         if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
-            if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
-                output_names = Alias(list(output_names), 0)
-            elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
-                output_names = Alias(list(output_names), 1)
-                
+            output_names = Alias(list(output_names), output_dims[0])
+            # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
+            #     output_names = Alias(list(output_names), 0)
+            # elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
+            #     output_names = Alias(list(output_names), 1)
+
+        if output_names is not None and not isinstance(output_names, Alias):
+            l = len(_compute_shape(output_names))
+            if l == 0:
+                pass
+            elif l == 1:
+                output_names = Obj(output_names, output_dims)
+            elif l == 2:
+                output_names = Obj(output_names, [0] + list(output_dims))
+            else:
+                raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
+
         self._s = Slicer(
-            values = values,
-            base_values = None if base_values is None else Obj(base_values, [0] + list(output_dims)),
-            data = data,
-            display_data = display_data,
-            instance_names = None if instance_names is None else Alias(instance_names, 0),
-            feature_names = feature_names, 
-            output_names =  output_names, # None if output_names is None else Alias(output_names, output_dims),
-            output_indexes = None if output_indexes is None else (output_dims, output_indexes),
-            lower_bounds = lower_bounds,
-            upper_bounds = upper_bounds,
-            main_effects = main_effects,
-            hierarchical_values = hierarchical_values,
-            clustering = None if clustering is None else Obj(clustering, [0])
+            values=values,
+            base_values=None if base_values is None else Obj(base_values, [0] + list(output_dims)),
+            data=data,
+            display_data=display_data,
+            instance_names=None if instance_names is None else Alias(instance_names, 0),
+            feature_names=feature_names,
+            output_names=output_names,
+            output_indexes=None if output_indexes is None else (output_dims, output_indexes),
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
+            main_effects=main_effects,
+            hierarchical_values=hierarchical_values,
+            clustering=None if clustering is None else Obj(clustering, [0])
         )
 
     @property
@@ -214,7 +226,7 @@ class Explanation(object, metaclass=MetaExplanation):
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
         """
-        
+
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         elif isinstance(cohorts, (list, tuple, np.ndarray)):
@@ -222,7 +234,7 @@ class Explanation(object, metaclass=MetaExplanation):
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
         else:
             raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
-        
+
     def __repr__(self):
         out = ".values =\n"+self.values.__repr__()
         if self.base_values is not None:
@@ -230,15 +242,15 @@ class Explanation(object, metaclass=MetaExplanation):
         if self.data is not None:
             out += "\n\n.data =\n"+self.data.__repr__()
         return out
-    
+
     def __getitem__(self, item):
-        """ This adds support for magic string indexes like "rank(0)".
+        """ This adds support for OpChain indexing.
         """
         if not isinstance(item, tuple):
             item = (item,)
-        
+
         # convert any OpChains or magic strings
-        for i,t in enumerate(item):
+        for pos, t in enumerate(item):
             orig_t = t
             if issubclass(type(t), OpChain):
                 t = t.apply(self)
@@ -248,50 +260,59 @@ class Explanation(object, metaclass=MetaExplanation):
                     t = [int(v) for v in t] # slicer wants lists not numpy arrays for indexing
             elif issubclass(type(t), Explanation):
                 t = t.values
-            elif type(t) is str:
-                if is_1d(self.feature_names):
-                    ind = np.where(np.array(self.feature_names) == t)[0][0]
-                    t = int(ind)
-                else:
+            elif isinstance(t, str):
+
+                # work around for 2D output_names since they are not yet slicer supported
+                output_names_dims = []
+                if "output_names" in self._s._objects:
+                    output_names_dims = self._s._objects["output_names"].dim
+                if pos != 0 and pos in output_names_dims and len(output_names_dims) == 2:
                     new_values = []
                     new_base_values = []
                     new_data = []
-                    if self.output_names is not None and (self.output_names.ndim >= 2 or self.output_names.shape[0] >= 2):
-                        new_self = copy.deepcopy(self)
-                        for i in range(len(self.values)):
-                            for j in range(len(self.output_names[i])): 
-                                s = self.output_names[i][j]
-                                if s == t: 
-                                    new_values.append(np.array(self.values[i][:,j]))
-                                    new_data.append(np.array(self.data[i]))
-                                    new_base_values.append(self.base_values[i][j])
-                        new_self = copy.deepcopy(self)
-                        new_self.values = np.array(new_values)
-                        new_self.base_values = np.array(new_base_values)
-                        new_self.data = np.array(new_data)
-                        new_self.output_names = t
-                        new_self.feature_names = np.array(new_data)
-                        new_self.clustering = None
-                    else: 
-                        for i in range(len(self.values)):
-                            for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
-                                if s == t:
-                                    new_values.append(v)
-                                    new_data.append(d)
-                        new_self = copy.deepcopy(self)
-                        new_self.values = new_values
-                        new_self.data = new_data
-                        new_self.feature_names = t
-                        new_self.clustering = None
+                    new_self = copy.deepcopy(self)
+                    for i in range(len(self.values)):
+                        for j in range(len(self.output_names[i])):
+                            s = self.output_names[i][j]
+                            if s == t:
+                                new_values.append(np.array(self.values[i][:,j]))
+                                new_data.append(np.array(self.data[i]))
+                                new_base_values.append(self.base_values[i][j])
+                    new_self = copy.deepcopy(self)
+                    new_self.values = np.array(new_values)
+                    new_self.base_values = np.array(new_base_values)
+                    new_self.data = np.array(new_data)
+                    new_self.output_names = t
+                    new_self.feature_names = np.array(new_data)
+                    new_self.clustering = None
+
+                # work around for 2D feature_names since they are not yet slicer supported
+                feature_names_dims = []
+                if "feature_names" in self._s._objects:
+                    feature_names_dims = self._s._objects["feature_names"].dim
+                if pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2:
+                    new_values = []
+                    new_data = []
+                    for i in range(len(self.values)):
+                        for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
+                            if s == t:
+                                new_values.append(v)
+                                new_data.append(d)
+                    new_self = copy.deepcopy(self)
+                    new_self.values = new_values
+                    new_self.data = new_data
+                    new_self.feature_names = t
+                    new_self.clustering = None
                     return new_self
+
             if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
-            
+
             if t is not orig_t:
                 tmp = list(item)
-                tmp[i] = t
+                tmp[pos] = t
                 item = tuple(tmp)
-        
+
         # call slicer for the real work
         new_self = copy.copy(self)
         new_self._s = self._s.__getitem__(item)
@@ -623,11 +644,10 @@ class Percentile(Op):
     def add_repr(self, s, verbose=False):
         return "percentile("+s+", "+str(self.percentile)+")"
 
-    
 
 
 def _compute_shape(x):
-    if not hasattr(x, "__len__"):
+    if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
     elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(x[0], str):
         return (None,)
@@ -643,18 +663,19 @@ def _compute_shape(x):
         if len(x) == 0:
             return (0,)
         elif len(x) == 1:
-            return (len(x),) + _compute_shape(x[0])
+            return (1,) + _compute_shape(x[0])
         else:
             first_shape = _compute_shape(x[0])
             if first_shape == tuple():
                 return (len(x),)
             else: # we have an array of arrays...
-                for i in range(1,len(x)):
+                matches = np.ones(len(first_shape), dtype=np.bool)
+                for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
-                    if shape != first_shape: # TODO: detect when some inner dims match and some don't (right now we assume they all don't)
-                        assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
-                        return (len(x),) + (None,) * len(shape)
-                return (len(x),) + first_shape
+                    assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
+                    for j in range(0, len(shape)):
+                        matches[j] &= shape[j] == first_shape[j]
+                return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
 
 class Cohorts():
     def __init__(self, **kwargs):

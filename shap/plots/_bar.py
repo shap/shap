@@ -102,18 +102,18 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             if op.get("collapsed_instances", False): # see if this if the first op to collapse the instances
                 cohort_sizes.append(op["prev_shape"][0])
                 break
-    
+
 
     # unwrap any pandas series
     if str(type(features)) == "<class 'pandas.core.series.Series'>":
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
-    
+
     # ensure we at least have default feature names
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(len(values[0]))])
-    
+
     # determine how many top features we will plot
     if max_display is None:
         max_display = len(feature_names)
@@ -134,7 +134,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             # now relax the requirement to match the parition tree ordering for connections above clustering_cutoff
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, clustering_cutoff, feature_order)
-        
+
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
             if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= clustering_cutoff:
@@ -149,7 +149,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
                 break
         else:
             break
-    
+
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
     y_pos = np.arange(len(feature_inds), 0, -1)
@@ -157,11 +157,13 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     for pos,inds in enumerate(orig_inds):
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
-        elif len(inds) <= 2:
-            feature_names_new.append(" + ".join([feature_names[i] for i in inds]))
         else:
-            max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-            feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds)-1))
+            full_print = " + ".join([feature_names[i] for i in inds])
+            if len(full_print) <= 40:
+                feature_names_new.append(full_print)
+            else:
+                max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
+                feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds)-1))
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
@@ -345,22 +347,22 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 #     return max(left_val, right_val) + 1, max(left_sum, right_sum)
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
-    
+
     # unwrap pandas series
     if str(type(features)) == "<class 'pandas.core.series.Series'>":
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
-        
+
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(len(shap_values))])
-    
+
     if max_display is None:
         max_display = 7
     else:
         max_display = min(len(feature_names), max_display)
-        
-    
+
+
     feature_order = np.argsort(-np.abs(shap_values))
     
     # 

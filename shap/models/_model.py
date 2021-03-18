@@ -1,27 +1,34 @@
-import pickle
-import cloudpickle
+from .._serializable import Serializable, Serializer, Deserializer
 
-class Model():
+
+class Model(Serializable):
+    """ This is the superclass of all models.
+    """
+
     def __init__(self, model=None):
-        """ This superclass of all model objects.
+        """ Wrap a callable model as a SHAP Model object.
         """
-        if type(model) == Model:
-            self.model = model.model
+        if isinstance(model, Model):
+            self.inner_model = model.inner_model
         else:
-            self.model = model
-    
+            self.inner_model = model
+
     def __call__(self, *args):
-        return self.model(*args)
-    
-    def save(self, out_file, *args):
-        pickle.dump(type(self), out_file)
-        cloudpickle.dump(self.model, out_file)
-    
+        return self.inner_model(*args)
+
+    def save(self, out_file):
+        """ Save the model to the given file stream.
+        """
+        super().save(out_file)
+        with Serializer(out_file, "shap.Model", version=0) as s:
+            s.save("model", self.inner_model)
+
     @classmethod
-    def load(cls, in_file):
-        model_type = pickle.load(in_file)
-        if model_type is None:
-            print("Warning: model was not found in saved file, please set model before using explainer.")
-            return None
-            
-        return cloudpickle.load(in_file)
+    def load(cls, in_file, instantiate=True):
+        if instantiate:
+            return cls._instantiated_load(in_file)
+
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.Model", min_version=0, max_version=0) as s:
+            kwargs["model"] = s.load("model")
+        return kwargs

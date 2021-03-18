@@ -1,8 +1,9 @@
-import numpy as np
 import queue
+import numpy as np
 from ..utils import assert_import, record_import_error
 from ._masker import Masker
-import pickle
+from .._serializable import Serializer, Deserializer
+
 try:
     import cv2
 except ImportError as e:
@@ -10,9 +11,12 @@ except ImportError as e:
 
 
 class Image(Masker):
+    """ This masks out image regions with blurring or inpainting.
+    """
+
     def __init__(self, mask_value, shape=None):
-        """ This masks out image regions according to the given tokenizer. 
-        
+        """ Build a new Image masker with the given masking value.
+
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
@@ -23,21 +27,22 @@ class Image(Masker):
             image shape needs to be provided.
         """
         if shape is None:
-            if type(mask_value) is str:
+            if isinstance(mask_value, str):
                 raise TypeError("When the mask_value is a string the shape parameter must be given!")
             self.input_shape = mask_value.shape # the (1,) is because we only return a single masked sample to average over
         else:
             self.input_shape = shape
-        
+
         self.input_mask_value = mask_value
 
         # This is the shape of the masks we expect
         self.shape = (1, np.prod(self.input_shape)) # the (1, ...) is because we only return a single masked sample to average over
-        
+
         self.blur_kernel = None
+        self._blur_value_cache = None
         if issubclass(type(mask_value), np.ndarray):
             self.mask_value = mask_value.flatten()
-        elif type(mask_value) is str:
+        elif isinstance(mask_value, str):
             assert_import("cv2")
             self.mask_value = mask_value
             if mask_value.startswith("blur("):
@@ -47,39 +52,38 @@ class Image(Masker):
         self.build_partition_tree()
 
         # note if this masker can use different background for different samples
-        self.fixed_background = type(self.mask_value) is not str
-        
+        self.fixed_background = not isinstance(self.mask_value, str)
+
         #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=np.bool)
         self.last_xid = None
-    
-    def __call__(self, mask, x):
 
+    def __call__(self, mask, x):
         if np.prod(x.shape) != np.prod(self.input_shape):
             raise Exception("The length of the image to be masked must match the shape given in the " + \
                             "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
                             " != "+" * ".join([str(i) for i in self.input_shape]))
 
         # unwrap single element lists (which are how single input models look in multi-input format)
-        if type(x) is list and len(x) == 1:
+        if isinstance(x, list) and len(x) == 1:
             x = x[0]
-        
+
         # we preserve flattend inputs as flattened and full-shaped inputs as their original shape
         in_shape = x.shape
         if len(x.shape) > 1:
             x = x.flatten()
-        
+
         # if mask is not given then we mask the whole image
         if mask is None:
             mask = np.zeros(np.prod(x.shape), dtype=np.bool)
-            
-        if type(self.mask_value) is str:
+
+        if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
                 if self.last_xid != id(x):
-                    self.blur_value = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).flatten()
+                    self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).flatten()
                     self.last_xid = id(x)
                 out = x.copy()
-                out[~mask] = self.blur_value[~mask]
-                
+                out[~mask] = self._blur_value_cache[~mask]
+
             elif self.mask_value == "inpaint_telea":
                 out = self.inpaint(x, ~mask, "INPAINT_TELEA")
             elif self.mask_value == "inpaint_ns":
@@ -89,28 +93,27 @@ class Image(Masker):
             out[~mask] = self.mask_value[~mask]
 
         return (out.reshape(1, *in_shape),)
-        
-    def blur(self, x, mask):
-        cv2.blur()
-        
+
     def inpaint(self, x, mask, method):
+        """ Fill in the masked parts of the image through inpainting.
+        """
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(2)
         if reshaped_mask.sum() == np.prod(self.input_shape[:-1]):
             out = x.reshape(self.input_shape).copy()
-            out[:] = out.mean((0,1))
+            out[:] = out.mean((0, 1))
             return out.flatten()
-        else:
-            return cv2.inpaint(
-                x.reshape(self.input_shape).astype(np.uint8),
-                reshaped_mask,
-                inpaintRadius=3,
-                flags=getattr(cv2, method)
-            ).astype(x.dtype).flatten()
+
+        return cv2.inpaint(
+            x.reshape(self.input_shape).astype(np.uint8),
+            reshaped_mask,
+            inpaintRadius=3,
+            flags=getattr(cv2, method)
+        ).astype(x.dtype).flatten()
 
     def build_partition_tree(self):
         """ This partitions an image into a herarchical clustering based on axis-aligned splits.
         """
-        
+
         xmin = 0
         xmax = self.input_shape[0]
         ymin = 0
@@ -126,14 +129,14 @@ class Image(Masker):
         q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
         ind = len(self.clustering) - 1
         while not q.empty():
-            neg_size, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
-            
+            _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
+
             if parent_ind >= 0:
                 self.clustering[parent_ind, 0 if is_left else 1] = ind + M
 
             # make sure we line up with a flattened indexing scheme
             if ind < 0:
-                assert -ind - 1 ==  xmin * total_ywidth * total_zwidth + ymin * total_zwidth + zmin
+                assert -ind - 1 == xmin * total_ywidth * total_zwidth + ymin * total_zwidth + zmin
 
             xwidth = xmax - xmin
             ywidth = ymax - ymin
@@ -175,40 +178,34 @@ class Image(Masker):
                 q.put((-rsize, rxmin, rxmax, rymin, rymax, rzmin, rzmax, ind, False))
 
             ind -= 1
-        
+
         # fill in the group sizes
         for i in range(len(self.clustering)):
-            li = int(self.clustering[i,0])
-            ri = int(self.clustering[i,1])
-            lsize = 1 if li < M else self.clustering[li-M,3]
-            rsize = 1 if ri < M else self.clustering[ri-M,3]
-            self.clustering[i,3] = lsize + rsize
+            li = int(self.clustering[i, 0])
+            ri = int(self.clustering[i, 1])
+            lsize = 1 if li < M else self.clustering[li-M, 3]
+            rsize = 1 if ri < M else self.clustering[ri-M, 3]
+            self.clustering[i, 3] = lsize + rsize
 
-    def save(self, out_file, *args):
-        super(Image, self).save(out_file)
-        pickle.dump(type(self.input_mask_value), out_file)
-        if issubclass(type(self.input_mask_value), np.ndarray):
-            np.save(out_file, self.input_mask_value)
-        else:
-            pickle.dump(self.input_mask_value, out_file)
-        pickle.dump(self.input_shape, out_file)
+    def save(self, out_file):
+        """ Write a Image masker to a file stream.
+        """
+        super().save(out_file)
 
-    @classmethod
-    def load(cls, in_file):
-        masker_type = pickle.load(in_file)
-        if not masker_type == cls:
-            print("Warning: Saved masker type not same as the one that's attempting to be loaded. Saved masker type: ", masker_type)
-        return Image._load(in_file)
+        # Increment the verison number when the encoding changes!
+        with Serializer(out_file, "shap.maskers.Image", version=0) as s:
+            s.save("mask_value", self.input_mask_value)
+            s.save("shape", self.input_shape)
 
     @classmethod
-    def _load(cls, in_file):
-        mask_value_type = pickle.load(in_file)
-        mask_value = None
-        if issubclass(mask_value_type, np.ndarray):
-            mask_value = np.load(in_file)
-        else:
-            mask_value = pickle.load(in_file)
-        shape = pickle.load(in_file)
-        image_masker = Image(mask_value, shape)
+    def load(cls, in_file, instantiate=True):
+        """ Load a Image masker from a file stream.
+        """
+        if instantiate:
+            return cls._instantiated_load(in_file)
 
-        return image_masker
+        kwargs = super().load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.maskers.Image", min_version=0, max_version=0) as s:
+            kwargs["mask_value"] = s.load("mask_value")
+            kwargs["shape"] = s.load("shape")
+        return kwargs
