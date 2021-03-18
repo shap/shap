@@ -127,7 +127,7 @@ def compile_cuda_module(host_args):
 
 
 def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spark, test_pyod,
-              with_cuda, test_transformers, test_pytorch, test_sentencepiece, test_opencv):
+              with_cuda, test_transformers, test_pytorch, test_sentencepiece, test_opencv, test_mlflow):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -179,6 +179,8 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         tests_require += ['sentencepiece']
     if test_opencv:
         tests_require += ['opencv-python']
+    if test_mlflow:
+        tests_require += ['mlflow']
 
     extras_require = {
         'plots': [
@@ -290,5 +292,5 @@ if __name__ == "__main__":
     try_run_setup(
         with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
         test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True, test_pytorch=True,
-        test_sentencepiece=True, test_opencv=True
+        test_sentencepiece=True, test_opencv=True, test_mlflow=True
     )

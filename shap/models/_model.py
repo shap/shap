@@ -12,6 +12,8 @@ class Model(Serializable):
             self.inner_model = model.inner_model
         else:
             self.inner_model = model
+        
+        self.model = model
 
     def __call__(self, *args):
         return self.inner_model(*args)
