@@ -372,7 +372,7 @@ def __run_measure(measure, X, y, model_generator, method_name, attribution_sign,
         else:
             A = attribution_sign * __strip_list(attr_function(X_test))
         nmask = np.ones(len(y_test)) * fcount
-        nmask = np.minimum(nmask, np.array(A >= 0).sum(1)).astype(np.int)
+        nmask = np.minimum(nmask, np.array(A >= 0).sum(1)).astype(int)
         return measure(
             nmask, X_train, y_train, X_test, y_test, A,
             model_generator, summary_function, trained_model, random_state
@@ -419,11 +419,11 @@ def batch_keep_absolute_retrain__roc_auc(X, y, model_generator, method_name, num
 def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num_fcounts):
     def score_function(fcount, X_train, X_test, y_train, y_test, attr_function, trained_model):
         A_train = np.abs(__strip_list(attr_function(X_train)))
-        nkeep_train = (np.ones(len(y_train)) * fcount).astype(np.int)
-        #nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(np.int)
+        nkeep_train = (np.ones(len(y_train)) * fcount).astype(int)
+        #nkeep_train = np.minimum(nkeep_train, np.array(A_train > 0).sum(1)).astype(int)
         A_test = np.abs(__strip_list(attr_function(X_test)))
-        nkeep_test = (np.ones(len(y_test)) * fcount).astype(np.int)
-        #nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(np.int)
+        nkeep_test = (np.ones(len(y_test)) * fcount).astype(int)
+        #nkeep_test = np.minimum(nkeep_test, np.array(A_test >= 0).sum(1)).astype(int)
         return metric(
             nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, A_train, A_test,
             model_generator, loss
@@ -511,7 +511,7 @@ def __check_cache(f, X):
         return __cache0
 
 def __intlogspace(start, end, count):
-    return np.unique(np.round(start + (end-start) * (np.logspace(0, 1, count, endpoint=True) - 1) / 9).astype(np.int))
+    return np.unique(np.round(start + (end-start) * (np.logspace(0, 1, count, endpoint=True) - 1) / 9).astype(int))
 
 def __toarray(X):
     """ Converts DataFrames to numpy arrays.

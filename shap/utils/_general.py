@@ -80,7 +80,7 @@ def potential_interactions(shap_values_column, shap_values_matrix):
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
-        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=np.float)
+        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=float)
 
         val_other = encoded_val_other
         v = 0.0
@@ -132,7 +132,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
-        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=np.float)
+        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=float)
 
         val_other = encoded_val_other
         v = 0.0

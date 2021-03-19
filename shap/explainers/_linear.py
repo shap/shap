@@ -189,7 +189,7 @@ class Linear(Explainer):
 
         mean_transform = np.zeros((M,M))
         x_transform = np.zeros((M,M))
-        inds = np.arange(M, dtype=np.int)
+        inds = np.arange(M, dtype=int)
         for _ in tqdm(range(nsamples), "Estimating transforms"):
             np.random.shuffle(inds)
             cov_inv_SiSi = np.zeros((0,0))
@@ -387,7 +387,7 @@ class Linear(Explainer):
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))
     C = np.matmul(np.matmul(D, C), D)
-    components = -np.ones(C.shape[0], dtype=np.int)
+    components = -np.ones(C.shape[0], dtype=int)
     count = -1
     for i in range(C.shape[0]):
         found_group = False

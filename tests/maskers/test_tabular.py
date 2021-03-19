@@ -28,7 +28,7 @@ def test_serialization_independent_masker_dataframe():
 
     temp_serialization_file.close()
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 
@@ -59,7 +59,7 @@ def test_serialization_independent_masker_numpy():
 
     temp_serialization_file.close()
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 
@@ -87,7 +87,7 @@ def test_serialization_partion_masker_dataframe():
 
     temp_serialization_file.close()
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 
@@ -116,7 +116,7 @@ def test_serialization_partion_masker_numpy():
 
     temp_serialization_file.close()
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 

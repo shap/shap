@@ -43,7 +43,7 @@ class Additive(Explainer):
                 # num_features = len(model.additive_terms_)
 
                 # fm = MaskedModel(self.model, self.masker, self.link, np.zeros(num_features))
-                # masks = np.ones((1, num_features), dtype=np.bool)
+                # masks = np.ones((1, num_features), dtype=bool)
                 # outputs = fm(masks)
                 # self.model(np.zeros(num_features))
                 # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
@@ -56,7 +56,7 @@ class Additive(Explainer):
 
         # pre-compute per-feature offsets
         fm = MaskedModel(self.model, self.masker, self.link, np.zeros(self.masker.shape[1]))
-        masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=np.bool)
+        masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=bool)
         for i in range(1, self.masker.shape[1]+1):
             masks[i,i-1] = False
         outputs = fm(masks)

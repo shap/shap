@@ -372,7 +372,7 @@ class Explainer(Serializable):
         """
 
         # mask each input on in isolation
-        masks = np.zeros(2*len(inds)-1, dtype=np.int)
+        masks = np.zeros(2*len(inds)-1, dtype=int)
         last_ind = -1
         for i in range(len(inds)):
             if i > 0:

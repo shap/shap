@@ -53,7 +53,7 @@ class MaskedModel():
             # we need to convert from delta masking to a full masking call because we were given a delta masking
             # input but the masker does not support delta masking
             else: 
-                full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=np.bool)
+                full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=bool)
                 _convert_delta_mask_to_full(masks, full_masks)
                 return self._full_masking_call(full_masks, batch_size=batch_size)
 
@@ -66,16 +66,16 @@ class MaskedModel():
         # else:
         #out = []
         do_delta_masking = getattr(self.masker, "reset_delta_masking", None) is not None
-        last_mask = np.zeros(masks.shape[1], dtype=np.bool)
-        batch_positions = np.zeros(len(masks)+1, dtype=np.int)
+        last_mask = np.zeros(masks.shape[1], dtype=bool)
+        batch_positions = np.zeros(len(masks)+1, dtype=int)
         #masked_inputs = np.zeros((len(masks) * self.masker.max_output_samples, masks.shape[1]))
         all_masked_inputs = []
         #batch_masked_inputs = []
-        num_mask_samples = np.zeros(len(masks), dtype=np.int)
-        num_varying_rows = np.zeros(len(masks), dtype=np.int)
+        num_mask_samples = np.zeros(len(masks), dtype=int)
+        num_varying_rows = np.zeros(len(masks), dtype=int)
         varying_rows = []
         if self._variants is not None:
-            delta_tmp = self._variants.copy().astype(np.int)
+            delta_tmp = self._variants.copy().astype(int)
         for i, mask in enumerate(masks):
 
             # mask the inputs
@@ -95,7 +95,7 @@ class MaskedModel():
 
             # see which rows have been updated, so we can only evaluate the model on the rows we need to
             if i == 0 or self._variants is None:
-                varying_rows.append(np.ones(num_mask_samples[i], dtype=np.bool))
+                varying_rows.append(np.ones(num_mask_samples[i], dtype=bool))
                 num_varying_rows[i] = num_mask_samples[i]
             else:
                 # a = np.any(self._variants & delta_mask, axis=1)
@@ -179,7 +179,7 @@ class MaskedModel():
 
         subset_masked_inputs = [arg[varying_rows.reshape(-1)] for arg in masked_inputs]
 
-        batch_positions = np.zeros(len(varying_rows)+1, dtype=np.int)
+        batch_positions = np.zeros(len(varying_rows)+1, dtype=int)
         for i in range(len(varying_rows)):
             batch_positions[i+1] = batch_positions[i] + num_varying_rows[i]
         
@@ -227,7 +227,7 @@ class MaskedModel():
             inds = np.arange(len(self))
 
         # mask each potentially nonzero input in isolation
-        masks = np.zeros(2*len(inds), dtype=np.int)
+        masks = np.zeros(2*len(inds), dtype=int)
         masks[0] = MaskedModel.delta_mask_noop_value
         last_ind = -1
         for i in range(len(inds)):
@@ -393,8 +393,8 @@ def make_masks(cluster_matrix):
     rec_fill_masks(mask_matrix_inds, cluster_matrix, M)
     
     # convert the array of index lists into CSR format
-    indptr = np.zeros(len(mask_matrix_inds) + 1, dtype=np.int)
-    indices = np.zeros(np.sum([len(v) for v in mask_matrix_inds]), dtype=np.int)
+    indptr = np.zeros(len(mask_matrix_inds) + 1, dtype=int)
+    indices = np.zeros(np.sum([len(v) for v in mask_matrix_inds]), dtype=int)
     pos = 0
     for i in range(len(mask_matrix_inds)):
         inds = mask_matrix_inds[i]
@@ -402,7 +402,7 @@ def make_masks(cluster_matrix):
         pos += len(inds)
         indptr[i+1] = pos
     mask_matrix = scipy.sparse.csr_matrix(
-        (np.ones(len(indices), dtype=np.bool), indices, indptr),
+        (np.ones(len(indices), dtype=bool), indices, indptr),
         shape=(len(mask_matrix_inds), M)
     )
 

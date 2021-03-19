@@ -268,8 +268,8 @@ class Kernel(Explainer):
             self.allocate()
 
             # weight the different subset sizes
-            num_subset_sizes = np.int(np.ceil((self.M - 1) / 2.0))
-            num_paired_subset_sizes = np.int(np.floor((self.M - 1) / 2.0))
+            num_subset_sizes = int(np.ceil((self.M - 1) / 2.0))
+            num_paired_subset_sizes = int(np.floor((self.M - 1) / 2.0))
             weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
             weight_vector[:num_paired_subset_sizes] *= 2
             weight_vector /= np.sum(weight_vector)

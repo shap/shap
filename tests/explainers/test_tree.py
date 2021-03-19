@@ -167,7 +167,7 @@ def test_xgboost_mixed_types():
 
     X, y = shap.datasets.boston()
     X["LSTAT"] = X["LSTAT"].astype(np.int64)
-    X["B"] = X["B"].astype(np.bool)
+    X["B"] = X["B"].astype(bool)
     bst = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 1000)
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
@@ -389,7 +389,7 @@ def test_catboost():
     catboost = pytest.importorskip("catboost")
     # train catboost model
     X, y = shap.datasets.boston()
-    X["RAD"] = X["RAD"].astype(np.int)
+    X["RAD"] = X["RAD"].astype(int)
     model = catboost.CatBoostRegressor(iterations=30, learning_rate=0.1, random_seed=123)
     p = catboost.Pool(X, y, cat_features=["RAD"])
     model.fit(p, verbose=False, plot=False)

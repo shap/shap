@@ -669,7 +669,7 @@ def _compute_shape(x):
             if first_shape == tuple():
                 return (len(x),)
             else: # we have an array of arrays...
-                matches = np.ones(len(first_shape), dtype=np.bool)
+                matches = np.ones(len(first_shape), dtype=bool)
                 for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
                     assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"

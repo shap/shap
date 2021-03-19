@@ -259,7 +259,7 @@ class Text(Masker):
         """
         self._update_s_cache(s)
 
-        invariants = np.zeros(len(self._tokenized_s), dtype=np.bool)
+        invariants = np.zeros(len(self._tokenized_s), dtype=bool)
         if self.keep_prefix > 0:
             invariants[:self.keep_prefix] = True
         if self.keep_suffix > 0:

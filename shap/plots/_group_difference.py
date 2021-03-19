@@ -51,7 +51,7 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
     diff = shap_values[group_mask].mean(0) - shap_values[~group_mask].mean(0)
     
     if sort is True:
-        inds = np.argsort(-np.abs(diff)).astype(np.int)
+        inds = np.argsort(-np.abs(diff)).astype(int)
     else:
         inds = np.arange(len(diff))
     
