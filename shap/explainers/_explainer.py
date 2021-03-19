@@ -208,6 +208,7 @@ class Explainer(Serializable):
         # parse our incoming arguments
         num_rows = None
         args = list(args)
+        need_main_effects = main_effects
         if self.feature_names is None:
             feature_names = [None for _ in range(len(args))]
         elif issubclass(type(self.feature_names[0]), (list, tuple)):
@@ -253,7 +254,7 @@ class Explainer(Serializable):
             feature_names = [[] for _ in range(len(args))]
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
             row_result = self.explain_row(
-                *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
+                *row_args, max_evals=max_evals, main_effects=need_main_effects, error_bounds=error_bounds,
                 batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
             )
             values.append(row_result.get("values", None))
