@@ -14,13 +14,15 @@ class MaskedModel():
 
     delta_mask_noop_value = 2147483647 # used to encode a noop for delta masking
 
-    def __init__(self, model, masker, link, *args):
+    def __init__(self, model, masker, link, *args, **kwargs):
         self.model = model
         self.masker = masker
         self.link = link
         self.args = args
+        self.mode = kwargs.get("mode")
+        self.ps_len = kwargs.get("ps_len", -1)        
         # if the masker supports it, save what positions vary from the background
-        if callable(getattr(self.masker, "invariants", None)):
+        if callable(getattr(self.masker, "invariants", None)) and (self.mode != 'full'):
             self._variants = ~self.masker.invariants(*args)
             self._variants_column_sums = self._variants.sum(0)
             self._variants_row_inds = [
@@ -43,24 +45,25 @@ class MaskedModel():
             self._masker_rows = None# # just assuming...
             self._masker_cols = sum(np.prod(a.shape) for a in self.args)
 
-    def __call__(self, masks, batch_size=None):
+    def __call__(self, masks, batch_size=None, ps_len=-1, start_row = 0):
 
+        self.ps_len = ps_len
         # if we are passed a 1D array of indexes then we are delta masking and have a special implementation
         if len(masks.shape) == 1:
             if getattr(self.masker, "supports_delta_masking", False):
-                return self._delta_masking_call(masks, batch_size=batch_size)
+                return self._delta_masking_call(masks, batch_size=batch_size, start_row = start_row)
 
             # we need to convert from delta masking to a full masking call because we were given a delta masking
             # input but the masker does not support delta masking
             else: 
                 full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=np.bool)
                 _convert_delta_mask_to_full(masks, full_masks)
-                return self._full_masking_call(full_masks, batch_size=batch_size)
+                return self._full_masking_call(full_masks, batch_size=batch_size, start_row = start_row)
 
         else:
-            return self._full_masking_call(masks, batch_size=batch_size)
+            return self._full_masking_call(masks, batch_size=batch_size, start_row = start_row)
 
-    def _full_masking_call(self, masks, batch_size=None):
+    def _full_masking_call(self, masks, batch_size=None, start_row = 0):
 
         # # TODO: we need to do batching here
         # else:
@@ -169,12 +172,28 @@ class MaskedModel():
     #         self._varying_delta_mask_rows.append(np.unique(np.concatenate(varying_rows_set)))
 
     
-    def _delta_masking_call(self, masks, batch_size=None):
+    def _delta_masking_call(self, masks, batch_size=None, start_row = 0):
         # TODO: we need to do batching here
 
         assert getattr(self.masker, "supports_delta_masking", None) is not None, "Masker must support delta masking!"
         
-        masked_inputs, varying_rows = self.masker(masks, *self.args)
+        if self.mode == 'full':
+            masked_inputs_list=[]
+            varying_rows_list=[]
+            if self.ps_len >= 1:
+                mask_row_count = len(masks) // self.ps_len
+            
+                vx=self.args[0][start_row:start_row+mask_row_count]
+                for row in range(mask_row_count):
+                    row_masked_inputs, row_varying_rows = self.masker(masks[self.ps_len * row : self.ps_len * (row+1)], vx[row])
+                    masked_inputs_list.append(np.array(row_masked_inputs))
+                    varying_rows_list.append(row_varying_rows)
+                masked_inputs=np.concatenate(masked_inputs_list, axis=1)
+                varying_rows=np.array(varying_rows_list)
+                varying_rows=varying_rows.reshape(-1, varying_rows.shape[-1])
+            
+        else:
+            masked_inputs, varying_rows = self.masker(masks, *self.args)
         num_varying_rows = varying_rows.sum(1)
 
         subset_masked_inputs = [arg[varying_rows.reshape(-1)] for arg in masked_inputs]

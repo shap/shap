@@ -105,7 +105,7 @@ class Tabular(Masker):
             self._masked_data[:] = self.data
             _delta_masking(
                 mask, x, curr_delta_inds,
-                varying_rows_out, self._masked_data, self._last_mask, self. data, variants,
+                varying_rows_out, self._masked_data, self._last_mask, self.data, variants,
                 masked_inputs_out, MaskedModel.delta_mask_noop_value
             )
             if self.output_dataframe:
@@ -214,7 +214,10 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
             curr_delta_inds[dpos] = -curr_delta_inds[dpos] - 1 # -value + 1 is the original index that needs flipped
             _single_delta_mask(curr_delta_inds[dpos], masked_inputs_tmp, last_mask, data, x, noop_code)
             dpos += 1
-            curr_delta_inds[dpos] = masks[masks_pos + dpos]
+            if masks_pos+dpos < len(masks):
+                curr_delta_inds[dpos] = masks[masks_pos + dpos]
+        if masks_pos+dpos >=len(masks):
+            break  
         _single_delta_mask(curr_delta_inds[dpos], masked_inputs_tmp, last_mask, data, x, noop_code)
 
         # copy the tmp masked inputs array to the output
@@ -232,7 +235,7 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
 
             # more than one column was changed
             else:
-                varying_rows_out[i, :] = np.sum(variants[:, curr_delta_inds[:dpos+1]], axis=1) > 0
+                varying_rows_out[i, :] = np.sum(variants[:, [c for c in curr_delta_inds[:dpos+1] if c != noop_code]], axis=1) > 0 # don't create mask if ind is noop_code (unless it's the first ind)
 
         output_pos += N
 

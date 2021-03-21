@@ -5,11 +5,20 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 import pickle
+import datetime
 import cloudpickle
 from .. import links
 from .. import maskers
 from ..maskers import Masker
 from ..models import Model
+
+def add_pair(pair_dict, inds, iind, iind2, k):
+    k1=inds[iind]
+    k2=inds[iind2]
+    if k1 in pair_dict:
+        pair_dict[k1][k2]=k
+    else:
+        pair_dict[k1]={k2:k}
 
 class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.
@@ -41,10 +50,201 @@ class Permutation(Explainer):
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
         """
         super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
-
+        self.mode = ""
         if not isinstance(model, Model):
             self.model = Model(model)
 
+    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, interactions=False, need_temp_save=False, progress=None, **kwargs):
+        """ Explains a full set of samples (by groups of features) and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects, interactions).
+
+        Parameters
+        ----------
+        args : numpy.array
+            samples x # features. Where # features shuold be a 1D array
+
+        batch_size : int
+            count of samples to send to model to predict as a batch. every sample would "unfold" into a number of masked samples.
+            if main effects and/or interactions are switched on, more masked samples are going to be in a batch.
+
+        feature_groupd_list : dict
+             dictionary of "group_feature_name": [list of feature index]
+             eg: {"BP": [0, 4, 8], "AG": [1, 5, 9], "CQ": [2, 6, 10], "DD": [3, 7, 11]}  <== this could be a grouping for a RNN of a 4x3 input.
+
+        main_effects : boolean
+            if a main_effects would be calculated and returned.
+
+        interactions : boolean
+            if a interaction value array would be calculated and returned for every sample.
+
+        need_temp_save : int
+            save a temporary pickle file every [need_temp_save] batches. 
+            [expected_values, row_values, main_effect_values, interaction_values, rows_count]
+
+        """
+        if batch_size == "auto":
+            batch_size = 1
+        # by default we run 10 permutations forward and backward
+        if feature_group_list is None:
+            feature_mask_list = [[i] for i in range(self.masker.shape[1])]
+        else:
+            feature_mask_list = feature_group_list
+        mask_group_len=len(feature_mask_list)
+        if max_evals == "auto":
+            max_evals = 10 * 2 * mask_group_len
+
+        inds_mask = np.zeros(self.masker.shape[1], dtype=np.bool)
+        npermutations = max_evals // (2*mask_group_len+1)
+        last_time = datetime.datetime.now()
+        print("shap calculation started at {}".format(last_time))
+        # build a masked version of the model for the current input sample
+        fm = MaskedModel(self.model, self.masker, self.link, *args, mode='full')
+        #inds = fm.varying_inputs()
+        #ind_len=len(inds) # feature_count
+        ginds= [i for i in range(mask_group_len)]
+        gind_len = mask_group_len #number of feature groups
+        ind_len = args[0].shape[1]
+        ginds_mask = np.zeros(mask_group_len, dtype=np.bool)
+        ginds_len = 0 # shap valid (need to average) masks count 
+
+        def indlist_from_gindlist(ginds, addnew=True):
+            new_mask = []
+            if type(ginds) is not list:
+                ginds=[ginds,]
+            for igind in ginds:
+                for j,jgind in enumerate(feature_mask_list[igind]):
+                    if addnew:
+                        if j+1 == len(feature_mask_list[igind]):
+                            new_mask.append(jgind)
+                        else:
+                            new_mask.append(-jgind-1)
+                    else:
+                        new_mask.append(-jgind-1)
+            return new_mask
+
+        if gind_len > 0:
+
+            k=0 #total mask counter
+            row_count = args[0].shape[0]
+            shapmask_len = 0 # mask count for base_value and shap value
+            row_values = None
+            main_effect_values = None
+            interaction_values = None
+
+            for row in range(row_count): #generate masks for the whole dataset at once
+                if row % batch_size == 0: #send for model prediction in batches
+                    base_row = row
+                    batch_rows=0
+                    masks=[]
+                    pair_dict=[]
+                    ginds_list=[]
+
+                # loop over many permutations
+                batch_rows += 1
+                ginds_mask[ginds] = True
+                masks += [MaskedModel.delta_mask_noop_value,] #first one, base value
+                k+=1
+                ginds_list.append([])
+                for _ in range(npermutations):
+                    
+                    # shuffle the indexes so we get a random permutation ordering
+                    if getattr(self.masker, "clustering", None) is not None:
+                        # [TODO] This is shuffle does not work when inds is not a complete set of integers from 0 to M TODO: still true?
+                        #assert ind_len == len(fm), "Need to support partition shuffle when not all the inds vary!!"
+                        partition_tree_shuffle(ginds, ginds_mask, self.masker.clustering)
+                        # [jnjn] this is not well supported yet in 'full' mode
+                    else:
+                        np.random.shuffle(ginds)
+
+                    # create a large batch of masks to evaluate
+
+                    masks += indlist_from_gindlist(list(ginds)) + indlist_from_gindlist(list(ginds), addnew = False) + [MaskedModel.delta_mask_noop_value,]
+                    k+=gind_len+1
+                    ginds_list[batch_rows-1] += list(ginds) + [MaskedModel.delta_mask_noop_value,]
+                if row == 0:
+                    shapmask_len = k
+                    ginds_len=len(ginds_list[batch_rows-1])
+
+                if main_effects:
+                    masks_mei = []
+                    pair_dict.append({})
+                    k_mei = 0 # mei (main_effects and interactions段的masks计数器)
+                    for iind in range(gind_len):
+                        masks_mei += indlist_from_gindlist(ginds[iind]) #开main effects feature mask
+                        add_pair(pair_dict[batch_rows-1], ginds, iind, iind, k_mei)
+                        k_mei += 1
+                        if interactions:
+                            for iind2 in range(iind+1, gind_len):
+                                masks_mei += indlist_from_gindlist(ginds[iind2])
+                                add_pair(pair_dict[batch_rows-1], ginds, iind, iind2, k_mei)
+                                k_mei += 1
+                                masks_mei += indlist_from_gindlist(ginds[iind2], addnew=False)
+                        masks_mei += indlist_from_gindlist(ginds[iind], addnew=False)  #关main effects feature mask
+                    k += k_mei
+                    masks += masks_mei
+                if row == 0:
+                    mask_len = k
+                    ps_len = len(masks)
+                    
+                if ((row + 1) % batch_size == 0) or (row + 1 == row_count):
+
+                    masks=np.array(masks, dtype=np.int)
+                    outputs = fm(masks, ps_len=ps_len, start_row=base_row)
+                    outputs2=outputs.reshape(batch_rows, mask_len, -1)
+
+                    if row_values is None:
+                        row_values = np.zeros((row_count, gind_len,) + outputs2.shape[2:])
+                        expected_values = np.zeros((row_count,) + outputs2.shape[2:])
+                        if main_effects:
+                            main_effect_values = np.zeros((row_count, gind_len,) + outputs2.shape[2:])
+                            if interactions:
+                                interaction_values = np.zeros((row_count, gind_len, gind_len,) + outputs2.shape[2:])         
+
+                    expected_values[base_row:base_row + batch_rows]=outputs2[:,0]
+                    for batch_row in range(batch_rows):
+                            
+                        for j in range(ginds_len):
+                            d=ginds_list[batch_row][j]
+                            if d != MaskedModel.delta_mask_noop_value:
+                                row_values[base_row + batch_row, d] += (outputs2[batch_row,j+1] - outputs2[batch_row,j])
+                        if main_effects:
+                            for j in range(gind_len):
+                                main_effect_values[base_row + batch_row, j] = outputs2[batch_row, shapmask_len + pair_dict[batch_row][j][j]] - outputs2[batch_row, 0]
+                            
+                                if interactions:
+                                    for j2 in range(j,gind_len):
+                                        if j != j2:
+                                            d=None
+                                            if j2 in pair_dict[batch_row][j]:
+                                                d=pair_dict[batch_row][j][j2]
+                                            else:
+                                                d=pair_dict[batch_row][j2][j]
+                                            if d:
+                                                itt=(outputs2[batch_row,shapmask_len + d] + outputs2[batch_row,0] - outputs2[batch_row, shapmask_len + pair_dict[batch_row][j][j]] - outputs2[batch_row, shapmask_len + pair_dict[batch_row][j2][j2]])/2
+                                                interaction_values[base_row + batch_row,j,j2]=itt
+                                                interaction_values[base_row + batch_row,j2,j]=itt   
+                                        else:
+                                            interaction_values[base_row + batch_row,j,j2]=main_effect_values[base_row + batch_row, j]
+                    present_time =  datetime.datetime.now()
+                    if last_time:
+                        time_diff = (present_time - last_time).seconds
+                        time_eta = (time_diff / batch_rows ) * (row_count - (row+1))
+                        last_time = present_time
+                        print(" --> done calculation of row {} (of {}) at {}, used {} seconds ({} seconds per sample), ETA: {} min left".format(row+1, row_count, datetime.datetime.now(), time_diff, time_diff / batch_rows, round(time_eta/60, 1)))    
+                    
+                    if (type(need_temp_save) is int) and (((row + 1) % (batch_rows * need_temp_save) == 0) or (row + 1 == row_count)):
+                        print(" ===> saving as directed at row {} (every {} batches)".format(row+1, need_temp_save))
+                        with open("temp_shap_cal.save", mode="wb") as sf:
+                            pickle.dump([expected_values, row_values, main_effect_values, interaction_values, row], sf)
+                                
+        return {
+            "values": row_values / npermutations,
+            "expected_values": expected_values,
+            "mask_shapes": fm.mask_shapes,
+            "main_effects": main_effect_values,
+            "interactions": interaction_values,
+            "clustering": getattr(self.masker, "clustering", None)
+        }
+    
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
