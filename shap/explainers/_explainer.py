@@ -210,6 +210,7 @@ class Explainer(Serializable):
         args = list(args)
         need_main_effects = main_effects
 
+        mode = kwargs.get('mode', '')
         self.mode = 'row'
 
         if self.feature_names is None:
@@ -229,7 +230,7 @@ class Explainer(Serializable):
             group_mask = False
             feature_group_list =  [[i] for i in range(args[0].shape[1])]
 
-        if type(self) is explainers.Permutation:
+        if type(self) is explainers.Permutation and mode == "full":
             self.mode = 'full'
             if len(args) != 1 or len(args[0].shape) > 2 :
                 raise Exception("Expecting single 1D inputs for grouping, but got multiple inputs for model!")
