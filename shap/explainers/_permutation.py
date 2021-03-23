@@ -1,6 +1,7 @@
 from ..utils import partition_tree_shuffle, MaskedModel
 from .._explanation import Explanation
 from ._explainer import Explainer
+from ..utils import safe_isinstance, show_progress
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -54,7 +55,7 @@ class Permutation(Explainer):
         if not isinstance(model, Model):
             self.model = Model(model)
 
-    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, interactions=False, need_temp_save=False, progress=None, **kwargs):
+    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, interactions=False, need_temp_save=False, **kwargs):
         """ Explains a full set of samples (by groups of features) and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects, interactions).
 
         Parameters
@@ -94,8 +95,8 @@ class Permutation(Explainer):
 
         inds_mask = np.zeros(self.masker.shape[1], dtype=np.bool)
         npermutations = max_evals // (2*mask_group_len+1)
-        last_time = datetime.datetime.now()
-        print("shap calculation started at {}".format(last_time))
+        #last_time = datetime.datetime.now()
+        #print("shap calculation started at {}".format(last_time))
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *args, mode='full')
         #inds = fm.varying_inputs()
@@ -129,8 +130,8 @@ class Permutation(Explainer):
             row_values = None
             main_effect_values = None
             interaction_values = None
-
-            for row in range(row_count): #generate masks for the whole dataset at once
+            
+            for row in show_progress(range(row_count), row_count, self.__class__.__name__+" explainer (full mode)", silent): #generate masks for the whole dataset at once
                 if row % batch_size == 0: #send for model prediction in batches
                     base_row = row
                     batch_rows=0
@@ -224,12 +225,12 @@ class Permutation(Explainer):
                                                 interaction_values[base_row + batch_row,j2,j]=itt   
                                         else:
                                             interaction_values[base_row + batch_row,j,j2]=main_effect_values[base_row + batch_row, j]
-                    present_time =  datetime.datetime.now()
-                    if last_time:
-                        time_diff = (present_time - last_time).seconds
-                        time_eta = (time_diff / batch_rows ) * (row_count - (row+1))
-                        last_time = present_time
-                        print(" --> done calculation of row {} (of {}) at {}, used {} seconds ({} seconds per sample), ETA: {} min left".format(row+1, row_count, datetime.datetime.now(), time_diff, time_diff / batch_rows, round(time_eta/60, 1)))    
+                    #present_time =  datetime.datetime.now()
+                    #if last_time:
+                    #    time_diff = (present_time - last_time).seconds
+                    #    time_eta = (time_diff / batch_rows ) * (row_count - (row+1))
+                    #    last_time = present_time
+                    #    print(" --> done calculation of row {} (of {}) at {}, used {} seconds ({} seconds per sample), ETA: {} min left".format(row+1, row_count, datetime.datetime.now(), time_diff, time_diff / batch_rows, round(time_eta/60, 1)))    
                     
                     if (type(need_temp_save) is int) and (((row + 1) % (batch_rows * need_temp_save) == 0) or (row + 1 == row_count)):
                         print(" ===> saving as directed at row {} (every {} batches)".format(row+1, need_temp_save))

@@ -373,7 +373,7 @@ class Explainer(Serializable):
         else:
 
             full_results = self.explain_full(args, max_evals=max_evals, error_bounds=error_bounds, 
-                                            batch_size=batch_size, outputs=outputs, silent=silent, feature_group_list=feature_group_list, main_effects=need_main_effects, progress=show_progress, **kwargs)
+                                            batch_size=batch_size, outputs=outputs, silent=silent, feature_group_list=feature_group_list, main_effects=need_main_effects, **kwargs)
 
             values=full_results.get("values", None)
             output_indices=full_results.get("output_indices", None)
