@@ -55,7 +55,7 @@ class Permutation(Explainer):
         if not isinstance(model, Model):
             self.model = Model(model)
 
-    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, interactions=False, need_temp_save=False, **kwargs):
+    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, need_interactions=False, **kwargs):
         """ Explains a full set of samples (by groups of features) and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects, interactions).
 
         Parameters
@@ -74,12 +74,8 @@ class Permutation(Explainer):
         main_effects : boolean
             if a main_effects would be calculated and returned.
 
-        interactions : boolean
+        need_interactions : boolean
             if a interaction value array would be calculated and returned for every sample.
-
-        need_temp_save : int
-            save a temporary pickle file every [need_temp_save] batches. 
-            [expected_values, row_values, main_effect_values, interaction_values, rows_count]
 
         """
         if batch_size == "auto":
@@ -173,7 +169,7 @@ class Permutation(Explainer):
                         masks_mei += indlist_from_gindlist(ginds[iind]) #开main effects feature mask
                         add_pair(pair_dict[batch_rows-1], ginds, iind, iind, k_mei)
                         k_mei += 1
-                        if interactions:
+                        if need_interactions:
                             for iind2 in range(iind+1, gind_len):
                                 masks_mei += indlist_from_gindlist(ginds[iind2])
                                 add_pair(pair_dict[batch_rows-1], ginds, iind, iind2, k_mei)
@@ -197,7 +193,7 @@ class Permutation(Explainer):
                         expected_values = np.zeros((row_count,) + outputs2.shape[2:])
                         if main_effects:
                             main_effect_values = np.zeros((row_count, gind_len,) + outputs2.shape[2:])
-                            if interactions:
+                            if need_interactions:
                                 interaction_values = np.zeros((row_count, gind_len, gind_len,) + outputs2.shape[2:])         
 
                     expected_values[base_row:base_row + batch_rows]=outputs2[:,0]
@@ -211,7 +207,7 @@ class Permutation(Explainer):
                             for j in range(gind_len):
                                 main_effect_values[base_row + batch_row, j] = outputs2[batch_row, shapmask_len + pair_dict[batch_row][j][j]] - outputs2[batch_row, 0]
                             
-                                if interactions:
+                                if need_interactions:
                                     for j2 in range(j,gind_len):
                                         if j != j2:
                                             d=None
@@ -232,10 +228,10 @@ class Permutation(Explainer):
                     #    last_time = present_time
                     #    print(" --> done calculation of row {} (of {}) at {}, used {} seconds ({} seconds per sample), ETA: {} min left".format(row+1, row_count, datetime.datetime.now(), time_diff, time_diff / batch_rows, round(time_eta/60, 1)))    
                     
-                    if (type(need_temp_save) is int) and (((row + 1) % (batch_rows * need_temp_save) == 0) or (row + 1 == row_count)):
-                        print(" ===> saving as directed at row {} (every {} batches)".format(row+1, need_temp_save))
-                        with open("temp_shap_cal.save", mode="wb") as sf:
-                            pickle.dump([expected_values, row_values, main_effect_values, interaction_values, row], sf)
+                    #if (type(need_temp_save) is int) and (((row + 1) % (batch_rows * need_temp_save) == 0) or (row + 1 == row_count)):
+                    #    print(" ===> saving as directed at row {} (every {} batches)".format(row+1, need_temp_save))
+                    #    with open("temp_shap_cal.save", mode="wb") as sf:
+                    #        pickle.dump([expected_values, row_values, main_effect_values, interaction_values, row], sf)
                                 
         return {
             "values": row_values / npermutations,
@@ -246,7 +242,7 @@ class Permutation(Explainer):
             "clustering": getattr(self.masker, "clustering", None)
         }
     
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, **kwargs):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
         """
 
@@ -256,6 +252,9 @@ class Permutation(Explainer):
         # by default we run 10 permutations forward and backward
         if max_evals == "auto":
             max_evals = 10 * 2 * len(fm)
+        
+        # see if we need interactions
+        need_interactions = kwargs.get("need_interactions", False)
 
         # compute any custom clustering for this row
         row_clustering = None
@@ -276,6 +275,7 @@ class Permutation(Explainer):
         npermutations = max_evals // (2*len(inds)+1)
         row_values = None
         main_effect_values = None
+        interaction_values = None
         if len(inds) > 0:
             for _ in range(npermutations):
 
@@ -315,13 +315,14 @@ class Permutation(Explainer):
 
             # compute the main effects if we need to
             if main_effects:
-                main_effect_values = fm.main_effects(inds)
+                main_effect_values, interaction_values = fm.main_effects(inds, need_interactions=need_interactions)
 
         return {
             "values": row_values / (2 * npermutations),
             "expected_values": expected_value,
             "mask_shapes": fm.mask_shapes,
             "main_effects": main_effect_values,
+            "interactions": interaction_values,
             "clustering": row_clustering,
             "output_names": self.model.output_names if hasattr(self.model, "output_names") else None
         }

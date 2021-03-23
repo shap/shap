@@ -237,34 +237,67 @@ class MaskedModel():
         else:
             return np.where(np.any(self._variants, axis=0))[0]
 
-    def main_effects(self, inds=None):
+    def main_effects(self, inds=None, need_interactions=False):
         """ Compute the main effects for this model.
         """
+        def add_pair(pair_dict, inds, iind, iind2, k):
+            k1=inds[iind]
+            k2=inds[iind2]
+            if k1 in pair_dict:
+                pair_dict[k1][k2]=k
+            else:
+                pair_dict[k1]={k2:k}
 
         # if no indexes are given then we assume all indexes could be non-zero
         if inds is None:
             inds = np.arange(len(self))
 
-        # mask each potentially nonzero input in isolation
-        masks = np.zeros(2*len(inds), dtype=np.int)
-        masks[0] = MaskedModel.delta_mask_noop_value
-        last_ind = -1
-        for i in range(len(inds)):
-            if i > 0:
-                masks[2*i] = -last_ind - 1 # turn off the last input
-            masks[2*i+1] = inds[i] # turn on this input
-            last_ind = inds[i]
-
+        k=0 # cournter of index for masks
+        masks = []
+        masks.append(MaskedModel.delta_mask_noop_value)
+        pair_dict={'BASE':{'BASE': k}}
+        
+        # calculate main_effects and interactions a single roll
+        for iind in range(len(inds)):
+            masks.append(inds[iind])
+            k+=1
+            add_pair(pair_dict, inds, iind, iind, k) # this is the main effects for iind
+            if need_interactions:
+                for iind2 in range(iind+1, len(inds)):
+                    masks.append(inds[iind2])
+                    k+=1
+                    add_pair(pair_dict, inds, iind, iind2, k) # this is the interactions between iind and iind2
+                    masks.append(-inds[iind2]-1)
+            masks.append(-inds[iind]-1)
         # compute the main effects for the given indexes
+        masks=np.array(masks, dtype=np.int)
         outputs = self(masks)
-        main_effects = outputs[1:] - outputs[0]
-        
-        # expand the vector to the full input size
-        expanded_main_effects = np.zeros((len(self),) + outputs.shape[1:])
-        for i,ind in enumerate(inds):
-            expanded_main_effects[ind] = main_effects[i]
-        
-        return expanded_main_effects
+        main_effects = []
+        for ind in range(len(self)):
+            main_effects.append(outputs[pair_dict[ind][ind]]) # make up the list of main_effects for features
+        expanded_main_effects=np.array(main_effects) - outputs[0] # make up the main effects output value
+
+        # return main_effects, and interactions if needed
+        if need_interactions:
+            expanded_interactions = np.zeros((len(self),len(self),) + outputs.shape[1:])
+            for i,ind in enumerate(inds):
+                for j,ind2 in enumerate(inds):
+                    if ind != ind2:
+                        d=None
+                        if ind2 in pair_dict[ind]:
+                            d=pair_dict[ind][ind2]
+                        elif ind in pair_dict[ind2]:
+                            d=pair_dict[ind2][ind]
+                        if not (d is None):
+                            if i != j:
+                                itt=(outputs[d] + outputs[0] - outputs[pair_dict[ind][ind]]-outputs[pair_dict[ind2][ind2]])/2
+                                expanded_interactions[ind, ind2] = itt # both are half of the value
+                                expanded_interactions[ind2, ind] = itt # both are half of the value
+                            else:
+                                expanded_interactions[ind, ind2] = expanded_main_effects[ind] # if ind == ind2, the value in the interaction array is the maineffect (of ind (==ind2) )
+            return expanded_main_effects, expanded_interactions
+        else:
+            return expanded_main_effects
 
 def _assert_output_input_match(inputs, outputs):
     assert len(outputs) == len(inputs[0]), \

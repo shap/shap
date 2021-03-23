@@ -236,7 +236,6 @@ class Explainer(Serializable):
                 raise Exception("Expecting single 1D inputs for grouping, but got multiple inputs for model!")
 
         if group_mask:
-            need_temp_save = kwargs.get('need_temp_save')
             need_interactions = kwargs.get('need_interactions')
 
         for i in range(len(args)):
@@ -295,7 +294,7 @@ class Explainer(Serializable):
                 clustering.append(row_result.get("clustering", None))
                 hierarchical_values.append(row_result.get("hierarchical_values", None))
                 output_names.append(row_result.get("output_names", None))
-
+                interactions.append(row_result.get("interactions", None))
                 if callable(getattr(self.masker, "feature_names", None)):
                     row_feature_names = self.masker.feature_names(*row_args)
                     for i in range(len(row_args)):
@@ -314,10 +313,9 @@ class Explainer(Serializable):
             expected_values = pack_values(expected_values)
             main_effects = pack_values(main_effects)
             output_indices = pack_values(output_indices)
-            main_effects = pack_values(main_effects)
             hierarchical_values = pack_values(hierarchical_values)
             clustering = pack_values(clustering)
-
+            interactions = pack_values(interactions)
             # getting output labels
             ragged_outputs = False
             if output_indices is not None:
@@ -366,7 +364,8 @@ class Explainer(Serializable):
                     feature_names=feature_names[j], main_effects=main_effects,
                     clustering=clustering,
                     hierarchical_values=hierarchical_values,
-                    output_names=sliced_labels # self.output_names
+                    output_names=sliced_labels, # self.output_names
+                    interactions = interactions,
                     # output_shape=output_shape,
                     #lower_bounds=v_min, upper_bounds=v_max
                 ))
@@ -407,7 +406,7 @@ class Explainer(Serializable):
 
         return out[0] if len(out) == 1 else out
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, outputs, silent, **kwargs):
+    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, **kwargs):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
 
         This is an abstract method meant to be implemented by each subclass.
