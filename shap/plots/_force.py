@@ -372,6 +372,15 @@ class SimpleListVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        if os.environ.get("ALWAYS_INJECT_JS_SCRIPTS"):
+            return getjs() + """
+<div id='{id}'></div>
+ <script>
+   SHAP.ReactDom.render(
+    SHAP.React.createElement(SHAP.SimpleListVisualizer, {data}),
+    document.getElementById('{id}')
+  );
+</script>""".format(edata=json.dumps(self.data), id=id_generator())
         return """
 <div id='{id}'>{err_msg}</div>
  <script>
@@ -473,6 +482,15 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        if os.environ.get("ALWAYS_INJECT_JS_SCRIPTS"):
+            return getjs() + """
+    <div id='{id}'></div>
+     <script>
+      SHAP.ReactDom.render(
+        SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {data}),
+        document.getElementById('{id}')
+      );
+    </script>""".format(data=json.dumps(self.data), id=id_generator())
         return """
 <div id='{id}'>{err_msg}</div>
  <script>
