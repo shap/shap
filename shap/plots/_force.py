@@ -380,7 +380,7 @@ class SimpleListVisualizer(BaseVisualizer):
     SHAP.React.createElement(SHAP.SimpleListVisualizer, {data}),
     document.getElementById('{id}')
   );
-</script>""".format(edata=json.dumps(self.data), id=id_generator())
+</script>""".format(data=json.dumps(self.data), id=id_generator())
         return """
 <div id='{id}'>{err_msg}</div>
  <script>
