@@ -85,7 +85,7 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
 
     # plot our explanations
     x = pixel_values
-    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + nchannels)])
+    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + ((nchannels - 1) * 3))])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
     fig, axes = pl.subplots(nrows=x.shape[0] * nchannels, ncols=len(shap_values) + 1, figsize=fig_size)
