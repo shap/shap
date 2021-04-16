@@ -69,8 +69,11 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         shap_values = [shap_values]
 
     # make sure the number of channels to plot is <= number of channels present
-    nchannels = min(shap_values[0].shape[-1], len(plotchannels))
-    plotchannels = plotchannels[:nchannels]
+    if plotchannels is not None:
+        nchannels = min(shap_values[0].shape[-1], len(plotchannels))
+        plotchannels = plotchannels[:nchannels]
+    else:
+        nchannels = 1
 
     # make sure labels
     if labels is not None:
@@ -132,11 +135,17 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             if labels is not None:
                 axes[row*nchannels,i+1].set_title(labels[row,i], **label_kwargs)
 
-            for c in range(nchannels):
-                sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row][..., plotchannels[c]]
-                axes[row*nchannels+c,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
-                im = axes[row*nchannels+c,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
-                axes[row*nchannels+c,i+1].axis('off')
+            if plotchannels is not None:
+                for c in range(nchannels):
+                    sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row][..., plotchannels[c]]
+                    axes[row*nchannels+c,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
+                    im = axes[row*nchannels+c,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+                    axes[row*nchannels+c,i+1].axis('off')
+            else:
+                sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
+                axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
+                im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+                axes[row,i+1].axis('off')
 
     if hspace == 'auto':
         fig.tight_layout()
