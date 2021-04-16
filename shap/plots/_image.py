@@ -47,6 +47,8 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
+    plotchannels : None or list
+        List of image channel indices to plot separately. If None, will sum all bands for a single plot.
     """
 
     # support passing an explanation object
