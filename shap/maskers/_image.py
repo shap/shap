@@ -160,47 +160,47 @@ class Image(Masker):
                 lzmin = rzmin = zmin
                 lzmax = rzmax = zmax
 
-                 # Partition scheme 0: xaxis and yaxis fully partitioned before zaxis
-                 if self.partition_scheme == 0:
+                # Partition scheme 0: xaxis and yaxis fully partitioned before zaxis
+                if self.partition_scheme == 0:
 
-                     # split the xaxis if it is the largest dimension
-                     if xwidth >= ywidth and xwidth > 1:
-                         xmid = xmin + xwidth // 2
-                         lxmax = xmid
-                         rxmin = xmid
+                    # split the xaxis if it is the largest dimension
+                    if xwidth >= ywidth and xwidth > 1:
+                        xmid = xmin + xwidth // 2
+                        lxmax = xmid
+                        rxmin = xmid
 
-                     # split the yaxis
-                     elif ywidth > 1:
-                         ymid = ymin + ywidth // 2
-                         lymax = ymid
-                         rymin = ymid
+                    # split the yaxis
+                    elif ywidth > 1:
+                        ymid = ymin + ywidth // 2
+                        lymax = ymid
+                        rymin = ymid
 
-                     # split the zaxis only when the other ranges are already width 1
-                     else:
-                         zmid = zmin + zwidth // 2
-                         lzmax = zmid
-                         rzmin = zmid
+                    # split the zaxis only when the other ranges are already width 1
+                    else:
+                        zmid = zmin + zwidth // 2
+                        lzmax = zmid
+                        rzmin = zmid
 
-                 # Partition scheme 1: zaxis partitioned first
-                 if self.partition_scheme == 2:
+                # Partition scheme 1: zaxis partitioned first
+                if self.partition_scheme == 2:
 
-                     # split the zaxis if it is larger than 1
-                     if zwidth > 1:
-                         zmid = zmin + zwidth // 2
-                         lzmax = zmid
-                         rzmin = zmid
+                    # split the zaxis if it is larger than 1
+                    if zwidth > 1:
+                        zmid = zmin + zwidth // 2
+                        lzmax = zmid
+                        rzmin = zmid
 
-                     # split the xaxis if it is larger than the yaxis
-                     elif xwidth >= ywidth and xwidth > 1:
-                         xmid = xmin + xwidth // 2
-                         lxmax = xmid
-                         rxmin = xmid
+                    # split the xaxis if it is larger than the yaxis
+                    elif xwidth >= ywidth and xwidth > 1:
+                        xmid = xmin + xwidth // 2
+                        lxmax = xmid
+                        rxmin = xmid
 
-                     # split the yaxis
-                     elif ywidth > 1:
-                         ymid = ymin + ywidth // 2
-                         lymax = ymid
-                         rymin = ymid
+                    # split the yaxis
+                    elif ywidth > 1:
+                        ymid = ymin + ywidth // 2
+                        lymax = ymid
+                        rymin = ymid
 
 
                 lsize = (lxmax - lxmin) * (lymax - lymin) * (lzmax - lzmin)
