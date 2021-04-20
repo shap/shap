@@ -102,10 +102,11 @@ class Permutation(Explainer):
                     row_values = np.zeros((len(fm),) + outputs.shape[1:])
 
                 # update our SHAP value estimates
-                for i,ind in enumerate(inds):
-                    row_values[ind] += outputs[i+1] - outputs[i]
-                for i,ind in enumerate(inds):
-                    row_values[ind] += outputs[i+1] - outputs[i]
+                forwards, backwards = outputs[:len(fm)+1], outputs[len(fm):][::-1]
+                for i, ind in enumerate(inds):
+                    row_values[ind] += forwards[i + 1] - forwards[i]
+                for i, ind in enumerate(inds[::-1]):
+                    row_values[ind] += backwards[i + 1] - backwards[i]
 
             if npermutations == 0:
                 raise Exception("max_evals is too low for the Permutation explainer, it must be at least 2 * num_features + 1!")
