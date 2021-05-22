@@ -9,7 +9,7 @@ import json
 
 # TODO: we should support text output explanations (from models that output text not numbers), this would require the force
 # the force plot and the coloring to update based on mouseovers (or clicks to make it fixed) of the output text
-def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xmin=None, xmax=None, cmax=None):
+def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xmin=None, xmax=None, cmax=None, mylist=[]):
     """ Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
@@ -82,7 +82,8 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
                 cmax = cmax_i
         for i in range(len(shap_values)):
             display(HTML("<br/><b>"+ordinal_str(i)+" instance:</b><br/>"))
-            text(shap_values[i], num_starting_labels=num_starting_labels, group_threshold=group_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
+            myhtml = text(shap_values[i], num_starting_labels=num_starting_labels, group_threshold=group_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
+            mylist.append(myhtml)
         return
 
     elif len(shap_values.shape) == 2 and shap_values.output_names is not None:
@@ -165,6 +166,7 @@ def text(shap_values, num_starting_labels=0, group_threshold=1, separator='', xm
              + "</div>"
 
     display(HTML(out))
+    return out
 
 def process_shap_values(tokens, values, group_threshold, separator, clustering = None, return_meta_data  = False):
 
