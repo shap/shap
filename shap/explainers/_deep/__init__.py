@@ -13,10 +13,6 @@ class Deep(Explainer):
     over many backgound samples Deep estimates approximate SHAP values such that they sum
     up to the difference between the expected model output on the passed background samples and the
     current model output (f(x) - E[f(x)]).
-
-    Examples
-    --------
-    See :ref:`Deep Explainer Examples <deep_explainer_examples>`
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):

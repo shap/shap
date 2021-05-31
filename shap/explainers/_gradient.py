@@ -19,10 +19,6 @@ class Gradient(Explainer):
     and combines that expectation with sampling reference values from the background dataset. This leads
     to a single combined expectation of gradients that converges to attributions that sum to the
     difference between the expected model output and the current output.
-    
-    Examples
-    --------
-    See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
     """
 
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):

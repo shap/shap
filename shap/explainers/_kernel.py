@@ -52,10 +52,6 @@ class Kernel(Explainer):
         sense to connect them to the output with a link function where link(output) = sum(phi).
         If the model output is a probability then the LogitLink link function makes the feature
         importance values have log-odds units.
-
-    Examples
-    --------
-    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
     """
 
     def __init__(self, model, data, link=IdentityLink(), **kwargs):
