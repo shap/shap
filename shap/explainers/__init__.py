@@ -6,3 +6,6 @@ from ._exact import Exact
 from ._additive import Additive
 from ._linear import Linear
 from ._sampling import Sampling
+from ._gradient import Gradient
+from ._deep import Deep
+from ._kernel import Kernel

@@ -32,6 +32,10 @@ explainers
     shap.explainers.Partition
     shap.explainers.Sampling
     shap.explainers.Additive
+    shap.explainers.Gradient
+    shap.explainers.Deep
+    shap.explainers.Exact
+    shap.explainers.Kernel
     shap.explainers.other.Coefficent
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
@@ -55,6 +59,14 @@ plots
     shap.plots.text
     shap.plots.image
     shap.plots.partial_dependence
+    shap.plots.decision
+    shap.plots.embedding
+    shap.plots.initjs
+    shap.plots.group_difference
+    shap.plots.image_to_text
+    shap.plots.monitoring
+    shap.plots.beeswarm
+    shap.plots.violin
 
 
 .. _maskers_api:
@@ -67,6 +79,11 @@ maskers
     shap.maskers.Masker
     shap.maskers.Independent
     shap.maskers.Partition
+    shap.maskers.Impute
+    shap.maskers.Fixed
+    shap.maskers.Composite
+    shap.maskers.FixedComposite
+    shap.maskers.OutputComposite
     shap.maskers.Text
     shap.maskers.Image
 
@@ -79,7 +96,10 @@ models
     :toctree: generated/
 
     shap.models.Model
-    shap.models.TeacherForcingLogits
+    shap.models.TeacherForcing
+    shap.models.TextGeneration
+    shap.models.TopKLM
+    shap.models.TransformersPipeline
 
 
 .. _utils_api:
@@ -90,9 +110,24 @@ utils
     :toctree: generated/
 
     shap.utils.hclust
+    shap.utils.hclust_ordering
+    shap.utils.partition_tree
+    shap.utils.partition_tree_shuffle
+    shap.utils.delta_minimization_order
+    shap.utils.approximate_interactions
+    shap.utils.potential_interactions
+    shap.utils.safe_isinstance
+    shap.utils.assert_import
+    shap.utils.record_import_error
     shap.utils.sample
     shap.utils.shapley_coefficients
+    shap.utils.convert_name
+    shap.utils.format_value
+    shap.utils.ordinal_str
+    shap.utils.OpChain
+    shap.utils.show_progress
     shap.utils.MaskedModel
+    shap.utils.make_masks
 
 
 .. _datasets_api:
