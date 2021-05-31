@@ -36,19 +36,6 @@ maskers
     example_notebooks/api_examples/maskers/*
 
 
-.. _models_examples:
-
-models
-======
-.. Examples for members of :ref:`shap.models <models_api>`.
-
-.. toctree::
-    :glob:
-    :maxdepth: 1
-
-    example_notebooks/api_examples/models/*
-
-
 .. _plots_examples:
 
 plots
