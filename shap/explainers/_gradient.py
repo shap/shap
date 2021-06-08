@@ -519,8 +519,8 @@ class _PyTorchGradient(Explainer):
                 # assign the attributions to the right part of the output arrays
                 for l in range(len(self.data)):
                     samples = grad[l] * samples_delta[l]
-                    phis[l][j] = samples.mean(0)
-                    phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
+                    phis[l][j] = np.nanmean(samples, 0)
+                    phi_vars[l][j] = np.nanvar(samples, 0) / np.sqrt(samples.shape[0]) # estimate variance of means
 
             output_phis.append(phis[0] if len(self.data) == 1 else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
