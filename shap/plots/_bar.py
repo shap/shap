@@ -75,7 +75,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     values = np.array([cohort_exps[i].values for i in range(len(cohort_exps))])
 
     if len(values[0]) == 0:
-        raise Exception("The passed Explanation is empty! (so there is nothing to plot)")
+        raise ValueError("The passed Explanation is empty! (so there is nothing to plot)")
 
     # we show the data on auto only when there are no transforms
     if show_data == "auto":

@@ -24,7 +24,7 @@ class ActionOptimizer():
                     v._grouped_index = i
                 self.action_groups.append(group)
             else:
-                raise Exception("A passed action was not an Action or list of actions!")
+                raise TypeError("A passed action was not an Action or list of actions!")
         
     def __call__(self, *args, max_evals=10000):
         
@@ -40,7 +40,7 @@ class ActionOptimizer():
             # see if we have exceeded our runtime budget
             nevals += 1
             if nevals > max_evals:
-                raise Exception(f"Failed to find a solution with max_evals={max_evals}! Try reducing the number of actions or increasing max_evals.")
+                raise RuntimeError(f"Failed to find a solution with max_evals={max_evals}! Try reducing the number of actions or increasing max_evals.")
             
             # get the next cheapest set of actions we can do
             cost, actions = q.get()

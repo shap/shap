@@ -39,7 +39,7 @@ class Serializable():
             return None
 
         if not inspect.isclass(obj_type) or (not issubclass(obj_type, cls) and (obj_type is not cls)):
-            raise Exception(f"Invalid object type loaded from file. {obj_type} is not a subclass of {cls}.")
+            raise TypeError(f"Invalid object type loaded from file. {obj_type} is not a subclass of {cls}.")
 
         # here we call the constructor with all the arguments we have loaded
         constructor_args = obj_type.load(in_file, instantiate=False, **kwargs)

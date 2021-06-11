@@ -170,7 +170,7 @@ class TFDeep(Explainer):
             if noutputs is not None:
                 self.phi_symbolics = [None for i in range(noutputs)]
             else:
-                raise Exception("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
+                raise ValueError("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
 
     def _get_model_output(self, model):
         if len(model.layers[-1]._inbound_nodes) == 0:

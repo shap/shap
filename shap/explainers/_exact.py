@@ -85,7 +85,7 @@ class Exact(Explainer):
 
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < 2**len(inds):
-                raise Exception(
+                raise ValueError(
                     f"It takes {2**len(inds)} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
                 )
 
@@ -124,14 +124,14 @@ class Exact(Explainer):
                 _compute_grey_code_row_values_st(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             elif interactions > 2:
-                raise Exception("Currently the Exact explainer does not support interactions higher than order 2!")
+                raise ValueError("Currently the Exact explainer does not support interactions higher than order 2!")
 
         # do a partition tree constrained version of Shapley values
         else:
 
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < len(fm)**2:
-                raise Exception(
+                raise ValueError(
                     f"It takes {len(fm)**2} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
                 )
 

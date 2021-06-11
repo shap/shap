@@ -55,7 +55,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     elif issubclass(type(feature_order), OpChain):
         feature_order = feature_order.apply(Explanation(values))
     elif not hasattr(feature_order, "__len__"):
-        raise Exception("Unsupported feature_order: %s!" % str(feature_order))
+        raise TypeError("Unsupported feature_order: %s!" % str(feature_order))
     xlabel = "Instances"
     instance_order = convert_ordering(instance_order, shap_values)
     # if issubclass(type(instance_order), OpChain):

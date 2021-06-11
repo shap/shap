@@ -1,4 +1,5 @@
 from .._explainer import Explainer
+from ...exceptions import UnsupportedModelError
 import numpy as np
 from sklearn.model_selection import train_test_split
 
@@ -87,7 +88,7 @@ class TreeMaple(Explainer):
         # elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
         #     pass
         else:
-            raise Exception("The passed model is not yet supported by TreeMapleExplainer: " + str(type(model)))
+            raise UnsupportedModelError("The passed model is not yet supported by TreeMapleExplainer: " + str(type(model)))
 
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             data = data.values

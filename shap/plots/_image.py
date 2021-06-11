@@ -56,7 +56,7 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         if len(shap_exp.base_values.shape) == 2:
             shap_values = [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])]
         else:
-            raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
+            raise NotImplementedError("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
             pixel_values = shap_exp.data
         if labels is None:

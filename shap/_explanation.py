@@ -233,7 +233,7 @@ class Explanation(object, metaclass=MetaExplanation):
             cohorts = np.array(cohorts)
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
         else:
-            raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
+            raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
 
     def __repr__(self):
         out = ".values =\n"+self.values.__repr__()
@@ -460,7 +460,7 @@ class Explanation(object, metaclass=MetaExplanation):
         elif axis == 1 or len(self.shape) == 1:
             return group_features(self, grouping)
         else:
-            raise Exception("Only axis = 1 is supported for grouping right now...")
+            raise ValueError("Only axis = 1 is supported for grouping right now...")
 
     # def reshape(self, *args):
     #     return self._numpy_func("reshape", newshape=args)
@@ -498,7 +498,7 @@ class Explanation(object, metaclass=MetaExplanation):
         values = self.values
 
         if len(values.shape) != 2:
-            raise Exception("The hclust order only supports 2D arrays right now!")
+            raise ValueError("The hclust order only supports 2D arrays right now!")
 
         if axis == 1:
             values = values.T

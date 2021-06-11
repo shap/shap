@@ -59,7 +59,7 @@ class Image(Masker):
 
     def __call__(self, mask, x):
         if np.prod(x.shape) != np.prod(self.input_shape):
-            raise Exception("The length of the image to be masked must match the shape given in the " + \
+            raise ValueError("The length of the image to be masked must match the shape given in the " + \
                             "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
                             " != "+" * ".join([str(i) for i in self.input_shape]))
 

@@ -49,7 +49,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
     # make sure we only have a single output to explain
     if (type(base_values) == np.ndarray and len(base_values) > 0) or type(base_values) == list:
-        raise Exception("waterfall_plot requires a scalar base_values of the model output as the first " \
+        raise TypeError("waterfall_plot requires a scalar base_values of the model output as the first " \
                         "parameter, but you have passed an array as the first parameter! " \
                         "Try shap.waterfall_plot(explainer.base_values[0], values[0], X[0]) or " \
                         "for multi-output models try " \
@@ -57,7 +57,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
     # make sure we only have a single explanation to plot
     if len(values.shape) == 2:
-        raise Exception("The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
+        raise ValueError("The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
     
     # unwrap pandas series
     if safe_isinstance(features, "pandas.core.series.Series"):
@@ -340,7 +340,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
 
     # make sure we only have a single output to explain
     if (type(expected_value) == np.ndarray and len(expected_value) > 0) or type(expected_value) == list:
-        raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first " \
+        raise TypeError("waterfall_plot requires a scalar expected_value of the model output as the first " \
                         "parameter, but you have passed an array as the first parameter! " \
                         "Try shap.waterfall_plot(explainer.expected_value[0], shap_values[0], X[0]) or " \
                         "for multi-output models try " \
@@ -348,7 +348,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
 
     # make sure we only have a single explanation to plot
     if len(shap_values.shape) == 2:
-        raise Exception("The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
+        raise ValueError("The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
     
     # unwrap pandas series
     if safe_isinstance(features, "pandas.core.series.Series"):

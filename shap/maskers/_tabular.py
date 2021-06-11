@@ -70,7 +70,7 @@ class Tabular(Masker):
             elif safe_isinstance(clustering, "numpy.ndarray"):
                 self.clustering = clustering
             else:
-                raise Exception(
+                raise ValueError(
                     "Unknown clustering given! Make sure you pass a distance metric as a string, or a clustering as a numpy.ndarray."
                 )
         else:
@@ -91,7 +91,7 @@ class Tabular(Masker):
 
         # make sure we are given a single sample
         if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
-            raise Exception("The input passed for tabular masking does not match the background data shape!")
+            raise ValueError("The input passed for tabular masking does not match the background data shape!")
 
         # if mask is an array of integers then we are doing delta masking
         if np.issubdtype(mask.dtype, np.integer):
@@ -140,7 +140,7 @@ class Tabular(Masker):
 
         # make sure we got valid data
         if x.shape != self.data.shape[1:]:
-            raise Exception(
+            raise ValueError(
                 "The passed data does not match the background shape expected by the masker! The data of shape " + \
                 str(x.shape) + " was passed while the masker expected data of shape " + str(self.data.shape[1:]) + "."
             )

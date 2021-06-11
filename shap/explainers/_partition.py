@@ -116,7 +116,7 @@ class Partition(Explainer):
             # else:
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
-            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+            raise ValueError("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, *row_args)

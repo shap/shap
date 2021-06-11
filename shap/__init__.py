@@ -68,6 +68,7 @@ else:
 from . import datasets
 from . import utils
 from . import links
+from . import exceptions
 
 from .actions._optimizer import ActionOptimizer
 

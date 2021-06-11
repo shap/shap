@@ -161,7 +161,7 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
                     elif linkage == "average":
                         dist.append((dist_full[i,j] + dist_full[j,i]) / 2)
                     else:
-                        raise Exception("Unsupported linkage type!")
+                        raise ValueError("Unsupported linkage type!")
         dist = np.array(dist)
     
     else:
@@ -185,4 +185,4 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     elif linkage == "average":
         return sp.cluster.hierarchy.average(dist)
     else:
-        raise Exception("Unknown linkage: " + str(linkage))
+        raise ValueError("Unknown linkage: " + str(linkage))

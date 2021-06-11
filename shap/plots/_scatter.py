@@ -107,7 +107,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         return
 
     if len(shap_values.shape) != 1:
-        raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to " + \
+        raise ValueError("The passed Explanation object has multiple columns, please pass a single feature column to " + \
                         "shap.plots.dependence like: shap_values[:,column]")
 
     # this unpacks the explanation object for the code that was written earlier

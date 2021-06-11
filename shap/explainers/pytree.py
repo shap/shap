@@ -6,6 +6,7 @@ module which uses a compiled C++ implmentation.
 import numpy as np
 #import numba
 from .explainer import Explainer
+from ..exceptions import UnsupportedModelError
 
 # class TreeExplainer(Explainer):
 #     def __init__(self, model, **kwargs):
@@ -153,7 +154,7 @@ class TreeExplainer:
             self.model_type = "lightgbm"
             self.trees = model
         else:
-            raise Exception("Model type not supported by TreeExplainer: " + str(type(model)))
+            raise UnsupportedModelError("Model type not supported by TreeExplainer: " + str(type(model)))
 
         if self.model_type == "internal":
             # Preallocate space for the unique path data
@@ -227,7 +228,7 @@ class TreeExplainer:
                 tree_limit=0
             return self.trees.predict(X, ntree_limit=tree_limit, pred_interactions=True)
         else:
-            raise Exception("Interaction values not yet supported for model type: " + str(type(X)))
+            raise UnsupportedModelError("Interaction values not yet supported for model type: " + str(type(X)))
 
     def tree_shap(self, tree, x, x_missing, phi, condition=0, condition_feature=0):
 

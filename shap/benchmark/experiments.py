@@ -408,12 +408,12 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
     # copy the results back
     subprocess.check_output(["scp", remote+":"+cache_file, cache_file])
 
-    if os.path.isfile(cache_file):
+    try:
         with open(cache_file, "rb") as f:
             #print(cache_id.replace("__", " ") + " ...loaded from remote after %f seconds" % (time.time() - start))
             return pickle.load(f)
-    else:
-        raise Exception("Remote benchmark call finished but no local file was found!")
+    except (FileNotFoundError, IOError) as err:
+        raise FileNotFoundError("Remote benchmark call finished but no local file was found!") from err
 
 def __gen_cache_id(experiment):
     dataset_name, model_name, method_name, metric_name = experiment

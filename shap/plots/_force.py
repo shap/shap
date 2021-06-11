@@ -92,7 +92,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
     if (isinstance(base_value, np.ndarray) or type(base_value) == list):
         if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
-            raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
+            raise TypeError("In v0.20 force_plot now requires the base value as the first parameter! " \
                             "Try shap.force_plot(explainer.expected_value, shap_values) or " \
                             "for multi-output models try " \
                             "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
@@ -144,7 +144,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
             if len(features) == shap_values.shape[1] - 1:
                 msg += " You might be using an old format shap_values array with the base value " \
                        "as the last column. In this case just pass the array without the last column."
-            raise Exception(msg)
+            raise ValueError(msg)
 
         instance = Instance(np.zeros((1, len(feature_names))), features)
         e = AdditiveExplanation(
@@ -168,7 +168,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         
     else:
         if matplotlib:
-            raise Exception("matplotlib = True is not yet supported for force plots with multiple samples!")
+            raise ValueError("matplotlib = True is not yet supported for force plots with multiple samples!")
         
         if shap_values.shape[0] > 3000:
             warnings.warn("shap.plots.force is slow for many thousands of rows, try subsampling your data.")

@@ -11,6 +11,7 @@ from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._legacy import DenseData
 from .._explanation import Explanation
+from ..exceptions import UnsupportedModelError
 from .. import maskers
 import warnings
 import pandas as pd
@@ -101,10 +102,10 @@ class Tree(Explainer):
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
         elif masker is not None:
-            raise Exception("Unsupported masker type: %s!" % str(type(self.masker)))
+            raise TypeError("Unsupported masker type: %s!" % str(type(self.masker)))
 
         if getattr(self.masker, "clustering", None) is not None:
-            raise Exception("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
+            raise TypeError("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
 
         # check for deprecated options
         if model_output == "margin":
@@ -122,10 +123,10 @@ class Tree(Explainer):
                 warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
                     " = \"interventional\", you can't supply both options! See GitHub issue #882.")
             if dep_val == "tree_path_dependent" and feature_perturbation == "interventional":
-                raise Exception("The feature_dependence option has been renamed to feature_perturbation! " \
+                raise AttributeError("The feature_dependence option has been renamed to feature_perturbation! " \
                     "Please update the option name before calling TreeExplainer. See GitHub issue #882.")
         if feature_perturbation == "independent":
-            raise Exception("feature_perturbation = \"independent\" is not a valid option value, please use " \
+            raise ValueError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
 
@@ -160,7 +161,7 @@ class Tree(Explainer):
 
         if self.model.model_output != "raw":
             if self.model.objective is None and self.model.tree_output is None:
-                raise Exception("Model does not have a known objective or output type! When model_output is " \
+                raise AttributeError("Model does not have a known objective or output type! When model_output is " \
                                 "not \"raw\" then we need to know the model's objective or link function.")
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
@@ -175,10 +176,10 @@ class Tree(Explainer):
         elif data is not None:
             try:
                 self.expected_value = self.model.predict(self.data).mean(0)
-            except ValueError:
-                raise Exception("Currently TreeExplainer can only handle models with categorical splits when " \
+            except ValueError as err:
+                raise ValueError("Currently TreeExplainer can only handle models with categorical splits when " \
                                 "feature_perturbation=\"tree_path_dependent\" and no background data is passed. Please try again using " \
-                                "shap.TreeExplainer(model, feature_perturbation=\"tree_path_dependent\").")
+                                "shap.TreeExplainer(model, feature_perturbation=\"tree_path_dependent\").") from err
             if hasattr(self.expected_value, '__len__') and len(self.expected_value) == 1:
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
@@ -352,7 +353,7 @@ class Tree(Explainer):
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
                     except ValueError as e:
-                        raise Exception("This reshape error is often caused by passing a bad data matrix to SHAP. " \
+                        raise ValueError("This reshape error is often caused by passing a bad data matrix to SHAP. " \
                                          "See https://github.com/slundberg/shap/issues/580") from e
 
             elif self.model.model_type == "catboost": # thanks to the CatBoost team for implementing this...
@@ -530,7 +531,7 @@ class Tree(Explainer):
                 err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
                            " was %f, while the model output was %f. If this difference is acceptable" \
                            " you can set check_additivity=False to disable this check." % (sum_val[ind], model_output[ind])
-                raise Exception(err_msg)
+                raise ValueError(err_msg)
 
         if type(phi) is list:
             for i in range(len(phi)):
@@ -735,7 +736,7 @@ class TreeEnsemble:
             import sklearn
             self.base_offset = model._baseline_prediction
             if hasattr(self.base_offset, "__len__") and self.model_output != "raw":
-                raise Exception("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output=\"raw\". See GitHub issue #1028")
+                raise UnsupportedModelError("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output=\"raw\". See GitHub issue #1028")
             self.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
             self.num_stacked_models = len(model._predictors[0])
             if self.model_output == "predict_proba":
@@ -974,7 +975,7 @@ class TreeEnsemble:
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
         else:
-            raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
+            raise UnsuportedModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
@@ -1036,7 +1037,7 @@ class TreeEnsemble:
             elif self.tree_output == "probability":
                 transform = "identity"
             else:
-                raise Exception("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
+                raise ValueError("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
         elif self.model_output == "log_loss":
 
             if self.objective == "squared_error":
@@ -1044,9 +1045,9 @@ class TreeEnsemble:
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                raise Exception("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
+                raise ValueError("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         else:
-            raise Exception("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
+            raise ValueError("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
 
         return transform
 
@@ -1345,7 +1346,7 @@ class SingleTree:
             self.values = values[:,np.newaxis] * scaling
             self.node_sample_weight = node_sample_weight
         else:
-            raise Exception("Unknown input to SingleTree constructor: " + str(tree))
+            raise UnsupportedModelError("Unknown input to SingleTree constructor: " + str(tree))
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:

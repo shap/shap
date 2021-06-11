@@ -64,7 +64,7 @@ class Permutation(Explainer):
             elif callable(self.masker.clustering):
                 row_clustering = self.masker.clustering(*row_args)
             else:
-                raise Exception("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
+                raise AttributeError("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
 
         # loop over many permutations
         inds = fm.varying_inputs()
@@ -108,7 +108,7 @@ class Permutation(Explainer):
                     row_values[ind] += outputs[i+1] - outputs[i]
 
             if npermutations == 0:
-                raise Exception("max_evals is too low for the Permutation explainer, it must be at least 2 * num_features + 1!")
+                raise ValueError("max_evals is too low for the Permutation explainer, it must be at least 2 * num_features + 1!")
 
             expected_value = outputs[0]
 

@@ -48,8 +48,7 @@ class Additive(Explainer):
                 # self.model(np.zeros(num_features))
                 # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
                 # self._input_offsets = np.zeros(num_features) #* self._zero_offset
-                raise Exception("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
-                return
+                raise ValueError("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
 
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
         assert safe_isinstance(self.masker, "shap.maskers.Independent"), "The Additive explainer only supports the Tabular masker at the moment!"
@@ -83,7 +82,7 @@ class Additive(Explainer):
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             if model.interactions is not 0:
-                raise Exception("Need to add support for interaction effects!")
+                raise NotImplementedError("Need to add support for interaction effects!")
             return True
             
         return False

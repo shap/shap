@@ -9,6 +9,7 @@ from .. import models
 from ..models import Model
 from ..maskers import Masker
 from .._explanation import Explanation
+from ..exceptions import UnsupportedModelError
 from .._serializable import Serializable
 from .. import explainers
 from .._serializable import Serializer, Deserializer
@@ -122,7 +123,7 @@ class Explainer(Serializable):
         if callable(link) and callable(getattr(link, "inverse", None)):
             self.link = link
         else:
-            raise Exception("The passed link function needs to be callable and have a callable .inverse property!")
+            raise AttributeError("The passed link function needs to be callable and have a callable .inverse property!")
 
         # if we are called directly (as opposed to through super()) then we convert ourselves to the subclass
         # that implements the specific algorithm that was chosen
@@ -165,7 +166,7 @@ class Explainer(Serializable):
 
                 # if we get here then we don't know how to handle what was given to us
                 else:
-                    raise Exception("The passed model is not callable and cannot be analyzed directly with the given masker! Model: " + str(model))
+                    raise UnsupportedModelError("The passed model is not callable and cannot be analyzed directly with the given masker! Model: " + str(model))
 
             # build the right subclass
             if algorithm == "exact":
@@ -187,7 +188,7 @@ class Explainer(Serializable):
                 self.__class__ = explainers.Linear
                 explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
             else:
-                raise Exception("Unknown algorithm type passed: %s!" % algorithm)
+                raise ValueError("Unknown algorithm type passed: %s!" % algorithm)
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",

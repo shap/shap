@@ -145,7 +145,7 @@ class Text(Masker):
             return out
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
             return self.token_segments(s)
-        raise Exception("Unknown tokenizer type!", self.tokenizer)
+        raise TypeError("Unknown tokenizer type!", self.tokenizer)
 
     def tokenize(self, s):
         """ Calls the underlying tokenizer on the given string.
@@ -154,7 +154,7 @@ class Text(Masker):
             return self.tokenizer.encode_plus(s)
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
             return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
-        raise Exception("Unknown tokenizer type!", self.tokenizer)
+        raise TypeError("Unknown tokenizer type!", self.tokenizer)
 
     def token_segments(self, s):
         """ Returns the substrings associated with each token in the given string.
@@ -179,7 +179,7 @@ class Text(Masker):
             parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)]
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
-        raise Exception("Unknown tokenizer type!", self.tokenizer)
+        raise TypeError("Unknown tokenizer type!", self.tokenizer)
 
     def clustering(self, s):
         """ Compute the clustering of tokens for the given string.
