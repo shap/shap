@@ -53,7 +53,7 @@ class MaskedModel():
             # we need to convert from delta masking to a full masking call because we were given a delta masking
             # input but the masker does not support delta masking
             else: 
-                full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=np.bool)
+                full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=bool)
                 _convert_delta_mask_to_full(masks, full_masks)
                 return self._full_masking_call(full_masks, batch_size=batch_size)
 
@@ -66,7 +66,7 @@ class MaskedModel():
         # else:
         #out = []
         do_delta_masking = getattr(self.masker, "reset_delta_masking", None) is not None
-        last_mask = np.zeros(masks.shape[1], dtype=np.bool)
+        last_mask = np.zeros(masks.shape[1], dtype=bool)
         batch_positions = np.zeros(len(masks)+1, dtype=np.int)
         #masked_inputs = np.zeros((len(masks) * self.masker.max_output_samples, masks.shape[1]))
         all_masked_inputs = []
@@ -95,7 +95,7 @@ class MaskedModel():
 
             # see which rows have been updated, so we can only evaluate the model on the rows we need to
             if i == 0 or self._variants is None:
-                varying_rows.append(np.ones(num_mask_samples[i], dtype=np.bool))
+                varying_rows.append(np.ones(num_mask_samples[i], dtype=bool))
                 num_varying_rows[i] = num_mask_samples[i]
             else:
                 # a = np.any(self._variants & delta_mask, axis=1)
@@ -402,7 +402,7 @@ def make_masks(cluster_matrix):
         pos += len(inds)
         indptr[i+1] = pos
     mask_matrix = scipy.sparse.csr_matrix(
-        (np.ones(len(indices), dtype=np.bool), indices, indptr),
+        (np.ones(len(indices), dtype=bool), indices, indptr),
         shape=(len(mask_matrix_inds), M)
     )
 

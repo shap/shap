@@ -215,7 +215,7 @@ class TFDeep(Explainer):
         """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
         """
         if op not in self._vinputs:
-            out = np.zeros(len(op.inputs), dtype=np.bool)
+            out = np.zeros(len(op.inputs), dtype=bool)
             for i,t in enumerate(op.inputs):
                 out[i] = t.name in self.between_tensors
             self._vinputs[op] = out

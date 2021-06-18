@@ -274,11 +274,11 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
         cv = interaction_feature_values
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(cv.astype(np.float), 5)
-        chigh = np.nanpercentile(cv.astype(np.float), 95)
+        clow = np.nanpercentile(cv.astype(float), 5)
+        chigh = np.nanpercentile(cv.astype(float), 95)
         if clow == chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
@@ -290,8 +290,8 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
         # discritize colors for categorical features
         if categorical_interaction and clow != chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
             bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
@@ -301,7 +301,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if x_jitter > 1: x_jitter = 1
         xvals = xv.copy()
         if isinstance(xvals[0], float):
-            xvals = xvals.astype(np.float)
+            xvals = xvals.astype(float)
             xvals = xvals[~np.isnan(xvals)]
         xvals = np.unique(xvals) # returns a sorted array
         if len(xvals) >= 2:
@@ -628,11 +628,11 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
         cv = interaction_feature_values
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(cv.astype(np.float), 5)
-        chigh = np.nanpercentile(cv.astype(np.float), 95)
+        clow = np.nanpercentile(cv.astype(float), 5)
+        chigh = np.nanpercentile(cv.astype(float), 95)
         if clow == chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
@@ -644,8 +644,8 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
         # discritize colors for categorical features
         if categorical_interaction and clow != chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
             bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
@@ -654,7 +654,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         if x_jitter > 1: x_jitter = 1
         xvals = xv.copy()
         if isinstance(xvals[0], float):
-            xvals = xvals.astype(np.float)
+            xvals = xvals.astype(float)
             xvals = xvals[~np.isnan(xvals)]
         xvals = np.unique(xvals) # returns a sorted array
         if len(xvals) >= 2:

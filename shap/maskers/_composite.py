@@ -56,7 +56,7 @@ class Composite(Masker):
 
     #     # if mask is not given then we mask all features
     #     if mask is None:
-    #         mask = np.zeros(np.prod(x.shape), dtype=np.bool)
+    #         mask = np.zeros(np.prod(x.shape), dtype=bool)
 
     #     out = x * mask + self.background_data * np.invert(mask)
 

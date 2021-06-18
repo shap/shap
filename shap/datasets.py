@@ -53,7 +53,7 @@ def imdb(display=False):
 
     with open(cache(github_data_url + "imdb_train.txt")) as f:
         data = f.readlines()
-    y = np.ones(25000, dtype=np.bool)
+    y = np.ones(25000, dtype=bool)
     y[:12500] = 0
     return data, y
 
@@ -71,7 +71,7 @@ def communitiesandcrime(display=False):
 
     # find the indices where the total violent crimes are known
     valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:,-2])))[0]
-    y = np.array(raw_data.iloc[valid_inds,-2], dtype=np.float)
+    y = np.array(raw_data.iloc[valid_inds,-2], dtype=float)
 
     # extract the predictive features and remove columns with missing values
     X = raw_data.iloc[valid_inds,5:-18]

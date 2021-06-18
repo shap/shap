@@ -76,16 +76,16 @@ class Tabular(Masker):
         else:
             self.clustering = None
 
-        # self._last_mask = np.zeros(self.data.shape[1], dtype=np.bool)
+        # self._last_mask = np.zeros(self.data.shape[1], dtype=bool)
         self._masked_data = data.copy()
-        self._last_mask = np.zeros(data.shape[1], dtype=np.bool)
+        self._last_mask = np.zeros(data.shape[1], dtype=bool)
         self.shape = self.data.shape
         self.supports_delta_masking = True
         # self._last_x = None
-        # self._data_variance = np.ones(self.data.shape, dtype=np.bool)
+        # self._data_variance = np.ones(self.data.shape, dtype=bool)
 
         # this is property that allows callers to check what rows actually changed since last time.
-        # self.changed_rows = np.ones(self.data.shape[0], dtype=np.bool)
+        # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
     def __call__(self, mask, x):
 
@@ -99,7 +99,7 @@ class Tabular(Masker):
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=np.int)
             num_masks = (mask >= 0).sum()
-            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=np.bool)
+            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)
             masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))
             self._last_mask[:] = False
             self._masked_data[:] = self.data

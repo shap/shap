@@ -68,7 +68,7 @@ class Permutation(Explainer):
 
         # loop over many permutations
         inds = fm.varying_inputs()
-        inds_mask = np.zeros(len(fm), dtype=np.bool)
+        inds_mask = np.zeros(len(fm), dtype=bool)
         inds_mask[inds] = True
         masks = np.zeros(2*len(inds)+1, dtype=np.int)
         masks[0] = MaskedModel.delta_mask_noop_value
