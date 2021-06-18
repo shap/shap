@@ -243,8 +243,7 @@ class Tree(Explainer):
             flat_output = True
             X = X.reshape(1, X.shape[0])
         if X.dtype != self.model.input_dtype:
-            self.astype = X.astype(self.model.input_dtype)
-            X = self.astype
+            X = X.astype(self.model.input_dtype)
         X_missing = np.isnan(X, dtype=bool)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
