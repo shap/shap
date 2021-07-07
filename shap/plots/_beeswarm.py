@@ -17,6 +17,7 @@ from . import colors
 from ..utils import safe_isinstance, OpChain, format_value
 from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
 from .. import Explanation
+import copy
 
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
@@ -54,7 +55,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                 "The beeswarm plot does not support plotting explanations with instances that have more "
                 "than one dimension!"
             )
-        shap_exp = shap_values
+        shap_exp = copy.deepcopy(shap_values)
         base_values = shap_exp.base_values
         values = shap_exp.values
         features = shap_exp.data
