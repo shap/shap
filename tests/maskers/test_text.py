@@ -6,6 +6,27 @@ import pytest
 import numpy as np
 import shap
 
+
+@pytest.fixture
+def custom_tokenizer():
+    class Tokenizer():
+        def __init__(self):
+            AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=False)
+
+        def encode(self, x):
+            return self.tokenizer.encode(x)[1:-1]
+
+        def decode(self, x):
+            return self.tokenizer.decode(x)
+
+        def tokenize(self, x):
+            return self.tokenizer.tokenize(x)
+
+    tokenizer = Tokenizer()
+    return tokenizer
+            
+
 def test_method_tokenize_pretrained_tokenizer():
     """ Check that the Text masker produces the same ids as its non-fast pretrained tokenizer.
     """
@@ -33,6 +54,18 @@ def test_method_tokenize_pretrained_tokenizer_fast():
     test_text = "I have a joke about deep learning but I can't explain it."
     output_ids = masker.tokenize(test_text)
     correct_ids = tokenizer.encode_plus(test_text)['input_ids']
+
+    assert output_ids == correct_ids
+
+
+def test_method_tokenize_custom_tokenizer(custom_tokenizer):
+    """Check that the Text masker produces the same ids as the custom tokenizer
+    """
+    masker = shap.maskers.Text(custom_tokenizer)
+
+    test_text = "I have a joke about deep learning but I can't explain it."
+    output_ids = masker.tokenize(test_text)
+    correct_ids = custom_tokenizer.encode(test_text)
 
     assert output_ids == correct_ids
 
@@ -65,6 +98,18 @@ def test_method_token_segments_pretrained_tokenizer_fast():
     test_text = "I ate a Cannoli"
     output_token_segments = masker.token_segments(test_text)
     correct_token_segments = ['', 'I ', 'ate ', 'a ', 'Can', 'no', 'li', '']
+
+    assert output_token_segments == correct_token_segments
+
+
+def test_method_token_segments_custom_tokenizer(custom_tokenizer):
+    """ Check that the Text masker produces the same segments as the transformers pretrained tokenizers.
+    """
+    masker = shap.maskers.Text(custom_tokenizer)
+
+    test_text = "I ate a Cannoli"
+    output_token_segments = masker.token_segments(test_text)
+    correct_token_segments = ['i', 'ate', 'a', 'can', '##no', '##li']
 
     assert output_token_segments == correct_token_segments
 
@@ -102,6 +147,21 @@ def test_masker_call_pretrained_tokenizer_fast():
     correct_masked_text = '[MASK]ate a [MASK]noli'
 
     assert output_masked_text[0] == correct_masked_text
+
+
+def test_masker_call_custom_tokenizer(custom_tokenizer):
+    """ Check that the Text masker with a non-fast pretrained tokenizer masks correctly.
+    """
+    masker = shap.maskers.Text(custom_tokenizer)
+
+    test_text = "I ate a Cannoli"
+    test_input_mask = np.array([False, True, True, False, True, True])
+
+    output_masked_text = masker(test_input_mask, test_text)
+    correct_masked_text = 'ate a ##no ##li' # this is an artifact of using transformers tokenizer to test the custom tokenizer
+
+    assert output_masked_text[0] == correct_masked_text
+
 
 def test_sentencepiece_tokenizer_output():
     """ Tests for output for sentencepiece tokenizers to not have '_' in output of masker when passed a mask of ones.
@@ -265,5 +325,4 @@ def test_serialization_text_masker_collapse_mask_token():
 
     original_masked_output = original_masker(test_input_mask, test_text)
     new_masked_output = new_masker(test_input_mask, test_text)
-
     assert original_masked_output == new_masked_output
