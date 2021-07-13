@@ -112,6 +112,9 @@ class Text(Masker):
                 out = "".join(out)
             elif isinstance(self.tokenizer, SplittingTokenizer):
                 out = "".join(out)
+            else:
+                # custom tokenizer assumes join by whitespace
+                out = " ".join(out)
         else:
             if self.mask_token_id is None:
                 out = self._tokenized_s[mask]
@@ -163,7 +166,8 @@ class Text(Masker):
         if isinstance(self.tokenizer, SplittingTokenizer):
             return self.tokenizer.encode(s)
 
-        raise Exception("Unknown tokenizer type!", self.tokenizer)
+        # custom tokenizer
+        return [token+' ' for token in self.token_segments(s)]
 
     def tokenize(self, s):
         """ Calls the underlying tokenizer on the given string.
@@ -174,7 +178,10 @@ class Text(Masker):
             return self.tokenizer.encode_plus(s, return_offsets_mapping=True).data["input_ids"]
         if isinstance(self.tokenizer, SplittingTokenizer):
             return self.tokenizer.encode(s)
-        raise Exception("Unknown tokenizer type!", self.tokenizer)
+        
+        if not hasattr(self.tokenizer, "encode"):
+            raise Exception("Custom tokenizer does not implement encode method.")
+        return self.tokenizer.encode(s)
 
     def token_segments(self, s):
         """ Returns the substrings associated with each token in the given string.
@@ -203,14 +210,16 @@ class Text(Masker):
         if isinstance(self.tokenizer, SplittingTokenizer):
             return self.tokenizer.encode(s)
 
-        raise Exception("Unknown tokenizer type!", self.tokenizer)
+        if not hasattr(self.tokenizer, "tokenize"):
+            raise Exception("Custom tokenizer does not implement tokenize method")
+        return self.tokenizer.tokenize(s)
 
     def clustering(self, s):
         """ Compute the clustering of tokens for the given string.
         """
         self._update_s_cache(s)
         decoded_x = [self.tokenizer.decode([v]) for v in self._tokenized_s]
-        special_tokens = [self.tokenizer.sep_token] if 'sep_token' in self.tokenizer.special_tokens_map else None
+        special_tokens = [self.tokenizer.sep_token] if hasattr(self.tokenizer, "special_tokens_map") and 'sep_token' in self.tokenizer.special_tokens_map else None
         pt = partition_tree(decoded_x, special_tokens)
 
         # use the rescaled size of the clusters as their height since the merge scores are just a
@@ -262,6 +271,13 @@ class Text(Masker):
             self._s = s
             #self._tokenized_s_full = self.tokenize(s)
             self._tokenized_s = np.array(self.tokenize(s))#self._tokenized_s_full.data["input_ids"])
+            
+            # Not needed after new update
+            #self._tokenized_s_full = self.tokenize(s)
+            #if hasattr(self._tokenized_s_full, "data"):
+            #    self._tokenized_s = np.array(self._tokenized_s_full.data["input_ids"])
+            #else:
+            #    self._tokenized_s = self.tokenizer.encode(s)
             self._segments_s = np.array(self.token_segments(s))
 
     def shape(self, s):
