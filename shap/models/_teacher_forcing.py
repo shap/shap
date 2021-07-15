@@ -82,8 +82,10 @@ class TeacherForcing(Model):
         self.similarity_model_type = None
         if safe_isinstance(self.similarity_model, "transformers.PreTrainedModel"):
             self.similarity_model_type = "pt"
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
-            self.similarity_model = self.similarity_model.to(self.device)
+            if self.device is not None:# = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
+                d = self.similarity_model.device
+                assert d == self.device or str(d) == self.device, "The passed similarity_model must be on the same device!"
+                #self.similarity_model = self.similarity_model.to(self.device)
         elif safe_isinstance(self.similarity_model, "transformers.TFPreTrainedModel"):
             self.similarity_model_type = "tf"
 
@@ -323,9 +325,10 @@ class TeacherForcing(Model):
         # check if type of model architecture assigned in model config
         if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \
             and (hasattr(self.similarity_model.config, "is_decoder") and not self.similarity_model.config.is_decoder):
-            raise ValueError(
-                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
-            )
+            pass #self.similarity_model.config.is_decoder = True # TODO: is this okay?
+            # raise ValueError(
+            #     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+            # )
         # get output ids for teacher forcing
         output_ids = self.get_outputs(Y)
         if self.similarity_model.config.is_encoder_decoder:

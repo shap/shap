@@ -223,7 +223,7 @@ class Tree(Explainer):
             e = Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names)
         else:
             v = self.shap_interaction_values(X)
-            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names, interaction_order=2)
+            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names)
         return e
 
     def _validate_inputs(self, X, y, tree_limit, check_additivity):

@@ -4,7 +4,7 @@ import scipy as sp
 from .. import maskers
 from .. import links
 from ..utils import safe_isinstance, show_progress
-from ..utils.transformers import MODELS_FOR_CAUSAL_LM, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM
+from ..utils.transformers import is_transformers_lm
 from .. import models
 from ..models import Model
 from ..maskers import Masker
@@ -23,7 +23,7 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, **kwargs):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True, **kwargs):
         """ Build a new explainer for the passed model.
 
         Parameters
@@ -81,8 +81,7 @@ class Explainer(Serializable):
             else:
                 self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
-            if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and \
-                    safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+            if is_transformers_lm(self.model):
                 # auto assign text infilling if model is a transformer model with lm head
                 self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
             else:
@@ -94,21 +93,26 @@ class Explainer(Serializable):
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
             return self.__init__( # pylint: disable=non-parent-init-called
                 self.model, self.model.inner_model.tokenizer,
-                link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, **kwargs
+                link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
             )
         else:
             self.masker = masker
 
         # Check for transformer pipeline objects and wrap them
         if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
-            return self.__init__( # pylint: disable=non-parent-init-called
-                models.TransformersPipeline(self.model), self.masker,
-                link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, **kwargs
-            )
+            if is_transformers_lm(self.model.model):
+                return self.__init__( # pylint: disable=non-parent-init-called
+                    self.model.model, self.model.tokenizer if self.masker is None else self.masker,
+                    link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
+                )
+            else:
+                return self.__init__( # pylint: disable=non-parent-init-called
+                    models.TransformersPipeline(self.model), self.masker,
+                    link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
+                )
 
         # wrap self.masker and self.model for output text explanation algorithm
-        if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and \
-                safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
+        if is_transformers_lm(self.model):
             self.model = models.TeacherForcing(self.model, self.masker.tokenizer)
             self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
         elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
@@ -119,10 +123,11 @@ class Explainer(Serializable):
         #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
 
         # validate and save the link function
-        if callable(link) and callable(getattr(link, "inverse", None)):
+        if callable(link):
             self.link = link
         else:
-            raise Exception("The passed link function needs to be callable and have a callable .inverse property!")
+            raise Exception("The passed link function needs to be callable!")
+        self.linearize_link = linearize_link
 
         # if we are called directly (as opposed to through super()) then we convert ourselves to the subclass
         # that implements the specific algorithm that was chosen
@@ -170,22 +175,22 @@ class Explainer(Serializable):
             # build the right subclass
             if algorithm == "exact":
                 self.__class__ = explainers.Exact
-                explainers.Exact.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Exact.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "permutation":
                 self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, output_names=self.output_names, **kwargs)
+                explainers.Partition.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
             elif algorithm == "tree":
                 self.__class__ = explainers.Tree
-                explainers.Tree.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Tree.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "additive":
                 self.__class__ = explainers.Additive
-                explainers.Additive.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Additive.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "linear":
                 self.__class__ = explainers.Linear
-                explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, **kwargs)
+                explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
@@ -194,7 +199,7 @@ class Explainer(Serializable):
                  outputs=None, silent=False, **kwargs):
         """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
 
-        Note this default version could be ois an abstract method that is implemented by each algorithm-specific
+        Note this default version could be an abstract method that is implemented by each algorithm-specific
         subclass of Explainer. Descriptions of each subclasses' __call__ arguments
         are available in their respective doc-strings.
         """
@@ -249,6 +254,7 @@ class Explainer(Serializable):
         hierarchical_values = []
         clustering = []
         output_names = []
+        error_std = []
         if callable(getattr(self.masker, "feature_names", None)):
             feature_names = [[] for _ in range(len(args))]
         for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
@@ -264,7 +270,7 @@ class Explainer(Serializable):
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
             output_names.append(row_result.get("output_names", None))
-
+            error_std.append(row_result.get("error_std", None))
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)
                 for i in range(len(row_args)):
@@ -285,6 +291,7 @@ class Explainer(Serializable):
         output_indices = pack_values(output_indices)
         main_effects = pack_values(main_effects)
         hierarchical_values = pack_values(hierarchical_values)
+        error_std = pack_values(error_std)
         clustering = pack_values(clustering)
 
         # getting output labels
@@ -335,7 +342,8 @@ class Explainer(Serializable):
                 feature_names=feature_names[j], main_effects=main_effects,
                 clustering=clustering,
                 hierarchical_values=hierarchical_values,
-                output_names=sliced_labels # self.output_names
+                output_names=sliced_labels, # self.output_names
+                error_std=error_std
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))

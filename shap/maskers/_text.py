@@ -6,6 +6,7 @@ from .._serializable import Serializer, Deserializer
 from ..utils import safe_isinstance
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
 
+
 class Text(Masker):
     """ This masks out tokens according to the given tokenizer.
 
@@ -14,13 +15,18 @@ class Text(Masker):
     output_type : "string" (default) or "token_ids"
 
     """
-    def __init__(self, tokenizer, mask_token="auto", collapse_mask_token=False, output_type="string"):
+    def __init__(self, tokenizer, mask_token="auto", collapse_mask_token="auto", output_type="string"):
         self.mask_history = {}
-        self.tokenizer = tokenizer
+        if hasattr(tokenizer, "encode"):
+            self.tokenizer = tokenizer
+        else:
+            self.tokenizer = SplittingTokenizer(tokenizer)
+
         self.output_type = output_type
         self.collapse_mask_token = collapse_mask_token
         self.input_mask_token = mask_token
-        parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(tokenizer)
+        self.mask_token = None # will be computed later in this function
+        parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.tokenizer)
 
         self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
         self.keep_suffix = parsed_tokenizer_dict['keep_suffix']
@@ -29,24 +35,30 @@ class Text(Masker):
         #null_tokens = parsed_tokenizer_dict['null_tokens']
 
         if mask_token == "auto":
-            if hasattr(self.tokenizer, "mask_token_id") and self.tokenizer.mask_token_id is not None:
+            if getattr(self.tokenizer, "mask_token_id", None) is not None:
                 self.mask_token = " "+self.tokenizer.decode([self.tokenizer.mask_token_id])+" "#[self.prefix_strlen:-self.suffix_strlen]
                 if self.keep_suffix > 0:
-                    self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+                    self.mask_token_id = self.tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
                 else:
-                    self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
+                    self.mask_token_id = self.tokenizer.encode(self.mask_token)[self.keep_prefix:]
+                if self.collapse_mask_token == "auto":
+                    self.collapse_mask_token = False
             else:
+                mask_token = "..."
+        if self.mask_token is None:
+            if mask_token == "":
                 self.mask_token_id = None
                 self.mask_token = ""
-        elif mask_token == "":
-            self.mask_token_id = None
-            self.mask_token = ""
-        else:
-            self.mask_token = " "+mask_token+" "
-            if self.keep_suffix > 0:
-                self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
             else:
-                self.mask_token_id = tokenizer.encode(self.mask_token)[self.keep_prefix:]
+                self.mask_token = " "+mask_token+" "
+                if self.keep_suffix > 0:
+                    self.mask_token_id = self.tokenizer.encode(self.mask_token)[self.keep_prefix:-self.keep_suffix]
+                else:
+                    self.mask_token_id = self.tokenizer.encode(self.mask_token)[self.keep_prefix:]
+
+        if self.collapse_mask_token == "auto":
+            self.collapse_mask_token = True
+
         # assign mask token segment
         if self.keep_suffix > 0:
             self.mask_token_segment = self.token_segments(self.mask_token)[self.keep_prefix:-self.keep_suffix]
@@ -98,6 +110,8 @@ class Text(Masker):
                 out = self.tokenizer.convert_tokens_to_string(out.tolist())
             elif safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
                 out = "".join(out)
+            elif isinstance(self.tokenizer, SplittingTokenizer):
+                out = "".join(out)
         else:
             if self.mask_token_id is None:
                 out = self._tokenized_s[mask]
@@ -111,7 +125,7 @@ class Text(Masker):
             out = post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
         if isinstance(out, str):
-            out = re.sub(r"[\s]+", " ", out).strip()
+            out = re.sub(r"[\s]+", " ", out).strip() # TODO: should do strip?? (originally because of fast vs. slow tokenizer differences)
         # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain
         # extra unnecessary tokens, for example ''. you may want to strip out spaces adjacent to separator tokens. Refer to PR
         # for more details.
@@ -145,15 +159,21 @@ class Text(Masker):
             return out
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
             return self.token_segments(s)
+
+        if isinstance(self.tokenizer, SplittingTokenizer):
+            return self.tokenizer.encode(s)
+
         raise Exception("Unknown tokenizer type!", self.tokenizer)
 
     def tokenize(self, s):
         """ Calls the underlying tokenizer on the given string.
         """
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils.PreTrainedTokenizer"):
-            return self.tokenizer.encode_plus(s)
+            return self.tokenizer.encode_plus(s).data["input_ids"]
         if safe_isinstance(self.tokenizer, "transformers.tokenization_utils_fast.PreTrainedTokenizerFast"):
-            return self.tokenizer.encode_plus(s, return_offsets_mapping=True)
+            return self.tokenizer.encode_plus(s, return_offsets_mapping=True).data["input_ids"]
+        if isinstance(self.tokenizer, SplittingTokenizer):
+            return self.tokenizer.encode(s)
         raise Exception("Unknown tokenizer type!", self.tokenizer)
 
     def token_segments(self, s):
@@ -179,6 +199,10 @@ class Text(Masker):
             parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)]
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts
+
+        if isinstance(self.tokenizer, SplittingTokenizer):
+            return self.tokenizer.encode(s)
+
         raise Exception("Unknown tokenizer type!", self.tokenizer)
 
     def clustering(self, s):
@@ -236,8 +260,8 @@ class Text(Masker):
     def _update_s_cache(self, s):
         if self._s != s:
             self._s = s
-            self._tokenized_s_full = self.tokenize(s)
-            self._tokenized_s = np.array(self._tokenized_s_full.data["input_ids"])
+            #self._tokenized_s_full = self.tokenize(s)
+            self._tokenized_s = np.array(self.tokenize(s))#self._tokenized_s_full.data["input_ids"])
             self._segments_s = np.array(self.token_segments(s))
 
     def shape(self, s):
@@ -266,7 +290,7 @@ class Text(Masker):
             invariants[-self.keep_suffix:] = True
         # mark separator tokens as invariant
         for i in range(len(self._tokenized_s)):
-            if self._tokenized_s[i] == self.tokenizer.sep_token_id:
+            if self._tokenized_s[i] == getattr(self.tokenizer, "sep_token_id", None):
                 invariants[i] = True
         return invariants.reshape(1, -1)
 
@@ -300,6 +324,29 @@ class Text(Masker):
             kwargs["collapse_mask_token"] = s.load("collapse_mask_token")
             kwargs["output_type"] = s.load("output_type")
         return kwargs
+
+
+class SplittingTokenizer():
+    """ This wraps a basic string splitting tokenization function for use in SHAP.
+    """
+    def __init__(self, splitter, join_token=" "):
+        """ Create a tokenizer based on a simple splitting function.
+        """
+        self.splitter = splitter
+        self.join_token = join_token
+        self.special_tokens_map = {}
+
+    def encode(self, s):
+        """ Convert a string into a set of token ids (in this case the token is its own id).
+        """
+        out = [" " + t for t in self.splitter(s) if len(t) > 0]
+        return out
+
+    def decode(self, tokens):
+        """ Convert a list of tokens into an output string.
+        """
+        return self.join_token.join(tokens)
+
 
 def post_process_sentencepiece_tokenizer_output(s):
     """ replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers.

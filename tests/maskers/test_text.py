@@ -16,7 +16,7 @@ def test_method_tokenize_pretrained_tokenizer():
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I have a joke about deep learning but I can't explain it."
-    output_ids = masker.tokenize(test_text)['input_ids']
+    output_ids = masker.tokenize(test_text)
     correct_ids = tokenizer.encode_plus(test_text)['input_ids']
 
     assert output_ids == correct_ids
@@ -31,7 +31,7 @@ def test_method_tokenize_pretrained_tokenizer_fast():
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I have a joke about deep learning but I can't explain it."
-    output_ids = masker.tokenize(test_text)['input_ids']
+    output_ids = masker.tokenize(test_text)
     correct_ids = tokenizer.encode_plus(test_text)['input_ids']
 
     assert output_ids == correct_ids
