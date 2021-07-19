@@ -206,9 +206,6 @@ def test_tf_keras_imdb_lstm():
     background = X_train[inds]
     testx = X_test[10:11]
 
-    # Question for Scott: we can explain without fitting?
-    # mod.fit(X_train, y_train, epochs=1, shuffle=False, verbose=1)
-
     # explain a prediction and make sure it sums to the difference between the average output
     # over the background samples and the current output
     sess = tf.compat.v1.keras.backend.get_session()
@@ -332,20 +329,6 @@ def test_pytorch_mnist_cnn(tmpdir):
     batch_size = 32
 
     try:
-        # train_loader = torch.utils.data.DataLoader(
-        #     datasets.MNIST(tmpdir, train=True, download=True,
-        #                 transform=transforms.Compose([
-        #                     transforms.ToTensor(),
-        #                     transforms.Normalize((0.1307,), (0.3081,))
-        #                 ])),
-        #     batch_size=batch_size, shuffle=True)
-        # test_loader = torch.utils.data.DataLoader(
-        #     datasets.MNIST(tmpdir, train=False, download=True,
-        #                 transform=transforms.Compose([
-        #                     transforms.ToTensor(),
-        #                     transforms.Normalize((0.1307,), (0.3081,))
-        #                 ])),
-        #     batch_size=batch_size, shuffle=True)
         train_loader = RandData(batch_size)
         test_loader = RandData(batch_size)
     except HTTPError as e:
