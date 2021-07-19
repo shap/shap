@@ -226,8 +226,6 @@ def test_pytorch_mnist_cnn(tmpdir):
     """
     torch = pytest.importorskip('torch')
     torchvision = pytest.importorskip('torchvision')
-    datasets = torchvision.datasets
-    transforms = torchvision.transforms
 
     from torch import nn
     from torch.nn import functional as F
