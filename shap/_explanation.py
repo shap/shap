@@ -579,13 +579,12 @@ def group_features(shap_values, feature_map):
     curr_names = shap_values.feature_names
     shap_values_new = copy.deepcopy(shap_values)
     found = {}
-    i = -1
+    i = 0
     rank1 = len(shap_values.shape) == 1
     for name in curr_names:
         new_name = feature_map.get(name, name)
         if new_name in found:
             continue
-        i += 1
         found[new_name] = True
         
         new_name = feature_map.get(name, name)
@@ -599,6 +598,7 @@ def group_features(shap_values, feature_map):
             shap_values_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
             shap_values_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
         shap_values_new.feature_names[i] = new_name
+        i += 1
 
     return Explanation(
         shap_values_new.values[:i] if rank1 else shap_values_new.values[:,:i],
