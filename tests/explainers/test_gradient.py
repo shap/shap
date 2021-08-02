@@ -106,6 +106,7 @@ def test_pytorch_mnist_cnn(tmpdir):
 
     from torch import nn
     from torch.nn import functional as F
+    torch.manual_seed(0)
 
     batch_size = 128
 
@@ -150,18 +151,18 @@ def test_pytorch_mnist_cnn(tmpdir):
             """
             def __init__(self):
                 super().__init__()
-                self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-                self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+                self.conv1 = nn.Conv2d(1, 5, kernel_size=5)
+                self.conv2 = nn.Conv2d(5, 10, kernel_size=5)
                 self.conv2_drop = nn.Dropout2d()
-                self.fc1 = nn.Linear(320, 50)
-                self.fc2 = nn.Linear(50, 10)
+                self.fc1 = nn.Linear(160, 20)
+                self.fc2 = nn.Linear(20, 10)
 
             def forward(self, x):
                 """ Run the model.
                 """
                 x = F.relu(F.max_pool2d(self.conv1(x), 2))
                 x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-                x = x.view(-1, 320)
+                x = x.view(-1, 160)
                 x = F.relu(self.fc1(x))
                 x = F.dropout(x, training=self.training)
                 x = self.fc2(x)
@@ -210,7 +211,7 @@ def test_pytorch_mnist_cnn(tmpdir):
                 diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
             sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
             d = np.abs(sums - diff).sum()
-            assert d / np.abs(diff).sum() < 0.1, "Sum of SHAP values " \
+            assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values " \
                                                  "does not match difference! %f" % (d / np.abs(diff).sum())
 
     print('Running test from interim layer')
