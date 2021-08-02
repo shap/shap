@@ -1,7 +1,7 @@
 """ Tests for the Deep explainer.
 """
 
-from distutils.version import LooseVersion
+from packaging import version
 from urllib.error import HTTPError
 import numpy as np
 import pandas as pd
@@ -18,7 +18,7 @@ def test_tf_eager():
     """
 
     tf = pytest.importorskip('tensorflow')
-    if LooseVersion(tf.__version__) >= LooseVersion("2.4.0"):
+    if version.parse(tf.__version__) >= version.parse("2.4.0"):
         pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
 
     x = pd.DataFrame({"B": np.random.random(size=(100,))})
@@ -175,7 +175,7 @@ def test_tf_keras_imdb_lstm():
     tf = pytest.importorskip('tensorflow')
 
     # this fails right now for new TF versions (there is a warning in the code for this)
-    if LooseVersion(tf.__version__) >= LooseVersion("2.5.0"):
+    if version.parse(tf.__version__) >= version.parse("2.5.0"):
         pytest.skip()
 
     from tensorflow.keras.datasets import imdb

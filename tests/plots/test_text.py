@@ -44,5 +44,13 @@ def test_single_text_to_text():
     ])
 
 
-    shap_values_test = MockTextExplanation(test_data, test_values, test_output_names, test_base_values, test_clustering, test_hierarchical_values)
+    shap_values_test = shap.Explanation(
+        values=[test_values],
+        base_values=[test_base_values],
+        data=[test_data],
+        output_names=test_output_names,
+        feature_names=test_base_values,
+        clustering=[test_clustering],
+        hierarchical_values=[test_hierarchical_values]
+    )
     shap.plots.text(shap_values_test)

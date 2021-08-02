@@ -186,8 +186,8 @@ class Text(Masker):
             # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
             tokens = []
             for i, v in enumerate(special_tokens_mask):
-                if ((v == 0) or ('sep_token' in self.tokenizer.special_tokens_map) and \
-                        (all_tokens[i] == self.tokenizer.sep_token) and (0 < i < len(special_tokens_mask) - 1)):
+                if ((v == 0) or (all_tokens[i] == getattr(self.tokenizer, 'sep_token', None)) and (0 < i < len(special_tokens_mask) - 1) or \
+                    (all_tokens[i] == getattr(self.tokenizer, 'mask_token', None))):
                     tokens.append(all_tokens[i])
                 else:
                     tokens.append("")
