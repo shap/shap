@@ -44,7 +44,10 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
         Maximum shap value bound.
 
     cmax : float
-        Maximum absolute shap value for sample. Used for scaling colors for input tokens. 
+        Maximum absolute shap value for sample. Used for scaling colors for input tokens.
+    
+    display: bool
+        Whether to display or return html to further manipulate or embed. default: True
 
     """
 
