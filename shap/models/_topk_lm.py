@@ -5,16 +5,6 @@ from ..utils import safe_isinstance, record_import_error
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM
 from .._serializable import Serializer, Deserializer
 
-try:
-    import torch
-except ImportError as e:
-    record_import_error("torch", "Torch could not be imported!", e)
-
-try:
-    import tensorflow as tf
-except ImportError as e:
-    record_import_error("tensorflow", "TensorFlow could not be imported!", e)
-
 class TopKLM(Model):
     """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
     """
@@ -62,6 +52,7 @@ class TopKLM(Model):
         self.model_type = None
         if safe_isinstance(self.inner_model, "transformers.PreTrainedModel"):
             self.model_type = "pt"
+            import torch
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             self.inner_model = self.inner_model.to(self.device)
         elif safe_isinstance(self.inner_model, "transformers.TFPreTrainedModel"):
@@ -214,6 +205,7 @@ class TopKLM(Model):
         if safe_isinstance(self.inner_model, MODELS_FOR_CAUSAL_LM):
             inputs = self.get_inputs(X, padding_side="left")
             if self.model_type == "pt":
+                import torch
                 inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
                 inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
                 inputs = inputs.to(self.device)
@@ -223,6 +215,7 @@ class TopKLM(Model):
                 # extract only logits corresponding to target sentence ids
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')[:, -1, :]
             elif self.model_type == "tf":
+                import tensorflow as tf
                 inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
                 inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
                 if self.device is None:
