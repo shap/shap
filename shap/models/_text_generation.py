@@ -1,8 +1,7 @@
 import numpy as np
 from ._model import Model
-from ..utils import record_import_error, safe_isinstance
+from ..utils import safe_isinstance
 from .._serializable import Serializer, Deserializer
-
 
 class TextGeneration(Model):
     """ Generates target sentence/ids using a base model.
@@ -151,7 +150,7 @@ class TextGeneration(Model):
             # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             # self.inner_model = self.inner_model.to(device)
             # self.inner_model.eval()
-            import torch
+            import torch # pylint: disable=import-outside-toplevel
             with torch.no_grad():
                 if self.inner_model.config.is_encoder_decoder:
                     inputs = self.get_inputs(X)
@@ -169,7 +168,7 @@ class TextGeneration(Model):
                 outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
             else:
                 try:
-                    import tensorflow as tf
+                    import tensorflow as tf # pylint: disable=import-outside-toplevel
                     with tf.device(self.device):
                         outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
                 except RuntimeError as err:
