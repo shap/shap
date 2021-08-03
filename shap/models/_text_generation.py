@@ -1,18 +1,7 @@
 import numpy as np
 from ._model import Model
-from ..utils import record_import_error, safe_isinstance
+from ..utils import safe_isinstance
 from .._serializable import Serializer, Deserializer
-
-try:
-    import torch
-except ImportError as e:
-    record_import_error("torch", "Torch could not be imported!", e)
-
-try:
-    import tensorflow as tf
-except ImportError as e:
-    record_import_error("tensorflow", "TensorFlow could not be imported!", e)
-
 
 class TextGeneration(Model):
     """ Generates target sentence/ids using a base model.
@@ -136,7 +125,7 @@ class TextGeneration(Model):
         if (hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder) \
                 and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
             pass
-            # TODO: Is this okay? I am just assuming we want is_decoder when neither are set
+            # TODOmaybe: Is this okay? I am just assuming we want is_decoder when neither are set
             #self.inner_model.config.is_decoder = True
             # raise ValueError(
             #     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
@@ -157,10 +146,11 @@ class TextGeneration(Model):
                     del text_generation_params[k]
         if self.model_type == "pt":
             # create torch tensors and move to device
-            # TODO: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks piplines)
+            # TODOmaybe: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks piplines)
             # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             # self.inner_model = self.inner_model.to(device)
             # self.inner_model.eval()
+            import torch # pylint: disable=import-outside-toplevel
             with torch.no_grad():
                 if self.inner_model.config.is_encoder_decoder:
                     inputs = self.get_inputs(X)
@@ -178,10 +168,11 @@ class TextGeneration(Model):
                 outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
             else:
                 try:
+                    import tensorflow as tf # pylint: disable=import-outside-toplevel
                     with tf.device(self.device):
                         outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
-                except RuntimeError as e:
-                    print(e)
+                except RuntimeError as err:
+                    print(err)
         if getattr(self.inner_model.config, "is_decoder", True):
             # slice the output ids after the input ids
             outputs = outputs[:, inputs["input_ids"].shape[1]:]
