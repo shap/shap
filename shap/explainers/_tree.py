@@ -6,7 +6,7 @@ import json
 import os
 import struct
 import itertools
-from distutils.version import LooseVersion
+from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._legacy import DenseData
@@ -166,7 +166,7 @@ class Tree(Explainer):
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
             import xgboost
-            if LooseVersion(xgboost.__version__) < LooseVersion('0.81'):
+            if version.parse(xgboost.__version__) < version.parse('0.81'):
                 raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
 
         # compute the expected value if we have a parsed tree for the cext
@@ -223,7 +223,7 @@ class Tree(Explainer):
             e = Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names)
         else:
             v = self.shap_interaction_values(X)
-            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names, interaction_order=2)
+            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names)
         return e
 
     def _validate_inputs(self, X, y, tree_limit, check_additivity):
@@ -1430,7 +1430,7 @@ class XGBTreeModelLoader(object):
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
         # so we have to transform it depending on the objective
         import xgboost
-        if LooseVersion(xgboost.__version__).version[0] >= 1:
+        if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
                 self.base_score = scipy.special.logit(self.base_score) # pylint: disable=no-member
 

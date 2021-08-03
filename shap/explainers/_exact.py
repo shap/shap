@@ -20,7 +20,7 @@ class Exact(Explainer):
     and a greedly sorting method for hclustering structured maskers.
     """
 
-    def __init__(self, model, masker, link=links.identity, feature_names=None):
+    def __init__(self, model, masker, link=links.identity, linearize_link=True, feature_names=None):
         """ Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
@@ -42,8 +42,15 @@ class Exact(Explainer):
             computed in probability units while explanations remain in the (more naturally additive) log-odds
             units. For more details on how link functions work see any overview of link functions for generalized
             linear models.
-        """
-        super(Exact, self).__init__(model, masker, link=link, feature_names=feature_names)
+
+        linearize_link : bool
+            If we use a non-linear link function to take expectations then models that are additive with respect to that
+            link function for a single background sample will no longer be additive when using a background masker with
+            many samples. This for example means that a linear logisitic regression model would have interaction effects
+            that arise from the non-linear changes in expectation averaging. To retain the additively of the model with
+            still respecting the link function we linearize the link function by default.
+        """ # TODO link to the link linearization paper when done
+        super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
         self.model = Model(model)
 
@@ -74,7 +81,7 @@ class Exact(Explainer):
         """
 
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(self.model, self.masker, self.link, *row_args)
+        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
         # do the standard Shapley values
         inds = None
@@ -103,7 +110,7 @@ class Exact(Explainer):
                     extended_delta_indexes[i] = inds[delta_indexes[i]]
 
             # run the model
-            outputs = fm(extended_delta_indexes, batch_size=batch_size)
+            outputs = fm(extended_delta_indexes, zero_index=0, batch_size=batch_size)
 
             # Shapley values
             if interactions is False or interactions is 1: # pylint: disable=literal-comparison
@@ -231,7 +238,7 @@ def partition_delta_indexes(partition_tree, all_masks):
     delta_inds = []
     for i in range(len(all_masks)):
         inds = np.where(mask ^ all_masks[i,:])[0]
-        
+
         for j in inds[:-1]:
             delta_inds.append(-j - 1) # negative + (-1) means we have more inds still to change...
         if len(inds) == 0:
@@ -257,7 +264,7 @@ def partition_masks(partition_tree):
     _partition_masks_recurse(len(partition_tree)-1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
     all_masks = np.array(all_masks)
-    
+
     # we resort the clustering matrix to minimize the sequential difference between the masks
     # this minimizes the number of model evaluations we need to run when the background sometimes
     # matches the foreground. We seem to average about 1.5 feature changes per mask with this
@@ -280,17 +287,17 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
         inds_lists[index + M][0].append(ind00)
         inds_lists[index + M][1].append(ind11)
         return
-    
+
     # get our children indexes
     left_index = int(partition_tree[index,0] - M)
     right_index = int(partition_tree[index,1] - M)
-    
+
     # build more refined masks
     m10 = m00.copy() # we separate the copy from the add so as to not get converted to a matrix
     m10[:] += mask_matrix[left_index+M, :]
     m01 = m00.copy()
     m01[:] += mask_matrix[right_index+M, :]    
-    
+
     # record the new masks we made
     ind01 = len(all_masks)
     all_masks.append(m01)
@@ -299,7 +306,7 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
 
     # inds_stack.append(len(all_masks) - 2)
     # inds_stack.append(len(all_masks) - 1)
-    
+
     # recurse left and right with both 1 (True) and 0 (False) contexts
     _partition_masks_recurse(left_index, m00, ind00, ind10, inds_lists, mask_matrix, partition_tree, M, all_masks)
     _partition_masks_recurse(right_index, m10, ind10, ind11, inds_lists, mask_matrix, partition_tree, M, all_masks)
@@ -323,13 +330,13 @@ def gray_code_masks(nbits):
                     break
         else: # even
             li[-1] = li[-1]^1
-        
+
         out[term-1,:] = li
     return out
 
 def gray_code_indexes(nbits):
     """ Produces an array of which bits flip at which position.
-    
+
     We assume the masks start at all zero and -1 means don't do a flip.
     This is a more efficient represenation of the gray_code_masks version.
     """
@@ -346,5 +353,3 @@ def gray_code_indexes(nbits):
             li[-1] = li[-1]^1
             out[term+1] = nbits-1
     return out
-
-
