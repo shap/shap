@@ -5,19 +5,6 @@ def test_single_text_to_text():
     """ Just make sure the test_plot function doesn't crash.
     """
 
-    class MockTextExplanation: # pylint: disable=too-few-public-methods
-        """ Fake explanation object.
-        """
-        def __init__(self, data, values, output_names, base_values, clustering, hierarchical_values):
-            self.data = data
-            self.values = values
-            self.output_names = output_names
-            self.base_values = base_values
-            self.clustering = clustering
-            self.hierarchical_values = hierarchical_values
-            self.shape = (values.shape[0], values.shape[1])
-
-
     test_values = np.array([
         [10.61284012, 3.28389317],
         [-3.77245945, 10.76889759],
@@ -44,5 +31,13 @@ def test_single_text_to_text():
     ])
 
 
-    shap_values_test = MockTextExplanation(test_data, test_values, test_output_names, test_base_values, test_clustering, test_hierarchical_values)
+    shap_values_test = shap.Explanation(
+        values=[test_values],
+        base_values=[test_base_values],
+        data=[test_data],
+        output_names=test_output_names,
+        feature_names=test_base_values,
+        clustering=[test_clustering],
+        hierarchical_values=[test_hierarchical_values]
+    )
     shap.plots.text(shap_values_test)

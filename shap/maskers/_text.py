@@ -125,7 +125,7 @@ class Text(Masker):
             out = post_process_sentencepiece_tokenizer_output(out)
         # replace sequence of spaces with a single space and strip beginning and end spaces
         if isinstance(out, str):
-            out = re.sub(r"[\s]+", " ", out).strip() # TODO: should do strip?? (originally because of fast vs. slow tokenizer differences)
+            out = re.sub(r"[\s]+", " ", out).strip() # TODOmaybe: should do strip?? (originally because of fast vs. slow tokenizer differences)
         # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain
         # extra unnecessary tokens, for example ''. you may want to strip out spaces adjacent to separator tokens. Refer to PR
         # for more details.
@@ -186,8 +186,8 @@ class Text(Masker):
             # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
             tokens = []
             for i, v in enumerate(special_tokens_mask):
-                if ((v == 0) or ('sep_token' in self.tokenizer.special_tokens_map) and \
-                        (all_tokens[i] == self.tokenizer.sep_token) and (0 < i < len(special_tokens_mask) - 1)):
+                if ((v == 0) or (all_tokens[i] == getattr(self.tokenizer, 'sep_token', None)) and (0 < i < len(special_tokens_mask) - 1) or \
+                    (all_tokens[i] == getattr(self.tokenizer, 'mask_token', None))):
                     tokens.append(all_tokens[i])
                 else:
                     tokens.append("")
@@ -289,8 +289,8 @@ class Text(Masker):
         if self.keep_suffix > 0:
             invariants[-self.keep_suffix:] = True
         # mark separator tokens as invariant
-        for i in range(len(self._tokenized_s)):
-            if self._tokenized_s[i] == getattr(self.tokenizer, "sep_token_id", None):
+        for i, v in enumerate(self._tokenized_s):
+            if v == getattr(self.tokenizer, "sep_token_id", None):
                 invariants[i] = True
         return invariants.reshape(1, -1)
 
