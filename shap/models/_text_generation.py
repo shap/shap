@@ -180,8 +180,8 @@ class TextGeneration(Model):
                 try:
                     with tf.device(self.device):
                         outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
-                except RuntimeError as e:
-                    print(e)
+                except RuntimeError as err:
+                    print(err)
         if getattr(self.inner_model.config, "is_decoder", True):
             # slice the output ids after the input ids
             outputs = outputs[:, inputs["input_ids"].shape[1]:]

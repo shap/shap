@@ -4,7 +4,7 @@ import pytest
 import shap
 
 
-# pylint: disable=import-error,import-outside-toplevel
+# pylint: disable=import-error, import-outside-toplevel, no-name-in-module, import-error
 
 def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
@@ -96,13 +96,10 @@ def test_tf_keras_mnist_cnn():
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_mnist_cnn(tmpdir):
+def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
     torch = pytest.importorskip('torch')
-    torchvision = pytest.importorskip('torchvision')
-    datasets = torchvision.datasets
-    transforms = torchvision.transforms
 
     from torch import nn
     from torch.nn import functional as F
@@ -111,6 +108,8 @@ def test_pytorch_mnist_cnn(tmpdir):
     batch_size = 128
 
     class RandData:
+        """ Ranomd data for testing.
+        """
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -171,10 +170,10 @@ def test_pytorch_mnist_cnn(tmpdir):
         model = Net()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-        def train(model, device, train_loader, optimizer, epoch, cutoff=20):
+        def train(model, device, train_loader, optimizer, _, cutoff=20):
             model.train()
             num_examples = 0
-            for batch_idx, (data, target) in enumerate(train_loader):
+            for _, (data, target) in enumerate(train_loader):
                 num_examples += target.shape[0]
                 data, target = data.to(device), target.to(device)
                 optimizer.zero_grad()

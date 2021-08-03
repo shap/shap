@@ -231,8 +231,8 @@ class TopKLM(Model):
                     try:
                         with tf.device(self.device):
                             outputs = self.inner_model(inputs, return_dict=True)
-                    except RuntimeError as e:
-                        print(e)
+                    except RuntimeError as err:
+                        print(err)
                 logits = outputs.logits.numpy().astype('float64')[:, -1, :]
         return logits
 

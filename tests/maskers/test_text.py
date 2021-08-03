@@ -189,17 +189,15 @@ def test_serialization_text_masker():
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)
     original_masker = shap.maskers.Text(tokenizer)
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    original_masker.save(temp_serialization_file)
+        original_masker.save(temp_serialization_file)
 
-    temp_serialization_file.seek(0)
+        temp_serialization_file.seek(0)
 
 
-    # deserialize masker
-    new_masker = shap.maskers.Text.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_masker = shap.maskers.Text.load(temp_serialization_file)
 
 
     test_text = "I ate a Cannoli"
@@ -219,16 +217,14 @@ def test_serialization_text_masker_custom_mask():
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, mask_token='[CUSTOM-MASK]')
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    original_masker.save(temp_serialization_file)
+        original_masker.save(temp_serialization_file)
 
-    temp_serialization_file.seek(0)
+        temp_serialization_file.seek(0)
 
-    # deserialize masker
-    new_masker = shap.maskers.Text.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_masker = shap.maskers.Text.load(temp_serialization_file)
 
 
     test_text = "I ate a Cannoli"
@@ -248,16 +244,14 @@ def test_serialization_text_masker_collapse_mask_token():
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
     original_masker = shap.maskers.Text(tokenizer, collapse_mask_token=True)
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    original_masker.save(temp_serialization_file)
+        original_masker.save(temp_serialization_file)
 
-    temp_serialization_file.seek(0)
+        temp_serialization_file.seek(0)
 
-    # deserialize masker
-    new_masker = shap.maskers.Text.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_masker = shap.maskers.Text.load(temp_serialization_file)
 
 
     test_text = "I ate a Cannoli"

@@ -284,8 +284,8 @@ class TeacherForcing(Model):
                     try:
                         with tf.device(self.device):
                             outputs = self.similarity_model(inputs, decoder_input_ids=output_ids, labels=output_ids, return_dict=True)
-                    except RuntimeError as e:
-                        print(e)
+                    except RuntimeError as err:
+                        print(err)
             else:
                 # combine source and target sentence ids to pass into decoder eg: in case of distillgpt2
                 inputs["input_ids"] = tf.concat((inputs["input_ids"], output_ids), axis=-1)
@@ -299,8 +299,8 @@ class TeacherForcing(Model):
                     try:
                         with tf.device(self.device):
                             outputs = self.similarity_model(inputs, return_dict=True)
-                    except RuntimeError as e:
-                        print(e)
+                    except RuntimeError as err:
+                        print(err)
             logits = outputs.logits.numpy().astype('float64')
         return logits
 

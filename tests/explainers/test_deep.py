@@ -1,8 +1,8 @@
 """ Tests for the Deep explainer.
 """
 
-from packaging import version
 from urllib.error import HTTPError
+from packaging import version
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,7 +11,7 @@ from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-# pylint: disable=import-outside-toplevel
+# pylint: disable=import-outside-toplevel, no-name-in-module, import-error
 
 def test_tf_eager():
     """ This is a basic eager example from keras.
@@ -225,16 +225,17 @@ def test_tf_keras_imdb_lstm():
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_pytorch_mnist_cnn(tmpdir):
+def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
     torch = pytest.importorskip('torch')
-    torchvision = pytest.importorskip('torchvision')
 
     from torch import nn
     from torch.nn import functional as F
 
     class RandData:
+        """ Random test data.
+        """
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -286,10 +287,10 @@ def test_pytorch_mnist_cnn(tmpdir):
         model = Net()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-        def train(model, device, train_loader, optimizer, epoch, cutoff=20):
+        def train(model, device, train_loader, optimizer, _, cutoff=20):
             model.train()
             num_examples = 0
-            for batch_idx, (data, target) in enumerate(train_loader):
+            for _, (data, target) in enumerate(train_loader):
                 num_examples += target.shape[0]
                 data, target = data.to(device), target.to(device)
                 optimizer.zero_grad()
@@ -333,7 +334,7 @@ def test_pytorch_mnist_cnn(tmpdir):
     try:
         train_loader = RandData(batch_size)
         test_loader = RandData(batch_size)
-    except HTTPError as e:
+    except HTTPError:
         pytest.skip()
 
     #print('Running test on interim layer')

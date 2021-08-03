@@ -5,19 +5,6 @@ def test_single_text_to_text():
     """ Just make sure the test_plot function doesn't crash.
     """
 
-    class MockTextExplanation: # pylint: disable=too-few-public-methods
-        """ Fake explanation object.
-        """
-        def __init__(self, data, values, output_names, base_values, clustering, hierarchical_values):
-            self.data = data
-            self.values = values
-            self.output_names = output_names
-            self.base_values = base_values
-            self.clustering = clustering
-            self.hierarchical_values = hierarchical_values
-            self.shape = (values.shape[0], values.shape[1])
-
-
     test_values = np.array([
         [10.61284012, 3.28389317],
         [-3.77245945, 10.76889759],

@@ -289,8 +289,8 @@ class Text(Masker):
         if self.keep_suffix > 0:
             invariants[-self.keep_suffix:] = True
         # mark separator tokens as invariant
-        for i in range(len(self._tokenized_s)):
-            if self._tokenized_s[i] == getattr(self.tokenizer, "sep_token_id", None):
+        for i, v in enumerate(self._tokenized_s):
+            if v == getattr(self.tokenizer, "sep_token_id", None):
                 invariants[i] = True
         return invariants.reshape(1, -1)
 
