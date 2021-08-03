@@ -123,7 +123,7 @@ class Permutation(Explainer):
                         row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]
                     i += 1
                 history_pos += 1
-                for ind in inds: # backward
+                for ind in inds: # backward 
                     row_values[ind] += outputs[i] - outputs[i + 1]
                     if error_bounds:
                         row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]
