@@ -1,20 +1,11 @@
 import numpy as np
 import scipy as sp
 from ._model import Model
-from ..utils import safe_isinstance, record_import_error
+from ..utils import safe_isinstance
 from ..utils.transformers import parse_prefix_suffix_for_tokenizer
 from .. import models
 from .._serializable import Serializer, Deserializer
 
-try:
-    import torch
-except ImportError as e:
-    record_import_error("torch", "Torch could not be imported!", e)
-
-try:
-    import tensorflow as tf
-except ImportError as e:
-    record_import_error("tensorflow", "TensorFlow could not be imported!", e)
 
 class TeacherForcing(Model):
     """ Generates scores (log odds) for output text explanation algorithms using Teacher Forcing technique.
@@ -256,6 +247,7 @@ class TeacherForcing(Model):
             Returns output logits from the model.
         """
         if self.similarity_model_type == "pt":
+            import torch # pylint: disable=import-outside-toplevel
             # create torch tensors and move to device
             inputs = inputs.to(self.device)
             output_ids = torch.tensor(output_ids, dtype=torch.int64, device=self.device)
@@ -276,6 +268,7 @@ class TeacherForcing(Model):
                     outputs = self.similarity_model(**inputs, return_dict=True)
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')
         elif self.similarity_model_type == "tf":
+            import tensorflow as tf # pylint: disable=import-outside-toplevel
             output_ids = tf.convert_to_tensor(output_ids, dtype=tf.int32)
             if self.similarity_model.config.is_encoder_decoder:
                 if self.device is None:
@@ -284,8 +277,8 @@ class TeacherForcing(Model):
                     try:
                         with tf.device(self.device):
                             outputs = self.similarity_model(inputs, decoder_input_ids=output_ids, labels=output_ids, return_dict=True)
-                    except RuntimeError as e:
-                        print(e)
+                    except RuntimeError as err:
+                        print(err)
             else:
                 # combine source and target sentence ids to pass into decoder eg: in case of distillgpt2
                 inputs["input_ids"] = tf.concat((inputs["input_ids"], output_ids), axis=-1)
@@ -299,8 +292,8 @@ class TeacherForcing(Model):
                     try:
                         with tf.device(self.device):
                             outputs = self.similarity_model(inputs, return_dict=True)
-                    except RuntimeError as e:
-                        print(e)
+                    except RuntimeError as err:
+                        print(err)
             logits = outputs.logits.numpy().astype('float64')
         return logits
 
@@ -325,7 +318,7 @@ class TeacherForcing(Model):
         # check if type of model architecture assigned in model config
         if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \
             and (hasattr(self.similarity_model.config, "is_decoder") and not self.similarity_model.config.is_decoder):
-            pass #self.similarity_model.config.is_decoder = True # TODO: is this okay?
+            pass #self.similarity_model.config.is_decoder = True # TODOmaybe: is this okay?
             # raise ValueError(
             #     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
             # )
