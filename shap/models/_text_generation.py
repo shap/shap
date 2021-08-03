@@ -1,18 +1,7 @@
 import numpy as np
 from ._model import Model
-from ..utils import record_import_error, safe_isinstance
+from ..utils import safe_isinstance
 from .._serializable import Serializer, Deserializer
-
-try:
-    import torch
-except ImportError as e:
-    record_import_error("torch", "Torch could not be imported!", e)
-
-try:
-    import tensorflow as tf
-except ImportError as e:
-    record_import_error("tensorflow", "TensorFlow could not be imported!", e)
-
 
 class TextGeneration(Model):
     """ Generates target sentence/ids using a base model.
@@ -52,6 +41,8 @@ class TextGeneration(Model):
 
         self.tokenizer = tokenizer
         self.device = device
+        if self.device is None:
+            self.device = getattr(self.inner_model, "device", None)
         if safe_isinstance(model, "transformers.PreTrainedModel"):
             self.model_agnostic = False
             self.model_type = "pt"
@@ -133,9 +124,12 @@ class TextGeneration(Model):
         """
         if (hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder) \
                 and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
-            raise ValueError(
-                "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
-            )
+            pass
+            # TODOmaybe: Is this okay? I am just assuming we want is_decoder when neither are set
+            #self.inner_model.config.is_decoder = True
+            # raise ValueError(
+            #     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
+            # )
         # check if user assigned any text generation specific kwargs
         text_generation_params = {}
         if self.inner_model.config.__dict__.get("task_specific_params") is not None and \
@@ -145,16 +139,25 @@ class TextGeneration(Model):
                 raise ValueError(
                     "Please assign text generation params as a dictionary under task_specific_params with key 'text-generation' "
                 )
+            # remove keys that are overridden by params on the model itself
+            # (this is to mimic how precedence works for transformers pipelines)
+            for k in list(text_generation_params.keys()):
+                if hasattr(self.inner_model.config, k):
+                    del text_generation_params[k]
         if self.model_type == "pt":
             # create torch tensors and move to device
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
-            self.inner_model = self.inner_model.to(device)
-            self.inner_model.eval()
+            # TODOmaybe: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks piplines)
+            # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
+            # self.inner_model = self.inner_model.to(device)
+            # self.inner_model.eval()
+            import torch # pylint: disable=import-outside-toplevel
             with torch.no_grad():
                 if self.inner_model.config.is_encoder_decoder:
-                    inputs = self.get_inputs(X).to(device)
+                    inputs = self.get_inputs(X)
                 else:
-                    inputs = self.get_inputs(X, padding_side="left").to(device)
+                    inputs = self.get_inputs(X, padding_side="left")
+                if self.device is not None:
+                    inputs = inputs.to(self.device)
                 outputs = self.inner_model.generate(**inputs, **text_generation_params).detach().cpu().numpy()
         elif self.model_type == "tf":
             if self.inner_model.config.is_encoder_decoder:
@@ -165,11 +168,12 @@ class TextGeneration(Model):
                 outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
             else:
                 try:
+                    import tensorflow as tf # pylint: disable=import-outside-toplevel
                     with tf.device(self.device):
                         outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
-                except RuntimeError as e:
-                    print(e)
-        if self.inner_model.config.is_decoder:
+                except RuntimeError as err:
+                    print(err)
+        if getattr(self.inner_model.config, "is_decoder", True):
             # slice the output ids after the input ids
             outputs = outputs[:, inputs["input_ids"].shape[1]:]
         # parse output ids to find special tokens in prefix and suffix

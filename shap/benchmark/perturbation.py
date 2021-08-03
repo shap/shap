@@ -47,6 +47,8 @@ class SequentialPerturbation():
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
+        else:
+            raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
         if label is None:
             label = "Score %d" % len(self.score_values)
@@ -78,14 +80,14 @@ class SequentialPerturbation():
                 sample_attributions = attributions[i] 
                 data = X[i]
                 mask_shape = feature_size
-            
+
             self.masked_model = MaskedModel(self.model, self.masker, links.identity, data)
 
             if len(attributions[i].shape) == 1 or self.data_type == "tabular": 
                 output_size = 1 
             else: 
                 output_size = attributions[i].shape[-1]
-            
+
             masks = []
             for k in range(output_size): 
                 mask = np.ones(mask_shape, dtype=np.bool) * (self.perturbation == "remove")
@@ -95,7 +97,7 @@ class SequentialPerturbation():
                     test_attributions = sample_attributions[:,k]
                 else: 
                     test_attributions = sample_attributions
-                
+
                 ordered_inds = self.sort_order_map(test_attributions)
                 increment = max(1,int(feature_size*percent))
                 for j in range(0, feature_size, increment): 
@@ -139,10 +141,10 @@ class SequentialPerturbation():
         
         self.score_values.append(np.array(svals))
         
-        if self.sort_order == "negative": 
-            curve_sign = -1
-        else: 
-            curve_sign = 1
+        # if self.sort_order == "negative": 
+        #     curve_sign = -1
+        # else: 
+        curve_sign = 1
         
         self.labels.append(label)
 
@@ -177,11 +179,11 @@ class SequentialPerturbation():
 
         if label is None:
             label = "Score %d" % len(self.score_values)
-        
+
         # convert dataframes
         if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
             X = X.values
-            
+
         # convert all single-sample vectors to matrices
         if not hasattr(attributions[0], "__len__"):
             attributions = np.array([attributions])
@@ -206,7 +208,7 @@ class SequentialPerturbation():
                 output_size = 1 
             else: 
                 output_size = attributions[i].shape[-1] 
-            
+
             for k in range(output_size): 
                 if self.data_type == "image":
                     mask_shape = X[i].shape 
@@ -219,16 +221,16 @@ class SequentialPerturbation():
                 values = np.zeros(feature_size+1)
                 # masked, data = self.masker(mask, X[i])
                 masked = self.masker(mask, X[i])
-                data = None 
+                data = None
                 curr_val = self.f(masked, data, k).mean(0)
-                
-                values[0] = curr_val 
+
+                values[0] = curr_val
 
                 if output_size != 1: 
                     test_attributions = sample_attributions[:,k]
                 else: 
                     test_attributions = sample_attributions
-                
+
                 ordered_inds = self.sort_order_map(test_attributions)
                 increment = max(1,int(feature_size*percent))
                 for j in range(0, feature_size, increment): 
@@ -247,19 +249,19 @@ class SequentialPerturbation():
                     # masked, data = self.masker(mask, X[i])
                     masked = self.masker(mask, X[i])
                     curr_val = self.f(masked, data, k).mean(0)
-                    
-                    for l in range(j, min(feature_size, j+increment)): 
-                        values[l+1] = curr_val 
-            
+
+                    for l in range(j, min(feature_size, j+increment)):
+                        values[l+1] = curr_val
+
                 svals.append(values) 
                 mask_vals.append(masks)
-        
+
             if pbar is None and time.time() - start_time > 5:
                 pbar = tqdm(total=len(X), disable=silent, leave=False)
                 pbar.update(i+1)
             if pbar is not None:
                 pbar.update(1)
-            
+
         if pbar is not None:
             pbar.close()
 

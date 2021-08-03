@@ -94,22 +94,21 @@ def test_serialization(explainer_type, model, masker, data, rtol=1e-05, atol=1e-
     """ Test serialization with a given explainer algorithm.
     """
 
-    explainer_kwargs = {k: kwargs[k] for k in kwargs if k in ["algorithm"]}
+    explainer_kwargs = {k: v for k,v in kwargs.items() if k in ["algorithm"]}
     explainer_original = explainer_type(model, masker, **explainer_kwargs)
     shap_values_original = explainer_original(data[:1])
 
     # Serialization
-    temp_serialization_file = tempfile.TemporaryFile()
-    save_kwargs = {k: kwargs[k] for k in kwargs if k in ["model_saver", "masker_saver"]}
-    explainer_original.save(temp_serialization_file, **save_kwargs)
+    with tempfile.TemporaryFile() as temp_serialization_file:
+        save_kwargs = {k: v for k,v in kwargs.items() if k in ["model_saver", "masker_saver"]}
+        explainer_original.save(temp_serialization_file, **save_kwargs)
 
-    # Deserialization
-    temp_serialization_file.seek(0)
-    load_kwargs = {k: kwargs[k] for k in kwargs if k in ["model_loader", "masker_loader"]}
-    explainer_new = explainer_type.load(temp_serialization_file, **load_kwargs)
-    temp_serialization_file.close()
+        # Deserialization
+        temp_serialization_file.seek(0)
+        load_kwargs = {k: v for k,v in kwargs.items() if k in ["model_loader", "masker_loader"]}
+        explainer_new = explainer_type.load(temp_serialization_file, **load_kwargs)
 
-    call_kwargs = {k: kwargs[k] for k in kwargs if k in ["max_evals"]}
+    call_kwargs = {k: v for k,v in kwargs.items() if k in ["max_evals"]}
     shap_values_new = explainer_new(data[:1], **call_kwargs)
 
     assert np.allclose(shap_values_original.base_values, shap_values_new.base_values, rtol=rtol, atol=atol)
