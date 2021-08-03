@@ -116,15 +116,18 @@ class Permutation(Explainer):
                         row_values_history = np.zeros((2 * npermutations, len(fm),) + outputs.shape[1:])
 
                 # update our SHAP value estimates
-                for i,ind in enumerate(inds):
-                    row_values[ind] += outputs[i+1] - outputs[i]
+                i = 0
+                for ind in inds: # forward
+                    row_values[ind] += outputs[i + 1] - outputs[i]
                     if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i+1] - outputs[i]
+                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]
+                    i += 1
                 history_pos += 1
-                for i,ind in enumerate(inds):
-                    row_values[ind] += outputs[i+1] - outputs[i]
+                for ind in inds: # backward
+                    row_values[ind] += outputs[i] - outputs[i + 1]
                     if error_bounds:
-                        row_values_history[history_pos][ind] = outputs[i+1] - outputs[i]
+                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]
+                    i += 1
                 history_pos += 1
 
             if npermutations == 0:
@@ -135,6 +138,13 @@ class Permutation(Explainer):
             # compute the main effects if we need to
             if main_effects:
                 main_effect_values = fm.main_effects(inds)
+        else:
+            masks = np.zeros(1, dtype=np.int)
+            outputs = fm(masks, zero_index=0, batch_size=1)
+            expected_value = outputs[0]
+            row_values = np.zeros((len(fm),) + outputs.shape[1:])
+            if error_bounds:
+                row_values_history = np.zeros((2 * npermutations, len(fm),) + outputs.shape[1:])
 
         return {
             "values": row_values / (2 * npermutations),

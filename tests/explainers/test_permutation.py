@@ -3,9 +3,28 @@
 
 # pylint: disable=missing-function-docstring
 import pickle
+import numpy as np
 import shap
 from . import common
 
+def test_exact_second_order():
+    """ This tests that the Perumtation explain gives exact answers for second order functions.
+    """
+    np.random.seed(0)
+    data = np.random.randint(0, 2, size=(100,5))
+    def model(data):
+        return data[:,0] * data[:,2] + data[:,1] + data[:,2] + data[:,2] * data[:,3]
+
+    right_answer = np.zeros(data.shape)
+    right_answer[:, 0] += (data[:, 0] * data[:, 2]) / 2
+    right_answer[:, 2] += (data[:, 0] * data[:, 2]) / 2
+    right_answer[:, 1] += data[:, 1]
+    right_answer[:, 2] += data[:, 2]
+    right_answer[:, 2] += (data[:, 2] * data[:, 3]) / 2
+    right_answer[:, 3] += (data[:, 2] * data[:, 3]) / 2
+    shap_values = shap.explainers.Permutation(model, np.zeros((1,5)))(data)
+
+    assert np.allclose(right_answer, shap_values.values)
 
 def test_tabular_single_output_auto_masker():
     model, data = common.basic_xgboost_scenario(100)
