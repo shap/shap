@@ -1,7 +1,7 @@
 import numpy as np
 import warnings
 from .._explainer import Explainer
-from distutils.version import LooseVersion
+from packaging import version
 from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
 keras = None
 tf = None
@@ -82,7 +82,7 @@ class TFDeep(Explainer):
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl
             import tensorflow as tf
-            if LooseVersion(tf.__version__) < LooseVersion("1.4.0"):
+            if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         global keras
         if keras is None:
@@ -92,8 +92,8 @@ class TFDeep(Explainer):
             except:
                 pass
         
-        if LooseVersion(tf.__version__) >= LooseVersion("2.4.0"):
-            warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode. See PR #1483 for discussion.")
+        if version.parse(tf.__version__) >= version.parse("2.4.0"):
+            warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
 
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)

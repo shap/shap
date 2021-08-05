@@ -75,6 +75,7 @@ class Explanation(object, metaclass=MetaExplanation):
         output_indexes=None,
         lower_bounds=None,
         upper_bounds=None,
+        error_std=None,
         main_effects=None,
         hierarchical_values=None,
         clustering=None
@@ -88,7 +89,7 @@ class Explanation(object, metaclass=MetaExplanation):
             base_values = e.base_values
             data = e.data
 
-        output_dims = compute_output_dims(values, base_values, data)
+        output_dims = compute_output_dims(values, base_values, data, output_names)
 
         if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
             values_shape = _compute_shape(values)
@@ -119,16 +120,17 @@ class Explanation(object, metaclass=MetaExplanation):
         self._s = Slicer(
             values=values,
             base_values=None if base_values is None else Obj(base_values, [0] + list(output_dims)),
-            data=data,
-            display_data=display_data,
+            data=list_wrap(data),
+            display_data=list_wrap(display_data),
             instance_names=None if instance_names is None else Alias(instance_names, 0),
             feature_names=feature_names,
             output_names=output_names,
             output_indexes=None if output_indexes is None else (output_dims, output_indexes),
-            lower_bounds=lower_bounds,
-            upper_bounds=upper_bounds,
-            main_effects=main_effects,
-            hierarchical_values=hierarchical_values,
+            lower_bounds=list_wrap(lower_bounds),
+            upper_bounds=list_wrap(upper_bounds),
+            error_std=list_wrap(error_std),
+            main_effects=list_wrap(main_effects),
+            hierarchical_values=list_wrap(hierarchical_values),
             clustering=None if clustering is None else Obj(clustering, [0])
         )
 
@@ -195,6 +197,10 @@ class Explanation(object, metaclass=MetaExplanation):
     @property
     def upper_bounds(self):
         return self._s.upper_bounds
+
+    @property
+    def error_std(self):
+        return self._s.error_std
 
     @property
     def main_effects(self):
@@ -339,6 +345,7 @@ class Explanation(object, metaclass=MetaExplanation):
             self.output_indexes,
             self.lower_bounds,
             self.upper_bounds,
+            self.error_std,
             self.main_effects,
             self.hierarchical_values,
             self.clustering
@@ -572,13 +579,12 @@ def group_features(shap_values, feature_map):
     curr_names = shap_values.feature_names
     shap_values_new = copy.deepcopy(shap_values)
     found = {}
-    i = -1
+    i = 0
     rank1 = len(shap_values.shape) == 1
     for name in curr_names:
         new_name = feature_map.get(name, name)
         if new_name in found:
             continue
-        i += 1
         found[new_name] = True
         
         new_name = feature_map.get(name, name)
@@ -592,6 +598,7 @@ def group_features(shap_values, feature_map):
             shap_values_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
             shap_values_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
         shap_values_new.feature_names[i] = new_name
+        i += 1
 
     return Explanation(
         shap_values_new.values[:i] if rank1 else shap_values_new.values[:,:i],
@@ -604,12 +611,15 @@ def group_features(shap_values, feature_map):
         output_indexes = None,
         lower_bounds = None,
         upper_bounds = None,
+        error_std = None,
         main_effects = None,
         hierarchical_values = None,
         clustering = None
     )
 
-def compute_output_dims(values, base_values, data):
+def compute_output_dims(values, base_values, data, output_names):
+    """ Uses the passed data to infer which dimensions correspond to the model's output.
+    """
     values_shape = _compute_shape(values)
 
     # input shape matches the data shape
@@ -617,11 +627,19 @@ def compute_output_dims(values, base_values, data):
         data_shape = _compute_shape(data)
 
     # if we are not given any data we assume it would be the same shape as the given values
-    else: 
+    else:
         data_shape = values_shape
 
-    # output shape is known from the base values
-    if base_values is not None:
+    # output shape is known from the base values or output names
+    if output_names is not None:
+        output_shape = _compute_shape(output_names)
+
+        # if our output_names are per sample then we need to drop the sample dimension here
+        if values_shape[-len(output_shape):] != output_shape and \
+                values_shape[-len(output_shape)+1:] == output_shape[1:] and values_shape[0] == output_shape[0]:
+            output_shape = output_shape[1:]
+
+    elif base_values is not None:
         output_shape = _compute_shape(base_values)[1:]
     else:
         output_shape = tuple()
@@ -742,3 +760,11 @@ def _auto_cohorts(shap_values, max_cohorts):
         cohorts[name] = shap_values[path_names == name]
     
     return Cohorts(**cohorts)
+
+def list_wrap(x):
+    """ A helper to patch things since slicer doesn't handle arrays of arrays (it does handle lists of arrays)
+    """
+    if isinstance(x, np.ndarray) and len(x.shape) == 1 and isinstance(x[0], np.ndarray):
+        return [v for v in x]
+    else:
+        return x

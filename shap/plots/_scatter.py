@@ -18,7 +18,7 @@ from .._explanation import Explanation
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
 def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
-            ax=None, show=True):
+            overlay=None, ax=None, ylabel="SHAP value", show=True):
     """ Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -72,10 +72,44 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     """
 
+
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+
+    # see if we are plotting multiple columns
+    if not isinstance(shap_values.feature_names, str) and len(shap_values.feature_names) > 0:
+        inds = np.argsort(np.abs(shap_values.values).mean(0))
+        nan_min = np.nanmin(shap_values.values)
+        nan_max = np.nanmax(shap_values.values)
+        if ymin is None:
+            ymin = nan_min - (nan_max - nan_min)/20
+        if ymax is None:
+            ymax = nan_max + (nan_max - nan_min)/20
+        f = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        for i in inds:
+            ax = pl.subplot(1,len(inds),i+1)
+            scatter(shap_values[:,i], show=False, ax=ax, ymin=ymin, ymax=ymax)
+            if overlay is not None:
+                line_styles = ["solid", "dotted", "dashed"]
+                for j, name in enumerate(overlay):
+                    vals = overlay[name]
+                    if isinstance(vals[i][0][0], (float, int)):
+                        pl.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
+            if i == 0:
+                ax.set_ylabel(ylabel)
+            else:
+                ax.set_ylabel("")
+                ax.set_yticks([])
+                ax.spines['left'].set_visible(False)
+        if overlay is not None:
+            pl.legend()
+        if show:
+            pl.show()
+        return
+
     if len(shap_values.shape) != 1:
-        raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to shap.plots.dependence like: shap_values[:,column]")
-    
+        raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to " + \
+                        "shap.plots.dependence like: shap_values[:,column]")
+
     # this unpacks the explanation object for the code that was written earlier
     feature_names = [shap_values.feature_names]
     ind = 0

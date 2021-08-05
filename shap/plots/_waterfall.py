@@ -38,6 +38,10 @@ def waterfall(shap_values, max_display=10, show=True):
         to be customized further after it has been created.
     """
     
+    # Turn off interactive plot
+    if show is False:
+        plt.ioff()
+    
 
     base_values = shap_values.base_values
     
@@ -289,6 +293,8 @@ def waterfall(shap_values, max_display=10, show=True):
     
     if show:
         pl.show()
+    else:
+        return plt.gcf()
 
 
 
@@ -325,6 +331,10 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
     """
+
+    # Turn off interactive plot
+    if show is False:
+        plt.ioff()
     
     # support passing an explanation object
     upper_bounds = None
@@ -578,3 +588,5 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     
     if show:
         pl.show()
+    else:
+        return plt.gcf()

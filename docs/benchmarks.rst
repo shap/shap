@@ -9,4 +9,4 @@ They are all generated from Jupyter notebooks
     :glob:
     :maxdepth: 1
 
-    example_notebooks/benchmarks/*
+    example_notebooks/benchmark/*
