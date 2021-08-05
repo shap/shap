@@ -1311,13 +1311,14 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
                                             tfloat transform(const tfloat, const tfloat)) {
 
     // build a list of all the unique features in each tree
-    int *unique_features = new int[trees.tree_limit * trees.max_nodes];
-    std::fill(unique_features, unique_features + trees.tree_limit * trees.max_nodes, -1);
+    int amount_of_unique_features = min(data.M, trees.max_nodes);
+    int *unique_features = new int[trees.tree_limit * amount_of_unique_features];
+    std::fill(unique_features, unique_features + trees.tree_limit * amount_of_unique_features, -1);
     for (unsigned j = 0; j < trees.tree_limit; ++j) {
         const int *features_row = trees.features + j * trees.max_nodes;
-        int *unique_features_row = unique_features + j * trees.max_nodes;
+        int *unique_features_row = unique_features + j * amount_of_unique_features;
         for (unsigned k = 0; k < trees.max_nodes; ++k) {
-            for (unsigned l = 0; l < trees.max_nodes; ++l) {
+            for (unsigned l = 0; l < amount_of_unique_features; ++l) {
                 if (features_row[k] == unique_features_row[l]) break;
                 if (unique_features_row[l] < 0) {
                     unique_features_row[l] = features_row[k];
@@ -1346,8 +1347,8 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
             trees.get_tree(tree, j);
             tree_shap(tree, instance, diag_contribs, 0, 0);
 
-            const int *unique_features_row = unique_features + j * trees.max_nodes;
-            for (unsigned k = 0; k < trees.max_nodes; ++k) {
+            const int *unique_features_row = unique_features + j * amount_of_unique_features;
+            for (unsigned k = 0; k < amount_of_unique_features; ++k) {
                 const int ind = unique_features_row[k];
                 if (ind < 0) break; // < 0 means we have seen all the features for this tree
 

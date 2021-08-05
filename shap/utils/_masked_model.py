@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse
 from numba import jit
+from .. import links
 
 
 class MaskedModel():
@@ -14,10 +15,11 @@ class MaskedModel():
 
     delta_mask_noop_value = 2147483647 # used to encode a noop for delta masking
 
-    def __init__(self, model, masker, link, *args):
+    def __init__(self, model, masker, link, linearize_link, *args):
         self.model = model
         self.masker = masker
         self.link = link
+        self.linearize_link = linearize_link
         self.args = args
         # if the masker supports it, save what positions vary from the background
         if callable(getattr(self.masker, "invariants", None)):
@@ -28,7 +30,7 @@ class MaskedModel():
             ]
         else:
             self._variants = None
-        
+
         # compute the length of the mask (and hence our length)
         if hasattr(self.masker, "shape"):
             if callable(self.masker.shape):
@@ -43,24 +45,26 @@ class MaskedModel():
             self._masker_rows = None# # just assuming...
             self._masker_cols = sum(np.prod(a.shape) for a in self.args)
 
-    def __call__(self, masks, batch_size=None):
+        self._linearizing_weights = None
+
+    def __call__(self, masks, zero_index=None, batch_size=None):
 
         # if we are passed a 1D array of indexes then we are delta masking and have a special implementation
         if len(masks.shape) == 1:
             if getattr(self.masker, "supports_delta_masking", False):
-                return self._delta_masking_call(masks, batch_size=batch_size)
+                return self._delta_masking_call(masks, zero_index=zero_index, batch_size=batch_size)
 
             # we need to convert from delta masking to a full masking call because we were given a delta masking
             # input but the masker does not support delta masking
             else: 
                 full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=np.bool)
                 _convert_delta_mask_to_full(masks, full_masks)
-                return self._full_masking_call(full_masks, batch_size=batch_size)
+                return self._full_masking_call(full_masks, zero_index=zero_index, batch_size=batch_size)
 
         else:
             return self._full_masking_call(masks, batch_size=batch_size)
 
-    def _full_masking_call(self, masks, batch_size=None):
+    def _full_masking_call(self, masks, zero_index=None, batch_size=None):
 
         # # TODO: we need to do batching here
         # else:
@@ -89,7 +93,7 @@ class MaskedModel():
             # wrap the masked inputs if they are not already in a tuple
             if not isinstance(masked_inputs, tuple):
                 masked_inputs = (masked_inputs.copy(),)
- 
+
             # masked_inputs = self.masker(mask, *self.args)
             num_mask_samples[i] = len(masked_inputs[0])
 
@@ -109,7 +113,7 @@ class MaskedModel():
                 # for i in range(20):
                 #     varying_rows[-1].sum()
             last_mask[:] = mask
-            
+
             batch_positions[i+1] = batch_positions[i] + num_varying_rows[i]
 
             # subset the masked input to only the rows that vary
@@ -129,17 +133,21 @@ class MaskedModel():
 
             for i in range(len(masked_inputs)):
                 all_masked_inputs[i].append(masked_inputs[i])
-        
+
         joined_masked_inputs = self._stack_inputs(*all_masked_inputs)
         outputs = self.model(*joined_masked_inputs)
         _assert_output_input_match(joined_masked_inputs, outputs)
+
+        if self.linearize_link and self.link != links.identity and self._linearizing_weights is None:
+            background_outputs = outputs[batch_positions[zero_index]:batch_positions[zero_index+1]]
+            self._linearizing_weights = link_reweighting(background_outputs, self.link)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
         max_outs = self._masker_rows if self._masker_rows is not None else max(len(r) for r in varying_rows) 
         last_outs = np.zeros((max_outs,) + outputs.shape[1:])
         varying_rows = np.array(varying_rows)
-        
-        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
+
+        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link, self._linearizing_weights)
 
         return averaged_outs
 
@@ -168,12 +176,12 @@ class MaskedModel():
     #             masks_pos += 1
     #         self._varying_delta_mask_rows.append(np.unique(np.concatenate(varying_rows_set)))
 
-    
-    def _delta_masking_call(self, masks, batch_size=None):
+
+    def _delta_masking_call(self, masks, zero_index=None, batch_size=None):
         # TODO: we need to do batching here
 
         assert getattr(self.masker, "supports_delta_masking", None) is not None, "Masker must support delta masking!"
-        
+
         masked_inputs, varying_rows = self.masker(masks, *self.args)
         num_varying_rows = varying_rows.sum(1)
 
@@ -182,18 +190,22 @@ class MaskedModel():
         batch_positions = np.zeros(len(varying_rows)+1, dtype=np.int)
         for i in range(len(varying_rows)):
             batch_positions[i+1] = batch_positions[i] + num_varying_rows[i]
-        
+
         # joined_masked_inputs = self._stack_inputs(all_masked_inputs)
         outputs = self.model(*subset_masked_inputs)
         _assert_output_input_match(subset_masked_inputs, outputs)
 
+        if self.linearize_link and self.link != links.identity and self._linearizing_weights is None:
+            background_outputs = outputs[batch_positions[zero_index]:batch_positions[zero_index+1]]
+            self._linearizing_weights = link_reweighting(background_outputs, self.link)
+
         averaged_outs = np.zeros((varying_rows.shape[0],) + outputs.shape[1:])
         last_outs = np.zeros((varying_rows.shape[1],) + outputs.shape[1:])
         #print("link", self.link)
-        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link)
+        _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link, self._linearizing_weights)
 
         return averaged_outs
-    
+
     def _stack_inputs(self, *inputs):
         return tuple([np.concatenate(v) for v in inputs])
 
@@ -262,11 +274,11 @@ def _convert_delta_mask_to_full(masks, full_masks):
 
         if i > 0:
             full_masks[i] = full_masks[i-1]
-        
+
         while masks[masks_pos] < 0:
             full_masks[i,-masks[masks_pos]-1] = ~full_masks[i,-masks[masks_pos]-1] # -value - 1 is the original index that needs flipped
             masks_pos += 1
-        
+
         if masks[masks_pos] != MaskedModel.delta_mask_noop_value:
             full_masks[i,masks[masks_pos]] = ~full_masks[i,masks[masks_pos]]
         masks_pos += 1
@@ -280,7 +292,7 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
     masks_pos = 0
     while masks_pos < len(masks):
         i += 1
-        
+
         dpos = 0
         delta_indexes[0] = masks[masks_pos]
 
@@ -301,15 +313,15 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
             varying_rows[i,:] = True
             #varying_rows.append(np.arange(num_mask_samples[i]))
             num_varying_rows[i] = num_mask_samples[i]
-            
-        else: 
+
+        else:
             # only one column was changed
-            if dpos == 0: 
-                
+            if dpos == 0:
+
                 varying_rows[i,:] = variants[:,delta_indexes[dpos]]
                 #varying_rows.append(_variants_row_inds[delta_indexes[dpos]])
                 num_varying_rows[i] = variants_column_sums[delta_indexes[dpos]]
-                
+
 
             # more than one column was changed
             else: 
@@ -329,56 +341,59 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
         # wrap the masked inputs if they are not already in a tuple
         if len(args) == 1:
             masked_inputs = (masked_inputs,)
-        
+
         for j in range(len(masked_inputs)):
             all_masked_inputs[j].append(masked_inputs[j])
 
     return all_masked_inputs, i + 1 # i + 1 is the number of output rows after averaging
 
 
-def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
     if len(last_outs.shape) == 1:
-        _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link)
+        _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights)
     else:
-        _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link)
+        _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights)
 
 @jit # we can't use this when using a custom link function...
-def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
-    last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
     sample_count = last_outs.shape[0]
-    multi_output = len(last_outs.shape) > 1
-    averaged_outs[0] = np.mean(last_outs)
-    for i in range(1, len(averaged_outs)):
+    # if linearizing_weights is not None:
+    #     averaged_outs[0] = np.mean(linearizing_weights * link(last_outs))
+    # else:
+    #     averaged_outs[0] = link(np.mean(last_outs))
+    for i in range(0, len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
             else:
                 last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
-            averaged_outs[i] = link(np.mean(last_outs))
-            averaged_outs[i] = np.mean(last_outs)
+            if linearizing_weights is not None:
+                averaged_outs[i] = np.mean(linearizing_weights * link(last_outs))
+            else:
+                averaged_outs[i] = link(np.mean(last_outs))
         else:
             averaged_outs[i] = averaged_outs[i-1]
 
 @jit
-def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link):
+def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
-    last_outs[:] = outputs[batch_positions[0]:batch_positions[1]]
     sample_count = last_outs.shape[0]
-    multi_output = len(last_outs.shape) > 1
-    for j in range(last_outs.shape[-1]): # using -1 is important so 
-        averaged_outs[0,j] = np.mean(last_outs[:,j]) # we can't just do np.mean(last_outs, 0) because that fails to numba compile
-    for i in range(1, len(averaged_outs)):
+    for i in range(0, len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
             else:
                 last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
-            averaged_outs[i] = link(np.mean(last_outs))
-            for j in range(last_outs.shape[1]):
-                averaged_outs[i,j] = np.mean(last_outs[:,j])
+            #averaged_outs[i] = link(np.mean(last_outs))
+            if linearizing_weights is not None:
+                for j in range(last_outs.shape[-1]):
+                    averaged_outs[i,j] = np.mean(linearizing_weights[:,j] * link(last_outs[:,j]))
+            else:
+                for j in range(last_outs.shape[-1]): # using -1 is important
+                    averaged_outs[i,j] = link(np.mean(last_outs[:,j])) # we can't just do np.mean(last_outs, 0) because that fails to numba compile
         else:
             averaged_outs[i] = averaged_outs[i-1]
 
@@ -391,7 +406,7 @@ def make_masks(cluster_matrix):
     M = cluster_matrix.shape[0] + 1
     mask_matrix_inds = np.zeros(2 * M - 1, dtype=np.object)
     rec_fill_masks(mask_matrix_inds, cluster_matrix, M)
-    
+
     # convert the array of index lists into CSR format
     indptr = np.zeros(len(mask_matrix_inds) + 1, dtype=np.int)
     indices = np.zeros(np.sum([len(v) for v in mask_matrix_inds]), dtype=np.int)
@@ -411,16 +426,32 @@ def make_masks(cluster_matrix):
 def rec_fill_masks(mask_matrix, cluster_matrix, M, ind=None):
     if ind is None:
         ind = cluster_matrix.shape[0] - 1 + M
-        
+
     if ind < M:
         mask_matrix[ind] = np.array([ind])
         return
 
     lind = int(cluster_matrix[ind-M,0])
     rind = int(cluster_matrix[ind-M,1])
-    
+
     rec_fill_masks(mask_matrix, cluster_matrix, M, lind)
     mask_matrix[ind] = mask_matrix[lind]
 
     rec_fill_masks(mask_matrix, cluster_matrix, M, rind)
     mask_matrix[ind] = np.concatenate((mask_matrix[ind], mask_matrix[rind]))
+
+def link_reweighting(p, link):
+    """ Returns a weighting that makes mean(weights*link(outputs)) == link(mean(outputs)).
+
+    This is based on a linearization of the link function. When that the link function is monotonic then we
+    can find a set of positive weights that adjust for the non-linear influence changes on the
+    expected value.
+    """
+    expected_value = np.mean(p, axis=0)
+    epsilon = 0.0001
+    link_gradient = (link(expected_value + epsilon) - link(expected_value)) / epsilon
+
+    linearized_link = link_gradient*(p - expected_value) + link(expected_value)
+    weights = (linearized_link - link(expected_value)) / (link(p) - link(expected_value))
+    weights *= weights.shape[0] / np.sum(weights, axis=0)
+    return weights

@@ -1,8 +1,8 @@
 """ Tests for the Deep explainer.
 """
 
-from distutils.version import LooseVersion
 from urllib.error import HTTPError
+from packaging import version
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,14 +11,14 @@ from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-# pylint: disable=import-outside-toplevel
+# pylint: disable=import-outside-toplevel, no-name-in-module, import-error
 
 def test_tf_eager():
     """ This is a basic eager example from keras.
     """
 
     tf = pytest.importorskip('tensorflow')
-    if LooseVersion(tf.__version__) >= LooseVersion("2.4.0"):
+    if version.parse(tf.__version__) >= version.parse("2.4.0"):
         pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
 
     x = pd.DataFrame({"B": np.random.random(size=(100,))})
@@ -47,10 +47,16 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
     from tensorflow.keras.layers import Conv2D, MaxPooling2D
     from tensorflow.keras import backend as K
+    from tensorflow.compat.v1 import ConfigProto
+    from tensorflow.compat.v1 import InteractiveSession
+
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+    InteractiveSession(config=config)
 
     tf.compat.v1.disable_eager_execution()
 
-    batch_size = 128
+    batch_size = 64
     num_classes = 10
     epochs = 1
 
@@ -58,7 +64,11 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     img_rows, img_cols = 28, 28
 
     # the data, split between train and test sets
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+    # (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+    x_train = np.random.randn(200, 28, 28)
+    y_train = np.random.randint(0, 9, 200)
+    x_test = np.random.randn(200, 28, 28)
+    y_test = np.random.randint(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -79,14 +89,14 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(8, kernel_size=(3, 3),
+    model.add(Conv2D(2, kernel_size=(3, 3),
                      activation='relu',
                      input_shape=input_shape))
-    model.add(Conv2D(16, (3, 3), activation='relu'))
+    model.add(Conv2D(4, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
-    model.add(Dense(32, activation='relu')) # 128
+    model.add(Dense(16, activation='relu')) # 128
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
@@ -95,15 +105,15 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    model.fit(x_train[:1000, :], y_train[:1000, :],
+    model.fit(x_train[:10, :], y_train[:10, :],
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test[:1000, :], y_test[:1000, :]))
+              validation_data=(x_test[:10, :], y_test[:10, :]))
 
     # explain by passing the tensorflow inputs and outputs
     np.random.seed(0)
-    inds = np.random.choice(x_train.shape[0], 10, replace=False)
+    inds = np.random.choice(x_train.shape[0], 3, replace=False)
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
@@ -164,6 +174,10 @@ def test_tf_keras_imdb_lstm():
     """
     tf = pytest.importorskip('tensorflow')
 
+    # this fails right now for new TF versions (there is a warning in the code for this)
+    if version.parse(tf.__version__) >= version.parse("2.5.0"):
+        pytest.skip()
+
     from tensorflow.keras.datasets import imdb
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense
@@ -196,9 +210,6 @@ def test_tf_keras_imdb_lstm():
     background = X_train[inds]
     testx = X_test[10:11]
 
-    # Question for Scott: we can explain without fitting?
-    # mod.fit(X_train, y_train, epochs=1, shuffle=False, verbose=1)
-
     # explain a prediction and make sure it sums to the difference between the average output
     # over the background samples and the current output
     sess = tf.compat.v1.keras.backend.get_session()
@@ -214,16 +225,29 @@ def test_tf_keras_imdb_lstm():
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_pytorch_mnist_cnn(tmpdir):
+def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
     torch = pytest.importorskip('torch')
-    torchvision = pytest.importorskip('torchvision')
-    datasets = torchvision.datasets
-    transforms = torchvision.transforms
 
     from torch import nn
     from torch.nn import functional as F
+
+    class RandData:
+        """ Random test data.
+        """
+        def __init__(self, batch_size):
+            self.current = 0
+            self.batch_size = batch_size
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            self.current += 1
+            if self.current < 10:
+                return torch.randn(self.batch_size, 1, 28, 28), torch.randint(0, 9, (self.batch_size,))
+            raise StopIteration
 
     def run_test(train_loader, test_loader, interim):
 
@@ -263,10 +287,10 @@ def test_pytorch_mnist_cnn(tmpdir):
         model = Net()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-        def train(model, device, train_loader, optimizer, epoch, cutoff=2000):
+        def train(model, device, train_loader, optimizer, _, cutoff=20):
             model.train()
             num_examples = 0
-            for batch_idx, (data, target) in enumerate(train_loader):
+            for _, (data, target) in enumerate(train_loader):
                 num_examples += target.shape[0]
                 data, target = data.to(device), target.to(device)
                 optimizer.zero_grad()
@@ -275,10 +299,10 @@ def test_pytorch_mnist_cnn(tmpdir):
                 # loss = F.nll_loss(output, target)
                 loss.backward()
                 optimizer.step()
-                if batch_idx % 10 == 0:
-                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                        epoch, batch_idx * len(data), len(train_loader.dataset),
-                        100. * batch_idx / len(train_loader), loss.item()))
+                # if batch_idx % 10 == 0:
+                #     # print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                #     #     epoch, batch_idx * len(data), len(train_loader.dataset),
+                #         # 100. * batch_idx / len(train_loader), loss.item()))
                 if num_examples > cutoff:
                     break
 
@@ -287,7 +311,7 @@ def test_pytorch_mnist_cnn(tmpdir):
 
         next_x, _ = next(iter(train_loader))
         np.random.seed(0)
-        inds = np.random.choice(next_x.shape[0], 20, replace=False)
+        inds = np.random.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
         else:
@@ -305,28 +329,17 @@ def test_pytorch_mnist_cnn(tmpdir):
         d = np.abs(sums - diff).sum()
         assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
-    batch_size = 128
+    batch_size = 32
 
     try:
-        train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(tmpdir, train=True, download=True,
-                        transform=transforms.Compose([
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.1307,), (0.3081,))
-                        ])),
-            batch_size=batch_size, shuffle=True)
-        test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(tmpdir, train=False, download=True,
-                        transform=transforms.Compose([
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.1307,), (0.3081,))
-                        ])),
-            batch_size=batch_size, shuffle=True)
+        train_loader = RandData(batch_size)
+        test_loader = RandData(batch_size)
     except HTTPError:
         pytest.skip()
 
     #print('Running test on interim layer')
     run_test(train_loader, test_loader, interim=True)
+
     #print('Running test on whole model')
     run_test(train_loader, test_loader, interim=False)
 

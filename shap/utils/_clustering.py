@@ -137,7 +137,7 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     
     return dist
 
-def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
+def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     if safe_isinstance(X, "pandas.core.frame.DataFrame"):
         X = X.values
 
@@ -154,7 +154,14 @@ def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
         for i in range(dist_full.shape[0]):
             for j in range(i+1, dist_full.shape[1]):
                 if i != j:
-                    dist.append(max(dist_full[i,j], dist_full[j,i]))
+                    if linkage == "single":
+                        dist.append(min(dist_full[i,j], dist_full[j,i]))
+                    elif linkage == "complete":
+                        dist.append(max(dist_full[i,j], dist_full[j,i]))
+                    elif linkage == "average":
+                        dist.append((dist_full[i,j] + dist_full[j,i]) / 2)
+                    else:
+                        raise Exception("Unsupported linkage type!")
         dist = np.array(dist)
     
     else:
@@ -171,7 +178,11 @@ def hclust(X, y=None, linkage="complete", metric="auto", random_state=0):
     #     raise Exception("Unknown metric: " + str(metric))
 
     # build linkage
-    if linkage == "complete":
+    if linkage == "single":
+        return sp.cluster.hierarchy.single(dist)
+    elif linkage == "complete":
         return sp.cluster.hierarchy.complete(dist)
+    elif linkage == "average":
+        return sp.cluster.hierarchy.average(dist)
     else:
         raise Exception("Unknown linkage: " + str(linkage))

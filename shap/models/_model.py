@@ -1,3 +1,4 @@
+import numpy as np
 from .._serializable import Serializable, Serializer, Deserializer
 
 
@@ -13,8 +14,11 @@ class Model(Serializable):
         else:
             self.inner_model = model
 
+        if hasattr(model, "output_names"):
+            self.output_names = model.output_names
+
     def __call__(self, *args):
-        return self.inner_model(*args)
+        return np.array(self.inner_model(*args))
 
     def save(self, out_file):
         """ Save the model to the given file stream.

@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 from ..explainers._explainer import Explainer
 from ..explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
-from distutils.version import LooseVersion
+from packaging import version
 keras = None
 tf = None
 torch = None
@@ -119,12 +119,12 @@ class _TFGradient(Explainer):
         global tf, keras
         if tf is None:
             import tensorflow as tf
-            if LooseVersion(tf.__version__) < LooseVersion("1.4.0"):
+            if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         if keras is None:
             try:
                 import keras
-                if LooseVersion(keras.__version__) < LooseVersion("2.1.0"):
+                if version.parse(keras.__version__) < version.parse("2.1.0"):
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
             except:
                 pass
@@ -341,7 +341,7 @@ class _PyTorchGradient(Explainer):
         global torch
         if torch is None:
             import torch
-            if LooseVersion(torch.__version__) < LooseVersion("0.4"):
+            if version.parse(torch.__version__) < version.parse("0.4"):
                 warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
         # check if we have multiple inputs
