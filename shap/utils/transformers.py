@@ -95,34 +95,39 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
     Example for distillgpt2: null_tokens=[], for BART: null_tokens = [0,2] and for MarianMT: null_tokens=[0]
     used to slice tokens belonging to sentence after passing through tokenizer.encode().
     """
-    null_tokens = tokenizer.encode("")
-    keep_prefix, keep_suffix, prefix_strlen, suffix_strlen = None, None, None, None
+    null_tokens = tokenizer("")["input_ids"]
+    keep_prefix, keep_suffix = None, None
 
     if len(null_tokens) == 1:
         null_token = null_tokens[0]
-        st_map = tokenizer.special_tokens_map
-        assert (('eos_token' in st_map) or ('bos_token' in st_map)), "No eos token or bos token found in tokenizer!"
-        if ('eos_token' in st_map) and (tokenizer.decode(null_token) == st_map['eos_token']):
-            keep_prefix = 0
-            keep_suffix = 1
-            prefix_strlen = 0
-            suffix_strlen = len(tokenizer.decode(null_tokens[-keep_suffix:]))
-        elif ('bos_token' in st_map) and (tokenizer.decode(null_token) == st_map['bos_token']):
-            keep_prefix = 1
-            keep_suffix = 0
-            prefix_strlen = len(tokenizer.decode(null_tokens[:keep_prefix]))
-            suffix_strlen = 0
+        if hasattr(tokenizer, "special_tokens_map") and hasattr(tokenizer, "decode"):
+            st_map = tokenizer.special_tokens_map
+            assert (('eos_token' in st_map) or ('bos_token' in st_map)), "No eos token or bos token found in tokenizer!"
+            if ('eos_token' in st_map) and (tokenizer.decode(null_token) == st_map['eos_token']):
+                keep_prefix = 0
+                keep_suffix = 1
+                # prefix_strlen = 0
+                # suffix_strlen = len(tokenizer.decode(null_tokens[-keep_suffix:]))
+            elif ('bos_token' in st_map) and (tokenizer.decode(null_token) == st_map['bos_token']):
+                keep_prefix = 1
+                keep_suffix = 0
+                # prefix_strlen = len(tokenizer.decode(null_tokens[:keep_prefix]))
+                # suffix_strlen = 0
+        else:
+            raise Exception("The given tokenizer produces one token when applied to the empty string, but " + \
+                            "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] " + \
+                            "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!")
     else:
         assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"
         keep_prefix = len(null_tokens) // 2
         keep_suffix = len(null_tokens) // 2
-        prefix_strlen = len(tokenizer.decode(null_tokens[:keep_prefix]))
-        suffix_strlen = len(tokenizer.decode(null_tokens[-keep_suffix:]))
+        # prefix_strlen = len(tokenizer.decode(null_tokens[:keep_prefix]))
+        # suffix_strlen = len(tokenizer.decode(null_tokens[-keep_suffix:]))
 
     return {
         'keep_prefix' : keep_prefix,
         'keep_suffix' : keep_suffix,
-        'prefix_strlen' : prefix_strlen,
-        'suffix_strlen' : suffix_strlen,
+        # 'prefix_strlen' : prefix_strlen,
+        # 'suffix_strlen' : suffix_strlen,
         'null_tokens' : null_tokens
     }

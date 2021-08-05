@@ -254,9 +254,9 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
     encoded_tokens = [t.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '') for t in tokens]
     output_name = shap_values.output_names if isinstance(shap_values.output_names, str) else ""
     out += svg_force_plot(values, shap_values.base_values, shap_values.base_values + values.sum(), encoded_tokens, uuid, xmin, xmax, output_name)
-    out += "<div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
+    out += "<div align='center'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
     for i, token in enumerate(tokens):
-        scaled_value = 0.5 + 0.5 * values[i] / cmax
+        scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
         color = (color[0]*255, color[1]*255, color[2]*255, color[3])
 
@@ -275,10 +275,9 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             value_label = str(values[i].round(3)) + " / " + str(group_sizes[i])
 
         # the HTML for this token
-        out += f"""
-<div style='display: {wrapper_display}; text-align: center;'>
-    <div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div>
-        <div id='_tp_{uuid}_ind_{i}'
+        out += f"""<div style='display: {wrapper_display}; text-align: center;'
+    ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
+        ><div id='_tp_{uuid}_ind_{i}'
             style='display: inline; background: rgba{color}; border-radius: 3px; padding: 0px'
             onclick="
             if (this.previousSibling.style.display == 'none') {{
@@ -289,11 +288,9 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 this.parentNode.style.display = 'inline';
             }}"
             onmouseover="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 1; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 1;"
-            onmouseout="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 0; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 0;">
-        {token.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '')}
-    </div>
-</div>
-"""
+            onmouseout="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 0; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 0;"
+        >{token.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '')}</div></div>"""
+    out += "</div>"
 
     if display:
         ipython_display(HTML(out))
@@ -419,7 +416,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
 
     def xpos(xval):
-        return 100 * (xval - xmin)  / (xmax - xmin)
+        return 100 * (xval - xmin)  / (xmax - xmin + 1e-8)
 
     s = ''
     s += '<svg width="100%" height="80px">'
@@ -446,11 +443,11 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         return s
 
 
-    xcenter = round((xmax + xmin) / 2, round(1-np.log10(xmax - xmin)))
+    xcenter = round((xmax + xmin) / 2, round(1-np.log10(xmax - xmin + 1e-8)))
     s += draw_tick_mark(xcenter)
     #    np.log10(xmax - xmin)
 
-    tick_interval = round((xmax - xmin) / 7, round(1-np.log10(xmax - xmin)))
+    tick_interval = round((xmax - xmin) / 7, round(1-np.log10(xmax - xmin + 1e-8)))
 
     #tick_interval = (xmax - xmin) / 7
     side_buffer = (xmax - xmin) / 14
@@ -475,7 +472,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     # draw base red bar
     x = fx - values[values > 0].sum()
-    w = 100 * values[values > 0].sum() / (xmax - xmin)
+    w = 100 * values[values > 0].sum() / (xmax - xmin + 1e-8)
     s += f'<rect x="{xpos(x)}%" width="{w}%" y="40" height="18" style="fill:rgb{red}; stroke-width:0; stroke:rgb(0,0,0)" />'
 
     # draw underline marks and the text labels
@@ -574,7 +571,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     light_blue = (208, 230, 250)
 
     # draw base blue bar
-    w = 100 * -values[values < 0].sum() / (xmax - xmin)
+    w = 100 * -values[values < 0].sum() / (xmax - xmin + 1e-8)
     s += f'<rect x="{xpos(fx)}%" width="{w}%" y="40" height="18" style="fill:rgb{blue}; stroke-width:0; stroke:rgb(0,0,0)" />'
 
     # draw underline marks and the text labels
@@ -711,8 +708,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
             ri = partition_tree[i-M,1]
             upper_values[i] = value
             value += shap_values[i]
-#             lower_credit(upper_values, partition_tree, li, value * len(groups[li]) / (len(groups[li]) + len(groups[ri])))
-#             lower_credit(upper_values, partition_tree, ri, value * len(groups[ri]) / (len(groups[li]) + len(groups[ri])))
+
             lower_credit(upper_values, partition_tree, li, value * 0.5)
             lower_credit(upper_values, partition_tree, ri, value * 0.5)
 
