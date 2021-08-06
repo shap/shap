@@ -14,7 +14,7 @@ class Image(Masker):
     """ This masks out image regions with blurring or inpainting.
     """
 
-    def __init__(self, mask_value, shape=None):
+    def __init__(self, mask_value, shape=None, partition_scheme=0):
         """ Build a new Image masker with the given masking value.
 
         Parameters
@@ -25,18 +25,28 @@ class Image(Masker):
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
+
+        partition_scheme : 0 or 1
+            Selects paritioning scheme. If the partition_scheme is 0, then all row, column
+            splits are performed before channel splits. If the partition_scheme is 1, then
+            all channels are split before splitting rows and columns.
         """
         if shape is None:
             if isinstance(mask_value, str):
-                raise TypeError("When the mask_value is a string the shape parameter must be given!")
-            self.input_shape = mask_value.shape # the (1,) is because we only return a single masked sample to average over
+                raise TypeError(
+                    "When the mask_value is a string the shape parameter must be given!")
+            # the (1,) is because we only return a single masked sample to average over
+            self.input_shape = mask_value.shape
         else:
             self.input_shape = shape
 
         self.input_mask_value = mask_value
 
+        self.partition_scheme = partition_scheme
+
         # This is the shape of the masks we expect
-        self.shape = (1, np.prod(self.input_shape)) # the (1, ...) is because we only return a single masked sample to average over
+        # the (1, ...) is because we only return a single masked sample to average over
+        self.shape = (1, np.prod(self.input_shape))
 
         self.blur_kernel = None
         self._blur_value_cache = None
@@ -59,8 +69,8 @@ class Image(Masker):
 
     def __call__(self, mask, x):
         if np.prod(x.shape) != np.prod(self.input_shape):
-            raise Exception("The length of the image to be masked must match the shape given in the " + \
-                            "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
+            raise Exception("The length of the image to be masked must match the shape given in the " +
+                            "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape]) +
                             " != "+" * ".join([str(i) for i in self.input_shape]))
 
         # unwrap single element lists (which are how single input models look in multi-input format)
@@ -79,7 +89,8 @@ class Image(Masker):
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
                 if self.last_xid != id(x):
-                    self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).flatten()
+                    self._blur_value_cache = cv2.blur(
+                        x.reshape(self.input_shape), self.blur_kernel).flatten()
                     self.last_xid = id(x)
                 out = x.copy()
                 out[~mask] = self._blur_value_cache[~mask]
@@ -136,7 +147,12 @@ class Image(Masker):
 
             # make sure we line up with a flattened indexing scheme
             if ind < 0:
-                assert -ind - 1 == xmin * total_ywidth * total_zwidth + ymin * total_zwidth + zmin
+                assert -ind - 1 == xmin * total_ywidth * \
+                    total_zwidth + ymin * total_zwidth + zmin
+
+            # make sure the partition scheme is supported
+            nschemes = [0, 1]
+            assert self.partition_scheme in nschemes
 
             xwidth = xmax - xmin
             ywidth = ymax - ymin
@@ -153,29 +169,55 @@ class Image(Masker):
                 lzmin = rzmin = zmin
                 lzmax = rzmax = zmax
 
-                # split the xaxis if it is the largest dimension
-                if xwidth >= ywidth and xwidth > 1:
-                    xmid = xmin + xwidth // 2
-                    lxmax = xmid
-                    rxmin = xmid
+                # Partition scheme 0: xaxis and yaxis fully partitioned before zaxis
+                if self.partition_scheme == 0:
 
-                # split the yaxis
-                elif ywidth > 1:
-                    ymid = ymin + ywidth // 2
-                    lymax = ymid
-                    rymin = ymid
+                    # split the xaxis if it is the largest dimension
+                    if xwidth >= ywidth and xwidth > 1:
+                        xmid = xmin + xwidth // 2
+                        lxmax = xmid
+                        rxmin = xmid
 
-                # split the zaxis only when the other ranges are already width 1
-                else:
-                    zmid = zmin + zwidth // 2
-                    lzmax = zmid
-                    rzmin = zmid
+                    # split the yaxis
+                    elif ywidth > 1:
+                        ymid = ymin + ywidth // 2
+                        lymax = ymid
+                        rymin = ymid
+
+                    # split the zaxis only when the other ranges are already width 1
+                    else:
+                        zmid = zmin + zwidth // 2
+                        lzmax = zmid
+                        rzmin = zmid
+
+                # Partition scheme 1: zaxis partitioned first
+                if self.partition_scheme == 1:
+
+                    # split the zaxis if it is larger than 1
+                    if zwidth > 1:
+                        zmid = zmin + zwidth // 2
+                        lzmax = zmid
+                        rzmin = zmid
+
+                    # split the xaxis if it is larger than the yaxis
+                    elif xwidth >= ywidth and xwidth > 1:
+                        xmid = xmin + xwidth // 2
+                        lxmax = xmid
+                        rxmin = xmid
+
+                    # split the yaxis
+                    elif ywidth > 1:
+                        ymid = ymin + ywidth // 2
+                        lymax = ymid
+                        rymin = ymid
 
                 lsize = (lxmax - lxmin) * (lymax - lymin) * (lzmax - lzmin)
                 rsize = (rxmax - rxmin) * (rymax - rymin) * (rzmax - rzmin)
 
-                q.put((-lsize, lxmin, lxmax, lymin, lymax, lzmin, lzmax, ind, True))
-                q.put((-rsize, rxmin, rxmax, rymin, rymax, rzmin, rzmax, ind, False))
+                q.put((-lsize, lxmin, lxmax, lymin,
+                       lymax, lzmin, lzmax, ind, True))
+                q.put((-rsize, rxmin, rxmax, rymin,
+                       rymax, rzmin, rzmax, ind, False))
 
             ind -= 1
 

@@ -20,7 +20,8 @@ from ..utils._legacy import kmeans
 # pylint: disable=unsubscriptable-object
 
 
-def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hspace=0.2, labelpad=None, show=True):
+
+def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hspace=0.2, labelpad=None, show=True, plotchannels=[0]):
     """ Plots SHAP values for image inputs.
 
     Parameters
@@ -46,6 +47,8 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
+    plotchannels : None or list
+        List of image channel indices to plot separately. If None, will sum all bands for a single plot.
     """
 
     # support passing an explanation object
@@ -67,6 +70,13 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         multi_output = False
         shap_values = [shap_values]
 
+    # make sure the number of channels to plot is <= number of channels present
+    if plotchannels is not None:
+        nchannels = min(shap_values[0].shape[-1], len(plotchannels))
+        plotchannels = plotchannels[:nchannels]
+    else:
+        nchannels = 1
+
     # make sure labels
     if labels is not None:
         labels = np.array(labels)
@@ -80,10 +90,10 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
 
     # plot our explanations
     x = pixel_values
-    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
+    fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + ((nchannels - 1) * 3))])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
+    fig, axes = pl.subplots(nrows=x.shape[0] * nchannels, ncols=len(shap_values) + 1, figsize=fig_size)
     if len(axes.shape) == 1:
         axes = axes.reshape(1,axes.size)
     for row in range(x.shape[0]):
@@ -94,7 +104,7 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             x_curr = x_curr.reshape(x_curr.shape[:2])
         if x_curr.max() > 1:
             x_curr /= 255.
-        
+
         # get a grayscale version of the image
         if len(x_curr.shape) == 3 and x_curr.shape[2] == 3:
             x_curr_gray = (0.2989 * x_curr[:,:,0] + 0.5870 * x_curr[:,:,1] + 0.1140 * x_curr[:,:,2]) # rgb to gray
@@ -113,8 +123,11 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row,0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
-        axes[row,0].axis('off')
+        axes[row*nchannels,0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
+        axes[row*nchannels,0].axis('off')
+        for c in range(1, nchannels):
+            axes[row*nchannels+c, 0].set_visible(False)
+
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
@@ -122,11 +135,20 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row,i+1].set_title(labels[row,i], **label_kwargs)
-            sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
-            axes[row,i+1].axis('off')
+                axes[row*nchannels,i+1].set_title(labels[row,i], **label_kwargs)
+
+            if plotchannels is not None:
+                for c in range(nchannels):
+                    sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row][..., plotchannels[c]]
+                    axes[row*nchannels+c,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
+                    im = axes[row*nchannels+c,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+                    axes[row*nchannels+c,i+1].axis('off')
+            else:
+                sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
+                axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
+                im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+                axes[row,i+1].axis('off')
+
     if hspace == 'auto':
         fig.tight_layout()
     else:
@@ -152,14 +174,14 @@ def image_to_text(shap_values):
         for i in range(shap_values.values.shape[0]):
             display(HTML(f"<br/><b>{ordinal_str(i)} instance:</b><br/>"))
             image_to_text(shap_values[i])
-        
+
         return
-    
+
 
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
-    
+
     # creating input html tokens
-    
+
     model_output = shap_values.output_names
 
     output_text_html = ''
@@ -178,35 +200,35 @@ def image_to_text(shap_values):
                 + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
                 + " </div>" \
                 + "</div>"
-    
+
     # computing gray scale images
     image_data = shap_values.data
     image_height = image_data.shape[0]
     image_width = image_data.shape[1]
-    
+
     # computing gray scale image
     image_data_gray_scale = np.ones((image_height, image_width, 4)) * 255 * 0.5
     image_data_gray_scale[:,:,0] = np.mean(image_data,axis=2).astype(int)
     image_data_gray_scale[:,:,1] = image_data_gray_scale[:,:,0]
     image_data_gray_scale[:,:,2] = image_data_gray_scale[:,:,0]
-        
+
     # computing shap color values for every pixel and for every output token
-    
+
     shap_values_color_maps = shap_values.values[:,:,0,:]
     max_val = np.nanpercentile(np.abs(shap_values.values), 99.9)
-    
+
     shap_values_color_dict = {}
-    
-    for index in range(model_output.shape[0]):        
+
+    for index in range(model_output.shape[0]):
         shap_values_color_dict[f'{uuid}_output_flat_token_{index}'] = (colors.red_transparent_blue(0.5 + 0.5 * shap_values_color_maps[:,:,index]/ max_val) * 255).astype(int).tolist()
 
-    
+
     # converting to json to be read in javascript
-    
+
     image_data_json = json.dumps(shap_values.data.astype(int).tolist())
     shap_values_color_dict_json = json.dumps(shap_values_color_dict)
     image_data_gray_scale_json = json.dumps(image_data_gray_scale.astype(int).tolist())
-    
+
     image_viz_html = f"""
 
         <div id="{uuid}_image_viz" class="{uuid}_image_viz_content">
@@ -251,27 +273,27 @@ def image_to_text(shap_values):
         </div>
 
     """
-    
-    
-    
+
+
+
     image_viz_script = f"""
         <script>
-            
+
             var {uuid}_heatmap_flat_state = null;
             var {uuid}_opacity = 0.35
-            
+
             function onMouseHoverFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "grey";
                     {uuid}_update_image_and_overlay(id);
-                }}            
+                }}
             }}
-            
+
             function onMouseOutFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "transparent";
                     {uuid}_update_image_and_overlay(null);
-                }}                
+                }}
             }}
 
             function onMouseClickFlat_{uuid}(id) {{
@@ -295,25 +317,25 @@ def image_to_text(shap_values):
                         {uuid}_heatmap_flat_state = id
                     }}
                 }}
-            }}         
+            }}
 
             const {uuid}_image_data_matrix = {image_data_json};
             const {uuid}_image_data_gray_scale = {image_data_gray_scale_json};
             const {uuid}_image_height = {image_height};
             const {uuid}_image_width = {image_width};
             const {uuid}_shap_values_color_dict = {shap_values_color_dict_json};
-            
+
             {uuid}_canvas = document.getElementById('{uuid}_image_canvas');
             {uuid}_context = {uuid}_canvas.getContext('2d');
-            
-            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);            
+
+            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);
             var {uuid}_currImagData = {uuid}_imageData;
-            
-            
+
+
             {uuid}_trackTransforms({uuid}_context);
             initial_scale_factor = Math.min({uuid}_canvas.height/{uuid}_image_height,{uuid}_canvas.width/{uuid}_image_width);
             {uuid}_context.scale(initial_scale_factor, initial_scale_factor);
-            
+
             function {uuid}_update_image_and_overlay(selected_id) {{
                 if (selected_id == null) {{
                     {uuid}_currImagData = {uuid}_imageData;
@@ -324,16 +346,16 @@ def image_to_text(shap_values):
                     {uuid}_redraw();
                 }}
             }}
-            
+
             function {uuid}_set_opacity(value) {{
                 {uuid}_opacity = value/100;
-                
+
                 if ({uuid}_heatmap_flat_state !== null ) {{
-                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);                    
+                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);
                     {uuid}_redraw();
                 }}
             }}
-            
+
             function {uuid}_redraw() {{
 
                 // Clear the entire canvas
@@ -393,13 +415,13 @@ def image_to_text(shap_values):
                 {uuid}_context.translate(-pt.x, -pt.y);
                 {uuid}_redraw();
             }}
-            
+
             var {uuid}_reset = function(clicks) {{
                 {uuid}_context.restore();
                 {uuid}_redraw();
                 {uuid}_context.save();
             }}
-            
+
             var handleScroll = function(evt) {{
                 var delta = evt.wheelDelta ? evt.wheelDelta / 40 : evt.detail ? -evt.detail : 0;
                 if (delta) {uuid}_zoom(delta);
@@ -480,7 +502,7 @@ def image_to_text(shap_values):
                     return pt.matrixTransform(xform.inverse());
                 }}
             }}
-            
+
 
             function {uuid}_convert_image_matrix_to_data(image_data_matrix, image_height, image_width, context) {{
 
@@ -497,19 +519,19 @@ def image_to_text(shap_values):
                         imageData.data[index + 3] = 255;
                     }}
                 }}
-                
+
                 return imageData;
             }}
-            
+
             function {uuid}_blend_image_shap_map(image_data_matrix, shap_color_map, image_height, image_width, alpha, context) {{
                 var blendedImageData = context.createImageData(image_height, image_width);
 
                 for(var row_index = 0; row_index < image_height; row_index++) {{
-                
+
                     for(var col_index = 0; col_index < image_width; col_index++) {{
-                    
+
                         index = (row_index * image_width + col_index) * 4;
-                    
+
                         blendedImageData.data[index + 0] = image_data_matrix[row_index][col_index][0] * alpha + (shap_color_map[row_index][col_index][0]) * ( 1 - alpha);
                         blendedImageData.data[index + 1] = image_data_matrix[row_index][col_index][1] * alpha + (shap_color_map[row_index][col_index][1]) * ( 1 - alpha);
                         blendedImageData.data[index + 2] = image_data_matrix[row_index][col_index][2] * alpha + (shap_color_map[row_index][col_index][2]) * ( 1 - alpha);
