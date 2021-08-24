@@ -25,45 +25,63 @@ class MetaExplanation(type):
 
     @property
     def abs(cls):
+        """ Element-wize absolute value op.
+        """
         return op_chain_root.abs
 
     @property
     def identity(cls):
+        """ A no-op.
+        """
         return op_chain_root.identity
 
     @property
     def argsort(cls):
+        """ Numpy style argsort.
+        """
         return op_chain_root.argsort
 
     @property
     def sum(cls):
+        """ Numpy style sum.
+        """
         return op_chain_root.sum
 
     @property
     def max(cls):
+        """ Numpy style max.
+        """
         return op_chain_root.max
 
     @property
     def min(cls):
+        """ Numpy style min.
+        """
         return op_chain_root.min
 
     @property
     def mean(cls):
+        """ Numpy style mean.
+        """
         return op_chain_root.mean
-    
+
     @property
     def sample(cls):
+        """ Numpy style sample.
+        """
         return op_chain_root.sample
 
     @property
     def hclust(cls):
+        """ Hierarchial clustering op.
+        """
         return op_chain_root.hclust
 
 
-class Explanation(object, metaclass=MetaExplanation):
+class Explanation(metaclass=MetaExplanation):
     """ A slicable set of parallel arrays representing a SHAP explanation.
     """
-    def __init__(
+    def __init__( # pylint: disable=too-many-arguments
         self,
         values,
         base_values=None,
@@ -78,31 +96,34 @@ class Explanation(object, metaclass=MetaExplanation):
         error_std=None,
         main_effects=None,
         hierarchical_values=None,
-        clustering=None
+        clustering=None,
+        compute_time=None
     ):
         self.op_history = []
 
-        # cloning. TODO: better cloning :)
+        self.compute_time = compute_time
+
+        # cloning. TODOsomeday: better cloning :)
         if issubclass(type(values), Explanation):
             e = values
             values = e.values
             base_values = e.base_values
             data = e.data
 
-        output_dims = compute_output_dims(values, base_values, data, output_names)
+        self.output_dims = compute_output_dims(values, base_values, data, output_names)
         values_shape = _compute_shape(values)
 
-        if output_names is None and len(output_dims) == 1:
-            output_names = [f"Output {i}" for i in range(values_shape[output_dims[0]])]
+        if output_names is None and len(self.output_dims) == 1:
+            output_names = [f"Output {i}" for i in range(values_shape[self.output_dims[0]])]
 
-        if len(_compute_shape(feature_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
+        if len(_compute_shape(feature_names)) == 1: # TODOsomeday: should always be an alias once slicer supports per-row aliases
             if len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
                 feature_names = Alias(list(feature_names), 0)
             elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
                 feature_names = Alias(list(feature_names), 1)
 
-        if len(_compute_shape(output_names)) == 1: # TODO: should always be an alias once slicer supports per-row aliases
-            output_names = Alias(list(output_names), output_dims[0])
+        if len(_compute_shape(output_names)) == 1: # TODOsomeday: should always be an alias once slicer supports per-row aliases
+            output_names = Alias(list(output_names), self.output_dims[0])
             # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
             #     output_names = Alias(list(output_names), 0)
             # elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
@@ -113,21 +134,21 @@ class Explanation(object, metaclass=MetaExplanation):
             if l == 0:
                 pass
             elif l == 1:
-                output_names = Obj(output_names, output_dims)
+                output_names = Obj(output_names, self.output_dims)
             elif l == 2:
-                output_names = Obj(output_names, [0] + list(output_dims))
+                output_names = Obj(output_names, [0] + list(self.output_dims))
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
 
         self._s = Slicer(
             values=values,
-            base_values=None if base_values is None else Obj(base_values, [0] + list(output_dims)),
+            base_values=base_values if hasattr(base_values, "__len__") else Obj(base_values, [0] + list(self.output_dims)),
             data=list_wrap(data),
             display_data=list_wrap(display_data),
             instance_names=None if instance_names is None else Alias(instance_names, 0),
             feature_names=feature_names,
             output_names=output_names,
-            output_indexes=None if output_indexes is None else (output_dims, output_indexes),
+            output_indexes=None if output_indexes is None else (self.output_dims, output_indexes),
             lower_bounds=list_wrap(lower_bounds),
             upper_bounds=list_wrap(upper_bounds),
             error_std=list_wrap(error_std),
@@ -138,10 +159,14 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def shape(self):
+        """ Compute the shape over potentially complex data nesting.
+        """
         return _compute_shape(self._s.values)
 
     @property
     def values(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.values
     @values.setter
     def values(self, new_values):
@@ -149,6 +174,8 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def base_values(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.base_values
     @base_values.setter
     def base_values(self, new_base_values):
@@ -156,6 +183,8 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def data(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.data
     @data.setter
     def data(self, new_data):
@@ -163,6 +192,8 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def display_data(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.display_data
     @display_data.setter
     def display_data(self, new_display_data):
@@ -172,21 +203,29 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def instance_names(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.instance_names
 
     @property
     def output_names(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.output_names
-    @output_names.setter 
+    @output_names.setter
     def output_names(self, new_output_names):
         self._s.output_names = new_output_names
 
     @property
     def output_indexes(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.output_indexes
 
     @property
     def feature_names(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.feature_names
     @feature_names.setter
     def feature_names(self, new_feature_names):
@@ -194,18 +233,26 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def lower_bounds(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.lower_bounds
 
     @property
     def upper_bounds(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.upper_bounds
 
     @property
     def error_std(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.error_std
 
     @property
     def main_effects(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.main_effects
     @main_effects.setter
     def main_effects(self, new_main_effects):
@@ -213,6 +260,8 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def hierarchical_values(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.hierarchical_values
     @hierarchical_values.setter
     def hierarchical_values(self, new_hierarchical_values):
@@ -220,6 +269,8 @@ class Explanation(object, metaclass=MetaExplanation):
 
     @property
     def clustering(self):
+        """ Pass-through from the underlying slicer object.
+        """
         return self._s.clustering
     @clustering.setter
     def clustering(self, new_clustering):
@@ -237,13 +288,14 @@ class Explanation(object, metaclass=MetaExplanation):
 
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
-        elif isinstance(cohorts, (list, tuple, np.ndarray)):
+        if isinstance(cohorts, (list, tuple, np.ndarray)):
             cohorts = np.array(cohorts)
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
-        else:
-            raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
+        raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
 
     def __repr__(self):
+        """ Display some basic printable info, but not everything.
+        """
         out = ".values =\n"+self.values.__repr__()
         if self.base_values is not None:
             out += "\n\n.base_values =\n"+self.base_values.__repr__()
@@ -258,7 +310,7 @@ class Explanation(object, metaclass=MetaExplanation):
             item = (item,)
 
         # convert any OpChains or magic strings
-        for pos, t in enumerate(item):
+        for pos, t in enumerate(item): # pylint: disable=too-many-nested-blocks
             orig_t = t
             if issubclass(type(t), OpChain):
                 t = t.apply(self)
@@ -279,11 +331,10 @@ class Explanation(object, metaclass=MetaExplanation):
                     new_base_values = []
                     new_data = []
                     new_self = copy.deepcopy(self)
-                    for i in range(len(self.values)):
-                        for j in range(len(self.output_names[i])):
-                            s = self.output_names[i][j]
+                    for i, v in enumerate(self.values):
+                        for j, s in enumerate(self.output_names[i]):
                             if s == t:
-                                new_values.append(np.array(self.values[i][:,j]))
+                                new_values.append(np.array(v[:,j]))
                                 new_data.append(np.array(self.data[i]))
                                 new_base_values.append(self.base_values[i][j])
                     new_self = copy.deepcopy(self)
@@ -301,8 +352,8 @@ class Explanation(object, metaclass=MetaExplanation):
                 if pos != 0 and pos in feature_names_dims and len(feature_names_dims) == 2:
                     new_values = []
                     new_data = []
-                    for i in range(len(self.values)):
-                        for s,v,d in zip(self.feature_names[i], self.values[i], self.data[i]):
+                    for i, val_i in enumerate(self.values):
+                        for s,v,d in zip(self.feature_names[i], val_i, self.data[i]):
                             if s == t:
                                 new_values.append(v)
                                 new_data.append(d)
@@ -379,36 +430,40 @@ class Explanation(object, metaclass=MetaExplanation):
 
     def __add__(self, other):
         return self._apply_binary_operator(other, operator.add, "__add__")
-    
+
     def __radd__(self, other):
         return self._apply_binary_operator(other, operator.add, "__add__")
-        
+
     def __sub__(self, other):
         return self._apply_binary_operator(other, operator.sub, "__sub__")
-    
+
     def __rsub__(self, other):
         return self._apply_binary_operator(other, operator.sub, "__sub__")
-    
+
     def __mul__(self, other):
         return self._apply_binary_operator(other, operator.mul, "__mul__")
-    
+
     def __rmul__(self, other):
         return self._apply_binary_operator(other, operator.mul, "__mul__")
-        
+
     def __truediv__(self, other):
         return self._apply_binary_operator(other, operator.truediv, "__truediv__")
 
-    @property
-    def abs(self):
-        new_self = copy.copy(self)
-        new_self.values = np.abs(new_self.values)
-        new_self.op_history.append({
-            "name": "abs",
-            "prev_shape": self.shape
-        })
-        return new_self
+    # @property
+    # def abs(self):
+    #     """ Element-size absolute value operator.
+    #     """
+    #     new_self = copy.copy(self)
+    #     new_self.values = np.abs(new_self.values)
+    #     new_self.op_history.append({
+    #         "name": "abs",
+    #         "prev_shape": self.shape
+    #     })
+    #     return new_self
 
     def _numpy_func(self, fname, **kwargs):
+        """ Apply a numpy-style function to this Explanation.
+        """
         new_self = copy.copy(self)
         axis = kwargs.get("axis", None)
 
@@ -444,26 +499,34 @@ class Explanation(object, metaclass=MetaExplanation):
                 new_self.clustering = self.clustering[0]
             else:
                 new_self.clustering = None
-        
+
         new_self.op_history.append({
             "name": fname,
             "kwargs": kwargs,
             "prev_shape": self.shape,
             "collapsed_instances": axis == 0
         })
-        
+
         return new_self
 
     def mean(self, axis):
+        """ Numpy-style mean function.
+        """
         return self._numpy_func("mean", axis=axis)
 
     def max(self, axis):
+        """ Numpy-style mean function.
+        """
         return self._numpy_func("max", axis=axis)
 
     def min(self, axis):
+        """ Numpy-style mean function.
+        """
         return self._numpy_func("min", axis=axis)
 
     def sum(self, axis=None, grouping=None):
+        """ Numpy-style mean function.
+        """
         if grouping is None:
             return self._numpy_func("sum", axis=axis)
         elif axis == 1 or len(self.shape) == 1:
@@ -493,9 +556,9 @@ class Explanation(object, metaclass=MetaExplanation):
 
     def hclust(self, metric="sqeuclidean", axis=0):
         """ Computes an optimal leaf ordering sort order using hclustering.
-        
+
         hclust(metric="sqeuclidean")
-        
+
         Parameters
         ----------
         metric : string
@@ -526,7 +589,7 @@ class Explanation(object, metaclass=MetaExplanation):
         max_samples : int
             The number of rows to sample. Note that if replace=False then less than
             fewer than max_samples will be drawn if explanation.shape[0] < max_samples.
-        
+
         replace : bool
             Sample with or without replacement.
         """
@@ -573,13 +636,13 @@ class Explanation(object, metaclass=MetaExplanation):
         return new_self
 
 def group_features(shap_values, feature_map):
-    # TODO: support and deal with clusterings
+    # TODOsomeday: support and deal with clusterings
     reverse_map = {}
     for name in feature_map:
         reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
-    
+
     curr_names = shap_values.feature_names
-    shap_values_new = copy.deepcopy(shap_values)
+    sv_new = copy.deepcopy(shap_values)
     found = {}
     i = 0
     rank1 = len(shap_values.shape) == 1
@@ -588,27 +651,27 @@ def group_features(shap_values, feature_map):
         if new_name in found:
             continue
         found[new_name] = True
-        
+
         new_name = feature_map.get(name, name)
         cols_to_sum = reverse_map.get(new_name, [new_name])
         old_inds = [curr_names.index(v) for v in cols_to_sum]
-        
+
         if rank1:
-            shap_values_new.values[i] = shap_values.values[old_inds].sum()
-            shap_values_new.data[i] = shap_values.data[old_inds].sum()
+            sv_new.values[i] = shap_values.values[old_inds].sum()
+            sv_new.data[i] = shap_values.data[old_inds].sum()
         else:
-            shap_values_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
-            shap_values_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
-        shap_values_new.feature_names[i] = new_name
+            sv_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
+            sv_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
+        sv_new.feature_names[i] = new_name
         i += 1
 
     return Explanation(
-        shap_values_new.values[:i] if rank1 else shap_values_new.values[:,:i],
-        base_values = shap_values_new.base_values,
-        data = shap_values_new.data[:i] if rank1 else shap_values_new.data[:,:i],
-        display_data = None if shap_values_new.display_data is None else (shap_values_new.display_data[:,:i] if rank1 else shap_values_new.display_data[:,:i]),
+        sv_new.values[:i] if rank1 else sv_new.values[:,:i],
+        base_values = sv_new.base_values,
+        data = sv_new.data[:i] if rank1 else sv_new.data[:,:i],
+        display_data = None if sv_new.display_data is None else (sv_new.display_data[:,:i] if rank1 else sv_new.display_data[:,:i]),
         instance_names = None,
-        feature_names = None if shap_values_new.feature_names is None else shap_values_new.feature_names[:i],
+        feature_names = None if sv_new.feature_names is None else sv_new.feature_names[:i],
         output_names = None,
         output_indexes = None,
         lower_bounds = None,
@@ -664,15 +727,18 @@ class Percentile(Op):
     def add_repr(self, s, verbose=False):
         return "percentile("+s+", "+str(self.percentile)+")"
 
-
+def _first_item(x):
+    for item in x:
+        return item
+    return None
 
 def _compute_shape(x):
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
-    elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(x[0], str):
+    elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
         return (None,)
     else:
-        if type(x) == dict:
+        if isinstance(x, dict):
             return (len(x),) + _compute_shape(x[next(iter(x))])
 
         # 2D arrays we just take their shape as-is
@@ -683,9 +749,9 @@ def _compute_shape(x):
         if len(x) == 0:
             return (0,)
         elif len(x) == 1:
-            return (1,) + _compute_shape(x[0])
+            return (1,) + _compute_shape(_first_item(x))
         else:
-            first_shape = _compute_shape(x[0])
+            first_shape = _compute_shape(_first_item(x))
             if first_shape == tuple():
                 return (len(x),)
             else: # we have an array of arrays...
@@ -708,13 +774,13 @@ class Cohorts():
         for k in self.cohorts:
             new_cohorts.cohorts[k] = self.cohorts[k].__getitem__(item)
         return new_cohorts
-    
+
     def __getattr__(self, name):
         new_cohorts = Cohorts()
         for k in self.cohorts:
             new_cohorts.cohorts[k] = getattr(self.cohorts[k], name)
         return new_cohorts
-    
+
     def __call__(self, *args, **kwargs):
         new_cohorts = Cohorts()
         for k in self.cohorts:
@@ -729,7 +795,7 @@ def _auto_cohorts(shap_values, max_cohorts):
     """ This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values.
     """
 
-    # fit a decision tree that well spearates the SHAP values 
+    # fit a decision tree that well spearates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)
 
@@ -755,12 +821,12 @@ def _auto_cohorts(shap_values, max_cohorts):
                     name += str(threshold) + " & "
         path_names.append(name[:-3]) # the -3 strips off the last unneeded ' & '
     path_names = np.array(path_names)
-    
+
     # split the instances into cohorts by their path names
     cohorts = {}
     for name in np.unique(path_names):
         cohorts[name] = shap_values[path_names == name]
-    
+
     return Cohorts(**cohorts)
 
 def list_wrap(x):

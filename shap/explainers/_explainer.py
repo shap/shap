@@ -1,4 +1,5 @@
 import copy
+import time
 import numpy as np
 import scipy as sp
 from .. import maskers
@@ -33,7 +34,7 @@ class Explainer(Serializable):
             computes the output of the model for those samples.
 
         masker : function, numpy.array, pandas.DataFrame, tokenizer, None, or a list of these for each model input
-            The function used to "mask" out hidden features of the form `masked_args = masker(*model_args, mask=mask)`. 
+            The function used to "mask" out hidden features of the form `masked_args = masker(*model_args, mask=mask)`.
             It takes input in the same form as the model, but for just a single sample with a binary
             mask, then returns an iterable of masked samples. These
             masked samples will then be evaluated using the model function and the outputs averaged.
@@ -157,13 +158,7 @@ class Explainer(Serializable):
                             algorithm = "exact"
                         else:
                             algorithm = "permutation"
-                    elif issubclass(type(self.masker), maskers.Composite):
-                        if getattr(self.masker, "partition_tree", None) is None:
-                            algorithm = "permutation"
-                        else:
-                            algorithm = "partition" # TODO: should really only do this if there is more than just tabular
-                    elif issubclass(type(self.masker), maskers.Image) or issubclass(type(self.masker), maskers.Text) or \
-                            issubclass(type(self.masker), maskers.OutputComposite) or issubclass(type(self.masker), maskers.FixedComposite):
+                    elif (getattr(self.masker, "text_data", False) or getattr(self.masker, "image_data", False)) and hasattr(self.masker, "clustering"):
                         algorithm = "partition"
                     else:
                         algorithm = "permutation"
@@ -206,6 +201,8 @@ class Explainer(Serializable):
 
         # if max_evals == "auto":
         #     self._brute_force_fallback
+
+        start_time = time.time()
 
         if issubclass(type(self.masker), maskers.OutputComposite) and len(args)==2:
             self.masker.model = models.TextGeneration(target_sentences=args[1])
@@ -307,6 +304,7 @@ class Explainer(Serializable):
             else:
                 sliced_labels = None
         else:
+            assert output_indices is not None, "You have passed a list for output_names but the model seems to not have multiple outputs!"
             labels = np.array(self.output_names)
             sliced_labels = [labels[index_list] for index_list in output_indices]
             if not ragged_outputs:
@@ -316,9 +314,17 @@ class Explainer(Serializable):
             if np.all(sliced_labels[0,:] == sliced_labels):
                 sliced_labels = sliced_labels[0]
 
+        # allow the masker to transform the input data to better match the masking pattern
+        # (such as breaking text into token segments)
+        if hasattr(self.masker, "data_transform"):
+            new_args = []
+            for row_args in zip(*args):
+                new_args.append([pack_values(v) for v in self.masker.data_transform(*row_args)])
+            args = list(zip(*new_args))
+
         # build the explanation objects
         out = []
-        for j in range(len(args)):
+        for j, data in enumerate(args):
 
             # reshape the attribution values using the mask_shapes
             tmp = []
@@ -329,13 +335,6 @@ class Explainer(Serializable):
                     tmp.append(v.reshape(*mask_shapes[i][j]))
             arg_values[j] = pack_values(tmp)
 
-            # allow the masker to transform the input data to better match the masking pattern
-            # (such as breaking text into token segments)
-            if hasattr(self.masker, "data_transform"):
-                data = pack_values([self.masker.data_transform(v) for v in args[j]])
-            else:
-                data = args[j]
-
             # build an explanation object for this input argument
             out.append(Explanation(
                 arg_values[j], expected_values, data,
@@ -343,7 +342,8 @@ class Explainer(Serializable):
                 clustering=clustering,
                 hierarchical_values=hierarchical_values,
                 output_names=sliced_labels, # self.output_names
-                error_std=error_std
+                error_std=error_std,
+                compute_time=time.time() - start_time
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
             ))
@@ -428,6 +428,9 @@ class Explainer(Serializable):
 def pack_values(values):
     """ Used the clean up arrays before putting them into an Explanation object.
     """
+
+    if not hasattr(values, "__len__"):
+        return values
 
     # collapse the values if we didn't compute them
     if values is None or values[0] is None:

@@ -88,6 +88,7 @@ class Tabular(Masker):
         # self.changed_rows = np.ones(self.data.shape[0], dtype=np.bool)
 
     def __call__(self, mask, x):
+        mask = self._standardize_mask(mask, x)
 
         # make sure we are given a single sample
         if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
@@ -120,7 +121,7 @@ class Tabular(Masker):
         if self.output_dataframe:
             return pd.DataFrame(self._masked_data, columns=self.feature_names)
 
-        return self._masked_data
+        return (self._masked_data,)
 
     # def reset_delta_masking(self):
     #     """ This resets the masker back to all zeros when delta masking.

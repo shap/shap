@@ -157,6 +157,8 @@ class GPUTree(Tree):
 
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for " \
                                                  "SHAP interaction values right now!"
+        assert self.feature_perturbation != "interventional", 'feature_perturbation="interventional" is not yet supported for ' + \
+                                                              'interaction values. Use feature_perturbation="tree_path_dependent" instead.'
         transform = "identity"
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit,

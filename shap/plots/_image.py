@@ -51,10 +51,12 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
-        feature_names = [shap_exp.feature_names]
-        ind = 0
-        if len(shap_exp.base_values.shape) == 2:
+        # feature_names = [shap_exp.feature_names]
+        # ind = 0
+        if len(shap_exp.output_dims) == 1:
             shap_values = [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])]
+        elif len(shap_exp.output_dims) == 0:
+            shap_values = shap_exp.values
         else:
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
@@ -63,13 +65,19 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             labels = shap_exp.output_names
 
     multi_output = True
-    if type(shap_values) != list:
+    if not isinstance(shap_values, list):
         multi_output = False
         shap_values = [shap_values]
+
+    if len(shap_values[0].shape) == 3:
+        shap_values = [v.reshape(1, *v.shape) for v in shap_values]
+        pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
     # make sure labels
     if labels is not None:
         labels = np.array(labels)
+        if labels.shape[0] != shap_values[0].shape[0] and labels.shape[0] == len(shap_values):
+            labels = np.tile(np.array([labels]), shap_values[0].shape[0])
         assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
         if multi_output:
             assert labels.shape[1] == len(shap_values), "Labels must have a column for each output in shap_values!"
@@ -94,7 +102,7 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             x_curr = x_curr.reshape(x_curr.shape[:2])
         if x_curr.max() > 1:
             x_curr /= 255.
-        
+
         # get a grayscale version of the image
         if len(x_curr.shape) == 3 and x_curr.shape[2] == 3:
             x_curr_gray = (0.2989 * x_curr[:,:,0] + 0.5870 * x_curr[:,:,1] + 0.1140 * x_curr[:,:,2]) # rgb to gray
