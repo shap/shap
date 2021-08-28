@@ -1,3 +1,6 @@
+import types
+import copy
+import inspect
 from ..utils import MaskedModel
 import numpy as np
 import warnings
@@ -20,7 +23,8 @@ from ..models import Model
 
 class Partition(Explainer):
 
-    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, linearize_link=True, feature_names=None, **call_args):
+    def __init__(self, model, masker, *, output_names=None, link=links.identity, linearize_link=True,
+                 feature_names=None, **call_args):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
@@ -107,10 +111,23 @@ class Partition(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-        # update the default argument values
-        for arg in call_args:
-            self.__call__.__kwdefaults__[arg] = call_args[arg]
+        # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
+        # has a call function with those new default arguments
+        if len(call_args) > 0:
+            class Partition(self.__class__):
+                # this signature should match the __call__ signature of the class defined below
+                def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
+                             outputs=None, silent=False):
+                    return super().__call__(
+                        *args, max_evals=max_evals, fixed_context=fixed_context, main_effects=main_effects, error_bounds=error_bounds,
+                        batch_size=batch_size, outputs=outputs, silent=silent
+                    )
+            Partition.__call__.__doc__ = self.__class__.__call__.__doc__
+            self.__class__ = Partition
+            for k, v in call_args.items():
+                self.__call__.__kwdefaults__[k] = v
 
+    # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False):
         """ Explain the output of the model on the given arguments.

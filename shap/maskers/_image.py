@@ -38,6 +38,8 @@ class Image(Masker):
         # This is the shape of the masks we expect
         self.shape = (1, np.prod(self.input_shape)) # the (1, ...) is because we only return a single masked sample to average over
 
+        self.image_data = True
+
         self.blur_kernel = None
         self._blur_value_cache = None
         if issubclass(type(mask_value), np.ndarray):

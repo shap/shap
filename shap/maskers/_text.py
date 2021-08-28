@@ -26,9 +26,10 @@ class Text(Masker):
             tokenizer must return a dictionary with 'input_ids' and then either include
             an 'offset_mapping' entry in the same dictionary or provide a .convert_ids_to_tokens or .decode method.
 
-        mask_token : string or None
-            The sub-string used to mask out portions of a string. If None it will use the tokenizers .mask_token
-            attribute, if defined, or "..." if the tokenizer does not have a .mask_token attribute.
+        mask_token : string, int, or None
+            The sub-string or integer token id used to mask out portions of a string. If None it will use the
+            tokenizer's .mask_token attribute, if defined, or "..." if the tokenizer does not have a .mask_token
+            attribute.
 
         collapse_mask_token : True, False, or "auto"
             If True, when several consecutive tokens are masked only one mask token is used to replace the entire
@@ -52,7 +53,7 @@ class Text(Masker):
         self.collapse_mask_token = collapse_mask_token
         self.input_mask_token = mask_token
         self.mask_token = mask_token # could be recomputed later in this function
-        self.mask_token_id = None
+        self.mask_token_id = mask_token if isinstance(mask_token, int) else None
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.tokenizer)
 
         self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
@@ -60,6 +61,8 @@ class Text(Masker):
         # self.prefix_strlen = parsed_tokenizer_dict['prefix_strlen']
         # self.suffix_strlen = parsed_tokenizer_dict['suffix_strlen']
         #null_tokens = parsed_tokenizer_dict['null_tokens']
+
+        self.text_data = True
 
         if mask_token is None:
             if getattr(self.tokenizer, "mask_token", None) is not None:
@@ -96,6 +99,7 @@ class Text(Masker):
         self._segments_s = None
 
     def __call__(self, mask, s):
+        mask = self._standardize_mask(mask, s)
         self._update_s_cache(s)
 
         # if we have a fixed prefix or suffix then we need to grow the mask to account for that
@@ -137,6 +141,13 @@ class Text(Masker):
                 out = self._tokenized_s[mask]
             else:
                 out = np.array([self._tokenized_s[i] if mask[i] else self.mask_token_id for i in range(len(mask))])
+                # print("mask len", len(out))
+                # # crop the output if needed
+                # if self.max_length is not None and len(out) > self.max_length:
+                #     new_out = np.zeros(self.max_length)
+                #     new_out[:] = out[:self.max_length]
+                #     new_out[-self.keep_suffix:] = out[-self.keep_suffix:]
+                #     out = new_out
 
         # for some sentences with strange configurations around the separator tokens, tokenizer encoding/decoding may contain
         # extra unnecessary tokens, for example ''. you may want to strip out spaces adjacent to separator tokens. Refer to PR
@@ -146,7 +157,7 @@ class Text(Masker):
     def data_transform(self, s):
         """ Called by explainers to allow us to convert data to better match masking (here this means tokenizing).
         """
-        return self.token_segments(s)[0]
+        return (self.token_segments(s)[0],)
 
     def token_segments(self, s):
         """ Returns the substrings associated with each token in the given string.
@@ -197,13 +208,17 @@ class Text(Masker):
             special_tokens = []
         else:
             special_tokens = [sep_token]
+
+        # convert the text segments to tokens that the partition tree function expects
         tokens = []
-        pattern = re.compile(r"\W$")
+        space_end = re.compile(r"^.*\W$")
+        letter_start = re.compile(r"^[A-z]")
         for i, v in enumerate(self._segments_s):
-            if i > 0 and not pattern.match(tokens[i-1]) and v != "":
+            if i > 0 and space_end.match(self._segments_s[i-1]) is None and letter_start.match(v) is not None and tokens[i-1] != "":
                 tokens.append("##" + v.strip())
             else:
                 tokens.append(v.strip())
+
         pt = partition_tree(tokens, special_tokens)
 
         # use the rescaled size of the clusters as their height since the merge scores are just a

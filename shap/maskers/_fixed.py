@@ -1,3 +1,4 @@
+import numpy as np
 from ._masker import Masker
 
 class Fixed(Masker):
@@ -11,7 +12,13 @@ class Fixed(Masker):
     label inputs.
     """
     def __init__(self):
-        pass
+        self.shape = (None, 0)
+        self.clustering = np.zeros((0, 4))
 
-    def __call__(self, x, mask):
-        return x
+    def __call__(self, mask, x):
+        return ([x],)
+
+    def mask_shapes(self, x): # pylint: disable=no-self-use,unused-argument
+        """ The shape of the masks we expect.
+        """
+        return [(0,)]

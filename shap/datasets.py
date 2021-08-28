@@ -1,7 +1,7 @@
+import os
 import pandas as pd
 import numpy as np
 import sklearn.datasets
-import os
 
 try:
     from urllib.request import urlretrieve
@@ -10,7 +10,7 @@ except ImportError:
 
 github_data_url = "https://github.com/slundberg/shap/raw/master/data/"
 
-def imagenet50(display=False, resolution=224):
+def imagenet50(display=False, resolution=224): # pylint: disable=unused-argument
     """ This is a set of 50 images representative of ImageNet images.
 
     This dataset was collected by randomly finding a working ImageNet link and then pasting the
@@ -27,7 +27,7 @@ def imagenet50(display=False, resolution=224):
     y = np.loadtxt(cache(prefix + "labels.csv"))
     return X, y
 
-def boston(display=False):
+def boston(display=False): # pylint: disable=unused-argument
     """ Return the boston housing data in a nice package. """
 
     d = sklearn.datasets.load_boston()
@@ -35,7 +35,7 @@ def boston(display=False):
     return df, d.target # pylint: disable=E1101
 
 
-def linnerud(display=False):
+def linnerud(display=False): # pylint: disable=unused-argument
     """ Return the linnerud data in a nice package (multi-target regression). """
 
     d = sklearn.datasets.load_linnerud()
@@ -44,7 +44,7 @@ def linnerud(display=False):
     return X, y # pylint: disable=E1101
 
 
-def imdb(display=False):
+def imdb(display=False): # pylint: disable=unused-argument
     """ Return the clssic IMDB sentiment analysis training data in a nice package.
 
     Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
@@ -57,7 +57,7 @@ def imdb(display=False):
     y[:12500] = 0
     return data, y
 
-def communitiesandcrime(display=False):
+def communitiesandcrime(display=False): # pylint: disable=unused-argument
     """ Predict total number of non-violent crimes per 100K popuation.
 
     This dataset is from the classic UCI Machine Learning repository:
@@ -80,7 +80,7 @@ def communitiesandcrime(display=False):
 
     return X, y
 
-def diabetes(display=False):
+def diabetes(display=False): # pylint: disable=unused-argument
     """ Return the diabetes data in a nice package. """
 
     d = sklearn.datasets.load_diabetes()
@@ -95,8 +95,7 @@ def iris(display=False):
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
     if display:
         return df, [d.target_names[v] for v in d.target] # pylint: disable=E1101
-    else:
-        return df, d.target # pylint: disable=E1101
+    return df, d.target # pylint: disable=E1101
 
 
 def adult(display=False):
@@ -134,8 +133,7 @@ def adult(display=False):
 
     if display:
         return raw_data.drop(["Education", "Target", "fnlwgt"], axis=1), data["Target"].values
-    else:
-        return data.drop(["Target", "fnlwgt"], axis=1), data["Target"].values
+    return data.drop(["Target", "fnlwgt"], axis=1), data["Target"].values
 
 
 def nhanesi(display=False):
@@ -147,13 +145,12 @@ def nhanesi(display=False):
         X_display = X.copy()
         #X_display["sex_isFemale"] = ["Female" if v else "Male" for v in X["sex_isFemale"]]
         return X_display, np.array(y)
-    else:
-        return X, np.array(y)
+    return X, np.array(y)
 
 
-def corrgroups60(display=False):
+def corrgroups60(display=False): # pylint: disable=unused-argument
     """ Correlated Groups 60
-    
+
     A simulated dataset with tight correlations among distinct groups of features.
     """
 
@@ -196,7 +193,7 @@ def corrgroups60(display=False):
     return pd.DataFrame(X), y
 
 
-def independentlinear60(display=False):
+def independentlinear60(display=False): # pylint: disable=unused-argument
     """ A simulated dataset with tight correlations among distinct groups of features.
     """
 
@@ -242,12 +239,14 @@ def rank():
 
 
 def cache(url, file_name=None):
+    """ Loads a file from the URL and caches it locally.
+    """
     if file_name is None:
         file_name = os.path.basename(url)
     data_dir = os.path.join(os.path.dirname(__file__), "cached_data")
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
-    
+
     file_path = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
         urlretrieve(url, file_path)

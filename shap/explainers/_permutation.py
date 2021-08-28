@@ -17,9 +17,9 @@ class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.
 
     This is a model agnostic explainer that gurantees local accuracy (additivity) by iterating completely
-    through an entire permutatation of the features in both forward and reverse directions. If we do this
-    once, then we get the exact SHAP values for models with up to second order interaction effects. We can
-    iterate this many times over many random permutations to get better SHAP value estimates for models
+    through an entire permutatation of the features in both forward and reverse directions (antithetic sampling).
+    If we do this once, then we get the exact SHAP values for models with up to second order interaction effects.
+    We can iterate this many times over many random permutations to get better SHAP value estimates for models
     with higher order interactions. This sequential ordering formulation also allows for easy reuse of
     model evaluations and the ability to effciently avoid evaluating the model when the background values
     for a feature are the same as the current input value. We can also account for hierarchial data
@@ -47,12 +47,34 @@ class Permutation(Explainer):
         """
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
-        if not isinstance(model, Model):
-            self.model = Model(model)
+        if not isinstance(self.model, Model):
+            self.model = Model(self.model)
 
-        for arg in call_args:
-            self.__call__.__kwdefaults__[arg] = call_args[arg]
+        # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
+        # has a call function with those new default arguments
+        if len(call_args) > 0:
+            # this signature should match the __call__ signature of the class defined below
+            class Permutation(self.__class__):
+                def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
+                             outputs=None, silent=False):
+                    return super().__call__(
+                        *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
+                        batch_size=batch_size, outputs=outputs, silent=silent
+                    )
+            Permutation.__call__.__doc__ = self.__class__.__call__.__doc__
+            self.__class__ = Permutation
+            for k, v in call_args.items():
+                self.__call__.__kwdefaults__[k] = v
 
+    # note that changes to this function signature should be copied to the default call argument wrapper above
+    def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
+                 outputs=None, silent=False):
+        """ Explain the output of the model on the given arguments.
+        """
+        return super().__call__(
+            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
+            outputs=outputs, silent=silent
+        )
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
@@ -131,13 +153,13 @@ class Permutation(Explainer):
                 history_pos += 1
 
             if npermutations == 0:
-                raise Exception("max_evals is too low for the Permutation explainer, it must be at least 2 * num_features + 1!")
+                raise Exception(f"max_evals={max_evals} is too low for the Permutation explainer, it must be at least 2 * num_features + 1 = {2 * len(inds) + 1}!")
 
             expected_value = outputs[0]
 
             # compute the main effects if we need to
             if main_effects:
-                main_effect_values = fm.main_effects(inds)
+                main_effect_values = fm.main_effects(inds, batch_size=batch_size)
         else:
             masks = np.zeros(1, dtype=np.int)
             outputs = fm(masks, zero_index=0, batch_size=1)
