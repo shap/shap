@@ -1414,8 +1414,8 @@ class XGBTreeModelLoader(object):
     """
     def __init__(self, xgb_model):
         # new in XGBoost 1.1, 'binf' is appended to the buffer
-        self.buf = xgb_model.save_raw().lstrip(b'binf')
-        self.pos = 0
+        self.buf = xgb_model.save_raw()
+        self.pos = 4
 
         # load the model parameters
         self.base_score = self.read('f')
