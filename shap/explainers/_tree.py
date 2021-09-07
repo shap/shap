@@ -208,12 +208,15 @@ class Tree(Explainer):
 
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
+            if self.model.model_type == "lightgbm":
+                X_original = X
             X = X.values
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate)
+            v = self.shap_values(X_original if self.model.model_type == "lightgbm" else X,
+                                 y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate)
             if type(v) is list:
                 v = np.stack(v, axis=-1) # put outputs at the end
         else:
