@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance
-from ..utils.transformers import MODELS_FOR_CAUSAL_LM
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM, getattr_silent
 from .._serializable import Serializer, Deserializer
 
 class TopKLM(Model):
@@ -38,7 +38,7 @@ class TopKLM(Model):
 
         self.tokenizer = tokenizer
         # set pad token if not defined
-        if self.tokenizer.pad_token is None:
+        if getattr_silent(self.tokenizer, "pad_token") is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.k = k
         self._custom_generate_topk_token_ids = generate_topk_token_ids

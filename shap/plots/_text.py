@@ -216,7 +216,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             xmax = xmax_computed
         if cmax is None:
             cmax = cmax_computed
-        
+
         for i, v in enumerate(shap_values):
             ipython_display(HTML(f"""
 <br>
