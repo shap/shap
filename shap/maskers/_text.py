@@ -4,7 +4,7 @@ import numpy as np
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS, getattr_silent
 
 
 class Text(Masker):
@@ -65,9 +65,9 @@ class Text(Masker):
         self.text_data = True
 
         if mask_token is None:
-            if getattr(self.tokenizer, "mask_token", None) is not None:
+            if getattr_silent(self.tokenizer, "mask_token") is not None:
                 self.mask_token = self.tokenizer.mask_token
-                self.mask_token_id = getattr(self.tokenizer, "mask_token_id", None)
+                self.mask_token_id = getattr_silent(self.tokenizer, "mask_token_id")
                 if self.collapse_mask_token == "auto":
                     self.collapse_mask_token = False
             else:
@@ -115,7 +115,7 @@ class Text(Masker):
             #     #out = np.array([self._segments_s[i] if mask[i] else self.mask_token for i in range(len(mask))])
             out_parts = []
             is_previous_appended_token_mask_token = False
-            sep_token = getattr(self.tokenizer, "sep_token", None)
+            sep_token = getattr_silent(self.tokenizer, "sep_token")
             for i, v in enumerate(mask):
                 # mask ignores separator tokens and keeps them unmasked
                 if v or sep_token == self._segments_s[i]:
@@ -170,7 +170,7 @@ class Text(Masker):
             parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)]
             parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
             return parts, token_data["input_ids"]
-        except (NotImplementedError, TypeError): # catch lock of support for return_offsets_mapping
+        except (NotImplementedError, TypeError): # catch lack of support for return_offsets_mapping
             token_ids = self.tokenizer(s)['input_ids']
             if hasattr(self.tokenizer, "convert_ids_to_tokens"):
                 tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
@@ -179,7 +179,7 @@ class Text(Masker):
             if hasattr(self.tokenizer, "get_special_tokens_mask"):
                 special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens=True)
                 # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
-                special_keep = [getattr(self.tokenizer, 'sep_token', None), getattr(self.tokenizer, 'mask_token', None)]
+                special_keep = [getattr_silent(self.tokenizer, 'sep_token'), getattr_silent(self.tokenizer, 'mask_token')]
                 for i, v in enumerate(special_tokens_mask):
                     if v == 1 and (tokens[i] not in special_keep or i + 1 == len(special_tokens_mask)):
                         tokens[i] = ""
@@ -203,7 +203,7 @@ class Text(Masker):
         """
         self._update_s_cache(s)
         special_tokens = []
-        sep_token = getattr(self.tokenizer, "sep_token", None)
+        sep_token = getattr_silent(self.tokenizer, "sep_token")
         if sep_token is None:
             special_tokens = []
         else:
@@ -298,7 +298,7 @@ class Text(Masker):
             invariants[-self.keep_suffix:] = True
         # mark separator tokens as invariant
         for i, v in enumerate(self._tokenized_s):
-            if v == getattr(self.tokenizer, "sep_token_id", None):
+            if v == getattr_silent(self.tokenizer, "sep_token_id"):
                 invariants[i] = True
         return invariants.reshape(1, -1)
 
@@ -531,3 +531,4 @@ def partition_tree(decoded_tokens, special_tokens):
     clustm[:, 2] = clustm[:, 2] + 10
 
     return clustm
+
