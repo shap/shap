@@ -57,7 +57,7 @@ class TeacherForcing(Model):
                 self.device = model.device
             elif getattr(similarity_model, "device", None) is not None:
                 self.device = similarity_model.device
-        
+
         self.batch_size = batch_size
         # assign text generation function
         if safe_isinstance(model, "transformers.PreTrainedModel") or safe_isinstance(model, "transformers.TFPreTrainedModel"):
