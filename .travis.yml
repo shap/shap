@@ -1,4 +1,5 @@
 language: python
+cache: pip
 os:
 - linux
 python:
