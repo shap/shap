@@ -531,4 +531,3 @@ def partition_tree(decoded_tokens, special_tokens):
     clustm[:, 2] = clustm[:, 2] + 10
 
     return clustm
-

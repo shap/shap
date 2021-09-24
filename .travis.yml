@@ -1,8 +1,9 @@
 language: python
+cache: pip
 os:
 - linux
 python:
-- '3.6'
+- '3.7'
 before_install:
 - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 - sudo add-apt-repository -y ppa:openjdk-r/ppa
