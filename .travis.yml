@@ -3,7 +3,7 @@ cache: pip
 os:
 - linux
 python:
-- '3.7'
+- '3.6'
 before_install:
 - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 - sudo add-apt-repository -y ppa:openjdk-r/ppa
@@ -21,7 +21,7 @@ install:
 - pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint sentencepiece
 script:
   - python -m pytest tests
-  - pylint tests shap/models shap/maskers shap/explainers/_gpu_tree.py shap/_serializable.py shap/links.py shap/datasets.py 
+  # - pylint tests shap/models shap/maskers shap/explainers/_gpu_tree.py shap/_serializable.py shap/links.py shap/datasets.py 
 after_success:
   - codecov
 deploy:
