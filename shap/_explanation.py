@@ -412,7 +412,7 @@ class Explanation(metaclass=MetaExplanation):
                 item = tuple(tmp)
 
         # call slicer for the real work
-        item = tuple(v for v in item if not isinstance(v, str)) # s
+        item = tuple(v for v in item) # SML I cut out: `if not isinstance(v, str)`
         if len(item) == 0:
             return new_self
         if new_self is None:
