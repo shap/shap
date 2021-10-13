@@ -11,9 +11,9 @@ tf_execute = None
 tf_gradients_impl = None
 
 def custom_record_gradient(op_name, inputs, attrs, results):
-    """ This overrides tensorflow.python.eager.backprop._record_gradient.
+    """ This overrides tensorflow.python.eager.backprop.record_gradient.
 
-    We need to override _record_gradient in order to get gradient backprop to
+    We need to override record_gradient in order to get gradient backprop to
     get called for ResourceGather operations. In order to make this work we
     temporarily "lie" about the input type to prevent the node from getting
     pruned from the gradient backprop process. We then reset the type directly
@@ -23,7 +23,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     if op_name == "ResourceGather" and inputs[1].dtype == tf.int32:
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
-    out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
+    out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
 
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
@@ -359,7 +359,7 @@ class TFDeep(Explainer):
                     v = tf.constant(data, dtype=self.model_inputs[i].dtype)
                     inputs.append(v)
                 final_out = out(inputs)
-                tf_execute.record_gradient = tf_backprop._record_gradient
+                tf_execute.record_gradient = tf_backprop.record_gradient
 
                 return final_out
             return self.execute_with_overridden_gradients(anon)
