@@ -6,7 +6,7 @@ from .utils import explainer # (pytest fixture do not remove) pylint: disable=un
 
 @pytest.mark.mpl_image_compare
 def test_beeswarm(explainer): # pylint: disable=redefined-outer-name
-    """ Make sure the violin plot is unchanged.
+    """ Make sure the beeswarm plot is unchanged.
     """
     fig = plt.figure()
     shap_values = explainer.shap_values(explainer.data)
