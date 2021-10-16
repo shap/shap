@@ -180,7 +180,7 @@ def waterfall(shap_values, max_display=10, show=True):
             )
 
         txt_obj = pl.text(
-            pos_lefts[i] + 0.5*dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
+            pos_lefts[i] + 0.5*dist, pos_inds[i], format_value(1/(1+np.exp(-pos_widths[i])), '%+0.04f'),
             horizontalalignment='center', verticalalignment='center', color="white",
             fontsize=12
         )
@@ -216,7 +216,7 @@ def waterfall(shap_values, max_display=10, show=True):
             )
         
         txt_obj = pl.text(
-            neg_lefts[i] + 0.5*dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
+            neg_lefts[i] + 0.5*dist, neg_inds[i], format_value(1/(1+np.exp(-neg_widths[i])), '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
             fontsize=12
         )
