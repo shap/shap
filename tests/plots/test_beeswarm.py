@@ -9,7 +9,7 @@ def test_beeswarm(explainer): # pylint: disable=redefined-outer-name
     """ Make sure the beeswarm plot is unchanged.
     """
     fig = plt.figure()
-    shap_values = explainer.shap_values(explainer.data)
+    shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values)
     plt.tight_layout()
     return fig

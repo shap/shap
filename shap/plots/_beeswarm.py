@@ -64,6 +64,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         if sp.sparse.issparse(features):
             features = features.toarray()
         feature_names = shap_exp.feature_names
+    else:
+        raise ValueError(f"Type of type(shap_values) is {type(shap_values)}")
         # if out_names is None: # TODO: waiting for slicer support
         #     out_names = shap_exp.output_names
 
