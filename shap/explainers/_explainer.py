@@ -266,7 +266,8 @@ class Explainer(Serializable):
             main_effects.append(row_result.get("main_effects", None))
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
-            output_names.append(row_result.get("output_names", None))
+            tmp = row_result.get("output_names", None)
+            output_names.append(tmp(*row_args) if callable(tmp) else tmp)
             error_std.append(row_result.get("error_std", None))
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)

@@ -138,35 +138,41 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             
             if (document._zoom_{uuid} === '_tp_{uuid}_output_' + i) {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'block';
-                document.getElementById(document._zoom_{uuid}+'_name').style.background = '#dddddd';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = '3px solid #000000';
             }} else {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'none';
-                document.getElementById(document._zoom_{uuid}+'_name').style.background = '#ffffff';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = 'none';
             }}
         }}
         if (document._zoom_{uuid} !== '_tp_{uuid}_output_' + i) {{
             next_id = '_tp_{uuid}_output_' + i;
             document.getElementById(next_id).style.display = 'none';
             document.getElementById(next_id + '_zoom').style.display = 'block';
-            document.getElementById(next_id+'_name').style.background = '#bbbbbb';
+            document.getElementById(next_id+'_name').style.borderBottom = '3px solid #000000';
         }}
         document._zoom_{uuid} = next_id;
     }}
     function _output_onmouseover_{uuid}(i, el) {{
         if (document._zoom_{uuid} !== undefined) {{ return; }}
         if (document._hover_{uuid} !== undefined) {{
-            document.getElementById(document._hover_{uuid} + '_name').style.background = '#ffffff';
+            document.getElementById(document._hover_{uuid} + '_name').style.borderBottom = 'none';
             document.getElementById(document._hover_{uuid}).style.display = 'none';
         }}
         document.getElementById('_tp_{uuid}_output_' + i).style.display = 'block';
-        el.style.background = '#dddddd';
+        el.style.borderBottom = '3px solid #000000';
         document._hover_{uuid} = '_tp_{uuid}_output_' + i;
     }}
 </script>
 <div style=\"color: rgb(120,120,120); font-size: 12px;\">outputs</div>"""
+        output_values = shap_values.values.sum(0) + shap_values.base_values
+        output_max = np.max(np.abs(output_values))
         for i,name in enumerate(shap_values.output_names):
+            scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
+            color = colors.red_transparent_blue(scaled_value)
+            color = (color[0]*255, color[1]*255, color[2]*255, color[3])
+            # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
-<div style="display: inline; background: {'#dddddd' if i == 0 else '#ffffff'}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
+<div style="display: inline; border-bottom: {'3px solid #000000' if i == 0 else 'none'}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
     onclick="_output_onclick_{uuid}({i})"
     onmouseover="_output_onmouseover_{uuid}({i}, this);">{name}</div>"""
         out += "<br><br>"
