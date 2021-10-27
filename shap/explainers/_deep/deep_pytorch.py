@@ -76,7 +76,7 @@ class PyTorchDeep(Explainer):
                 handles_list.extend(self.add_handles(child, forward_handle, backward_handle))
         else:  # leaves
             handles_list.append(model.register_forward_hook(forward_handle))
-            handles_list.append(model.register_backward_hook(backward_handle))
+            handles_list.append(model.register_full_backward_hook(backward_handle))
         return handles_list
 
     def remove_attributes(self, model):
