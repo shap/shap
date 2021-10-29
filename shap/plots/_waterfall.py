@@ -37,7 +37,6 @@ def waterfall(shap_values, max_display=10, show=True):
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
     """
-    
     # Turn off interactive plot
     if show is False:
         plt.ioff()
@@ -123,7 +122,12 @@ def waterfall(shap_values, max_display=10, show=True):
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            yticklabels[rng[i]] = format_value(features[order[i]], "%0.03f") + " = " + feature_names[order[i]] 
+            type_variable = type(features[order[i]])
+            if type_variable == int or type_variable == float:
+                yticklabels[rng[i]] = format_value(features[order[i]], "%0.03f") + " = " + feature_names[order[i]]
+            else:
+                yticklabels[rng[i]] = features[order[i]] + " = " + feature_names[order[i]]
+
     
     # add a last grouped feature to represent the impact of all the features we didn't show
     if num_features < len(values):
