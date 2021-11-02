@@ -186,6 +186,9 @@ class Explainer(Serializable):
             elif algorithm == "linear":
                 self.__class__ = explainers.Linear
                 explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+            elif algorithm == "deep":
+                self.__class__ = explainers.Deep
+                explainers.Deep.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
