@@ -11,7 +11,8 @@ import sys
 # to publish use:
 # > python setup.py sdist bdist_wheel upload
 # which depends on ~/.pypirc
-
+if sys.version_info[:2] < (3, 7):
+    raise RuntimeError("Python version >= 3.7 required. For python 2, refer to ddf81a0ce8b6955dee70f5fe46dba560c6396805")
 
 # This is copied from @robbuckley's fix for Panda's
 # For mac, ensure extensions are built for macos 10.9 when compiling on a
@@ -85,8 +86,8 @@ def run_setup(with_binary=True, test_xgboost=True, test_lightgbm=True):
         packages=['shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers.deep', 'shap.benchmark'],
         package_data={'shap': ['tree_shap.h']},
         cmdclass={'build_ext': build_ext},
-        setup_requires=['numpy<1.17'],
-        install_requires=['numpy<1.17', 'scipy<1.3', 'scikit-learn<0.21', 'pandas<0.25'],
+        setup_requires=['numpy<1.22'],
+        install_requires=['numpy<1.22', 'scipy<1.3', 'scikit-learn<0.21', 'pandas<0.25'],
         test_suite='nose.collector',
         tests_require=tests_require,
         ext_modules=ext_modules,
