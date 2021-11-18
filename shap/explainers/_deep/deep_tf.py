@@ -23,7 +23,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     if op_name == "ResourceGather" and inputs[1].dtype == tf.int32:
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
-    out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
+    out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
 
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
