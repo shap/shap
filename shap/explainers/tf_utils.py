@@ -62,6 +62,8 @@ def _get_model_inputs(model):
         str(type(model)).endswith("keras.engine.training.Model'>") or \
         isinstance(model, tf.keras.Model):
         return model.inputs
+    elif str(type(model)).endswith("onnx_tf.backend_rep.TensorflowRep'>"):
+        return model.tensor_dict[model.inputs[0]]
     elif str(type(model)).endswith("tuple'>"):
         return model[0]
     else:
@@ -87,6 +89,8 @@ def _get_model_output(model):
             return model.outputs[0]
         else:
             return model.layers[-1].output
+    elif str(type(model)).endswith("onnx_tf.backend_rep.TensorflowRep'>"):
+        return model.tensor_dict[model.outputs[0]]
     elif str(type(model)).endswith("tuple'>"):
         return model[1]
     else:
