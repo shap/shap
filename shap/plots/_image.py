@@ -20,7 +20,7 @@ from ..utils._legacy import kmeans
 # pylint: disable=unsubscriptable-object
 
 
-def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hspace=0.2, labelpad=None, show=True):
+def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hspace=0.2, labelpad=None, show=True, ori_width=300, ori_height=300):
     """ Plots SHAP values for image inputs.
 
     Parameters
@@ -91,7 +91,7 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values), figsize=fig_size)
     if len(axes.shape) == 1:
         axes = axes.reshape(1,axes.size)
     for row in range(x.shape[0]):
@@ -121,8 +121,9 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row,0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
-        axes[row,0].axis('off')
+        # axes[row,0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
+        # axes[row,0].imshow(x_curr, extent=(-1, ori_width, ori_height, -1))
+        # axes[row,0].axis('off')
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
@@ -130,11 +131,13 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row,i+1].set_title(labels[row,i], **label_kwargs)
+                axes[row,i].set_title(labels[row,i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
-            axes[row,i+1].axis('off')
+            axes[row,i].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.9, extent=(-1, ori_width, ori_height, -1))
+            # axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.9, extent=(-1, sv.shape[1], sv.shape[0], -1))
+            # axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('white'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
+            im = axes[row,i].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val, extent=(-1, ori_width, ori_height, -1))
+            axes[row,i].axis('off')
     if hspace == 'auto':
         fig.tight_layout()
     else:
@@ -143,6 +146,8 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
     cb.outline.set_visible(False)
     if show:
         pl.show()
+    else:
+        pl.savefig('example.png', dpi=fig.dpi)
 
 
 def image_to_text(shap_values):
