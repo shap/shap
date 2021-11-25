@@ -2,6 +2,7 @@
 """
 
 from urllib.error import HTTPError
+
 from packaging import version
 import numpy as np
 import pandas as pd
@@ -516,8 +517,42 @@ def test_pytorch_single_output():
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
+def test_pytorch_single_output():
+    """Testing single outputs
+    """
+    from pathlib import Path
+    import onnx as onnx
+    from onnx_tf.backend import prepare
 
-def test_pytorch_multiple_inputs():
+    def run_onnx_through_tf(onnx_model_path, data):
+        onnx_model = onnx.load(onnx_model_path)  # load onnx model
+        tf_output = prepare(onnx_model).run(data).output
+        return tf_output
+
+
+    folder = Path(r'C:\Users\ChristiaanMeijer\Documents\dianna\tutorials')
+    leafsnap_model_path = folder / 'leafsnap_model.onnx'
+    np.random.seed = 1234
+    leafsnap_input = np.random.randn(64, 3, 128, 128).astype(np.float32)
+    abs_diff = np.abs(run_onnx_through_tf(leafsnap_model_path, leafsnap_input)
+                      - run_onnx_using_runner(leafsnap_model_path, leafsnap_input))
+    print('mean', np.mean(abs_diff), '\nstd', np.std(abs_diff), '\nmax', np.max(abs_diff))
+
+    
+    e = shap.DeepExplainer(model, next_x[inds, :])
+    test_x, _ = next(iter(loader))
+    shap_values = e.shap_values(test_x[:1])
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        diff = (model(test_x[:1]) - model(next_x[inds, :])).detach().numpy().mean(0)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+
+def test_pytorch_model_converted_from_onnx():
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
