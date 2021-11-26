@@ -10,6 +10,7 @@ import logging
 import copy
 import itertools
 import warnings
+import gc
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from tqdm.auto import tqdm
 from ._explainer import Explainer
@@ -184,6 +185,7 @@ class Kernel(Explainer):
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
                 explanations.append(self.explain(data, **kwargs))
+                gc.collect()
 
             # vector-output
             s = explanations[0].shape
