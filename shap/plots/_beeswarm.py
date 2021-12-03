@@ -867,7 +867,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
 #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
