@@ -75,7 +75,10 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         base_value = shap_exp.base_values
         shap_values = shap_exp.values
         if features is None:
-            features = shap_exp.data
+            if shap_exp.display_data is None:
+                features = shap_exp.data
+            else:
+                features = shap_exp.display_data
         if sp.sparse.issparse(features):
             features = features.toarray().flatten()
         if feature_names is None:

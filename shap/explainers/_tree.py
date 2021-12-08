@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import scipy.special
 import multiprocessing
@@ -6,7 +7,7 @@ import json
 import os
 import struct
 import itertools
-from distutils.version import LooseVersion
+from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._legacy import DenseData
@@ -50,7 +51,7 @@ class Tree(Explainer):
     implementations either inside an externel model package or in the local compiled C extention.
     """
 
-    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, **deprecated_options):
+    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, approximate=False, **deprecated_options):
         """ Build a new Tree explainer for the passed model.
 
         Parameters
@@ -147,6 +148,8 @@ class Tree(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
+        
+        self.approximate = approximate
 
         if feature_perturbation not in feature_perturbation_codes:
             raise ValueError("Invalid feature_perturbation option!")
@@ -166,7 +169,7 @@ class Tree(Explainer):
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
             import xgboost
-            if LooseVersion(xgboost.__version__) < LooseVersion('0.81'):
+            if version.parse(xgboost.__version__) < version.parse('0.81'):
                 raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
 
         # compute the expected value if we have a parsed tree for the cext
@@ -201,6 +204,8 @@ class Tree(Explainer):
 
     def __call__(self, X, y=None, interactions=False, check_additivity=True):
 
+        start_time = time.time()
+
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
             X = X.values
@@ -208,23 +213,20 @@ class Tree(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity)
-            output_shape = tuple()
+            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate)
             if type(v) is list:
-                output_shape = (len(v),)
                 v = np.stack(v, axis=-1) # put outputs at the end
-
-            # the explanation object expects an expected value for each row
-            if hasattr(self.expected_value, "__len__"):
-                ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
-            else:
-                ev_tiled = np.tile(self.expected_value, v.shape[0])
-
-            e = Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names)
         else:
+            assert not self.approximate, "Approximate computation not yet supported for interaction effects!"
             v = self.shap_interaction_values(X)
-            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names, interaction_order=2)
-        return e
+
+        # the explanation object expects an expected value for each row
+        if hasattr(self.expected_value, "__len__"):
+            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+        else:
+            ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+        return Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names, compute_time=time.time() - start_time)
 
     def _validate_inputs(self, X, y, tree_limit, check_additivity):
         # see if we have a default tree_limit in place.
@@ -262,7 +264,7 @@ class Tree(Explainer):
                                                        "so TreeExplainer cannot run with the " \
                                                        "feature_perturbation=\"tree_path_dependent\" option! " \
                                                        "Try providing a larger background " \
-                                                       "dataset, or using " \
+                                                       "dataset, no background dataset, or using " \
                                                        "feature_perturbation=\"interventional\"."
 
         if check_additivity and self.model.model_type == "pyspark":
@@ -1430,7 +1432,7 @@ class XGBTreeModelLoader(object):
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
         # so we have to transform it depending on the objective
         import xgboost
-        if LooseVersion(xgboost.__version__).version[0] >= 1:
+        if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
                 self.base_score = scipy.special.logit(self.base_score) # pylint: disable=no-member
 

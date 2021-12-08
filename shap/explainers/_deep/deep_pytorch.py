@@ -1,7 +1,7 @@
 import numpy as np
 import warnings
 from .._explainer import Explainer
-from distutils.version import LooseVersion
+from packaging import version
 torch = None
 
 
@@ -12,7 +12,7 @@ class PyTorchDeep(Explainer):
         global torch
         if torch is None:
             import torch
-            if LooseVersion(torch.__version__) < LooseVersion("0.4"):
+            if version.parse(torch.__version__) < version.parse("0.4"):
                 warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
         # check if we have multiple inputs
