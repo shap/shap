@@ -1415,8 +1415,7 @@ class XGBTreeModelLoader(object):
     def __init__(self, xgb_model):
         # new in XGBoost 1.1, 'binf' is appended to the buffer
         self.buf = xgb_model.save_raw()
-        start_buf = self.buf[:4]
-        if start_buf == bytearray(b'binf'):
+        if self.buf.startswith(b'binf'):
             self.buf = self.buf[4:]
         self.pos = 0
 
