@@ -20,6 +20,8 @@
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/logical.h>
 #include <thrust/reduce.h>
+#include <thrust/host_vector.h>
+#include <cub/cub.cuh>
 #include <algorithm>
 #include <functional>
 #include <set>
@@ -738,6 +740,8 @@ __global__ void __launch_bounds__(GPUTREESHAP_MAX_THREADS_PER_BLOCK)
     }
   }
 
+  __syncthreads();
+
   __shared__ PathElement<SplitConditionT> s_elements[kBlockSize];
   PathElement<SplitConditionT>& e = s_elements[threadIdx.x];
 
@@ -845,6 +849,18 @@ struct DeduplicateKeyTransformOp {
   }
 };
 
+inline void CheckCuda(cudaError_t err) {
+  if (err != cudaSuccess) {
+    throw thrust::system_error(err, thrust::cuda_category());
+  }
+}
+
+template <typename Return>
+class DiscardOverload : public thrust::discard_iterator<Return> {
+ public:
+  using value_type = Return;  // NOLINT
+};
+
 template <typename PathVectorT, typename DeviceAllocatorT,
           typename SplitConditionT>
 void DeduplicatePaths(PathVectorT* device_paths,
@@ -865,22 +881,37 @@ void DeduplicatePaths(PathVectorT* device_paths,
 
   deduplicated_paths->resize(device_paths->size());
 
+  using Pair = thrust::pair<size_t, int64_t>;
   auto key_transform = thrust::make_transform_iterator(
       device_paths->begin(), DeduplicateKeyTransformOp());
-  thrust::equal_to<thrust::pair<size_t, int64_t>> key_compare;
-  auto end = thrust::reduce_by_key(
-      thrust::cuda::par(alloc), key_transform,
-      key_transform + device_paths->size(), device_paths->begin(),
-      thrust::make_discard_iterator(), deduplicated_paths->begin(), key_compare,
-      [=] __device__(PathElement<SplitConditionT> a,
-                     const PathElement<SplitConditionT>& b) {
-        // Combine duplicate features
-        a.split_condition.Merge(b.split_condition);
-        a.zero_fraction *= b.zero_fraction;
-        return a;
-      });
 
-  deduplicated_paths->resize(end.second - deduplicated_paths->begin());
+  thrust::device_vector<size_t> d_num_runs_out(1);
+  size_t* h_num_runs_out;
+  CheckCuda(cudaMallocHost(&h_num_runs_out, sizeof(size_t)));
+
+  auto combine = [] __device__(PathElement<SplitConditionT> a,
+                               PathElement<SplitConditionT> b) {
+    // Combine duplicate features
+    a.split_condition.Merge(b.split_condition);
+    a.zero_fraction *= b.zero_fraction;
+    return a;
+  };  // NOLINT
+  size_t temp_size = 0;
+  CheckCuda(cub::DeviceReduce::ReduceByKey(
+      nullptr, temp_size, key_transform, DiscardOverload<Pair>(),
+      device_paths->begin(), deduplicated_paths->begin(),
+      d_num_runs_out.begin(), combine, device_paths->size()));
+  using TempAlloc = RebindVector<char, DeviceAllocatorT>;
+  TempAlloc tmp(temp_size);
+  CheckCuda(cub::DeviceReduce::ReduceByKey(
+      tmp.data().get(), temp_size, key_transform, DiscardOverload<Pair>(),
+      device_paths->begin(), deduplicated_paths->begin(),
+      d_num_runs_out.begin(), combine, device_paths->size()));
+
+  CheckCuda(cudaMemcpy(h_num_runs_out, d_num_runs_out.data().get(),
+                       sizeof(size_t), cudaMemcpyDeviceToHost));
+  deduplicated_paths->resize(*h_num_runs_out);
+  CheckCuda(cudaFreeHost(h_num_runs_out));
 }
 
 template <typename PathVectorT, typename SplitConditionT, typename SizeVectorT,
@@ -1056,7 +1087,7 @@ void ValidatePaths(const PathVectorT& device_paths,
                      path_lengths.end(), too_long_op);
 
   if (invalid_length) {
-    throw std::invalid_argument("Tree depth must be <= 32");
+    throw std::invalid_argument("Tree depth must be < 32");
   }
 
   IncorrectVOp<SplitConditionT> incorrect_v_op{device_paths.data().get()};
@@ -1435,7 +1466,7 @@ void GPUTreeShapTaylorInteractions(DatasetT X, PathIteratorT begin,
  * and a dataset. Uses device memory proportional to the tree ensemble size. This variant
  * implements the interventional tree shap algorithm described here:
  * https://drafts.distill.pub/HughChen/its_blog/
- * 
+ *
  * It requires a background dataset R.
  *
  * \exception std::invalid_argument Thrown when an invalid argument error condition occurs.
