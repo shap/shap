@@ -830,7 +830,13 @@ class TreeEnsemble:
             self.base_offset = xgb_loader.base_score
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
-            self.tree_limit = getattr(model, "best_ntree_limit", None)
+            # 'best_ntree_limit' is problematic
+            # https://github.com/dmlc/xgboost/issues/6615
+            if hasattr(model, 'best_iteration'):
+                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1 
+                self.tree_limit = (getattr(model, "best_iteration", None) + 1) * trees_per_iteration
+            else:
+                self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
             if self.model_output == "predict_proba":
