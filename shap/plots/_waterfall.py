@@ -40,7 +40,7 @@ def waterfall(shap_values, max_display=10, show=True):
     
     # Turn off interactive plot
     if show is False:
-        plt.ioff()
+        pl.ioff()
     
 
     base_values = shap_values.base_values
