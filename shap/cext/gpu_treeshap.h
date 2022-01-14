@@ -21,7 +21,13 @@
 #include <thrust/logical.h>
 #include <thrust/reduce.h>
 #include <thrust/host_vector.h>
+#if (CUDART_VERSION >= 11000)
 #include <cub/cub.cuh>
+#else
+// Hack to get cub device reduce on older toolkits
+#include <thrust/system/cuda/detail/cub/device/device_reduce.cuh>
+using namespace thrust::cuda_cub;
+#endif
 #include <algorithm>
 #include <functional>
 #include <set>
