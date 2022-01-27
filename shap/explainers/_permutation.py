@@ -205,7 +205,7 @@ class Permutation(Explainer):
         """
 
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
-        return explanation._old_format()
+        return explanation
 
     def __str__(self):
         return "shap.explainers.Permutation()"
