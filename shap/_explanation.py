@@ -323,9 +323,10 @@ class Explanation(metaclass=MetaExplanation):
             pos += 1
 
             # skip over Ellipsis
-            if t == Ellipsis:
-                pos += len(self.shape) - len(item)
-                continue
+            if type(t) not in [np.ndarray, pd.Series]:
+                if t == Ellipsis:
+                    pos += len(self.shape) - len(item)
+                    continue
 
             orig_t = t
             if issubclass(type(t), OpChain):
@@ -334,7 +335,7 @@ class Explanation(metaclass=MetaExplanation):
                     t = int(t)
                 elif issubclass(type(t), np.ndarray):
                     t = [int(v) for v in t] # slicer wants lists not numpy arrays for indexing
-            elif issubclass(type(t), Explanation):
+            elif issubclass(type(t), (Explanation, pd.Series)):
                 t = t.values
             elif isinstance(t, str):
 
