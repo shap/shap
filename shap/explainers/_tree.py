@@ -337,8 +337,9 @@ class Tree(Explainer):
                                          "See https://github.com/slundberg/shap/issues/580") from e
 
                 if check_additivity and self.model.model_output == "raw":
+                    xgb_tree_limit = tree_limit // self.model.num_stacked_models 
                     model_output_vals = self.model.original_model.predict(
-                        X, ntree_limit=tree_limit, output_margin=True,
+                        X, ntree_limit=xgb_tree_limit, output_margin=True,
                         validate_features=False
                     )
 
@@ -476,7 +477,8 @@ class Tree(Explainer):
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            phi = self.model.original_model.predict(X, ntree_limit=tree_limit, pred_interactions=True, validate_features=False)
+            xgb_tree_limit = tree_limit // self.model.num_stacked_models
+            phi = self.model.original_model.predict(X, ntree_limit=xgb_tree_limit, pred_interactions=True, validate_features=False)
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
