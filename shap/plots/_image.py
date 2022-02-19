@@ -4,6 +4,7 @@ import warnings
 from typing import Optional
 
 import numpy as np
+from shap._explanation import Explanation
 
 from ..utils import ordinal_str
 
@@ -23,9 +24,10 @@ from ..utils._legacy import kmeans
 # pylint: disable=unsubscriptable-object
 
 
-def image(shap_values: list,
-          pixel_values: np.ndarray,
+def image(shap_values: Explanation or np.ndarray,
+          pixel_values: Optional[np.ndarray] = None,
           labels: Optional[list] = None,
+          true_labels: Optional[list] = None,
           width: Optional[int] = 20,
           aspect: Optional[float] = 0.2,
           hspace: Optional[float] = 0.2,
@@ -47,6 +49,9 @@ def image(shap_values: list,
     labels : list
         List of names for each of the model outputs that are being explained. This list should be the same length
         as the shap_values list.
+
+    true_labels: list
+        List of a true image labels to plot
 
     width : float
         The width of the produced matplotlib plot.
@@ -139,6 +144,8 @@ def image(shap_values: list,
             x_curr_disp = x_curr
 
         axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
+        if true_labels:
+            axes[row, 0].set_title(true_labels[row], **label_kwargs)
         axes[row, 0].axis('off')
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
