@@ -4,8 +4,8 @@ import warnings
 from typing import Optional
 
 import numpy as np
-from shap._explanation import Explanation
 
+from shap._explanation import Explanation
 from ..utils import ordinal_str
 
 try:
@@ -26,7 +26,7 @@ from ..utils._legacy import kmeans
 
 def image(shap_values: Explanation or np.ndarray,
           pixel_values: Optional[np.ndarray] = None,
-          labels: Optional[list] = None,
+          labels: Optional[list or np.ndarray] = None,
           true_labels: Optional[list] = None,
           width: Optional[int] = 20,
           aspect: Optional[float] = 0.2,
@@ -46,9 +46,8 @@ def image(shap_values: Explanation or np.ndarray,
         Matrix of pixel values (# samples x width x height x channels) for each image. It should be the same
         shape as each array in the shap_values list of arrays.
 
-    labels : list
-        List of names for each of the model outputs that are being explained. This list should be the same length
-        as the shap_values list.
+    labels : list or np.ndarray
+        List or np.ndarray (# samples x top_k classes) of names for each of the model outputs that are being explained.
 
     true_labels: list
         List of a true image labels to plot
@@ -92,16 +91,20 @@ def image(shap_values: Explanation or np.ndarray,
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
         pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
-    # make sure labels
+    # labels: (rows (images) x columns (top_k classes) )
     if labels is not None:
-        labels = np.array(labels)
-        if labels.shape[0] != shap_values[0].shape[0] and labels.shape[0] == len(shap_values):
-            labels = np.tile(np.array([labels]), shap_values[0].shape[0])
-        assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
-        if multi_output:
-            assert labels.shape[1] == len(shap_values), "Labels must have a column for each output in shap_values!"
-        else:
-            assert len(labels.shape) == 1, "Labels must be a vector for single output shap_values."
+        if isinstance(labels, list):
+            labels = np.array(labels).reshape(1, -1)
+
+    # if labels is not None:
+    #     labels = np.array(labels)
+    #     if labels.shape[0] != shap_values[0].shape[0] and labels.shape[0] == len(shap_values):
+    #         labels = np.tile(np.array([labels]), shap_values[0].shape[0])
+    #     assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
+    #     if multi_output:
+    #         assert labels.shape[1] == len(shap_values), "Labels must have a column for each output in shap_values!"
+    #     else:
+    #         assert len(labels[0].shape) == 1, "Labels must be a vector for single output shap_values."
 
     label_kwargs = {} if labelpad is None else {'pad': labelpad}
 
