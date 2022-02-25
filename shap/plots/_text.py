@@ -87,15 +87,21 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 xmax = xmax_i
             if cmax_i > cmax:
                 cmax = cmax_i
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
-<br>
-<hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
-<div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
-</div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            sep = f"""
+    <br>
+    <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
+    <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
+    </div>
+                """
+            if display:
+                ipython_display(HTML(sep))
+            text_output = text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=display)
+            if not display:
+                out += sep
+                out += text_output
+        return out
 
     if len(shap_values.shape) == 2 and shap_values.output_names is not None:
 
@@ -222,16 +228,22 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             xmax = xmax_computed
         if cmax is None:
             cmax = cmax_computed
-
+        
+        out = "" if not display else None
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
+            sep = f"""
 <br>
 <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
 <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
 </div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            """
+            if display:
+                ipython_display(HTML(sep))
+            text_output = text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=display)
+            if not display:
+                out += sep
+                out += text_output
+        return out
 
 
     # set any unset bounds
