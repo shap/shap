@@ -140,9 +140,16 @@ class Explanation(metaclass=MetaExplanation):
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
 
+        if not hasattr(base_values, "__len__") or len(base_values) == 0:
+            pass
+        elif len(_compute_shape(base_values)) == len(self.output_dims):
+            base_values = Obj(base_values, list(self.output_dims))
+        else:
+            base_values = Obj(base_values, [0] + list(self.output_dims))
+
         self._s = Slicer(
             values=values,
-            base_values=base_values if hasattr(base_values, "__len__") else Obj(base_values, [0] + list(self.output_dims)),
+            base_values=base_values,
             data=list_wrap(data),
             display_data=list_wrap(display_data),
             instance_names=None if instance_names is None else Alias(instance_names, 0),
@@ -306,11 +313,20 @@ class Explanation(metaclass=MetaExplanation):
     def __getitem__(self, item):
         """ This adds support for OpChain indexing.
         """
+        new_self = None
         if not isinstance(item, tuple):
             item = (item,)
 
         # convert any OpChains or magic strings
-        for pos, t in enumerate(item): # pylint: disable=too-many-nested-blocks
+        pos = -1
+        for t in item: # pylint: disable=too-many-nested-blocks
+            pos += 1
+
+            # skip over Ellipsis
+            if t == Ellipsis:
+                pos += len(self.shape) - len(item)
+                continue
+
             orig_t = t
             if issubclass(type(t), OpChain):
                 t = t.apply(self)
@@ -326,24 +342,47 @@ class Explanation(metaclass=MetaExplanation):
                 output_names_dims = []
                 if "output_names" in self._s._objects:
                     output_names_dims = self._s._objects["output_names"].dim
-                if pos != 0 and pos in output_names_dims and len(output_names_dims) == 2:
-                    new_values = []
-                    new_base_values = []
-                    new_data = []
-                    new_self = copy.deepcopy(self)
-                    for i, v in enumerate(self.values):
-                        for j, s in enumerate(self.output_names[i]):
-                            if s == t:
-                                new_values.append(np.array(v[:,j]))
-                                new_data.append(np.array(self.data[i]))
-                                new_base_values.append(self.base_values[i][j])
-                    new_self = copy.deepcopy(self)
-                    new_self.values = np.array(new_values)
-                    new_self.base_values = np.array(new_base_values)
-                    new_self.data = np.array(new_data)
-                    new_self.output_names = t
-                    new_self.feature_names = np.array(new_data)
-                    new_self.clustering = None
+                elif "output_names" in self._s._aliases:
+                    output_names_dims = self._s._aliases["output_names"].dim
+                if pos != 0 and pos in output_names_dims:
+                    if len(output_names_dims) == 1:
+                        t = np.argwhere(np.array(self.output_names) == t)[0][0]
+                    elif len(output_names_dims) == 2:
+                        new_values = []
+                        new_base_values = []
+                        new_data = []
+                        new_self = copy.deepcopy(self)
+                        for i, v in enumerate(self.values):
+                            for j, s in enumerate(self.output_names[i]):
+                                if s == t:
+                                    new_values.append(np.array(v[:,j]))
+                                    new_data.append(np.array(self.data[i]))
+                                    new_base_values.append(self.base_values[i][j])
+
+                        new_self = Explanation(
+                            np.array(new_values),
+                            np.array(new_base_values),
+                            np.array(new_data),
+                            self.display_data,
+                            self.instance_names,
+                            np.array(new_data),
+                            t, # output_names
+                            self.output_indexes,
+                            self.lower_bounds,
+                            self.upper_bounds,
+                            self.error_std,
+                            self.main_effects,
+                            self.hierarchical_values,
+                            self.clustering
+                        )
+                        new_self.op_history = copy.copy(self.op_history)
+                        # new_self = copy.deepcopy(self)
+                        # new_self.values = np.array(new_values)
+                        # new_self.base_values = np.array(new_base_values)
+                        # new_self.data = np.array(new_data)
+                        # new_self.output_names = t
+                        # new_self.feature_names = np.array(new_data)
+                        # new_self.clustering = None
 
                 # work around for 2D feature_names since they are not yet slicer supported
                 feature_names_dims = []
@@ -362,7 +401,7 @@ class Explanation(metaclass=MetaExplanation):
                     new_self.data = new_data
                     new_self.feature_names = t
                     new_self.clustering = None
-                    return new_self
+                    # return new_self
 
             if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
@@ -373,8 +412,12 @@ class Explanation(metaclass=MetaExplanation):
                 item = tuple(tmp)
 
         # call slicer for the real work
-        new_self = copy.copy(self)
-        new_self._s = self._s.__getitem__(item)
+        item = tuple(v for v in item) # SML I cut out: `if not isinstance(v, str)`
+        if len(item) == 0:
+            return new_self
+        if new_self is None:
+            new_self = copy.copy(self)
+        new_self._s = new_self._s.__getitem__(item)
         new_self.op_history.append({
             "name": "__getitem__",
             "args": (item,),
@@ -533,6 +576,31 @@ class Explanation(metaclass=MetaExplanation):
             return group_features(self, grouping)
         else:
             raise Exception("Only axis = 1 is supported for grouping right now...")
+
+    def hstack(self, other):
+        """ Stack two explanations column-wise.
+        """
+        assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
+        assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
+        
+        new_exp = Explanation(
+            np.hstack([self.values, other.values]),
+            np.hstack([self.values, other.values]),
+            self.base_values,
+            self.data,
+            self.display_data,
+            self.instance_names,
+            self.feature_names,
+            self.output_names,
+            self.output_indexes,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.error_std,
+            self.main_effects,
+            self.hierarchical_values,
+            self.clustering
+        )
+        return self._numpy_func("min", axis=axis)
 
     # def reshape(self, *args):
     #     return self._numpy_func("reshape", newshape=args)

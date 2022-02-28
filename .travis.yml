@@ -1,4 +1,5 @@
 language: python
+cache: pip
 os:
 - linux
 python:
@@ -20,7 +21,7 @@ install:
 - pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint sentencepiece
 script:
   - python -m pytest tests
-  - pylint tests shap/models shap/maskers shap/explainers/_gpu_tree.py shap/_serializable.py shap/links.py shap/datasets.py 
+  # - pylint tests shap/models shap/maskers shap/explainers/_gpu_tree.py shap/_serializable.py shap/links.py shap/datasets.py 
 after_success:
   - codecov
 deploy:

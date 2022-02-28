@@ -131,3 +131,26 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
         # 'suffix_strlen' : suffix_strlen,
         'null_tokens' : null_tokens
     }
+
+def getattr_silent(obj, attr):
+    """ This turns of verbose logging of missing attributes for huggingface transformers.
+
+    This is motivated by huggingface transformers objects that print error warnings
+    when we access unset properties.
+    """
+
+    reset_verbose = False
+    if getattr(obj, 'verbose', False):
+        reset_verbose = True
+        obj.verbose = False
+
+    val = getattr(obj, attr, None)
+
+    if reset_verbose:
+        obj.verbose = True
+
+    # fix strange huggingface bug where `obj.verbose = False` causes val to change from None to "None"
+    if val == "None":
+        val = None
+
+    return val

@@ -46,12 +46,18 @@ def benchmark(benchmark, show=True):
         if single_metric and has_curves:
             benchmark.sort(key=lambda b: -b.value_sign * b.value)
             for i, b in enumerate(benchmark):
+                plt.fill_between(
+                    b.curve_x, b.curve_y - b.curve_y_std, b.curve_y + b.curve_y_std,
+                    color=method_color[b.method], alpha=0.1, linewidth=0
+                )
+            for i, b in enumerate(benchmark):
                 plt.plot(
                     b.curve_x, b.curve_y,
                     color=method_color[b.method],
                     linewidth=2,
                     label=b.method + f" ({b.value:0.3})"
                 )
+                #plt.fill_between(b.curve_x, b.curve_y - b.curve_y_std, b.curve_y + b.curve_y_std, color=method_color[b.method], alpha=0.2)
                 ax = plt.gca()
             ax.set_xlabel(xlabel_names[metric_name], fontsize=13)
             ax.set_ylabel("Model output", fontsize=13)
@@ -199,14 +205,19 @@ def benchmark(benchmark, show=True):
 
     # plot a single benchmark result
     else:
+        plt.fill_between(
+            benchmark.curve_x, benchmark.curve_y - benchmark.curve_y_std,
+            benchmark.curve_y + benchmark.curve_y_std,
+            color=colors.blue_rgb, alpha=0.1, linewidth=0
+        )
         plt.plot(
-            benchmark.xs, benchmark.ys,
+            benchmark.curve_x, benchmark.curve_y,
             color=colors.blue_rgb,
             linewidth=2,
-            label=benchmark.name + f" ({benchmark.auc:0.3})"
+            label=benchmark.method + f" ({benchmark.value:0.3})"
         )
         ax = plt.gca()
-        ax.set_xlabel(xlabel_names[benchmark.metric_name], fontsize=13)
+        ax.set_xlabel(xlabel_names[benchmark.metric], fontsize=13)
         ax.set_ylabel("Model output", fontsize=13)
         ax.xaxis.set_ticks_position('bottom')
         ax.yaxis.set_ticks_position('left')
