@@ -589,4 +589,4 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     if show:
         pl.show()
     else:
-        return plt.gcf()
+        return pl.gcf()
