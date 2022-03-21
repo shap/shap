@@ -749,7 +749,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
