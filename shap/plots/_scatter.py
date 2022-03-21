@@ -456,7 +456,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
