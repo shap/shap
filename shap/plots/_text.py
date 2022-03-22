@@ -87,7 +87,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 xmax = xmax_i
             if cmax_i > cmax:
                 cmax = cmax_i
-        out = ""
+        out = None if display else ""
         for i, v in enumerate(shap_values):
             sep = f"""
     <br>
@@ -237,13 +237,15 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
 </div>
             """
-            if display:
-                ipython_display(HTML(sep))
-            text_output = text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=display)
-            if not display:
-                out += sep
-                out += text_output
-        return out
+            out += sep
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+        else:
+            return out
 
 
     # set any unset bounds
