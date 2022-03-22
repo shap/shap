@@ -5,7 +5,7 @@
 </p>
 
 ---
-<a href="https://travis-ci.com/github/slundberg/shap"><img src="https://travis-ci.com/slundberg/shap.svg?branch=master"></a>
+![example workflow](https://github.com/slundberg/shap/actions/workflows/run_tests.yml/badge.svg)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/slundberg/shap/master)
 [![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
 
