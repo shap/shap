@@ -304,7 +304,7 @@ def waterfall(shap_values, max_display=10, show=True):
     if show:
         plt.show()
     else:
-        return pl.gcf()
+        return plt.gcf()
 
 
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
@@ -341,10 +341,10 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         to be customized further after it has been created.
     """
 
-    # Turn off interactive plot
+    # Turn off interactive plot when not calling plt.show
     if show is False:
         plt.ioff()
-  
+
     # support passing an explanation object
     upper_bounds = None
     lower_bounds = None
@@ -608,4 +608,4 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     if show:
         plt.show()
     else:
-        return pl.gcf()
+        return plt.gcf()
