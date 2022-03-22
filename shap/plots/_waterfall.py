@@ -341,7 +341,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         to be customized further after it has been created.
     """
 
-    # Turn off interactive plot
+    # Turn off interactive plot when not calling plt.show
     if show is False:
         plt.ioff()
 
