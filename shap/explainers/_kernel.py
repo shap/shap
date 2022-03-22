@@ -13,6 +13,7 @@ import warnings
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from tqdm.auto import tqdm
 from ._explainer import Explainer
+from .. import maskers
 
 log = logging.getLogger('shap')
 
@@ -59,12 +60,20 @@ class Kernel(Explainer):
     """
 
     def __init__(self, model, data, link=IdentityLink(), **kwargs):
+        masker = data
+        super(Kernel, self).__init__(model, masker, **kwargs)
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
         self.model = convert_to_model(model)
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
+        if type(self.masker) is maskers.Independent:
+            data = self.masker.data
+        elif self.masker is not None:
+            raise Exception(
+                f"Unsupported masker type {type(masker)}. Only Independent masker is supported."
+            )
         self.data = convert_to_data(data, keep_index=self.keep_index)
         model_null = match_model_to_data(self.model, self.data)
 
