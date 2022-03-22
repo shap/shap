@@ -8,6 +8,7 @@ import pandas as pd
 import scipy as sp
 import pickle
 import cloudpickle
+import warnings
 from .. import links
 from .. import maskers
 from ..maskers import Masker
@@ -203,9 +204,10 @@ class Permutation(Explainer):
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
         """
-
+        warnings.warn("shap_values() is deprecated; use __call__().", warnings.DeprecationWarning)
+        
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
-        return explanation
+        return explanation.values
 
     def __str__(self):
         return "shap.explainers.Permutation()"
