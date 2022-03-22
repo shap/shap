@@ -33,8 +33,7 @@ def image(shap_values: Explanation or np.ndarray,
           aspect: Optional[float] = 0.2,
           hspace: Optional[float] = 0.2,
           labelpad: Optional[float] = None,
-          show: Optional[bool] = True,
-          save_name: Optional[str] = None):
+          show: Optional[bool] = True):
     """ Plots SHAP values for image inputs.
 
     Parameters
@@ -62,9 +61,6 @@ def image(shap_values: Explanation or np.ndarray,
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
-
-    save_name: str
-        Save matplotlib image if save_name exists.
     """
 
     # support passing an explanation object
@@ -171,8 +167,6 @@ def image(shap_values: Explanation or np.ndarray,
     cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal",
                       aspect=fig_size[0] / aspect)
     cb.outline.set_visible(False)
-    if save_name:
-        pl.savefig(save_name)
     if show:
         pl.show()
 
