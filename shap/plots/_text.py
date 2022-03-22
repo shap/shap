@@ -54,6 +54,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
     def values_min_max(values, base_values):
         """ Used to pick our axis limits.
         """
+        values = np.array(values)
         fx = base_values + values.sum()
         xmin = fx - values[values > 0].sum()
         xmax = fx - values[values < 0].sum()
