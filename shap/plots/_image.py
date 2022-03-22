@@ -146,7 +146,7 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
 
 
 def image_to_text(shap_values):
-    """ Plots SHAP values for image inputs with test outputs.
+    """ Plots SHAP values for image inputs with text outputs.
 
     Parameters
     ----------

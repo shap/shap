@@ -23,8 +23,11 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     if op_name == "ResourceGather" and inputs[1].dtype == tf.int32:
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
-    out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
-
+    try:
+        out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
+    except AttributeError:
+        out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
+    
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -359,7 +362,10 @@ class TFDeep(Explainer):
                     v = tf.constant(data, dtype=self.model_inputs[i].dtype)
                     inputs.append(v)
                 final_out = out(inputs)
-                tf_execute.record_gradient = tf_backprop._record_gradient
+                try:
+                    tf_execute.record_gradient = tf_backprop._record_gradient
+                except AttributeError:
+                    tf_execute.record_gradient = tf_backprop.record_gradient
 
                 return final_out
             return self.execute_with_overridden_gradients(anon)

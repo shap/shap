@@ -223,14 +223,20 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         ],
         package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
         cmdclass={'build_ext': build_ext},
-        setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', # numpy versions are for numba
+        setup_requires=['numpy<1.22'], # <1.22 is because of numba
+        install_requires=['numpy<1.22', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', # numpy versions are for numba
                           'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
         classifiers=[
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.6',
+            "Operating System :: Microsoft :: Windows",
+            "Operating System :: POSIX",
+            "Operating System :: Unix",
+            "Operating System :: MacOS",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
         ],
         zip_safe=False
         # python_requires='>3.0' we will add this at some point

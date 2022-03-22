@@ -426,9 +426,9 @@ def decision(
         feature_idx = feature_order
     elif (feature_order is None) or (feature_order.lower() == "none"):
         feature_idx = np.arange(feature_count)
-    elif feature_order is "importance":
+    elif feature_order == "importance":
         feature_idx = np.argsort(np.sum(np.abs(shap_values), axis=0))
-    elif feature_order is "hclust":
+    elif feature_order == "hclust":
         feature_idx = np.array(hclust_ordering(shap_values.transpose()))
     else:
         raise ValueError("The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
