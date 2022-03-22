@@ -229,7 +229,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
         if cmax is None:
             cmax = cmax_computed
         
-        out = "" if not display else None
+        out = ""
         for i, v in enumerate(shap_values):
             sep = f"""
 <br>
