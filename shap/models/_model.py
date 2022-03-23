@@ -1,5 +1,6 @@
 import numpy as np
 from .._serializable import Serializable, Serializer, Deserializer
+from torch import Tensor
 
 
 class Model(Serializable):
@@ -18,7 +19,9 @@ class Model(Serializable):
             self.output_names = model.output_names
 
     def __call__(self, *args):
-        return np.array(self.inner_model(*args))
+        out = self.inner_model(*args)
+        out = out.cpu().detach().numpy() if isinstance(out, Tensor) else np.array(out)
+        return out
 
     def save(self, out_file):
         """ Save the model to the given file stream.
