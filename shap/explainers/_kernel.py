@@ -10,6 +10,7 @@ import logging
 import copy
 import itertools
 import warnings
+import gc
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from tqdm.auto import tqdm
 from ._explainer import Explainer
@@ -126,6 +127,9 @@ class Kernel(Explainer):
             The "aic" and "bic" options use the AIC and BIC rules for regularization.
             Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
             "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
+            
+        gc_collect : bool
+           Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
 
         Returns
         -------
@@ -184,6 +188,8 @@ class Kernel(Explainer):
                 if self.keep_index:
                     data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
                 explanations.append(self.explain(data, **kwargs))
+                if kwargs.get("gc_collect", False):
+                    gc.collect()
 
             # vector-output
             s = explanations[0].shape

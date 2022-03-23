@@ -101,7 +101,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                             "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
 
 
-    assert not type(shap_values) == list, "The shap_values arg looks looks multi output, try shap_values[i]."
+    assert not type(shap_values) == list, "The shap_values arg looks multi output, try shap_values[i]."
 
     link = convert_to_link(link)
 
@@ -308,7 +308,7 @@ def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
 def ensure_not_numpy(x):
     if isinstance(x, bytes):
         return x.decode()
-    elif isinstance(x, np.str):
+    elif isinstance(x, np.str_):
         return str(x)
     elif isinstance(x, np.generic):
         return float(x.item())
