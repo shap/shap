@@ -101,6 +101,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             )
         if display:
             ipython_display(HTML(out))
+            return
         else:
             return out
 
@@ -244,6 +245,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             )
         if display:
             ipython_display(HTML(out))
+            return
         else:
             return out
 
@@ -314,6 +316,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 
     if display:
         ipython_display(HTML(out))
+        return
     else:
         return out
         
