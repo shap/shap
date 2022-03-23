@@ -98,6 +98,9 @@ class Text(Masker):
         self._tokenized_s = None
         self._segments_s = None
 
+        # flag that we return outputs that will not get changed by later masking calls
+        self.immutable_outputs = True
+
     def __call__(self, mask, s):
         mask = self._standardize_mask(mask, s)
         self._update_s_cache(s)

@@ -92,6 +92,10 @@ class MaskedModel():
                 else:
                     masked_inputs = self.masker(mask, *self.args)
 
+                # get a copy that won't get overwritten by the next iteration 
+                if not getattr(self.masker, "immutable_outputs", False):
+                    masked_inputs = copy.deepcopy(masked_inputs)
+
                 # wrap the masked inputs if they are not already in a tuple
                 if not isinstance(masked_inputs, tuple):
                     masked_inputs = (masked_inputs,)
@@ -134,9 +138,9 @@ class MaskedModel():
                     all_masked_inputs = [[] for m in range(len(masked_inputs))]
 
                 for i, v in enumerate(masked_inputs):
-                    all_masked_inputs[i].append(copy.copy(v))
+                    all_masked_inputs[i].append(v)
 
-            joined_masked_inputs = self._stack_inputs(*all_masked_inputs)
+            joined_masked_inputs = tuple([np.concatenate(v) for v in all_masked_inputs])
             outputs = self.model(*joined_masked_inputs)
             _assert_output_input_match(joined_masked_inputs, outputs)
             all_outputs.append(outputs)
@@ -209,9 +213,6 @@ class MaskedModel():
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link, self._linearizing_weights)
 
         return averaged_outs
-
-    def _stack_inputs(self, *inputs):
-        return tuple([np.concatenate(v) for v in inputs])
 
     @property
     def mask_shapes(self):
@@ -403,46 +404,58 @@ def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions
 
 
 def make_masks(cluster_matrix):
+    """ Builds a sparse CSR mask matrix from the given clustering.
 
-    # build the mask matrix recursively as an array of index lists
-    global count
-    count = 0
+    This function is optimized since trees for images can be very large.
+    """
+
     M = cluster_matrix.shape[0] + 1
-    mask_matrix_inds = np.zeros(2 * M - 1, dtype=np.object)
-    rec_fill_masks(mask_matrix_inds, cluster_matrix, M)
+    indices_row_pos = np.zeros(2 * M - 1, dtype=np.int)
+    indptr = np.zeros(2 * M, dtype=np.int)
+    indices = np.zeros(int(np.sum(cluster_matrix[:,3])) + M, dtype=np.int)
 
-    # convert the array of index lists into CSR format
-    indptr = np.zeros(len(mask_matrix_inds) + 1, dtype=np.int)
-    indices = np.zeros(np.sum([len(v) for v in mask_matrix_inds]), dtype=np.int)
-    pos = 0
-    for i in range(len(mask_matrix_inds)):
-        inds = mask_matrix_inds[i]
-        indices[pos:pos+len(inds)] = inds
-        pos += len(inds)
-        indptr[i+1] = pos
+    # build an array of index lists in CSR format
+    _init_masks(cluster_matrix, M, indices_row_pos, indptr)
+    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, cluster_matrix.shape[0] - 1 + M)    
     mask_matrix = scipy.sparse.csr_matrix(
         (np.ones(len(indices), dtype=np.bool), indices, indptr),
-        shape=(len(mask_matrix_inds), M)
+        shape=(2 * M - 1, M)
     )
 
     return mask_matrix
 
-def rec_fill_masks(mask_matrix, cluster_matrix, M, ind=None):
-    if ind is None:
-        ind = cluster_matrix.shape[0] - 1 + M
+@jit
+def _init_masks(cluster_matrix, M, indices_row_pos, indptr):
+    pos = 0
+    for i in range(2 * M - 1):
+        if i < M:
+            pos += 1
+        else:
+            pos += int(cluster_matrix[i-M, 3])
+        indptr[i+1] = pos
+        indices_row_pos[i] = indptr[i]
+
+@jit
+def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
+    pos = indices_row_pos[ind]
 
     if ind < M:
-        mask_matrix[ind] = np.array([ind])
+        indices[pos] = ind
         return
 
     lind = int(cluster_matrix[ind-M,0])
     rind = int(cluster_matrix[ind-M,1])
+    lind_size = int(cluster_matrix[lind-M, 3]) if lind >= M else 1
+    rind_size = int(cluster_matrix[rind-M, 3]) if rind >= M else 1
 
-    rec_fill_masks(mask_matrix, cluster_matrix, M, lind)
-    mask_matrix[ind] = mask_matrix[lind]
+    lpos = indices_row_pos[lind]
+    rpos = indices_row_pos[rind]
 
-    rec_fill_masks(mask_matrix, cluster_matrix, M, rind)
-    mask_matrix[ind] = np.concatenate((mask_matrix[ind], mask_matrix[rind]))
+    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, lind)
+    indices[pos:pos + lind_size] = indices[lpos:lpos + lind_size]
+
+    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, rind)
+    indices[pos + lind_size:pos + lind_size + rind_size] = indices[rpos:rpos + rind_size]
 
 def link_reweighting(p, link):
     """ Returns a weighting that makes mean(weights*link(outputs)) == link(mean(outputs)).
