@@ -412,7 +412,7 @@ class Explanation(metaclass=MetaExplanation):
                 item = tuple(tmp)
 
         # call slicer for the real work
-        item = tuple(v for v in item if not isinstance(v, str)) # s
+        item = tuple(v for v in item) # SML I cut out: `if not isinstance(v, str)`
         if len(item) == 0:
             return new_self
         if new_self is None:
@@ -576,6 +576,31 @@ class Explanation(metaclass=MetaExplanation):
             return group_features(self, grouping)
         else:
             raise Exception("Only axis = 1 is supported for grouping right now...")
+
+    def hstack(self, other):
+        """ Stack two explanations column-wise.
+        """
+        assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
+        assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
+        
+        new_exp = Explanation(
+            np.hstack([self.values, other.values]),
+            np.hstack([self.values, other.values]),
+            self.base_values,
+            self.data,
+            self.display_data,
+            self.instance_names,
+            self.feature_names,
+            self.output_names,
+            self.output_indexes,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.error_std,
+            self.main_effects,
+            self.hierarchical_values,
+            self.clustering
+        )
+        return self._numpy_func("min", axis=axis)
 
     # def reshape(self, *args):
     #     return self._numpy_func("reshape", newshape=args)

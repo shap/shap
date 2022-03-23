@@ -87,15 +87,23 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 xmax = xmax_i
             if cmax_i > cmax:
                 cmax = cmax_i
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
-<br>
-<hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
-<div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
-</div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            out += f"""
+    <br>
+    <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
+    <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
+    </div>
+                """
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+            return
+        else:
+            return out
 
     if len(shap_values.shape) == 2 and shap_values.output_names is not None:
 
@@ -138,35 +146,41 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             
             if (document._zoom_{uuid} === '_tp_{uuid}_output_' + i) {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'block';
-                document.getElementById(document._zoom_{uuid}+'_name').style.background = '#dddddd';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = '3px solid #000000';
             }} else {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'none';
-                document.getElementById(document._zoom_{uuid}+'_name').style.background = '#ffffff';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = 'none';
             }}
         }}
         if (document._zoom_{uuid} !== '_tp_{uuid}_output_' + i) {{
             next_id = '_tp_{uuid}_output_' + i;
             document.getElementById(next_id).style.display = 'none';
             document.getElementById(next_id + '_zoom').style.display = 'block';
-            document.getElementById(next_id+'_name').style.background = '#bbbbbb';
+            document.getElementById(next_id+'_name').style.borderBottom = '3px solid #000000';
         }}
         document._zoom_{uuid} = next_id;
     }}
     function _output_onmouseover_{uuid}(i, el) {{
         if (document._zoom_{uuid} !== undefined) {{ return; }}
         if (document._hover_{uuid} !== undefined) {{
-            document.getElementById(document._hover_{uuid} + '_name').style.background = '#ffffff';
+            document.getElementById(document._hover_{uuid} + '_name').style.borderBottom = 'none';
             document.getElementById(document._hover_{uuid}).style.display = 'none';
         }}
         document.getElementById('_tp_{uuid}_output_' + i).style.display = 'block';
-        el.style.background = '#dddddd';
+        el.style.borderBottom = '3px solid #000000';
         document._hover_{uuid} = '_tp_{uuid}_output_' + i;
     }}
 </script>
 <div style=\"color: rgb(120,120,120); font-size: 12px;\">outputs</div>"""
+        output_values = shap_values.values.sum(0) + shap_values.base_values
+        output_max = np.max(np.abs(output_values))
         for i,name in enumerate(shap_values.output_names):
+            scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
+            color = colors.red_transparent_blue(scaled_value)
+            color = (color[0]*255, color[1]*255, color[2]*255, color[3])
+            # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
-<div style="display: inline; background: {'#dddddd' if i == 0 else '#ffffff'}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
+<div style="display: inline; border-bottom: {'3px solid #000000' if i == 0 else 'none'}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
     onclick="_output_onclick_{uuid}({i})"
     onmouseover="_output_onmouseover_{uuid}({i}, this);">{name}</div>"""
         out += "<br><br>"
@@ -216,16 +230,24 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             xmax = xmax_computed
         if cmax is None:
             cmax = cmax_computed
-
+        
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
+            out += f"""
 <br>
 <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
 <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
 </div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            """
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+            return
+        else:
+            return out
 
 
     # set any unset bounds
@@ -294,6 +316,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 
     if display:
         ipython_display(HTML(out))
+        return
     else:
         return out
         
@@ -1307,4 +1330,4 @@ def unpack_shap_explanation_contents(shap_values):
         values = shap_values.values
     clustering = getattr(shap_values, "clustering", None)
 
-    return values, clustering
+    return np.array(values), clustering

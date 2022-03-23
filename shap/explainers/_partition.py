@@ -180,7 +180,7 @@ class Partition(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, fixed_context, batch_size, silent)
+        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)
 
         # if False:
         #     if self.multi_output:
@@ -268,7 +268,7 @@ class Partition(Explainer):
             # create a batch of work to do
             batch_args = []
             batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:
+            while not q.empty() and len(batch_masks) < batch_size and eval_count + len(batch_masks) < max_evals:
 
                 # get our next set of arguments
                 m00, f00, f11, ind, weight = q.get()[2]

@@ -186,6 +186,9 @@ class Explainer(Serializable):
             elif algorithm == "linear":
                 self.__class__ = explainers.Linear
                 explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+            elif algorithm == "deep":
+                self.__class__ = explainers.Deep
+                explainers.Deep.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
                 raise Exception("Unknown algorithm type passed: %s!" % algorithm)
 
@@ -266,7 +269,8 @@ class Explainer(Serializable):
             main_effects.append(row_result.get("main_effects", None))
             clustering.append(row_result.get("clustering", None))
             hierarchical_values.append(row_result.get("hierarchical_values", None))
-            output_names.append(row_result.get("output_names", None))
+            tmp = row_result.get("output_names", None)
+            output_names.append(tmp(*row_args) if callable(tmp) else tmp)
             error_std.append(row_result.get("error_std", None))
             if callable(getattr(self.masker, "feature_names", None)):
                 row_feature_names = self.masker.feature_names(*row_args)

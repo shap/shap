@@ -46,3 +46,14 @@ Examples of how to explain predictions from summarization models.
     :maxdepth: 1
 
     example_notebooks/text_examples/summarization/*
+
+
+Question Answering
+=============
+Examples of how to explain predictions from question answering models.
+
+.. toctree::
+    :glob:
+    :maxdepth: 1
+
+    example_notebooks/text_examples/question_answering/*
