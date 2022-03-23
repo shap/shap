@@ -42,27 +42,28 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         unchanged.
     """
 
-    # support passing an explanation object
-    if str(type(shap_values)).endswith("Explanation'>"):
-        if len(shap_values.shape) == 1:
-            raise ValueError(
-                "The beeswarm plot does not support plotting a single instance, please pass "
-                "an explanation matrix with many instances!"
-            )
-        elif len(shap_values.shape) > 2:
-            raise ValueError(
-                "The beeswarm plot does not support plotting explanations with instances that have more "
-                "than one dimension!"
-            )
-        shap_exp = shap_values
-        base_values = shap_exp.base_values
-        values = shap_exp.values.copy()
-        features = shap_exp.data
-        if sp.sparse.issparse(features):
-            features = features.toarray()
-        feature_names = shap_exp.feature_names
-        # if out_names is None: # TODO: waiting for slicer support
-        #     out_names = shap_exp.output_names
+    if not isinstance(shap_values, Explanation):
+        raise ValueError("the beeswarm plot requires Explanation object as the `shap_values` argument")
+
+    if len(shap_values.shape) == 1:
+        raise ValueError(
+            "The beeswarm plot does not support plotting a single instance, please pass "
+            "an explanation matrix with many instances!"
+        )
+    elif len(shap_values.shape) > 2:
+        raise ValueError(
+            "The beeswarm plot does not support plotting explanations with instances that have more "
+            "than one dimension!"
+        )
+    shap_exp = shap_values
+    # we make a copy here, because later there are places that might modify this array
+    values = np.copy(shap_exp.values)
+    features = shap_exp.data
+    if sp.sparse.issparse(features):
+        features = features.toarray()
+    feature_names = shap_exp.feature_names
+    # if out_names is None: # TODO: waiting for slicer support
+    #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
     
@@ -109,7 +110,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
+        shape_msg = "The shape of the matrix does not match the shape of the " \
                     "provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
