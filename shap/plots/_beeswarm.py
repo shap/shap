@@ -56,7 +56,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             )
         shap_exp = shap_values
         base_values = shap_exp.base_values
-        values = shap_exp.values
+        values = shap_exp.values.copy()
         features = shap_exp.data
         if sp.sparse.issparse(features):
             features = features.toarray()
