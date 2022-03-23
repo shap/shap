@@ -129,12 +129,15 @@ def test_xgboost_multiclass():
     xgboost = pytest.importorskip('xgboost')
 
     # train XGBoost model
-    X, Y = shap.datasets.iris()
-    model = xgboost.XGBClassifier(objective="binary:logistic", max_depth=4)
-    model.fit(X, Y)
+    X, y = shap.datasets.iris()
+    model = xgboost.XGBClassifier(n_estimators=1, max_depth=4)
+    model.fit(X, y)
 
-    # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    explainer = shap.TreeExplainer(model)
+
+    assert np.allclose(explainer.model.predict(X), model.predict(X, output_margin=True))
+
+    shap_values = explainer.shap_values(X)
 
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
