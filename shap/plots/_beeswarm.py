@@ -110,7 +110,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
+        shape_msg = "The shape of the 
+        matrix does not match the shape of the " \
                     "provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
