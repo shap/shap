@@ -1,10 +1,14 @@
-import numpy as np
-import warnings
-import json
-import numpy as np
-from ..utils import ordinal_str
 import random
 import string
+import warnings
+import json
+from typing import Optional
+
+import numpy as np
+
+from shap._explanation import Explanation
+from ..utils import ordinal_str
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -16,11 +20,20 @@ except ImportError:
 from . import colors
 from ..utils._legacy import kmeans
 
+
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
 
 
-def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hspace=0.2, labelpad=None, show=True):
+def image(shap_values: Explanation or np.ndarray,
+          pixel_values: Optional[np.ndarray] = None,
+          labels: Optional[list or np.ndarray] = None,
+          true_labels: Optional[list] = None,
+          width: Optional[int] = 20,
+          aspect: Optional[float] = 0.2,
+          hspace: Optional[float] = 0.2,
+          labelpad: Optional[float] = None,
+          show: Optional[bool] = True):
     """ Plots SHAP values for image inputs.
 
     Parameters
@@ -33,9 +46,11 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         Matrix of pixel values (# samples x width x height x channels) for each image. It should be the same
         shape as each array in the shap_values list of arrays.
 
-    labels : list
-        List of names for each of the model outputs that are being explained. This list should be the same length
-        as the shap_values list.
+    labels : list or np.ndarray
+        List or np.ndarray (# samples x top_k classes) of names for each of the model outputs that are being explained.
+
+    true_labels: list
+        List of a true image labels to plot
 
     width : float
         The width of the produced matplotlib plot.
@@ -73,16 +88,20 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
         pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
-    # make sure labels
+    # labels: (rows (images) x columns (top_k classes) )
     if labels is not None:
-        labels = np.array(labels)
-        if labels.shape[0] != shap_values[0].shape[0] and labels.shape[0] == len(shap_values):
-            labels = np.tile(np.array([labels]), shap_values[0].shape[0])
-        assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
-        if multi_output:
-            assert labels.shape[1] == len(shap_values), "Labels must have a column for each output in shap_values!"
-        else:
-            assert len(labels.shape) == 1, "Labels must be a vector for single output shap_values."
+        if isinstance(labels, list):
+            labels = np.array(labels).reshape(1, -1)
+
+    # if labels is not None:
+    #     labels = np.array(labels)
+    #     if labels.shape[0] != shap_values[0].shape[0] and labels.shape[0] == len(shap_values):
+    #         labels = np.tile(np.array([labels]), shap_values[0].shape[0])
+    #     assert labels.shape[0] == shap_values[0].shape[0], "Labels must have same row count as shap_values arrays!"
+    #     if multi_output:
+    #         assert labels.shape[1] == len(shap_values), "Labels must have a column for each output in shap_values!"
+    #     else:
+    #         assert len(labels[0].shape) == 1, "Labels must be a vector for single output shap_values."
 
     label_kwargs = {} if labelpad is None else {'pad': labelpad}
 
@@ -93,36 +112,41 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         fig_size *= width / fig_size[0]
     fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
     if len(axes.shape) == 1:
-        axes = axes.reshape(1,axes.size)
+        axes = axes.reshape(1, axes.size)
     for row in range(x.shape[0]):
         x_curr = x[row].copy()
 
         # make sure we have a 2D array for grayscale
         if len(x_curr.shape) == 3 and x_curr.shape[2] == 1:
             x_curr = x_curr.reshape(x_curr.shape[:2])
-        if x_curr.max() > 1:
-            x_curr /= 255.
+
+        # if x_curr.max() > 1:
+        #     x_curr /= 255.
 
         # get a grayscale version of the image
         if len(x_curr.shape) == 3 and x_curr.shape[2] == 3:
-            x_curr_gray = (0.2989 * x_curr[:,:,0] + 0.5870 * x_curr[:,:,1] + 0.1140 * x_curr[:,:,2]) # rgb to gray
+            x_curr_gray = (
+                    0.2989 * x_curr[:, :, 0] + 0.5870 * x_curr[:, :, 1] + 0.1140 * x_curr[:, :, 2])  # rgb to gray
             x_curr_disp = x_curr
         elif len(x_curr.shape) == 3:
             x_curr_gray = x_curr.mean(2)
 
             # for non-RGB multi-channel data we show an RGB image where each of the three channels is a scaled k-mean center
-            flat_vals = x_curr.reshape([x_curr.shape[0]*x_curr.shape[1], x_curr.shape[2]]).T
+            flat_vals = x_curr.reshape([x_curr.shape[0] * x_curr.shape[1], x_curr.shape[2]]).T
             flat_vals = (flat_vals.T - flat_vals.mean(1)).T
             means = kmeans(flat_vals, 3, round_values=False).data.T.reshape([x_curr.shape[0], x_curr.shape[1], 3])
-            x_curr_disp = (means - np.percentile(means, 0.5, (0,1))) / (np.percentile(means, 99.5, (0,1)) - np.percentile(means, 1, (0,1)))
+            x_curr_disp = (means - np.percentile(means, 0.5, (0, 1))) / (
+                    np.percentile(means, 99.5, (0, 1)) - np.percentile(means, 1, (0, 1)))
             x_curr_disp[x_curr_disp > 1] = 1
             x_curr_disp[x_curr_disp < 0] = 0
         else:
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row,0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
-        axes[row,0].axis('off')
+        axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
+        if true_labels:
+            axes[row, 0].set_title(true_labels[row], **label_kwargs)
+        axes[row, 0].axis('off')
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
@@ -130,16 +154,18 @@ def image(shap_values, pixel_values=None, labels=None, width=20, aspect=0.2, hsp
         max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row,i+1].set_title(labels[row,i], **label_kwargs)
+                axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row,i+1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row,i+1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
-            axes[row,i+1].axis('off')
+            axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
+                                    extent=(-1, sv.shape[1], sv.shape[0], -1))
+            im = axes[row, i + 1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+            axes[row, i + 1].axis('off')
     if hspace == 'auto':
         fig.tight_layout()
     else:
         fig.subplots_adjust(hspace=hspace)
-    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0]/aspect)
+    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal",
+                      aspect=fig_size[0] / aspect)
     cb.outline.set_visible(False)
     if show:
         pl.show()
@@ -160,61 +186,62 @@ def image_to_text(shap_values):
         for i in range(shap_values.values.shape[0]):
             display(HTML(f"<br/><b>{ordinal_str(i)} instance:</b><br/>"))
             image_to_text(shap_values[i])
-        
+
         return
-    
 
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
-    
+
     # creating input html tokens
-    
+
     model_output = shap_values.output_names
 
     output_text_html = ''
 
     for i in range(model_output.shape[0]):
         output_text_html += "<div style='display:inline; text-align:center;'>" \
-                + f"<div id='{uuid}_output_flat_value_label_"+ str(i) +"'" \
-                + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
-                + "</div>" \
-                + f"<div id='{uuid}_output_flat_token_"+ str(i) +"'" \
-                + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'" \
-                + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
-                + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
-                + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
-                + ">" \
-                + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁', '').replace('Ġ','') \
-                + " </div>" \
-                + "</div>"
-    
+                            + f"<div id='{uuid}_output_flat_value_label_" + str(i) + "'" \
+                            + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
+                            + "</div>" \
+                            + f"<div id='{uuid}_output_flat_token_" + str(i) + "'" \
+                            + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'" \
+                            + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
+                            + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
+                            + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
+                            + ">" \
+                            + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁',
+                                                                                                                   '').replace(
+            'Ġ', '') \
+                            + " </div>" \
+                            + "</div>"
+
     # computing gray scale images
     image_data = shap_values.data
     image_height = image_data.shape[0]
     image_width = image_data.shape[1]
-    
+
     # computing gray scale image
     image_data_gray_scale = np.ones((image_height, image_width, 4)) * 255 * 0.5
-    image_data_gray_scale[:,:,0] = np.mean(image_data,axis=2).astype(int)
-    image_data_gray_scale[:,:,1] = image_data_gray_scale[:,:,0]
-    image_data_gray_scale[:,:,2] = image_data_gray_scale[:,:,0]
-        
-    # computing shap color values for every pixel and for every output token
-    
-    shap_values_color_maps = shap_values.values[:,:,0,:]
-    max_val = np.nanpercentile(np.abs(shap_values.values), 99.9)
-    
-    shap_values_color_dict = {}
-    
-    for index in range(model_output.shape[0]):        
-        shap_values_color_dict[f'{uuid}_output_flat_token_{index}'] = (colors.red_transparent_blue(0.5 + 0.5 * shap_values_color_maps[:,:,index]/ max_val) * 255).astype(int).tolist()
+    image_data_gray_scale[:, :, 0] = np.mean(image_data, axis=2).astype(int)
+    image_data_gray_scale[:, :, 1] = image_data_gray_scale[:, :, 0]
+    image_data_gray_scale[:, :, 2] = image_data_gray_scale[:, :, 0]
 
-    
+    # computing shap color values for every pixel and for every output token
+
+    shap_values_color_maps = shap_values.values[:, :, 0, :]
+    max_val = np.nanpercentile(np.abs(shap_values.values), 99.9)
+
+    shap_values_color_dict = {}
+
+    for index in range(model_output.shape[0]):
+        shap_values_color_dict[f'{uuid}_output_flat_token_{index}'] = (colors.red_transparent_blue(
+            0.5 + 0.5 * shap_values_color_maps[:, :, index] / max_val) * 255).astype(int).tolist()
+
     # converting to json to be read in javascript
-    
+
     image_data_json = json.dumps(shap_values.data.astype(int).tolist())
     shap_values_color_dict_json = json.dumps(shap_values_color_dict)
     image_data_gray_scale_json = json.dumps(image_data_gray_scale.astype(int).tolist())
-    
+
     image_viz_html = f"""
 
         <div id="{uuid}_image_viz" class="{uuid}_image_viz_content">
@@ -259,22 +286,20 @@ def image_to_text(shap_values):
         </div>
 
     """
-    
-    
-    
+
     image_viz_script = f"""
         <script>
-            
+
             var {uuid}_heatmap_flat_state = null;
             var {uuid}_opacity = 0.35
-            
+
             function onMouseHoverFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "grey";
                     {uuid}_update_image_and_overlay(id);
                 }}            
             }}
-            
+
             function onMouseOutFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "transparent";
@@ -310,18 +335,18 @@ def image_to_text(shap_values):
             const {uuid}_image_height = {image_height};
             const {uuid}_image_width = {image_width};
             const {uuid}_shap_values_color_dict = {shap_values_color_dict_json};
-            
+
             {uuid}_canvas = document.getElementById('{uuid}_image_canvas');
             {uuid}_context = {uuid}_canvas.getContext('2d');
-            
+
             var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);            
             var {uuid}_currImagData = {uuid}_imageData;
-            
-            
+
+
             {uuid}_trackTransforms({uuid}_context);
             initial_scale_factor = Math.min({uuid}_canvas.height/{uuid}_image_height,{uuid}_canvas.width/{uuid}_image_width);
             {uuid}_context.scale(initial_scale_factor, initial_scale_factor);
-            
+
             function {uuid}_update_image_and_overlay(selected_id) {{
                 if (selected_id == null) {{
                     {uuid}_currImagData = {uuid}_imageData;
@@ -332,16 +357,16 @@ def image_to_text(shap_values):
                     {uuid}_redraw();
                 }}
             }}
-            
+
             function {uuid}_set_opacity(value) {{
                 {uuid}_opacity = value/100;
-                
+
                 if ({uuid}_heatmap_flat_state !== null ) {{
                     {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);                    
                     {uuid}_redraw();
                 }}
             }}
-            
+
             function {uuid}_redraw() {{
 
                 // Clear the entire canvas
@@ -401,13 +426,13 @@ def image_to_text(shap_values):
                 {uuid}_context.translate(-pt.x, -pt.y);
                 {uuid}_redraw();
             }}
-            
+
             var {uuid}_reset = function(clicks) {{
                 {uuid}_context.restore();
                 {uuid}_redraw();
                 {uuid}_context.save();
             }}
-            
+
             var handleScroll = function(evt) {{
                 var delta = evt.wheelDelta ? evt.wheelDelta / 40 : evt.detail ? -evt.detail : 0;
                 if (delta) {uuid}_zoom(delta);
@@ -488,7 +513,7 @@ def image_to_text(shap_values):
                     return pt.matrixTransform(xform.inverse());
                 }}
             }}
-            
+
 
             function {uuid}_convert_image_matrix_to_data(image_data_matrix, image_height, image_width, context) {{
 
@@ -505,19 +530,19 @@ def image_to_text(shap_values):
                         imageData.data[index + 3] = 255;
                     }}
                 }}
-                
+
                 return imageData;
             }}
-            
+
             function {uuid}_blend_image_shap_map(image_data_matrix, shap_color_map, image_height, image_width, alpha, context) {{
                 var blendedImageData = context.createImageData(image_height, image_width);
 
                 for(var row_index = 0; row_index < image_height; row_index++) {{
-                
+
                     for(var col_index = 0; col_index < image_width; col_index++) {{
-                    
+
                         index = (row_index * image_width + col_index) * 4;
-                    
+
                         blendedImageData.data[index + 0] = image_data_matrix[row_index][col_index][0] * alpha + (shap_color_map[row_index][col_index][0]) * ( 1 - alpha);
                         blendedImageData.data[index + 1] = image_data_matrix[row_index][col_index][1] * alpha + (shap_color_map[row_index][col_index][1]) * ( 1 - alpha);
                         blendedImageData.data[index + 2] = image_data_matrix[row_index][col_index][2] * alpha + (shap_color_map[row_index][col_index][2]) * ( 1 - alpha);

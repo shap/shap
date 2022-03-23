@@ -308,7 +308,7 @@ def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
 def ensure_not_numpy(x):
     if isinstance(x, bytes):
         return x.decode()
-    elif isinstance(x, np.str):
+    elif isinstance(x, np.str_):
         return str(x)
     elif isinstance(x, np.generic):
         return float(x.item())
