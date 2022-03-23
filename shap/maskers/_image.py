@@ -5,6 +5,7 @@ from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 import heapq
 from numba import jit
+from torch import Tensor
 
 # TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
 from numba.core.errors import NumbaPendingDeprecationWarning
@@ -23,12 +24,10 @@ class Image(Masker):
 
     def __init__(self, mask_value, shape=None):
         """ Build a new Image masker with the given masking value.
-
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
             The value used to mask hidden regions of the image.
-
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
@@ -70,6 +69,10 @@ class Image(Masker):
         self.immutable_outputs = True
 
     def __call__(self, mask, x):
+
+        if isinstance(x, Tensor):
+            x = x.cpu().numpy()
+
         if np.prod(x.shape) != np.prod(self.input_shape):
             raise Exception("The length of the image to be masked must match the shape given in the " + \
                             "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
