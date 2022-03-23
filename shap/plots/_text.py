@@ -87,15 +87,23 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 xmax = xmax_i
             if cmax_i > cmax:
                 cmax = cmax_i
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
-<br>
-<hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
-<div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
-</div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            out += f"""
+    <br>
+    <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
+    <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
+    </div>
+                """
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+            return
+        else:
+            return out
 
     if len(shap_values.shape) == 2 and shap_values.output_names is not None:
 
@@ -222,16 +230,24 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             xmax = xmax_computed
         if cmax is None:
             cmax = cmax_computed
-
+        
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
+            out += f"""
 <br>
 <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
 <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
 </div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            """
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+            return
+        else:
+            return out
 
 
     # set any unset bounds
@@ -300,6 +316,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 
     if display:
         ipython_display(HTML(out))
+        return
     else:
         return out
         
@@ -1313,4 +1330,4 @@ def unpack_shap_explanation_contents(shap_values):
         values = shap_values.values
     clustering = getattr(shap_values, "clustering", None)
 
-    return values, clustering
+    return np.array(values), clustering
