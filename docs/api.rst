@@ -104,7 +104,6 @@ datasets
 
     shap.datasets.adult
     shap.datasets.boston
-    shap.datasets.adult
     shap.datasets.communitiesandcrime
     shap.datasets.corrgroups60
     shap.datasets.diabetes

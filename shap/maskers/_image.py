@@ -3,6 +3,14 @@ import numpy as np
 from ..utils import assert_import, record_import_error
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
+import heapq
+from numba import jit
+from torch import Tensor
+
+# TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
+from numba.core.errors import NumbaPendingDeprecationWarning
+import warnings
+warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 try:
     import cv2
@@ -16,12 +24,10 @@ class Image(Masker):
 
     def __init__(self, mask_value, shape=None):
         """ Build a new Image masker with the given masking value.
-
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
             The value used to mask hidden regions of the image.
-
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
@@ -59,7 +65,14 @@ class Image(Masker):
         #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=np.bool)
         self.last_xid = None
 
+        # flag that we return outputs that will not get changed by later masking calls
+        self.immutable_outputs = True
+
     def __call__(self, mask, x):
+
+        if isinstance(x, Tensor):
+            x = x.cpu().numpy()
+
         if np.prod(x.shape) != np.prod(self.input_shape):
             raise Exception("The length of the image to be masked must match the shape given in the " + \
                             "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
@@ -72,7 +85,7 @@ class Image(Masker):
         # we preserve flattend inputs as flattened and full-shaped inputs as their original shape
         in_shape = x.shape
         if len(x.shape) > 1:
-            x = x.flatten()
+            x = x.ravel()
 
         # if mask is not given then we mask the whole image
         if mask is None:
@@ -81,7 +94,7 @@ class Image(Masker):
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
                 if self.last_xid != id(x):
-                    self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).flatten()
+                    self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).ravel()
                     self.last_xid = id(x)
                 out = x.copy()
                 out[~mask] = self._blur_value_cache[~mask]
@@ -103,14 +116,14 @@ class Image(Masker):
         if reshaped_mask.sum() == np.prod(self.input_shape[:-1]):
             out = x.reshape(self.input_shape).copy()
             out[:] = out.mean((0, 1))
-            return out.flatten()
+            return out.ravel()
 
         return cv2.inpaint(
             x.reshape(self.input_shape).astype(np.uint8),
             reshaped_mask,
             inpaintRadius=3,
             flags=getattr(cv2, method)
-        ).astype(x.dtype).flatten()
+        ).astype(x.dtype).ravel()
 
     def build_partition_tree(self):
         """ This partitions an image into a herarchical clustering based on axis-aligned splits.
@@ -125,69 +138,12 @@ class Image(Masker):
         #total_xwidth = xmax - xmin
         total_ywidth = ymax - ymin
         total_zwidth = zmax - zmin
-        q = queue.PriorityQueue()
+        q = [(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)]
+        # q = numba.typed.List([(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)]) # TODO: won't work until the next numba rel (as of dec 2021)
         M = int((xmax - xmin) * (ymax - ymin) * (zmax - zmin))
-        self.clustering = np.zeros((M - 1, 4))
-        q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
-        ind = len(self.clustering) - 1
-        while not q.empty():
-            _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
-
-            if parent_ind >= 0:
-                self.clustering[parent_ind, 0 if is_left else 1] = ind + M
-
-            # make sure we line up with a flattened indexing scheme
-            if ind < 0:
-                assert -ind - 1 == xmin * total_ywidth * total_zwidth + ymin * total_zwidth + zmin
-
-            xwidth = xmax - xmin
-            ywidth = ymax - ymin
-            zwidth = zmax - zmin
-            if xwidth == 1 and ywidth == 1 and zwidth == 1:
-                pass
-            else:
-
-                # by default our ranges remain unchanged
-                lxmin = rxmin = xmin
-                lxmax = rxmax = xmax
-                lymin = rymin = ymin
-                lymax = rymax = ymax
-                lzmin = rzmin = zmin
-                lzmax = rzmax = zmax
-
-                # split the xaxis if it is the largest dimension
-                if xwidth >= ywidth and xwidth > 1:
-                    xmid = xmin + xwidth // 2
-                    lxmax = xmid
-                    rxmin = xmid
-
-                # split the yaxis
-                elif ywidth > 1:
-                    ymid = ymin + ywidth // 2
-                    lymax = ymid
-                    rymin = ymid
-
-                # split the zaxis only when the other ranges are already width 1
-                else:
-                    zmid = zmin + zwidth // 2
-                    lzmax = zmid
-                    rzmin = zmid
-
-                lsize = (lxmax - lxmin) * (lymax - lymin) * (lzmax - lzmin)
-                rsize = (rxmax - rxmin) * (rymax - rymin) * (rzmax - rzmin)
-
-                q.put((-lsize, lxmin, lxmax, lymin, lymax, lzmin, lzmax, ind, True))
-                q.put((-rsize, rxmin, rxmax, rymin, rymax, rzmin, rzmax, ind, False))
-
-            ind -= 1
-
-        # fill in the group sizes
-        for i in range(len(self.clustering)):
-            li = int(self.clustering[i, 0])
-            ri = int(self.clustering[i, 1])
-            lsize = 1 if li < M else self.clustering[li-M, 3]
-            rsize = 1 if ri < M else self.clustering[ri-M, 3]
-            self.clustering[i, 3] = lsize + rsize
+        clustering = np.zeros((M - 1, 4))
+        _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q)
+        self.clustering = clustering
 
     def save(self, out_file):
         """ Write a Image masker to a file stream.
@@ -211,3 +167,74 @@ class Image(Masker):
             kwargs["mask_value"] = s.load("mask_value")
             kwargs["shape"] = s.load("shape")
         return kwargs
+
+@jit
+def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
+    """ This partitions an image into a herarchical clustering based on axis-aligned splits.
+    """
+
+    # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
+
+    # q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
+    ind = len(clustering) - 1
+    while len(q) > 0: # q.empty()
+        _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left =  heapq.heappop(q)
+        # _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
+
+        if parent_ind >= 0:
+            clustering[parent_ind, 0 if is_left else 1] = ind + M
+
+        # make sure we line up with a flattened indexing scheme
+        if ind < 0:
+            assert -ind - 1 == xmin * total_ywidth * total_zwidth + ymin * total_zwidth + zmin
+
+        xwidth = xmax - xmin
+        ywidth = ymax - ymin
+        zwidth = zmax - zmin
+        if xwidth == 1 and ywidth == 1 and zwidth == 1:
+            pass
+        else:
+
+            # by default our ranges remain unchanged
+            lxmin = rxmin = xmin
+            lxmax = rxmax = xmax
+            lymin = rymin = ymin
+            lymax = rymax = ymax
+            lzmin = rzmin = zmin
+            lzmax = rzmax = zmax
+
+            # split the xaxis if it is the largest dimension
+            if xwidth >= ywidth and xwidth > 1:
+                xmid = xmin + xwidth // 2
+                lxmax = xmid
+                rxmin = xmid
+
+            # split the yaxis
+            elif ywidth > 1:
+                ymid = ymin + ywidth // 2
+                lymax = ymid
+                rymin = ymid
+
+            # split the zaxis only when the other ranges are already width 1
+            else:
+                zmid = zmin + zwidth // 2
+                lzmax = zmid
+                rzmin = zmid
+
+            lsize = (lxmax - lxmin) * (lymax - lymin) * (lzmax - lzmin)
+            rsize = (rxmax - rxmin) * (rymax - rymin) * (rzmax - rzmin)
+
+            heapq.heappush(q, (-lsize, lxmin, lxmax, lymin, lymax, lzmin, lzmax, ind, True))
+            heapq.heappush(q, (-rsize, rxmin, rxmax, rymin, rymax, rzmin, rzmax, ind, False))
+            # q.put((-lsize, lxmin, lxmax, lymin, lymax, lzmin, lzmax, ind, True))
+            # q.put((-rsize, rxmin, rxmax, rymin, rymax, rzmin, rzmax, ind, False))
+
+        ind -= 1
+
+    # fill in the group sizes
+    for i in range(len(clustering)):
+        li = int(clustering[i, 0])
+        ri = int(clustering[i, 1])
+        lsize = 1 if li < M else clustering[li-M, 3]
+        rsize = 1 if ri < M else clustering[ri-M, 3]
+        clustering[i, 3] = lsize + rsize
