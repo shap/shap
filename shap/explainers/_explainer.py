@@ -53,7 +53,7 @@ class Explainer(Serializable):
             units. For more details on how link functions work see any overview of link functions for generalized
             linear models.
 
-        algorithm : "auto", "permutation", "partition", "tree", "kernel", "sampling", "linear", "deep", or "gradient"
+        algorithm : "auto", "permutation", "partition", "tree", "sampling", "linear", "deep", or "gradient"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
             of these algorithms have various tradeoffs and are preferrable in different situations. By
