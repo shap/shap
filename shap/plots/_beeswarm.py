@@ -887,5 +887,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
     else:
         pl.xlabel(labels['VALUE'], fontsize=13)
+    pl.tight_layout()
     if show:
         pl.show()
