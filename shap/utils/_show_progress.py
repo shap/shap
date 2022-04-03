@@ -1,5 +1,5 @@
 import time
-import tqdm
+from tqdm.auto import tqdm
 
 
 class ShowProgress():
@@ -17,7 +17,7 @@ class ShowProgress():
     
     def __next__(self):
         if self.pbar is None and time.time() - self.start_time > self.start_delay:
-           self.pbar = tqdm.tqdm(total=self.total, initial=self.unshown_count, desc=self.desc, disable=self.silent)
+           self.pbar = tqdm(total=self.total, initial=self.unshown_count, desc=self.desc, disable=self.silent)
            self.pbar.start_t = self.start_time
         if self.pbar is not None:
             self.pbar.update(1)
