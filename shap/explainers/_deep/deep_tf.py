@@ -157,7 +157,7 @@ class TFDeep(Explainer):
                 self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
             else:
                 if type(self.model)is tuple:
-                    sel.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
+                    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
         if not tf.executing_eagerly():
