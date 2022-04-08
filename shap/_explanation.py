@@ -323,7 +323,7 @@ class Explanation(metaclass=MetaExplanation):
             pos += 1
 
             # skip over Ellipsis
-            if t == Ellipsis:
+            if np.any(t == Ellipsis):
                 pos += len(self.shape) - len(item)
                 continue
 
