@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import sklearn.datasets
+import shap
 
 try:
     from urllib.request import urlretrieve
@@ -33,6 +34,18 @@ def boston(display=False): # pylint: disable=unused-argument
     d = sklearn.datasets.load_boston()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
     return df, d.target # pylint: disable=E1101
+
+
+def california(display=False, n_points=None): # pylint: disable=unused-argument
+    """ Return the california housing data in a nice package. """
+
+    d = sklearn.datasets.fetch_california_housing()
+    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
+    target = d.target
+    if n_points is not None:
+        df = shap.utils.sample(df, n_points)
+        target = shap.utils.sample(target, n_points)
+    return df, target # pylint: disable=E1101
 
 
 def linnerud(display=False): # pylint: disable=unused-argument
