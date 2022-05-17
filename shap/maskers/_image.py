@@ -1,11 +1,15 @@
-import queue
 import numpy as np
 from ..utils import assert_import, record_import_error
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 import heapq
 from numba import jit
-from torch import Tensor
+try:
+    torch_installed = False
+    from torch import Tensor
+    torch_installed = True
+except ImportError as e:
+    record_import_error("torch", "torch could not be imported!", e)
 
 # TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
 from numba.core.errors import NumbaPendingDeprecationWarning
@@ -70,7 +74,7 @@ class Image(Masker):
 
     def __call__(self, mask, x):
 
-        if isinstance(x, Tensor):
+        if torch_installed and isinstance(x, Tensor):
             x = x.cpu().numpy()
 
         if np.prod(x.shape) != np.prod(self.input_shape):
