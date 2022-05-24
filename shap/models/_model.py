@@ -1,5 +1,5 @@
 import numpy as np
-from ..utils import record_import_error
+from ..utils import record_import_error, safe_isinstance
 from .._serializable import Serializable, Serializer, Deserializer
 try:
     import torch
