@@ -1,5 +1,5 @@
 import numpy as np
-from ..utils import assert_import, record_import_error
+from ..utils import assert_import, record_import_error, safe_isinstance
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 import heapq
