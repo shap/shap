@@ -2,9 +2,7 @@ import numpy as np
 from ..utils import record_import_error
 from .._serializable import Serializable, Serializer, Deserializer
 try:
-    torch_installed = False
-    from torch import Tensor
-    torch_installed = True
+    import torch
 except ImportError as e:
     record_import_error("torch", "torch could not be imported!", e)
 
@@ -26,7 +24,7 @@ class Model(Serializable):
 
     def __call__(self, *args):
         out = self.inner_model(*args)
-        is_tensor = torch_installed and isinstance(out, Tensor)
+        is_tensor = safe_isinstance(out, "torch.Tensor")
         out = out.cpu().detach().numpy() if is_tensor else np.array(out)
         return out
 
