@@ -5,9 +5,7 @@ from .._serializable import Serializer, Deserializer
 import heapq
 from numba import jit
 try:
-    torch_installed = False
-    from torch import Tensor
-    torch_installed = True
+    import torch
 except ImportError as e:
     record_import_error("torch", "torch could not be imported!", e)
 
@@ -74,7 +72,7 @@ class Image(Masker):
 
     def __call__(self, mask, x):
 
-        if torch_installed and isinstance(x, Tensor):
+        if safe_isinstance(x, "torch.Tensor"):
             x = x.cpu().numpy()
 
         if np.prod(x.shape) != np.prod(self.input_shape):
