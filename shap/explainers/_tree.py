@@ -738,7 +738,12 @@ class TreeEnsemble:
         elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingClassifier"]):
             import sklearn
             self.base_offset = model._baseline_prediction
-            if hasattr(self.base_offset, "__len__") and self.model_output != "raw":
+            has_len = hasattr(self.base_offset, "__len__")
+            # Note for newer sklearn versions, the base_offset is an array even for binary classification
+            if has_len and self.base_offset.shape == (1, 1):
+                self.base_offset = self.base_offset[0, 0]
+                has_len = False
+            if has_len and self.model_output != "raw":
                 raise Exception("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output=\"raw\". See GitHub issue #1028")
             self.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
             self.num_stacked_models = len(model._predictors[0])
