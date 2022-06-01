@@ -226,7 +226,7 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy<1.22'], # <1.22 is because of numba
         install_requires=['numpy<1.22', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', # numpy versions are for numba
-                          'packaging>20.9', 'slicer==0.0.7', 'numba>=0.45.0', 'cloudpickle'],
+                          'packaging>20.9', 'slicer==0.0.7', 'numba>=0.46.0', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
         classifiers=[
