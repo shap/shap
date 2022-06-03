@@ -5,6 +5,7 @@ import json
 from typing import Optional
 
 import numpy as np
+from matplotlib.colors import Colormap
 
 from shap._explanation import Explanation
 from ..utils import ordinal_str
@@ -27,6 +28,7 @@ from ..utils._legacy import kmeans
 
 def image(shap_values: Explanation or np.ndarray,
           pixel_values: Optional[np.ndarray] = None,
+          cmap: Optional[str or Colormap] = colors.red_transparent_blue,
           labels: Optional[list or np.ndarray] = None,
           true_labels: Optional[list] = None,
           width: Optional[int] = 20,
@@ -158,7 +160,7 @@ def image(shap_values: Explanation or np.ndarray,
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
                                     extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row, i + 1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+            im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
             axes[row, i + 1].axis('off')
     if hspace == 'auto':
         fig.tight_layout()
