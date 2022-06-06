@@ -92,7 +92,7 @@ class Linear(Explainer):
         elif issubclass(type(self.masker), maskers.Impute):
             self.feature_perturbation = "correlation_dependent"
         else:
-            raise Exception("The Linear explainer only supports the Independent, Partition, and Impute maskers right now!")
+            raise NotImplementedError("The Linear explainer only supports the Independent, Partition, and Impute maskers right now!")
         data = getattr(self.masker, "data", None)
 
         # convert DataFrame's to numpy arrays
@@ -120,12 +120,12 @@ class Linear(Explainer):
             if safe_isinstance(self.cov, "pandas.core.frame.DataFrame"):
                 self.cov = self.cov.values
         elif data is None:
-            raise Exception("A background data distribution must be provided!")
+            raise ValueError("A background data distribution must be provided!")
         else:
             if sp.sparse.issparse(data):
                 self.mean = np.array(np.mean(data, 0))[0]
                 if self.feature_perturbation != "interventional":
-                    raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
+                    raise NotImplementedError("Only feature_perturbation = 'interventional' is supported for sparse data")
             else:
                 self.mean = np.array(np.mean(data, 0)).flatten() # assumes it is an array
                 if self.feature_perturbation == "correlation_dependent":
@@ -173,7 +173,7 @@ class Linear(Explainer):
             if nsamples != 1000:
                 warnings.warn("Setting nsamples has no effect when feature_perturbation = 'interventional'!")
         else:
-            raise Exception("Unknown type of feature_perturbation provided: " + self.feature_perturbation)
+            raise ValueError("Unknown type of feature_perturbation provided: " + self.feature_perturbation)
 
     def _estimate_transforms(self, nsamples):
         """ Uses block matrix inversion identities to quickly estimate transforms.
@@ -261,7 +261,7 @@ class Linear(Explainer):
                 coef = model.coef_
                 intercept = model.intercept_
         else:
-            raise Exception("An unknown model type was passed: " + str(type(model)))
+            raise ValueError("An unknown model type was passed: " + str(type(model)))
 
         return coef,intercept
 
@@ -300,7 +300,7 @@ class Linear(Explainer):
 
         if self.feature_perturbation == "correlation_dependent":
             if sp.sparse.issparse(X):
-                raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
+                raise NotImplementedError("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
@@ -363,7 +363,7 @@ class Linear(Explainer):
 
         if self.feature_perturbation == "correlation_dependent":
             if sp.sparse.issparse(X):
-                raise Exception("Only feature_perturbation = 'interventional' is supported for sparse data")
+                raise ValueError("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 

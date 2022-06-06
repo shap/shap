@@ -1,5 +1,6 @@
 import numpy as np
 from ..utils import assert_import, record_import_error, safe_isinstance
+from ..utils._exceptions import DimensionError
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 import heapq
@@ -76,7 +77,7 @@ class Image(Masker):
             x = x.cpu().numpy()
 
         if np.prod(x.shape) != np.prod(self.input_shape):
-            raise Exception("The length of the image to be masked must match the shape given in the " + \
+            raise DimensionError("The length of the image to be masked must match the shape given in the " + \
                             "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
                             " != "+" * ".join([str(i) for i in self.input_shape]))
 
