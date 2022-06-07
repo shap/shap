@@ -112,10 +112,9 @@ def image(shap_values: Explanation or np.ndarray,
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) +1, figsize=fig_size)
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
     if len(axes.shape) == 1:
-         print(axes.shape)
-         axes = axes.reshape(2, 1)
+        axes = axes.reshape(1, axes.size)
     for row in range(x.shape[0]):
         x_curr = x[row].copy()
 
@@ -146,11 +145,10 @@ def image(shap_values: Explanation or np.ndarray,
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-#Plotting of original image
-        # axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
-        # if true_labels:
-        #     axes[row, 0].set_title(true_labels[row], **label_kwargs)
-        # axes[row, 0].axis('off')
+        axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
+        if true_labels:
+            axes[row, 0].set_title(true_labels[row], **label_kwargs)
+        axes[row, 0].axis('off')
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
@@ -158,15 +156,12 @@ def image(shap_values: Explanation or np.ndarray,
         max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row, 0].set_title(labels[row, i], **label_kwargs)
+                axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row, 0].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
+            axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
                                     extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row, 0].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
-            print(axes.shape)
-            axes[row, 0].axis('off')
- #           axes[row, 1].axis('off')
-            print(axes.shape)
+            im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
+            axes[row, i + 1].axis('off')
     if hspace == 'auto':
         fig.tight_layout()
     else:
@@ -174,9 +169,6 @@ def image(shap_values: Explanation or np.ndarray,
     cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal",
                       aspect=fig_size[0] / aspect)
     cb.outline.set_visible(False)
-#    axes[row, 1].remove()
-#    axes[row, 1].axis('off')
-
     if show:
         pl.show()
 
