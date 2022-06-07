@@ -160,7 +160,7 @@ def image(shap_values: Explanation or np.ndarray,
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
                                     extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin='Speaks against model-predicted class', vmax='Speaks for model-predicted class')
+            im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
             axes[row, i + 1].axis('off')
     if hspace == 'auto':
         fig.tight_layout()
