@@ -24,7 +24,8 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True, **kwargs):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True,
+                 seed=None, **kwargs):
         """ Build a new explainer for the passed model.
 
         Parameters
@@ -68,6 +69,10 @@ class Explainer(Serializable):
             be the names of all the output classes. This parameter is optional. When output_names is None then
             the Explanation objects produced by this explainer will not have any output_names, which could effect
             downstream plots.
+
+        seed: None or int
+            seed for reproducibility
+
         """
 
         self.model = model
@@ -173,7 +178,7 @@ class Explainer(Serializable):
                 explainers.Exact.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "permutation":
                 self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, seed=seed, **kwargs)
             elif algorithm == "partition":
                 self.__class__ = explainers.Partition
                 explainers.Partition.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
@@ -338,6 +343,10 @@ class Explainer(Serializable):
                 else:
                     tmp.append(v.reshape(*mask_shapes[i][j]))
             arg_values[j] = pack_values(tmp)
+
+            if feature_names[j] is None:
+                feature_names[j] = ["Feature " + str(i) for i in range(data.shape[1])]
+
 
             # build an explanation object for this input argument
             out.append(Explanation(
