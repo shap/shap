@@ -28,13 +28,13 @@ from ..utils._legacy import kmeans
 
 def image(shap_values: Explanation or np.ndarray,
           pixel_values: Optional[np.ndarray] = None,
-          cmap: Optional[str or Colormap] = colors.red_transparent_blue,
           labels: Optional[list or np.ndarray] = None,
           true_labels: Optional[list] = None,
           width: Optional[int] = 20,
           aspect: Optional[float] = 0.2,
           hspace: Optional[float] = 0.2,
           labelpad: Optional[float] = None,
+          cmap: Optional[str or Colormap] = colors.red_transparent_blue,
           show: Optional[bool] = True):
     """ Plots SHAP values for image inputs.
 
