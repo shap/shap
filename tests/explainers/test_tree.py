@@ -392,9 +392,9 @@ def test_catboost():
     catboost = pytest.importorskip("catboost")
     # train catboost model
     X, y = shap.datasets.california(n_points=500)
-    X["RAD"] = X["RAD"].astype(np.int)
+    X['IsOld'] = (X['HouseAge'] > 30).astype(str)
     model = catboost.CatBoostRegressor(iterations=30, learning_rate=0.1, random_seed=123)
-    p = catboost.Pool(X, y, cat_features=["RAD"])
+    p = catboost.Pool(X, y, cat_features=["IsOld"])
     model.fit(p, verbose=False, plot=False)
 
     # explain the model's predictions using SHAP values
