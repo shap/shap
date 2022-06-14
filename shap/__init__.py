@@ -25,9 +25,19 @@ from .explainers._permutation import Permutation as PermutationExplainer
 from .explainers._additive import Additive as AdditiveExplainer
 from .explainers import other
 
+_no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
+                         "to fix this."
+
+
 # plotting (only loaded if matplotlib is present)
 def unsupported(*args, **kwargs):
-    warnings.warn("matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this.")
+    warnings.warn(_no_matplotlib_warning)
+
+
+class UnsupportedModule(object):
+    def __getattribute__(self, item):
+        raise ValueError(_no_matplotlib_warning)
+
 
 try:
     import matplotlib
@@ -62,6 +72,10 @@ else:
     bar_plot = unsupported
     waterfall_plot = unsupported
     text_plot = unsupported
+    # If matplotlib is available, then the plots submodule will be directly available.
+    # If not, we need to define something that will issue a meaningful warning message
+    # (rather than ModuleNotFound).
+    plots = UnsupportedModule()
 
 
 # other stuff :)
