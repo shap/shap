@@ -87,7 +87,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         f = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = pl.subplot(1,len(inds),i+1)
-            scatter(shap_values[:,i], show=False, ax=ax, ymin=ymin, ymax=ymax)
+            scatter(shap_values[:,i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
             if overlay is not None:
                 line_styles = ["solid", "dotted", "dashed"]
                 for j, name in enumerate(overlay):
