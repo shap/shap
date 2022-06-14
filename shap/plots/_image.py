@@ -5,6 +5,7 @@ import json
 from typing import Optional
 
 import numpy as np
+from matplotlib.colors import Colormap
 
 from shap._explanation import Explanation
 from ..utils import ordinal_str
@@ -33,6 +34,7 @@ def image(shap_values: Explanation or np.ndarray,
           aspect: Optional[float] = 0.2,
           hspace: Optional[float] = 0.2,
           labelpad: Optional[float] = None,
+          cmap: Optional[str or Colormap] = colors.red_transparent_blue,
           show: Optional[bool] = True):
     """ Plots SHAP values for image inputs.
 
@@ -158,7 +160,7 @@ def image(shap_values: Explanation or np.ndarray,
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
                                     extent=(-1, sv.shape[1], sv.shape[0], -1))
-            im = axes[row, i + 1].imshow(sv, cmap=colors.red_transparent_blue, vmin=-max_val, vmax=max_val)
+            im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
             axes[row, i + 1].axis('off')
     if hspace == 'auto':
         fig.tight_layout()
