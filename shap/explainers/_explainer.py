@@ -344,6 +344,10 @@ class Explainer(Serializable):
                     tmp.append(v.reshape(*mask_shapes[i][j]))
             arg_values[j] = pack_values(tmp)
 
+            if feature_names[j] is None:
+                feature_names[j] = ["Feature " + str(i) for i in range(data.shape[1])]
+
+
             # build an explanation object for this input argument
             out.append(Explanation(
                 arg_values[j], expected_values, data,
