@@ -124,8 +124,8 @@ def waterfall(shap_values, max_display=10, show=True):
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            if isinstance(features[order[i]], int) or isinstance(features[order[i]], float):
-                yticklabels[rng[i]] = format_value(features[order[i]], "%0.03f") + " = " + feature_names[order[i]]
+            if np.issubdtype(type(features[order[i]]), np.number):
+                yticklabels[rng[i]] = format_value(float(features[order[i]]), "%0.03f") + " = " + feature_names[order[i]]
             else:
                 yticklabels[rng[i]] = features[order[i]] + " = " + feature_names[order[i]]
 

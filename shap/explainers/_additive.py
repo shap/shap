@@ -14,7 +14,7 @@ class Additive(Explainer):
     you will get incorrect answers that fail additivity).
     """
 
-    def __init__(self, model, masker, link=None, feature_names=None):
+    def __init__(self, model, masker, link=None, feature_names=None, linearize_link=True):
         """ Build an Additive explainer for the given model using the given masker object.
 
         Parameters
@@ -31,7 +31,7 @@ class Additive(Explainer):
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
         """
-        super(Additive, self).__init__(model, masker, feature_names=feature_names)
+        super(Additive, self).__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
         
 
@@ -55,7 +55,7 @@ class Additive(Explainer):
         assert safe_isinstance(self.masker, "shap.maskers.Independent"), "The Additive explainer only supports the Tabular masker at the moment!"
 
         # pre-compute per-feature offsets
-        fm = MaskedModel(self.model, self.masker, self.link, np.zeros(self.masker.shape[1]))
+        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, np.zeros(self.masker.shape[1]))
         masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=np.bool)
         for i in range(1, self.masker.shape[1]+1):
             masks[i,i-1] = False
