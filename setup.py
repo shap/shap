@@ -224,8 +224,8 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         ],
         package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
         cmdclass={'build_ext': build_ext},
-        setup_requires=['numpy<1.22'], # <1.22 is because of numba
-        install_requires=['numpy<1.22', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0', # numpy versions are for numba
+        setup_requires=['numpy'],
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
                           'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
