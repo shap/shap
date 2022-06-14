@@ -397,7 +397,7 @@ def decision(
         feature_names = [labels['FEATURE'] % str(i) for i in range(feature_count)]
     elif len(feature_names) != feature_count:
         raise ValueError("The feature_names arg must include all features represented in shap_values.")
-    elif not isinstance(feature_names, list):
+    elif not isinstance(feature_names, (list, np.ndarray)):
         raise TypeError("The feature_names arg requires a list or numpy array.")
 
     # transform interactions cube to a matrix and generate interaction names.

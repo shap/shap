@@ -466,11 +466,11 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         return s
 
 
-    xcenter = round((xmax + xmin) / 2, round(1-np.log10(xmax - xmin + 1e-8)))
+    xcenter = round((xmax + xmin) / 2, int(round(1-np.log10(xmax - xmin + 1e-8))))
     s += draw_tick_mark(xcenter)
     #    np.log10(xmax - xmin)
 
-    tick_interval = round((xmax - xmin) / 7, round(1-np.log10(xmax - xmin + 1e-8)))
+    tick_interval = round((xmax - xmin) / 7, int(round(1-np.log10(xmax - xmin + 1e-8))))
 
     #tick_interval = (xmax - xmin) / 7
     side_buffer = (xmax - xmin) / 14
