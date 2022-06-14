@@ -397,9 +397,11 @@ class Kernel(Explainer):
 
     @staticmethod
     def not_equal(i, j):
-        if isinstance(i, str) or isinstance(j, str):
+        number_types = (int, float, np.number)
+        if isinstance(i, number_types) and isinstance(j, number_types):
+            return 0 if np.isclose(i, j, equal_nan=True) else 1
+        else:
             return 0 if i == j else 1
-        return 0 if np.isclose(i, j, equal_nan=True) else 1
 
     def varying_groups(self, x):
         if not sp.sparse.issparse(x):
