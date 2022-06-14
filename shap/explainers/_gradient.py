@@ -66,7 +66,7 @@ class Gradient(Explainer):
             except:
                 framework = 'tensorflow'
 
-         if isinstance(data, pd.DataFrame):
+        if isinstance(data, pd.DataFrame):
             self.features = data.columns.values
         else:
             self.features = list(range(data[0].shape[1]))
