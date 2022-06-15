@@ -28,6 +28,12 @@ jobs:
           python setup.py develop
           pip install .[test]
           pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint sentencepiece
+
+      # ===== STATIC CHECKERS ======
+      - name: isort
+        run: isort . --check-only
+
+      # ===== RUN TESTS =====
       - name: Test with pytest
         run: |
           python -m pytest tests
