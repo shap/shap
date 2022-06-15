@@ -1,6 +1,3 @@
-from multiprocessing.sharedctypes import Value
-
-
 class DimensionError(Exception):
     """
     Used for instances where dimensions are either
