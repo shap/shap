@@ -1,5 +1,6 @@
-import numpy as np
 import numba
+import numpy as np
+
 
 @numba.jit
 def identity(x):

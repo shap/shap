@@ -1,8 +1,10 @@
+import gc
+
+import numpy as np
 import sklearn
 import sklearn.ensemble
-import gc
 from sklearn.preprocessing import StandardScaler
-import numpy as np
+
 
 class KerasWrap(object):
     """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
@@ -65,8 +67,8 @@ def corrgroups60__gbm():
 def corrgroups60__ffnn():
     """ 4-Layer Neural Network
     """
-    from keras.models import Sequential
     from keras.layers import Dense
+    from keras.models import Sequential
 
     model = Sequential()
     model.add(Dense(32, activation='relu', input_dim=60))
@@ -114,8 +116,8 @@ def independentlinear60__gbm():
 def independentlinear60__ffnn():
     """ 4-Layer Neural Network
     """
-    from keras.models import Sequential
     from keras.layers import Dense
+    from keras.models import Sequential
 
     model = Sequential()
     model.add(Dense(32, activation='relu', input_dim=60))
@@ -189,8 +191,8 @@ def cric__gbm():
 def cric__ffnn():
     """ 4-Layer Neural Network
     """
-    from keras.models import Sequential
     from keras.layers import Dense, Dropout
+    from keras.models import Sequential
 
     model = Sequential()
     model.add(Dense(10, activation='relu', input_dim=336))

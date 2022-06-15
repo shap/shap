@@ -1,11 +1,14 @@
-import cv2
 import json
-import matplotlib.pyplot as plt 
-import numpy as np
 import os
-import requests
-import shap
 from textwrap import wrap
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import requests
+
+import shap
+
 
 def is_empty(path):
     """ Function to check if folder at given path exists and is not empty.

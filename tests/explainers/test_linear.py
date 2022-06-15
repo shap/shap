@@ -3,8 +3,9 @@
 
 # pylint: disable=missing-function-docstring
 import numpy as np
-import scipy
 import pytest
+import scipy
+
 import shap
 
 

@@ -1,13 +1,14 @@
+import json
 import random
 import string
 import warnings
-import json
 from typing import Optional
 
 import numpy as np
 from matplotlib.colors import Colormap
 
 from shap._explanation import Explanation
+
 from ..utils import ordinal_str
 
 try:
@@ -15,12 +16,11 @@ try:
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
 try:
-    from IPython.core.display import display, HTML
+    from IPython.core.display import HTML, display
 except ImportError:
     warnings.warn("IPython could not be loaded!")
-from . import colors
 from ..utils._legacy import kmeans
-
+from . import colors
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object

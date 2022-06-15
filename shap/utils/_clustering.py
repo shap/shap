@@ -1,9 +1,11 @@
+import warnings
+
 import numpy as np
 import scipy as sp
-from scipy.spatial.distance import pdist
-from numba import jit
 import sklearn
-import warnings
+from numba import jit
+from scipy.spatial.distance import pdist
+
 from ._general import safe_isinstance
 from ._show_progress import show_progress
 
@@ -99,7 +101,7 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     """
     
     import xgboost
-    
+
     # pick our train/text split
     X_train,X_test,y_train,y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 

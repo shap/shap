@@ -1,27 +1,27 @@
 from __future__ import print_function
-from .. import datasets
-from . import metrics
-from . import models
-from . import methods
-from .. import __version__
-import numpy as np
-import sklearn
+
+import copy
+import itertools
 import os
 import pickle
+import random
+import subprocess
 import sys
 import time
-import subprocess
 from multiprocessing import Pool
-import itertools
-import copy
-import random
-import time
+
+import numpy as np
+import sklearn
+
+from .. import __version__, datasets
+from . import methods, metrics, models
+
 try:
     from queue import Queue
 except ImportError:
     from Queue import Queue
-from threading import Thread, Lock
 
+from threading import Lock, Thread
 
 regression_metrics = [
     "local_accuracy",

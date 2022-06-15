@@ -121,9 +121,11 @@
 
 
 
+from warnings import warn
+
 import numpy as np
 from scipy import linalg
-from warnings import warn
+
 
 def rgb2xyz(rgb):
     """RGB to XYZ color space conversion.

@@ -1,12 +1,16 @@
-import matplotlib.pyplot as plt 
-import pandas as pd 
-import numpy as np 
-import itertools as it 
-import sklearn 
-import shap 
+import itertools as it
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import sklearn
 from sklearn.model_selection import train_test_split
-from shap.utils import safe_isinstance, MaskedModel
+
+import shap
+from shap.utils import MaskedModel, safe_isinstance
+
 from . import perturbation
+
 
 def update(model, attributions, X, y, masker, sort_order, perturbation_method, scores):
     metric = perturbation_method + ' ' + sort_order

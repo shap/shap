@@ -1,14 +1,16 @@
-import numpy as np
 import warnings
+
+import numpy as np
+
 try:
-    import matplotlib.pyplot as plt
     import matplotlib
+    import matplotlib.pyplot as plt
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from ..utils import safe_isinstance, format_value
+from ..utils import format_value, safe_isinstance
 from . import colors
+from ._labels import labels
 
 
 # TODO: If we make a JS version of this plot then we could let users click on a bar and then see the dependence

@@ -1,8 +1,9 @@
 from urllib.error import HTTPError
+
 import numpy as np
 import pytest
-import shap
 
+import shap
 
 # pylint: disable=import-error, import-outside-toplevel, no-name-in-module, import-error
 
@@ -10,12 +11,11 @@ def test_tf_keras_mnist_cnn():
     """ This is the basic mnist cnn example from keras.
     """
     tf = pytest.importorskip('tensorflow')
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
-    from tensorflow.keras.layers import Conv2D, MaxPooling2D
+    from tensorflow.compat.v1 import ConfigProto, InteractiveSession
     from tensorflow.keras import backend as K
-    from tensorflow.compat.v1 import ConfigProto
-    from tensorflow.compat.v1 import InteractiveSession
+    from tensorflow.keras.layers import (Activation, Conv2D, Dense, Dropout,
+                                         Flatten, MaxPooling2D)
+    from tensorflow.keras.models import Sequential
 
     config = ConfigProto()
     config.gpu_options.allow_growth = True

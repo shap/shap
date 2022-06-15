@@ -1,13 +1,15 @@
 
-import pandas as pd
-import numpy as np
-import scipy as sp
-import sys
-import warnings
 import copy
 import operator
+import sys
+import warnings
+
+import numpy as np
+import pandas as pd
+import scipy as sp
 import sklearn
-from slicer import Slicer, Alias, Obj
+from slicer import Alias, Obj, Slicer
+
 # from ._order import Order
 from .utils._general import OpChain
 

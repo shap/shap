@@ -1,6 +1,8 @@
-import numpy as np
 import multiprocessing
 import sys
+
+import numpy as np
+
 from .explainer import Explainer
 
 try:

@@ -1,12 +1,16 @@
-import numpy as np
-import warnings
-from . import colors
-from ..utils import ordinal_str
+import json
 import random
 import string
-import json
+import warnings
+
+import numpy as np
+
+from ..utils import ordinal_str
+from . import colors
+
 try:
-    from IPython.core.display import display as ipython_display, HTML
+    from IPython.core.display import HTML
+    from IPython.core.display import display as ipython_display
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -821,12 +825,13 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
              + "</div>" \
              + "</div>"
 
-    from IPython.core.display import display, HTML
+    from IPython.core.display import HTML, display
     return display(HTML(out))
 
 def text_to_text(shap_values):        
 
-    from IPython.core.display import display, HTML
+    from IPython.core.display import HTML, display
+
     # unique ID added to HTML elements and function to avoid collision of differnent instances
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
 

@@ -1,4 +1,5 @@
 import types
+
 from ._masker import Masker
 
 

@@ -1,9 +1,11 @@
+import warnings
+
 import numpy as np
 import scipy as sp
-import warnings
-from ._explainer import Explainer
-from ..utils import safe_isinstance, MaskedModel
+
 from .. import maskers
+from ..utils import MaskedModel, safe_isinstance
+from ._explainer import Explainer
 
 
 class Additive(Explainer):

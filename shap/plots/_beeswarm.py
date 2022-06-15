@@ -4,19 +4,22 @@
 from __future__ import division
 
 import warnings
+
 import numpy as np
 import scipy as sp
 from scipy.stats import gaussian_kde
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
-from ..utils import safe_isinstance, OpChain, format_value
-from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
 from .. import Explanation
+from ..utils import OpChain, format_value, safe_isinstance
+from . import colors
+from ._labels import labels
+from ._utils import (convert_color, convert_ordering, get_sort_order,
+                     merge_nodes, sort_inds)
 
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left

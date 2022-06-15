@@ -1,16 +1,16 @@
+import copy
+import importlib
+import os
 import re
-import pandas as pd
-import numpy as np
-import scipy as sp
-from scipy.spatial.distance import pdist
 import sys
 import warnings
-import sklearn
-import importlib
-import copy
 from contextlib import contextmanager
-import sys, os
 
+import numpy as np
+import pandas as pd
+import scipy as sp
+import sklearn
+from scipy.spatial.distance import pdist
 
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")

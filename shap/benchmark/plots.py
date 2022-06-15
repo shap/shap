@@ -1,17 +1,18 @@
-import numpy as np
-from .experiments import run_experiments
-from ..plots import colors
-from .. import __version__
-from . import models
-from . import methods
-from . import metrics
-import sklearn
-import io
 import base64
+import io
 import os
+
+import numpy as np
+import sklearn
+
+from .. import __version__
+from ..plots import colors
+from . import methods, metrics, models
+from .experiments import run_experiments
+
 try:
-    import matplotlib.pyplot as pl
     import matplotlib
+    import matplotlib.pyplot as pl
 except ImportError:
     pass
 
@@ -423,6 +424,7 @@ def make_grid(scores, dataset, model, normalize=True, transform=True):
     return row_keys, col_keys, data
 
 from matplotlib.colors import LinearSegmentedColormap
+
 red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
     'red': ((0.0, 198./255, 198./255),
             (1.0, 5./255, 5./255)),
@@ -437,6 +439,8 @@ red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
               (1.0, 1, 1))
 })
 from IPython.core.display import HTML
+
+
 def plot_grids(dataset, model_names, out_dir=None):
 
     if out_dir is not None:

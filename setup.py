@@ -1,13 +1,14 @@
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext as _build_ext
-import os
-import re
 import codecs
+import os
 import platform
+import re
+import subprocess
+import sys
 from distutils.sysconfig import get_config_var, get_python_inc
 from distutils.version import LooseVersion
-import sys
-import subprocess
+
+from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext as _build_ext
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload

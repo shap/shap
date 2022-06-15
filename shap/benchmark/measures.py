@@ -1,9 +1,9 @@
-import numpy as np
-from tqdm.autonotebook import tqdm
 import gc
 import warnings
-import sklearn.utils
 
+import numpy as np
+import sklearn.utils
+from tqdm.autonotebook import tqdm
 
 _remove_cache = {}
 def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):

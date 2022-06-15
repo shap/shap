@@ -1,22 +1,22 @@
-import types
 import copy
 import inspect
-from ..utils import MaskedModel
-import numpy as np
-import warnings
-import time
-from tqdm.auto import tqdm
-import queue
-from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain
-from .. import Explanation
-from .. import maskers
-from ._explainer import Explainer
-from .. import links
-import cloudpickle
 import pickle
+import queue
+import time
+import types
+import warnings
+
+import cloudpickle
+import numpy as np
+from numba import jit
+from tqdm.auto import tqdm
+
+from .. import Explanation, links, maskers
 from ..maskers import Masker
 from ..models import Model
-from numba import jit
+from ..utils import (MaskedModel, OpChain, assert_import, make_masks,
+                     record_import_error, safe_isinstance)
+from ._explainer import Explainer
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object

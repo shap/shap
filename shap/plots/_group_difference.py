@@ -1,8 +1,10 @@
-import numpy as np
 import warnings
+
+import numpy as np
+
 try:
-    import matplotlib.pyplot as pl
     import matplotlib
+    import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass

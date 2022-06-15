@@ -1,15 +1,19 @@
-from ..utils import convert_name
-from .. import Explanation
-from ..plots.colors import light_blue_rgb, blue_rgb, red_rgb, red_blue_transparent
 import warnings
+
+from .. import Explanation
+from ..plots.colors import (blue_rgb, light_blue_rgb, red_blue_transparent,
+                            red_rgb)
+from ..utils import convert_name
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
+
 
 def compute_bounds(xmin, xmax, xv):
     """ Handles any setting of xmax and xmin.

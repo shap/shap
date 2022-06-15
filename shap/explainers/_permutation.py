@@ -1,18 +1,20 @@
 import functools
+import pickle
 import types
-from ..utils import partition_tree_shuffle, MaskedModel
-from .._explanation import Explanation
-from ._explainer import Explainer
+import warnings
+
+import cloudpickle
 import numpy as np
 import pandas as pd
 import scipy as sp
-import pickle
-import cloudpickle
-import warnings
-from .. import links
-from .. import maskers
+
+from .. import links, maskers
+from .._explanation import Explanation
 from ..maskers import Masker
 from ..models import Model
+from ..utils import MaskedModel, partition_tree_shuffle
+from ._explainer import Explainer
+
 
 class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.

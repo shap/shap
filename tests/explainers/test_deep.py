@@ -2,10 +2,12 @@
 """
 
 from urllib.error import HTTPError
-from packaging import version
+
 import numpy as np
 import pandas as pd
 import pytest
+from packaging import version
+
 import shap
 from shap import DeepExplainer
 
@@ -43,12 +45,11 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     tf = pytest.importorskip('tensorflow')
 
     from tensorflow import keras
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
-    from tensorflow.keras.layers import Conv2D, MaxPooling2D
+    from tensorflow.compat.v1 import ConfigProto, InteractiveSession
     from tensorflow.keras import backend as K
-    from tensorflow.compat.v1 import ConfigProto
-    from tensorflow.compat.v1 import InteractiveSession
+    from tensorflow.keras.layers import (Activation, Conv2D, Dense, Dropout,
+                                         Flatten, MaxPooling2D)
+    from tensorflow.keras.models import Sequential
 
     config = ConfigProto()
     config.gpu_options.allow_growth = True
@@ -131,8 +132,8 @@ def test_tf_keras_linear():
     """
     tf = pytest.importorskip('tensorflow')
 
-    from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras.models import Model
     from tensorflow.keras.optimizers import SGD
 
     tf.compat.v1.disable_eager_execution()
@@ -179,10 +180,8 @@ def test_tf_keras_imdb_lstm():
         pytest.skip()
 
     from tensorflow.keras.datasets import imdb
+    from tensorflow.keras.layers import LSTM, Dense, Embedding
     from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense
-    from tensorflow.keras.layers import LSTM
-    from tensorflow.keras.layers import Embedding
     from tensorflow.keras.preprocessing import sequence
 
     tf.compat.v1.disable_eager_execution()
@@ -349,10 +348,10 @@ def test_pytorch_custom_nested_models():
     """
     torch = pytest.importorskip('torch')
 
+    from sklearn.datasets import load_boston
     from torch import nn
     from torch.nn import functional as F
-    from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from torch.utils.data import DataLoader, TensorDataset
 
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
@@ -451,10 +450,10 @@ def test_pytorch_single_output():
     """
     torch = pytest.importorskip('torch')
 
+    from sklearn.datasets import load_boston
     from torch import nn
     from torch.nn import functional as F
-    from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from torch.utils.data import DataLoader, TensorDataset
 
     X, y = load_boston(return_X_y=True)
     num_features = X.shape[1]
@@ -525,10 +524,10 @@ def test_pytorch_multiple_inputs():
     def _run_pytorch_multiple_inputs_test(disconnected):
         """ Testing multiple inputs
         """
+        from sklearn.datasets import load_boston
         from torch import nn
         from torch.nn import functional as F
-        from torch.utils.data import TensorDataset, DataLoader
-        from sklearn.datasets import load_boston
+        from torch.utils.data import DataLoader, TensorDataset
         torch.manual_seed(1)
         X, y = load_boston(return_X_y=True)
         num_features = X.shape[1]

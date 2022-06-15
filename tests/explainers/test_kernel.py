@@ -1,8 +1,10 @@
 import numpy as np
-import scipy as sp
 import pandas as pd
+import scipy as sp
 import sklearn
+
 import shap
+
 
 def test_null_model_small():
     """ Test a small null model.

@@ -1,10 +1,11 @@
-import pickle
 #import types
 import inspect
 import logging
+import pickle
+
+import cloudpickle
 #import warnings
 import numpy as np
-import cloudpickle
 
 log = logging.getLogger('shap')
 

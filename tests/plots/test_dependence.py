@@ -1,7 +1,9 @@
 import matplotlib
 import numpy as np
+
 matplotlib.use('Agg')
-import shap # pylint: disable=wrong-import-position
+import shap  # pylint: disable=wrong-import-position
+
 
 def test_random_dependence():
     """ Make sure a dependence plot does not crash.

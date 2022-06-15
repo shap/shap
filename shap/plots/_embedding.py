@@ -1,15 +1,18 @@
+import warnings
+
 import numpy as np
 import sklearn
-import warnings
+
 try:
-    import matplotlib.pyplot as pl
     import matplotlib
+    import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
 from ..utils import convert_name
+from . import colors
+from ._labels import labels
+
 
 def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
     """ Use the SHAP values as an embedding which we project to 2D for visualization.

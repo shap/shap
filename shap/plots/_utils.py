@@ -1,7 +1,8 @@
+import numpy as np
+
 from .. import Explanation
 from ..utils import OpChain
 from . import colors
-import numpy as np
 
 
 def convert_color(color):

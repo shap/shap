@@ -1,10 +1,13 @@
-import re
 import math
+import re
+
 import numpy as np
-from ._masker import Masker
-from .._serializable import Serializer, Deserializer
+
+from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS, getattr_silent
+from ..utils.transformers import (SENTENCEPIECE_TOKENIZERS, getattr_silent,
+                                  parse_prefix_suffix_for_tokenizer)
+from ._masker import Masker
 
 
 class Text(Masker):

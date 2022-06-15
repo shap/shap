@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+
 import shap
-from .utils import explainer # (pytest fixture do not remove) pylint: disable=unused-import
+
+from .utils import \
+    explainer  # (pytest fixture do not remove) pylint: disable=unused-import
 
 
 @pytest.mark.mpl_image_compare

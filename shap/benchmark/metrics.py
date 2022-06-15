@@ -1,17 +1,16 @@
-from .. import LinearExplainer
-from .. import KernelExplainer
-from .. import SamplingExplainer
-from ..explainers import other
-from .. import __version__
-from . import measures
-from . import methods
-import sklearn
-import numpy as np
 import copy
 import functools
-import time
 import hashlib
 import os
+import time
+
+import numpy as np
+import sklearn
+
+from .. import KernelExplainer, LinearExplainer, SamplingExplainer, __version__
+from ..explainers import other
+from . import measures, methods
+
 try:
     import dill as pickle
 except Exception:

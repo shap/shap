@@ -1,19 +1,16 @@
 import copy
 import time
+
 import numpy as np
 import scipy as sp
-from .. import maskers
-from .. import links
+
+from .. import explainers, links, maskers, models
+from .._explanation import Explanation
+from .._serializable import Deserializer, Serializable, Serializer
+from ..maskers import Masker
+from ..models import Model
 from ..utils import safe_isinstance, show_progress
 from ..utils.transformers import is_transformers_lm
-from .. import models
-from ..models import Model
-from ..maskers import Masker
-from .._explanation import Explanation
-from .._serializable import Serializable
-from .. import explainers
-from .._serializable import Serializer, Deserializer
-
 
 
 class Explainer(Serializable):

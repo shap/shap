@@ -1,5 +1,7 @@
-from .._explainer import Explainer
 import numpy as np
+
+from .._explainer import Explainer
+
 try:
     import lime
     import lime.lime_tabular    

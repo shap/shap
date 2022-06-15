@@ -1,10 +1,14 @@
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
-from ..explainers._explainer import Explainer
-from ..explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
-from .._explanation import Explanation
 from packaging import version
+
+from .._explanation import Explanation
+from ..explainers._explainer import Explainer
+from ..explainers.tf_utils import (_get_graph, _get_model_inputs,
+                                   _get_model_output, _get_session)
+
 keras = None
 tf = None
 torch = None

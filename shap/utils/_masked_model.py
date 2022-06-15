@@ -1,7 +1,9 @@
 import copy
+
 import numpy as np
 import scipy.sparse
 from numba import jit
+
 from .. import links
 
 
