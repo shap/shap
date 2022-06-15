@@ -1,5 +1,4 @@
 import copy
-from sqlite3 import NotSupportedError
 import time
 import numpy as np
 import scipy as sp
