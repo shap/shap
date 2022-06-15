@@ -324,7 +324,7 @@ class Explanation(metaclass=MetaExplanation):
             pos += 1
 
             # skip over Ellipsis
-            if t == Ellipsis:
+            if t is Ellipsis:
                 pos += len(self.shape) - len(item)
                 continue
 
