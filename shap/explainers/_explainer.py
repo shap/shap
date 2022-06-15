@@ -1,4 +1,5 @@
 import copy
+from sqlite3 import NotSupportedError
 import time
 import numpy as np
 import scipy as sp
@@ -13,7 +14,7 @@ from .._explanation import Explanation
 from .._serializable import Serializable
 from .. import explainers
 from .._serializable import Serializer, Deserializer
-
+from ..utils._exceptions import InvalidAlgorithmError
 
 
 class Explainer(Serializable):
@@ -190,7 +191,7 @@ class Explainer(Serializable):
                 self.__class__ = explainers.Deep
                 explainers.Deep.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
-                raise ValueError("Unknown algorithm type passed: %s!" % algorithm)
+                raise InvalidAlgorithmError("Unknown algorithm type passed: %s!" % algorithm)
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",

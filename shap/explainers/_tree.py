@@ -11,7 +11,7 @@ from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._legacy import DenseData
-from ..utils._exceptions import InvalidMaskerError, ExplainerError
+from ..utils._exceptions import InvalidMaskerError, ExplainerError, InvalidFeaturePerturbationError, InvalidModelError
 from .._explanation import Explanation
 from .. import maskers
 import warnings
@@ -127,7 +127,7 @@ class Tree(Explainer):
                 raise ValueError("The feature_dependence option has been renamed to feature_perturbation! " \
                     "Please update the option name before calling TreeExplainer. See GitHub issue #882.")
         if feature_perturbation == "independent":
-            raise ValueError("feature_perturbation = \"independent\" is not a valid option value, please use " \
+            raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
 
@@ -153,7 +153,7 @@ class Tree(Explainer):
         self.approximate = approximate
 
         if feature_perturbation not in feature_perturbation_codes:
-            raise ValueError("Invalid feature_perturbation option!")
+            raise InvalidFeaturePerturbationError("Invalid feature_perturbation option!")
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":
@@ -990,7 +990,7 @@ class TreeEnsemble:
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
         else:
-            raise ExplainerError("Model type not yet supported by TreeExplainer: " + str(type(model)))
+            raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
@@ -1062,7 +1062,7 @@ class TreeEnsemble:
             else:
                 raise NotImplementedError("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         else:
-            raise TypeError("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
+            raise ValueError("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
 
         return transform
 

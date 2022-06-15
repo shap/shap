@@ -4,7 +4,7 @@ import numpy as np
 from numba import jit
 from .. import utils
 from ..utils import safe_isinstance, MaskedModel
-from ..utils._exceptions import DimensionError
+from ..utils._exceptions import DimensionError, InvalidClusteringError
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 
@@ -71,7 +71,7 @@ class Tabular(Masker):
             elif safe_isinstance(clustering, "numpy.ndarray"):
                 self.clustering = clustering
             else:
-                raise ValueError(
+                raise InvalidClusteringError(
                     "Unknown clustering given! Make sure you pass a distance metric as a string, or a clustering as a numpy.ndarray."
                 )
         else:
