@@ -43,8 +43,7 @@ def waterfall(shap_values, max_display=10, show=True):
         plt.ioff()
 
     base_values = shap_values.base_values
-
-    features = shap_values.data
+    features = shap_values.display_data if shap_values.display_data is not None else shap_values.data
     feature_names = shap_values.feature_names
     lower_bounds = getattr(shap_values, "lower_bounds", None)
     upper_bounds = getattr(shap_values, "upper_bounds", None)
