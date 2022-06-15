@@ -6,7 +6,6 @@ import numpy as np
 import scipy
 import pytest
 import shap
-from shap.utils._exceptions import NotImplementedError
 
 def test_tied_pair():
     np.random.seed(0)
