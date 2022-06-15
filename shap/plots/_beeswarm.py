@@ -42,27 +42,28 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         unchanged.
     """
 
-    # support passing an explanation object
-    if str(type(shap_values)).endswith("Explanation'>"):
-        if len(shap_values.shape) == 1:
-            raise ValueError(
-                "The beeswarm plot does not support plotting a single instance, please pass "
-                "an explanation matrix with many instances!"
-            )
-        elif len(shap_values.shape) > 2:
-            raise ValueError(
-                "The beeswarm plot does not support plotting explanations with instances that have more "
-                "than one dimension!"
-            )
-        shap_exp = shap_values
-        base_values = shap_exp.base_values
-        values = shap_exp.values.copy()
-        features = shap_exp.data
-        if sp.sparse.issparse(features):
-            features = features.toarray()
-        feature_names = shap_exp.feature_names
-        # if out_names is None: # TODO: waiting for slicer support
-        #     out_names = shap_exp.output_names
+    if not isinstance(shap_values, Explanation):
+        raise ValueError("the beeswarm plot requires Explanation object as the `shap_values` argument")
+
+    if len(shap_values.shape) == 1:
+        raise ValueError(
+            "The beeswarm plot does not support plotting a single instance, please pass "
+            "an explanation matrix with many instances!"
+        )
+    elif len(shap_values.shape) > 2:
+        raise ValueError(
+            "The beeswarm plot does not support plotting explanations with instances that have more "
+            "than one dimension!"
+        )
+    shap_exp = shap_values
+    # we make a copy here, because later there are places that might modify this array
+    values = np.copy(shap_exp.values)
+    features = shap_exp.data
+    if sp.sparse.issparse(features):
+        features = features.toarray()
+    feature_names = shap_exp.feature_names
+    # if out_names is None: # TODO: waiting for slicer support
+    #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
     
@@ -109,7 +110,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
+        shape_msg = "The shape of the matrix does not match the shape of the " \
                     "provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
@@ -361,14 +362,14 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=color)
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
+        cb = pl.colorbar(m, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 20)
+#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+#         cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -861,14 +862,14 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
+        cb = pl.colorbar(m, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 20)
+#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+#         cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -886,5 +887,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
     else:
         pl.xlabel(labels['VALUE'], fontsize=13)
+    pl.tight_layout()
     if show:
         pl.show()

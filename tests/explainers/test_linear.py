@@ -7,7 +7,6 @@ import scipy
 import pytest
 import shap
 
-
 def test_tied_pair():
     np.random.seed(0)
     beta = np.array([1, 0, 0])
@@ -36,7 +35,7 @@ def test_tied_pair_new():
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_wrong_masker():
-    with pytest.raises(Exception):
+    with pytest.raises(NotImplementedError):
         shap.explainers.Linear((0, 0), shap.maskers.Image("blur(10,10)", (10, 10, 3)))
 
 def test_tied_triple():
@@ -54,7 +53,7 @@ def test_sklearn_linear():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     X = X[:100]
     y = y[:100]
     model = Ridge(0.1)
@@ -70,7 +69,7 @@ def test_sklearn_linear_old_style():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     X = X[:100]
     y = y[:100]
     model = Ridge(0.1)
@@ -86,7 +85,7 @@ def test_sklearn_linear_new():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     X = X[:100]
     y = y[:100]
     model = Ridge(0.1)
@@ -103,7 +102,7 @@ def test_sklearn_multiclass_no_intercept():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     X = X[:100]
     y = y[:100]
 
@@ -120,7 +119,7 @@ def test_sklearn_multiclass_no_intercept():
 def test_perfect_colinear():
     LinearRegression = pytest.importorskip('sklearn.linear_model').LinearRegression
 
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     X = X[:100]
     y = y[:100]
     X.iloc[:, 0] = X.iloc[:, 4] # test duplicated features
@@ -215,7 +214,7 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     X = X[:100]
     y = y[:100]
     model = Ridge(0.1)

@@ -16,6 +16,7 @@ import cloudpickle
 import pickle
 from ..maskers import Masker
 from ..models import Model
+from numba import jit
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -32,7 +33,7 @@ class Partition(Explainer):
         PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
         model-agnostic but when using a balanced partition tree only has quadradic exact runtime
         (in term of the number of input features). This is in contrast to the exponential exact
-        runtime of KernalExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
+        runtime of KernelExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
         correlated features the credit that set of features would have had if treated as a group. This
         means if the hierarchical clustering given to PartitionExplainer groups correlated features
         together, then feature correlations are "accounted for" ... in the sense that the total credit assigned
@@ -147,7 +148,7 @@ class Partition(Explainer):
             # else:
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
-            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+            raise ValueError("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
@@ -191,20 +192,7 @@ class Partition(Explainer):
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
 
-        def lower_credit(i, value=0):
-            if i < M:
-                self.values[i] += value
-                return
-            li = int(self._clustering[i-M,0])
-            ri = int(self._clustering[i-M,1])
-            group_size = int(self._clustering[i-M,3])
-            lsize = int(self._clustering[li-M,3]) if li >= M else 1
-            rsize = int(self._clustering[ri-M,3]) if ri >= M else 1
-            assert lsize+rsize == group_size
-            self.values[i] += value
-            lower_credit(li, self.values[i] * lsize / group_size)
-            lower_credit(ri, self.values[i] * rsize / group_size)
-        lower_credit(len(self.dvalues) - 1)
+        lower_credit(len(self.dvalues) - 1, 0, M, self.values, self._clustering)
 
         return {
             "values": self.values[:M].copy(),
@@ -683,3 +671,18 @@ def output_indexes_len(output_indexes):
         return int(output_indexes[8:-2])
     elif not isinstance(output_indexes, str):
         return len(output_indexes)
+
+@jit
+def lower_credit(i, value, M, values, clustering):
+    if i < M:
+        values[i] += value
+        return
+    li = int(clustering[i-M,0])
+    ri = int(clustering[i-M,1])
+    group_size = int(clustering[i-M,3])
+    lsize = int(clustering[li-M,3]) if li >= M else 1
+    rsize = int(clustering[ri-M,3]) if ri >= M else 1
+    assert lsize+rsize == group_size
+    values[i] += value
+    lower_credit(li, values[i] * lsize / group_size, M, values, clustering)
+    lower_credit(ri, values[i] * rsize / group_size, M, values, clustering)
