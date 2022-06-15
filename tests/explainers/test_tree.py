@@ -1115,3 +1115,20 @@ def test_skopt_rf_et():
                        result_et.models[-1].predict(et_df))
     assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value,
                        result_rf.models[-1].predict(rf_df))
+
+
+def test_xgboost_buffer_strip():
+    # test to make sure bug #1864 doesn't get reintroduced
+    xgboost = pytest.importorskip("xgboost")
+    X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
+    y = np.array([1, 0])
+    # specific values (e.g. 1.3) caused the bug previously
+    model = xgboost.XGBRegressor(base_score=1.3)
+    model.fit(X, y, eval_metric="rmse")
+    # previous bug did .lstrip('binf'), so would have incorrectly handled
+    # buffer starting with binff
+    assert model.get_booster().save_raw().startswith(b"binff")
+
+    # after this fix, this line should not error
+    explainer = shap.TreeExplainer(model)
+    assert isinstance(explainer, shap.explainers.Tree)
