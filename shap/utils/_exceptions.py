@@ -6,6 +6,13 @@ class DimensionError(Exception):
 
     pass
 
+class InvalidAction(Exception):
+    pass
+
+
+class ConvergenceError(Exception):
+    pass
+
 class InvalidMaskerError(ValueError):
     pass
 

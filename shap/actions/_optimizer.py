@@ -3,14 +3,7 @@ import numpy as np
 import warnings
 import copy
 from ._action import Action
-
-
-class InvalidAction(Exception):
-    pass
-
-
-class ConvergenceError(Exception):
-    pass
+from ..utils._exceptions import InvalidAction, ConvergenceError
 
 
 class ActionOptimizer:
