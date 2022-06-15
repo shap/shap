@@ -10,6 +10,7 @@ import sklearn
 from slicer import Slicer, Alias, Obj
 # from ._order import Order
 from .utils._general import OpChain
+from .utils._exceptions import DimensionError
 
 # slicer confuses pylint...
 # pylint: disable=no-member
@@ -298,7 +299,7 @@ class Explanation(metaclass=MetaExplanation):
         if isinstance(cohorts, (list, tuple, np.ndarray)):
             cohorts = np.array(cohorts)
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
-        raise Exception("The given set of cohort indicators is not recognized! Please give an array or int.")
+        raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
 
     def __repr__(self):
         """ Display some basic printable info, but not everything.
@@ -323,7 +324,7 @@ class Explanation(metaclass=MetaExplanation):
             pos += 1
 
             # skip over Ellipsis
-            if t == Ellipsis:
+            if t is Ellipsis:
                 pos += len(self.shape) - len(item)
                 continue
 
@@ -575,7 +576,7 @@ class Explanation(metaclass=MetaExplanation):
         elif axis == 1 or len(self.shape) == 1:
             return group_features(self, grouping)
         else:
-            raise Exception("Only axis = 1 is supported for grouping right now...")
+            raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
     def hstack(self, other):
         """ Stack two explanations column-wise.
@@ -638,7 +639,7 @@ class Explanation(metaclass=MetaExplanation):
         values = self.values
 
         if len(values.shape) != 2:
-            raise Exception("The hclust order only supports 2D arrays right now!")
+            raise DimensionError("The hclust order only supports 2D arrays right now!")
 
         if axis == 1:
             values = values.T

@@ -3,6 +3,7 @@ import warnings
 from .._explainer import Explainer
 from packaging import version
 from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+from ...utils._exceptions import DimensionError
 keras = None
 tf = None
 tf_ops = None
@@ -156,8 +157,8 @@ class TFDeep(Explainer):
             if not tf.executing_eagerly():
                 self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
             else:
-                if type(self.model)is tuple:
-                    sel.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
+                #if type(self.model)is tuple:
+                #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
         if not tf.executing_eagerly():
@@ -173,7 +174,7 @@ class TFDeep(Explainer):
             if noutputs is not None:
                 self.phi_symbolics = [None for i in range(noutputs)]
             else:
-                raise Exception("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
+                raise DimensionError("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
 
     def _get_model_output(self, model):
         if len(model.layers[-1]._inbound_nodes) == 0:

@@ -43,8 +43,7 @@ def waterfall(shap_values, max_display=10, show=True):
         plt.ioff()
 
     base_values = shap_values.base_values
-
-    features = shap_values.data
+    features = shap_values.display_data if shap_values.display_data is not None else shap_values.data
     feature_names = shap_values.feature_names
     lower_bounds = getattr(shap_values, "lower_bounds", None)
     upper_bounds = getattr(shap_values, "upper_bounds", None)
@@ -124,8 +123,8 @@ def waterfall(shap_values, max_display=10, show=True):
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
-            if isinstance(features[order[i]], int) or isinstance(features[order[i]], float):
-                yticklabels[rng[i]] = format_value(features[order[i]], "%0.03f") + " = " + feature_names[order[i]]
+            if np.issubdtype(type(features[order[i]]), np.number):
+                yticklabels[rng[i]] = format_value(float(features[order[i]]), "%0.03f") + " = " + feature_names[order[i]]
             else:
                 yticklabels[rng[i]] = features[order[i]] + " = " + feature_names[order[i]]
 
@@ -311,7 +310,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
 
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
-    """ Plots an explantion of a single prediction as a waterfall plot.
+    """ Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
     output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature

@@ -14,7 +14,7 @@ class SequentialMasker():
 
         for arg in model_args:
             if isinstance(arg, pd.DataFrame):
-                raise Exception("DataFrame arguments dont iterate correctly, pass numpy arrays instead!")
+                raise TypeError("DataFrame arguments dont iterate correctly, pass numpy arrays instead!")
 
         # convert any DataFrames to numpy arrays
         # self.model_arg_cols = []
@@ -180,7 +180,7 @@ class SequentialPerturbation():
             yp = self.score_values[-1][j]
             curves[j,:] = np.interp(xs, xp, yp)
         ys = curves.mean(0)
-        std = curves.std(0)
+        std = curves.std(0) / np.sqrt(curves.shape[0])
         auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign*(ys-ys[0]))
 
         if not debug_mode:

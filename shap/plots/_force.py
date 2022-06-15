@@ -171,7 +171,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         
     else:
         if matplotlib:
-            raise Exception("matplotlib = True is not yet supported for force plots with multiple samples!")
+            raise NotImplementedError("matplotlib = True is not yet supported for force plots with multiple samples!")
         
         if shap_values.shape[0] > 3000:
             warnings.warn("shap.plots.force is slow for many thousands of rows, try subsampling your data.")

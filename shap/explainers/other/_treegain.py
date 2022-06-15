@@ -20,7 +20,7 @@ class TreeGain(Explainer):
         elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
             pass
         else:
-            raise Exception("The passed model is not yet supported by TreeGainExplainer: " + str(type(model)))
+            raise NotImplementedError("The passed model is not yet supported by TreeGainExplainer: " + str(type(model)))
         assert hasattr(model, "feature_importances_"), "The passed model does not have a feature_importances_ attribute!"
         self.model = model
 

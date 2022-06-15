@@ -37,7 +37,7 @@ class Random(Explainer):
             elif callable(self.masker.clustering):
                 row_clustering = self.masker.clustering(*row_args)
             else:
-                raise Exception("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
+                raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
 
         # compute the correct expected value
         masks = np.zeros(1, dtype=np.int)
