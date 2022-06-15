@@ -33,6 +33,10 @@ jobs:
       - name: isort
         run: isort . --check-only
 
+      - name: black
+        run: black --check shap tests
+        
+
       # ===== RUN TESTS =====
       - name: Test with pytest
         run: |
