@@ -1,6 +1,6 @@
 import types
 from ._masker import Masker
-
+from ..utils._exceptions import InvalidMaskerError
 
 class Composite(Masker):
     """ This merges several maskers for different inputs together into a single composite masker.
@@ -103,7 +103,7 @@ class Composite(Masker):
                 num_rows = shapes[-1][0]
 
             if shapes[-1][0] != num_rows and shapes[-1][0] != 1 and shapes[-1][0] is not None:
-                raise Exception("The composite masker can only join together maskers with a compatible number of background rows!")
+                raise InvalidMaskerError("The composite masker can only join together maskers with a compatible number of background rows!")
             arg_pos += self.arg_counts[i]
 
         # call all the submaskers and combine their outputs
@@ -138,5 +138,5 @@ def joint_clustering(self, *args):
         if len(single_clustering) == 0:
             single_clustering = clustering
         elif len(clustering) != 0:
-            raise Exception("Joining two non-trivial clusterings is not yet implemented in the Composite masker!")
+            raise NotImplementedError("Joining two non-trivial clusterings is not yet implemented in the Composite masker!")
     return single_clustering

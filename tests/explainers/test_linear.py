@@ -7,7 +7,6 @@ import scipy
 import pytest
 import shap
 
-
 def test_tied_pair():
     np.random.seed(0)
     beta = np.array([1, 0, 0])
@@ -36,7 +35,7 @@ def test_tied_pair_new():
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_wrong_masker():
-    with pytest.raises(Exception):
+    with pytest.raises(NotImplementedError):
         shap.explainers.Linear((0, 0), shap.maskers.Image("blur(10,10)", (10, 10, 3)))
 
 def test_tied_triple():

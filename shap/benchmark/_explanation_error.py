@@ -115,7 +115,7 @@ class ExplanationError():
                 elif callable(self.masker.clustering):
                     row_clustering = self.masker.clustering(*args)
                 else:
-                    raise Exception("The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!")
+                    raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!")
 
             masked_model = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *args)
 
