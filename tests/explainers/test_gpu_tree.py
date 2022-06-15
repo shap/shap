@@ -45,9 +45,11 @@ def test_front_page_xgboost():
 rs = np.random.RandomState(15921)  # pylint: disable=no-member
 n = 100
 m = 4
-datasets = {'regression': (rs.randn(n, m), rs.randn(n)),
-            'binary': (rs.randn(n, m), rs.binomial(1, 0.5, n)),
-            'multiclass': (rs.randn(n, m), rs.randint(0, 5, n))}
+datasets = {
+    "regression": (rs.randn(n, m), rs.randn(n)),
+    "binary": (rs.randn(n, m), rs.binomial(1, 0.5, n)),
+    "multiclass": (rs.randn(n, m), rs.randint(0, 5, n)),
+}
 
 
 def task_xfail(func):
@@ -63,7 +65,7 @@ def xgboost_base():
         import xgboost
     except ImportError:
         return pytest.param("xgboost.XGBRegressor", marks=pytest.mark.skip)
-    X, y = datasets['regression']
+    X, y = datasets["regression"]
 
     model = xgboost.XGBRegressor(tree_method="hist")
     model.fit(X, y)
@@ -77,7 +79,7 @@ def xgboost_regressor():
     except ImportError:
         return pytest.param("xgboost.XGBRegressor", marks=pytest.mark.skip)
 
-    X, y = datasets['regression']
+    X, y = datasets["regression"]
 
     model = xgboost.XGBRegressor()
     model.fit(X, y)
@@ -91,9 +93,9 @@ def xgboost_binary_classifier():
     except ImportError:
         return pytest.param("xgboost.XGBClassifier", marks=pytest.mark.skip)
 
-    X, y = datasets['binary']
+    X, y = datasets["binary"]
 
-    model = xgboost.XGBClassifier(eval_metric='error')
+    model = xgboost.XGBClassifier(eval_metric="error")
     model.fit(X, y)
     return model, X, model.predict(X, output_margin=True)
 
@@ -105,7 +107,7 @@ def xgboost_multiclass_classifier():
     except ImportError:
         return pytest.param("xgboost.XGBClassifier", marks=pytest.mark.skip)
 
-    X, y = datasets['multiclass']
+    X, y = datasets["multiclass"]
 
     model = xgboost.XGBClassifier()
     model.fit(X, y)
@@ -118,7 +120,7 @@ def lightgbm_base():
         import lightgbm
     except ImportError:
         return pytest.param("lightgbm.LGBMRegressor", marks=pytest.mark.skip)
-    X, y = datasets['regression']
+    X, y = datasets["regression"]
 
     model = lightgbm.LGBMRegressor()
     model.fit(X, y)
@@ -131,7 +133,7 @@ def lightgbm_regression():
         import lightgbm
     except ImportError:
         return pytest.param("lightgbm.LGBMRegressor", marks=pytest.mark.skip)
-    X, y = datasets['regression']
+    X, y = datasets["regression"]
 
     model = lightgbm.LGBMRegressor()
     model.fit(X, y)
@@ -144,7 +146,7 @@ def lightgbm_binary_classifier():
         import lightgbm
     except ImportError:
         return pytest.param("lightgbm.LGBMClassifier", marks=pytest.mark.skip)
-    X, y = datasets['binary']
+    X, y = datasets["binary"]
 
     model = lightgbm.LGBMClassifier()
     model.fit(X, y)
@@ -157,7 +159,7 @@ def lightgbm_multiclass_classifier():
         import lightgbm
     except ImportError:
         return pytest.param("lightgbm.LGBMClassifier", marks=pytest.mark.skip)
-    X, y = datasets['multiclass']
+    X, y = datasets["multiclass"]
 
     model = lightgbm.LGBMClassifier()
     model.fit(X, y)
@@ -165,30 +167,39 @@ def lightgbm_multiclass_classifier():
 
 
 def rf_regressor():
-    X, y = datasets['regression']
+    X, y = datasets["regression"]
     model = sklearn.ensemble.RandomForestRegressor()
     model.fit(X, y)
     return model, X, model.predict(X)
 
 
 def rf_binary_classifier():
-    X, y = datasets['binary']
+    X, y = datasets["binary"]
     model = sklearn.ensemble.RandomForestClassifier()
     model.fit(X, y)
     return model, X, model.predict_proba(X)
 
 
 def rf_multiclass_classifier():
-    X, y = datasets['multiclass']
+    X, y = datasets["multiclass"]
     model = sklearn.ensemble.RandomForestClassifier()
     model.fit(X, y)
     return model, X, model.predict_proba(X)
 
 
-tasks = [xgboost_base(), xgboost_regressor(), xgboost_binary_classifier(),
-         xgboost_multiclass_classifier(), lightgbm_base(), lightgbm_regression(),
-         lightgbm_binary_classifier(), lightgbm_multiclass_classifier(), rf_binary_classifier(),
-         rf_regressor(), rf_multiclass_classifier()]
+tasks = [
+    xgboost_base(),
+    xgboost_regressor(),
+    xgboost_binary_classifier(),
+    xgboost_multiclass_classifier(),
+    lightgbm_base(),
+    lightgbm_regression(),
+    lightgbm_binary_classifier(),
+    lightgbm_multiclass_classifier(),
+    rf_binary_classifier(),
+    rf_regressor(),
+    rf_multiclass_classifier(),
+]
 
 
 # pretty print tasks
@@ -196,11 +207,13 @@ def idfn(task):
     if isinstance(task, str):
         return task
     model, _, _ = task
-    return type(model).__module__ + '.' + type(model).__qualname__
+    return type(model).__module__ + "." + type(model).__qualname__
 
 
 @pytest.mark.parametrize("task", tasks, ids=idfn)
-@pytest.mark.parametrize("feature_perturbation", ["interventional", "tree_path_dependent"])
+@pytest.mark.parametrize(
+    "feature_perturbation", ["interventional", "tree_path_dependent"]
+)
 def test_gpu_tree_explainer_shap(task, feature_perturbation):
     model, X, _ = task
     gpu_ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
@@ -220,6 +233,14 @@ def test_gpu_tree_explainer_shap_interactions(task, feature_perturbation):
     ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
     shap_values = np.array(ex.shap_interaction_values(X), copy=False)
 
-    assert np.abs(np.sum(shap_values, axis=(len(shap_values.shape) - 1, len(
-        shap_values.shape) - 2)).T + ex.expected_value - margin).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
+    assert (
+        np.abs(
+            np.sum(
+                shap_values,
+                axis=(len(shap_values.shape) - 1, len(shap_values.shape) - 2),
+            ).T
+            + ex.expected_value
+            - margin
+        ).max()
+        < 1e-4
+    ), "SHAP values don't sum to model output!"

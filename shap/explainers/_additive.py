@@ -9,15 +9,17 @@ from ._explainer import Explainer
 
 
 class Additive(Explainer):
-    """ Computes SHAP values for generalized additive models.
+    """Computes SHAP values for generalized additive models.
 
     This assumes that the model only has first order effects. Extending this to
     2nd and third order effects is future work (if you apply this to those models right now
     you will get incorrect answers that fail additivity).
     """
 
-    def __init__(self, model, masker, link=None, feature_names=None, linearize_link=True):
-        """ Build an Additive explainer for the given model using the given masker object.
+    def __init__(
+        self, model, masker, link=None, feature_names=None, linearize_link=True
+    ):
+        """Build an Additive explainer for the given model using the given masker object.
 
         Parameters
         ----------
@@ -33,9 +35,9 @@ class Additive(Explainer):
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
         """
-        super(Additive, self).__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
-
-        
+        super(Additive, self).__init__(
+            model, masker, feature_names=feature_names, linearize_link=linearize_link
+        )
 
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             self.model = model.decision_function
@@ -50,28 +52,37 @@ class Additive(Explainer):
                 # self.model(np.zeros(num_features))
                 # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
                 # self._input_offsets = np.zeros(num_features) #* self._zero_offset
-                raise Exception("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
+                raise Exception(
+                    "Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!"
+                )
                 return
 
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
-        assert safe_isinstance(self.masker, "shap.maskers.Independent"), "The Additive explainer only supports the Tabular masker at the moment!"
+        assert safe_isinstance(
+            self.masker, "shap.maskers.Independent"
+        ), "The Additive explainer only supports the Tabular masker at the moment!"
 
         # pre-compute per-feature offsets
-        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, np.zeros(self.masker.shape[1]))
-        masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=np.bool)
-        for i in range(1, self.masker.shape[1]+1):
-            masks[i,i-1] = False
+        fm = MaskedModel(
+            self.model,
+            self.masker,
+            self.link,
+            self.linearize_link,
+            np.zeros(self.masker.shape[1]),
+        )
+        masks = np.ones((self.masker.shape[1] + 1, self.masker.shape[1]), dtype=np.bool)
+        for i in range(1, self.masker.shape[1] + 1):
+            masks[i, i - 1] = False
         outputs = fm(masks)
         self._zero_offset = outputs[0]
         self._input_offsets = np.zeros(masker.shape[1])
-        for i in range(1, self.masker.shape[1]+1):
-            self._input_offsets[i-1] = outputs[i] - self._zero_offset
+        for i in range(1, self.masker.shape[1] + 1):
+            self._input_offsets[i - 1] = outputs[i] - self._zero_offset
 
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
     def __call__(self, *args, max_evals=None, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iteratable args.
-        """
+        """Explains the output of model(*args), where args represents one or more parallel iteratable args."""
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
@@ -79,7 +90,7 @@ class Additive(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
@@ -87,18 +98,26 @@ class Additive(Explainer):
             if model.interactions is not 0:
                 raise Exception("Need to add support for interaction effects!")
             return True
-            
+
         return False
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
+    def explain_row(
+        self,
+        *row_args,
+        max_evals,
+        main_effects,
+        error_bounds,
+        batch_size,
+        outputs,
+        silent
+    ):
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
 
         x = row_args[0]
         inputs = np.zeros((len(x), len(x)))
         for i in range(len(x)):
-            inputs[i,i] = x[i]
-        
+            inputs[i, i] = x[i]
+
         phi = self.model(inputs) - self._zero_offset - self._input_offsets
 
         return {
@@ -106,8 +125,9 @@ class Additive(Explainer):
             "expected_values": self._expected_value,
             "mask_shapes": [a.shape for a in row_args],
             "main_effects": phi,
-            "clustering": getattr(self.masker, "clustering", None)
+            "clustering": getattr(self.masker, "clustering", None),
         }
+
 
 # class AdditiveExplainer(Explainer):
 #     """ Computes SHAP values for generalized additive models.
@@ -137,17 +157,17 @@ class Additive(Explainer):
 #             self.f = model
 #         else:
 #             raise ValueError("The passed model must be a recognized object or a function!")
-        
+
 #         # convert dataframes
 #         if safe_isinstance(data, "pandas.core.series.Series"):
 #             data = data.values
 #         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
 #             data = data.values
 #         self.data = data
-        
+
 #         # compute the expected value of the model output
 #         self.expected_value = self.f(data).mean()
-        
+
 #         # pre-compute per-feature offsets
 #         tmp = np.zeros(data.shape)
 #         self._zero_offset = self.f(tmp).mean()
@@ -188,13 +208,13 @@ class Additive(Explainer):
 #             X = X.values
 #         elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
 #             X = X.values
-            
-            
+
+
 #         phi = np.zeros(X.shape)
 #         tmp = np.zeros(X.shape)
 #         for i in range(X.shape[1]):
 #             tmp[:,i] = X[:,i]
 #             phi[:,i] = self.f(tmp) - self._zero_offset - self._feature_offset[i]
 #             tmp[:,i] = 0
-            
+
 #         return phi

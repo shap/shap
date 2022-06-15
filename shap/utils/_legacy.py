@@ -7,7 +7,7 @@ from sklearn.impute import SimpleImputer
 
 
 def kmeans(X, k, round_values=True):
-    """ Summarize a dataset with k mean samples weighted by the number of data points they
+    """Summarize a dataset with k mean samples weighted by the number of data points they
     each represent.
 
     Parameters
@@ -33,7 +33,7 @@ def kmeans(X, k, round_values=True):
         X = X.values
 
     # in case there are any missing values in data impute them
-    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    imp = SimpleImputer(missing_values=np.nan, strategy="mean")
     X = imp.fit_transform(X)
 
     kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
@@ -41,10 +41,14 @@ def kmeans(X, k, round_values=True):
     if round_values:
         for i in range(k):
             for j in range(X.shape[1]):
-                xj = X[:,j].toarray().flatten() if issparse(X) else X[:, j] # sparse support courtesy of @PrimozGodec
-                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i,j]))
-                kmeans.cluster_centers_[i,j] = X[ind,j]
-    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
+                xj = (
+                    X[:, j].toarray().flatten() if issparse(X) else X[:, j]
+                )  # sparse support courtesy of @PrimozGodec
+                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i, j]))
+                kmeans.cluster_centers_[i, j] = X[ind, j]
+    return DenseData(
+        kmeans.cluster_centers_, group_names, None, 1.0 * np.bincount(kmeans.labels_)
+    )
 
 
 class Instance:
@@ -84,7 +88,10 @@ def match_instance_to_data(instance, data):
 
     if isinstance(data, DenseData):
         if instance.group_display_values is None:
-            instance.group_display_values = [instance.x[0, group[0]] if len(group) == 1 else "" for group in data.groups]
+            instance.group_display_values = [
+                instance.x[0, group[0]] if len(group) == 1 else ""
+                for group in data.groups
+            ]
         assert len(instance.group_display_values) == len(data.groups)
         instance.groups = data.groups
 
@@ -104,7 +111,7 @@ def convert_to_model(val):
 
 def match_model_to_data(model, data):
     assert isinstance(model, Model), "model must be of type Model!"
-    
+
     try:
         if isinstance(data, DenseDataWithIndex):
             out_val = model.f(data.convert_to_df())
@@ -118,10 +125,11 @@ def match_model_to_data(model, data):
         if len(out_val.shape) == 1:
             model.out_names = ["output value"]
         else:
-            model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
-    
-    return out_val
+            model.out_names = [
+                "output value " + str(i) for i in range(out_val.shape[0])
+            ]
 
+    return out_val
 
 
 class Data:
@@ -143,7 +151,11 @@ class SparseData(Data):
 
 class DenseData(Data):
     def __init__(self, data, group_names, *args):
-        self.groups = args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
+        self.groups = (
+            args[0]
+            if len(args) > 0 and args[0] is not None
+            else [np.array([i]) for i in range(len(group_names))]
+        )
 
         l = sum(len(g) for g in self.groups)
         num_samples = data.shape[0]
@@ -187,10 +199,12 @@ def convert_to_data(val, keep_index=False):
     elif type(val) == np.ndarray:
         return DenseData(val, [str(i) for i in range(val.shape[1])])
     elif str(type(val)).endswith("'pandas.core.series.Series'>"):
-        return DenseData(val.values.reshape((1,len(val))), list(val.index))
+        return DenseData(val.values.reshape((1, len(val))), list(val.index))
     elif str(type(val)).endswith("'pandas.core.frame.DataFrame'>"):
         if keep_index:
-            return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
+            return DenseDataWithIndex(
+                val.values, list(val.columns), val.index.values, val.index.name
+            )
         else:
             return DenseData(val.values, list(val.columns))
     elif sp.sparse.issparse(val):
@@ -198,7 +212,8 @@ def convert_to_data(val, keep_index=False):
             val = val.tocsr()
         return SparseData(val)
     else:
-        assert False, "Unknown type passed as data object: "+str(type(val))
+        assert False, "Unknown type passed as data object: " + str(type(val))
+
 
 class Link:
     def __init__(self):
@@ -218,21 +233,17 @@ class IdentityLink(Link):
         return x
 
 
-
-
-
-
 class LogitLink(Link):
     def __str__(self):
         return "logit"
 
     @staticmethod
     def f(x):
-        return np.log(x/(1-x))
+        return np.log(x / (1 - x))
 
     @staticmethod
     def finv(x):
-        return 1/(1+np.exp(-x))
+        return 1 / (1 + np.exp(-x))
 
 
 def convert_to_link(val):

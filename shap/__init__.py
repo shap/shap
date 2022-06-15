@@ -3,16 +3,17 @@
 import sys
 import warnings
 
-__version__ = '0.41.0'
+__version__ = "0.41.0"
 
 # check python version
-if (sys.version_info < (3, 0)):
+if sys.version_info < (3, 0):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
 
 from ._explanation import Cohorts, Explanation
 from .explainers import other
 from .explainers._additive import Additive as AdditiveExplainer
 from .explainers._deep import Deep as DeepExplainer
+
 # explainers
 from .explainers._explainer import Explainer
 from .explainers._gpu_tree import GPUTree as GPUTreeExplainer
@@ -24,8 +25,10 @@ from .explainers._permutation import Permutation as PermutationExplainer
 from .explainers._sampling import Sampling as SamplingExplainer
 from .explainers._tree import Tree as TreeExplainer
 
-_no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
-                         "to fix this."
+_no_matplotlib_warning = (
+    "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` "
+    "to fix this."
+)
 
 
 # plotting (only loaded if matplotlib is present)
@@ -40,6 +43,7 @@ class UnsupportedModule(object):
 
 try:
     import matplotlib
+
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
@@ -47,17 +51,14 @@ if have_matplotlib:
     from .plots._bar import bar_legacy as bar_plot
     from .plots._beeswarm import summary_legacy as summary_plot
     from .plots._decision import decision as decision_plot
-    from .plots._decision import \
-        multioutput_decision as multioutput_decision_plot
+    from .plots._decision import multioutput_decision as multioutput_decision_plot
     from .plots._embedding import embedding as embedding_plot
     from .plots._force import force as force_plot
     from .plots._force import getjs, initjs, save_html
-    from .plots._group_difference import \
-        group_difference as group_difference_plot
+    from .plots._group_difference import group_difference as group_difference_plot
     from .plots._image import image as image_plot
     from .plots._monitoring import monitoring as monitoring_plot
-    from .plots._partial_dependence import \
-        partial_dependence as partial_dependence_plot
+    from .plots._partial_dependence import partial_dependence as partial_dependence_plot
     from .plots._scatter import dependence_legacy as dependence_plot
     from .plots._text import text as text_plot
     from .plots._waterfall import waterfall as waterfall_plot
@@ -88,4 +89,4 @@ from .actions._optimizer import ActionOptimizer
 from .utils import approximate_interactions, sample
 from .utils._legacy import kmeans
 
-#from . import benchmark
+# from . import benchmark

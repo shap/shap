@@ -10,8 +10,7 @@ import shap
 
 
 def test_method_token_segments_pretrained_tokenizer():
-    """ Check that the Text masker produces the same segments as its non-fast pretrained tokenizer.
-    """
+    """Check that the Text masker produces the same segments as its non-fast pretrained tokenizer."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -19,15 +18,14 @@ def test_method_token_segments_pretrained_tokenizer():
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
-    output_token_segments,_ = masker.token_segments(test_text)
-    correct_token_segments = ['', ' I', ' ate', ' a', ' Can', 'no', 'li', '']
+    output_token_segments, _ = masker.token_segments(test_text)
+    correct_token_segments = ["", " I", " ate", " a", " Can", "no", "li", ""]
 
     assert output_token_segments == correct_token_segments
 
 
 def test_method_token_segments_pretrained_tokenizer_fast():
-    """ Check that the Text masker produces the same segments as its fast pretrained tokenizer.
-    """
+    """Check that the Text masker produces the same segments as its fast pretrained tokenizer."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -35,15 +33,14 @@ def test_method_token_segments_pretrained_tokenizer_fast():
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
-    output_token_segments,_ = masker.token_segments(test_text)
-    correct_token_segments = ['', 'I ', 'ate ', 'a ', 'Can', 'no', 'li', '']
+    output_token_segments, _ = masker.token_segments(test_text)
+    correct_token_segments = ["", "I ", "ate ", "a ", "Can", "no", "li", ""]
 
     assert output_token_segments == correct_token_segments
 
 
 def test_masker_call_pretrained_tokenizer():
-    """ Check that the Text masker with a non-fast pretrained tokenizer masks correctly.
-    """
+    """Check that the Text masker with a non-fast pretrained tokenizer masks correctly."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -54,13 +51,13 @@ def test_masker_call_pretrained_tokenizer():
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
     output_masked_text = masker(test_input_mask, test_text)
-    correct_masked_text = '[MASK] ate a [MASK]noli'
+    correct_masked_text = "[MASK] ate a [MASK]noli"
 
     assert output_masked_text[0] == correct_masked_text
 
+
 def test_masker_call_pretrained_tokenizer_fast():
-    """ Check that the Text masker with a fast pretrained tokenizer masks correctly.
-    """
+    """Check that the Text masker with a fast pretrained tokenizer masks correctly."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -71,13 +68,13 @@ def test_masker_call_pretrained_tokenizer_fast():
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
     output_masked_text = masker(test_input_mask, test_text)
-    correct_masked_text = '[MASK]ate a [MASK]noli'
+    correct_masked_text = "[MASK]ate a [MASK]noli"
 
     assert output_masked_text[0] == correct_masked_text
 
+
 def test_sentencepiece_tokenizer_output():
-    """ Tests for output for sentencepiece tokenizers to not have '_' in output of masker when passed a mask of ones.
-    """
+    """Tests for output for sentencepiece tokenizers to not have '_' in output of masker when passed a mask of ones."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     pytest.importorskip("sentencepiece")
@@ -89,14 +86,21 @@ def test_sentencepiece_tokenizer_output():
     mask = np.ones(masker.shape(s)[1], dtype=bool)
 
     sentencepiece_tokenizer_output_processed = masker(mask, s)
-    expected_sentencepiece_tokenizer_output_processed = "This is a test statement for sentencepiece tokenizer"
+    expected_sentencepiece_tokenizer_output_processed = (
+        "This is a test statement for sentencepiece tokenizer"
+    )
     # since we expect output wrapped in a tuple hence the indexing [0][0] to extract the string
-    assert sentencepiece_tokenizer_output_processed[0][0] == expected_sentencepiece_tokenizer_output_processed
+    assert (
+        sentencepiece_tokenizer_output_processed[0][0]
+        == expected_sentencepiece_tokenizer_output_processed
+    )
 
-@pytest.mark.skip(reason="fails on travis and I don't know why yet...Ryan might need to take a look since this API will change soon anyway")
+
+@pytest.mark.skip(
+    reason="fails on travis and I don't know why yet...Ryan might need to take a look since this API will change soon anyway"
+)
 def test_keep_prefix_suffix_tokenizer_parsing():
-    """ Checks parsed keep prefix and keep suffix for different tokenizers.
-    """
+    """Checks parsed keep prefix and keep suffix for different tokenizers."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -112,19 +116,23 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     masker_gpt_expected_keep_prefix, masker_gpt_expected_keep_suffix = 0, 0
     masker_bart_expected_keep_prefix, masker_bart_expected_keep_suffix = 1, 1
 
-    assert masker_mt.keep_prefix == masker_mt_expected_keep_prefix and masker_mt.keep_suffix == masker_mt_expected_keep_suffix and \
-           masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix and \
-           masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
+    assert (
+        masker_mt.keep_prefix == masker_mt_expected_keep_prefix
+        and masker_mt.keep_suffix == masker_mt_expected_keep_suffix
+        and masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix
+        and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix
+        and masker_bart.keep_prefix == masker_bart_expected_keep_prefix
+        and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
+    )
 
 
 def test_text_infill_with_collapse_mask_token():
-    """ Tests for different text infilling output combinations with collapsing mask token.
-    """
+    """Tests for different text infilling output combinations with collapsing mask token."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    masker = shap.maskers.Text(tokenizer, mask_token='...', collapse_mask_token=True)
+    masker = shap.maskers.Text(tokenizer, mask_token="...", collapse_mask_token=True)
 
     s = "This is a test string to be infilled"
 
@@ -149,12 +157,16 @@ def test_text_infill_with_collapse_mask_token():
     text_infilled_ex4 = masker(mask_ex4, s)[0][0]
     expected_text_infilled_ex4 = "..."
 
-    assert  text_infilled_ex1 == expected_text_infilled_ex1 and text_infilled_ex2 == expected_text_infilled_ex2 and \
-            text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4
+    assert (
+        text_infilled_ex1 == expected_text_infilled_ex1
+        and text_infilled_ex2 == expected_text_infilled_ex2
+        and text_infilled_ex3 == expected_text_infilled_ex3
+        and text_infilled_ex4 == expected_text_infilled_ex4
+    )
+
 
 def test_serialization_text_masker():
-    """ Make sure text serialization works.
-    """
+    """Make sure text serialization works."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -167,10 +179,8 @@ def test_serialization_text_masker():
 
         temp_serialization_file.seek(0)
 
-
         # deserialize masker
         new_masker = shap.maskers.Text.load(temp_serialization_file)
-
 
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
@@ -180,14 +190,14 @@ def test_serialization_text_masker():
 
     assert original_masked_output == new_masked_output
 
+
 def test_serialization_text_masker_custom_mask():
-    """ Make sure text serialization works with custom mask.
-    """
+    """Make sure text serialization works with custom mask."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=True)
-    original_masker = shap.maskers.Text(tokenizer, mask_token='[CUSTOM-MASK]')
+    original_masker = shap.maskers.Text(tokenizer, mask_token="[CUSTOM-MASK]")
 
     with tempfile.TemporaryFile() as temp_serialization_file:
 
@@ -198,7 +208,6 @@ def test_serialization_text_masker_custom_mask():
         # deserialize masker
         new_masker = shap.maskers.Text.load(temp_serialization_file)
 
-
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])
 
@@ -207,9 +216,9 @@ def test_serialization_text_masker_custom_mask():
 
     assert original_masked_output == new_masked_output
 
+
 def test_serialization_text_masker_collapse_mask_token():
-    """ Make sure text serialization works with collapse mask token.
-    """
+    """Make sure text serialization works with collapse mask token."""
 
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
@@ -224,7 +233,6 @@ def test_serialization_text_masker_collapse_mask_token():
 
         # deserialize masker
         new_masker = shap.maskers.Text.load(temp_serialization_file)
-
 
     test_text = "I ate a Cannoli"
     test_input_mask = np.array([True, False, True, True, False, True, True, True])

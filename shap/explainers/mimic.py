@@ -13,6 +13,7 @@ except:
     print("xgboost is installed...but failed to load!")
     pass
 
+
 class MimicExplainer(Explainer):
     """Fits a mimic model to the original model and then explains predictions using the mimic model.
 
@@ -59,23 +60,33 @@ class MimicExplainer(Explainer):
         self.model_out = self.model.f(data.data)
 
         # enforce our current input type limitations
-        assert isinstance(self.data, DenseData), "Shap explainer only supports the DenseData input currently."
-        assert not self.data.transposed, "Shap explainer does not support transposed DenseData currently."
+        assert isinstance(
+            self.data, DenseData
+        ), "Shap explainer only supports the DenseData input currently."
+        assert (
+            not self.data.transposed
+        ), "Shap explainer does not support transposed DenseData currently."
 
         # warn users about large background data sets
         if len(self.data.weights) < 100:
-            log.warning("Using only " + str(len(self.data.weights)) + " training data samples could cause " +
-                        "the mimic model poorly to fit the real model. Consider using more training samples " +
-                        "or if you don't have more samples, using shap.inflate(data, N) to generate more.")
+            log.warning(
+                "Using only "
+                + str(len(self.data.weights))
+                + " training data samples could cause "
+                + "the mimic model poorly to fit the real model. Consider using more training samples "
+                + "or if you don't have more samples, using shap.inflate(data, N) to generate more."
+            )
 
         self._train_mimic_model()
 
     def _train_mimic_model(self):
         if self.mimic_model_type == "xgboost":
-            self.mimic_model = xgboost.train(self.mimic_model_params, xgboost.DMatrix(data.data))
+            self.mimic_model = xgboost.train(
+                self.mimic_model_params, xgboost.DMatrix(data.data)
+            )
 
     def shap_values(self, X, **kwargs):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------

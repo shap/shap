@@ -9,14 +9,16 @@ torch = None
 
 
 class PyTorchDeep(Explainer):
-
     def __init__(self, model, data):
         # try and import pytorch
         global torch
         if torch is None:
             import torch
+
             if version.parse(torch.__version__) < version.parse("0.4"):
-                warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
+                warnings.warn(
+                    "Your PyTorch version is older than 0.4 and not supported."
+                )
 
         # check if we have multiple inputs
         self.multi_input = False
@@ -76,7 +78,9 @@ class PyTorchDeep(Explainer):
         model_children = list(model.children())
         if model_children:
             for child in model_children:
-                handles_list.extend(self.add_handles(child, forward_handle, backward_handle))
+                handles_list.extend(
+                    self.add_handles(child, forward_handle, backward_handle)
+                )
         else:  # leaves
             handles_list.append(model.register_forward_hook(forward_handle))
             handles_list.append(model.register_backward_hook(backward_handle))
@@ -88,7 +92,7 @@ class PyTorchDeep(Explainer):
         Recursively searches for non-container layers
         """
         for child in model.children():
-            if 'nn.modules.container' in str(type(child)):
+            if "nn.modules.container" in str(type(child)):
                 self.remove_attributes(child)
             else:
                 try:
@@ -109,9 +113,12 @@ class PyTorchDeep(Explainer):
         if self.interim:
             interim_inputs = self.layer.target_input
             for idx, input in enumerate(interim_inputs):
-                grad = torch.autograd.grad(selected, input,
-                                           retain_graph=True if idx + 1 < len(interim_inputs) else None,
-                                           allow_unused=True)[0]
+                grad = torch.autograd.grad(
+                    selected,
+                    input,
+                    retain_graph=True if idx + 1 < len(interim_inputs) else None,
+                    allow_unused=True,
+                )[0]
                 if grad is not None:
                     grad = grad.cpu().numpy()
                 else:
@@ -121,9 +128,12 @@ class PyTorchDeep(Explainer):
             return grads, [i.detach().cpu().numpy() for i in interim_inputs]
         else:
             for idx, x in enumerate(X):
-                grad = torch.autograd.grad(selected, x,
-                                           retain_graph=True if idx + 1 < len(X) else None,
-                                           allow_unused=True)[0]
+                grad = torch.autograd.grad(
+                    selected,
+                    x,
+                    retain_graph=True if idx + 1 < len(X) else None,
+                    allow_unused=True,
+                )[0]
                 if grad is not None:
                     grad = grad.cpu().numpy()
                 else:
@@ -131,7 +141,9 @@ class PyTorchDeep(Explainer):
                 grads.append(grad)
             return grads
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=False):
+    def shap_values(
+        self, X, ranked_outputs=None, output_rank_order="max", check_additivity=False
+    ):
 
         # X ~ self.model_input
         # X_data ~ self.data
@@ -152,15 +164,21 @@ class PyTorchDeep(Explainer):
             if output_rank_order == "max":
                 _, model_output_ranks = torch.sort(model_output_values, descending=True)
             elif output_rank_order == "min":
-                _, model_output_ranks = torch.sort(model_output_values, descending=False)
+                _, model_output_ranks = torch.sort(
+                    model_output_values, descending=False
+                )
             elif output_rank_order == "max_abs":
-                _, model_output_ranks = torch.sort(torch.abs(model_output_values), descending=True)
+                _, model_output_ranks = torch.sort(
+                    torch.abs(model_output_values), descending=True
+                )
             else:
                 assert False, "output_rank_order must be max, min, or max_abs!"
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
-            model_output_ranks = (torch.ones((X[0].shape[0], self.num_outputs)).int() *
-                                  torch.arange(0, self.num_outputs).int())
+            model_output_ranks = (
+                torch.ones((X[0].shape[0], self.num_outputs)).int()
+                * torch.arange(0, self.num_outputs).int()
+            )
 
         # add the gradient handles
         handles = self.add_handles(self.model, add_interim_values, deeplift_grad)
@@ -173,16 +191,24 @@ class PyTorchDeep(Explainer):
             phis = []
             if self.interim:
                 for k in range(len(self.interim_inputs_shape)):
-                    phis.append(np.zeros((X[0].shape[0], ) + self.interim_inputs_shape[k][1: ]))
+                    phis.append(
+                        np.zeros((X[0].shape[0],) + self.interim_inputs_shape[k][1:])
+                    )
             else:
                 for k in range(len(X)):
                     phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
                 # tile the inputs to line up with the background data samples
-                tiled_X = [X[l][j:j + 1].repeat(
-                                   (self.data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape) - 1)])) for l
-                           in range(len(X))]
-                joint_x = [torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))]
+                tiled_X = [
+                    X[l][j : j + 1].repeat(
+                        (self.data[l].shape[0],)
+                        + tuple([1 for k in range(len(X[l].shape) - 1)])
+                    )
+                    for l in range(len(X))
+                ]
+                joint_x = [
+                    torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))
+                ]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.gradient(feature_ind, joint_x)
@@ -195,10 +221,23 @@ class PyTorchDeep(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
+                        phis[l][j] = (
+                            sample_phis[l][self.data[l].shape[0] :] * (x[l] - data[l])
+                        ).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]).to(self.device) * (X[l][j: j + 1] - self.data[l])).cpu().detach().numpy().mean(0)
+                        phis[l][j] = (
+                            (
+                                torch.from_numpy(
+                                    sample_phis[l][self.data[l].shape[0] :]
+                                ).to(self.device)
+                                * (X[l][j : j + 1] - self.data[l])
+                            )
+                            .cpu()
+                            .detach()
+                            .numpy()
+                            .mean(0)
+                        )
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
@@ -214,6 +253,7 @@ class PyTorchDeep(Explainer):
         else:
             return output_phis
 
+
 # Module hooks
 
 
@@ -225,10 +265,10 @@ def deeplift_grad(module, grad_input, grad_output):
     module_type = module.__class__.__name__
     # first, check the module is supported
     if module_type in op_handler:
-        if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
+        if op_handler[module_type].__name__ not in ["passthrough", "linear_1d"]:
             return op_handler[module_type](module, grad_input, grad_output)
     else:
-        print('Warning: unrecognized nn.Module: {}'.format(module_type))
+        print("Warning: unrecognized nn.Module: {}".format(module_type))
         return grad_input
 
 
@@ -248,7 +288,7 @@ def add_interim_values(module, input, output):
     if module_type in op_handler:
         func_name = op_handler[module_type].__name__
         # First, check for cases where we don't need to save the x and y tensors
-        if func_name == 'passthrough':
+        if func_name == "passthrough":
             pass
         else:
             # check only the 0th input varies
@@ -257,16 +297,16 @@ def add_interim_values(module, input, output):
                     assert input[i] == output[i], "Only the 0th input may vary!"
             # if a new method is added, it must be added here too. This ensures tensors
             # are only saved if necessary
-            if func_name in ['maxpool', 'nonlinear_1d']:
+            if func_name in ["maxpool", "nonlinear_1d"]:
                 # only save tensors if necessary
                 if type(input) is tuple:
-                    setattr(module, 'x', torch.nn.Parameter(input[0].detach()))
+                    setattr(module, "x", torch.nn.Parameter(input[0].detach()))
                 else:
-                    setattr(module, 'x', torch.nn.Parameter(input.detach()))
+                    setattr(module, "x", torch.nn.Parameter(input.detach()))
                 if type(output) is tuple:
-                    setattr(module, 'y', torch.nn.Parameter(output[0].detach()))
+                    setattr(module, "y", torch.nn.Parameter(output[0].detach()))
                 else:
-                    setattr(module, 'y', torch.nn.Parameter(output.detach()))
+                    setattr(module, "y", torch.nn.Parameter(output.detach()))
             if module_type in failure_case_modules:
                 input[0].register_hook(deeplift_tensor_grad)
 
@@ -279,7 +319,8 @@ def get_target_input(module, input, output):
         del module.target_input
     except AttributeError:
         pass
-    setattr(module, 'target_input', input)
+    setattr(module, "target_input", input)
+
 
 # From the documentation: "The current implementation will not have the presented behavior for
 # complex Module that perform many operations. In some failure cases, grad_input and grad_output
@@ -289,7 +330,7 @@ def get_target_input(module, input, output):
 # will then retrieve the proper gradient from this list.
 
 
-failure_case_modules = ['MaxPool1d']
+failure_case_modules = ["MaxPool1d"]
 
 
 def deeplift_tensor_grad(grad):
@@ -308,16 +349,18 @@ def passthrough(module, grad_input, grad_output):
 
 def maxpool(module, grad_input, grad_output):
     pool_to_unpool = {
-        'MaxPool1d': torch.nn.functional.max_unpool1d,
-        'MaxPool2d': torch.nn.functional.max_unpool2d,
-        'MaxPool3d': torch.nn.functional.max_unpool3d
+        "MaxPool1d": torch.nn.functional.max_unpool1d,
+        "MaxPool2d": torch.nn.functional.max_unpool2d,
+        "MaxPool3d": torch.nn.functional.max_unpool3d,
     }
     pool_to_function = {
-        'MaxPool1d': torch.nn.functional.max_pool1d,
-        'MaxPool2d': torch.nn.functional.max_pool2d,
-        'MaxPool3d': torch.nn.functional.max_pool3d
+        "MaxPool1d": torch.nn.functional.max_pool1d,
+        "MaxPool2d": torch.nn.functional.max_pool2d,
+        "MaxPool3d": torch.nn.functional.max_pool3d,
     }
-    delta_in = module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2):]
+    delta_in = (
+        module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2) :]
+    )
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # we also need to check if the output is a tuple
     y, ref_output = torch.chunk(module.y, 2)
@@ -327,16 +370,33 @@ def maxpool(module, grad_input, grad_output):
     # all of this just to unpool the outputs
     with torch.no_grad():
         _, indices = pool_to_function[module.__class__.__name__](
-            module.x, module.kernel_size, module.stride, module.padding,
-            module.dilation, module.ceil_mode, True)
-        xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
-            grad_output[0] * diffs, indices, module.kernel_size, module.stride,
-            module.padding, list(module.x.shape)), 2)
+            module.x,
+            module.kernel_size,
+            module.stride,
+            module.padding,
+            module.dilation,
+            module.ceil_mode,
+            True,
+        )
+        xmax_pos, rmax_pos = torch.chunk(
+            pool_to_unpool[module.__class__.__name__](
+                grad_output[0] * diffs,
+                indices,
+                module.kernel_size,
+                module.stride,
+                module.padding,
+                list(module.x.shape),
+            ),
+            2,
+        )
     org_input_shape = grad_input[0].shape  # for the maxpool 1d
     grad_input = [None for _ in grad_input]
-    grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
-                           (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
-    if module.__class__.__name__ == 'MaxPool1d':
+    grad_input[0] = torch.where(
+        torch.abs(delta_in) < 1e-7,
+        torch.zeros_like(delta_in),
+        (xmax_pos + rmax_pos) / delta_in,
+    ).repeat(dup0)
+    if module.__class__.__name__ == "MaxPool1d":
         complex_module_gradients.append(grad_input[0])
         # the grad input that is returned doesn't matter, since it will immediately be
         # be overridden by the grad in the complex_module_gradient
@@ -350,51 +410,58 @@ def linear_1d(module, grad_input, grad_output):
 
 
 def nonlinear_1d(module, grad_input, grad_output):
-    delta_out = module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2):]
+    delta_out = (
+        module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2) :]
+    )
 
-    delta_in = module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2):]
+    delta_in = (
+        module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2) :]
+    )
     dup0 = [2] + [1 for i in delta_in.shape[1:]]
     # handles numerical instabilities where delta_in is very small by
     # just taking the gradient in those cases
     grads = [None for _ in grad_input]
-    grads[0] = torch.where(torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0],
-                           grad_output[0] * (delta_out / delta_in).repeat(dup0))
+    grads[0] = torch.where(
+        torch.abs(delta_in.repeat(dup0)) < 1e-6,
+        grad_input[0],
+        grad_output[0] * (delta_out / delta_in).repeat(dup0),
+    )
     return tuple(grads)
 
 
 op_handler = {}
 
 # passthrough ops, where we make no change to the gradient
-op_handler['Dropout3d'] = passthrough
-op_handler['Dropout2d'] = passthrough
-op_handler['Dropout'] = passthrough
-op_handler['AlphaDropout'] = passthrough
+op_handler["Dropout3d"] = passthrough
+op_handler["Dropout2d"] = passthrough
+op_handler["Dropout"] = passthrough
+op_handler["AlphaDropout"] = passthrough
 
-op_handler['Conv1d'] = linear_1d
-op_handler['Conv2d'] = linear_1d
-op_handler['Conv3d'] = linear_1d
-op_handler['ConvTranspose1d'] = linear_1d
-op_handler['ConvTranspose2d'] = linear_1d
-op_handler['ConvTranspose3d'] = linear_1d
-op_handler['Linear'] = linear_1d
-op_handler['AvgPool1d'] = linear_1d
-op_handler['AvgPool2d'] = linear_1d
-op_handler['AvgPool3d'] = linear_1d
-op_handler['AdaptiveAvgPool1d'] = linear_1d
-op_handler['AdaptiveAvgPool2d'] = linear_1d
-op_handler['AdaptiveAvgPool3d'] = linear_1d
-op_handler['BatchNorm1d'] = linear_1d
-op_handler['BatchNorm2d'] = linear_1d
-op_handler['BatchNorm3d'] = linear_1d
+op_handler["Conv1d"] = linear_1d
+op_handler["Conv2d"] = linear_1d
+op_handler["Conv3d"] = linear_1d
+op_handler["ConvTranspose1d"] = linear_1d
+op_handler["ConvTranspose2d"] = linear_1d
+op_handler["ConvTranspose3d"] = linear_1d
+op_handler["Linear"] = linear_1d
+op_handler["AvgPool1d"] = linear_1d
+op_handler["AvgPool2d"] = linear_1d
+op_handler["AvgPool3d"] = linear_1d
+op_handler["AdaptiveAvgPool1d"] = linear_1d
+op_handler["AdaptiveAvgPool2d"] = linear_1d
+op_handler["AdaptiveAvgPool3d"] = linear_1d
+op_handler["BatchNorm1d"] = linear_1d
+op_handler["BatchNorm2d"] = linear_1d
+op_handler["BatchNorm3d"] = linear_1d
 
-op_handler['LeakyReLU'] = nonlinear_1d
-op_handler['ReLU'] = nonlinear_1d
-op_handler['ELU'] = nonlinear_1d
-op_handler['Sigmoid'] = nonlinear_1d
+op_handler["LeakyReLU"] = nonlinear_1d
+op_handler["ReLU"] = nonlinear_1d
+op_handler["ELU"] = nonlinear_1d
+op_handler["Sigmoid"] = nonlinear_1d
 op_handler["Tanh"] = nonlinear_1d
 op_handler["Softplus"] = nonlinear_1d
-op_handler['Softmax'] = nonlinear_1d
+op_handler["Softmax"] = nonlinear_1d
 
-op_handler['MaxPool1d'] = maxpool
-op_handler['MaxPool2d'] = maxpool
-op_handler['MaxPool3d'] = maxpool
+op_handler["MaxPool1d"] = maxpool
+op_handler["MaxPool2d"] = maxpool
+op_handler["MaxPool3d"] = maxpool

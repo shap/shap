@@ -1,7 +1,9 @@
 try:
     import matplotlib
 except ImportError:
-    raise ImportError("matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this.")
+    raise ImportError(
+        "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this."
+    )
 
 from ._bar import bar
 from ._beeswarm import beeswarm

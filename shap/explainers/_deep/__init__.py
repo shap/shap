@@ -4,7 +4,7 @@ from .deep_tf import TFDeep
 
 
 class Deep(Explainer):
-    """ Meant to approximate SHAP values for deep learning models.
+    """Meant to approximate SHAP values for deep learning models.
 
     This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we
     approximate the conditional expectations of SHAP values using a selection of background samples.
@@ -20,7 +20,7 @@ class Deep(Explainer):
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
-        """ An explainer object for a differentiable model using a given background dataset.
+        """An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
@@ -70,25 +70,27 @@ class Deep(Explainer):
             a, b = model
             try:
                 a.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except:
-                framework = 'tensorflow'
+                framework = "tensorflow"
         else:
             try:
                 model.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except:
-                framework = 'tensorflow'
+                framework = "tensorflow"
 
-        if framework == 'tensorflow':
+        if framework == "tensorflow":
             self.explainer = TFDeep(model, data, session, learning_phase_flags)
-        elif framework == 'pytorch':
+        elif framework == "pytorch":
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
-        """ Return approximate SHAP values for the model applied to the data given by X.
+    def shap_values(
+        self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True
+    ):
+        """Return approximate SHAP values for the model applied to the data given by X.
 
         Parameters
         ----------
@@ -121,4 +123,6 @@ class Deep(Explainer):
             ranked_outputs, and indexes is a matrix that indicates for each sample which output indexes
             were chosen as "top".
         """
-        return self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)
+        return self.explainer.shap_values(
+            X, ranked_outputs, output_rank_order, check_additivity=check_additivity
+        )

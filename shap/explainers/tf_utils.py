@@ -3,14 +3,14 @@ import warnings
 
 
 def _import_tf():
-    """ Tries to import tensorflow.
-    """
+    """Tries to import tensorflow."""
     global tf
     if tf is None:
         import tensorflow as tf
 
+
 def _get_session(session):
-    """ Common utility to get the session for the tensorflow-based explainer.
+    """Common utility to get the session for the tensorflow-based explainer.
 
     Parameters
     ----------
@@ -31,8 +31,9 @@ def _get_session(session):
             session = tf.keras.backend.get_session()
     return tf.get_default_session() if session is None else session
 
+
 def _get_graph(explainer):
-    """ Common utility to get the graph for the tensorflow-based explainer.
+    """Common utility to get the graph for the tensorflow-based explainer.
 
     Parameters
     ----------
@@ -45,11 +46,13 @@ def _get_graph(explainer):
         return explainer.session.graph
     else:
         from tensorflow.python.keras import backend
+
         graph = backend.get_graph()
         return graph
 
+
 def _get_model_inputs(model):
-    """ Common utility to determine the model inputs.
+    """Common utility to determine the model inputs.
 
     Parameters
     ----------
@@ -58,18 +61,21 @@ def _get_model_inputs(model):
         The tensorflow model or tuple.
     """
     _import_tf()
-    if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
-        str(type(model)).endswith("keras.models.Sequential'>") or \
-        str(type(model)).endswith("keras.engine.training.Model'>") or \
-        isinstance(model, tf.keras.Model):
+    if (
+        str(type(model)).endswith("keras.engine.sequential.Sequential'>")
+        or str(type(model)).endswith("keras.models.Sequential'>")
+        or str(type(model)).endswith("keras.engine.training.Model'>")
+        or isinstance(model, tf.keras.Model)
+    ):
         return model.inputs
     elif str(type(model)).endswith("tuple'>"):
         return model[0]
     else:
         assert False, str(type(model)) + " is not currently a supported model type!"
 
+
 def _get_model_output(model):
-    """ Common utility to determine the model output.
+    """Common utility to determine the model output.
 
     Parameters
     ----------
@@ -78,10 +84,12 @@ def _get_model_output(model):
         The tensorflow model or tuple.
     """
     _import_tf()
-    if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
-        str(type(model)).endswith("keras.models.Sequential'>") or \
-        str(type(model)).endswith("keras.engine.training.Model'>") or \
-        isinstance(model, tf.keras.Model):
+    if (
+        str(type(model)).endswith("keras.engine.sequential.Sequential'>")
+        or str(type(model)).endswith("keras.models.Sequential'>")
+        or str(type(model)).endswith("keras.engine.training.Model'>")
+        or isinstance(model, tf.keras.Model)
+    ):
         if len(model.layers[-1]._inbound_nodes) == 0:
             if len(model.outputs) > 1:
                 warnings.warn("Only one model output supported.")
