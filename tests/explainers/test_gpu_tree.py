@@ -20,7 +20,7 @@ def test_front_page_xgboost():
     shap.initjs()
 
     # train XGBoost model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
 
     # explain the model's predictions using SHAP values
@@ -35,7 +35,7 @@ def test_front_page_xgboost():
 
     # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
     shap.dependence_plot(5, shap_values, X, show=False)
-    shap.dependence_plot("RM", shap_values, X, show=False)
+    shap.dependence_plot("Longitude", shap_values, X, show=False)
 
     # summarize the effects of all the features
     shap.summary_plot(shap_values, X, show=False)

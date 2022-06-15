@@ -458,17 +458,21 @@ def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
     indices[pos + lind_size:pos + lind_size + rind_size] = indices[rpos:rpos + rind_size]
 
 def link_reweighting(p, link):
-    """ Returns a weighting that makes mean(weights*link(outputs)) == link(mean(outputs)).
+    """ Returns a weighting that makes mean(weights*link(p)) == link(mean(p)).
 
-    This is based on a linearization of the link function. When that the link function is monotonic then we
+    This is based on a linearization of the link function. When the link function is monotonic then we
     can find a set of positive weights that adjust for the non-linear influence changes on the
-    expected value.
+    expected value. Note that there are many possible reweightings that can satisfy the above
+    property. This function returns the one that has the lowest L2 norm.
     """
+    
+    # the linearized link funciton is a first order Taylor expansion of the link function
+    # centered at the expected value
     expected_value = np.mean(p, axis=0)
     epsilon = 0.0001
     link_gradient = (link(expected_value + epsilon) - link(expected_value)) / epsilon
-
     linearized_link = link_gradient*(p - expected_value) + link(expected_value)
+    
     weights = (linearized_link - link(expected_value)) / (link(p) - link(expected_value))
     weights *= weights.shape[0] / np.sum(weights, axis=0)
     return weights
