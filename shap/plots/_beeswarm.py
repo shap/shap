@@ -362,14 +362,14 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=color)
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
+        cb = pl.colorbar(m, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 20)
+#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+#         cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -862,14 +862,14 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ticks=[0, 1], aspect=1000)
+        cb = pl.colorbar(m, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 20)
+#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+#         cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
     pl.gca().xaxis.set_ticks_position('bottom')
@@ -887,5 +887,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
     else:
         pl.xlabel(labels['VALUE'], fontsize=13)
+    pl.tight_layout()
     if show:
         pl.show()
