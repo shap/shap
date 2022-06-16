@@ -777,7 +777,6 @@ def compute_output_dims(values, base_values, data, output_names):
         output_shape = tuple()
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
-    list(range(len(values_shape)))
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
