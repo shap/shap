@@ -2,8 +2,6 @@
 import pandas as pd
 import numpy as np
 import scipy as sp
-import sys
-import warnings
 import copy
 import operator
 import sklearn
@@ -779,7 +777,7 @@ def compute_output_dims(values, base_values, data, output_names):
         output_shape = tuple()
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
-    values_dims = list(range(len(values_shape)))
+    list(range(len(values_shape)))
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 

@@ -1,5 +1,5 @@
 from shap.utils import safe_isinstance, MaskedModel
-from shap.maskers import Independent, Partition, Impute, Text, Image, FixedComposite
+from shap.maskers import FixedComposite, Image, Text
 from shap import Explanation, links
 import matplotlib.pyplot as pl
 import sklearn

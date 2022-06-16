@@ -5,7 +5,6 @@ module which uses a compiled C++ implmentation.
 """
 import numpy as np
 #import numba
-from .explainer import Explainer
 from ..utils._exceptions import ExplainerError
 
 # class TreeExplainer(Explainer):

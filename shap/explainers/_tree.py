@@ -1,12 +1,8 @@
 import time
 import numpy as np
 import scipy.special
-import multiprocessing
-import sys
 import json
-import os
 import struct
-import itertools
 from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance

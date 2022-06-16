@@ -11,10 +11,9 @@ try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
-    pass
 from ._labels import labels
 from . import colors
-from ..utils import safe_isinstance, OpChain, format_value
+from ..utils import safe_isinstance
 from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
 from .. import Explanation
 
@@ -254,7 +253,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
-    y_pos = np.arange(len(feature_inds), 0, -1)
+    np.arange(len(feature_inds), 0, -1)
     feature_names_new = []
     for pos,inds in enumerate(orig_inds):
         if len(inds) == 1:
@@ -442,7 +441,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
-        base_value = shap_exp.base_values
+        shap_exp.base_values
         shap_values = shap_exp.values
         if features is None:
             features = shap_exp.data
@@ -699,7 +698,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 ds /= np.max(ds) * 3
 
                 values = features[:, i]
-                window_size = max(10, len(values) // 20)
+                max(10, len(values) // 20)
                 smooth_values = np.zeros(len(xs) - 1)
                 sort_inds = np.argsort(shaps)
                 trailing_pos = 0
@@ -788,7 +787,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             # order the feature data so we can apply percentiling
             order = np.argsort(feature)
             # x axis is located at y0 = pos, with pos being there for offset
-            y0 = np.ones(num_x_points) * pos
+            np.ones(num_x_points) * pos
             # calculate kdes:
             ys = np.zeros((nbins, num_x_points))
             for i in range(nbins):

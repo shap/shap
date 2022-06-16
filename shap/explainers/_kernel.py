@@ -2,7 +2,6 @@ from ..utils._legacy import convert_to_instance, convert_to_model, match_instanc
 from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
 from ..utils import safe_isinstance
 from scipy.special import binom
-from scipy.sparse import issparse
 import numpy as np
 import pandas as pd
 import scipy as sp

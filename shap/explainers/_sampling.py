@@ -1,5 +1,4 @@
-from ..utils._legacy import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
-from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData
+from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ..utils import safe_isinstance
 from .._explanation import Explanation
 from ._kernel import Kernel
@@ -55,9 +54,9 @@ class Sampling(Kernel):
             feature_names = None # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
-        output_shape = tuple()
+        tuple()
         if type(v) is list:
-            output_shape = (len(v),)
+            (len(v),)
             v = np.stack(v, axis=-1) # put outputs at the end
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)#, output_shape=output_shape)
         return e

@@ -1,12 +1,9 @@
 import re
-import pandas as pd
 import numpy as np
 import scipy as sp
-from scipy.spatial.distance import pdist
 import sys
 import warnings
 import sklearn
-import importlib
 import copy
 from contextlib import contextmanager
 import sys, os
@@ -65,7 +62,7 @@ def potential_interactions(shap_values_column, shap_values_matrix):
     # ignore inds that are identical to the column 
     ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)
     
-    values = shap_values_matrix.values
+    shap_values_matrix.values
     X = shap_values_matrix.data
 
     if X.shape[0] > 10000:

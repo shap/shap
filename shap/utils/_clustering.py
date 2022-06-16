@@ -1,6 +1,5 @@
 import numpy as np
 import scipy as sp
-from scipy.spatial.distance import pdist
 from numba import jit
 import sklearn
 import warnings

@@ -1,17 +1,8 @@
-import functools
-import types
 from ..utils import partition_tree_shuffle, MaskedModel
-from .._explanation import Explanation
 from ._explainer import Explainer
 import numpy as np
-import pandas as pd
-import scipy as sp
-import pickle
-import cloudpickle
 import warnings
 from .. import links
-from .. import maskers
-from ..maskers import Masker
 from ..models import Model
 
 class Permutation(Explainer):
