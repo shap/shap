@@ -54,9 +54,7 @@ class Sampling(Kernel):
             feature_names = None # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
-        tuple()
         if type(v) is list:
-            (len(v),)
             v = np.stack(v, axis=-1) # put outputs at the end
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)#, output_shape=output_shape)
         return e
