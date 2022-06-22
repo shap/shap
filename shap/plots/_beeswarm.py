@@ -215,8 +215,10 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         pl.subplots_adjust(hspace=0, wspace=0.1)
         if show:
             pl.show()
-        return
-
+            return
+        else:
+            return pl.gcf()
+        
     # determine how many top features we will plot
     if max_display is None:
         max_display = len(feature_names)
@@ -385,6 +387,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+    else:
+        return pl.gcf()
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
