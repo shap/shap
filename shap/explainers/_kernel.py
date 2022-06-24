@@ -11,12 +11,13 @@ import copy
 import itertools
 import warnings
 import gc
+import pickle
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from tqdm.auto import tqdm
 from ._explainer import Explainer
+from .._serializable import Serializer, Deserializer, Serializable
 
 log = logging.getLogger('shap')
-
 
 
 class Kernel(Explainer):
@@ -610,3 +611,22 @@ class Kernel(Explainer):
                 phi[i] = 0
 
         return phi, np.ones(len(phi))
+
+    @classmethod
+    def load(cls, in_file, model_loader=None, masker_loader=None, instantiate=True):
+        if instantiate:
+            return cls._instantiated_load(in_file, model_loader=None, masker_loader=None)
+
+        kwargs = Serializable.load(in_file, instantiate=False)
+        with Deserializer(in_file, "shap.Explainer", min_version=0, max_version=0) as s:
+            kwargs["model"] = s.load("model")
+            kwargs["link"] = s.load("link")
+            kwargs["data"] = s.load("data")
+        return kwargs
+
+    def save(self, out_file, model_saver=None, masker_saver=None):
+        pickle.dump(type(self), out_file)
+        with Serializer(out_file, "shap.Explainer", version=0) as s:
+            s.save("model", self.model)
+            s.save("link", self.link)
+            s.save("data", self.data)
