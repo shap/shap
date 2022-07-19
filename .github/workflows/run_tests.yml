@@ -25,7 +25,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python setup.py develop
+          pip install numpy scipy scikit-learn pandas tqdm packaging slicer numba
+          pip install -e . --no-build-isolation
           pip install .[test]
           pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint sentencepiece
       - name: Test with pytest
