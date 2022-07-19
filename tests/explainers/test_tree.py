@@ -1132,3 +1132,29 @@ def test_xgboost_buffer_strip():
     # after this fix, this line should not error
     explainer = shap.TreeExplainer(model)
     assert isinstance(explainer, shap.explainers.Tree)
+
+
+def test_feature_perturbation_refactoring():
+    X, y = sklearn.datasets.make_regression(n_samples=100, n_features=10, random_state=0)
+    model = sklearn.ensemble.RandomForestRegressor().fit(X, y)
+
+    # check the behaviour of "auto" and the switch from "interventional" to "tree_path_dependent"
+    feature_perturbation = "auto"
+    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "tree_path_dependent"
+
+    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "interventional"
+
+    # check that we raise a FutureWarning when switching "interventional" to "tree_path_dependent"
+    feature_perturbation = "interventional"
+    warn_msg = "In the future, passing feature_perturbation='interventional'"
+    with pytest.warns(FutureWarning, match=warn_msg):
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "tree_path_dependent"
+
+    # raise an error if the option is unknown
+    feature_perturbation = "random"
+    err_msg = "feature_perturbation must be"
+    with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
