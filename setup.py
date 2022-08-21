@@ -200,7 +200,8 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
     }
     extras_require['test'] = tests_require
     extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
-
+    with open("requirements.txt") as f:
+        requirements = f.readlines()
     setup(
         name='shap',
         version=find_version("shap", "__init__.py"),
@@ -224,9 +225,10 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         ],
         package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
         cmdclass={'build_ext': build_ext},
-        setup_requires=['numpy'],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
-                          'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
+        setup_requires=['cython==0.29.32',
+                        "numpy==1.21.6;python_version=='3.7'",
+                        "numpy==1.22.4;python_version>='3.8'"],
+        install_requires=requirements,
         extras_require=extras_require,
         ext_modules=ext_modules,
         classifiers=[
