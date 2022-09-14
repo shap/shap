@@ -5,7 +5,7 @@ from __future__ import division, unicode_literals
 import os
 import io
 import string
-import json
+import simplejson as json
 import random
 try:
     from IPython.core.display import display, HTML
