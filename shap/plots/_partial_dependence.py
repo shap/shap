@@ -40,7 +40,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
     if isinstance(data, Explanation):
         features = data.data
-        shap_values = data
+#         shap_values = data
     else:
         features = data
 
