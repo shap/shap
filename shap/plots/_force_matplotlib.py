@@ -114,7 +114,7 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
         if feature[1] == "":
             text = feature[2]
         else:
-            text = feature[2] + ' = ' + feature[1]
+            text = feature[2] + ' = ' + str(feature[1])
 
         if text_rotation is not 0:
             va_alignment = 'top'
