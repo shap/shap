@@ -525,6 +525,10 @@ class Tree(Explainer):
 
         def check_sum(sum_val, model_output):
             diff = np.abs(sum_val - model_output)
+            
+            print("Additivity difference: " + str(diff))
+            print("Relative additivity difference: " + str(np.max(diff / (np.abs(sum_val) + 1e-2))))
+            
             if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
                 ind = np.argmax(diff)
                 err_msg = "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the " \
