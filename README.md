@@ -13,7 +13,7 @@
 
 <!--**SHAP (SHapley Additive exPlanations)** is a unified approach to explain the output of any machine learning model. SHAP connects game theory with local explanations, uniting several previous methods [1-7] and representing the only possible consistent and locally accurate additive feature attribution method based on expectations (see our [papers](#citations) for details and citations).-->
 
-
+Image Classification video tutorial(Chiense): https://www.bilibili.com/video/BV1vP4y1S7Xu
 
 ## Install
 
