@@ -590,7 +590,7 @@ class Explanation(object, metaclass=MetaExplanation):
 def group_features(shap_values, feature_map):
     # TODO: support and deal with clusterings
 
-    if shap_values.feature_groups is not none:
+    if shap_values.feature_groups is not None:
         raise Exception("Cannot group features on a groupped explaination.")
         return shap_values
 

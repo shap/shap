@@ -14,7 +14,7 @@ class Tabular(Masker):
     """ A common base class for Independent and Partition.
     """
 
-    def __init__(self, data, max_samples=100, clustering=None):
+    def __init__(self, data, max_samples=1000, clustering=None):
         """ This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -120,7 +120,7 @@ class Tabular(Masker):
         if self.output_dataframe:
             return pd.DataFrame(self._masked_data, columns=self.feature_names)
 
-        return self._masked_data
+        return (self._masked_data,)
 
     # def reset_delta_masking(self):
     #     """ This resets the masker back to all zeros when delta masking.
@@ -205,8 +205,7 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
     output_pos = 0
     N = masked_inputs_tmp.shape[0]
     while masks_pos < len(masks):
-        i += 1
-
+        i += 1 #first i=0
         # update the tmp masked inputs array
         dpos = 0
         curr_delta_inds[0] = masks[masks_pos]

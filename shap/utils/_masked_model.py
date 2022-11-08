@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse
 from numba import jit
+import pandas as pd
 
 
 class MaskedModel():
@@ -20,7 +21,6 @@ class MaskedModel():
         self.link = link
         self.args = args
         self.mode = kwargs.get("mode")
-        self.ps_len = kwargs.get("ps_len", -1)        
         # if the masker supports it, save what positions vary from the background
         if callable(getattr(self.masker, "invariants", None)) and (self.mode != 'full'):
             self._variants = ~self.masker.invariants(*args)
@@ -45,9 +45,9 @@ class MaskedModel():
             self._masker_rows = None# # just assuming...
             self._masker_cols = sum(np.prod(a.shape) for a in self.args)
 
-    def __call__(self, masks, batch_size=None, ps_len=-1, start_row = 0):
+    def __call__(self, masks, batch_size=None, mask_end_pos=[], start_row = 0):
 
-        self.ps_len = ps_len
+        self.mask_end_pos = mask_end_pos
         # if we are passed a 1D array of indexes then we are delta masking and have a special implementation
         if len(masks.shape) == 1:
             if getattr(self.masker, "supports_delta_masking", False):
@@ -180,17 +180,23 @@ class MaskedModel():
         if self.mode == 'full':
             masked_inputs_list=[]
             varying_rows_list=[]
-            if self.ps_len >= 1:
-                mask_row_count = len(masks) // self.ps_len
-            
+            if self.mask_end_pos:
+                mask_row_count = len(self.mask_end_pos)
                 vx=self.args[0][start_row:start_row+mask_row_count]
-                for row in range(mask_row_count):
-                    row_masked_inputs, row_varying_rows = self.masker(masks[self.ps_len * row : self.ps_len * (row+1)], vx[row])
-                    masked_inputs_list.append(np.array(row_masked_inputs))
+                row = 0
+                for pos in self.mask_end_pos:
+                    if row == 0:
+                        last_pos = 0
+                    else:
+                        last_pos = self.mask_end_pos[row-1]
+                    row_masked_inputs, row_varying_rows = self.masker(masks[last_pos : pos], vx[row])
+                    if isinstance(row_masked_inputs[0], pd.DataFrame):
+                        row_masked_inputs=[row_masked_inputs[0].values,]
+                    masked_inputs_list.append(row_masked_inputs)
                     varying_rows_list.append(row_varying_rows)
+                    row += 1
                 masked_inputs=np.concatenate(masked_inputs_list, axis=1)
-                varying_rows=np.array(varying_rows_list)
-                varying_rows=varying_rows.reshape(-1, varying_rows.shape[-1])
+                varying_rows=np.concatenate(varying_rows_list, axis=0)
             
         else:
             masked_inputs, varying_rows = self.masker(masks, *self.args)

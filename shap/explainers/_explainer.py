@@ -23,7 +23,7 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, **kwargs):
+    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, max_samples=100, **kwargs):
         """ Build a new explainer for the passed model.
 
         Parameters
@@ -79,7 +79,7 @@ class Explainer(Serializable):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
-                self.masker = maskers.Independent(masker)
+                self.masker = maskers.Independent(masker, max_samples=max_samples)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
             if (safe_isinstance(self.model, "transformers.PreTrainedModel") or safe_isinstance(self.model, "transformers.TFPreTrainedModel")) and \
                     safe_isinstance(self.model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM):
@@ -90,7 +90,7 @@ class Explainer(Serializable):
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
         elif (masker is dict) and ("mean" in masker):
-            self.masker = maskers.Independent(masker)
+            self.masker = maskers.Independent(masker, max_samples=max_samples)
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
             return self.__init__( # pylint: disable=non-parent-init-called
                 self.model, self.model.inner_model.tokenizer,
@@ -191,7 +191,7 @@ class Explainer(Serializable):
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
-                 outputs=None, silent=False, **kwargs):
+                 outputs=None, silent=False, dryrun=False, **kwargs):
         """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
 
         Note this default version could be ois an abstract method that is implemented by each algorithm-specific
@@ -249,7 +249,8 @@ class Explainer(Serializable):
 
             # convert DataFrames to numpy arrays
             if safe_isinstance(args[i], "pandas.core.frame.DataFrame"):
-                feature_names[i] = list(args[i].columns)
+                if not group_mask:
+                    feature_names[i] = list(args[i].columns)
                 args[i] = args[i].to_numpy()
 
             # convert nlp Dataset objects to lists
@@ -373,7 +374,7 @@ class Explainer(Serializable):
         else:
 
             full_results = self.explain_full(args, max_evals=max_evals, error_bounds=error_bounds, 
-                                            batch_size=batch_size, outputs=outputs, silent=silent, feature_group_list=feature_group_list, main_effects=need_main_effects, **kwargs)
+                                            batch_size=batch_size, outputs=outputs, silent=silent, feature_group_list=feature_group_list, main_effects=need_main_effects, dryrun=dryrun, **kwargs)
 
             values=full_results.get("values", None)
             output_indices=full_results.get("output_indices", None)
