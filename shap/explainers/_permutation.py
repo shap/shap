@@ -74,10 +74,10 @@ class Permutation(Explainer):
             # this signature should match the __call__ signature of the class defined below
             class Permutation(self.__class__):
                 def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
-                             outputs=None, silent=False):
+                             outputs=None, silent=False, **kwargs):
                     return super().__call__(
                         *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
-                        batch_size=batch_size, outputs=outputs, silent=silent
+                        batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
                     )
             Permutation.__call__.__doc__ = self.__class__.__call__.__doc__
             self.__class__ = Permutation
@@ -86,15 +86,15 @@ class Permutation(Explainer):
 
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
-                 outputs=None, silent=False):
+                 outputs=None, silent=False, **kwargs):
         """ Explain the output of the model on the given arguments.
         """
         return super().__call__(
             *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
-            outputs=outputs, silent=silent
+            outputs=outputs, silent=silent, **kwargs
         )
 
-    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, need_interactions=False, **kwargs):
+    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, need_interactions=False, dryrun=False, **kwargs):
         """ Explains a full set of samples (by groups of features) and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects, interactions).
 
         Parameters
@@ -133,7 +133,7 @@ class Permutation(Explainer):
         #last_time = datetime.datetime.now()
         #print("shap calculation started at {}".format(last_time))
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(self.model, self.masker, self.link, *args, mode='full')
+        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *args, mode='full')
         #inds = fm.varying_inputs()
         #ind_len=len(inds) # feature_count
         ginds= [i for i in range(mask_group_len)]
@@ -173,6 +173,7 @@ class Permutation(Explainer):
                     masks=[]
                     pair_dict=[]
                     ginds_list=[]
+                    mask_end_pos = []
 
                 # loop over many permutations
                 batch_rows += 1
@@ -218,14 +219,17 @@ class Permutation(Explainer):
                     k += k_mei
                     masks += masks_mei
                 if row == 0:
-                    mask_len = k
-                    ps_len = len(masks)
+                    per_row_gmask_count = k
+                mask_end_pos.append(len(masks))
                     
                 if ((row + 1) % batch_size == 0) or (row + 1 == row_count):
 
                     masks=np.array(masks, dtype=np.int)
-                    outputs = fm(masks, ps_len=ps_len, start_row=base_row)
-                    outputs2=outputs.reshape(batch_rows, mask_len, -1)
+                    if dryrun:
+                        outputs2=np.zeros((batch_rows, per_row_gmask_count, 1))
+                    else:
+                        outputs = fm(masks, mask_end_pos=mask_end_pos, start_row=base_row)
+                        outputs2=outputs.reshape(batch_rows, per_row_gmask_count, -1)
 
                     if row_values is None:
                         row_values = np.zeros((row_count, gind_len,) + outputs2.shape[2:])
