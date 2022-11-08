@@ -21,9 +21,9 @@ class FixedComposite(Masker):
             A tuple consisting of the masked input using the underlying masker appended with the original args in a list.
         """
         self.masker = masker
-        # define attributes to be dynamically set
-        masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names"]
-        # set attributes dynamically
+
+        # copy attributes from the masker we are wrapping
+        masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names", "text_data", "image_data"]
         for masker_attribute in masker_attributes:
             if getattr(self.masker, masker_attribute, None) is not None:
                 setattr(self, masker_attribute, getattr(self.masker, masker_attribute))

@@ -1,3 +1,5 @@
+import functools
+import types
 from ..utils import partition_tree_shuffle, MaskedModel
 from .._explanation import Explanation
 from ._explainer import Explainer
@@ -8,6 +10,7 @@ import scipy as sp
 import pickle
 import datetime
 import cloudpickle
+import warnings
 from .. import links
 from .. import maskers
 from ..maskers import Masker
@@ -25,16 +28,16 @@ class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.
 
     This is a model agnostic explainer that gurantees local accuracy (additivity) by iterating completely
-    through an entire permutatation of the features in both forward and reverse directions. If we do this
-    once, then we get the exact SHAP values for models with up to second order interaction effects. We can
-    iterate this many times over many random permutations to get better SHAP value estimates for models
+    through an entire permutatation of the features in both forward and reverse directions (antithetic sampling).
+    If we do this once, then we get the exact SHAP values for models with up to second order interaction effects.
+    We can iterate this many times over many random permutations to get better SHAP value estimates for models
     with higher order interactions. This sequential ordering formulation also allows for easy reuse of
     model evaluations and the ability to effciently avoid evaluating the model when the background values
     for a feature are the same as the current input value. We can also account for hierarchial data
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
     """
 
-    def __init__(self, model, masker, link=links.identity, feature_names=None):
+    def __init__(self, model, masker, link=links.identity, feature_names=None, linearize_link=True, seed=None, **call_args):
         """ Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
@@ -49,11 +52,47 @@ class Permutation(Explainer):
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. To use a clustering
             game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
+
+        seed: None or int
+            Seed for reproducibility
+
+        **call_args : valid argument to the __call__ method
+            These arguments are saved and passed to the __call__ method as the new default values for these arguments.
         """
-        super(Permutation, self).__init__(model, masker, link=link, feature_names=feature_names)
+
+        # setting seed for random generation: if seed is not None, then shap values computation should be reproducible
+        np.random.seed(seed)
+
+        super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
         self.mode = ""
-        if not isinstance(model, Model):
-            self.model = Model(model)
+        if not isinstance(self.model, Model):
+            self.model = Model(self.model)
+
+        # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
+        # has a call function with those new default arguments
+        if len(call_args) > 0:
+            # this signature should match the __call__ signature of the class defined below
+            class Permutation(self.__class__):
+                def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
+                             outputs=None, silent=False):
+                    return super().__call__(
+                        *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
+                        batch_size=batch_size, outputs=outputs, silent=silent
+                    )
+            Permutation.__call__.__doc__ = self.__class__.__call__.__doc__
+            self.__class__ = Permutation
+            for k, v in call_args.items():
+                self.__call__.__kwdefaults__[k] = v
+
+    # note that changes to this function signature should be copied to the default call argument wrapper above
+    def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
+                 outputs=None, silent=False):
+        """ Explain the output of the model on the given arguments.
+        """
+        return super().__call__(
+            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
+            outputs=outputs, silent=silent
+        )
 
     def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, need_interactions=False, **kwargs):
         """ Explains a full set of samples (by groups of features) and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects, interactions).
@@ -247,7 +286,7 @@ class Permutation(Explainer):
         """
 
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(self.model, self.masker, self.link, *row_args)
+        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
         # by default we run 10 permutations forward and backward
         if max_evals == "auto":
@@ -264,7 +303,7 @@ class Permutation(Explainer):
             elif callable(self.masker.clustering):
                 row_clustering = self.masker.clustering(*row_args)
             else:
-                raise Exception("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
+                raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
 
         # loop over many permutations
         inds = fm.varying_inputs()
@@ -274,6 +313,8 @@ class Permutation(Explainer):
         masks[0] = MaskedModel.delta_mask_noop_value
         npermutations = max_evals // (2*len(inds)+1)
         row_values = None
+        row_values_history = None
+        history_pos = 0
         main_effect_values = None
         interaction_values = None
         if len(inds) > 0:
@@ -297,25 +338,44 @@ class Permutation(Explainer):
                     i += 1
 
                 # evaluate the masked model
-                outputs = fm(masks, batch_size=batch_size)
+                outputs = fm(masks, zero_index=0, batch_size=batch_size)
 
                 if row_values is None:
                     row_values = np.zeros((len(fm),) + outputs.shape[1:])
 
+                    if error_bounds:
+                        row_values_history = np.zeros((2 * npermutations, len(fm),) + outputs.shape[1:])
+
                 # update our SHAP value estimates
-                for i,ind in enumerate(inds):
-                    row_values[ind] += outputs[i+1] - outputs[i]
-                for i,ind in enumerate(inds):
-                    row_values[ind] += outputs[i+1] - outputs[i]
+                i = 0
+                for ind in inds: # forward
+                    row_values[ind] += outputs[i + 1] - outputs[i]
+                    if error_bounds:
+                        row_values_history[history_pos][ind] = outputs[i + 1] - outputs[i]
+                    i += 1
+                history_pos += 1
+                for ind in inds: # backward
+                    row_values[ind] += outputs[i] - outputs[i + 1]
+                    if error_bounds:
+                        row_values_history[history_pos][ind] = outputs[i] - outputs[i + 1]
+                    i += 1
+                history_pos += 1
 
             if npermutations == 0:
-                raise Exception("max_evals is too low for the Permutation explainer, it must be at least 2 * num_features + 1!")
+                raise ValueError(f"max_evals={max_evals} is too low for the Permutation explainer, it must be at least 2 * num_features + 1 = {2 * len(inds) + 1}!")
 
             expected_value = outputs[0]
 
             # compute the main effects if we need to
             if main_effects:
-                main_effect_values, interaction_values = fm.main_effects(inds, need_interactions=need_interactions)
+                main_effect_values, interaction_values = fm.main_effects(inds, need_interactions=need_interactions, batch_size=batch_size)
+        else:
+            masks = np.zeros(1, dtype=np.int)
+            outputs = fm(masks, zero_index=0, batch_size=1)
+            expected_value = outputs[0]
+            row_values = np.zeros((len(fm),) + outputs.shape[1:])
+            if error_bounds:
+                row_values_history = np.zeros((2 * npermutations, len(fm),) + outputs.shape[1:])
 
         return {
             "values": row_values / (2 * npermutations),
@@ -324,6 +384,7 @@ class Permutation(Explainer):
             "main_effects": main_effect_values,
             "interactions": interaction_values,
             "clustering": row_clustering,
+            "error_std": None if row_values_history is None else row_values_history.std(0),
             "output_names": self.model.output_names if hasattr(self.model, "output_names") else None
         }
 
@@ -352,6 +413,10 @@ class Permutation(Explainer):
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
         """
-
+        warnings.warn("shap_values() is deprecated; use __call__().", warnings.DeprecationWarning)
+        
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
-        return explanation._old_format()
+        return explanation.values
+
+    def __str__(self):
+        return "shap.explainers.Permutation()"

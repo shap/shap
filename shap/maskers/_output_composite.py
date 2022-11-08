@@ -26,9 +26,9 @@ class OutputComposite(Masker):
         """
         self.masker = masker
         self.model = model
-        # define attributes to be dynamically set
-        masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names"]
-        # set attributes dynamically
+
+        # copy attributes from the masker we are wrapping
+        masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names", "text_data", "image_data"]
         for masker_attribute in masker_attributes:
             if getattr(self.masker, masker_attribute, None) is not None:
                 setattr(self, masker_attribute, getattr(self.masker, masker_attribute))

@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import scipy.special
 import multiprocessing
@@ -6,10 +7,11 @@ import json
 import os
 import struct
 import itertools
-from distutils.version import LooseVersion
+from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._legacy import DenseData
+from ..utils._exceptions import InvalidMaskerError, ExplainerError, InvalidFeaturePerturbationError, InvalidModelError
 from .._explanation import Explanation
 from .. import maskers
 import warnings
@@ -50,7 +52,7 @@ class Tree(Explainer):
     implementations either inside an externel model package or in the local compiled C extention.
     """
 
-    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, **deprecated_options):
+    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, approximate=False, **deprecated_options):
         """ Build a new Tree explainer for the passed model.
 
         Parameters
@@ -101,10 +103,10 @@ class Tree(Explainer):
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
         elif masker is not None:
-            raise Exception("Unsupported masker type: %s!" % str(type(self.masker)))
+            raise InvalidMaskerError("Unsupported masker type: %s!" % str(type(self.masker)))
 
         if getattr(self.masker, "clustering", None) is not None:
-            raise Exception("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
+            raise ExplainerError("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
 
         # check for deprecated options
         if model_output == "margin":
@@ -122,10 +124,10 @@ class Tree(Explainer):
                 warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
                     " = \"interventional\", you can't supply both options! See GitHub issue #882.")
             if dep_val == "tree_path_dependent" and feature_perturbation == "interventional":
-                raise Exception("The feature_dependence option has been renamed to feature_perturbation! " \
+                raise ValueError("The feature_dependence option has been renamed to feature_perturbation! " \
                     "Please update the option name before calling TreeExplainer. See GitHub issue #882.")
         if feature_perturbation == "independent":
-            raise Exception("feature_perturbation = \"independent\" is not a valid option value, please use " \
+            raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
 
@@ -147,9 +149,11 @@ class Tree(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
+        
+        self.approximate = approximate
 
         if feature_perturbation not in feature_perturbation_codes:
-            raise ValueError("Invalid feature_perturbation option!")
+            raise InvalidFeaturePerturbationError("Invalid feature_perturbation option!")
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":
@@ -166,7 +170,7 @@ class Tree(Explainer):
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
             import xgboost
-            if LooseVersion(xgboost.__version__) < LooseVersion('0.81'):
+            if version.parse(xgboost.__version__) < version.parse('0.81'):
                 raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
 
         # compute the expected value if we have a parsed tree for the cext
@@ -176,7 +180,7 @@ class Tree(Explainer):
             try:
                 self.expected_value = self.model.predict(self.data).mean(0)
             except ValueError:
-                raise Exception("Currently TreeExplainer can only handle models with categorical splits when " \
+                raise ExplainerError("Currently TreeExplainer can only handle models with categorical splits when " \
                                 "feature_perturbation=\"tree_path_dependent\" and no background data is passed. Please try again using " \
                                 "shap.TreeExplainer(model, feature_perturbation=\"tree_path_dependent\").")
             if hasattr(self.expected_value, '__len__') and len(self.expected_value) == 1:
@@ -201,6 +205,8 @@ class Tree(Explainer):
 
     def __call__(self, X, y=None, interactions=False, check_additivity=True):
 
+        start_time = time.time()
+
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
             X = X.values
@@ -208,23 +214,20 @@ class Tree(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity)
-            output_shape = tuple()
+            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate)
             if type(v) is list:
-                output_shape = (len(v),)
                 v = np.stack(v, axis=-1) # put outputs at the end
-
-            # the explanation object expects an expected value for each row
-            if hasattr(self.expected_value, "__len__"):
-                ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
-            else:
-                ev_tiled = np.tile(self.expected_value, v.shape[0])
-
-            e = Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names)
         else:
+            assert not self.approximate, "Approximate computation not yet supported for interaction effects!"
             v = self.shap_interaction_values(X)
-            e = Explanation(v, base_values=self.expected_value, data=X, feature_names=feature_names, interaction_order=2)
-        return e
+
+        # the explanation object expects an expected value for each row
+        if hasattr(self.expected_value, "__len__"):
+            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+        else:
+            ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+        return Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names, compute_time=time.time() - start_time)
 
     def _validate_inputs(self, X, y, tree_limit, check_additivity):
         # see if we have a default tree_limit in place.
@@ -262,7 +265,7 @@ class Tree(Explainer):
                                                        "so TreeExplainer cannot run with the " \
                                                        "feature_perturbation=\"tree_path_dependent\" option! " \
                                                        "Try providing a larger background " \
-                                                       "dataset, or using " \
+                                                       "dataset, no background dataset, or using " \
                                                        "feature_perturbation=\"interventional\"."
 
         if check_additivity and self.model.model_type == "pyspark":
@@ -335,8 +338,9 @@ class Tree(Explainer):
                                          "See https://github.com/slundberg/shap/issues/580") from e
 
                 if check_additivity and self.model.model_output == "raw":
+                    xgb_tree_limit = tree_limit // self.model.num_stacked_models 
                     model_output_vals = self.model.original_model.predict(
-                        X, ntree_limit=tree_limit, output_margin=True,
+                        X, ntree_limit=xgb_tree_limit, output_margin=True,
                         validate_features=False
                     )
 
@@ -474,7 +478,8 @@ class Tree(Explainer):
                 X = xgboost.DMatrix(X)
             if tree_limit == -1:
                 tree_limit = 0
-            phi = self.model.original_model.predict(X, ntree_limit=tree_limit, pred_interactions=True, validate_features=False)
+            xgb_tree_limit = tree_limit // self.model.num_stacked_models
+            phi = self.model.original_model.predict(X, ntree_limit=xgb_tree_limit, pred_interactions=True, validate_features=False)
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
@@ -530,7 +535,7 @@ class Tree(Explainer):
                 err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
                            " was %f, while the model output was %f. If this difference is acceptable" \
                            " you can set check_additivity=False to disable this check." % (sum_val[ind], model_output[ind])
-                raise Exception(err_msg)
+                raise ExplainerError(err_msg)
 
         if type(phi) is list:
             for i in range(len(phi)):
@@ -734,8 +739,13 @@ class TreeEnsemble:
         elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingClassifier"]):
             import sklearn
             self.base_offset = model._baseline_prediction
-            if hasattr(self.base_offset, "__len__") and self.model_output != "raw":
-                raise Exception("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output=\"raw\". See GitHub issue #1028")
+            has_len = hasattr(self.base_offset, "__len__")
+            # Note for newer sklearn versions, the base_offset is an array even for binary classification
+            if has_len and self.base_offset.shape == (1, 1):
+                self.base_offset = self.base_offset[0, 0]
+                has_len = False
+            if has_len and self.model_output != "raw":
+                raise NotImplementedError("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output=\"raw\". See GitHub issue #1028")
             self.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
             self.num_stacked_models = len(model._predictors[0])
             if self.model_output == "predict_proba":
@@ -828,7 +838,13 @@ class TreeEnsemble:
             self.base_offset = xgb_loader.base_score
             self.objective = objective_name_map.get(xgb_loader.name_obj, None)
             self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
-            self.tree_limit = getattr(model, "best_ntree_limit", None)
+            # 'best_ntree_limit' is problematic
+            # https://github.com/dmlc/xgboost/issues/6615
+            if hasattr(model, 'best_iteration'):
+                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1 
+                self.tree_limit = (getattr(model, "best_iteration", None) + 1) * trees_per_iteration
+            else:
+                self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
             if self.model_output == "predict_proba":
@@ -974,7 +990,7 @@ class TreeEnsemble:
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
         else:
-            raise Exception("Model type not yet supported by TreeExplainer: " + str(type(model)))
+            raise InvalidModelError("Model type not yet supported by TreeExplainer: " + str(type(model)))
 
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
@@ -1036,7 +1052,7 @@ class TreeEnsemble:
             elif self.tree_output == "probability":
                 transform = "identity"
             else:
-                raise Exception("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
+                raise NotImplementedError("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
         elif self.model_output == "log_loss":
 
             if self.objective == "squared_error":
@@ -1044,9 +1060,9 @@ class TreeEnsemble:
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                raise Exception("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
+                raise NotImplementedError("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         else:
-            raise Exception("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
+            raise ValueError("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
 
         return transform
 
@@ -1345,7 +1361,7 @@ class SingleTree:
             self.values = values[:,np.newaxis] * scaling
             self.node_sample_weight = node_sample_weight
         else:
-            raise Exception("Unknown input to SingleTree constructor: " + str(tree))
+            raise TypeError("Unknown input to SingleTree constructor: " + str(tree))
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
@@ -1412,7 +1428,9 @@ class XGBTreeModelLoader(object):
     """
     def __init__(self, xgb_model):
         # new in XGBoost 1.1, 'binf' is appended to the buffer
-        self.buf = xgb_model.save_raw().lstrip(b'binf')
+        self.buf = xgb_model.save_raw()
+        if self.buf.startswith(b'binf'):
+            self.buf = self.buf[4:]
         self.pos = 0
 
         # load the model parameters
@@ -1430,7 +1448,7 @@ class XGBTreeModelLoader(object):
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
         # so we have to transform it depending on the objective
         import xgboost
-        if LooseVersion(xgboost.__version__).version[0] >= 1:
+        if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
                 self.base_score = scipy.special.logit(self.base_score) # pylint: disable=no-member
 

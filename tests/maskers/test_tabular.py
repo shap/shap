@@ -15,18 +15,15 @@ def test_serialization_independent_masker_dataframe():
     # initialize independent masker
     original_independent_masker = shap.maskers.Independent(X)
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    # serialize independent masker
-    original_independent_masker.save(temp_serialization_file)
+        # serialize independent masker
+        original_independent_masker.save(temp_serialization_file)
 
+        temp_serialization_file.seek(0)
 
-    temp_serialization_file.seek(0)
-
-    # deserialize masker
-    new_independent_masker = shap.maskers.Independent.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_independent_masker = shap.maskers.Independent.load(temp_serialization_file)
 
     mask = np.ones(X.shape[1]).astype(np.int)
     mask[0] = 0
@@ -46,18 +43,16 @@ def test_serialization_independent_masker_numpy():
     # initialize independent masker
     original_independent_masker = shap.maskers.Independent(X)
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    # serialize independent masker
-    original_independent_masker.save(temp_serialization_file)
+        # serialize independent masker
+        original_independent_masker.save(temp_serialization_file)
 
 
-    temp_serialization_file.seek(0)
+        temp_serialization_file.seek(0)
 
-    # deserialize masker
-    new_independent_masker = shap.maskers.Masker.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_independent_masker = shap.maskers.Masker.load(temp_serialization_file)
 
     mask = np.ones(X.shape[1]).astype(np.int)
     mask[0] = 0
@@ -75,17 +70,15 @@ def test_serialization_partion_masker_dataframe():
     # initialize partition masker
     original_partition_masker = shap.maskers.Partition(X)
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    # serialize partition masker
-    original_partition_masker.save(temp_serialization_file)
+        # serialize partition masker
+        original_partition_masker.save(temp_serialization_file)
 
-    temp_serialization_file.seek(0)
+        temp_serialization_file.seek(0)
 
-    # deserialize masker
-    new_partition_masker = shap.maskers.Partition.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_partition_masker = shap.maskers.Partition.load(temp_serialization_file)
 
     mask = np.ones(X.shape[1]).astype(np.int)
     mask[0] = 0
@@ -104,17 +97,15 @@ def test_serialization_partion_masker_numpy():
     # initialize partition masker
     original_partition_masker = shap.maskers.Partition(X)
 
-    temp_serialization_file = tempfile.TemporaryFile()
+    with tempfile.TemporaryFile() as temp_serialization_file:
 
-    # serialize partition masker
-    original_partition_masker.save(temp_serialization_file)
+        # serialize partition masker
+        original_partition_masker.save(temp_serialization_file)
 
-    temp_serialization_file.seek(0)
+        temp_serialization_file.seek(0)
 
-    # deserialize masker
-    new_partition_masker = shap.maskers.Masker.load(temp_serialization_file)
-
-    temp_serialization_file.close()
+        # deserialize masker
+        new_partition_masker = shap.maskers.Masker.load(temp_serialization_file)
 
     mask = np.ones(X.shape[1]).astype(np.int)
     mask[0] = 0

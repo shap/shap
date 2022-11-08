@@ -18,7 +18,7 @@ from .._explanation import Explanation
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
 def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
-            ax=None, show=True):
+            overlay=None, ax=None, ylabel="SHAP value", show=True):
     """ Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -72,10 +72,44 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     """
 
+
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+
+    # see if we are plotting multiple columns
+    if not isinstance(shap_values.feature_names, str) and len(shap_values.feature_names) > 0:
+        inds = np.argsort(np.abs(shap_values.values).mean(0))
+        nan_min = np.nanmin(shap_values.values)
+        nan_max = np.nanmax(shap_values.values)
+        if ymin is None:
+            ymin = nan_min - (nan_max - nan_min)/20
+        if ymax is None:
+            ymax = nan_max + (nan_max - nan_min)/20
+        f = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        for i in inds:
+            ax = pl.subplot(1,len(inds),i+1)
+            scatter(shap_values[:,i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
+            if overlay is not None:
+                line_styles = ["solid", "dotted", "dashed"]
+                for j, name in enumerate(overlay):
+                    vals = overlay[name]
+                    if isinstance(vals[i][0][0], (float, int)):
+                        pl.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
+            if i == 0:
+                ax.set_ylabel(ylabel)
+            else:
+                ax.set_ylabel("")
+                ax.set_yticks([])
+                ax.spines['left'].set_visible(False)
+        if overlay is not None:
+            pl.legend()
+        if show:
+            pl.show()
+        return
+
     if len(shap_values.shape) != 1:
-        raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to shap.plots.dependence like: shap_values[:,column]")
-    
+        raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to " + \
+                        "shap.plots.dependence like: shap_values[:,column]")
+
     # this unpacks the explanation object for the code that was written earlier
     feature_names = [shap_values.feature_names]
     ind = 0
@@ -309,10 +343,10 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             tick_positions = np.array([cname_map[n] for n in cnames])
             tick_positions *= 1 - 1 / len(cnames)
             tick_positions += 0.5 * (chigh - clow) / (chigh - clow + 1)
-            cb = pl.colorbar(p, ticks=tick_positions, ax=ax)
+            cb = pl.colorbar(p, ticks=tick_positions, ax=ax, aspect=80)
             cb.set_ticklabels(cnames)
         else:
-            cb = pl.colorbar(p, ax=ax)
+            cb = pl.colorbar(p, ax=ax, aspect=80)
 
         cb.set_label(feature_names[interaction_index], size=13)
         cb.ax.tick_params(labelsize=11)
@@ -320,8 +354,8 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             cb.ax.tick_params(length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.7) * 20)
+#         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#         cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
     # handles any setting of xmax and xmin
     # note that we handle None,float, or "percentile(float)" formats
@@ -422,7 +456,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -434,7 +468,8 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,
                       interaction_index="auto",
                       color="#1E88E5", axis_color="#333333", cmap=None,
-                      dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True):
+                      dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True,
+                      ymin=None, ymax=None):
     """ Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -488,6 +523,12 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     ax : matplotlib Axes object
          Optionally specify an existing matplotlib Axes object, into which the plot will be placed.
          In this case we do not create a Figure, otherwise we do.
+
+    ymin : float
+        Represents the lower bound of the plot's y-axis.
+
+    ymax : float
+        Represents the upper bound of the plot's y-axis.
 
     """
 
@@ -641,7 +682,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         cvals[cvals_imp < clow] = clow
         p = ax.scatter(
             xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
-            cmap=cmap, alpha=alpha, vmin=clow, vmax=chigh,
+            cmap=cmap, alpha=alpha,
             norm=color_norm, rasterized=len(xv) > 500
         )
         p.set_array(cvals[xv_notnan])
@@ -656,10 +697,10 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             if len(tick_positions) == 2:
                 tick_positions[0] -= 0.25
                 tick_positions[1] += 0.25
-            cb = pl.colorbar(p, ticks=tick_positions, ax=ax)
+            cb = pl.colorbar(p, ticks=tick_positions, ax=ax, aspect=80)
             cb.set_ticklabels(cnames)
         else:
-            cb = pl.colorbar(p, ax=ax)
+            cb = pl.colorbar(p, ax=ax, aspect=80)
 
         cb.set_label(feature_names[interaction_index], size=13)
         cb.ax.tick_params(labelsize=11)
@@ -667,8 +708,8 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             cb.ax.tick_params(length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.7) * 20)
+#         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#         cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
     # handles any setting of xmax and xmin
     # note that we handle None,float, or "percentile(float)" formats
@@ -704,6 +745,15 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # make the plot more readable
     ax.set_xlabel(name, color=axis_color, fontsize=13)
     ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
+
+    if (ymin is not None) or (ymax is not None):
+        if ymin is None:
+            ymin = -ymax
+        if ymax is None:
+            ymax = -ymin
+
+        ax.set_ylim(ymin, ymax)
+
     if title is not None:
         ax.set_title(title, color=axis_color, fontsize=13)
     ax.xaxis.set_ticks_position('bottom')
@@ -715,7 +765,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         spine.set_edgecolor(axis_color)
     if type(xd[0]) == str:
         ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, dict(rotation='vertical', fontsize=11))
+        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)

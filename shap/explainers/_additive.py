@@ -14,7 +14,7 @@ class Additive(Explainer):
     you will get incorrect answers that fail additivity).
     """
 
-    def __init__(self, model, masker, link=None, feature_names=None):
+    def __init__(self, model, masker, link=None, feature_names=None, linearize_link=True):
         """ Build an Additive explainer for the given model using the given masker object.
 
         Parameters
@@ -31,7 +31,7 @@ class Additive(Explainer):
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
         """
-        super(Additive, self).__init__(model, masker, feature_names=feature_names)
+        super(Additive, self).__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
         
 
@@ -48,14 +48,14 @@ class Additive(Explainer):
                 # self.model(np.zeros(num_features))
                 # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
                 # self._input_offsets = np.zeros(num_features) #* self._zero_offset
-                raise Exception("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
+                raise NotImplementedError("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
                 return
 
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
         assert safe_isinstance(self.masker, "shap.maskers.Independent"), "The Additive explainer only supports the Tabular masker at the moment!"
 
         # pre-compute per-feature offsets
-        fm = MaskedModel(self.model, self.masker, self.link, np.zeros(self.masker.shape[1]))
+        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, np.zeros(self.masker.shape[1]))
         masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=np.bool)
         for i in range(1, self.masker.shape[1]+1):
             masks[i,i-1] = False
@@ -83,7 +83,7 @@ class Additive(Explainer):
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             if model.interactions is not 0:
-                raise Exception("Need to add support for interaction effects!")
+                raise NotImplementedError("Need to add support for interaction effects!")
             return True
             
         return False

@@ -109,7 +109,8 @@ def compile_cuda_module(host_args):
     cuda_home, nvcc = get_cuda_path()
 
     print("NVCC ==> ", nvcc)
-    arch_flags = "-arch=sm_60 " + \
+    arch_flags = "-arch=sm_37 " + \
+                 "-gencode=arch=compute_37,code=sm_37 " + \
                  "-gencode=arch=compute_70,code=sm_70 " + \
                  "-gencode=arch=compute_75,code=sm_75 " + \
                  "-gencode=arch=compute_75,code=compute_75"
@@ -225,12 +226,18 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         cmdclass={'build_ext': build_ext},
         setup_requires=['numpy'],
         install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
-                          'slicer==0.0.7', 'numba', 'cloudpickle'],
+                          'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
         classifiers=[
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.6',
+            "Operating System :: Microsoft :: Windows",
+            "Operating System :: POSIX",
+            "Operating System :: Unix",
+            "Operating System :: MacOS",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
         ],
         zip_safe=False
         # python_requires='>3.0' we will add this at some point
