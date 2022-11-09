@@ -15,6 +15,7 @@ from .. import links
 from .. import maskers
 from ..maskers import Masker
 from ..models import Model
+import gc
 
 def add_pair(pair_dict, inds, iind, iind2, k):
     k1=inds[iind]
@@ -168,6 +169,7 @@ class Permutation(Explainer):
             
             for row in show_progress(range(row_count), row_count, self.__class__.__name__+" explainer (full mode)", silent): #generate masks for the whole dataset at once
                 if row % batch_size == 0: #send for model prediction in batches
+                    gc.collect()
                     base_row = row
                     batch_rows=0
                     masks=[]

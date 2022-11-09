@@ -223,14 +223,6 @@ class Explainer(Serializable):
         mode = kwargs.get('mode', '')
         self.mode = 'row'
 
-        if self.feature_names is None:
-            feature_names = [None for _ in range(len(args))]
-        elif issubclass(type(self.feature_names[0]), (list, tuple)):
-            feature_names = copy.deepcopy(self.feature_names)
-        else:
-            feature_names = [copy.deepcopy(self.feature_names)]
-
-
         feature_groups = kwargs.get('feature_groups')
         if feature_groups is not None:
             group_mask = True
@@ -239,6 +231,14 @@ class Explainer(Serializable):
         else:
             group_mask = False
             feature_group_list =  [[i] for i in range(args[0].shape[1])]
+
+            if self.feature_names is None:
+                feature_names = [None for _ in range(len(args))]
+            elif issubclass(type(self.feature_names[0]), (list, tuple)):
+                feature_names = copy.deepcopy(self.feature_names)
+            else:
+                feature_names = [copy.deepcopy(self.feature_names)]
+
 
         if type(self) is explainers.Permutation and mode == "full":
             self.mode = 'full'
@@ -288,6 +288,7 @@ class Explainer(Serializable):
         clustering = []
         output_names = []
         error_std = []
+
         out = []
         if self.mode != 'full':
             
@@ -375,24 +376,23 @@ class Explainer(Serializable):
                         tmp.append(v.reshape(*mask_shapes[i][j]))
                 arg_values[j] = pack_values(tmp)
 
-            if feature_names[j] is None:
-                feature_names[j] = ["Feature " + str(i) for i in range(data.shape[1])]
+                if feature_names[j] is None:
+                    feature_names[j] = ["Feature " + str(i) for i in range(data.shape[1])]
 
-
-            out.append(Explanation(
-                arg_values[j], expected_values, data,
-                feature_names=feature_names[j], 
-                main_effects=main_effects,
-                clustering=clustering,
-                hierarchical_values=hierarchical_values,
-                output_names=sliced_labels, # self.output_names
-                error_std=error_std,
-                compute_time=time.time() - start_time,
-                # output_shape=output_shape,
-                #lower_bounds=v_min, upper_bounds=v_max
-                interactions=interactions,
-                feature_groups = feature_groups
-            ))
+                out.append(Explanation(
+                    arg_values[j], expected_values, data,
+                    feature_names=feature_names[j], 
+                    main_effects=main_effects,
+                    clustering=clustering,
+                    hierarchical_values=hierarchical_values,
+                    output_names=sliced_labels, # self.output_names
+                    error_std=error_std,
+                    compute_time=time.time() - start_time,
+                    # output_shape=output_shape,
+                    #lower_bounds=v_min, upper_bounds=v_max
+                    interactions=interactions,
+                    feature_groups = feature_groups
+                ))
         else:
 
             full_results = self.explain_full(args, max_evals=max_evals, error_bounds=error_bounds, 
@@ -426,7 +426,7 @@ class Explainer(Serializable):
                 # output_shape=output_shape,
                 #lower_bounds=v_min, upper_bounds=v_max
                 interactions=interactions,
-                feature_groups = feature_groups
+                feature_groups=feature_groups
             ))
 
         return out[0] if len(out) == 1 else out
