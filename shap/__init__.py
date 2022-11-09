@@ -38,13 +38,8 @@ class UnsupportedModule(object):
     def __getattribute__(self, item):
         raise ValueError(_no_matplotlib_warning)
 
-
 try:
     import matplotlib
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-if have_matplotlib:
     from .plots._beeswarm import summary_legacy as summary_plot
     from .plots._decision import decision as decision_plot, multioutput_decision as multioutput_decision_plot
     from .plots._scatter import dependence_legacy as dependence_plot
@@ -56,8 +51,9 @@ if have_matplotlib:
     from .plots._bar import bar_legacy as bar_plot
     from .plots._waterfall import waterfall as waterfall_plot
     from .plots._group_difference import group_difference as group_difference_plot
-    from .plots._text import text as text_plot
-else:
+    from .plots._text import text as text_plot    
+    have_matplotlib = True
+except ImportError:
     summary_plot = unsupported
     decision_plot = unsupported
     multioutput_decision_plot = unsupported
@@ -76,7 +72,7 @@ else:
     # If not, we need to define something that will issue a meaningful warning message
     # (rather than ModuleNotFound).
     plots = UnsupportedModule()
-
+    have_matplotlib = False
 
 # other stuff :)
 from . import datasets
