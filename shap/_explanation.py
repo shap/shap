@@ -468,6 +468,7 @@ class Explanation(metaclass=MetaExplanation):
             self.main_effects,
             self.hierarchical_values,
             self.clustering,
+            self.compute_time,
             self.interactions,
             self.feature_groups
         )

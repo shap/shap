@@ -95,7 +95,7 @@ class Permutation(Explainer):
             outputs=outputs, silent=silent, **kwargs
         )
 
-    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, need_interactions=False, dryrun=False, **kwargs):
+    def explain_full(self, args, max_evals, error_bounds, batch_size, outputs, silent, feature_group_list=None, main_effects=False, interactions=False, dryrun=False, **kwargs):
         """ Explains a full set of samples (by groups of features) and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects, interactions).
 
         Parameters
@@ -118,6 +118,7 @@ class Permutation(Explainer):
             if a interaction value array would be calculated and returned for every sample.
 
         """
+        need_interactions = interactions
         if batch_size == "auto":
             batch_size = 1
         # by default we run 10 permutations forward and backward
@@ -299,7 +300,7 @@ class Permutation(Explainer):
             max_evals = 10 * 2 * len(fm)
         
         # see if we need interactions
-        need_interactions = kwargs.get("need_interactions", False)
+        need_interactions = kwargs.get("interactions", False)
 
         # compute any custom clustering for this row
         row_clustering = None
