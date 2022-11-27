@@ -9,6 +9,7 @@
 # tensorflow
 # torch
 # torchvision
+# transformers
 
 # For decision tree examples
 # xgboost

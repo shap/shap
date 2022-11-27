@@ -6,36 +6,6 @@ import pytest
 import numpy as np
 import shap
 
-def test_method_tokenize_pretrained_tokenizer():
-    """ Check that the Text masker produces the same ids as its non-fast pretrained tokenizer.
-    """
-
-    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=False)
-    masker = shap.maskers.Text(tokenizer)
-
-    test_text = "I have a joke about deep learning but I can't explain it."
-    output_ids = masker.tokenize(test_text)
-    correct_ids = tokenizer.encode_plus(test_text)['input_ids']
-
-    assert output_ids == correct_ids
-
-def test_method_tokenize_pretrained_tokenizer_fast():
-    """ Check that the Text masker produces the same ids as its fast pretrained tokenizer.
-    """
-
-    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased", use_fast=True)
-    masker = shap.maskers.Text(tokenizer)
-
-    test_text = "I have a joke about deep learning but I can't explain it."
-    output_ids = masker.tokenize(test_text)
-    correct_ids = tokenizer.encode_plus(test_text)['input_ids']
-
-    assert output_ids == correct_ids
-
 
 def test_method_token_segments_pretrained_tokenizer():
     """ Check that the Text masker produces the same segments as its non-fast pretrained tokenizer.
@@ -47,8 +17,8 @@ def test_method_token_segments_pretrained_tokenizer():
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
-    output_token_segments = masker.token_segments(test_text)
-    correct_token_segments = ['', 'I', 'ate', 'a', 'Can', '##no', '##li', '']
+    output_token_segments,_ = masker.token_segments(test_text)
+    correct_token_segments = ['', ' I', ' ate', ' a', ' Can', 'no', 'li', '']
 
     assert output_token_segments == correct_token_segments
 
@@ -63,7 +33,7 @@ def test_method_token_segments_pretrained_tokenizer_fast():
     masker = shap.maskers.Text(tokenizer)
 
     test_text = "I ate a Cannoli"
-    output_token_segments = masker.token_segments(test_text)
+    output_token_segments,_ = masker.token_segments(test_text)
     correct_token_segments = ['', 'I ', 'ate ', 'a ', 'Can', 'no', 'li', '']
 
     assert output_token_segments == correct_token_segments

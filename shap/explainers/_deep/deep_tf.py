@@ -3,6 +3,7 @@ import warnings
 from .._explainer import Explainer
 from packaging import version
 from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+from ...utils._exceptions import DimensionError
 keras = None
 tf = None
 tf_ops = None
@@ -23,8 +24,11 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     if op_name == "ResourceGather" and inputs[1].dtype == tf.int32:
         inputs[1].__dict__["_dtype"] = tf.float32
         reset_input = True
-    out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
-
+    try:
+        out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
+    except AttributeError:
+        out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
+    
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -153,8 +157,8 @@ class TFDeep(Explainer):
             if not tf.executing_eagerly():
                 self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
             else:
-                if type(self.model)is tuple:
-                    sel.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
+                #if type(self.model)is tuple:
+                #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
         if not tf.executing_eagerly():
@@ -170,7 +174,7 @@ class TFDeep(Explainer):
             if noutputs is not None:
                 self.phi_symbolics = [None for i in range(noutputs)]
             else:
-                raise Exception("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
+                raise DimensionError("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
 
     def _get_model_output(self, model):
         if len(model.layers[-1]._inbound_nodes) == 0:
@@ -359,7 +363,10 @@ class TFDeep(Explainer):
                     v = tf.constant(data, dtype=self.model_inputs[i].dtype)
                     inputs.append(v)
                 final_out = out(inputs)
-                tf_execute.record_gradient = tf_backprop._record_gradient
+                try:
+                    tf_execute.record_gradient = tf_backprop._record_gradient
+                except AttributeError:
+                    tf_execute.record_gradient = tf_backprop.record_gradient
 
                 return final_out
             return self.execute_with_overridden_gradients(anon)

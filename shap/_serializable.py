@@ -162,8 +162,7 @@ class Deserializer():
             log.debug("end_token = %s", end_token)
             if end_token == "END_BLOCK___":
                 return
-            else:
-                self._load_data_value()
+            self._load_data_value()
         raise ValueError(
             f"The data block end token wsa not found for the block {self.block_name}."
         )

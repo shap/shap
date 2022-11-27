@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 from ._model import Model
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer
+from ..utils.transformers import parse_prefix_suffix_for_tokenizer, getattr_silent
 from .. import models
 from .._serializable import Serializer, Deserializer
 
@@ -47,10 +47,17 @@ class TeacherForcing(Model):
 
         self.tokenizer = tokenizer
         # set pad token if not defined
-        if self.tokenizer is not None and self.tokenizer.pad_token is None:
+        if self.tokenizer is not None and getattr_silent(self.tokenizer, "pad_token") is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
+        # set our working device
         self.device = device
+        if self.device is None:
+            if getattr(model, "device", None) is not None:
+                self.device = model.device
+            elif getattr(similarity_model, "device", None) is not None:
+                self.device = similarity_model.device
+
         self.batch_size = batch_size
         # assign text generation function
         if safe_isinstance(model, "transformers.PreTrainedModel") or safe_isinstance(model, "transformers.TFPreTrainedModel"):
@@ -249,7 +256,8 @@ class TeacherForcing(Model):
         if self.similarity_model_type == "pt":
             import torch # pylint: disable=import-outside-toplevel
             # create torch tensors and move to device
-            inputs = inputs.to(self.device)
+            if self.device is not None:
+                inputs = inputs.to(self.device)
             output_ids = torch.tensor(output_ids, dtype=torch.int64, device=self.device)
             self.similarity_model.eval()
             with torch.no_grad():

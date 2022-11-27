@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
 import warnings
 from ..explainers._explainer import Explainer
 from ..explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+from .._explanation import Explanation
 from packaging import version
 keras = None
 tf = None
@@ -64,12 +66,35 @@ class Gradient(Explainer):
             except:
                 framework = 'tensorflow'
 
-
+        if isinstance(data, pd.DataFrame):
+            self.features = data.columns.values
+        else:
+            self.features = list(range(data[0].shape[1]))
+        
         if framework == 'tensorflow':
             self.explainer = _TFGradient(model, data, session, batch_size, local_smoothing)
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
+    def __call__(self, X, nsamples=200):
+        """ Return an explanation object for the model applied to X. 
+        
+        Parameters
+        ----------
+        X : list,
+            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'pytorch': torch.tensor
+            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
+            explain the model's output.
+        nsamples : int
+            number of background samples
+        Returns
+        -------
+        shap.Explanation: 
+        """
+        shap_values = self.shap_values(X, nsamples)
+        return Explanation(values=shap_values, data=X, feature_names=self.features)
+    
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
         """ Return the values for the model applied to X.
 

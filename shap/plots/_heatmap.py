@@ -10,7 +10,8 @@ from ..utils import OpChain
 from ._utils import convert_ordering, convert_color
 
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0), 
-            feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True):
+            feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
+            plot_width=8):
     """ Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
@@ -40,7 +41,10 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     show : bool
         If show is set to False then we don't call the matplotlib.pyplot.show() function. This allows
-        further customization of the plot by the caller after the bar() function is finished. 
+        further customization of the plot by the caller after the bar() function is finished.
+
+    plot_width: int, default 8
+        The width of the heatmap plot.
 
     """
 
@@ -85,7 +89,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     
     # define the plot size
     row_height = 0.5
-    pl.gcf().set_size_inches(8, values.shape[1] * row_height + 2.5)
+    pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
 
     # plot the matrix of SHAP values as a heat map
     vmin = np.nanpercentile(values.flatten(), 1)
