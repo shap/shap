@@ -814,7 +814,7 @@ def test_provided_background_tree_path_dependent():
 
     explainer = shap.TreeExplainer(bst, train_x, feature_perturbation="tree_path_dependent")
     diffs = explainer.expected_value + \
-            explainer.shap_values(test_x).sum(1) - bst.predict(dtrain, output_margin=True)
+            explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
     assert np.abs(explainer.expected_value - bst.predict(dtrain,
                                                          output_margin=True).mean()) < 1e-6, \
