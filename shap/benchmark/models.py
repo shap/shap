@@ -3,6 +3,7 @@ import sklearn.ensemble
 import gc
 from sklearn.preprocessing import StandardScaler
 import numpy as np
+from tensorflow import keras
 
 class KerasWrap(object):
     """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
