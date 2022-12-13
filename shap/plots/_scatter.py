@@ -175,9 +175,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     # allow vectors to be passed
     if len(shap_values_arr.shape) == 1:
-        shap_values_arr = np.reshape(shap_values_arr, len(shap_values_arr), 1)
+        shap_values_arr = np.reshape(shap_values_arr, (len(shap_values_arr), 1))
     if len(features.shape) == 1:
-        features = np.reshape(features, len(features), 1)
+        features = np.reshape(features, (len(features), 1))
 
     ind = convert_name(ind, shap_values_arr, feature_names)
 
@@ -556,9 +556,9 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
-        shap_values = np.reshape(shap_values, len(shap_values), 1)
+        shap_values = np.reshape(shap_values, (len(shap_values), 1))
     if len(features.shape) == 1:
-        features = np.reshape(features, len(features), 1)
+        features = np.reshape(features, (len(features), 1))
 
     ind = convert_name(ind, shap_values, feature_names)
 
