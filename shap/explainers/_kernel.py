@@ -105,8 +105,7 @@ class Kernel(Explainer):
         else:
             self.D = self.fnull.shape[0]
 
-
-    def shap_values(self, X, **kwargs):
+    def __call__(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -207,6 +206,11 @@ class Kernel(Explainer):
                     out[i] = explanations[i]
                 return out
 
+
+    def shap_values(self, X, **kwargs):
+        """ Legacy interface for deprecated shap_values call """
+        return self(X, **kwargs)
+        
     def explain(self, incoming_instance, **kwargs):
         # convert incoming input to a standardized iml object
         instance = convert_to_instance(incoming_instance)
