@@ -15,7 +15,7 @@ from . import colors
 # plot that is associated with that feature get overlayed on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
-def waterfall(shap_values, max_display=10, show=True):
+def waterfall(shap_values, max_display=10, show=True,waterfall_clr=None):
     """ Plots an explantion of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -42,6 +42,17 @@ def waterfall(shap_values, max_display=10, show=True):
     if show is False:
         plt.ioff()
 
+    import pandas as pd
+    if waterfall_clr:
+        clr_map={"c1_rgb":"red_rgb",
+            "light_c1_rgb":"light_red_rgb",
+            "c2_rgb":"blue_rgb",
+            "light_c2_rgb":"light_blue_rgb"}
+        colors=pd.DataFrame([list(waterfall_clr.values())],columns=list(waterfall_clr.keys())).iloc[0]
+        colors.rename(clr_map,axis=1,inplace=True)
+    else:
+        from . import colors
+        
     base_values = shap_values.base_values
     features = shap_values.display_data if shap_values.display_data is not None else shap_values.data
     feature_names = shap_values.feature_names
