@@ -211,7 +211,7 @@ class Permutation(Explainer):
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
         """
-        warnings.warn("shap_values() is deprecated; use __call__().", warnings.DeprecationWarning)
+        warnings.warn("shap_values() is deprecated; use __call__().", DeprecationWarning)
         
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
         return explanation.values
