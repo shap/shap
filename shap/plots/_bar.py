@@ -191,16 +191,18 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         pl.axvline(0, 0, 1, color="#000000", linestyle="-", linewidth=1, zorder=1)
 
     # draw the bars
-    patterns = ('', '\\\\', '++', 'xx', '////', '*', 'o', 'O', '.', '-')
+    patterns = ('', '\\', '+', 'x', '/', '*', 'o', 'O', '.', '-') # use i//10+1 repitions of these patterns in cohort i
     total_width = 0.7
     bar_width = total_width / len(values)
     for i in range(len(values)):
         ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
+        # try to reuse existing pattern avoiding IndexError
+        pattern = patterns[i%len(patterns)]*(i//len(patterns)+1) if i%len(patterns) else '|'*(i//len(patterns)+1)
         pl.barh(
             y_pos + ypos_offset, values[i,feature_inds],
             bar_width, align='center',
             color=[colors.blue_rgb if values[i,feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
-            hatch=patterns[i%len(patterns)]*(i//len(patterns)), edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
+            hatch=pattern, edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
