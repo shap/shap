@@ -191,7 +191,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         pl.axvline(0, 0, 1, color="#000000", linestyle="-", linewidth=1, zorder=1)
 
     # draw the bars
-    patterns = (None, '\\\\', '++', 'xx', '////', '*', 'o', 'O', '.', '-')
+    patterns = ('', '\\\\', '++', 'xx', '////', '*', 'o', 'O', '.', '-')
     total_width = 0.7
     bar_width = total_width / len(values)
     for i in range(len(values)):
@@ -200,7 +200,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             y_pos + ypos_offset, values[i,feature_inds],
             bar_width, align='center',
             color=[colors.blue_rgb if values[i,feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
-            hatch=patterns[i], edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
+            hatch=patterns[i%len(patterns)]*(i//len(patterns)), edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
