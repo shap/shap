@@ -1,8 +1,8 @@
 import warnings
 
-from shap._explanation import Explanation
-from shap.plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
-from shap.utils._general import convert_name
+from baby_shap._explanation import Explanation
+from baby_shap.plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
+from baby_shap.utils._general import convert_name
 
 try:
     import matplotlib.pyplot as pl

@@ -1,10 +1,9 @@
 node_modules
 __pycache__
-shap.egg-info
+baby_shap.egg-info
 *.pyc
 /build
 /dist
-notebooks/local_scratch
 docs/local
 docs/_build
 .ipynb_checkpoints
@@ -12,5 +11,6 @@ docs/_build
 .vscode
 .DS_Store
 .idea
+.venv
 **/.coverage*
 javascript/build/*

@@ -7,8 +7,8 @@ import scipy as sp
 import sklearn
 from slicer import Alias, Obj, Slicer
 
-from shap.utils._exceptions import DimensionError
-from shap.utils._general import OpChain
+from baby_shap.utils._exceptions import DimensionError
+from baby_shap.utils._general import OpChain
 
 op_chain_root = OpChain("shap.Explanation")
 

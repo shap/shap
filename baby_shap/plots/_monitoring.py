@@ -2,8 +2,8 @@ import matplotlib.pyplot as pl
 import numpy as np
 import scipy
 
-from shap.plots import colors
-from shap.plots._labels import labels
+from baby_shap.plots import colors
+from baby_shap.plots._labels import labels
 
 
 def truncate_text(text, max_len):

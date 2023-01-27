@@ -11,7 +11,7 @@ from scipy.special import binom
 from sklearn.linear_model import Lasso, LassoLarsIC, lars_path
 from tqdm.auto import tqdm
 
-from shap.utils._legacy import (
+from baby_shap.utils._legacy import (
     DenseData,
     IdentityLink,
     SparseData,

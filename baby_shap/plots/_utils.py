@@ -1,9 +1,9 @@
 import matplotlib.pyplot as pl
 import numpy as np
 
-from shap._explanation import Explanation
-from shap.plots import colors
-from shap.utils._general import OpChain
+from baby_shap._explanation import Explanation
+from baby_shap.plots import colors
+from baby_shap.utils._general import OpChain
 
 
 def convert_color(color):

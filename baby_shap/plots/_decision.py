@@ -11,10 +11,10 @@ except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
 
-from shap.plots import colors
-from shap.plots._labels import labels
-from shap.utils._clustering import hclust_ordering
-from shap.utils._legacy import LogitLink, convert_to_link
+from baby_shap.plots import colors
+from baby_shap.plots._labels import labels
+from baby_shap.utils._clustering import hclust_ordering
+from baby_shap.utils._legacy import LogitLink, convert_to_link
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object

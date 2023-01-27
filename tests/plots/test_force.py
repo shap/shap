@@ -1,7 +1,7 @@
 from sklearn import svm
 
-import shap
-from shap import explainers
+import baby_shap
+from baby_shap import explainers
 
 
 def test_random_force_plot_mpl_with_data(iris_dataset):
@@ -18,4 +18,4 @@ def test_random_force_plot_mpl_with_data(iris_dataset):
     shap_values = explainer.shap_values(X)
 
     # visualize the first prediction's explaination
-    shap.force_plot(explainer.expected_value[0], shap_values[0], show=False)
+    baby_shap.force_plot(explainer.expected_value[0], shap_values[0], show=False)

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as pl
 import numpy as np
 
-from shap.plots import colors
+from baby_shap.plots import colors
 
 
 def group_difference(

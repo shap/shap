@@ -1,15 +1,15 @@
 import numpy as np
 import pandas as pd
 
-import shap
-from shap.utils._general import approximate_interactions
+import baby_shap
+from baby_shap.utils._general import approximate_interactions
 
 
 def test_dependence_one_string_feature():
     """Test the dependence plot with a string feature."""
     X = _create_sample_dataset(string_features={"Sex"})
 
-    shap.dependence_plot(
+    baby_shap.dependence_plot(
         "Sex", np.random.randn(*X.values.shape), X, interaction_index="Age", show=False
     )
 
@@ -18,7 +18,7 @@ def test_dependence_two_string_features():
     """Test the dependence plot with two string features."""
     X = _create_sample_dataset(string_features={"Sex", "Blood group"})
 
-    shap.dependence_plot(
+    baby_shap.dependence_plot(
         "Sex",
         np.random.randn(*X.values.shape),
         X,
@@ -31,7 +31,7 @@ def test_dependence_one_string_feature_no_interaction():
     """Test the dependence plot with no interactions."""
     X = _create_sample_dataset(string_features={"Sex"})
 
-    shap.dependence_plot(
+    baby_shap.dependence_plot(
         "Sex", np.random.randn(*X.values.shape), X, interaction_index=None, show=False
     )
 
@@ -40,7 +40,7 @@ def test_dependence_one_string_feature_auto_interaction():
     """Test the dependence plot with auto interaction detection."""
     X = _create_sample_dataset(string_features={"Sex"})
 
-    shap.dependence_plot(
+    baby_shap.dependence_plot(
         "Sex", np.random.randn(*X.values.shape), X, interaction_index="auto", show=False
     )
 

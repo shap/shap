@@ -8,17 +8,17 @@ import numpy as np
 import scipy as sp
 from scipy.stats import gaussian_kde
 
-from shap._explanation import Explanation
-from shap.plots import colors
-from shap.plots._labels import labels
-from shap.plots._utils import (
+from baby_shap._explanation import Explanation
+from baby_shap.plots import colors
+from baby_shap.plots._labels import labels
+from baby_shap.plots._utils import (
     convert_color,
     convert_ordering,
     get_sort_order,
     merge_nodes,
     sort_inds,
 )
-from shap.utils._general import safe_isinstance
+from baby_shap.utils._general import safe_isinstance
 
 
 def beeswarm(

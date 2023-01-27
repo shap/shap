@@ -4,7 +4,7 @@ import numpy as np
 import scipy as sp
 from numba import jit
 
-from shap.utils._general import safe_isinstance
+from baby_shap.utils._general import safe_isinstance
 
 
 def partition_tree(X, metric="correlation"):

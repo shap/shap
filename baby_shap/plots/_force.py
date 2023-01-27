@@ -21,10 +21,10 @@ import numpy as np
 import scipy as sp
 import scipy.cluster
 
-from shap.plots._force_matplotlib import draw_additive_plot
-from shap.plots._labels import labels
-from shap.utils._clustering import hclust_ordering
-from shap.utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
+from baby_shap.plots._force_matplotlib import draw_additive_plot
+from baby_shap.plots._labels import labels
+from baby_shap.utils._clustering import hclust_ordering
+from baby_shap.utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
 
 
 def force(

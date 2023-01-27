@@ -6,8 +6,8 @@ import scipy as sp
 import sklearn
 from sklearn import datasets, linear_model, pipeline, preprocessing
 
-import shap
-from shap import explainers
+import baby_shap
+from baby_shap import explainers
 
 A1A_PATH = pathlib.Path(__file__).parent.resolve() / ".." / "datasets" / "a1a.svmlight"
 
@@ -28,11 +28,11 @@ def load_iris(display=False, sample=None):
         df = df.sample(n=sample, random_state=42)
 
     if display:
-        return df, [d.target_names[v] for v in d.target]  # pylint: disable=E1101
+        return df, [d.target_names[v] for v in d.target]
 
     target = df["target"].copy()
     df = df.drop(columns=["target"])
-    return df, target  # pylint: disable=E1101
+    return df, target
 
 
 def test_null_model_small():
@@ -57,14 +57,14 @@ def test_front_page_model_agnostic():
     """Test the ReadMe kernel expainer example."""
 
     # print the JS visualization code to the notebook
-    shap.initjs()
+    baby_shap.initjs()
 
     # train a SVM classifier
     X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
         *load_iris(), test_size=0.1, random_state=0
     )
     svm = sklearn.svm.SVC(kernel="rbf", probability=True)
-    svm.fit(X_train, Y_train)
+    svm.fit(X_train.to_numpy(), Y_train)
 
     # use Kernel SHAP to explain test set predictions
     explainer = explainers.KernelExplainer(
@@ -73,7 +73,7 @@ def test_front_page_model_agnostic():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(
+    baby_shap.force_plot(
         explainer.expected_value[0],
         shap_values[0][0, :],
         X_test.iloc[0, :],
@@ -85,14 +85,14 @@ def test_front_page_model_agnostic_rank():
     """Test the rank regularized explanation of the ReadMe example."""
 
     # print the JS visualization code to the notebook
-    shap.initjs()
+    baby_shap.initjs()
 
     # train a SVM classifier
     X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
         *load_iris(), test_size=0.1, random_state=0
     )
     svm = sklearn.svm.SVC(kernel="rbf", probability=True)
-    svm.fit(X_train, Y_train)
+    svm.fit(X_train.to_numpy(), Y_train)
 
     # use Kernel SHAP to explain test set predictions
     explainer = explainers.KernelExplainer(
@@ -101,7 +101,7 @@ def test_front_page_model_agnostic_rank():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(
+    baby_shap.force_plot(
         explainer.expected_value[0],
         shap_values[0][0, :],
         X_test.iloc[0, :],
@@ -292,7 +292,7 @@ def test_non_numeric():
     pipe.fit(X, y)
 
     # use KernelExplainer
-    explainer = shap.KernelExplainer(pipe.predict, X, nsamples=100)
+    explainer = baby_shap.KernelExplainer(pipe.predict, X, nsamples=100)
     shap_values = explainer.explain(X[0, :].reshape(1, -1))
 
     assert (
@@ -306,34 +306,34 @@ def test_non_numeric():
     assert shap_values[2] == 0
 
     # tests for shap.KernelExplainer.not_equal
-    assert shap.KernelExplainer.not_equal(0, 0) == shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(0, 0) == baby_shap.KernelExplainer.not_equal(
         "0", "0"
     )
-    assert shap.KernelExplainer.not_equal(0, 1) == shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(0, 1) == baby_shap.KernelExplainer.not_equal(
         "0", "1"
     )
-    assert shap.KernelExplainer.not_equal(0, np.nan) == shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(0, np.nan) == baby_shap.KernelExplainer.not_equal(
         "0", np.nan
     )
-    assert shap.KernelExplainer.not_equal(0, np.nan) == shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(0, np.nan) == baby_shap.KernelExplainer.not_equal(
         "0", None
     )
-    assert shap.KernelExplainer.not_equal(np.nan, 0) == shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(np.nan, 0) == baby_shap.KernelExplainer.not_equal(
         np.nan, "0"
     )
-    assert shap.KernelExplainer.not_equal(np.nan, 0) == shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(np.nan, 0) == baby_shap.KernelExplainer.not_equal(
         None, "0"
     )
-    assert shap.KernelExplainer.not_equal("ab", "bc")
-    assert not shap.KernelExplainer.not_equal("ab", "ab")
-    assert shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal("ab", "bc")
+    assert not baby_shap.KernelExplainer.not_equal("ab", "ab")
+    assert baby_shap.KernelExplainer.not_equal(
         pd.Timestamp("2017-01-01T12"), pd.Timestamp("2017-01-01T13")
     )
-    assert not shap.KernelExplainer.not_equal(
+    assert not baby_shap.KernelExplainer.not_equal(
         pd.Timestamp("2017-01-01T12"), pd.Timestamp("2017-01-01T12")
     )
-    assert shap.KernelExplainer.not_equal(
+    assert baby_shap.KernelExplainer.not_equal(
         pd.Timestamp("2017-01-01T12"), pd.Timestamp("2017-01-01T13")
     )
-    assert shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("3Q2005"))
-    assert not shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("4Q2005"))
+    assert baby_shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("3Q2005"))
+    assert not baby_shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("4Q2005"))

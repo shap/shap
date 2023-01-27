@@ -4,10 +4,10 @@ import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
 
-from shap._explanation import Explanation
-from shap.plots import colors
-from shap.plots._labels import labels
-from shap.utils._general import (
+from baby_shap._explanation import Explanation
+from baby_shap.plots import colors
+from baby_shap.plots._labels import labels
+from baby_shap.utils._general import (
     approximate_interactions,
     convert_name,
     encode_array_if_needed,
