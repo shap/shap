@@ -24,7 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       # Cache the installation of Poetry
       - name: cache poetry install
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.local
           key: poetry-1.3.2-0
@@ -35,18 +35,14 @@ jobs:
           virtualenvs-in-project: true
       - name: cache deps
         id: cache-deps
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}-${{ matrix.python-version }}
       - run: poetry install --no-interaction --no-root
         if: steps.cache-deps.outputs.cache-hit != 'true'
       - run: poetry install --no-interaction
-      # - name: Test with pytest
-      #   run: |
-      #     python -m pytest tests
-      # - name: Run CodeCov
-      #   run: |
-      #     codecov
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v2
+      - name: Test with pytest
+        run: |
+          poetry run python -m pytest tests
+ 
