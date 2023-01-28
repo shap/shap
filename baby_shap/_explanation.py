@@ -68,7 +68,7 @@ class MetaExplanation(type):
 class Explanation(metaclass=MetaExplanation):
     """A slicable set of parallel arrays representing a SHAP explanation."""
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         values,
         base_values=None,
@@ -308,7 +308,7 @@ class Explanation(metaclass=MetaExplanation):
 
         # convert any OpChains or magic strings
         pos = -1
-        for t in item:  # pylint: disable=too-many-nested-blocks
+        for t in item:
             pos += 1
 
             # skip over Ellipsis

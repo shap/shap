@@ -120,7 +120,7 @@ def test_kernel_shap_with_dataframe():
     df_y = df_y + np.random.normal(0.0, 0.1, df_y.shape)
 
     linear_model = sklearn.linear_model.LinearRegression()
-    linear_model.fit(df_X, df_y)
+    linear_model.fit(df_X.to_numpy(), df_y)
 
     explainer = explainers.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     _ = explainer.shap_values(df_X)
@@ -129,7 +129,7 @@ def test_kernel_shap_with_dataframe():
 def test_kernel_shap_with_a1a_sparse_zero_background():
     """Test with a sparse matrix for the background."""
 
-    X, y = a1a()  # pylint: disable=unbalanced-tuple-unpacking
+    X, y = a1a()
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(
         X, y, test_size=0.01, random_state=0
     )
@@ -148,12 +148,13 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     np.set_printoptions(threshold=100000)
     np.random.seed(0)
 
-    X, y = a1a()  # pylint: disable=unbalanced-tuple-unpacking
+    X, y = a1a()
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(
         X, y, test_size=0.01, random_state=0
     )
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)
+
     # Calculate median of background data
     median_dense = sklearn.utils.sparsefuncs.csc_median_axis_0(x_train.tocsc())
     median = sp.sparse.csr_matrix(median_dense)
@@ -169,6 +170,7 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     )
     x_test_dense = x_test.toarray()
     shap_values_dense = explainer_dense.shap_values(x_test_dense)
+
     # Validate sparse and dense result is the same
     assert np.allclose(shap_values, shap_values_dense, rtol=1e-02, atol=1e-01)
 
@@ -198,12 +200,15 @@ def test_kernel_shap_with_high_dim_sparse():
     )
     x_train = vectorizer.transform(x_train)
     x_test = vectorizer.transform(x_test)
+
     # Fit a linear regression model
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)
+
     _, cols = x_train.shape
     shape = 1, cols
     background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
+
     explainer = explainers.KernelExplainer(linear_model.predict, background)
     _ = explainer.shap_values(x_test)
 
@@ -216,7 +221,7 @@ def test_kernel_sparse_vs_dense_multirow_background():
         *load_iris(), test_size=0.1, random_state=0
     )
     lr = sklearn.linear_model.LogisticRegression(solver="lbfgs")
-    lr.fit(X_train, Y_train)
+    lr.fit(X_train.to_numpy(), Y_train)
 
     # use Kernel SHAP to explain test set predictions with dense data
     explainer = explainers.KernelExplainer(

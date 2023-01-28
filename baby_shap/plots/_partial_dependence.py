@@ -130,7 +130,7 @@ def partial_dependence(
             if ace_linewidth == "auto":
                 ace_linewidth = min(
                     1, 50 / ice_vals.shape[1]
-                )  # pylint: disable=unsubscriptable-object
+                )
             ax1.plot(
                 xs,
                 ice_vals,

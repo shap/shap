@@ -16,9 +16,6 @@ from baby_shap.plots._labels import labels
 from baby_shap.utils._clustering import hclust_ordering
 from baby_shap.utils._legacy import LogitLink, convert_to_link
 
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
-
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
     """Shift SHAP base value to a new value. This function assumes that `base_value` and `new_base_value` are scalars
