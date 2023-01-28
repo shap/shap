@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "baby-shap"
-version = "0.0.1"
+version = "0.0.2"
 description = "A stripped and opiniated version of Scott Lundberg's SHAP (SHapley Additive exPlanations)"
 authors = ["Thom Hopmans"]
 license = "MIT"
@@ -17,17 +17,15 @@ pandas = "^1.5.3"
 numpy = "^1.23.1"
 scikit-learn = "^1.2.1"
 slicer = "0.0.7"
-numba = "^0.56.4"
 tqdm = "^4.64.1"
 ipython = "^8.8.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.3"
 pytest = "^6.2"
-pytest-mock = "^3.6"
 pytest-cov = "^2.12.1"
 ruff = "^0.0.227"
-vulture = "^2.7"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

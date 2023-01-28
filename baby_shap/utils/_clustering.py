@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 import scipy as sp
-from numba import jit
 
 from baby_shap.utils._general import safe_isinstance
 
@@ -36,7 +35,6 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
     )
 
 
-@jit
 def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     if i < 0:
         # see if we should include this index in the ordering
@@ -56,7 +54,6 @@ def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     return pos
 
 
-@jit
 def delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
     order = np.arange(len(all_masks))
     for _ in range(num_passes):
@@ -67,7 +64,6 @@ def delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
     return order
 
 
-@jit
 def _reverse_window(order, start, length):
     for i in range(length // 2):
         tmp = order[start + i]
@@ -75,7 +71,6 @@ def _reverse_window(order, start, length):
         order[start + length - i - 1] = tmp
 
 
-@jit
 def _reverse_window_score_gain(masks, order, start, length):
     forward_score = _mask_delta_score(
         masks[order[start - 1]], masks[order[start]]
@@ -89,7 +84,6 @@ def _reverse_window_score_gain(masks, order, start, length):
     return forward_score - reverse_score
 
 
-@jit
 def _mask_delta_score(m1, m2):
     return (m1 ^ m2).sum()
 
