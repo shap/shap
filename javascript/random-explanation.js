@@ -17,9 +17,5 @@ export default function() {
       { name: "F3", effect: -0.2, value: 2 },
       { name: "F4", effect: 0, value: 0 }
     ]
-    // range(20).map(i => ({
-    //   name: 'value_'+i,
-    //   effect: random()-0.5
-    // }))
   };
 }
