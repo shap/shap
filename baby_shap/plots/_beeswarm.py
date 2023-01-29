@@ -548,8 +548,6 @@ def summary_legacy(
             features = shap_exp.data
         if feature_names is None:
             feature_names = shap_exp.feature_names
-        # if out_names is None: # TODO: waiting for slicer support of this
-        #     out_names = shap_exp.output_names
 
     # deprecation warnings
     if auto_size_plot is not None:
@@ -916,8 +914,6 @@ def summary_legacy(
                     shaps[nan_mask],
                     np.ones(shap_values[nan_mask].shape[0]) * pos,
                     color="#777777",
-                    vmin=vmin,
-                    vmax=vmax,
                     s=9,
                     alpha=alpha,
                     linewidth=0,
@@ -1011,8 +1007,8 @@ def summary_legacy(
                         "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
                         % (i, feature_names[ind])
                     )
-                    # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
-                    # nothing to do if i == 0
+                    # to ignore it, just set it to the previous y-values (so the area between them will be zero).
+                    # Not ys is already 0, so there's nothing to do if i == 0
                     if i > 0:
                         ys[i, :] = ys[i - 1, :]
                     continue
@@ -1101,9 +1097,6 @@ def summary_legacy(
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-    #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-    #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
-    # cb.draw_all()
 
     pl.gca().xaxis.set_ticks_position("bottom")
     pl.gca().yaxis.set_ticks_position("none")

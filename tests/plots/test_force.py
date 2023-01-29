@@ -11,7 +11,7 @@ def test_random_force_plot_mpl_with_data(iris_dataset):
 
     # train model
     X, y = iris_dataset
-    model.fit(X, y)
+    model.fit(X.to_numpy(), y)
 
     # explain the model's predictions using SHAP values
     explainer = explainers.KernelExplainer(model=model.predict_proba, data=X)
