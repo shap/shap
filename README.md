@@ -32,9 +32,10 @@ While SHAP can explain the output of any machine learning model, we have develop
 ```python
 import xgboost
 import shap
+from sklearn.datasets import fetch_california_housing
 
 # train an XGBoost model
-X, y = shap.datasets.boston()
+X, y = fetch_california_housing(return_X_y=True, as_frame=True)
 model = xgboost.XGBRegressor().fit(X, y)
 
 # explain the model's predictions using SHAP
