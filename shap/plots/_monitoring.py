@@ -17,7 +17,7 @@ def truncate_text(text, max_len):
     else:
         return text
 
-def monitoring(ind, shap_values, features, feature_names=None, show=True):
+def monitoring(ind, shap_values, features, feature_names=None, show=True, inc=50):
     """ Create a SHAP monitoring plot.
     
     (Note this function is preliminary and subject to change!!)
@@ -56,16 +56,19 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     xs = np.arange(len(ys))#np.linspace(0, 12*2, len(ys))
     
     pvals = []
-    inc = 50
-    for i in range(inc, len(ys)-inc, inc):
-        #stat, pval = scipy.stats.mannwhitneyu(v[:i], v[i:], alternative="two-sided")
-        _, pval = scipy.stats.ttest_ind(ys[:i], ys[i:])
-        pvals.append(pval)
-    min_pval = np.min(pvals)
-    min_pval_ind = np.argmin(pvals)*inc + inc
-    
-    if min_pval < 0.05 / shap_values.shape[1]:
-        pl.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
+    #inc = 50
+    if(inc < len(ys)-inc):
+        for i in range(inc, len(ys)-inc, inc):
+            #stat, pval = scipy.stats.mannwhitneyu(v[:i], v[i:], alternative="two-sided")
+            _, pval = scipy.stats.ttest_ind(ys[:i], ys[i:])
+            pvals.append(pval)
+        min_pval = np.min(pvals)
+        min_pval_ind = np.argmin(pvals)*inc + inc
+
+        if min_pval < 0.05 / shap_values.shape[1]:
+            pl.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
+    else:
+        print(f"Warning: Skipping the t-test. The chosen 'inc' value {inc} is greater than or equal to (number of samples - inc) = {len(ys)-inc}.")
         
     pl.scatter(xs, ys, s=10, c=features[:,ind], cmap=colors.red_blue)
     
