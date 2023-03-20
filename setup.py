@@ -168,7 +168,7 @@ def compile_hip_module(host_args):
 
     print("HIPCC ==> ", hipcc)
     arch_flags = " "
-    hipcc_command = "shap/cext/_cext_gpu.hip -o {} {} -I {} -c -O3 " \
+    hipcc_command = "shap/cext/_cext_gpu.hip -o {} {} -I{} -c -O3 " \
                    "--std=c++14 ".format(
                        lib_out,
                        ','.join(host_args),
