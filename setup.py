@@ -129,6 +129,7 @@ def compile_cuda_module(host_args):
 
 def get_hip_path():
     """Return a tuple with (base_hip_directory, full_path_to_hipcc_compiler)."""
+    hipcc_bin="hipcc"
 
     if "ROCMHOME" in os.environ:
         hip_home = os.environ["ROCMHOME"]
@@ -166,9 +167,9 @@ def compile_hip_module(host_args):
     hip_home, hipcc = get_hip_path()
 
     print("HIPCC ==> ", hipcc)
-    arch_flags = ""
-    hipcc_command = "shap/cext/_cext_gpu.hip -lib -o {} -I{} " \
-                   "--std c++14 ".format(
+    arch_flags = " "
+    hipcc_command = "shap/cext/_cext_gpu.hip -o {} {} -I {} -c -O3 " \
+                   "--std=c++14 ".format(
                        lib_out,
                        ','.join(host_args),
                        get_python_inc(), arch_flags)
@@ -223,7 +224,7 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
                 Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
                           extra_compile_args=compile_args,
                           library_dirs=[lib_dir, hiprt_path],
-                          libraries=[lib, 'hiprt'],
+                          libraries=[lib, 'amdhip64'],
                           depends=['shap/cext/_cext_gpu.hip', 'shap/cext/rocgpu_treeshap.h', 
                               'shap/cext/amd_warp_primitives.h', 'setup.py'])
             )
@@ -337,6 +338,10 @@ def try_run_setup(**kwargs):
             kwargs["with_cuda"] = False
             print("WARNING: Could not compile cuda extensions")
             try_run_setup(**kwargs)
+        elif "hip" in str(e).lower():
+            kwargs["with_hip"] = False
+            print("WARNING: Could not compile hip extensions")
+            try_run_setup(**kwargs)
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
@@ -365,6 +370,6 @@ def try_run_setup(**kwargs):
 if __name__ == "__main__":
     try_run_setup(
         with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
-        test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True, test_pytorch=True,
+        test_spark=True, test_pyod=True, with_cuda=True, with_hip=True, test_transformers=True, test_pytorch=True,
         test_sentencepiece=True, test_opencv=True
     )
