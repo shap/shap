@@ -58,7 +58,7 @@ def linnerud(display=False): # pylint: disable=unused-argument
 
 
 def imdb(display=False): # pylint: disable=unused-argument
-    """ Return the clssic IMDB sentiment analysis training data in a nice package.
+    """ Return the classic IMDB sentiment analysis training data in a nice package.
 
     Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
     Paper to cite when using the data is: http://www.aclweb.org/anthology/P11-1015
