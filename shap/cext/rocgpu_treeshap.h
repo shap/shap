@@ -104,9 +104,13 @@ struct XgboostSplitCondition {
  * \tparam  SplitConditionT A split condition implementing the methods
  * EvaluateSplit and Merge.
  */
+
+#define TREESHAP_MAGIC 999999
+
 template <typename SplitConditionT>
 struct PathElement {
   using split_type = SplitConditionT;
+
   __host__ __device__ PathElement(size_t path_idx, int64_t feature_idx,
                                   int group, SplitConditionT split_condition,
                                   double zero_fraction, float v)
@@ -115,9 +119,26 @@ struct PathElement {
         group(group),
         split_condition(split_condition),
         zero_fraction(zero_fraction),
-        v(v) {}
+        v(v), init_flag(TREESHAP_MAGIC) {}
 
-  PathElement() = default;
+  __host__ __device__ PathElement() = default;
+
+  /* this is hack to avoid memory error */
+  __host__ __device__ PathElement & operator=(const PathElement<SplitConditionT> &a) {
+      if (this != &a && a.is_initialized()) {
+          this->path_idx = a.path_idx;
+          this->feature_idx = a.feature_idx;
+          this->group = a.group;
+          this->split_condition = a.split_condition;
+          this->zero_fraction = a.zero_fraction;
+          this->v = a.v;
+          this->init_flag = a.init_flag;
+      }
+      return *this;
+  }
+
+  __host__ __device__ bool is_initialized() const {return init_flag == TREESHAP_MAGIC;}
+
   __host__ __device__ bool IsRoot() const { return feature_idx == -1; }
 
   template <typename DatasetT>
@@ -127,6 +148,8 @@ struct PathElement {
     }
     return split_condition.EvaluateSplit(X.GetElement(row_idx, feature_idx));
   }
+
+  int init_flag;
 
   /*! Unique path index. */
   size_t path_idx;
@@ -937,15 +960,29 @@ void DeduplicatePaths(PathVectorT* device_paths,
       device_paths->begin(), DeduplicateKeyTransformOp<SplitConditionT>());
 
   thrust::device_vector<size_t> d_num_runs_out(1);
-  size_t* h_num_runs_out;
-  CheckCuda(hipHostMalloc(&h_num_runs_out, sizeof(size_t)));
+  size_t *h_num_runs_out;
 
-  auto combine = [] __host__ __device__(PathElement<SplitConditionT> a,
-                               PathElement<SplitConditionT> b) {
-    // Combine duplicate features
-    a.split_condition.Merge(b.split_condition);
-    a.zero_fraction *= b.zero_fraction;
-    return a;
+  CheckCuda(hipHostMalloc(&h_num_runs_out, sizeof(*h_num_runs_out)));
+
+  auto combine = [] __host__ __device__(PathElement<SplitConditionT> a, PathElement<SplitConditionT> b) {
+#if 0
+      assert(a.is_initialized() || b.is_initialized());
+#endif
+
+      // Combine duplicate features
+      if (a.is_initialized() && b.is_initialized()) {
+          a.split_condition.Merge(b.split_condition);
+          a.zero_fraction *= b.zero_fraction;
+          return a;
+      }
+
+      /* check un-initialized input */
+      if (a.is_initialized()) {
+          return a;
+      }
+      else {
+          return b;
+      }
   };  // NOLINT
 
   size_t temp_size = 0;
@@ -964,7 +1001,7 @@ void DeduplicatePaths(PathVectorT* device_paths,
       d_num_runs_out.begin(), combine, device_paths->size()));
 
   CheckCuda(hipMemcpy(h_num_runs_out, d_num_runs_out.data().get(),
-                       sizeof(size_t), hipMemcpyDeviceToHost));
+              sizeof(*h_num_runs_out), hipMemcpyDeviceToHost));
   deduplicated_paths->resize(*h_num_runs_out);
   CheckCuda(hipHostFree(h_num_runs_out));
 }
