@@ -6,6 +6,11 @@
 #include <hip/hip_cooperative_groups.h>
 #include <hip/device_functions.h>
 
+#ifdef __AMDGCN_WAVEFRONT_SIZE
+#undef WAVEFRONT_SIZE
+#define WAVEFRONT_SIZE __AMDGCN_WAVEFRONT_SIZE
+#endif
+
 #if WAVEFRONT_SIZE != 64
 #error "WAVEFRONT_SIZE 64 required"
 #endif
