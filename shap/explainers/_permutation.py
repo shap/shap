@@ -169,7 +169,7 @@ class Permutation(Explainer):
             if main_effects:
                 main_effect_values = fm.main_effects(inds, batch_size=batch_size)
         else:
-            masks = np.zeros(1, dtype=np.int)
+            masks = np.zeros(1, dtype=int)
             outputs = fm(masks, zero_index=0, batch_size=1)
             expected_value = outputs[0]
             row_values = np.zeros((len(fm),) + outputs.shape[1:])
