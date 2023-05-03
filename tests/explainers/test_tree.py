@@ -19,7 +19,7 @@ def test_front_page_xgboost():
     shap.initjs()
 
     # train XGBoost model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 100)
 
     # explain the model's predictions using SHAP values
@@ -34,7 +34,7 @@ def test_front_page_xgboost():
 
     # create a SHAP dependence plot to show the effect of a single feature across the whole dataset
     shap.dependence_plot(5, shap_values, X, show=False)
-    shap.dependence_plot("RM", shap_values, X, show=False)
+    shap.dependence_plot("Longitude", shap_values, X, show=False)
 
     # summarize the effects of all the features
     shap.summary_plot(shap_values, X, show=False)
@@ -45,7 +45,7 @@ def test_front_page_sklearn():
     shap.initjs()
 
     # train model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     models = [
         sklearn.ensemble.RandomForestRegressor(n_estimators=10),
         sklearn.ensemble.ExtraTreesRegressor(n_estimators=10),
@@ -66,7 +66,7 @@ def test_front_page_sklearn():
         # create a SHAP dependence plot to show the effect of a single feature across the whole
         # dataset
         shap.dependence_plot(5, shap_values, X, show=False)
-        shap.dependence_plot("RM", shap_values, X, show=False)
+        shap.dependence_plot("Longitude", shap_values, X, show=False)
 
         # summarize the effects of all the features
         shap.summary_plot(shap_values, X, show=False)
@@ -129,12 +129,15 @@ def test_xgboost_multiclass():
     xgboost = pytest.importorskip('xgboost')
 
     # train XGBoost model
-    X, Y = shap.datasets.iris()
-    model = xgboost.XGBClassifier(objective="binary:logistic", max_depth=4)
-    model.fit(X, Y)
+    X, y = shap.datasets.iris()
+    model = xgboost.XGBClassifier(n_estimators=1, max_depth=4)
+    model.fit(X, y)
 
-    # explain the model's predictions using SHAP values (use pred_contrib in LightGBM)
-    shap_values = shap.TreeExplainer(model).shap_values(X)
+    explainer = shap.TreeExplainer(model)
+
+    assert np.allclose(explainer.model.predict(X), model.predict(X, output_margin=True))
+
+    shap_values = explainer.shap_values(X)
 
     # ensure plot works for first class
     shap.dependence_plot(0, shap_values[0], X, show=False)
@@ -165,9 +168,9 @@ def test_xgboost_ranking():
 def test_xgboost_mixed_types():
     xgboost = pytest.importorskip('xgboost')
 
-    X, y = shap.datasets.boston()
-    X["LSTAT"] = X["LSTAT"].astype(np.int64)
-    X["B"] = X["B"].astype(bool)
+    X, y = shap.datasets.california(n_points=500)
+    X["HouseAge"] = X["HouseAge"].astype(np.int64)
+    X['IsOld'] = (X['HouseAge'] > 30)
     bst = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 1000)
     shap_values = shap.TreeExplainer(bst).shap_values(X)
     shap.dependence_plot(0, shap_values, X, show=False)
@@ -176,7 +179,7 @@ def test_xgboost_mixed_types():
 def test_ngboost():
     ngboost = pytest.importorskip('ngboost')
 
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     model = ngboost.NGBRegressor(n_estimators=20).fit(X, y)
     explainer = shap.TreeExplainer(model, model_output=0)
     assert np.max(np.abs(
@@ -353,7 +356,7 @@ def test_lightgbm():
     lightgbm = pytest.importorskip("lightgbm")
 
     # train lightgbm model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     model = lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
     model.fit(X, y)
 
@@ -370,7 +373,7 @@ def test_lightgbm():
 def test_gpboost():
     gpboost = pytest.importorskip("gpboost")
     # train gpboost model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     data_train = gpboost.Dataset(X, y, categorical_feature=[8])
     model = gpboost.train(params={'objective': 'regression_l2', 'learning_rate': 0.1, 'verbose': 0},
                           train_set=data_train, num_boost_round=10)
@@ -388,10 +391,15 @@ def test_gpboost():
 def test_catboost():
     catboost = pytest.importorskip("catboost")
     # train catboost model
+<<<<<<< HEAD
     X, y = shap.datasets.boston()
     X["RAD"] = X["RAD"].astype(int)
+=======
+    X, y = shap.datasets.california(n_points=500)
+    X['IsOld'] = (X['HouseAge'] > 30).astype(str)
+>>>>>>> 45b85c1837283fdaeed7440ec6365a886af4a333
     model = catboost.CatBoostRegressor(iterations=30, learning_rate=0.1, random_seed=123)
-    p = catboost.Pool(X, y, cat_features=["RAD"])
+    p = catboost.Pool(X, y, cat_features=["IsOld"])
     model.fit(p, verbose=False, plot=False)
 
     # explain the model's predictions using SHAP values
@@ -421,12 +429,14 @@ def test_catboost():
 
 def test_catboost_categorical():
     catboost = pytest.importorskip("catboost")
-    bunch = sklearn.datasets.load_boston()
-    X, y = sklearn.datasets.load_boston(return_X_y=True)
+    bunch = sklearn.datasets.fetch_california_housing()
+    X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
+    X = shap.utils.sample(X, 500)
+    y = shap.utils.sample(y, 500)
     X = pd.DataFrame(X, columns=bunch.feature_names)  # pylint: disable=no-member
-    X['CHAS'] = X['CHAS'].astype(str)
+    X['IsOld'] = (X['HouseAge'] > 30).astype(str)
 
-    model = catboost.CatBoostRegressor(100, cat_features=['CHAS'], verbose=False)
+    model = catboost.CatBoostRegressor(100, cat_features=['IsOld'], verbose=False)
     model.fit(X, y)
 
     explainer = shap.TreeExplainer(model)
@@ -446,7 +456,7 @@ def test_lightgbm_constant_prediction():
     # The test does not fail with latest lightgbm 2.2.3 however
     lightgbm = pytest.importorskip("lightgbm")
     # train lightgbm model with a constant value for y
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     # use the mean for all values
     mean = np.mean(y)
     y.fill(mean)
@@ -554,7 +564,7 @@ def test_lightgbm_interaction():
     lightgbm = pytest.importorskip("lightgbm")
 
     # train XGBoost model
-    X, y = shap.datasets.boston()
+    X, y = shap.datasets.california(n_points=500)
     model = lightgbm.sklearn.LGBMRegressor()
     model.fit(X, y)
 
@@ -730,7 +740,7 @@ def test_multi_target_random_forest():
 def test_isolation_forest():
     IsolationForest = pytest.importorskip("sklearn.ensemble.IsolationForest")
     _average_path_length = pytest.importorskip("sklearn.ensemble._iforest._average_path_length")
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
     for max_features in [1.0, 0.75]:
         iso = IsolationForest(max_features=max_features)
         iso.fit(X)
@@ -751,7 +761,7 @@ def test_pyod_isolation_forest():
         pytest.skip("Failed to import pyod.models.iforest.IForest")
     _average_path_length = pytest.importorskip("sklearn.ensemble._iforest._average_path_length")
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
     for max_features in [1.0, 0.75]:
         iso = IForest(max_features=max_features)
         iso.fit(X)
@@ -1068,7 +1078,7 @@ def test_xgboost_classifier_independent_probability():
 #
 
 #     # train XGBoost model
-#     X, y = shap.datasets.boston()
+#     X, y = shap.datasets.california(n_points=500)
 #     model = xgboost.XGBRegressor()
 #     model.fit(X, y)
 
@@ -1110,3 +1120,20 @@ def test_skopt_rf_et():
                        result_et.models[-1].predict(et_df))
     assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value,
                        result_rf.models[-1].predict(rf_df))
+
+
+def test_xgboost_buffer_strip():
+    # test to make sure bug #1864 doesn't get reintroduced
+    xgboost = pytest.importorskip("xgboost")
+    X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
+    y = np.array([1, 0])
+    # specific values (e.g. 1.3) caused the bug previously
+    model = xgboost.XGBRegressor(base_score=1.3)
+    model.fit(X, y, eval_metric="rmse")
+    # previous bug did .lstrip('binf'), so would have incorrectly handled
+    # buffer starting with binff
+    assert model.get_booster().save_raw().startswith(b"binff")
+
+    # after this fix, this line should not error
+    explainer = shap.TreeExplainer(model)
+    assert isinstance(explainer, shap.explainers.Tree)

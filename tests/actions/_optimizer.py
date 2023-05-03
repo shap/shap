@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import shap
-
+from shap.utils._exceptions import ConvergenceError, InvalidAction
 
 def create_basic_scenario():
     X = pd.DataFrame({"feature1": np.ones(5), "feature2": np.ones(5), "feature3": np.ones(5)})
@@ -80,7 +80,7 @@ def test_too_few_evals():
         [IncreaseFeature3(i) for i in range(1,20)]
     ]
     optimizer = shap.ActionOptimizer(passed, possible_actions)
-    with pytest.raises(Exception):
+    with pytest.raises(ConvergenceError):
         optimizer(X.iloc[0], max_evals=3)
 
 
@@ -98,5 +98,5 @@ def test_run_out_of_group():
 
 
 def test_bad_action():
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidAction):
         shap.ActionOptimizer(None, [None])

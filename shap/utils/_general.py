@@ -8,6 +8,8 @@ import warnings
 import sklearn
 import importlib
 import copy
+from contextlib import contextmanager
+import sys, os
 
 
 if (sys.version_info < (3, 0)):
@@ -298,3 +300,14 @@ class OpChain():
                     out += ", " + ", ".join([str(k)+"="+str(kwargs[k]) for k in kwargs.keys()])
                 out += ")"
         return out
+
+# https://thesmithfam.org/blog/2012/10/25/temporarily-suppress-console-output-in-python/
+@contextmanager
+def suppress_stderr():
+    with open(os.devnull, "w") as devnull:
+        old_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr

@@ -87,7 +87,7 @@ class TreeMaple(Explainer):
         # elif str(type(model)).endswith("xgboost.sklearn.XGBClassifier'>"):
         #     pass
         else:
-            raise Exception("The passed model is not yet supported by TreeMapleExplainer: " + str(type(model)))
+            raise NotImplementedError("The passed model is not yet supported by TreeMapleExplainer: " + str(type(model)))
 
         if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
             data = data.values

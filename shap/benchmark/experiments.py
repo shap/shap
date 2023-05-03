@@ -413,7 +413,7 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
             #print(cache_id.replace("__", " ") + " ...loaded from remote after %f seconds" % (time.time() - start))
             return pickle.load(f)
     else:
-        raise Exception("Remote benchmark call finished but no local file was found!")
+        raise FileNotFoundError("Remote benchmark call finished but no local file was found!")
 
 def __gen_cache_id(experiment):
     dataset_name, model_name, method_name, metric_name = experiment

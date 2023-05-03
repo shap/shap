@@ -87,15 +87,23 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 xmax = xmax_i
             if cmax_i > cmax:
                 cmax = cmax_i
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
-<br>
-<hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
-<div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
-</div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            out += f"""
+    <br>
+    <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
+    <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
+    </div>
+                """
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+            return
+        else:
+            return out
 
     if len(shap_values.shape) == 2 and shap_values.output_names is not None:
 
@@ -138,35 +146,41 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             
             if (document._zoom_{uuid} === '_tp_{uuid}_output_' + i) {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'block';
-                document.getElementById(document._zoom_{uuid}+'_name').style.background = '#dddddd';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = '3px solid #000000';
             }} else {{
                 document.getElementById(document._zoom_{uuid}).style.display = 'none';
-                document.getElementById(document._zoom_{uuid}+'_name').style.background = '#ffffff';
+                document.getElementById(document._zoom_{uuid}+'_name').style.borderBottom = 'none';
             }}
         }}
         if (document._zoom_{uuid} !== '_tp_{uuid}_output_' + i) {{
             next_id = '_tp_{uuid}_output_' + i;
             document.getElementById(next_id).style.display = 'none';
             document.getElementById(next_id + '_zoom').style.display = 'block';
-            document.getElementById(next_id+'_name').style.background = '#bbbbbb';
+            document.getElementById(next_id+'_name').style.borderBottom = '3px solid #000000';
         }}
         document._zoom_{uuid} = next_id;
     }}
     function _output_onmouseover_{uuid}(i, el) {{
         if (document._zoom_{uuid} !== undefined) {{ return; }}
         if (document._hover_{uuid} !== undefined) {{
-            document.getElementById(document._hover_{uuid} + '_name').style.background = '#ffffff';
+            document.getElementById(document._hover_{uuid} + '_name').style.borderBottom = 'none';
             document.getElementById(document._hover_{uuid}).style.display = 'none';
         }}
         document.getElementById('_tp_{uuid}_output_' + i).style.display = 'block';
-        el.style.background = '#dddddd';
+        el.style.borderBottom = '3px solid #000000';
         document._hover_{uuid} = '_tp_{uuid}_output_' + i;
     }}
 </script>
 <div style=\"color: rgb(120,120,120); font-size: 12px;\">outputs</div>"""
+        output_values = shap_values.values.sum(0) + shap_values.base_values
+        output_max = np.max(np.abs(output_values))
         for i,name in enumerate(shap_values.output_names):
+            scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
+            color = colors.red_transparent_blue(scaled_value)
+            color = (color[0]*255, color[1]*255, color[2]*255, color[3])
+            # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
-<div style="display: inline; background: {'#dddddd' if i == 0 else '#ffffff'}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
+<div style="display: inline; border-bottom: {'3px solid #000000' if i == 0 else 'none'}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
     onclick="_output_onclick_{uuid}({i})"
     onmouseover="_output_onmouseover_{uuid}({i}, this);">{name}</div>"""
         out += "<br><br>"
@@ -217,15 +231,23 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
         if cmax is None:
             cmax = cmax_computed
         
+        out = ""
         for i, v in enumerate(shap_values):
-            ipython_display(HTML(f"""
+            out += f"""
 <br>
 <hr style="height: 1px; background-color: #fff; border: none; margin-top: 18px; margin-bottom: 18px; border-top: 1px dashed #ccc;"">
 <div align="center" style="margin-top: -35px;"><div style="display: inline-block; background: #fff; padding: 5px; color: #999; font-family: monospace">[{i}]</div>
 </div>
-            """))
-            text(v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold, separator=separator, xmin=xmin, xmax=xmax, cmax=cmax)
-        return
+            """
+            out += text(
+                v, num_starting_labels=num_starting_labels, grouping_threshold=grouping_threshold,
+                separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
+            )
+        if display:
+            ipython_display(HTML(out))
+            return
+        else:
+            return out
 
 
     # set any unset bounds
@@ -254,9 +276,9 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
     encoded_tokens = [t.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '') for t in tokens]
     output_name = shap_values.output_names if isinstance(shap_values.output_names, str) else ""
     out += svg_force_plot(values, shap_values.base_values, shap_values.base_values + values.sum(), encoded_tokens, uuid, xmin, xmax, output_name)
-    out += "<div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
+    out += "<div align='center'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
     for i, token in enumerate(tokens):
-        scaled_value = 0.5 + 0.5 * values[i] / cmax
+        scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
         color = (color[0]*255, color[1]*255, color[2]*255, color[3])
 
@@ -275,10 +297,9 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             value_label = str(values[i].round(3)) + " / " + str(group_sizes[i])
 
         # the HTML for this token
-        out += f"""
-<div style='display: {wrapper_display}; text-align: center;'>
-    <div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div>
-        <div id='_tp_{uuid}_ind_{i}'
+        out += f"""<div style='display: {wrapper_display}; text-align: center;'
+    ><div style='display: {label_display}; color: #999; padding-top: 0px; font-size: 12px;'>{value_label}</div
+        ><div id='_tp_{uuid}_ind_{i}'
             style='display: inline; background: rgba{color}; border-radius: 3px; padding: 0px'
             onclick="
             if (this.previousSibling.style.display == 'none') {{
@@ -289,14 +310,13 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 this.parentNode.style.display = 'inline';
             }}"
             onmouseover="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 1; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 1;"
-            onmouseout="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 0; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 0;">
-        {token.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '')}
-    </div>
-</div>
-"""
+            onmouseout="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 0; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 0;"
+        >{token.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '')}</div></div>"""
+    out += "</div>"
 
     if display:
         ipython_display(HTML(out))
+        return
     else:
         return out
         
@@ -419,7 +439,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
 
     def xpos(xval):
-        return 100 * (xval - xmin)  / (xmax - xmin)
+        return 100 * (xval - xmin)  / (xmax - xmin + 1e-8)
 
     s = ''
     s += '<svg width="100%" height="80px">'
@@ -446,11 +466,11 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         return s
 
 
-    xcenter = round((xmax + xmin) / 2, round(1-np.log10(xmax - xmin)))
+    xcenter = round((xmax + xmin) / 2, int(round(1-np.log10(xmax - xmin + 1e-8))))
     s += draw_tick_mark(xcenter)
     #    np.log10(xmax - xmin)
 
-    tick_interval = round((xmax - xmin) / 7, round(1-np.log10(xmax - xmin)))
+    tick_interval = round((xmax - xmin) / 7, int(round(1-np.log10(xmax - xmin + 1e-8))))
 
     #tick_interval = (xmax - xmin) / 7
     side_buffer = (xmax - xmin) / 14
@@ -475,7 +495,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     # draw base red bar
     x = fx - values[values > 0].sum()
-    w = 100 * values[values > 0].sum() / (xmax - xmin)
+    w = 100 * values[values > 0].sum() / (xmax - xmin + 1e-8)
     s += f'<rect x="{xpos(x)}%" width="{w}%" y="40" height="18" style="fill:rgb{red}; stroke-width:0; stroke:rgb(0,0,0)" />'
 
     # draw underline marks and the text labels
@@ -574,7 +594,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     light_blue = (208, 230, 250)
 
     # draw base blue bar
-    w = 100 * -values[values < 0].sum() / (xmax - xmin)
+    w = 100 * -values[values < 0].sum() / (xmax - xmin + 1e-8)
     s += f'<rect x="{xpos(fx)}%" width="{w}%" y="40" height="18" style="fill:rgb{blue}; stroke-width:0; stroke:rgb(0,0,0)" />'
 
     # draw underline marks and the text labels
@@ -711,8 +731,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
             ri = partition_tree[i-M,1]
             upper_values[i] = value
             value += shap_values[i]
-#             lower_credit(upper_values, partition_tree, li, value * len(groups[li]) / (len(groups[li]) + len(groups[ri])))
-#             lower_credit(upper_values, partition_tree, ri, value * len(groups[ri]) / (len(groups[li]) + len(groups[ri])))
+
             lower_credit(upper_values, partition_tree, li, value * 0.5)
             lower_credit(upper_values, partition_tree, ri, value * 0.5)
 
@@ -1311,4 +1330,4 @@ def unpack_shap_explanation_contents(shap_values):
         values = shap_values.values
     clustering = getattr(shap_values, "clustering", None)
 
-    return values, clustering
+    return np.array(values), clustering

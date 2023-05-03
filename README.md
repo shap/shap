@@ -5,7 +5,7 @@
 </p>
 
 ---
-<a href="https://travis-ci.org/slundberg/shap"><img src="https://travis-ci.com/slundberg/shap.svg?branch=master"></a>
+![example workflow](https://github.com/slundberg/shap/actions/workflows/run_tests.yml/badge.svg)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/slundberg/shap/master)
 [![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
 
@@ -283,13 +283,13 @@ An implementation of expected gradients to approximate SHAP values for deep lear
 
 ### LinearExplainer
 
-For a linear model with independent features we can analytically compute the exact SHAP values. We can also account for feature correlation if we are willing to estimate the feature covaraince matrix. LinearExplainer supports both of these options.
+For a linear model with independent features we can analytically compute the exact SHAP values. We can also account for feature correlation if we are willing to estimate the feature covariance matrix. LinearExplainer supports both of these options.
 
 - [**Sentiment Analysis with Logistic Regression**](https://slundberg.github.io/shap/notebooks/linear_explainer/Sentiment%20Analysis%20with%20Logistic%20Regression.html) - This notebook demonstrates how to explain a linear logistic regression sentiment analysis model.
 
 ### KernelExplainer
 
-An implementation of Kernel SHAP, a model agnostic method to estimate SHAP values for any model. Because it makes not assumptions about the model type, KernelExplainer is slower than the other model type specific algorithms.
+An implementation of Kernel SHAP, a model agnostic method to estimate SHAP values for any model. Because it makes no assumptions about the model type, KernelExplainer is slower than the other model type specific algorithms.
 
 - [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification%20with%20scikit-learn.html) - Using the standard adult census income dataset, this notebook trains a k-nearest neighbors classifier using scikit-learn and then explains predictions using `shap`.
 
@@ -327,6 +327,7 @@ The algorithms and visualizations used in this package came primarily out of res
 
 - For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)). 
 - For TreeExplainer you can read/cite our [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-019-0138-9) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/tree_explainer.bib); [free access](https://rdcu.be/b0z70)).
+- For GPUTreeExplainer you can read/cite [this article](https://arxiv.org/abs/2010.13972).
 - For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
 
 <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=189147091855991&ev=PageView&noscript=1" />

@@ -1,3 +1,6 @@
+import types
+import copy
+import inspect
 from ..utils import MaskedModel
 import numpy as np
 import warnings
@@ -13,6 +16,7 @@ import cloudpickle
 import pickle
 from ..maskers import Masker
 from ..models import Model
+from numba import jit
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -20,7 +24,8 @@ from ..models import Model
 
 class Partition(Explainer):
 
-    def __init__(self, model, masker, *, partition_tree=None, output_names=None, link=links.identity, linearize_link=True, feature_names=None, **call_args):
+    def __init__(self, model, masker, *, output_names=None, link=links.identity, linearize_link=True,
+                 feature_names=None, **call_args):
         """ Uses the Partition SHAP method to explain the output of any function.
 
         Partition SHAP computes Shapley values recursively through a hierarchy of features, this
@@ -28,7 +33,7 @@ class Partition(Explainer):
         PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
         model-agnostic but when using a balanced partition tree only has quadradic exact runtime
         (in term of the number of input features). This is in contrast to the exponential exact
-        runtime of KernalExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
+        runtime of KernelExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
         correlated features the credit that set of features would have had if treated as a group. This
         means if the hierarchical clustering given to PartitionExplainer groups correlated features
         together, then feature correlations are "accounted for" ... in the sense that the total credit assigned
@@ -107,10 +112,23 @@ class Partition(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-        # update the default argument values
-        for arg in call_args:
-            self.__call__.__kwdefaults__[arg] = call_args[arg]
+        # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
+        # has a call function with those new default arguments
+        if len(call_args) > 0:
+            class Partition(self.__class__):
+                # this signature should match the __call__ signature of the class defined below
+                def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
+                             outputs=None, silent=False):
+                    return super().__call__(
+                        *args, max_evals=max_evals, fixed_context=fixed_context, main_effects=main_effects, error_bounds=error_bounds,
+                        batch_size=batch_size, outputs=outputs, silent=silent
+                    )
+            Partition.__call__.__doc__ = self.__class__.__call__.__doc__
+            self.__class__ = Partition
+            for k, v in call_args.items():
+                self.__call__.__kwdefaults__[k] = v
 
+    # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False):
         """ Explain the output of the model on the given arguments.
@@ -130,7 +148,7 @@ class Partition(Explainer):
             # else:
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
-            raise Exception("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+            raise ValueError("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
@@ -163,7 +181,7 @@ class Partition(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        self.owen(fm, self._curr_base_value, f11, max_evals // 2 - 2, outputs, fixed_context, batch_size, silent)
+        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)
 
         # if False:
         #     if self.multi_output:
@@ -174,20 +192,7 @@ class Partition(Explainer):
         # drop the interaction terms down onto self.values
         self.values[:] = self.dvalues
 
-        def lower_credit(i, value=0):
-            if i < M:
-                self.values[i] += value
-                return
-            li = int(self._clustering[i-M,0])
-            ri = int(self._clustering[i-M,1])
-            group_size = int(self._clustering[i-M,3])
-            lsize = int(self._clustering[li-M,3]) if li >= M else 1
-            rsize = int(self._clustering[ri-M,3]) if ri >= M else 1
-            assert lsize+rsize == group_size
-            self.values[i] += value
-            lower_credit(li, self.values[i] * lsize / group_size)
-            lower_credit(ri, self.values[i] * rsize / group_size)
-        lower_credit(len(self.dvalues) - 1)
+        lower_credit(len(self.dvalues) - 1, 0, M, self.values, self._clustering)
 
         return {
             "values": self.values[:M].copy(),
@@ -251,7 +256,7 @@ class Partition(Explainer):
             # create a batch of work to do
             batch_args = []
             batch_masks = []
-            while not q.empty() and len(batch_masks) < batch_size and eval_count < max_evals:
+            while not q.empty() and len(batch_masks) < batch_size and eval_count + len(batch_masks) < max_evals:
 
                 # get our next set of arguments
                 m00, f00, f11, ind, weight = q.get()[2]
@@ -666,3 +671,18 @@ def output_indexes_len(output_indexes):
         return int(output_indexes[8:-2])
     elif not isinstance(output_indexes, str):
         return len(output_indexes)
+
+@jit
+def lower_credit(i, value, M, values, clustering):
+    if i < M:
+        values[i] += value
+        return
+    li = int(clustering[i-M,0])
+    ri = int(clustering[i-M,1])
+    group_size = int(clustering[i-M,3])
+    lsize = int(clustering[li-M,3]) if li >= M else 1
+    rsize = int(clustering[ri-M,3]) if ri >= M else 1
+    assert lsize+rsize == group_size
+    values[i] += value
+    lower_credit(li, values[i] * lsize / group_size, M, values, clustering)
+    lower_credit(ri, values[i] * rsize / group_size, M, values, clustering)
