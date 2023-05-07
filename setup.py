@@ -4,8 +4,8 @@ import os
 import re
 import codecs
 import platform
-from distutils.sysconfig import get_config_var, get_python_inc
-from distutils.version import LooseVersion
+import sysconfig
+from packaging.version import Version, parse
 import sys
 import subprocess
 
@@ -21,9 +21,9 @@ import subprocess
 # MACOSX_DEPLOYMENT_TARGET before calling setup.pcuda-comp-generalizey
 if sys.platform == 'darwin':
     if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-        current_system = LooseVersion(platform.mac_ver()[0])
-        python_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-        if python_target < '10.9' and current_system >= '10.9':
+        current_system: Version = parse(platform.mac_ver()[0])
+        python_target: Version = parse(sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        if python_target < Version('10.9') and current_system >= Version('10.9'):
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -120,7 +120,8 @@ def compile_cuda_module(host_args):
                    "--expt-relaxed-constexpr {}".format(
                        lib_out,
                        ','.join(host_args),
-                       get_python_inc(), arch_flags)
+                       sysconfig.get_path("include"),
+                       arch_flags)
     print("Compiling cuda extension, calling nvcc with arguments:")
     print([nvcc] + nvcc_command.split(' '))
     subprocess.run([nvcc] + nvcc_command.split(' '), check=True)
