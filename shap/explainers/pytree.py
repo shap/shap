@@ -53,7 +53,7 @@ from ..utils._exceptions import ExplainerError
 #         if len(X.shape) == 1:
 
 #             phi = np.zeros((X.shape[0] + 1, n_outputs))
-#             x_missing = np.zeros(X.shape[0], dtype=np.bool)
+#             x_missing = np.zeros(X.shape[0], dtype=bool)
 #             for t in self.trees:
 #                 self.tree_shap(t, X, x_missing, phi)
 #             phi /= len(self.trees)
@@ -65,7 +65,7 @@ from ..utils._exceptions import ExplainerError
 
 #         elif len(X.shape) == 2:
 #             phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
-#             x_missing = np.zeros(X.shape[1], dtype=np.bool)
+#             x_missing = np.zeros(X.shape[1], dtype=bool)
 #             for i in range(X.shape[0]):
 #                 for t in self.trees:
 #                     self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
@@ -194,7 +194,7 @@ class TreeExplainer:
         if len(X.shape) == 1:
 
             phi = np.zeros(X.shape[0] + 1, n_outputs)
-            x_missing = np.zeros(X.shape[0], dtype=np.bool)
+            x_missing = np.zeros(X.shape[0], dtype=bool)
             for t in self.trees:
                 self.tree_shap(t, X, x_missing, phi)
             phi /= len(self.trees)
@@ -206,7 +206,7 @@ class TreeExplainer:
 
         elif len(X.shape) == 2:
             phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
-            x_missing = np.zeros(X.shape[1], dtype=np.bool)
+            x_missing = np.zeros(X.shape[1], dtype=bool)
             for i in range(X.shape[0]):
                 for t in self.trees:
                     self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])

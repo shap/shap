@@ -52,9 +52,9 @@ def test_additivity(explainer_type, model, masker, data, **kwargs):
         for i in range(shap_values.shape[0]):
             row = shap_values[i]
             if callable(explainer.masker.shape):
-                all_on_masked = explainer.masker(np.ones(explainer.masker.shape(data[i])[1], dtype=np.bool), data[i])
+                all_on_masked = explainer.masker(np.ones(explainer.masker.shape(data[i])[1], dtype=bool), data[i])
             else:
-                all_on_masked = explainer.masker(np.ones(explainer.masker.shape[1], dtype=np.bool), data[i])
+                all_on_masked = explainer.masker(np.ones(explainer.masker.shape[1], dtype=bool), data[i])
             if not isinstance(all_on_masked, tuple):
                 all_on_masked = (all_on_masked,)
             out = explainer.model(*all_on_masked)
