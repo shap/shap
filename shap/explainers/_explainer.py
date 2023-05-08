@@ -453,4 +453,4 @@ def pack_values(values):
     elif np.issubdtype(type(values[0]), np.number) or len(np.unique([len(v) for v in values])) == 1:
         return np.array(values)
     else:
-        return np.array(values, dtype=np.object)
+        return np.array(values, dtype=object)
