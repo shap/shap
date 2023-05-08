@@ -82,7 +82,7 @@ class Additive(Explainer):
         This is an abstract static method meant to be implemented by each subclass.
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
-            if model.interactions is not 0:
+            if model.interactions != 0:
                 raise NotImplementedError("Need to add support for interaction effects!")
             return True
             
