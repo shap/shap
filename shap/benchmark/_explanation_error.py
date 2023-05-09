@@ -122,13 +122,13 @@ class ExplanationError():
             total_values = None
             for _ in range(self.num_permutations):
                 masks = []
-                mask = np.zeros(feature_size, dtype=np.bool)
+                mask = np.zeros(feature_size, dtype=bool)
                 masks.append(mask.copy())
                 ordered_inds = np.arange(feature_size)
 
                 # shuffle the indexes so we get a random permutation ordering
                 if row_clustering is not None:
-                    inds_mask = np.ones(feature_size, dtype=np.bool)
+                    inds_mask = np.ones(feature_size, dtype=bool)
                     partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
                 else:
                     np.random.shuffle(ordered_inds)

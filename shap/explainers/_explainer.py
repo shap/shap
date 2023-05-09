@@ -393,7 +393,7 @@ class Explainer(Serializable):
         """
 
         # mask each input on in isolation
-        masks = np.zeros(2*len(inds)-1, dtype=np.int)
+        masks = np.zeros(2*len(inds)-1, dtype=int)
         last_ind = -1
         for i in range(len(inds)):
             if i > 0:
@@ -453,4 +453,4 @@ def pack_values(values):
     elif np.issubdtype(type(values[0]), np.number) or len(np.unique([len(v) for v in values])) == 1:
         return np.array(values)
     else:
-        return np.array(values, dtype=np.object)
+        return np.array(values, dtype=object)

@@ -65,7 +65,7 @@ class Image(Masker):
         # note if this masker can use different background for different samples
         self.fixed_background = not isinstance(self.mask_value, str)
 
-        #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=np.bool)
+        #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=bool)
         self.last_xid = None
 
         # flag that we return outputs that will not get changed by later masking calls
@@ -92,7 +92,7 @@ class Image(Masker):
 
         # if mask is not given then we mask the whole image
         if mask is None:
-            mask = np.zeros(np.prod(x.shape), dtype=np.bool)
+            mask = np.zeros(np.prod(x.shape), dtype=bool)
 
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:

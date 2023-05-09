@@ -78,7 +78,7 @@ def __decision_plot_matplotlib(
         pl.axhline(y=i, color=y_demarc_color, lw=0.5, dashes=(1, 5), zorder=-1)
 
     # initialize highlighting
-    linestyle = np.array("-", dtype=np.object)
+    linestyle = np.array("-", dtype=object)
     linestyle = np.repeat(linestyle, cumsum.shape[0])
     linewidth = np.repeat(1, cumsum.shape[0])
     if highlight is not None:
