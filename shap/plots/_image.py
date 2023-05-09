@@ -15,7 +15,7 @@ try:
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
 try:
-    from IPython.core.display import display, HTML
+    from IPython.display import display, HTML
 except ImportError:
     warnings.warn("IPython could not be loaded!")
 from . import colors

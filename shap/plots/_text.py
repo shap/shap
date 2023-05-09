@@ -6,7 +6,7 @@ import random
 import string
 import json
 try:
-    from IPython.core.display import display as ipython_display, HTML
+    from IPython.display import display as ipython_display, HTML
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -821,12 +821,10 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
              + "</div>" \
              + "</div>"
 
-    from IPython.core.display import display, HTML
-    return display(HTML(out))
+    return ipython_display(HTML(out))
 
-def text_to_text(shap_values):        
+def text_to_text(shap_values):
 
-    from IPython.core.display import display, HTML
     # unique ID added to HTML elements and function to avoid collision of differnent instances
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
 
@@ -879,7 +877,7 @@ def text_to_text(shap_values):
     </script>
     """
 
-    display(HTML(javascript + html))
+    ipython_display(HTML(javascript + html))
 
 def saliency_plot(shap_values):
 
