@@ -102,7 +102,7 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     model.add(Activation('softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
+                  optimizer=keras.optimizers.legacy.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(x_train[:10, :], y_train[:10, :],
@@ -133,7 +133,7 @@ def test_tf_keras_linear():
 
     from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
-    from tensorflow.keras.optimizers import SGD
+    from tensorflow.keras.optimizers.legacy import SGD
 
     tf.compat.v1.disable_eager_execution()
 

@@ -69,7 +69,7 @@ def test_tf_keras_mnist_cnn():
     model.add(Activation('softmax'))
 
     model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                  optimizer=tf.keras.optimizers.Adadelta(),
+                  optimizer=tf.keras.optimizers.legacy.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(
