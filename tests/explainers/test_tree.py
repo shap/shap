@@ -269,7 +269,7 @@ def test_pyspark_regression_decision_tree():
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', 1)[:100] # pylint: disable=E1101
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100] # pylint: disable=E1101
 
         shap_values = explainer.shap_values(X)
         expected_values = explainer.expected_value
