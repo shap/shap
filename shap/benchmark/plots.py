@@ -12,6 +12,7 @@ import os
 try:
     import matplotlib.pyplot as pl
     import matplotlib
+    from IPython.display import HTML
 except ImportError:
     pass
 
@@ -436,7 +437,6 @@ red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
     'alpha': ((0.0, 1, 1),
               (1.0, 1, 1))
 })
-from IPython.core.display import HTML
 def plot_grids(dataset, model_names, out_dir=None):
 
     if out_dir is not None:

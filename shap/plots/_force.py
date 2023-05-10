@@ -8,8 +8,7 @@ import string
 import json
 import random
 try:
-    from IPython.core.display import display, HTML
-    from IPython import get_ipython
+    from IPython.display import display, HTML
     have_ipython = True
 except ImportError:
     have_ipython = False

@@ -27,8 +27,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install packaging
           python setup.py develop
-          pip install .[test]
-          pip install tensorflow xgboost matplotlib ipython codecov torch torchvision pylint sentencepiece
+          pip install '.[test,plots]'
+          pip install tensorflow xgboost codecov torch torchvision pylint sentencepiece
       - name: Test with pytest
         run: |
           python -m pytest tests
