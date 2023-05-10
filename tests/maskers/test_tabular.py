@@ -10,7 +10,7 @@ def test_serialization_independent_masker_dataframe():
     """ Test the serialization of an Independent masker based on a data frame.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
 
     # initialize independent masker
     original_independent_masker = shap.maskers.Independent(X)
@@ -37,7 +37,7 @@ def test_serialization_independent_masker_numpy():
     """
 
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
     X = X.values
 
     # initialize independent masker
@@ -65,7 +65,7 @@ def test_serialization_partion_masker_dataframe():
     """ Test the serialization of a Partition masker based on a DataFrame.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
 
     # initialize partition masker
     original_partition_masker = shap.maskers.Partition(X)
@@ -91,7 +91,7 @@ def test_serialization_partion_masker_numpy():
     """ Test the serialization of a Partition masker based on a numpy array.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
     X = X.values
 
     # initialize partition masker
