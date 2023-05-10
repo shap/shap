@@ -352,9 +352,9 @@ def test_pytorch_custom_nested_models():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from sklearn.datasets import fetch_california_housing
 
-    X, y = load_boston(return_X_y=True)
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -454,9 +454,9 @@ def test_pytorch_single_output():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from sklearn.datasets import fetch_california_housing
 
-    X, y = load_boston(return_X_y=True)
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -528,9 +528,9 @@ def test_pytorch_multiple_inputs():
         from torch import nn
         from torch.nn import functional as F
         from torch.utils.data import TensorDataset, DataLoader
-        from sklearn.datasets import load_boston
+        from sklearn.datasets import fetch_california_housing
         torch.manual_seed(1)
-        X, y = load_boston(return_X_y=True)
+        X, y = fetch_california_housing(return_X_y=True)
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
         x2 = X[:, :num_features // 2]
