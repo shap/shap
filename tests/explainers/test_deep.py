@@ -13,21 +13,6 @@ from shap import DeepExplainer
 
 # pylint: disable=import-outside-toplevel, no-name-in-module, import-error
 
-
-@pytest.fixture
-def legacy_boston_dataset():
-    """Returns boston house price dataset for use in test suite
-    
-    Nb. This is deprecated in sklearn. Including it here in order to reproduce the
-    original test suite, and get the tests passing. In future this could be replaced.
-    """
-    data_url = "http://lib.stat.cmu.edu/datasets/boston"
-    raw_df = pd.read_csv(data_url, sep="\\s+", skiprows=22, header=None)
-    data = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
-    target = raw_df.values[1::2, 2]
-    return data, target
-
-
 def test_tf_eager():
     """ This is a basic eager example from keras.
     """
@@ -359,7 +344,7 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, interim=False)
 
 
-def test_pytorch_custom_nested_models(legacy_boston_dataset):
+def test_pytorch_custom_nested_models():
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -367,8 +352,9 @@ def test_pytorch_custom_nested_models(legacy_boston_dataset):
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.datasets import fetch_california_housing
 
-    X, y = legacy_boston_dataset
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -384,7 +370,7 @@ def test_pytorch_custom_nested_models(legacy_boston_dataset):
                     nn.Conv1d(1, 1, 1),
                     nn.ConvTranspose1d(1, 1, 1),
                 ),
-                nn.AdaptiveAvgPool1d(output_size=6),
+                nn.AdaptiveAvgPool1d(output_size=num_features // 2),
             )
 
         def forward(self, X):
@@ -460,7 +446,7 @@ def test_pytorch_custom_nested_models(legacy_boston_dataset):
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_single_output(legacy_boston_dataset):
+def test_pytorch_single_output():
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -468,9 +454,9 @@ def test_pytorch_single_output(legacy_boston_dataset):
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    # from sklearn.datasets import fetch_california_housing
+    from sklearn.datasets import fetch_california_housing
 
-    X, y = legacy_boston_dataset
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -485,7 +471,7 @@ def test_pytorch_single_output(legacy_boston_dataset):
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.convt1d = nn.ConvTranspose1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
-            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=6)
+            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=num_features // 2)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
@@ -531,7 +517,7 @@ def test_pytorch_single_output(legacy_boston_dataset):
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_multiple_inputs(legacy_boston_dataset):
+def test_pytorch_multiple_inputs():
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
@@ -542,9 +528,9 @@ def test_pytorch_multiple_inputs(legacy_boston_dataset):
         from torch import nn
         from torch.nn import functional as F
         from torch.utils.data import TensorDataset, DataLoader
-
+        from sklearn.datasets import fetch_california_housing
         torch.manual_seed(1)
-        X, y = legacy_boston_dataset
+        X, y = fetch_california_housing(return_X_y=True)
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
         x2 = X[:, :num_features // 2]
@@ -560,7 +546,7 @@ def test_pytorch_multiple_inputs(legacy_boston_dataset):
                 super().__init__()
                 self.disconnected = disconnected
                 if disconnected:
-                    num_features = num_features // 2 + 1
+                    num_features = num_features // 2
                 self.linear = nn.Linear(num_features, 2)
                 self.output = nn.Sequential(
                     nn.MaxPool1d(2),
