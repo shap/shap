@@ -12,6 +12,8 @@ import itertools
 import warnings
 import gc
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 from ._explainer import Explainer
 
@@ -562,7 +564,8 @@ class Kernel(Explainer):
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
-                nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
+                model = make_pipeline(StandardScaler(with_mean=False), LassoLarsIC(criterion=c, normalize=False))
+                nonzero_inds = np.nonzero(model.fit(mask_aug, eyAdj_aug)[1].coef_)[0]
 
             # use a fixed regularization coeffcient
             else:
