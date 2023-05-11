@@ -13,6 +13,21 @@ from shap import DeepExplainer
 
 # pylint: disable=import-outside-toplevel, no-name-in-module, import-error
 
+
+@pytest.fixture
+def legacy_boston_dataset():
+    """Returns boston house price dataset for use in test suite
+    
+    Nb. This is deprecated in sklearn. Including it here in order to reproduce the
+    original test suite, and get the tests passing. In future this could be replaced.
+    """
+    data_url = "http://lib.stat.cmu.edu/datasets/boston"
+    raw_df = pd.read_csv(data_url, sep="\\s+", skiprows=22, header=None)
+    data = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
+    target = raw_df.values[1::2, 2]
+    return data, target
+
+
 def test_tf_eager():
     """ This is a basic eager example from keras.
     """
@@ -344,7 +359,7 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, interim=False)
 
 
-def test_pytorch_custom_nested_models():
+def test_pytorch_custom_nested_models(legacy_boston_dataset):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -352,9 +367,8 @@ def test_pytorch_custom_nested_models():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import fetch_california_housing
 
-    X, y = fetch_california_housing(return_X_y=True)
+    X, y = legacy_boston_dataset
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -446,7 +460,7 @@ def test_pytorch_custom_nested_models():
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_single_output():
+def test_pytorch_single_output(legacy_boston_dataset):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -454,9 +468,9 @@ def test_pytorch_single_output():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import fetch_california_housing
+    # from sklearn.datasets import fetch_california_housing
 
-    X, y = fetch_california_housing(return_X_y=True)
+    X, y = legacy_boston_dataset
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -517,7 +531,7 @@ def test_pytorch_single_output():
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_multiple_inputs():
+def test_pytorch_multiple_inputs(legacy_boston_dataset):
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
@@ -528,9 +542,9 @@ def test_pytorch_multiple_inputs():
         from torch import nn
         from torch.nn import functional as F
         from torch.utils.data import TensorDataset, DataLoader
-        from sklearn.datasets import fetch_california_housing
+
         torch.manual_seed(1)
-        X, y = fetch_california_housing(return_X_y=True)
+        X, y = legacy_boston_dataset
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
         x2 = X[:, :num_features // 2]
