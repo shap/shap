@@ -370,7 +370,7 @@ def test_pytorch_custom_nested_models():
                     nn.Conv1d(1, 1, 1),
                     nn.ConvTranspose1d(1, 1, 1),
                 ),
-                nn.AdaptiveAvgPool1d(output_size=6),
+                nn.AdaptiveAvgPool1d(output_size=num_features // 2),
             )
 
         def forward(self, X):
@@ -471,7 +471,7 @@ def test_pytorch_single_output():
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.convt1d = nn.ConvTranspose1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
-            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=6)
+            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=num_features // 2)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
@@ -546,7 +546,7 @@ def test_pytorch_multiple_inputs():
                 super().__init__()
                 self.disconnected = disconnected
                 if disconnected:
-                    num_features = num_features // 2 + 1
+                    num_features = num_features // 2
                 self.linear = nn.Linear(num_features, 2)
                 self.output = nn.Sequential(
                     nn.MaxPool1d(2),
