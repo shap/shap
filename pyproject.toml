@@ -9,6 +9,7 @@ select = ["F"]
 ignore = [
   "F401", # unused imports
   "F632", # Comparison of literals
+  "F541", # f-string without placeholders
   "F811", # Redefinition of unused variable
   "F821", # Undefined name
   "F841", # Local variables assigned but unused
