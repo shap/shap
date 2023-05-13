@@ -30,7 +30,7 @@ def imagenet50(display=False, resolution=224): # pylint: disable=unused-argument
     y = np.loadtxt(cache(prefix + "labels.csv"))
     return X, y
 
-@deprecated
+@deprecated()
 def boston(display=False): # pylint: disable=unused-argument
     """ Return the boston housing data in a nice package. """
     d = sklearn.datasets.load_boston()
