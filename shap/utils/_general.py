@@ -166,7 +166,12 @@ def encode_array_if_needed(arr, dtype=np.float64):
         return encoded_array
 
 def sample(X, nsamples=100, random_state=0):
-    if nsamples >= X.shape[0]:
+    if hasattr(X, "shape"):
+        over_count = nsamples >= X.shape[0]
+    else:
+        over_count = nsamples >= len(X)
+
+    if over_count:
         return X
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
