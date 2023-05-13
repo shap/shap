@@ -168,8 +168,7 @@ def encode_array_if_needed(arr, dtype=np.float64):
 def sample(X, nsamples=100, random_state=0):
     if nsamples >= X.shape[0]:
         return X
-    else:
-        return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
+    return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 def safe_isinstance(obj, class_path_str):
     """
