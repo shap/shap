@@ -171,7 +171,7 @@ class Image(Masker):
             kwargs["shape"] = s.load("shape")
         return kwargs
 
-@jit
+@jit(nopython=False)
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
     """ This partitions an image into a herarchical clustering based on axis-aligned splits.
     """

@@ -672,7 +672,7 @@ def output_indexes_len(output_indexes):
     elif not isinstance(output_indexes, str):
         return len(output_indexes)
 
-@jit
+@jit(nopython=False)
 def lower_credit(i, value, M, values, clustering):
     if i < M:
         values[i] += value
