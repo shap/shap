@@ -25,10 +25,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install packaging
-          python setup.py develop
-          pip install '.[test,plots]'
-          pip install tensorflow xgboost codecov torch torchvision pylint sentencepiece
+          pip install -e '.[test,plots]'
+          pip install tensorflow
       - name: Test with pytest
         run: |
           python -m pytest tests

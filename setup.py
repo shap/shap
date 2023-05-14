@@ -1,11 +1,11 @@
 from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext as _build_ext
 import os
 import re
 import codecs
 import platform
 import sysconfig
 from packaging.version import Version, parse
+import numpy as np
 import sys
 import subprocess
 
@@ -40,21 +40,6 @@ def find_version(*file_paths):
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
-
-
-# Extend the default build_ext class to bootstrap numpy installation
-# that are needed to build C extensions.
-# see https://stackoverflow.com/questions/19919905/how-to-bootstrap-numpy-installation-in-setup-py
-class build_ext(_build_ext):
-    def finalize_options(self):
-        _build_ext.finalize_options(self)
-        if isinstance(__builtins__, dict):
-            __builtins__["__NUMPY_SETUP__"] = False
-        else:
-            setattr(__builtins__, "__NUMPY_SETUP__", False)
-        import numpy
-        print("numpy.get_include()", numpy.get_include())
-        self.include_dirs.append(numpy.get_include())
 
 
 def find_in_path(name, path):
@@ -140,6 +125,7 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
 
         ext_modules.append(
             Extension('shap._cext', sources=['shap/cext/_cext.cc'],
+                      include_dirs=[np.get_include()],
                       extra_compile_args=compile_args))
     if with_cuda:
         try:
@@ -155,14 +141,15 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
             ext_modules.append(
                 Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
                           extra_compile_args=compile_args,
+                          include_dirs=[np.get_include()],
                           library_dirs=[lib_dir, cudart_path],
                           libraries=[lib, 'cudart'],
                           depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h','setup.py'])
             )
         except Exception as e:
-            raise Exception("Error building cuda module: " + repr(e))
+            raise Exception("Error building cuda module: " + repr(e)) from e
 
-    tests_require = ['pytest', 'pytest-mpl', 'pytest-cov']
+    tests_require = ['pytest', 'pytest-mpl', 'pytest-cov', 'codecov']
     if test_xgboost:
         tests_require += ['xgboost']
     if test_lightgbm:
@@ -176,7 +163,7 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
     if test_transformers:
         tests_require += ['transformers']
     if test_pytorch:
-        tests_require += ['torch']
+        tests_require += ['torch', 'torchvision']
     if test_sentencepiece:
         tests_require += ['sentencepiece']
     if test_opencv:
@@ -224,8 +211,6 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
             'shap.actions', 'shap.models'
         ],
         package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
-        cmdclass={'build_ext': build_ext},
-        setup_requires=['numpy'],
         install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
                           'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,

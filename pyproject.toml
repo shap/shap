@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "oldest-supported-numpy", "packaging"]
+requires = ["setuptools", "wheel", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
 [tool.ruff]
