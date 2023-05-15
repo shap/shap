@@ -113,8 +113,21 @@ def compile_cuda_module(host_args):
     return 'build', '_cext_gpu'
 
 
-def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spark, test_pyod,
-              with_cuda, test_transformers, test_pytorch, test_sentencepiece, test_opencv):
+def run_setup(
+    *,
+    with_binary,
+    test_xgboost,
+    test_lightgbm,
+    test_catboost,
+    test_spark,
+    test_pyod,
+    with_cuda,
+    test_transformers,
+    test_pytorch,
+    test_tensorflow,
+    test_sentencepiece,
+    test_opencv,
+):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -164,6 +177,8 @@ def run_setup(with_binary, test_xgboost, test_lightgbm, test_catboost, test_spar
         tests_require += ['transformers']
     if test_pytorch:
         tests_require += ['torch', 'torchvision']
+    if test_tensorflow:
+        tests_require += ['tensorflow']
     if test_sentencepiece:
         tests_require += ['sentencepiece']
     if test_opencv:
@@ -238,50 +253,55 @@ def try_run_setup(**kwargs):
         run_setup(**kwargs)
     except Exception as e:
         print(str(e))
-        if "xgboost" in str(e).lower():
+        exc_msg = str(e).lower()
+
+        if "xgboost" in exc_msg:
             kwargs["test_xgboost"] = False
             print("Couldn't install XGBoost for testing!")
-            try_run_setup(**kwargs)
-        elif "lightgbm" in str(e).lower():
+        elif "lightgbm" in exc_msg:
             kwargs["test_lightgbm"] = False
             print("Couldn't install LightGBM for testing!")
-            try_run_setup(**kwargs)
-        elif "catboost" in str(e).lower():
+        elif "catboost" in exc_msg:
             kwargs["test_catboost"] = False
             print("Couldn't install CatBoost for testing!")
-            try_run_setup(**kwargs)
-        elif "cuda" in str(e).lower():
+        elif "cuda" in exc_msg:
             kwargs["with_cuda"] = False
-            print("WARNING: Could not compile cuda extensions")
-            try_run_setup(**kwargs)
+            print("WARNING: Could not compile cuda extensions.")
+        elif "pyod" in exc_msg:
+            kwargs["test_pyod"] = False
+            print("Couldn't install PyOD for testing!")
+        elif "transformers" in exc_msg:
+            kwargs["test_transformers"] = False
+            print("Couldn't install Transformers for testing!")
+        elif "torch" in exc_msg:
+            kwargs["test_pytorch"] = False
+            print("Couldn't install PyTorch for testing!")
+        elif "sentencepiece" in exc_msg:
+            kwargs["test_sentencepiece"] = False
+            print("Couldn't install sentencepiece for testing!")
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
-            try_run_setup(**kwargs)
-        elif "pyod" in str(e).lower():
-            kwargs["test_pyod"] = False
-            print("Couldn't install PyOD for testing!")
-            try_run_setup(**kwargs)
-        elif "transformers" in str(e).lower():
-            kwargs["test_transformers"] = False
-            print("Couldn't install Transformers for testing!")
-            try_run_setup(**kwargs)
-        elif "torch" in str(e).lower():
-            kwargs["test_pytorch"] = False
-            print("Couldn't install PyTorch for testing!")
-            try_run_setup(**kwargs)
-        elif "sentencepiece" in str(e).lower():
-            kwargs["test_sentencepiece"] = False
-            print("Couldn't install sentencepiece for testing!")
-            try_run_setup(**kwargs)
         else:
             print("ERROR: Failed to build!")
+            return
+
+        try_run_setup(**kwargs)
 
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
     try_run_setup(
-        with_binary=True, test_xgboost=True, test_lightgbm=True, test_catboost=True,
-        test_spark=True, test_pyod=True, with_cuda=True, test_transformers=True, test_pytorch=True,
-        test_sentencepiece=True, test_opencv=True
+        with_binary=True,
+        test_xgboost=True,
+        test_lightgbm=True,
+        test_catboost=True,
+        test_spark=True,
+        test_pyod=True,
+        with_cuda=True,
+        test_transformers=True,
+        test_pytorch=True,
+        test_tensorflow=True,
+        test_sentencepiece=True,
+        test_opencv=True,
     )
