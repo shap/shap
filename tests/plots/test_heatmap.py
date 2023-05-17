@@ -11,7 +11,7 @@ def test_heatmap(explainer): # pylint: disable=redefined-outer-name
     """
     fig = plt.figure()
     shap_values = explainer(explainer.data)
-    shap.plots.heatmap(shap_values)
+    shap.plots.heatmap(shap_values, show=False)
     plt.tight_layout()
     return fig
 
@@ -23,6 +23,7 @@ def test_heatmap_feature_order(explainer): # pylint: disable=redefined-outer-nam
     fig = plt.figure()
     shap_values = explainer(explainer.data)
     shap.plots.heatmap(shap_values, max_display=5,
-                       feature_order=np.array(range(shap_values.shape[1]))[::-1])
+                       feature_order=np.array(range(shap_values.shape[1]))[::-1],
+                       show=False)
     plt.tight_layout()
     return fig
