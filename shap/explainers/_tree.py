@@ -1508,7 +1508,7 @@ class XGBTreeModelLoader(object):
             self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
             self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float32))
             self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=np.int))
+            self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=int))
             for j in range(self.num_nodes[i]):
                 self.loss_chg[-1][j] = self.read('f')
                 self.sum_hess[-1][j] = self.read('f')
@@ -1517,8 +1517,8 @@ class XGBTreeModelLoader(object):
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
-        self.children_default = np.zeros(shape, dtype=np.int)
-        self.features = np.zeros(shape, dtype=np.int)
+        self.children_default = np.zeros(shape, dtype=int)
+        self.features = np.zeros(shape, dtype=int)
         self.thresholds = np.zeros(shape, dtype=np.float32)
         self.values = np.zeros((shape[0], shape[1], 1), dtype=np.float32)
         trees = []
