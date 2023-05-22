@@ -1,4 +1,12 @@
+# SHAP Community Fork
 
+This repository is a fork of Scott Lundberg's popular [shap](https://github.com/slundberg/shap) library. Unfortunately, the original shap repo is not currently maintained. This fork attempts to fix shap's current issues and merge old PRs. See the general discussion on the purpose of this repo [here](https://github.com/dsgibbons/shap/discussions/11).
+
+**New contributors are very welcome**, so please feel free to get involved!
+
+We are eager to build a broad pool of maintainers, to avoid having a single person responsible for the entire repostitory. This repo adopts a _liberal contribution governance model_, where project decisions are based on a consensus seeking process. For more information, see [here](https://medium.com/the-node-js-collection/healthy-open-source-967fa8be7951).
+
+# SHAP
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/slundberg/shap/master/docs/artwork/shap_header.svg" width="800" />
@@ -12,8 +20,6 @@
 **SHAP (SHapley Additive exPlanations)** is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions (see [papers](#citations) for details and citations).
 
 <!--**SHAP (SHapley Additive exPlanations)** is a unified approach to explain the output of any machine learning model. SHAP connects game theory with local explanations, uniting several previous methods [1-7] and representing the only possible consistent and locally accurate additive feature attribution method based on expectations (see our [papers](#citations) for details and citations).-->
-
-
 
 ## Install
 

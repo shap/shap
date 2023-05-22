@@ -102,7 +102,7 @@ class Exact(Explainer):
             delta_indexes = self._cached_gray_codes(len(inds))
 
             # map to a larger mask that includes the invarient entries
-            extended_delta_indexes = np.zeros(2**len(inds), dtype=np.int)
+            extended_delta_indexes = np.zeros(2**len(inds), dtype=int)
             for i in range(2**len(inds)):
                 if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
                     extended_delta_indexes[i] = delta_indexes[i]
@@ -113,21 +113,21 @@ class Exact(Explainer):
             outputs = fm(extended_delta_indexes, zero_index=0, batch_size=batch_size)
 
             # Shapley values
-            if interactions is False or interactions is 1: # pylint: disable=literal-comparison
+            if interactions is False or interactions == 1:
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm),) + outputs.shape[1:])
-                mask = np.zeros(len(fm), dtype=np.bool)
+                mask = np.zeros(len(fm), dtype=bool)
                 _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             # Shapley-Taylor interaction values
-            elif interactions is True or interactions is 2: # pylint: disable=literal-comparison
+            elif interactions is True or interactions == 2:
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:])
-                mask = np.zeros(len(fm), dtype=np.bool)
+                mask = np.zeros(len(fm), dtype=bool)
                 _compute_grey_code_row_values_st(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             elif interactions > 2:
@@ -159,11 +159,11 @@ class Exact(Explainer):
 
         # compute the main effects if we need to
         main_effect_values = None
-        if main_effects or interactions is True or interactions is 2: # pylint: disable=literal-comparison
+        if main_effects or interactions is True or interactions == 2:
             if inds is None:
                 inds = np.arange(len(fm))
             main_effect_values = fm.main_effects(inds)
-            if interactions is True or interactions is 2:
+            if interactions is True or interactions == 2:
                 for i in range(len(fm)):
                     row_values[i, i] = main_effect_values[i]
 
@@ -234,7 +234,7 @@ def partition_delta_indexes(partition_tree, all_masks):
     """
 
     # convert the masks to delta index format
-    mask = np.zeros(all_masks.shape[1], dtype=np.bool)
+    mask = np.zeros(all_masks.shape[1], dtype=bool)
     delta_inds = []
     for i in range(len(all_masks)):
         inds = np.where(mask ^ all_masks[i,:])[0]
@@ -256,7 +256,7 @@ def partition_masks(partition_tree):
     M = partition_tree.shape[0] + 1
     mask_matrix = make_masks(partition_tree)
     all_masks = []
-    m00 = np.zeros(M, dtype=np.bool)
+    m00 = np.zeros(M, dtype=bool)
     all_masks.append(m00)
     all_masks.append(~m00)
     #inds_stack = [0,1]
@@ -319,8 +319,8 @@ def gray_code_masks(nbits):
 
     This is based on code from: http://code.activestate.com/recipes/576592-gray-code-generatoriterator/
     """
-    out = np.zeros((2**nbits, nbits), dtype=np.bool)
-    li = np.zeros(nbits, dtype=np.bool)
+    out = np.zeros((2**nbits, nbits), dtype=bool)
+    li = np.zeros(nbits, dtype=bool)
 
     for term in range(2, (1<<nbits)+1):
         if term % 2 == 1: # odd
@@ -340,8 +340,8 @@ def gray_code_indexes(nbits):
     We assume the masks start at all zero and -1 means don't do a flip.
     This is a more efficient represenation of the gray_code_masks version.
     """
-    out = np.ones(2**nbits, dtype=np.int) * MaskedModel.delta_mask_noop_value
-    li = np.zeros(nbits, dtype=np.bool)
+    out = np.ones(2**nbits, dtype=int) * MaskedModel.delta_mask_noop_value
+    li = np.zeros(nbits, dtype=bool)
     for term in range((1<<nbits)-1):
         if term % 2 == 1: # odd
             for i in range(-1,-nbits,-1):

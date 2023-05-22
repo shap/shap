@@ -20,6 +20,6 @@ class Masker(Serializable):
                 shape = self.shape
 
             if mask is True:
-                return np.ones(shape[1], dtype=np.bool)
-            return np.zeros(shape[1], dtype=np.bool)
+                return np.ones(shape[1], dtype=bool)
+            return np.zeros(shape[1], dtype=bool)
         return mask

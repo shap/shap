@@ -107,9 +107,9 @@ class Permutation(Explainer):
 
         # loop over many permutations
         inds = fm.varying_inputs()
-        inds_mask = np.zeros(len(fm), dtype=np.bool)
+        inds_mask = np.zeros(len(fm), dtype=bool)
         inds_mask[inds] = True
-        masks = np.zeros(2*len(inds)+1, dtype=np.int)
+        masks = np.zeros(2*len(inds)+1, dtype=int)
         masks[0] = MaskedModel.delta_mask_noop_value
         npermutations = max_evals // (2*len(inds)+1)
         row_values = None
@@ -169,7 +169,7 @@ class Permutation(Explainer):
             if main_effects:
                 main_effect_values = fm.main_effects(inds, batch_size=batch_size)
         else:
-            masks = np.zeros(1, dtype=np.int)
+            masks = np.zeros(1, dtype=int)
             outputs = fm(masks, zero_index=0, batch_size=1)
             expected_value = outputs[0]
             row_values = np.zeros((len(fm),) + outputs.shape[1:])
@@ -211,7 +211,7 @@ class Permutation(Explainer):
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
         """
-        warnings.warn("shap_values() is deprecated; use __call__().", warnings.DeprecationWarning)
+        warnings.warn("shap_values() is deprecated; use __call__().", DeprecationWarning)
         
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
         return explanation.values

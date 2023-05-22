@@ -40,7 +40,7 @@ class Random(Explainer):
                 raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
 
         # compute the correct expected value
-        masks = np.zeros(1, dtype=np.int)
+        masks = np.zeros(1, dtype=int)
         outputs = fm(masks, zero_index=0, batch_size=1)
         expected_value = outputs[0]
 

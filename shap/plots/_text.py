@@ -6,7 +6,7 @@ import random
 import string
 import json
 try:
-    from IPython.core.display import display as ipython_display, HTML
+    from IPython.display import display as ipython_display, HTML
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -514,10 +514,10 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         # the text label cropped and centered
         s += f'<svg x="{xpos(pos)}%" y="40" height="20" width="{xpos(last_pos) - xpos(pos)}%">'
-        s += f'  <svg x="0" y="0" width="100%" height="100%">'
+        s += '  <svg x="0" y="0" width="100%" height="100%">'
         s += f'    <text x="50%" y="9" font-size="12px" fill="rgb(255,255,255)" dominant-baseline="middle" text-anchor="middle">{tokens[ind].strip()}</text>'
-        s += f'  </svg>'
-        s += f'</svg>'
+        s += '  </svg>'
+        s += '</svg>'
 
         last_pos = pos
 
@@ -532,16 +532,16 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
                 s += f'<g transform="translate({2*j-8},0)">'
                 s += f'  <svg x="{xpos(last_pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 0 -9 l 6 18 L 0 25" fill="none" style="stroke:rgb{red};stroke-width:2" />'
-                s += f'  </svg>'
-                s += f'</g>'
+                s += '  </svg>'
+                s += '</g>'
 
         if i + 1 != len(inds):
             for j in range(4):
                 s += f'<g transform="translate({2*j-0},0)">'
                 s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 0 -9 l 6 18 L 0 25" fill="none" style="stroke:rgb{red};stroke-width:2" />'
-                s += f'  </svg>'
-                s += f'</g>'
+                s += '  </svg>'
+                s += '</g>'
 
         last_pos = pos
 
@@ -550,11 +550,11 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     # cover up a notch at the end of the red bar
     pos = fx - values[values > 0].sum()
-    s += f'<g transform="translate(-11.5,0)">'
+    s += '<g transform="translate(-11.5,0)">'
     s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
-    s += f'    <path d="M 10 -9 l 6 18 L 10 25 L 0 25 L 0 -9" fill="#ffffff" style="stroke:rgb(255,255,255);stroke-width:2" />'
-    s += f'  </svg>'
-    s += f'</g>'
+    s += '    <path d="M 10 -9 l 6 18 L 10 25 L 0 25 L 0 -9" fill="#ffffff" style="stroke:rgb(255,255,255);stroke-width:2" />'
+    s += '  </svg>'
+    s += '</g>'
 
 
     # draw the light red divider lines and a rect to handle mouseover events
@@ -566,24 +566,24 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         # divider line
         if i + 1 != len(inds):
-            s += f'<g transform="translate(-1.5,0)">'
+            s += '<g transform="translate(-1.5,0)">'
             s += f'  <svg x="{xpos(last_pos)}%" y="40" height="18" overflow="visible" width="30">'
             s += f'    <path d="M 0 -9 l 6 18 L 0 25" fill="none" style="stroke:rgb{light_red};stroke-width:2" />'
-            s += f'  </svg>'
-            s += f'</g>'
+            s += '  </svg>'
+            s += '</g>'
 
         # mouse over rectangle
         s += f'<rect x="{xpos(pos)}%" y="40" height="20" width="{xpos(last_pos) - xpos(pos)}%"'
-        s += f'      onmouseover="'
+        s += '      onmouseover="'
         s += f'document.getElementById(\'_tp_{uuid}_ind_{ind}\').style.textDecoration = \'underline\';'
         s += f'document.getElementById(\'_fs_{uuid}_ind_{ind}\').style.opacity = 1;'
         s += f'document.getElementById(\'_fb_{uuid}_ind_{ind}\').style.opacity = 1;'
-        s += f'"'
-        s += f'      onmouseout="'
+        s += '"'
+        s += '      onmouseout="'
         s += f'document.getElementById(\'_tp_{uuid}_ind_{ind}\').style.textDecoration = \'none\';'
         s += f'document.getElementById(\'_fs_{uuid}_ind_{ind}\').style.opacity = 0;'
         s += f'document.getElementById(\'_fb_{uuid}_ind_{ind}\').style.opacity = 0;'
-        s += f'" style="fill:rgb(0,0,0,0)" />'
+        s += '" style="fill:rgb(0,0,0,0)" />'
 
         last_pos = pos
 
@@ -613,10 +613,10 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         # the text label cropped and centered
         s += f'<svg x="{xpos(last_pos)}%" y="40" height="20" width="{xpos(pos) - xpos(last_pos)}%">'
-        s += f'  <svg x="0" y="0" width="100%" height="100%">'
+        s += '  <svg x="0" y="0" width="100%" height="100%">'
         s += f'    <text x="50%" y="9" font-size="12px" fill="rgb(255,255,255)" dominant-baseline="middle" text-anchor="middle">{tokens[ind].strip()}</text>'
-        s += f'  </svg>'
-        s += f'</svg>'
+        s += '  </svg>'
+        s += '</svg>'
 
         last_pos = pos
 
@@ -631,16 +631,16 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
                 s += f'<g transform="translate({-2*j+2},0)">'
                 s += f'  <svg x="{xpos(last_pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 8 -9 l -6 18 L 8 25" fill="none" style="stroke:rgb{blue};stroke-width:2" />'
-                s += f'  </svg>'
-                s += f'</g>'
+                s += '  </svg>'
+                s += '</g>'
 
         if i + 1 != len(inds):
             for j in range(4):
                 s += f'<g transform="translate(-{2*j+8},0)">'
                 s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 8 -9 l -6 18 L 8 25" fill="none" style="stroke:rgb{blue};stroke-width:2" />'
-                s += f'  </svg>'
-                s += f'</g>'
+                s += '  </svg>'
+                s += '</g>'
 
         last_pos = pos
 
@@ -649,11 +649,11 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     # cover up a notch at the end of the blue bar
     pos = fx - values[values < 0].sum()
-    s += f'<g transform="translate(-6.0,0)">'
+    s += '<g transform="translate(-6.0,0)">'
     s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
-    s += f'    <path d="M 8 -9 l -6 18 L 8 25 L 20 25 L 20 -9" fill="#ffffff" style="stroke:rgb(255,255,255);stroke-width:2" />'
-    s += f'  </svg>'
-    s += f'</g>'
+    s += '    <path d="M 8 -9 l -6 18 L 8 25 L 20 25 L 20 -9" fill="#ffffff" style="stroke:rgb(255,255,255);stroke-width:2" />'
+    s += '  </svg>'
+    s += '</g>'
 
     # draw the light blue divider lines and a rect to handle mouseover events
     pos = fx
@@ -664,24 +664,24 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         # divider line
         if i + 1 != len(inds):
-            s += f'<g transform="translate(-6.0,0)">'
+            s += '<g transform="translate(-6.0,0)">'
             s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
             s += f'    <path d="M 8 -9 l -6 18 L 8 25" fill="none" style="stroke:rgb{light_blue};stroke-width:2" />'
-            s += f'  </svg>'
-            s += f'</g>'
+            s += '  </svg>'
+            s += '</g>'
 
         # mouse over rectangle
         s += f'<rect x="{xpos(last_pos)}%" y="40" height="20" width="{xpos(pos) - xpos(last_pos)}%"'
-        s += f'      onmouseover="'
+        s += '      onmouseover="'
         s += f'document.getElementById(\'_tp_{uuid}_ind_{ind}\').style.textDecoration = \'underline\';'
         s += f'document.getElementById(\'_fs_{uuid}_ind_{ind}\').style.opacity = 1;'
         s += f'document.getElementById(\'_fb_{uuid}_ind_{ind}\').style.opacity = 1;'
-        s += f'"'
-        s += f'      onmouseout="'
+        s += '"'
+        s += '      onmouseout="'
         s += f'document.getElementById(\'_tp_{uuid}_ind_{ind}\').style.textDecoration = \'none\';'
         s += f'document.getElementById(\'_fs_{uuid}_ind_{ind}\').style.opacity = 0;'
         s += f'document.getElementById(\'_fb_{uuid}_ind_{ind}\').style.opacity = 0;'
-        s += f'" style="fill:rgb(0,0,0,0)" />'
+        s += '" style="fill:rgb(0,0,0,0)" />'
 
         last_pos = pos
 
@@ -821,12 +821,10 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
              + "</div>" \
              + "</div>"
 
-    from IPython.core.display import display, HTML
-    return display(HTML(out))
+    return ipython_display(HTML(out))
 
-def text_to_text(shap_values):        
+def text_to_text(shap_values):
 
-    from IPython.core.display import display, HTML
     # unique ID added to HTML elements and function to avoid collision of differnent instances
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
 
@@ -879,7 +877,7 @@ def text_to_text(shap_values):
     </script>
     """
 
-    display(HTML(javascript + html))
+    ipython_display(HTML(javascript + html))
 
 def saliency_plot(shap_values):
 

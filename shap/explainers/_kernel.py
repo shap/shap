@@ -12,6 +12,8 @@ import itertools
 import warnings
 import gc
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 from ._explainer import Explainer
 
@@ -274,8 +276,8 @@ class Kernel(Explainer):
             self.allocate()
 
             # weight the different subset sizes
-            num_subset_sizes = np.int(np.ceil((self.M - 1) / 2.0))
-            num_paired_subset_sizes = np.int(np.floor((self.M - 1) / 2.0))
+            num_subset_sizes = int(np.ceil((self.M - 1) / 2.0))
+            num_paired_subset_sizes = int(np.floor((self.M - 1) / 2.0))
             weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
             weight_vector[:num_paired_subset_sizes] *= 2
             weight_vector /= np.sum(weight_vector)
@@ -562,7 +564,8 @@ class Kernel(Explainer):
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
-                nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
+                model = make_pipeline(StandardScaler(with_mean=False), LassoLarsIC(criterion=c, normalize=False))
+                nonzero_inds = np.nonzero(model.fit(mask_aug, eyAdj_aug)[1].coef_)[0]
 
             # use a fixed regularization coeffcient
             else:
