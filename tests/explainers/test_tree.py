@@ -790,35 +790,30 @@ def test_multi_target_extra_trees():
 
 
 def test_provided_background_tree_path_dependent():
+    """Tests xgboost explainer when feature_perturbation is tree_path_dependent and when background
+    data is provided.
+    """
     xgboost = pytest.importorskip("xgboost")
     np.random.seed(10)
 
-    X, y = shap.datasets.iris()
-    X = X[:100]
-    y = y[:100]
-    train_x, test_x, train_y, _ = sklearn.model_selection.train_test_split(X, y, random_state=1)
-    feature_names = ["a", "b", "c", "d"]
-    dtrain = xgboost.DMatrix(train_x, label=train_y, feature_names=feature_names)
-    dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
+    X, y = shap.datasets.adult(n_points=100)
+    dtrain = xgboost.DMatrix(X, label=y, feature_names=X.columns)
 
     params = {
-        'booster': 'gbtree',
-        'objective': 'binary:logistic',
-        'max_depth': 4,
-        'eta': 0.1,
-        'nthread': -1,
-        'silent': 1
+        "booster": "gbtree",
+        "objective": "binary:logistic",
+        "max_depth": 2,
+        "eta": 0.05,
+        "nthread": -1,
+        "random_state": 42,
     }
+    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=10)
+    pred_scores = bst.predict(dtrain, output_margin=True)
 
-    bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
-
-    explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="tree_path_dependent")
-    diffs = explainer.expected_value + \
-            explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
+    explainer = shap.TreeExplainer(bst, data=X, feature_perturbation="tree_path_dependent")
+    diffs = explainer.expected_value + explainer.shap_values(X).sum(axis=1) - pred_scores
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtest,
-                                                         output_margin=True).mean()) < 1e-6, \
-        "Bad expected_value!"
+    assert np.abs(explainer.expected_value - pred_scores.mean()) < 1e-6, "Bad expected_value!"
 
 
 def test_provided_background_independent():

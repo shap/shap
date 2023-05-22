@@ -77,16 +77,17 @@ class Tree(Explainer):
             does not require a background dataset and so is used by default when no background dataset is provided.
 
         model_output : "raw", "probability", "log_loss", or model method name
-            What output of the model should be explained. If "raw" then we explain the raw output of the
-            trees, which varies by model. For regression models "raw" is the standard output, for binary
-            classification in XGBoost this is the log odds ratio. If model_output is the name of a supported
-            prediction method on the model object then we explain the output of that model method name.
-            For example model_output="predict_proba" explains the result of calling model.predict_proba.
-            If "probability" then we explain the output of the model transformed into probability space
-            (note that this means the SHAP values now sum to the probability output of the model). If "logloss"
+            What output of the model should be explained. If "raw", then we explain the raw output of the
+            trees, which varies by model. For regression models, "raw" is the standard output. For binary
+            classification in XGBoost, this is the log odds ratio. If model_output is the name of a supported
+            prediction method on the model object, then we explain the output of that model method name.
+            For example, model_output="predict_proba" explains the result of calling `model.predict_proba`.
+            If "probability", then we explain the output of the model transformed into probability space
+            (note that this means the SHAP values now sum to the probability output of the model). If "log_loss",
             then we explain the log base e of the model loss function, so that the SHAP values sum up to the
             log loss of the model for each sample. This is helpful for breaking down model performance by feature.
-            Currently the probability and logloss options are only supported when feature_dependence="independent".
+            Currently the "probability" and "log_loss" options are only supported when
+            feature_dependence="independent".
 
         Examples
         --------
@@ -98,7 +99,7 @@ class Tree(Explainer):
             self.data_feature_names = list(data.columns)
 
         masker = data
-        super(Tree, self).__init__(model, masker, feature_names=feature_names)
+        super().__init__(model, masker, feature_names=feature_names)
 
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
@@ -149,7 +150,7 @@ class Tree(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
-        
+
         self.approximate = approximate
 
         if feature_perturbation not in feature_perturbation_codes:
@@ -338,7 +339,7 @@ class Tree(Explainer):
                                          "See https://github.com/slundberg/shap/issues/580") from e
 
                 if check_additivity and self.model.model_output == "raw":
-                    xgb_tree_limit = tree_limit // self.model.num_stacked_models 
+                    xgb_tree_limit = tree_limit // self.model.num_stacked_models
                     model_output_vals = self.model.original_model.predict(
                         X, ntree_limit=xgb_tree_limit, output_margin=True,
                         validate_features=False
@@ -841,7 +842,7 @@ class TreeEnsemble:
             # 'best_ntree_limit' is problematic
             # https://github.com/dmlc/xgboost/issues/6615
             if hasattr(model, 'best_iteration'):
-                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1 
+                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1
                 self.tree_limit = (getattr(model, "best_iteration", None) + 1) * trees_per_iteration
             else:
                 self.tree_limit = getattr(model, "best_ntree_limit", None)
@@ -1365,7 +1366,7 @@ class SingleTree:
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
-            self.node_sample_weight[:] = 0.0
+            self.node_sample_weight.fill(0.0)
             _cext.dense_tree_update_weights(
                 self.children_left, self.children_right, self.children_default, self.features,
                 self.thresholds, self.values, 1, self.node_sample_weight, data, data_missing
@@ -1506,7 +1507,7 @@ class XGBTreeModelLoader(object):
 
             # load the stat nodes
             self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float32))
+            self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float64))
             self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
             self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=int))
             for j in range(self.num_nodes[i]):
@@ -1672,4 +1673,3 @@ class CatBoostTreeModelLoader:
                             }, data=data, data_missing=data_missing))
 
         return trees
-
