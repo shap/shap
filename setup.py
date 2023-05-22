@@ -67,8 +67,8 @@ def get_cuda_path():
         found_nvcc = find_in_path(nvcc_bin, os.environ["PATH"])
         if found_nvcc is None:
             print(
-                "The nvcc binary could not be located in your $PATH. Either " +
-                " add it to your path, or set $CUDAHOME to enable CUDA"
+                "The nvcc binary could not be located in your $PATH. Either "
+                "add it to your path, or set $CUDAHOME to enable CUDA.",
             )
             return None
         cuda_home = os.path.dirname(os.path.dirname(found_nvcc))
@@ -91,7 +91,7 @@ def compile_cuda_module(host_args):
     if not os.path.exists('build/'):
         os.makedirs('build/')
 
-    cuda_home, nvcc = get_cuda_path()
+    _, nvcc = get_cuda_path()
 
     print("NVCC ==> ", nvcc)
     arch_flags = "-arch=sm_37 " + \
@@ -116,17 +116,7 @@ def compile_cuda_module(host_args):
 def run_setup(
     *,
     with_binary,
-    test_xgboost,
-    test_lightgbm,
-    test_catboost,
-    test_spark,
-    test_pyod,
     with_cuda,
-    test_transformers,
-    test_pytorch,
-    test_tensorflow,
-    test_sentencepiece,
-    test_opencv,
 ):
     ext_modules = []
     if with_binary:
@@ -142,7 +132,7 @@ def run_setup(
                       extra_compile_args=compile_args))
     if with_cuda:
         try:
-            cuda_home, nvcc = get_cuda_path()
+            cuda_home, _ = get_cuda_path()
             if sys.platform == 'win32':
                 cudart_path = cuda_home + '/lib/x64'
             else:
@@ -162,27 +152,25 @@ def run_setup(
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
 
-    tests_require = ['pytest', 'pytest-mpl', 'pytest-cov', 'codecov']
-    if test_xgboost:
-        tests_require += ['xgboost']
-    if test_lightgbm:
-        tests_require += ['lightgbm']
-    if test_catboost:
-        tests_require += ['catboost']
-    if test_spark:
-        tests_require += ['pyspark']
-    if test_pyod:
-        tests_require += ['pyod']
-    if test_transformers:
-        tests_require += ['transformers']
-    if test_pytorch:
-        tests_require += ['torch', 'torchvision']
-    if test_tensorflow:
-        tests_require += ['tensorflow']
-    if test_sentencepiece:
-        tests_require += ['sentencepiece']
-    if test_opencv:
-        tests_require += ['opencv-python']
+    tests_require = [
+        # core testing libraries
+        "pytest",
+        "pytest-mpl",
+        "pytest-cov",
+        "codecov",
+        # optional dependencies
+        "xgboost",
+        "lightgbm",
+        "catboost",
+        "pyspark",
+        "pyod",
+        "transformers",
+        "torch",
+        "torchvision",
+        "tensorflow",
+        "sentencepiece",
+        "opencv-python",
+    ]
 
     extras_require = {
         'plots': [
@@ -252,33 +240,12 @@ def try_run_setup(**kwargs):
     try:
         run_setup(**kwargs)
     except Exception as e:
-        print(str(e))
+        print("Exception occured during setup,", str(e))
         exc_msg = str(e).lower()
 
-        if "xgboost" in exc_msg:
-            kwargs["test_xgboost"] = False
-            print("Couldn't install XGBoost for testing!")
-        elif "lightgbm" in exc_msg:
-            kwargs["test_lightgbm"] = False
-            print("Couldn't install LightGBM for testing!")
-        elif "catboost" in exc_msg:
-            kwargs["test_catboost"] = False
-            print("Couldn't install CatBoost for testing!")
-        elif "cuda" in exc_msg:
+        if "cuda module" in exc_msg:
             kwargs["with_cuda"] = False
             print("WARNING: Could not compile cuda extensions.")
-        elif "pyod" in exc_msg:
-            kwargs["test_pyod"] = False
-            print("Couldn't install PyOD for testing!")
-        elif "transformers" in exc_msg:
-            kwargs["test_transformers"] = False
-            print("Couldn't install Transformers for testing!")
-        elif "torch" in exc_msg:
-            kwargs["test_pytorch"] = False
-            print("Couldn't install PyTorch for testing!")
-        elif "sentencepiece" in exc_msg:
-            kwargs["test_sentencepiece"] = False
-            print("Couldn't install sentencepiece for testing!")
         elif kwargs["with_binary"]:
             kwargs["with_binary"] = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
@@ -293,15 +260,5 @@ def try_run_setup(**kwargs):
 if __name__ == "__main__":
     try_run_setup(
         with_binary=True,
-        test_xgboost=True,
-        test_lightgbm=True,
-        test_catboost=True,
-        test_spark=True,
-        test_pyod=True,
         with_cuda=True,
-        test_transformers=True,
-        test_pytorch=True,
-        test_tensorflow=True,
-        test_sentencepiece=True,
-        test_opencv=True,
     )
