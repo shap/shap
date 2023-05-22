@@ -157,7 +157,6 @@ def run_setup(
         "pytest",
         "pytest-mpl",
         "pytest-cov",
-        "codecov",
         # optional dependencies
         "xgboost",
         "lightgbm",

@@ -2,6 +2,10 @@
 requires = ["setuptools", "wheel", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+addopts = "--mpl --cov=shap"
+testpaths = ["tests"]
+
 [tool.ruff]
 # Aim to get all pyflakes logical errors ("F") passing
 select = ["F"]
