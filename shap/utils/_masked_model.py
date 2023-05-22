@@ -80,7 +80,7 @@ class MaskedModel():
         for batch_ind in range(0, len(masks), batch_size):
             mask_batch = masks[batch_ind:batch_ind + batch_size]
             all_masked_inputs = []
-            num_mask_samples = np.zeros(len(mask_batch), dtype=.int)
+            num_mask_samples = np.zeros(len(mask_batch), dtype=int)
             last_mask = np.zeros(mask_batch.shape[1], dtype=bool)
             for i, mask in enumerate(mask_batch):
 
