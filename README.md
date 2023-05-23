@@ -2,7 +2,13 @@
 
 This repository is a fork of Scott Lundberg's popular [shap](https://github.com/slundberg/shap) library. Unfortunately, the original shap repo is not currently maintained. This fork attempts to fix shap's current issues and merge old PRs. See the general discussion on the purpose of this repo [here](https://github.com/dsgibbons/shap/discussions/11).
 
-**New contributors are very welcome**, so please feel free to get involved!
+## What has changed on this fork?
+
+This fork primarily adds bug fixes and deprecation updates, to ensure that `shap` works with the latest versions of other libaries. Check out the [changelog](CHANGELOG.md) for full details of updates.
+
+## Contributing
+
+**New contributors are very welcome** so please feel free to get involved, for example by submitting PRs or opening issues!
 
 We are eager to build a broad pool of maintainers, to avoid having a single person responsible for the entire repostitory. This repo adopts a _liberal contribution governance model_, where project decisions are based on a consensus seeking process. For more information, see [here](https://medium.com/the-node-js-collection/healthy-open-source-967fa8be7951).
 
