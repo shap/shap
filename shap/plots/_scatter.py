@@ -73,7 +73,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     """
 
 
-    assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+    assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # see if we are plotting multiple columns
     if not isinstance(shap_values.feature_names, str) and len(shap_values.feature_names) > 0:
