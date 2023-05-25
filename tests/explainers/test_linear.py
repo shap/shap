@@ -7,6 +7,13 @@ import scipy
 import pytest
 import shap
 
+# Ignore expected internal shap warnings about deprecated syntax in LinearExplainer
+# In future when the deprecated syntax is fully removed, the tests must be updated
+pytestmark = [
+    pytest.mark.filterwarnings('ignore:The option feature.* has been renamed'),
+    pytest.mark.filterwarnings('ignore:The feature_perturbation option is now deprecated'),
+]
+
 def test_tied_pair():
     np.random.seed(0)
     beta = np.array([1, 0, 0])

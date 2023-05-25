@@ -11,6 +11,8 @@ import copy
 import itertools
 import warnings
 import gc
+from packaging import version
+import sklearn
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -564,7 +566,13 @@ class Kernel(Explainer):
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
-                model = make_pipeline(StandardScaler(with_mean=False), LassoLarsIC(criterion=c, normalize=False))
+
+                # "Normalize" parameter of LassoLarsIC was deprecated in sklearn version 1.2
+                if version.parse(sklearn.__version__) < version.parse("1.2.0"):
+                    kwg = dict(normalize=False)
+                else:
+                    kwg = {}
+                model = make_pipeline(StandardScaler(with_mean=False), LassoLarsIC(criterion=c, **kwg))
                 nonzero_inds = np.nonzero(model.fit(mask_aug, eyAdj_aug)[1].coef_)[0]
 
             # use a fixed regularization coeffcient
