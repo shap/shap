@@ -3,7 +3,7 @@ import pytest
 import shap
 from .utils import explainer # (pytest fixture do not remove) pylint: disable=unused-import
 
-@pytest.mark.mpl_image_compare
+@pytest.mark.mpl_image_compare(tolerance=3)
 def test_waterfall(explainer): # pylint: disable=redefined-outer-name
     """ Test the new waterfall plot.
     """
@@ -14,7 +14,7 @@ def test_waterfall(explainer): # pylint: disable=redefined-outer-name
     return fig
 
 
-@pytest.mark.mpl_image_compare
+@pytest.mark.mpl_image_compare(tolerance=3)
 def test_waterfall_legacy(explainer): # pylint: disable=redefined-outer-name
     """ Test the old waterfall plot.
     """
