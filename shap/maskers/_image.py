@@ -4,7 +4,7 @@ from ..utils._exceptions import DimensionError
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 import heapq
-from numba import jit
+from numba import njit
 try:
     import torch
 except ImportError as e:
@@ -171,7 +171,7 @@ class Image(Masker):
             kwargs["shape"] = s.load("shape")
         return kwargs
 
-@jit(nopython=False)
+@njit
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
     """ This partitions an image into a herarchical clustering based on axis-aligned splits.
     """

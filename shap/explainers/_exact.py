@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from numba import jit
+from numba import njit
 from .. import links
 from ..models import Model
 from ..utils import MaskedModel, shapley_coefficients, make_masks, delta_minimization_order
@@ -176,7 +176,7 @@ class Exact(Explainer):
             "clustering": getattr(self.masker, "clustering", None)
         }
 
-@jit(nopython=False)
+@njit
 def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
     set_size = 0
     M = len(inds)
@@ -202,7 +202,7 @@ def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff
             else:
                 row_values[j] -= out * off_coeff
 
-@jit(nopython=False)
+@njit
 def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
     set_size = 0
     M = len(inds)

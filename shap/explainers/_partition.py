@@ -16,7 +16,7 @@ import cloudpickle
 import pickle
 from ..maskers import Masker
 from ..models import Model
-from numba import jit
+from numba import njit
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -672,7 +672,7 @@ def output_indexes_len(output_indexes):
     elif not isinstance(output_indexes, str):
         return len(output_indexes)
 
-@jit
+@njit
 def lower_credit(i, value, M, values, clustering):
     if i < M:
         values[i] += value
