@@ -53,9 +53,7 @@ def test_sklearn_linear():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -69,9 +67,7 @@ def test_sklearn_linear_old_style():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -85,9 +81,7 @@ def test_sklearn_linear_new():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -102,9 +96,7 @@ def test_sklearn_multiclass_no_intercept():
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
 
     # make y multiclass
     multiclass_y = np.expand_dims(y, axis=-1)
@@ -119,9 +111,7 @@ def test_sklearn_multiclass_no_intercept():
 def test_perfect_colinear():
     LinearRegression = pytest.importorskip('sklearn.linear_model').LinearRegression
 
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     X.iloc[:, 0] = X.iloc[:, 4] # test duplicated features
     X.iloc[:, 5] = X.iloc[:, 6] - X.iloc[:, 6] # test multiple colinear features
     X.iloc[:, 3] = 0 # test null features
@@ -180,7 +170,6 @@ def test_single_feature():
 def test_sparse():
     """ Validate running LinearExplainer on scipy sparse data
     """
-    #from scipy.special import expit
     make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
     LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
 
@@ -214,9 +203,7 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 

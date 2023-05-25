@@ -265,7 +265,7 @@ class Independent(Tabular):
 class Partition(Tabular):
     """ This masks out tabular features by integrating over the given background dataset.
 
-    Unlike Independent, Partition respects a hierarchial structure of the data.
+    Unlike Independent, Partition respects a hierarchical structure of the data.
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):

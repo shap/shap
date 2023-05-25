@@ -9,6 +9,6 @@ def test_random_dependence():
     shap.dependence_plot(0, np.random.randn(20, 5), np.random.randn(20, 5), show=False)
 
 def test_random_dependence_no_interaction():
-    """ Make sure a dependence plot does not crash when we are not showing interations.
+    """ Make sure a dependence plot does not crash when we are not showing interactions.
     """
     shap.dependence_plot(0, np.random.randn(20, 5), np.random.randn(20, 5), show=False, interaction_index=None)

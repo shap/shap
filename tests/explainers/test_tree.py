@@ -8,7 +8,6 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
-from sklearn.experimental import enable_hist_gradient_boosting  # pylint: disable=unused-import
 import shap
 
 
@@ -155,11 +154,16 @@ def _validate_shap_values(model, x_test):
 def test_xgboost_ranking():
     xgboost = pytest.importorskip('xgboost')
 
-    # train lightgbm ranker model
+    # train xgboost ranker model
     x_train, y_train, x_test, _, q_train, _ = shap.datasets.rank()
-    params = {'objective': 'rank:pairwise', 'learning_rate': 0.1,
-              'gamma': 1.0, 'min_child_weight': 0.1,
-              'max_depth': 5, 'n_estimators': 4}
+    params = {
+        "objective": "rank:pairwise",
+        "learning_rate": 0.1,
+        "gamma": 1.0,
+        "min_child_weight": 0.1,
+        "max_depth": 5,
+        "n_estimators": 4,
+    }
     model = xgboost.sklearn.XGBRanker(**params)
     model.fit(x_train, y_train, q_train.astype(int))
     _validate_shap_values(model, x_test)
@@ -404,16 +408,11 @@ def test_catboost():
     predicted = model.predict(X)
 
     assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to modThisel output!"
+        "SHAP values don't sum to model output!"
 
     X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
     model = catboost.CatBoostClassifier(iterations=10, learning_rate=0.5, random_seed=12)
-    model.fit(
-        X,
-        y,
-        verbose=False,
-        plot=False
-    )
+    model.fit(X, y, verbose=False, plot=False)
     ex = shap.TreeExplainer(model)
     shap_values = ex.shap_values(X)
 
@@ -424,11 +423,7 @@ def test_catboost():
 
 def test_catboost_categorical():
     catboost = pytest.importorskip("catboost")
-    bunch = sklearn.datasets.fetch_california_housing()
-    X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
-    X = shap.utils.sample(X, 500)
-    y = shap.utils.sample(y, 500)
-    X = pd.DataFrame(X, columns=bunch.feature_names)  # pylint: disable=no-member
+    X, y = shap.datasets.california(n_points=500)
     X['IsOld'] = (X['HouseAge'] > 30).astype(str)
 
     model = catboost.CatBoostRegressor(100, cat_features=['IsOld'], verbose=False)
@@ -450,11 +445,11 @@ def test_lightgbm_constant_prediction():
     # max_nodes = np.max([len(t.values) for t in self.trees])
     # The test does not fail with latest lightgbm 2.2.3 however
     lightgbm = pytest.importorskip("lightgbm")
+
     # train lightgbm model with a constant value for y
     X, y = shap.datasets.california(n_points=500)
     # use the mean for all values
-    mean = np.mean(y)
-    y.fill(mean)
+    y.fill(np.mean(y))
     model = lightgbm.sklearn.LGBMRegressor(n_estimators=1)
     model.fit(X, y)
 
@@ -629,7 +624,7 @@ def test_sum_match_gradient_boosting_classifier():
         "SHAP values don't sum to model output!"
 
     # check initial expected value
-    assert np.abs(initial_ex_value - ex.expected_value) < 1e-4, "Inital expected value is wrong!"
+    assert np.abs(initial_ex_value - ex.expected_value) < 1e-4, "Initial expected value is wrong!"
 
     # check SHAP interaction values
     shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10, :])
@@ -673,9 +668,7 @@ def test_HistGradientBoostingClassifier_proba():
 
 def test_HistGradientBoostingClassifier_multidim():
     # train a tree-based model
-    X, y = shap.datasets.adult()
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.adult(n_points=100)
     y = np.random.randint(0, 3, len(y))
     model = sklearn.ensemble.HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
     explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="raw")
@@ -822,6 +815,7 @@ def test_provided_background_independent():
     np.random.seed(10)
 
     X, y = shap.datasets.iris()
+    # Select the first 100 rows, so that the y values contain only 0s and 1s
     X = X[:100]
     y = y[:100]
     train_x, test_x, train_y, _ = sklearn.model_selection.train_test_split(X, y, random_state=1)
@@ -835,7 +829,6 @@ def test_provided_background_independent():
         'max_depth': 4,
         'eta': 0.1,
         'nthread': -1,
-        'silent': 1
     }
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
@@ -855,6 +848,7 @@ def test_provided_background_independent_prob_output():
     np.random.seed(10)
 
     X, y = shap.datasets.iris()
+    # Select the first 100 rows, so that the y values contain only 0s and 1s
     X = X[:100]
     y = y[:100]
     train_x, test_x, train_y, _ = sklearn.model_selection.train_test_split(X, y, random_state=1)
@@ -869,7 +863,6 @@ def test_provided_background_independent_prob_output():
             'max_depth': 4,
             'eta': 0.1,
             'nthread': -1,
-            'silent': 1
         }
 
         bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
