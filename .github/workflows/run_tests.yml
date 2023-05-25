@@ -30,7 +30,7 @@ jobs:
       - name: Test with pytest
         run: |
           python -m pytest --durations=20 \
-          --cov-report=xml --cov-report=term-missing
+          --cov=shap --cov-report=xml --cov-report=term-missing
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
 
@@ -51,4 +51,4 @@ jobs:
           pip install -e '.[test-core,plots]'
       - name: Test with pytest
         run: |
-          python -m pytest --durations=20
+          python -m pytest
