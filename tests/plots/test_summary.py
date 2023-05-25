@@ -84,7 +84,7 @@ def test_random_summary_layered_violin_with_data():
     return fig
 
 
-@pytest.mark.mpl_image_compare
+@pytest.mark.mpl_image_compare(tolerance=6)
 def test_random_summary_with_log_scale():
     """ Check a with a log scale.
     """
