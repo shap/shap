@@ -113,7 +113,8 @@ class Exact(Explainer):
             outputs = fm(extended_delta_indexes, zero_index=0, batch_size=batch_size)
 
             # Shapley values
-            if interactions is False or interactions == 1:
+            # Care: Need to distinguish between `True` and `1`
+            if interactions is False or (interactions == 1 and interactions is not True):
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
