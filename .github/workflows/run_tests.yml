@@ -30,7 +30,15 @@ jobs:
       - name: Test with pytest
         run: |
           python -m pytest --durations=20 \
-          --cov=shap --cov-report=xml --cov-report=term-missing
+          --cov=shap --cov-report=xml --cov-report=term-missing \
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results
+      - name: Upload mpl test report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: mpl-results-${{ matrix.python-version }}
+          path: mpl-results/
+          if-no-files-found: ignore
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
 
