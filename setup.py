@@ -152,25 +152,6 @@ def run_setup(
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
 
-    tests_require = [
-        # core testing libraries
-        "pytest",
-        "pytest-mpl",
-        "pytest-cov",
-        # optional dependencies
-        "xgboost",
-        "lightgbm",
-        "catboost",
-        "pyspark",
-        "pyod",
-        "transformers",
-        "torch",
-        "torchvision",
-        "tensorflow",
-        "sentencepiece",
-        "opencv-python",
-    ]
-
     extras_require = {
         'plots': [
             'matplotlib',
@@ -186,9 +167,27 @@ def run_setup(
             'sphinx_rtd_theme',
             'sphinx',
             'nbsphinx',
-        ]
+        ],
+        'test-core': [
+            "pytest",
+            "pytest-mpl",
+            "pytest-cov",
+        ],
+        'test-extras': [
+            "xgboost",
+            "lightgbm",
+            "catboost",
+            "pyspark",
+            "pyod",
+            "transformers",
+            "torch",
+            "torchvision",
+            "tensorflow",
+            "sentencepiece",
+            "opencv-python",
+        ],
     }
-    extras_require['test'] = tests_require
+    extras_require['test'] = extras_require['test-core'] + extras_require['test-extras']
     extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
 
     setup(
