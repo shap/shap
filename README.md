@@ -1,5 +1,8 @@
 # SHAP Community Fork
 
+![example workflow](https://github.com/dsgibbons/shap/actions/workflows/run_tests.yml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/shap-community/badge/?version=latest)](https://shap-community.readthedocs.io/en/latest/?badge=latest)
+
 This repository is a fork of Scott Lundberg's popular [shap](https://github.com/slundberg/shap) library. Unfortunately, the original shap repo is not currently maintained. This fork attempts to fix shap's current issues and merge old PRs. See the general discussion on the purpose of this repo [here](https://github.com/dsgibbons/shap/discussions/11).
 
 ## What has changed on this fork?
@@ -23,9 +26,6 @@ Read the documentation for this fork here: [https://shap-community.readthedocs.i
 </p>
 
 ---
-![example workflow](https://github.com/slundberg/shap/actions/workflows/run_tests.yml/badge.svg)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/slundberg/shap/master)
-[![Documentation Status](https://readthedocs.org/projects/shap/badge/?version=latest)](https://shap.readthedocs.io/en/latest/?badge=latest)
 
 **SHAP (SHapley Additive exPlanations)** is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions (see [papers](#citations) for details and citations).
 
