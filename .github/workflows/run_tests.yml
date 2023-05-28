@@ -1,12 +1,23 @@
 name: tests
 
 on:
+  # only run tests and coverage when src code changes
   push:
     branches:
-    - master
+      - master
   pull_request:
     branches:
-    - master
+      - master
+    paths:
+      - "shap/**"
+      - "tests/**"
+      - "data/**"
+      - ".github/workflows/run_tests.yml"
+      - "setup.py"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   run_tests:
