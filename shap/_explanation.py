@@ -583,25 +583,24 @@ class Explanation(metaclass=MetaExplanation):
         """
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
         assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
-        
+
         new_exp = Explanation(
-            np.hstack([self.values, other.values]),
-            np.hstack([self.values, other.values]),
-            self.base_values,
-            self.data,
-            self.display_data,
-            self.instance_names,
-            self.feature_names,
-            self.output_names,
-            self.output_indexes,
-            self.lower_bounds,
-            self.upper_bounds,
-            self.error_std,
-            self.main_effects,
-            self.hierarchical_values,
-            self.clustering
+            values=np.hstack([self.values, other.values]),
+            base_values=self.base_values,
+            data=self.data,
+            display_data=self.display_data,
+            instance_names=self.instance_names,
+            feature_names=self.feature_names,
+            output_names=self.output_names,
+            output_indexes=self.output_indexes,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+            error_std=self.error_std,
+            main_effects=self.main_effects,
+            hierarchical_values=self.hierarchical_values,
+            clustering=self.clustering,
         )
-        return self._numpy_func("min", axis=axis)
+        return new_exp
 
     # def reshape(self, *args):
     #     return self._numpy_func("reshape", newshape=args)
