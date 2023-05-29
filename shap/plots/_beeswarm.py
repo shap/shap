@@ -823,7 +823,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 y = ys[i, :] / scale
                 c = pl.get_cmap(color)(i / (
                         nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
-                pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
+                pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
 
     elif not multi_class and plot_type == "bar":
