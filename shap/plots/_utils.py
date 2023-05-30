@@ -2,19 +2,20 @@ from .. import Explanation
 from ..utils import OpChain
 from . import colors
 import numpy as np
+import matplotlib.pyplot as pl
 
 
 def convert_color(color):
     try:
         color = pl.get_cmap(color)
-    except:
+    except Exception:
         pass
-    
+
     if color == "shap_red":
         color = colors.red_rgb
     elif color == "shap_blue":
         color = colors.blue_rgb
-    
+
     return color
 
 def convert_ordering(ordering, shap_values):

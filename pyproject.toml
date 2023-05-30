@@ -13,6 +13,5 @@ select = ["F"]
 ignore = [
   "F401", # unused imports
   "F811", # Redefinition of unused variable
-  "F821", # Undefined name
   "F841", # Local variables assigned but unused
 ]
