@@ -13,11 +13,27 @@ This fork primarily adds bug fixes and deprecation updates, to ensure that `shap
 
 **New contributors are very welcome** so please feel free to get involved, for example by submitting PRs or opening issues!
 
-We are eager to build a broad pool of maintainers, to avoid having a single person responsible for the entire repostitory. This repo adopts a _liberal contribution governance model_, where project decisions are based on a consensus seeking process. For more information, see [here](https://medium.com/the-node-js-collection/healthy-open-source-967fa8be7951).
+We are eager to build a broad pool of maintainers, to avoid having a single person responsible for the entire repository. This repo adopts a _liberal contribution governance model_, where project decisions are based on a consensus seeking process. For more information, see [here](https://medium.com/the-node-js-collection/healthy-open-source-967fa8be7951).
+
+## Installation
+
+This fork is not yet available on PyPI or conda. Our goal is to merge the changes from this fork back into [slundberg/shap](https://github.com/slundberg/shap). If you would like to use this fork, the currently supported installation method is:
+
+```
+pip install git+https://github.com/dsgibbons/shap.git
+```
+
+If we are unable to merge our changes back into [slundberg/shap](https://github.com/slundberg/shap), we will create our own release on PyPI.
 
 ## Documentation
 
 Read the documentation for this fork here: [https://shap-community.readthedocs.io/en/latest/](https://shap-community.readthedocs.io/en/latest/)
+
+<br>
+
+> **Warning**: From this point onward, README.md is copied from [slundberg/shap](https://github.com/slundberg/shap). Assume that any links or installation instructions refer to the original project and not this fork.
+
+<br>
 
 # SHAP
 
