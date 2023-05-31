@@ -210,7 +210,6 @@ class Tree(Explainer):
 
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
-            X = X.values
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
@@ -228,7 +227,18 @@ class Tree(Explainer):
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        return Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names, compute_time=time.time() - start_time)
+        # cf. GH issue #66, this conversion to numpy array should be done AFTER
+        # calculation of shap values
+        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            X = X.values
+
+        return Explanation(
+            v,
+            base_values=ev_tiled,
+            data=X,
+            feature_names=feature_names,
+            compute_time=time.time() - start_time,
+        )
 
     def _validate_inputs(self, X, y, tree_limit, check_additivity):
         # see if we have a default tree_limit in place.

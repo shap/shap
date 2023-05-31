@@ -358,24 +358,6 @@ def test_sklearn_decision_tree_multiclass():
     assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
 
 
-def test_lightgbm():
-    lightgbm = pytest.importorskip("lightgbm")
-
-    # train lightgbm model
-    X, y = shap.datasets.california(n_points=500)
-    model = lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
-    model.fit(X, y)
-
-    # explain the model's predictions using SHAP values
-    ex = shap.TreeExplainer(model)
-    shap_values = ex.shap_values(X)
-
-    predicted = model.predict(X, raw_score=True)
-
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
 def test_gpboost():
     gpboost = pytest.importorskip("gpboost")
     # train gpboost model
@@ -440,94 +422,6 @@ def test_catboost_categorical():
         "SHAP values don't sum to model output!"
 
 
-def test_lightgbm_constant_prediction():
-    # note: this test used to fail with lightgbm 2.2.1 with error:
-    # ValueError: zero-size array to reduction operation maximum which has no identity
-    # on TreeExplainer when trying to compute max nodes:
-    # max_nodes = np.max([len(t.values) for t in self.trees])
-    # The test does not fail with latest lightgbm 2.2.3 however
-    lightgbm = pytest.importorskip("lightgbm")
-
-    # train lightgbm model with a constant value for y
-    X, y = shap.datasets.california(n_points=500)
-    # use the mean for all values
-    y.fill(np.mean(y))
-    model = lightgbm.sklearn.LGBMRegressor(n_estimators=1)
-    model.fit(X, y)
-
-    # explain the model's predictions using SHAP values
-    shap.TreeExplainer(model).shap_values(X)
-
-
-def test_lightgbm_constant_multiclass():
-    # note: this test used to fail with lightgbm 2.2.1 with error:
-    # ValueError: zero-size array to reduction operation maximum which has no identity
-    # on TreeExplainer when trying to compute max nodes:
-    # max_nodes = np.max([len(t.values) for t in self.trees])
-    # The test does not fail with latest lightgbm 2.2.3 however
-    lightgbm = pytest.importorskip("lightgbm")
-
-    # train lightgbm model
-    X, Y = shap.datasets.iris()
-    Y.fill(1)
-    model = lightgbm.sklearn.LGBMClassifier(num_classes=3, objective="multiclass")
-    model.fit(X, Y)
-
-    # explain the model's predictions using SHAP values
-    shap.TreeExplainer(model).shap_values(X)
-
-
-def test_lightgbm_multiclass():
-    lightgbm = pytest.importorskip("lightgbm")
-    # train lightgbm model
-    X, Y = shap.datasets.iris()
-    model = lightgbm.sklearn.LGBMClassifier()
-    model.fit(X, Y)
-
-    # explain the model's predictions using SHAP values
-    shap_values = shap.TreeExplainer(model).shap_values(X)
-
-    # ensure plot works for first class
-    shap.dependence_plot(0, shap_values[0], X, show=False)
-
-
-def test_lightgbm_binary():
-    lightgbm = pytest.importorskip("lightgbm")
-    # train lightgbm model
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    model = lightgbm.sklearn.LGBMClassifier()
-    model.fit(X_train, Y_train)
-
-    # explain the model's predictions using SHAP values
-    shap_values = shap.TreeExplainer(model).shap_values(X_test)
-
-    # validate structure of shap values, must be a list of ndarray for both classes
-    assert isinstance(shap_values, list)
-    assert len(shap_values) == 2
-
-    # ensure plot works for first class
-    shap.dependence_plot(0, shap_values[0], X_test, show=False)
-
-
-# def test_lightgbm_ranking():
-#     try:
-#         import lightgbm
-#     except:
-#         print("Skipping test_lightgbm_ranking!")
-#         return
-#
-#
-
-#     # train lightgbm ranker model
-#     x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
-#     model = lightgbm.LGBMRanker()
-#     model.fit(x_train, y_train, group=q_train, eval_set=[(x_test, y_test)],
-#               eval_group=[q_test], eval_at=[1, 3], early_stopping_rounds=5, verbose=False,
-#               callbacks=[lightgbm.reset_parameter(learning_rate=lambda x: 0.95 ** x * 0.1)])
-#     _validate_shap_values(model, x_test)
-
 # TODO: Test tree_limit argument
 
 def test_sklearn_interaction():
@@ -550,22 +444,6 @@ def test_sklearn_interaction():
 
     # ensure the interaction plot works
     shap.summary_plot(interaction_vals[0], X, show=False)
-
-
-def test_lightgbm_interaction():
-    lightgbm = pytest.importorskip("lightgbm")
-
-    # train XGBoost model
-    X, y = shap.datasets.california(n_points=500)
-    model = lightgbm.sklearn.LGBMRegressor()
-    model.fit(X, y)
-
-    # verify symmetry of the interaction values (this typically breaks if anything is wrong)
-    interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
-    for j, _ in enumerate(interaction_vals):
-        for k, _ in enumerate(interaction_vals[j]):
-            for l, _ in enumerate(interaction_vals[j][k]):
-                assert abs(interaction_vals[j][k][l] - interaction_vals[j][l][k]) < 1e-4
 
 
 def test_sum_match_random_forest():
@@ -1122,3 +1000,164 @@ def test_xgboost_buffer_strip():
     # after this fix, this line should not error
     explainer = shap.TreeExplainer(model)
     assert isinstance(explainer, shap.explainers.Tree)
+
+
+class TestExplainerLightGBM:
+    """Tests for the TreeExplainer when the model passed in is a LightGBM instance."""
+
+    def test_lightgbm(self):
+        """Test the basic `shap_values` calculation."""
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # train lightgbm model
+        X, y = shap.datasets.california(n_points=500)
+        model = lightgbm.LGBMRegressor(categorical_feature=[8], n_jobs=1)
+        model.fit(X, y)
+
+        # explain the model's predictions using SHAP values
+        ex = shap.TreeExplainer(model)
+        shap_values = ex.shap_values(X)
+        predicted = model.predict(X, raw_score=True)
+
+        expected_diff = np.abs(shap_values.sum(1) + ex.expected_value - predicted).max()
+        assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
+
+    def test_lightgbm_constant_prediction(self):
+        # note: this test used to fail with lightgbm 2.2.1 with error:
+        # ValueError: zero-size array to reduction operation maximum which has no identity
+        # on TreeExplainer when trying to compute max nodes:
+        # max_nodes = np.max([len(t.values) for t in self.trees])
+        # The test does not fail with latest lightgbm 2.2.3 however
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # train lightgbm model with a constant value for y
+        X, y = shap.datasets.california(n_points=500)
+        # use the mean for all values
+        y.fill(np.mean(y))
+        model = lightgbm.LGBMRegressor(n_estimators=1, n_jobs=1)
+        model.fit(X, y)
+
+        # explain the model's predictions using SHAP values
+        shap.TreeExplainer(model).shap_values(X)
+
+    def test_lightgbm_binary(self):
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # train lightgbm model
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(),
+            test_size=0.2,
+            random_state=0,
+        )
+        model = lightgbm.LGBMClassifier(n_estimators=10, n_jobs=1)
+        model.fit(X_train, Y_train)
+
+        # explain the model's predictions using SHAP values
+        shap_values = shap.TreeExplainer(model).shap_values(X_test)
+
+        # validate structure of shap values, must be a list of ndarray for both classes
+        assert isinstance(shap_values, list)
+        assert len(shap_values) == 2
+
+        # ensure plot works for first class
+        shap.dependence_plot(0, shap_values[0], X_test, show=False)
+
+    def test_lightgbm_constant_multiclass(self):
+        # note: this test used to fail with lightgbm 2.2.1 with error:
+        # ValueError: zero-size array to reduction operation maximum which has no identity
+        # on TreeExplainer when trying to compute max nodes:
+        # max_nodes = np.max([len(t.values) for t in self.trees])
+        # The test does not fail with latest lightgbm 2.2.3 however
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # train lightgbm model
+        X, Y = shap.datasets.iris()
+        Y.fill(1)
+        model = lightgbm.LGBMClassifier(
+            n_estimators=50,
+            num_classes=3,
+            objective="multiclass",
+            n_jobs=1,
+        )
+        model.fit(X, Y)
+
+        # explain the model's predictions using SHAP values
+        shap.TreeExplainer(model).shap_values(X)
+
+    def test_lightgbm_multiclass(self):
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # train lightgbm model
+        X, Y = shap.datasets.iris()
+        model = lightgbm.LGBMClassifier(n_jobs=1)
+        model.fit(X, Y)
+
+        # explain the model's predictions using SHAP values
+        shap_values = shap.TreeExplainer(model).shap_values(X)
+
+        # ensure plot works for first class
+        shap.dependence_plot(0, shap_values[0], X, show=False)
+
+    # def test_lightgbm_ranking(self):
+    #     try:
+    #         import lightgbm
+    #     except:
+    #         print("Skipping test_lightgbm_ranking!")
+    #         return
+    #
+    #     # train lightgbm ranker model
+    #     x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
+    #     model = lightgbm.LGBMRanker()
+    #     model.fit(
+    #         x_train, y_train, group=q_train,
+    #         eval_set=[(x_test, y_test)],
+    #         eval_group=[q_test],
+    #         eval_at=[1, 3],
+    #         early_stopping_rounds=5,
+    #         verbose=False,
+    #         callbacks=[lightgbm.reset_parameter(learning_rate=lambda x: 0.95 ** x * 0.1)],
+    #     )
+    #     _validate_shap_values(model, x_test)
+
+    def test_lightgbm_interaction(self):
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # train LightGBM model
+        X, y = shap.datasets.california(n_points=500)
+        model = lightgbm.LGBMRegressor(n_estimators=20, n_jobs=1)
+        model.fit(X, y)
+
+        # verify symmetry of the interaction values (this typically breaks if anything is wrong)
+        interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
+        for j, jval in enumerate(interaction_vals):
+            for k, kval in enumerate(jval):
+                for m, _ in enumerate(kval):
+                    assert abs(interaction_vals[j][k][m] - interaction_vals[j][m][k]) < 1e-4
+
+    def test_lightgbm_call_explanation(self):
+        """Checks that __call__ runs without error and returns a valid Explanation object.
+
+        Related to GH issue #66.
+        """
+        lightgbm = pytest.importorskip("lightgbm")
+
+        # NOTE: the categorical column is necessary for testing GH issue #66.
+        X, y = shap.datasets.adult(n_points=300)
+        X["categ"] = pd.Categorical(
+            [p for p in ("M", "F") for _ in range(150)],
+            ordered=False,
+        )
+        model = lightgbm.LGBMClassifier(n_estimators=7, n_jobs=1)
+        model.fit(X, y)
+
+        explainer = shap.TreeExplainer(model)
+        explanation = explainer(X)
+
+        shap_values_raw: list[np.ndarray] = explainer.shap_values(X)
+        shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+        # checks that the call returns a valid Explanation object
+        assert len(explanation.base_values) == len(y)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+        assert (explanation.values == shap_values).all()

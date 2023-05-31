@@ -9,12 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added `n_points` parameter to all functions in `shap.datasets` (#39).
-- Added the ruff linter (#25, #26, #27).
+- Added the `ruff` linter (#25, #26, #27).
 
 ### Fixed
 
 - Fixed failing unit tests (#29, #20, #24).
-- Fixed `plot.waterfall` yticklabels with boolean features (#58).
+- Fixed `plot.waterfall` to support yticklabels with boolean features (#58).
+- Prevent `TreeExplainer.__call__` from throwing ValueError when passed a pandas DataFrame containing Categorical columns (#88).
 - Fixed sampling in `shap.datasets` to sample without replacement (#36).
 - Fixed deprecation warnings for `numpy>=1.24` from numpy types (#7).
 - Fixed deprecation warnings for `Ipython>=8` from `Ipython.core.display` (#13).
