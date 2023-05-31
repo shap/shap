@@ -6,17 +6,16 @@ import matplotlib.pyplot as pl
 
 
 def convert_color(color):
-    try:
-        color = pl.get_cmap(color)
-    except Exception:
-        pass
-
     if color == "shap_red":
-        color = colors.red_rgb
-    elif color == "shap_blue":
-        color = colors.blue_rgb
+        return colors.red_rgb
+    if color == "shap_blue":
+        return colors.blue_rgb
 
-    return color
+    try:
+        return pl.get_cmap(color)
+    except ValueError:
+        return color
+
 
 def convert_ordering(ordering, shap_values):
     if issubclass(type(ordering), OpChain):
