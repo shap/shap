@@ -210,7 +210,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     ax = pl.gca()
     #xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
+    width = bbox.width
     bbox_to_xscale = xlen/width
 
     for i in range(len(values)):
@@ -233,7 +233,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     # put horizontal lines for each feature row
     for i in range(num_features):
         pl.axhline(i+1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
-    
+
     if features is not None:
         features = list(features)
 
@@ -244,7 +244,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
                     features[i] = int(features[i])
             except:
                 pass # features[i] must not be a number
-    
+
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('none')
     pl.gca().spines['right'].set_visible(False)

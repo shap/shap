@@ -776,7 +776,6 @@ def compute_output_dims(values, base_values, data, output_names):
         output_shape = tuple()
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
-    values_dims = list(range(len(values_shape)))
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
@@ -867,7 +866,6 @@ def _auto_cohorts(shap_values, max_cohorts):
 
     # group instances by their decision paths
     paths = m.decision_path(shap_values.data).toarray()
-    unique_paths = np.unique(m.decision_path(shap_values.data).todense(), axis=0)
     path_names = []
 
     # mark each instance with a path name

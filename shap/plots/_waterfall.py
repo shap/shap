@@ -136,12 +136,10 @@ def waterfall(shap_values, max_display=10, show=True):
             pos_inds.append(0)
             pos_widths.append(-remaining_impact)
             pos_lefts.append(loc + remaining_impact)
-            c = colors.red_rgb
         else:
             neg_inds.append(0)
             neg_widths.append(-remaining_impact)
             neg_lefts.append(loc + remaining_impact)
-            c = colors.blue_rgb
 
     points = pos_lefts + list(np.array(pos_lefts) + np.array(pos_widths)) + neg_lefts + \
         list(np.array(neg_lefts) + np.array(neg_widths))
@@ -161,9 +159,8 @@ def waterfall(shap_values, max_display=10, show=True):
     xlen = plt.xlim()[1] - plt.xlim()[0]
     fig = plt.gcf()
     ax = plt.gca()
-    xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
+    width = bbox.width
     bbox_to_xscale = xlen/width
     hl_scaled = bbox_to_xscale * head_length
     renderer = fig.canvas.get_renderer()
@@ -443,12 +440,10 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             pos_inds.append(0)
             pos_widths.append(-remaining_impact)
             pos_lefts.append(loc + remaining_impact)
-            c = colors.red_rgb
         else:
             neg_inds.append(0)
             neg_widths.append(-remaining_impact)
             neg_lefts.append(loc + remaining_impact)
-            c = colors.blue_rgb
 
     points = pos_lefts + list(np.array(pos_lefts) + np.array(pos_widths)) + neg_lefts + \
         list(np.array(neg_lefts) + np.array(neg_widths))
@@ -468,9 +463,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     xlen = plt.xlim()[1] - plt.xlim()[0]
     fig = plt.gcf()
     ax = plt.gca()
-    xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
+    width = bbox.width
     bbox_to_xscale = xlen/width
     hl_scaled = bbox_to_xscale * head_length
     renderer = fig.canvas.get_renderer()

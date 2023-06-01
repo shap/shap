@@ -84,7 +84,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             ymin = nan_min - (nan_max - nan_min)/20
         if ymax is None:
             ymax = nan_max + (nan_max - nan_min)/20
-        f = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        _ = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = pl.subplot(1,len(inds),i+1)
             scatter(shap_values[:,i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)

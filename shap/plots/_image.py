@@ -81,9 +81,9 @@ def image(shap_values: Explanation or np.ndarray,
         if labels is None:
             labels = shap_exp.output_names
 
-    multi_output = True
+    # multi_output = True
     if not isinstance(shap_values, list):
-        multi_output = False
+        # multi_output = False
         shap_values = [shap_values]
 
     if len(shap_values[0].shape) == 3:

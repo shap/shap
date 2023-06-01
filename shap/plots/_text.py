@@ -263,8 +263,6 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 
     # build out HTML output one word one at a time
     top_inds = np.argsort(-np.abs(values))[:num_starting_labels]
-    maxv = values.max()
-    minv = values.min()
     out = ""
     # ev_str = str(shap_values.base_values)
     # vsum_str = str(values.sum())

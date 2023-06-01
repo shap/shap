@@ -12,7 +12,6 @@ select = ["F"]
 # For now, deselect rules that do not pass
 ignore = [
   "F811", # Redefinition of unused variable
-  "F841", # Local variables assigned but unused
 ]
 
 [tool.ruff.per-file-ignores]
