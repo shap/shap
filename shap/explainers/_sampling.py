@@ -1,5 +1,4 @@
-from ..utils._legacy import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
-from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData
+from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ..utils import safe_isinstance
 from .._explanation import Explanation
 from ._kernel import Kernel

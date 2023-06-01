@@ -2,7 +2,7 @@ import numpy as np
 from ..utils import record_import_error, safe_isinstance
 from .._serializable import Serializable, Serializer, Deserializer
 try:
-    import torch
+    import torch  # noqa: F401
 except ImportError as e:
     record_import_error("torch", "torch could not be imported!", e)
 

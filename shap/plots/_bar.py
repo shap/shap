@@ -6,11 +6,10 @@ except ImportError:
     pass
 from ._labels import labels
 from ..utils import format_value, ordinal_str
-from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds, dendrogram_coords
+from ._utils import convert_ordering, merge_nodes, get_sort_order, sort_inds, dendrogram_coords
 from . import colors
 import numpy as np
 import scipy
-import copy
 from .. import Explanation, Cohorts
 
 

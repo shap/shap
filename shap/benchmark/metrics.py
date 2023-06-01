@@ -1,14 +1,8 @@
-from .. import LinearExplainer
-from .. import KernelExplainer
-from .. import SamplingExplainer
-from ..explainers import other
 from .. import __version__
 from . import measures
 from . import methods
 import sklearn
 import numpy as np
-import copy
-import functools
 import time
 import hashlib
 import os

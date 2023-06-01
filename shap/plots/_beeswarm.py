@@ -14,7 +14,7 @@ except ImportError:
     pass
 from ._labels import labels
 from . import colors
-from ..utils import safe_isinstance, OpChain, format_value
+from ..utils import safe_isinstance
 from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
 from .. import Explanation
 

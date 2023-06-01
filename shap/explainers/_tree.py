@@ -1,12 +1,8 @@
 import time
 import numpy as np
 import scipy.special
-import multiprocessing
-import sys
 import json
-import os
 import struct
-import itertools
 from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
@@ -27,7 +23,7 @@ except ImportError as e:
     record_import_error("cext", "C extension was not built during install!", e)
 
 try:
-    import pyspark
+    import pyspark  # noqa
 except ImportError as e:
     record_import_error("pyspark", "PySpark could not be imported!", e)
 
@@ -829,7 +825,6 @@ class TreeEnsemble:
             else:
                 assert False, "Unsupported Spark model type: " + str(type(model))
         elif safe_isinstance(model, "xgboost.core.Booster"):
-            import xgboost
             self.original_model = model
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -840,7 +835,6 @@ class TreeEnsemble:
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBClassifier"):
-            import xgboost
             self.input_dtype = np.float32
             self.model_type = "xgboost"
             self.original_model = model.get_booster()
@@ -864,7 +858,6 @@ class TreeEnsemble:
                 else:
                     self.model_output = "probability"
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
-            import xgboost
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -876,7 +869,6 @@ class TreeEnsemble:
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
-            import xgboost
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)

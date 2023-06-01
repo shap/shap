@@ -11,7 +11,10 @@ testpaths = ["tests"]
 select = ["F"]
 # For now, deselect rules that do not pass
 ignore = [
-  "F401", # unused imports
   "F811", # Redefinition of unused variable
   "F841", # Local variables assigned but unused
 ]
+
+[tool.ruff.per-file-ignores]
+# Unused imports often intentional in top-level __init__.py 
+"__init__.py" = ["F401"]

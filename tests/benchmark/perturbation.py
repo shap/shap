@@ -1,5 +1,4 @@
 import numpy as np
-import shap 
 import shap.benchmark as benchmark 
 from transformers import AutoTokenizer
 from shap.maskers import Independent, Partition, Impute, Text, Image, FixedComposite

@@ -10,7 +10,6 @@ import numpy as np
 try:
     import matplotlib.cm as cm
     import matplotlib.pyplot as pl
-    import matplotlib
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass

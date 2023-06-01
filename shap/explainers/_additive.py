@@ -1,9 +1,6 @@
 import numpy as np
-import scipy as sp
-import warnings
 from ._explainer import Explainer
 from ..utils import safe_isinstance, MaskedModel
-from .. import maskers
 
 
 class Additive(Explainer):

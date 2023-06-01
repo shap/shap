@@ -1,9 +1,7 @@
 import cv2
-import json
 import matplotlib.pyplot as plt 
 import numpy as np
 import os
-import requests
 import shap
 from textwrap import wrap
 

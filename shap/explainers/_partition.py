@@ -1,20 +1,12 @@
-import types
-import copy
-import inspect
 from ..utils import MaskedModel
 import numpy as np
-import warnings
 import time
 from tqdm.auto import tqdm
 import queue
-from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain
+from ..utils import safe_isinstance, make_masks, OpChain
 from .. import Explanation
-from .. import maskers
 from ._explainer import Explainer
 from .. import links
-import cloudpickle
-import pickle
-from ..maskers import Masker
 from ..models import Model
 from numba import njit
 

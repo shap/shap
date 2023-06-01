@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import shap
-from .utils import explainer  # (pytest fixture do not remove) pylint: disable=unused-import
 
 
 def test_violin_with_invalid_plot_type():

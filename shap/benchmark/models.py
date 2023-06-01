@@ -1,6 +1,5 @@
 import sklearn
 import sklearn.ensemble
-import gc
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 

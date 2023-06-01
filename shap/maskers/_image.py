@@ -6,7 +6,7 @@ from .._serializable import Serializer, Deserializer
 import heapq
 from numba import njit
 try:
-    import torch
+    import torch  # noqa: F401
 except ImportError as e:
     record_import_error("torch", "torch could not be imported!", e)
 

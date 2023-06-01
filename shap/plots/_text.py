@@ -1,7 +1,5 @@
 import numpy as np
-import warnings
 from . import colors
-from ..utils import ordinal_str
 import random
 import string
 import json
