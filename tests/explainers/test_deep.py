@@ -124,6 +124,7 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    InteractiveSession.close()
 
 
 def test_tf_keras_linear():
