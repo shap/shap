@@ -41,7 +41,7 @@ def test_sample_no_op():
 def test_sample_sampling_without_replacement():
     """Ensures that `sample()` is performing sampling without replacement.
 
-    See #36.
+    See dsgibbons#36.
     """
     arr = np.arange(100)
     new_arr = shap.utils.sample(arr, 99, random_state=0)

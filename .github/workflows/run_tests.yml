@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See #42
+            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See dsgibbons#42
             ${{ env.pythonLocation }}/**/site-packages/pyspark*
             ${{ env.pythonLocation }}/**/site-packages/nvidia*
             ${{ env.pythonLocation }}/**/site-packages/torch*
@@ -68,7 +68,7 @@ jobs:
   run_tests_core:
     name: run_tests (core only)
     # Run tests with only the core dependencies, to ensure we
-    # cover the latest version of numpy/pandas. See #46
+    # cover the latest version of numpy/pandas. See dsgibbons#46
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

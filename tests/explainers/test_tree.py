@@ -1137,11 +1137,11 @@ class TestExplainerLightGBM:
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
 
-        Related to GH issue #66.
+        Related to GH issue dsgibbons#66.
         """
         lightgbm = pytest.importorskip("lightgbm")
 
-        # NOTE: the categorical column is necessary for testing GH issue #66.
+        # NOTE: the categorical column is necessary for testing GH issue dsgibbons#66.
         X, y = shap.datasets.adult(n_points=300)
         X["categ"] = pd.Categorical(
             [p for p in ("M", "F") for _ in range(150)],
