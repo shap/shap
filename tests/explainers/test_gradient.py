@@ -19,7 +19,7 @@ def test_tf_keras_mnist_cnn():
 
     config = ConfigProto()
     config.gpu_options.allow_growth = True
-    InteractiveSession(config=config)
+    sess = InteractiveSession(config=config)
 
     tf.compat.v1.disable_eager_execution()
 
@@ -87,13 +87,13 @@ def test_tf_keras_mnist_cnn():
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
-    sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+    sess.close()
 
 
 def test_pytorch_mnist_cnn():
