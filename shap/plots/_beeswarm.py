@@ -16,6 +16,7 @@ from ._labels import labels
 from . import colors
 from ..utils import safe_isinstance
 from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
+from ..utils._exceptions import DimensionError
 from .. import Explanation
 
 
@@ -43,7 +44,11 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     """
 
     if not isinstance(shap_values, Explanation):
-        raise ValueError("the beeswarm plot requires Explanation object as the `shap_values` argument")
+        emsg = (
+            "The beeswarm plot requires an `Explanation` object as the "
+            "`shap_values` argument."
+        )
+        raise TypeError(emsg)
 
     if len(shap_values.shape) == 1:
         raise ValueError(
@@ -109,13 +114,18 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the matrix does not match the shape of the " \
-                    "provided data matrix."
+        shape_msg = (
+            "The shape of the shap_values matrix does not match the shape "
+            "of the provided data matrix."
+        )
         if num_features - 1 == features.shape[1]:
-            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
-        else:
-            assert num_features == features.shape[1], shape_msg
+            shape_msg += (
+                " Perhaps the extra column in the shap_values matrix is the "
+                "constant offset? If so, just pass shap_values[:,:-1]."
+            )
+            raise DimensionError(shape_msg)
+        if num_features != features.shape[1]:
+            raise DimensionError(shape_msg)
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])

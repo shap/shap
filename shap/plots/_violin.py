@@ -13,6 +13,8 @@ except ImportError:
     pass
 from ._labels import labels
 from . import colors
+from ..utils._exceptions import DimensionError
+
 
 # TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
@@ -113,13 +115,18 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
     num_features = shap_values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
-                    "provided data matrix."
+        shape_msg = (
+            "The shape of the shap_values matrix does not match the shape "
+            "of the provided data matrix."
+        )
         if num_features - 1 == features.shape[1]:
-            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
-        else:
-            assert num_features == features.shape[1], shape_msg
+            shape_msg += (
+                " Perhaps the extra column in the shap_values matrix is the "
+                "constant offset? If so, just pass shap_values[:,:-1]."
+            )
+            raise DimensionError(shape_msg)
+        if num_features != features.shape[1]:
+            raise DimensionError(shape_msg)
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
