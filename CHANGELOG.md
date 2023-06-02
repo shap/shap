@@ -48,7 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed the unused `mimic.py` file and `MimicExplainer` code
   ([#53](https://github.com/dsgibbons/shap/pull/53)).
 
-## [0.41.0] - 2022-06-16 (parent repo)
+## [0.41.0] - 2022-06-16
 
-For details of previous changes, see the release page of the parent repository
+For details of previous changes, see the release page on GitHub
 [here](https://github.com/slundberg/shap/releases).
