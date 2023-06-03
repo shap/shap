@@ -29,6 +29,12 @@ from ..utils._legacy import (
     match_model_to_data,
 )
 from ._explainer import Explainer
+from .._explanation import Explanation
+import time
+
+# Suppress the sklearn warning
+# 'UserWarning: X does not have valid feature names, but <model> was fitted with feature names'
+warnings.filterwarnings('ignore', module='sklearn')
 
 log = logging.getLogger('shap')
 
@@ -73,7 +79,12 @@ class Kernel(Explainer):
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
     """
 
-    def __init__(self, model, data, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link=IdentityLink(), **kwargs):
+
+        if feature_names is not None:
+            self.data_feature_names=feature_names
+        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+            self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
@@ -119,6 +130,27 @@ class Kernel(Explainer):
         else:
             self.D = self.fnull.shape[0]
 
+    def __call__(self, X):
+
+        start_time = time.time()
+
+        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            feature_names = list(X.columns)
+            X = X.values
+        else:
+            feature_names = getattr(self, "data_feature_names", None)
+       
+        v = self.shap_values(X)
+        if type(v) is list:
+            v = np.stack(v, axis=-1) # put outputs at the end
+        
+        # the explanation object expects an expected value for each row
+        if hasattr(self.expected_value, "__len__"):
+            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+        else:
+            ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+        return Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names, compute_time=time.time() - start_time)
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
