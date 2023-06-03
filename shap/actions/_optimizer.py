@@ -1,5 +1,4 @@
 import queue
-import numpy as np
 import warnings
 import copy
 from ._action import Action

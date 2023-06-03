@@ -1,22 +1,14 @@
-import types
-import copy
-import inspect
 from ..utils import MaskedModel
 import numpy as np
-import warnings
 import time
 from tqdm.auto import tqdm
 import queue
-from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain
+from ..utils import safe_isinstance, make_masks, OpChain
 from .. import Explanation
-from .. import maskers
 from ._explainer import Explainer
 from .. import links
-import cloudpickle
-import pickle
-from ..maskers import Masker
 from ..models import Model
-from numba import jit
+from numba import njit
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -155,7 +147,7 @@ class Partition(Explainer):
 
         # make sure we have the base value and current value outputs
         M = len(fm)
-        m00 = np.zeros(M, dtype=np.bool)
+        m00 = np.zeros(M, dtype=bool)
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             self._curr_base_value = fm(m00.reshape(1, -1), zero_index=0)[0] # the zero index param tells the masked model what the baseline is
@@ -214,9 +206,9 @@ class Partition(Explainer):
 
         #f = self._reshaped_model
         #r = self.masker
-        #masks = np.zeros(2*len(inds)+1, dtype=np.int)
+        #masks = np.zeros(2*len(inds)+1, dtype=int)
         M = len(fm)
-        m00 = np.zeros(M, dtype=np.bool)
+        m00 = np.zeros(M, dtype=bool)
         #f00 = fm(m00.reshape(1,-1))[0]
         base_value = f00
         #f11 = fm(~m00.reshape(1,-1))[0]
@@ -353,9 +345,9 @@ class Partition(Explainer):
 
         #f = self._reshaped_model
         #r = self.masker
-        #masks = np.zeros(2*len(inds)+1, dtype=np.int)
+        #masks = np.zeros(2*len(inds)+1, dtype=int)
         M = len(fm)
-        m00 = np.zeros(M, dtype=np.bool)
+        m00 = np.zeros(M, dtype=bool)
         #f00 = fm(m00.reshape(1,-1))[0]
         base_value = f00
         #f11 = fm(~m00.reshape(1,-1))[0]
@@ -507,9 +499,9 @@ class Partition(Explainer):
 
     #     #f = self._reshaped_model
     #     #r = self.masker
-    #     #masks = np.zeros(2*len(inds)+1, dtype=np.int)
+    #     #masks = np.zeros(2*len(inds)+1, dtype=int)
     #     M = len(fm)
-    #     m00 = np.zeros(M, dtype=np.bool)
+    #     m00 = np.zeros(M, dtype=bool)
     #     #f00 = fm(m00.reshape(1,-1))[0]
     #     base_value = f00
     #     #f11 = fm(~m00.reshape(1,-1))[0]
@@ -672,7 +664,7 @@ def output_indexes_len(output_indexes):
     elif not isinstance(output_indexes, str):
         return len(output_indexes)
 
-@jit
+@njit
 def lower_credit(i, value, M, values, clustering):
     if i < M:
         values[i] += value

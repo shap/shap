@@ -2,8 +2,6 @@
 import pandas as pd
 import numpy as np
 import scipy as sp
-import sys
-import warnings
 import copy
 import operator
 import sklearn
@@ -583,25 +581,24 @@ class Explanation(metaclass=MetaExplanation):
         """
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
         assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
-        
+
         new_exp = Explanation(
-            np.hstack([self.values, other.values]),
-            np.hstack([self.values, other.values]),
-            self.base_values,
-            self.data,
-            self.display_data,
-            self.instance_names,
-            self.feature_names,
-            self.output_names,
-            self.output_indexes,
-            self.lower_bounds,
-            self.upper_bounds,
-            self.error_std,
-            self.main_effects,
-            self.hierarchical_values,
-            self.clustering
+            values=np.hstack([self.values, other.values]),
+            base_values=self.base_values,
+            data=self.data,
+            display_data=self.display_data,
+            instance_names=self.instance_names,
+            feature_names=self.feature_names,
+            output_names=self.output_names,
+            output_indexes=self.output_indexes,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+            error_std=self.error_std,
+            main_effects=self.main_effects,
+            hierarchical_values=self.hierarchical_values,
+            clustering=self.clustering,
         )
-        return self._numpy_func("min", axis=axis)
+        return new_exp
 
     # def reshape(self, *args):
     #     return self._numpy_func("reshape", newshape=args)
@@ -779,7 +776,6 @@ def compute_output_dims(values, base_values, data, output_names):
         output_shape = tuple()
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
-    values_dims = list(range(len(values_shape)))
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
@@ -824,7 +820,7 @@ def _compute_shape(x):
             if first_shape == tuple():
                 return (len(x),)
             else: # we have an array of arrays...
-                matches = np.ones(len(first_shape), dtype=np.bool)
+                matches = np.ones(len(first_shape), dtype=bool)
                 for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
                     assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
@@ -870,7 +866,6 @@ def _auto_cohorts(shap_values, max_cohorts):
 
     # group instances by their decision paths
     paths = m.decision_path(shap_values.data).toarray()
-    unique_paths = np.unique(m.decision_path(shap_values.data).todense(), axis=0)
     path_names = []
 
     # mark each instance with a path name

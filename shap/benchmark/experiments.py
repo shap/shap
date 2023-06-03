@@ -2,10 +2,7 @@ from __future__ import print_function
 from .. import datasets
 from . import metrics
 from . import models
-from . import methods
 from .. import __version__
-import numpy as np
-import sklearn
 import os
 import pickle
 import sys

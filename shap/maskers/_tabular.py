@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
-from numba import jit
+from numba import njit
 from .. import utils
 from ..utils import safe_isinstance, MaskedModel
 from ..utils._exceptions import DimensionError, InvalidClusteringError
@@ -77,16 +77,16 @@ class Tabular(Masker):
         else:
             self.clustering = None
 
-        # self._last_mask = np.zeros(self.data.shape[1], dtype=np.bool)
+        # self._last_mask = np.zeros(self.data.shape[1], dtype=bool)
         self._masked_data = data.copy()
-        self._last_mask = np.zeros(data.shape[1], dtype=np.bool)
+        self._last_mask = np.zeros(data.shape[1], dtype=bool)
         self.shape = self.data.shape
         self.supports_delta_masking = True
         # self._last_x = None
-        # self._data_variance = np.ones(self.data.shape, dtype=np.bool)
+        # self._data_variance = np.ones(self.data.shape, dtype=bool)
 
         # this is property that allows callers to check what rows actually changed since last time.
-        # self.changed_rows = np.ones(self.data.shape[0], dtype=np.bool)
+        # self.changed_rows = np.ones(self.data.shape[0], dtype=bool)
 
     def __call__(self, mask, x):
         mask = self._standardize_mask(mask, x)
@@ -99,9 +99,9 @@ class Tabular(Masker):
         if np.issubdtype(mask.dtype, np.integer):
 
             variants = ~self.invariants(x)
-            curr_delta_inds = np.zeros(len(mask), dtype=np.int)
+            curr_delta_inds = np.zeros(len(mask), dtype=int)
             num_masks = (mask >= 0).sum()
-            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=np.bool)
+            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)
             masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))
             self._last_mask[:] = False
             self._masked_data[:] = self.data
@@ -182,7 +182,7 @@ class Tabular(Masker):
             kwargs["clustering"] = s.load("clustering")
         return kwargs
 
-@jit
+@njit
 def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
     if dind == noop_code:
         pass
@@ -193,7 +193,7 @@ def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
         masked_inputs[:, dind] = x[dind]
         last_mask[dind] = True
 
-@jit
+@njit
 def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
                    masked_inputs_tmp, last_mask, data, variants, masked_inputs_out, noop_code):
     """ Implements the special (high speed) delta masking API that only flips the positions we need to.
@@ -265,7 +265,7 @@ class Independent(Tabular):
 class Partition(Tabular):
     """ This masks out tabular features by integrating over the given background dataset.
 
-    Unlike Independent, Partition respects a hierarchial structure of the data.
+    Unlike Independent, Partition respects a hierarchical structure of the data.
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):

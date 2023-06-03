@@ -148,7 +148,7 @@ class _TFGradient(Explainer):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         if keras is None:
             try:
-                import keras
+                from tensorflow import keras
                 if version.parse(keras.__version__) < version.parse("2.1.0"):
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
             except:

@@ -614,7 +614,7 @@ _integer_types = (np.byte, np.ubyte,          # 8 bits
 _integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max)
                    for t in _integer_types}
 dtype_range = {np.bool_: (False, True),
-               np.bool8: (False, True),
+               bool: (False, True),
                np.float16: (-1, 1),
                np.float32: (-1, 1),
                np.float64: (-1, 1)}

@@ -7,7 +7,7 @@ import numpy as np
 from ._colorconv import lab2rgb, lch2lab
 
 try:
-    import matplotlib
+    import matplotlib  # noqa: F401
     from matplotlib.colors import LinearSegmentedColormap
 
     def lch2rgb(x):

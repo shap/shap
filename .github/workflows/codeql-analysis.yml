@@ -4,11 +4,7 @@
 # You may wish to alter this file to override the set of languages analyzed,
 # or to provide custom queries or build logic.
 #
-# ******** NOTE ********
-# We have attempted to detect the languages in your repository. Please check
-# the `language` matrix defined below to confirm you have the correct set of
-# supported CodeQL languages.
-#
+
 name: "CodeQL"
 
 on:
@@ -17,6 +13,17 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "master" ]
+    paths:
+      - "shap/**"
+      - "javascript/**"
+      - "tests/**"
+      - "data/**"
+      - ".github/workflows/codeql-analysis.yml"
+      - "**.py"
+      - "**.js"
+      - "**.cc"
+      - "**.cu"
+      - "**.h"
   schedule:
     - cron: '16 9 * * 1'
 
@@ -55,8 +62,13 @@ jobs:
         
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+    # - name: Autobuild
+    #   uses: github/codeql-action/autobuild@v2
+
+    - name: Build python package
+      run: |
+        pip install build
+        python -m build
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
@@ -70,3 +82,5 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"

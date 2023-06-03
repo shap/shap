@@ -1,13 +1,12 @@
 import numpy as np
 try:
     import matplotlib.pyplot as pl
-    import matplotlib
 except ImportError:
     pass
 from . import colors
 from .. import Explanation
 from ..utils import OpChain
-from ._utils import convert_ordering, convert_color
+from ._utils import convert_ordering
 
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0), 
             feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
@@ -134,16 +133,13 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=cmap)
         m.set_array([min(vmin,-vmax), max(-vmin,vmax)])
-        cb = pl.colorbar(m, ticks=[min(vmin,-vmax), max(-vmin,vmax)], aspect=1000, fraction=0.0090, pad=0.10,
-                        panchor=(0,0.05))
-        #cb.set_ticklabels([min(vmin,-vmax), max(-vmin,vmax)])
+        cb = pl.colorbar(m, ticks=[min(vmin,-vmax), max(-vmin,vmax)], aspect=1000, fraction=0.02, pad=0.10)
         cb.set_label("SHAP value", size=12, labelpad=-10)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
         cb.ax.set_aspect((bbox.height - 0.9) * 15)
-        cb.ax.set_anchor((1,0.2))
         #cb.draw_all()
         
     for i in [0]:

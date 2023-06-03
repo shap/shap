@@ -42,6 +42,8 @@ models
 ======
 .. Examples for members of :ref:`shap.models <models_api>`.
 
+Work in progress.
+
 .. toctree::
     :glob:
     :maxdepth: 1

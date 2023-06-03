@@ -4,9 +4,9 @@ from ..utils._exceptions import DimensionError
 from ._masker import Masker
 from .._serializable import Serializer, Deserializer
 import heapq
-from numba import jit
+from numba import njit
 try:
-    import torch
+    import torch  # noqa: F401
 except ImportError as e:
     record_import_error("torch", "torch could not be imported!", e)
 
@@ -65,7 +65,7 @@ class Image(Masker):
         # note if this masker can use different background for different samples
         self.fixed_background = not isinstance(self.mask_value, str)
 
-        #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=np.bool)
+        #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=bool)
         self.last_xid = None
 
         # flag that we return outputs that will not get changed by later masking calls
@@ -92,7 +92,7 @@ class Image(Masker):
 
         # if mask is not given then we mask the whole image
         if mask is None:
-            mask = np.zeros(np.prod(x.shape), dtype=np.bool)
+            mask = np.zeros(np.prod(x.shape), dtype=bool)
 
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
@@ -171,7 +171,7 @@ class Image(Masker):
             kwargs["shape"] = s.load("shape")
         return kwargs
 
-@jit
+@njit
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
     """ This partitions an image into a herarchical clustering based on axis-aligned splits.
     """

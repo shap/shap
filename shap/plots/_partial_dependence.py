@@ -7,7 +7,6 @@ try:
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import pandas as pd
 

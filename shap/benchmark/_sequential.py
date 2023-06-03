@@ -1,5 +1,5 @@
 from shap.utils import safe_isinstance, MaskedModel
-from shap.maskers import Independent, Partition, Impute, Text, Image, FixedComposite
+from shap.maskers import Text, Image, FixedComposite
 from shap import Explanation, links
 import matplotlib.pyplot as pl
 import sklearn
@@ -129,7 +129,7 @@ class SequentialPerturbation():
 
             masks = []
             
-            mask = np.ones(feature_size, dtype=np.bool) * (self.perturbation == "remove")
+            mask = np.ones(feature_size, dtype=bool) * (self.perturbation == "remove")
             masks.append(mask.copy())
 
             ordered_inds = self.sort_order_map(sample_attributions)
@@ -241,7 +241,7 @@ class SequentialPerturbation():
                 else: 
                     mask_shape = feature_size 
 
-                mask = np.ones(mask_shape, dtype=np.bool) * (self.perturbation == "remove")
+                mask = np.ones(mask_shape, dtype=bool) * (self.perturbation == "remove")
                 masks = [mask.copy()]
 
                 values = np.zeros(feature_size+1)

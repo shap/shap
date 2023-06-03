@@ -2,7 +2,6 @@ from ..utils._legacy import convert_to_instance, convert_to_model, match_instanc
 from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
 from ..utils import safe_isinstance
 from scipy.special import binom
-from scipy.sparse import issparse
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -11,7 +10,11 @@ import copy
 import itertools
 import warnings
 import gc
+from packaging import version
+import sklearn
 from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 from ._explainer import Explainer
 
@@ -274,8 +277,8 @@ class Kernel(Explainer):
             self.allocate()
 
             # weight the different subset sizes
-            num_subset_sizes = np.int(np.ceil((self.M - 1) / 2.0))
-            num_paired_subset_sizes = np.int(np.floor((self.M - 1) / 2.0))
+            num_subset_sizes = int(np.ceil((self.M - 1) / 2.0))
+            num_paired_subset_sizes = int(np.floor((self.M - 1) / 2.0))
             weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
             weight_vector[:num_paired_subset_sizes] *= 2
             weight_vector /= np.sum(weight_vector)
@@ -562,7 +565,14 @@ class Kernel(Explainer):
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
-                nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
+
+                # "Normalize" parameter of LassoLarsIC was deprecated in sklearn version 1.2
+                if version.parse(sklearn.__version__) < version.parse("1.2.0"):
+                    kwg = dict(normalize=False)
+                else:
+                    kwg = {}
+                model = make_pipeline(StandardScaler(with_mean=False), LassoLarsIC(criterion=c, **kwg))
+                nonzero_inds = np.nonzero(model.fit(mask_aug, eyAdj_aug)[1].coef_)[0]
 
             # use a fixed regularization coeffcient
             else:

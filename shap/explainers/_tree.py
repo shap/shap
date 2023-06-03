@@ -1,12 +1,8 @@
 import time
 import numpy as np
 import scipy.special
-import multiprocessing
-import sys
 import json
-import os
 import struct
-import itertools
 from packaging import version
 from ._explainer import Explainer
 from ..utils import assert_import, record_import_error, safe_isinstance
@@ -27,7 +23,7 @@ except ImportError as e:
     record_import_error("cext", "C extension was not built during install!", e)
 
 try:
-    import pyspark
+    import pyspark  # noqa
 except ImportError as e:
     record_import_error("pyspark", "PySpark could not be imported!", e)
 
@@ -77,16 +73,17 @@ class Tree(Explainer):
             does not require a background dataset and so is used by default when no background dataset is provided.
 
         model_output : "raw", "probability", "log_loss", or model method name
-            What output of the model should be explained. If "raw" then we explain the raw output of the
-            trees, which varies by model. For regression models "raw" is the standard output, for binary
-            classification in XGBoost this is the log odds ratio. If model_output is the name of a supported
-            prediction method on the model object then we explain the output of that model method name.
-            For example model_output="predict_proba" explains the result of calling model.predict_proba.
-            If "probability" then we explain the output of the model transformed into probability space
-            (note that this means the SHAP values now sum to the probability output of the model). If "logloss"
+            What output of the model should be explained. If "raw", then we explain the raw output of the
+            trees, which varies by model. For regression models, "raw" is the standard output. For binary
+            classification in XGBoost, this is the log odds ratio. If model_output is the name of a supported
+            prediction method on the model object, then we explain the output of that model method name.
+            For example, model_output="predict_proba" explains the result of calling `model.predict_proba`.
+            If "probability", then we explain the output of the model transformed into probability space
+            (note that this means the SHAP values now sum to the probability output of the model). If "log_loss",
             then we explain the log base e of the model loss function, so that the SHAP values sum up to the
             log loss of the model for each sample. This is helpful for breaking down model performance by feature.
-            Currently the probability and logloss options are only supported when feature_dependence="independent".
+            Currently the "probability" and "log_loss" options are only supported when
+            feature_dependence="independent".
 
         Examples
         --------
@@ -98,7 +95,7 @@ class Tree(Explainer):
             self.data_feature_names = list(data.columns)
 
         masker = data
-        super(Tree, self).__init__(model, masker, feature_names=feature_names)
+        super().__init__(model, masker, feature_names=feature_names)
 
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
@@ -149,7 +146,7 @@ class Tree(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
-        
+
         self.approximate = approximate
 
         if feature_perturbation not in feature_perturbation_codes:
@@ -209,7 +206,6 @@ class Tree(Explainer):
 
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
-            X = X.values
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
@@ -227,7 +223,18 @@ class Tree(Explainer):
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        return Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names, compute_time=time.time() - start_time)
+        # cf. GH issue #66, this conversion to numpy array should be done AFTER
+        # calculation of shap values
+        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            X = X.values
+
+        return Explanation(
+            v,
+            base_values=ev_tiled,
+            data=X,
+            feature_names=feature_names,
+            compute_time=time.time() - start_time,
+        )
 
     def _validate_inputs(self, X, y, tree_limit, check_additivity):
         # see if we have a default tree_limit in place.
@@ -247,7 +254,7 @@ class Tree(Explainer):
             X = X.reshape(1, X.shape[0])
         if X.dtype != self.model.input_dtype:
             X = X.astype(self.model.input_dtype)
-        X_missing = np.isnan(X, dtype=np.bool)
+        X_missing = np.isnan(X, dtype=bool)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -338,7 +345,7 @@ class Tree(Explainer):
                                          "See https://github.com/slundberg/shap/issues/580") from e
 
                 if check_additivity and self.model.model_output == "raw":
-                    xgb_tree_limit = tree_limit // self.model.num_stacked_models 
+                    xgb_tree_limit = tree_limit // self.model.num_stacked_models
                     model_output_vals = self.model.original_model.predict(
                         X, ntree_limit=xgb_tree_limit, output_margin=True,
                         validate_features=False
@@ -818,7 +825,6 @@ class TreeEnsemble:
             else:
                 assert False, "Unsupported Spark model type: " + str(type(model))
         elif safe_isinstance(model, "xgboost.core.Booster"):
-            import xgboost
             self.original_model = model
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -829,7 +835,6 @@ class TreeEnsemble:
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBClassifier"):
-            import xgboost
             self.input_dtype = np.float32
             self.model_type = "xgboost"
             self.original_model = model.get_booster()
@@ -841,7 +846,7 @@ class TreeEnsemble:
             # 'best_ntree_limit' is problematic
             # https://github.com/dmlc/xgboost/issues/6615
             if hasattr(model, 'best_iteration'):
-                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1 
+                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1
                 self.tree_limit = (getattr(model, "best_iteration", None) + 1) * trees_per_iteration
             else:
                 self.tree_limit = getattr(model, "best_ntree_limit", None)
@@ -853,7 +858,6 @@ class TreeEnsemble:
                 else:
                     self.model_output = "probability"
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
-            import xgboost
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -865,7 +869,6 @@ class TreeEnsemble:
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
-            import xgboost
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
             xgb_loader = XGBTreeModelLoader(self.original_model)
@@ -1099,7 +1102,7 @@ class TreeEnsemble:
             X = X.reshape(1, X.shape[0])
         if X.dtype.type != self.input_dtype:
             X = X.astype(self.input_dtype)
-        X_missing = np.isnan(X, dtype=np.bool)
+        X_missing = np.isnan(X, dtype=bool)
         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
@@ -1365,7 +1368,7 @@ class SingleTree:
 
         # Re-compute the number of samples that pass through each node if we are given data
         if data is not None and data_missing is not None:
-            self.node_sample_weight[:] = 0.0
+            self.node_sample_weight.fill(0.0)
             _cext.dense_tree_update_weights(
                 self.children_left, self.children_right, self.children_default, self.features,
                 self.thresholds, self.values, 1, self.node_sample_weight, data, data_missing
@@ -1506,9 +1509,9 @@ class XGBTreeModelLoader(object):
 
             # load the stat nodes
             self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float32))
+            self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float64))
             self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=np.int))
+            self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=int))
             for j in range(self.num_nodes[i]):
                 self.loss_chg[-1][j] = self.read('f')
                 self.sum_hess[-1][j] = self.read('f')
@@ -1517,8 +1520,8 @@ class XGBTreeModelLoader(object):
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
-        self.children_default = np.zeros(shape, dtype=np.int)
-        self.features = np.zeros(shape, dtype=np.int)
+        self.children_default = np.zeros(shape, dtype=int)
+        self.features = np.zeros(shape, dtype=int)
         self.thresholds = np.zeros(shape, dtype=np.float32)
         self.values = np.zeros((shape[0], shape[1], 1), dtype=np.float32)
         trees = []
@@ -1672,4 +1675,3 @@ class CatBoostTreeModelLoader:
                             }, data=data, data_missing=data_missing))
 
         return trees
-

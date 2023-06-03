@@ -52,7 +52,7 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
 
     config = ConfigProto()
     config.gpu_options.allow_growth = True
-    InteractiveSession(config=config)
+    sess = InteractiveSession(config=config)
 
     tf.compat.v1.disable_eager_execution()
 
@@ -102,7 +102,7 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     model.add(Activation('softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
+                  optimizer=keras.optimizers.legacy.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(x_train[:10, :], y_train[:10, :],
@@ -117,13 +117,13 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
-    sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    sess.close()
 
 
 def test_tf_keras_linear():
@@ -133,7 +133,7 @@ def test_tf_keras_linear():
 
     from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
-    from tensorflow.keras.optimizers import SGD
+    from tensorflow.keras.optimizers.legacy import SGD
 
     tf.compat.v1.disable_eager_execution()
 
@@ -352,9 +352,9 @@ def test_pytorch_custom_nested_models():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from sklearn.datasets import fetch_california_housing
 
-    X, y = load_boston(return_X_y=True)
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -370,7 +370,7 @@ def test_pytorch_custom_nested_models():
                     nn.Conv1d(1, 1, 1),
                     nn.ConvTranspose1d(1, 1, 1),
                 ),
-                nn.AdaptiveAvgPool1d(output_size=6),
+                nn.AdaptiveAvgPool1d(output_size=num_features // 2),
             )
 
         def forward(self, X):
@@ -454,9 +454,9 @@ def test_pytorch_single_output():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from sklearn.datasets import fetch_california_housing
 
-    X, y = load_boston(return_X_y=True)
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -471,7 +471,7 @@ def test_pytorch_single_output():
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.convt1d = nn.ConvTranspose1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
-            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=6)
+            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=num_features // 2)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
@@ -528,9 +528,9 @@ def test_pytorch_multiple_inputs():
         from torch import nn
         from torch.nn import functional as F
         from torch.utils.data import TensorDataset, DataLoader
-        from sklearn.datasets import load_boston
+        from sklearn.datasets import fetch_california_housing
         torch.manual_seed(1)
-        X, y = load_boston(return_X_y=True)
+        X, y = fetch_california_housing(return_X_y=True)
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
         x2 = X[:, :num_features // 2]
@@ -546,7 +546,7 @@ def test_pytorch_multiple_inputs():
                 super().__init__()
                 self.disconnected = disconnected
                 if disconnected:
-                    num_features = num_features // 2 + 1
+                    num_features = num_features // 2
                 self.linear = nn.Linear(num_features, 2)
                 self.output = nn.Sequential(
                     nn.MaxPool1d(2),

@@ -1,12 +1,9 @@
 import re
-import pandas as pd
 import numpy as np
 import scipy as sp
-from scipy.spatial.distance import pdist
 import sys
 import warnings
 import sklearn
-import importlib
 import copy
 from contextlib import contextmanager
 import sys, os
@@ -62,10 +59,9 @@ def potential_interactions(shap_values_column, shap_values_matrix):
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
     """
 
-    # ignore inds that are identical to the column 
+    # ignore inds that are identical to the column
     ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)
-    
-    values = shap_values_matrix.values
+
     X = shap_values_matrix.data
 
     if X.shape[0] > 10000:
@@ -82,7 +78,7 @@ def potential_interactions(shap_values_column, shap_values_matrix):
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
-        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=np.float)
+        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=float)
 
         val_other = encoded_val_other
         v = 0.0
@@ -134,7 +130,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     inc = max(min(int(len(x) / 10.0), 50), 1)
     interactions = []
     for i in range(X.shape[1]):
-        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=np.float)
+        encoded_val_other = encode_array_if_needed(X[inds, i][srt], dtype=float)
 
         val_other = encoded_val_other
         v = 0.0
@@ -166,10 +162,14 @@ def encode_array_if_needed(arr, dtype=np.float64):
         return encoded_array
 
 def sample(X, nsamples=100, random_state=0):
-    if nsamples >= X.shape[0]:
-        return X
+    if hasattr(X, "shape"):
+        over_count = nsamples >= X.shape[0]
     else:
-        return sklearn.utils.resample(X, n_samples=nsamples, random_state=random_state)
+        over_count = nsamples >= len(X)
+
+    if over_count:
+        return X
+    return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 def safe_isinstance(obj, class_path_str):
     """

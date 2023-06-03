@@ -1,3 +1,13 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# slundberg/shap
 node_modules
 __pycache__
 shap.egg-info
@@ -10,6 +20,7 @@ docs/local
 docs/_build
 .ipynb_checkpoints
 .eggs
+.ruff_cache
 shap/_cext.cpython-36m-darwin.so
 shap/_cext.cpython-35m-darwin.so
 javascript/build/*
