@@ -8,12 +8,14 @@ on:
   pull_request:
     branches:
       - master
-    paths:
-      - "shap/**"
-      - "tests/**"
-      - "data/**"
-      - ".github/workflows/run_tests.yml"
-      - "setup.py"
+    # Interim measure: run all tests on all PRs, as these Checks
+    # are configured as Required Status Checks. See #2951
+    # paths:
+    #   - "shap/**"
+    #   - "tests/**"
+    #   - "data/**"
+    #   - ".github/workflows/run_tests.yml"
+    #   - "setup.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
