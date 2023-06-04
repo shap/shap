@@ -79,7 +79,10 @@ class Tabular(Masker):
 
         # self._last_mask = np.zeros(self.data.shape[1], dtype=bool)
         self._masked_data = data.copy()
-        self._last_mask = np.zeros(data.shape[1], dtype=bool)
+        if int(np.__version__.split('.')[0]) <= 1 and int(np.__version__.split('.')[1]) <= 17:
+            self._last_mask = np.zeros(data.shape[1], dtype=bool)
+        else:
+            self._last_mask = np.zeros(data.shape[1], dtype=bool_)
         self.shape = self.data.shape
         self.supports_delta_masking = True
         # self._last_x = None
@@ -101,7 +104,10 @@ class Tabular(Masker):
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=int)
             num_masks = (mask >= 0).sum()
-            varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)
+            if int(np.__version__.split('.')[0]) <= 1 and int(np.__version__.split('.')[1]) <= 17:
+                varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool)
+            else:
+                varying_rows_out = np.zeros((num_masks, self.shape[0]), dtype=bool_)
             masked_inputs_out = np.zeros((num_masks * self.shape[0], self.shape[1]))
             self._last_mask[:] = False
             self._masked_data[:] = self.data
