@@ -3,31 +3,24 @@
 
 from __future__ import division, unicode_literals
 
+import base64
 import io
 import json
 import os
 import random
+import re
 import string
+import warnings
+from collections.abc import Sequence
+
+import numpy as np
+import scipy as sp
 
 try:
     from IPython.display import HTML, display
     have_ipython = True
 except ImportError:
     have_ipython = False
-import base64
-import sys
-
-import numpy as np
-import scipy as sp
-import scipy.cluster
-
-if sys.version_info[0] >= 3:
-    from collections.abc import Sequence
-else:
-    from collections import Sequence  # pylint: disable=no-name-in-module
-
-import re
-import warnings
 
 from ..plots._force_matplotlib import draw_additive_plot
 from ..utils import hclust_ordering
