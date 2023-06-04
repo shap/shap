@@ -3,9 +3,13 @@
 
 # pylint: disable=missing-function-docstring
 import pickle
+
 import numpy as np
+
 import shap
+
 from . import common
+
 
 def test_exact_second_order():
     """ This tests that the Perumtation explain gives exact answers for second order functions.

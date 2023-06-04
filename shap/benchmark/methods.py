@@ -1,14 +1,18 @@
-from .. import LinearExplainer
-from .. import KernelExplainer
-from .. import SamplingExplainer
-from .. import TreeExplainer
-from .. import DeepExplainer
-from .. import GradientExplainer
-from .. import kmeans
-from ..explainers import other
-from .models import KerasWrap
 import numpy as np
 import sklearn
+
+from .. import (
+    DeepExplainer,
+    GradientExplainer,
+    KernelExplainer,
+    LinearExplainer,
+    SamplingExplainer,
+    TreeExplainer,
+    kmeans,
+)
+from ..explainers import other
+from .models import KerasWrap
+
 
 def linear_shap_corr(model, data):
     """ Linear SHAP (corr 1000)

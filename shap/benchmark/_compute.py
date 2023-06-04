@@ -1,5 +1,6 @@
 from . import BenchmarkResult
 
+
 class ComputeTime():
     """ Extracts a runtime benchmark result from the passed Explanation.
     """

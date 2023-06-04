@@ -1,16 +1,24 @@
 import warnings
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from ..utils import format_value, ordinal_str
-from ._utils import convert_ordering, merge_nodes, get_sort_order, sort_inds, dendrogram_coords
-from . import colors
 import numpy as np
 import scipy
-from .. import Explanation, Cohorts
+
+from .. import Cohorts, Explanation
+from ..utils import format_value, ordinal_str
+from . import colors
+from ._labels import labels
+from ._utils import (
+    convert_ordering,
+    dendrogram_coords,
+    get_sort_order,
+    merge_nodes,
+    sort_inds,
+)
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit

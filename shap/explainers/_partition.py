@@ -1,14 +1,14 @@
-from ..utils import MaskedModel
-import numpy as np
-import time
-from tqdm.auto import tqdm
 import queue
-from ..utils import safe_isinstance, make_masks, OpChain
-from .. import Explanation
-from ._explainer import Explainer
-from .. import links
-from ..models import Model
+import time
+
+import numpy as np
 from numba import njit
+from tqdm.auto import tqdm
+
+from .. import Explanation, links
+from ..models import Model
+from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from ._explainer import Explainer
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object

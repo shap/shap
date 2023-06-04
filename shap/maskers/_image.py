@@ -1,18 +1,23 @@
+import heapq
+
 import numpy as np
+from numba import njit
+
+from .._serializable import Deserializer, Serializer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._exceptions import DimensionError
 from ._masker import Masker
-from .._serializable import Serializer, Deserializer
-import heapq
-from numba import njit
+
 try:
     import torch  # noqa: F401
 except ImportError as e:
     record_import_error("torch", "torch could not be imported!", e)
 
 # TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
-from numba.core.errors import NumbaPendingDeprecationWarning
 import warnings
+
+from numba.core.errors import NumbaPendingDeprecationWarning
+
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 try:

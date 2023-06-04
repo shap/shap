@@ -1,5 +1,7 @@
-import numpy as np
 import warnings
+
+import numpy as np
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:

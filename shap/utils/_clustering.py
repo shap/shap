@@ -1,8 +1,10 @@
+import warnings
+
 import numpy as np
 import scipy as sp
-from numba import njit
 import sklearn
-import warnings
+from numba import njit
+
 from ._general import safe_isinstance
 from ._show_progress import show_progress
 

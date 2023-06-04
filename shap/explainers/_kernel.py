@@ -1,21 +1,33 @@
-from ..utils._legacy import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
-from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
-from ..utils import safe_isinstance
-from scipy.special import binom
+import copy
+import gc
+import itertools
+import logging
+import warnings
+
 import numpy as np
 import pandas as pd
 import scipy as sp
-import logging
-import copy
-import itertools
-import warnings
-import gc
-from packaging import version
 import sklearn
-from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
+from packaging import version
+from scipy.special import binom
+from sklearn.linear_model import Lasso, LassoLarsIC, lars_path
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
+
+from ..utils import safe_isinstance
+from ..utils._legacy import (
+    DenseData,
+    IdentityLink,
+    SparseData,
+    convert_to_data,
+    convert_to_instance,
+    convert_to_instance_with_index,
+    convert_to_link,
+    convert_to_model,
+    match_instance_to_data,
+    match_model_to_data,
+)
 from ._explainer import Explainer
 
 log = logging.getLogger('shap')

@@ -1,7 +1,8 @@
 import numpy as np
-import shap.benchmark as benchmark 
 from transformers import AutoTokenizer
-from shap.maskers import Independent, Partition, Impute, Text, Image, FixedComposite
+
+import shap.benchmark as benchmark
+from shap.maskers import FixedComposite, Image, Impute, Independent, Partition, Text
 
 model = lambda x, y: x 
 sort_order = 'positive'

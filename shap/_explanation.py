@@ -1,14 +1,15 @@
 
-import pandas as pd
-import numpy as np
-import scipy as sp
 import copy
 import operator
+
+import numpy as np
+import pandas as pd
+import scipy as sp
 import sklearn
-from slicer import Slicer, Alias, Obj
-# from ._order import Order
-from .utils._general import OpChain
+from slicer import Alias, Obj, Slicer
+
 from .utils._exceptions import DimensionError
+from .utils._general import OpChain
 
 # slicer confuses pylint...
 # pylint: disable=no-member

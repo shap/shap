@@ -1,6 +1,8 @@
-from .._explainer import Explainer
 import numpy as np
 from sklearn.model_selection import train_test_split
+
+from .._explainer import Explainer
+
 
 class Maple(Explainer):
     """ Simply wraps MAPLE into the common SHAP interface.
@@ -139,10 +141,11 @@ class TreeMaple(Explainer):
 # -  Assumes any required data normalization has already been done
 # -  Can pass Y (desired response) instead of MR (model fit to Y) to make fitting MAPLE to datasets easy
 
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
-import numpy as np
+
 
 class MAPLE:
 

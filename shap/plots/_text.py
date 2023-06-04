@@ -1,10 +1,14 @@
-import numpy as np
-from . import colors
+import json
 import random
 import string
-import json
+
+import numpy as np
+
+from . import colors
+
 try:
-    from IPython.display import display as ipython_display, HTML
+    from IPython.display import HTML
+    from IPython.display import display as ipython_display
     have_ipython = True
 except ImportError:
     have_ipython = False

@@ -1,13 +1,13 @@
+import copy
+import os
 import re
-import numpy as np
-import scipy as sp
 import sys
 import warnings
-import sklearn
-import copy
 from contextlib import contextmanager
-import sys, os
 
+import numpy as np
+import scipy as sp
+import sklearn
 
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")

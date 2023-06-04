@@ -7,8 +7,10 @@ addopts = "--mpl"
 testpaths = ["tests"]
 
 [tool.ruff]
-# Aim to get all pyflakes logical errors ("F") passing
-select = ["F"]
+select = [
+  "F",  # pyflakes
+  "I",  # isort
+]
 # For now, deselect rules that do not pass
 ignore = [
   "F811", # Redefinition of unused variable

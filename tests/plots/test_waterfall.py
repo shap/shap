@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import pytest
+
 import shap
+
 
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_waterfall(explainer): # pylint: disable=redefined-outer-name

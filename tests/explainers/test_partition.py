@@ -2,11 +2,15 @@
 """
 
 # pylint: disable=missing-function-docstring
-import sys
 import pickle
+import sys
+
 import pytest
+
 import shap
+
 from . import common
+
 
 @pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
 def test_translation():

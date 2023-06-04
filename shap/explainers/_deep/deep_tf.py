@@ -1,9 +1,12 @@
-import numpy as np
 import warnings
-from .._explainer import Explainer
+
+import numpy as np
 from packaging import version
-from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+
 from ...utils._exceptions import DimensionError
+from .._explainer import Explainer
+from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
+
 keras = None
 tf = None
 tf_ops = None
@@ -79,10 +82,14 @@ class TFDeep(Explainer):
         # try and import keras and tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
         if tf is None:
-            from tensorflow.python.framework import ops as tf_ops # pylint: disable=E0611
-            from tensorflow.python.ops import gradients_impl as tf_gradients_impl # pylint: disable=E0611
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
+            from tensorflow.python.framework import (
+                ops as tf_ops,  # pylint: disable=E0611
+            )
+            from tensorflow.python.ops import (
+                gradients_impl as tf_gradients_impl,  # pylint: disable=E0611
+            )
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl
             import tensorflow as tf

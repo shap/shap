@@ -1,6 +1,7 @@
 tf = None
 import warnings
 
+
 def _import_tf():
     """ Tries to import tensorflow.
     """

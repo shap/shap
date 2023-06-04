@@ -1,12 +1,17 @@
+import warnings
+
 import numpy as np
 import scipy as sp
-import warnings
 from tqdm.autonotebook import tqdm
-from ._explainer import Explainer
+
+from .. import links, maskers
 from ..utils import safe_isinstance
-from ..utils._exceptions import InvalidFeaturePerturbationError, InvalidModelError, DimensionError
-from .. import maskers
-from .. import links
+from ..utils._exceptions import (
+    DimensionError,
+    InvalidFeaturePerturbationError,
+    InvalidModelError,
+)
+from ._explainer import Explainer
 
 
 class Linear(Explainer):

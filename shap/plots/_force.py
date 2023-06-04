@@ -2,32 +2,38 @@
 """
 
 from __future__ import division, unicode_literals
-import os
+
 import io
-import string
 import json
+import os
 import random
+import string
+
 try:
-    from IPython.display import display, HTML
+    from IPython.display import HTML, display
     have_ipython = True
 except ImportError:
     have_ipython = False
 import base64
+import sys
+
 import numpy as np
 import scipy as sp
 import scipy.cluster
-import sys
+
 if sys.version_info[0] >= 3:
     from collections.abc import Sequence
 else:
-    from collections import Sequence # pylint: disable=no-name-in-module
+    from collections import Sequence  # pylint: disable=no-name-in-module
 
-import warnings
 import re
-from ._labels import labels
-from ..utils._legacy import convert_to_link, Instance, Model, Data, DenseData, Link
-from ..utils import hclust_ordering
+import warnings
+
 from ..plots._force_matplotlib import draw_additive_plot
+from ..utils import hclust_ordering
+from ..utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
+from ._labels import labels
+
 
 def force(base_value, shap_values=None, features=None, feature_names=None, out_names=None, link="identity",
           plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,

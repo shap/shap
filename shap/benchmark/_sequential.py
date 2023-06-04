@@ -1,13 +1,17 @@
-from shap.utils import safe_isinstance, MaskedModel
-from shap.maskers import Text, Image, FixedComposite
-from shap import Explanation, links
-import matplotlib.pyplot as pl
-import sklearn
-import numpy as np
-from tqdm.auto import tqdm
 import time
+
+import matplotlib.pyplot as pl
+import numpy as np
 import pandas as pd
+import sklearn
+from tqdm.auto import tqdm
+
+from shap import Explanation, links
+from shap.maskers import FixedComposite, Image, Text
+from shap.utils import MaskedModel, safe_isinstance
+
 from . import BenchmarkResult
+
 
 class SequentialMasker():
     def __init__(self, mask_type, sort_order, masker, model, *model_args, batch_size=500):

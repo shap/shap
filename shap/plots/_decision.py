@@ -1,8 +1,8 @@
 """ Visualize cumulative SHAP values."""
 
 from __future__ import division, unicode_literals
-import warnings
 
+import warnings
 from typing import Union
 
 import numpy as np
@@ -14,10 +14,10 @@ except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
 
+from ..utils import hclust_ordering
+from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
-from ..utils._legacy import convert_to_link, LogitLink
-from ..utils import hclust_ordering
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object

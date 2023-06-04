@@ -1,10 +1,11 @@
 import os
-import pandas as pd
-import numpy as np
-import sklearn.datasets
-import shap
 
+import numpy as np
+import pandas as pd
+import sklearn.datasets
 from sklearn.utils import deprecated
+
+import shap
 
 try:
     from urllib.request import urlretrieve
