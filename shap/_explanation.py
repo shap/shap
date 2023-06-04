@@ -4,7 +4,9 @@ import operator
 
 import numpy as np
 import pandas as pd
-import scipy as sp
+import scipy.cluster
+import scipy.sparse
+import scipy.spatial
 import sklearn
 from slicer import Alias, Obj, Slicer
 
@@ -643,9 +645,9 @@ class Explanation(metaclass=MetaExplanation):
             values = values.T
 
         # compute a hierarchical clustering and return the optimal leaf ordering
-        D = sp.spatial.distance.pdist(values, metric)
-        cluster_matrix = sp.cluster.hierarchy.complete(D)
-        inds = sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
+        D = scipy.spatial.distance.pdist(values, metric)
+        cluster_matrix = scipy.cluster.hierarchy.complete(D)
+        inds = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
         return inds
 
     def sample(self, max_samples, replace=False, random_state=0):
@@ -801,7 +803,7 @@ def _first_item(x):
 def _compute_shape(x):
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
-    elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
+    elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
         return (None,)
     else:
         if isinstance(x, dict):

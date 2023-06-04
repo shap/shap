@@ -1,7 +1,8 @@
 import warnings
 
 import numpy as np
-import scipy as sp
+import scipy.cluster
+import scipy.spatial
 import sklearn
 from numba import njit
 
@@ -11,8 +12,8 @@ from ._show_progress import show_progress
 
 def partition_tree(X, metric="correlation"):
     X_full_rank = X + np.random.randn(*X.shape) * 1e-8
-    D = sp.spatial.distance.pdist(X_full_rank.fillna(X_full_rank.mean()).T, metric=metric)
-    return sp.cluster.hierarchy.complete(D)
+    D = scipy.spatial.distance.pdist(X_full_rank.fillna(X_full_rank.mean()).T, metric=metric)
+    return scipy.cluster.hierarchy.complete(D)
 
 
 def partition_tree_shuffle(indexes, index_mask, partition_tree):
@@ -84,9 +85,9 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     """
     
     # compute a hierarchical clustering and return the optimal leaf ordering
-    D = sp.spatial.distance.pdist(X, metric)
-    cluster_matrix = sp.cluster.hierarchy.complete(D)
-    return sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
+    D = scipy.spatial.distance.pdist(X, metric)
+    cluster_matrix = scipy.cluster.hierarchy.complete(D)
+    return scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
 
 def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
     """ Compute reducancy distances scaled from 0-1 amoung all the feature in X relative to the label y.
@@ -174,16 +175,16 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
             bg_no_nan = X.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:,i], nan=np.nanmean(bg_no_nan[:,i]), copy=False)
-        dist = sp.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape)*1e-8, metric=metric)
+        dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape)*1e-8, metric=metric)
     # else:
     #     raise Exception("Unknown metric: " + str(metric))
 
     # build linkage
     if linkage == "single":
-        return sp.cluster.hierarchy.single(dist)
+        return scipy.cluster.hierarchy.single(dist)
     elif linkage == "complete":
-        return sp.cluster.hierarchy.complete(dist)
+        return scipy.cluster.hierarchy.complete(dist)
     elif linkage == "average":
-        return sp.cluster.hierarchy.average(dist)
+        return scipy.cluster.hierarchy.average(dist)
     else:
         raise Exception("Unknown linkage: " + str(linkage))

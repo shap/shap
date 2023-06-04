@@ -7,6 +7,8 @@ import warnings
 
 import numpy as np
 import scipy as sp
+import scipy.cluster
+import scipy.spatial
 from scipy.stats import gaussian_kde
 
 try:
@@ -254,7 +256,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             clust_order = sort_inds(partition_tree, np.abs(values))
 
             # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
-            dist = sp.spatial.distance.squareform(sp.cluster.hierarchy.cophenet(partition_tree))
+            dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
 
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
