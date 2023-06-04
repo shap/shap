@@ -223,7 +223,7 @@ class Tree(Explainer):
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        # cf. GH issue #66, this conversion to numpy array should be done AFTER
+        # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             X = X.values
