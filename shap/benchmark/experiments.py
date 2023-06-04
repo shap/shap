@@ -12,7 +12,6 @@ from multiprocessing import Pool
 import itertools
 import copy
 import random
-import time
 try:
     from queue import Queue
 except ImportError:
