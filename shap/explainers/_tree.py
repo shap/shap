@@ -45,7 +45,7 @@ class Tree(Explainer):
 
     Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles of trees,
     under several different possible assumptions about feature dependence. It depends on fast C++
-    implementations either inside an externel model package or in the local compiled C extention.
+    implementations either inside an external model package or in the local compiled C extension.
     """
 
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, approximate=False, **deprecated_options):
@@ -620,7 +620,7 @@ class TreeEnsemble:
 
         if type(model) is dict and "trees" in model:
             # This allows a dictionary to be passed that represents the model.
-            # this dictionary has several numerica paramters and also a list of trees
+            # this dictionary has several numerical parameters and also a list of trees
             # where each tree is a dictionary describing that tree
             if "internal_dtype" in model:
                 self.internal_dtype = model["internal_dtype"]
@@ -979,7 +979,7 @@ class TreeEnsemble:
             assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
             if self.model_output == "raw":
                 param_idx = 0 # default to the first parameter of the output distribution
-                warnings.warn("Translating model_ouput=\"raw\" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.")
+                warnings.warn("Translating model_output=\"raw\" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.")
             elif type(self.model_output) is int:
                 param_idx = self.model_output
                 self.model_output = "raw" # note that after loading we have a new model_output type
@@ -1164,7 +1164,7 @@ class SingleTree:
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
-        # deprecated dictionary support (with sklearn singlular style "feature" and "value" names)
+        # deprecated dictionary support (with sklearn singular style "feature" and "value" names)
         elif type(tree) is dict and 'children_left' in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
@@ -1196,10 +1196,10 @@ class SingleTree:
             def buildTree(index, node):
                 index = index + 1
                 if tree._java_obj.getImpurity() == 'variance':
-                    self.values[index] = [node.prediction()] #prediction for the node
+                    self.values[index] = [node.prediction()]  # prediction for the node
                 else:
                     self.values[index] = [e for e in node.impurityStats().stats()] #for gini: NDarray(numLabel): 1 per label: number of item for each label which went through this node
-                self.node_sample_weight[index] = node.impurityStats().count() #weighted count of element trough this node
+                self.node_sample_weight[index] = node.impurityStats().count()  # weighted count of element through this node
 
                 if node.subtreeDepth() == 0:
                     return index
