@@ -3,3 +3,10 @@ repos:
   rev: v0.0.265
   hooks:
   - id: ruff
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.3.0
+  hooks:
+  - id: check-added-large-files
+  - id: mixed-line-ending
+  - id: check-toml
+  - id: check-yaml
