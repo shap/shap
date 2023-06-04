@@ -44,7 +44,7 @@ class Explainer(Serializable):
             functions are available in shap such as shap.ImageMasker for images and shap.TokenMasker
             for text. In addition to determining how to replace hidden features, the masker can also
             constrain the rules of the cooperative game used to explain the model. For example
-            shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchial clustering
+            shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchical clustering
             of coalitions for the game (in this special case the attributions are known as the Owen values).
 
         link : function
@@ -57,9 +57,9 @@ class Explainer(Serializable):
         algorithm : "auto", "permutation", "partition", "tree", or "linear"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
-            of these algorithms have various tradeoffs and are preferrable in different situations. By
+            of these algorithms have various tradeoffs and are preferable in different situations. By
             default the "auto" options attempts to make the best choice given the passed model and masker,
-            but this choice can always be overriden by passing the name of a specific algorithm. The type of
+            but this choice can always be overridden by passing the name of a specific algorithm. The type of
             algorithm used will determine what type of subclass object is returned by this constructor, and
             you can also build those subclasses directly if you prefer or need more fine grained control over
             their options.

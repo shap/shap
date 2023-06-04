@@ -182,7 +182,7 @@ metadata = {
     #     "title": "Linear SHAP (ind)"
     # },
     # "coef": {
-    #     "title": "Coefficents"
+    #     "title": "Coefficients"
     # },
     # "random": {
     #     "title": "Random"

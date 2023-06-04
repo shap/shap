@@ -21,7 +21,7 @@ def linear_shap_ind(model, data):
     return LinearExplainer(model, data, feature_dependence="independent").shap_values
 
 def coef(model, data):
-    """ Coefficents
+    """ Coefficients
     """
     return other.CoefficentExplainer(model).attributions
 
