@@ -5,9 +5,18 @@ from ..explainers._explainer import Explainer
 from ..explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
 from .._explanation import Explanation
 from packaging import version
-keras = None
-tf = None
-torch = None
+
+try:
+    import tensorflow as tf
+    import tensorflow.keras as keras
+except:
+    tf = None
+    keras = None
+
+try:
+    import torch
+except:
+    torch = None
 
 
 class Gradient(Explainer):
@@ -142,17 +151,17 @@ class _TFGradient(Explainer):
 
         # try and import keras and tensorflow
         global tf, keras
-        if tf is None:
-            import tensorflow as tf
+        try:
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
-        if keras is None:
-            try:
-                from tensorflow import keras
-                if version.parse(keras.__version__) < version.parse("2.1.0"):
-                    warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
-            except:
-                pass
+        except ImportError:
+            raise ImportError("Tensorflow not found.")
+
+        try:
+            if version.parse(keras.__version__) < version.parse("2.1.0"):
+                warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
+        except ImportError:
+            raise ImportError("tensorflow.keras not found.")
 
         # determine the model inputs and outputs
         self.model = model
@@ -364,10 +373,11 @@ class _PyTorchGradient(Explainer):
 
         # try and import pytorch
         global torch
-        if torch is None:
-            import torch
+        try:
             if version.parse(torch.__version__) < version.parse("0.4"):
                 warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
+        except ImportError:
+            raise ImportError("torch not found.")
 
         # check if we have multiple inputs
         self.multi_input = False
