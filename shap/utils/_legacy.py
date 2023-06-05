@@ -1,9 +1,10 @@
+import copy
+
 import numpy as np
 import pandas as pd
 import scipy.sparse
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
-import copy
 
 
 def kmeans(X, k, round_values=True):
