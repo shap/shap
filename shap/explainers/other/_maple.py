@@ -11,7 +11,7 @@ class Maple(Explainer):
     ----------
     model : function
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array
@@ -43,7 +43,7 @@ class Maple(Explainer):
         Parameters
         ----------
         multiply_by_input : bool
-            If true, this multiplies the learned coeffients by the mean-centered input. This makes these
+            If true, this multiplies the learned coefficients by the mean-centered input. This makes these
             values roughly comparable to SHAP values.
         """
         if str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
@@ -66,7 +66,7 @@ class TreeMaple(Explainer):
     ----------
     model : function
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array

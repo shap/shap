@@ -27,7 +27,7 @@ class MetaExplanation(type):
 
     @property
     def abs(cls):
-        """ Element-wize absolute value op.
+        """ Element-wise absolute value op.
         """
         return op_chain_root.abs
 
@@ -75,7 +75,7 @@ class MetaExplanation(type):
 
     @property
     def hclust(cls):
-        """ Hierarchial clustering op.
+        """ Hierarchical clustering op.
         """
         return op_chain_root.hclust
 
@@ -863,7 +863,7 @@ def _auto_cohorts(shap_values, max_cohorts):
     """ This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values.
     """
 
-    # fit a decision tree that well spearates the SHAP values
+    # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)
 
