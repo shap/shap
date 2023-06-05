@@ -18,4 +18,3 @@ from ._scatter import scatter
 from ._text import text
 from ._violin import violin
 from ._waterfall import waterfall
-

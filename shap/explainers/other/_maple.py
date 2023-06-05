@@ -303,5 +303,3 @@ class MAPLE:
             pred[i] = lr_model.predict(x)[0]
 
         return pred
-
-

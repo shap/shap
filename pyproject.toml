@@ -11,11 +11,10 @@ select = [
   "F",  # pyflakes
   "I",  # isort
 ]
-# For now, deselect rules that do not pass
-ignore = [
-  "F811", # Redefinition of unused variable
-]
 
 [tool.ruff.per-file-ignores]
 # Unused imports often intentional in top-level __init__.py 
 "__init__.py" = ["F401"]
+# Don't apply linting/formatting to vendored code
+"shap/explainers/other/_maple.py" = ["ALL"]
+"shap/plots/colors/_colorconv.py" = ["ALL"]
