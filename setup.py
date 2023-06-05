@@ -239,7 +239,7 @@ def try_run_setup(**kwargs):
     try:
         run_setup(**kwargs)
     except Exception as e:
-        print("Exception occured during setup,", str(e))
+        print("Exception occurred during setup,", str(e))
         exc_msg = str(e).lower()
 
         if "cuda module" in exc_msg:

@@ -13,11 +13,11 @@ class LimeTabular(Explainer):
     ----------
     model : function or iml.Model
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array
-        The background dataset. 
+        The background dataset.
 
     mode : "classification" or "regression"
         Control the mode of LIME tabular.

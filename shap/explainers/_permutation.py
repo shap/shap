@@ -8,13 +8,13 @@ from ..models import Model
 class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.
 
-    This is a model agnostic explainer that gurantees local accuracy (additivity) by iterating completely
-    through an entire permutatation of the features in both forward and reverse directions (antithetic sampling).
+    This is a model agnostic explainer that guarantees local accuracy (additivity) by iterating completely
+    through an entire permutation of the features in both forward and reverse directions (antithetic sampling).
     If we do this once, then we get the exact SHAP values for models with up to second order interaction effects.
     We can iterate this many times over many random permutations to get better SHAP value estimates for models
     with higher order interactions. This sequential ordering formulation also allows for easy reuse of
-    model evaluations and the ability to effciently avoid evaluating the model when the background values
-    for a feature are the same as the current input value. We can also account for hierarchial data
+    model evaluations and the ability to efficiently avoid evaluating the model when the background values
+    for a feature are the same as the current input value. We can also account for hierarchical data
     structures with partition trees, something not currently implemented for KernalExplainer or SamplingExplainer.
     """
 
@@ -32,7 +32,7 @@ class Permutation(Explainer):
             masked samples are evaluated using the model function and the outputs are then averaged.
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. To use a clustering
-            game structure you can pass a shap.maksers.Tabular(data, clustering=\"correlation\") object.
+            game structure you can pass a shap.maskers.Tabular(data, clustering=\"correlation\") object.
 
         seed: None or int
             Seed for reproducibility

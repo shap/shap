@@ -15,7 +15,7 @@ class Linear(Explainer):
     This computes the SHAP values for a linear model and can account for the correlations among
     the input features. Assuming features are independent leads to interventional SHAP values which
     for a linear model are coef[i] * (x[i] - X.mean(0)[i]) for the ith feature. If instead we account
-    for correlations then we prevent any problems arising from colinearity and share credit among
+    for correlations then we prevent any problems arising from collinearity and share credit among
     correlated features. Accounting for correlations can be computationally challenging, but
     LinearExplainer uses sampling to estimate a transform that can then be applied to explain
     any prediction of the model.
@@ -28,7 +28,7 @@ class Linear(Explainer):
     data : (mean, cov), numpy.array, pandas.DataFrame, iml.DenseData or scipy.csr_matrix
         The background dataset to use for computing conditional expectations. Note that only the
         mean and covariance of the dataset are used. This means passing a raw data matrix is just
-        a convienent alternative to passing the mean and covariance directly.
+        a convenient alternative to passing the mean and covariance directly.
     nsamples : int
         Number of samples to use when estimating the transformation matrix used to account for
         feature correlations.
@@ -162,7 +162,7 @@ class Linear(Explainer):
             self.mean = np.matmul(self.avg_proj, self.mean)
             self.coef = np.matmul(sum_proj, self.coef)
 
-            # if we still have some multi-colinearity present then we just add regularization...
+            # if we still have some multi-collinearity present then we just add regularization...
             e,_ = np.linalg.eig(self.cov)
             if e.min() < 1e-7:
                 self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
@@ -244,7 +244,7 @@ class Linear(Explainer):
     def _parse_model(model):
         """ Attempt to pull out the coefficients and intercept from the given model object.
         """
-        # raw coefficents
+        # raw coefficients
         if type(model) == tuple and len(model) == 2:
             coef = model[0]
             intercept = model[1]
@@ -270,7 +270,7 @@ class Linear(Explainer):
     def supports_model_with_masker(model, masker):
         """ Determines if we can parse the given model.
         """
-        
+
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
 
@@ -322,8 +322,6 @@ class Linear(Explainer):
                 phi = np.array(X - self.mean) * self.coef
                 # if len(self.coef.shape) == 1:
                 #     phi = np.array(X - self.mean) * self.coef
-                    
-
                 #     return np.array(X - self.mean) * self.coef
                 # else:
                 #     return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
@@ -399,7 +397,7 @@ def duplicate_components(C):
                     count += 1
                     found_group = True
                 components[j] = count
-                
+
     proj = np.zeros((len(np.unique(components)), C.shape[0]))
     proj[0, 0] = 1
     for i in range(1,C.shape[0]):

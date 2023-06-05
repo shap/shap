@@ -36,8 +36,8 @@ def custom_record_gradient(op_name, inputs, attrs, results):
 
 class TFDeep(Explainer):
     """
-    Using tf.gradients to implement the backgropagation was
-    inspired by the gradient based implementation approach proposed by Ancona et al, ICLR 2018. Note
+    Using tf.gradients to implement the backpropagation was
+    inspired by the gradient-based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
 
@@ -46,7 +46,7 @@ class TFDeep(Explainer):
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
-        values, but be unreasonably expensive. The variance of the expectation estimates scale by
+        values, but will be computationally expensive. The variance of the expectation estimates scales by
         roughly 1/sqrt(N) for N background data samples. So 100 samples will give a good estimate,
         and 1000 samples a very good estimate of the expected values.
 
@@ -332,8 +332,8 @@ class TFDeep(Explainer):
                         diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
                 assert np.abs(diffs).max() < 1e-2, "The SHAP explanations do not sum up to the model's output! This is either because of a " \
                                                    "rounding error or because an operator in your computation graph was not fully supported. If " \
-                                                   "the sum difference of %f is significant compared the scale of your model outputs please post " \
-                                                   "as a github issue, with a reproducable example if possible so we can debug it." % np.abs(diffs).max()
+                                                   "the sum difference of %f is significant compared to the scale of your model outputs, please post " \
+                                                   "as a github issue, with a reproducible example so we can debug it." % np.abs(diffs).max()
 
         if not self.multi_output:
             return output_phis[0]
@@ -375,7 +375,7 @@ class TFDeep(Explainer):
         """ Passes a gradient op creation request to the correct handler.
         """
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
-        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefex before the lookup
+        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
 
     def execute_with_overridden_gradients(self, f):

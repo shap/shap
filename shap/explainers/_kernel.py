@@ -21,13 +21,12 @@ from ._explainer import Explainer
 log = logging.getLogger('shap')
 
 
-
 class Kernel(Explainer):
     """Uses the Kernel SHAP method to explain the output of any function.
 
     Kernel SHAP is a method that uses a special weighted linear regression
     to compute the importance of each feature. The computed importance values
-    are Shapley values from game theory and also coefficents from a local linear
+    are Shapley values from game theory and also coefficients from a local linear
     regression.
 
 
@@ -35,7 +34,7 @@ class Kernel(Explainer):
     ----------
     model : function or iml.Model
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array or pandas.DataFrame or shap.common.DenseData or any scipy.sparse matrix
@@ -130,7 +129,7 @@ class Kernel(Explainer):
             The "aic" and "bic" options use the AIC and BIC rules for regularization.
             Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
             "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
-            
+
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
 

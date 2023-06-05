@@ -15,9 +15,9 @@ class Exact(Explainer):
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
     from the background per sample. It also works well for Owen values from hclustering structured
     maskers when there are less than ~100 features that vary from the background per sample. This
-    explainer minmizes the number of function evaluations needed by ordering the masking sets to
+    explainer minimizes the number of function evaluations needed by ordering the masking sets to
     minimize sequential differences. This is done using gray codes for standard Shapley values
-    and a greedly sorting method for hclustering structured maskers.
+    and a greedy sorting method for hclustering structured maskers.
     """
 
     def __init__(self, model, masker, link=links.identity, linearize_link=True, feature_names=None):
@@ -46,7 +46,7 @@ class Exact(Explainer):
         linearize_link : bool
             If we use a non-linear link function to take expectations then models that are additive with respect to that
             link function for a single background sample will no longer be additive when using a background masker with
-            many samples. This for example means that a linear logisitic regression model would have interaction effects
+            many samples. This for example means that a linear logistic regression model would have interaction effects
             that arise from the non-linear changes in expectation averaging. To retain the additively of the model with
             still respecting the link function we linearize the link function by default.
         """ # TODO link to the link linearization paper when done
@@ -101,7 +101,7 @@ class Exact(Explainer):
             # don't vary from the background)
             delta_indexes = self._cached_gray_codes(len(inds))
 
-            # map to a larger mask that includes the invarient entries
+            # map to a larger mask that includes the invariant entries
             extended_delta_indexes = np.zeros(2**len(inds), dtype=int)
             for i in range(2**len(inds)):
                 if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
@@ -297,7 +297,7 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
     m10 = m00.copy() # we separate the copy from the add so as to not get converted to a matrix
     m10[:] += mask_matrix[left_index+M, :]
     m01 = m00.copy()
-    m01[:] += mask_matrix[right_index+M, :]    
+    m01[:] += mask_matrix[right_index+M, :]
 
     # record the new masks we made
     ind01 = len(all_masks)
@@ -339,7 +339,7 @@ def gray_code_indexes(nbits):
     """ Produces an array of which bits flip at which position.
 
     We assume the masks start at all zero and -1 means don't do a flip.
-    This is a more efficient represenation of the gray_code_masks version.
+    This is a more efficient representation of the gray_code_masks version.
     """
     out = np.ones(2**nbits, dtype=int) * MaskedModel.delta_mask_noop_value
     li = np.zeros(nbits, dtype=bool)

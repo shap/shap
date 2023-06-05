@@ -299,7 +299,7 @@ class _TFGradient(Explainer):
 
                 # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
-                # regression model with priors of the coefficents equal to the estimated variances for each
+                # regression model with priors of the coefficients equal to the estimated variances for each
                 # value (note that 1e-6 is designed to increase the weight of the sample and so closely
                 # match the correct sum)
                 # if False and self.local_smoothing == 0: # disabled right now to make sure it doesn't mask problems
@@ -311,7 +311,7 @@ class _TFGradient(Explainer):
                 #         sum_error = model_output_values[j] - phis_sum - self.expected_value
 
                 #     # this is a ridge regression with one sample of all ones with sum_error as the label
-                #     # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                #     # and 1/v as the ridge penalties. This simplified (and stable) form comes from the
                 #     # Sherman-Morrison formula
                 #     v = (phi_vars_s / phi_vars_s.max()) * 1e6
                 #     adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))

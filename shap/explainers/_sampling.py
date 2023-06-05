@@ -22,7 +22,7 @@ class Sampling(Kernel):
     ----------
     model : function
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array or pandas.DataFrame
@@ -153,13 +153,13 @@ class Sampling(Kernel):
                 phi_var[ind,:] /= np.sqrt(nsamples_each1[i] + nsamples_each2[i])
 
             # correct the sum of the SHAP values to equal the output of the model using a linear
-            # regression model with priors of the coefficents equal to the estimated variances for each
+            # regression model with priors of the coefficients equal to the estimated variances for each
             # SHAP value (note that 1e6 is designed to increase the weight of the sample and so closely
             # match the correct sum)
             sum_error = self.fx - phi.sum(0) - self.fnull
             for i in range(self.D):
                 # this is a ridge regression with one sample of all ones with sum_error[i] as the label
-                # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                # and 1/v as the ridge penalties. This simplified (and stable) form comes from the
                 # Sherman-Morrison formula
                 v = (phi_var[:,i] / phi_var[:,i].max()) * 1e6
                 adj = sum_error[i] * (v - (v * v.sum()) / (1 + v.sum()))

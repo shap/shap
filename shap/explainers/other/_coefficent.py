@@ -2,7 +2,7 @@ from .._explainer import Explainer
 import numpy as np
 
 class Coefficent(Explainer):
-    """ Simply returns the model coefficents as the feature attributions.
+    """ Simply returns the model coefficients as the feature attributions.
 
     This is only for benchmark comparisons and does not approximate SHAP values in a
     meaningful way.

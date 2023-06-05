@@ -6,8 +6,8 @@ from ..utils import safe_isinstance, MaskedModel
 class Additive(Explainer):
     """ Computes SHAP values for generalized additive models.
 
-    This assumes that the model only has first order effects. Extending this to
-    2nd and third order effects is future work (if you apply this to those models right now
+    This assumes that the model only has first-order effects. Extending this to
+    second- and third-order effects is future work (if you apply this to those models right now
     you will get incorrect answers that fail additivity).
     """
 
@@ -29,8 +29,6 @@ class Additive(Explainer):
             note that this structure information has no effect on the explanations of additive models.
         """
         super(Additive, self).__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
-
-        
 
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             self.model = model.decision_function
@@ -65,7 +63,7 @@ class Additive(Explainer):
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
     def __call__(self, *args, max_evals=None, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iteratable args.
+        """ Explains the output of model(*args), where args represents one or more parallel iterable args.
         """
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
@@ -82,7 +80,7 @@ class Additive(Explainer):
             if model.interactions != 0:
                 raise NotImplementedError("Need to add support for interaction effects!")
             return True
-            
+
         return False
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
