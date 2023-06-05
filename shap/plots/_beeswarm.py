@@ -47,7 +47,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
+        features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
@@ -291,12 +291,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     if num_features < len(values[0]):
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
         values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
-    
+
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
     if num_features < len(values[0]):
         yticklabels[-1] = "Sum of %d other features" % num_cut
-    
+
     row_height = 0.4
     if plot_size == "auto":
         pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
@@ -454,7 +454,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
+        features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.

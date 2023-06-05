@@ -132,13 +132,13 @@ class SequentialPerturbation():
             self.masked_model = MaskedModel(self.model, self.masker, links.identity, self.linearize_link, *args)
 
             masks = []
-            
+
             mask = np.ones(feature_size, dtype=bool) * (self.perturbation == "remove")
             masks.append(mask.copy())
 
             ordered_inds = self.sort_order_map(sample_attributions)
             increment = max(1,int(feature_size*percent))
-            for j in range(0, feature_size, increment): 
+            for j in range(0, feature_size, increment):
                 oind_list = [ordered_inds[l] for l in range(j, min(feature_size, j+increment))]
 
                 for oind in oind_list:
@@ -201,7 +201,7 @@ class SequentialPerturbation():
         '''
         Will be deprecated once MaskedModel is in complete support
         '''
-        # if explainer is already the attributions 
+        # if explainer is already the attributions
         if safe_isinstance(explanation, "numpy.ndarray"):
             attributions = explanation
         elif isinstance(explanation, Explanation):
@@ -225,25 +225,25 @@ class SequentialPerturbation():
         svals = []
         mask_vals = []
 
-        for i in range(len(X)): 
-            if self.data_type == "image": 
+        for i in range(len(X)):
+            if self.data_type == "image":
                 x_shape, y_shape = attributions[i].shape[0], attributions[i].shape[1]
                 feature_size = np.prod([x_shape, y_shape])
                 sample_attributions = attributions[i].mean(2).reshape(feature_size, -1)
-            else: 
-                feature_size = attributions[i].shape[0] 
-                sample_attributions = attributions[i] 
+            else:
+                feature_size = attributions[i].shape[0]
+                sample_attributions = attributions[i]
 
-            if len(attributions[i].shape) == 1 or self.data_type == "tabular": 
-                output_size = 1 
-            else: 
-                output_size = attributions[i].shape[-1] 
+            if len(attributions[i].shape) == 1 or self.data_type == "tabular":
+                output_size = 1
+            else:
+                output_size = attributions[i].shape[-1]
 
-            for k in range(output_size): 
+            for k in range(output_size):
                 if self.data_type == "image":
-                    mask_shape = X[i].shape 
-                else: 
-                    mask_shape = feature_size 
+                    mask_shape = X[i].shape
+                else:
+                    mask_shape = feature_size
 
                 mask = np.ones(mask_shape, dtype=bool) * (self.perturbation == "remove")
                 masks = [mask.copy()]
@@ -256,23 +256,23 @@ class SequentialPerturbation():
 
                 values[0] = curr_val
 
-                if output_size != 1: 
+                if output_size != 1:
                     test_attributions = sample_attributions[:,k]
-                else: 
+                else:
                     test_attributions = sample_attributions
 
                 ordered_inds = self.sort_order_map(test_attributions)
                 increment = max(1,int(feature_size*percent))
-                for j in range(0, feature_size, increment): 
+                for j in range(0, feature_size, increment):
                     oind_list = [ordered_inds[l] for l in range(j, min(feature_size, j+increment))]
 
-                    for oind in oind_list: 
+                    for oind in oind_list:
                         if not ((self.sort_order == "positive" and test_attributions[oind] <= 0) or \
                                 (self.sort_order == "negative" and test_attributions[oind] >= 0)):
                             if self.data_type == "image":
                                 xoind, yoind = oind // attributions[i].shape[1], oind % attributions[i].shape[1]
                                 mask[xoind][yoind] = self.perturbation == "keep"
-                            else: 
+                            else:
                                 mask[oind] = self.perturbation == "keep"
 
                     masks.append(mask.copy())
@@ -283,7 +283,7 @@ class SequentialPerturbation():
                     for l in range(j, min(feature_size, j+increment)):
                         values[l+1] = curr_val
 
-                svals.append(values) 
+                svals.append(values)
                 mask_vals.append(masks)
 
             if pbar is None and time.time() - start_time > 5:
@@ -296,12 +296,12 @@ class SequentialPerturbation():
             pbar.close()
 
         self.score_values.append(np.array(svals))
-        
-        if self.sort_order == "negative": 
+
+        if self.sort_order == "negative":
             curve_sign = -1
-        else: 
+        else:
             curve_sign = 1
-        
+
         self.labels.append(label)
 
         xs = np.linspace(0, 1, 100)
@@ -311,8 +311,8 @@ class SequentialPerturbation():
             yp = self.score_values[-1][j]
             curves[j,:] = np.interp(xs, xp, yp)
         ys = curves.mean(0)
-        
-        if debug_mode: 
+
+        if debug_mode:
             aucs = []
             for j in range(len(self.score_values[-1])):
                 curve = curves[j,:]
@@ -322,7 +322,7 @@ class SequentialPerturbation():
         else:
             auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign*(ys-ys[0]))
             return xs, ys, auc
-        
+
     def plot(self, xs, ys, auc):
         pl.plot(xs, ys, label="AUC %0.4f" % auc)
         pl.legend()

@@ -29,7 +29,7 @@ class Gradient(Explainer):
     and combines that expectation with sampling reference values from the background dataset. This leads
     to a single combined expectation of gradients that converges to attributions that sum to the
     difference between the expected model output and the current output.
-    
+
     Examples
     --------
     See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
@@ -78,15 +78,15 @@ class Gradient(Explainer):
             self.features = data.columns.values
         else:
             self.features = list(range(data[0].shape[1]))
-        
+
         if framework == 'tensorflow':
             self.explainer = _TFGradient(model, data, session, batch_size, local_smoothing)
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
-        """ Return an explanation object for the model applied to X. 
-        
+        """ Return an explanation object for the model applied to X.
+
         Parameters
         ----------
         X : list,
@@ -98,11 +98,11 @@ class Gradient(Explainer):
             number of background samples
         Returns
         -------
-        shap.Explanation: 
+        shap.Explanation:
         """
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)
-    
+
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
         """ Return the values for the model applied to X.
 

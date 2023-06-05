@@ -31,7 +31,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
         out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
     except AttributeError:
         out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
-    
+
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -102,7 +102,7 @@ class TFDeep(Explainer):
                 warnings.warn("keras is no longer supported, please use tf.keras instead.")
             except:
                 pass
-        
+
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
 

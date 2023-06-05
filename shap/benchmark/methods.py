@@ -129,7 +129,7 @@ def deep_shap(model, data):
             return phi[0]
         else:
             return phi
-    
+
     return f
 
 def expected_gradients(model, data):
@@ -144,5 +144,5 @@ def expected_gradients(model, data):
             return phi[0]
         else:
             return phi
-    
+
     return f

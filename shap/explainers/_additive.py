@@ -92,7 +92,7 @@ class Additive(Explainer):
         inputs = np.zeros((len(x), len(x)))
         for i in range(len(x)):
             inputs[i,i] = x[i]
-        
+
         phi = self.model(inputs) - self._zero_offset - self._input_offsets
 
         return {
@@ -131,17 +131,17 @@ class Additive(Explainer):
 #             self.f = model
 #         else:
 #             raise ValueError("The passed model must be a recognized object or a function!")
-        
+
 #         # convert dataframes
 #         if safe_isinstance(data, "pandas.core.series.Series"):
 #             data = data.values
 #         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
 #             data = data.values
 #         self.data = data
-        
+
 #         # compute the expected value of the model output
 #         self.expected_value = self.f(data).mean()
-        
+
 #         # pre-compute per-feature offsets
 #         tmp = np.zeros(data.shape)
 #         self._zero_offset = self.f(tmp).mean()
@@ -182,13 +182,13 @@ class Additive(Explainer):
 #             X = X.values
 #         elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
 #             X = X.values
-            
-            
+
+
 #         phi = np.zeros(X.shape)
 #         tmp = np.zeros(X.shape)
 #         for i in range(X.shape[1]):
 #             tmp[:,i] = X[:,i]
 #             phi[:,i] = self.f(tmp) - self._zero_offset - self._feature_offset[i]
 #             tmp[:,i] = 0
-            
+
 #         return phi

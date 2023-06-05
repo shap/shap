@@ -374,7 +374,7 @@ class Explainer(Serializable):
             are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
             of all the input shapes (since the row_values is always flattened),
         """
-        
+
         return {}
 
     @staticmethod

@@ -176,7 +176,7 @@ metadata = {
     #     "ylabel": "ROC AUC",
     #     "sort_order": 8
     # },
-    
+
     # "linear_shap_corr": {
     #     "title": "Linear SHAP (corr)"
     # },
@@ -273,7 +273,7 @@ def get_metric_attr(metric, attr):
         suffix = "\""
         if l.startswith(prefix) and l.endswith(suffix):
             return l[len(prefix):-len(suffix)]
-        
+
         # number
         prefix = attr+" = "
         if l.startswith(prefix):
@@ -322,7 +322,7 @@ def plot_human(dataset, model, metric, cmap=benchmark_color_map):
         _,_,method,_ = name
         diff_sum = np.sum(np.abs(scores[1] - scores[0]))
         method_arr.append((diff_sum, method, scores[0], scores[1]))
-    
+
     inds = np.arange(3)    # the x locations for the groups
     inc_width = (1.0 / len(method_arr)) * 0.8
     width = inc_width * 0.9
@@ -406,23 +406,23 @@ def make_grid(scores, dataset, model, normalize=True, transform=True):
     # print(col_keys)
     col_keys = list(color_vals.keys())
     row_keys = list(set([v for k in col_keys for v in color_vals[k].keys()]))
-    
+
     data = -28567 * np.ones((len(row_keys), len(col_keys)))
-    
+
     for i in range(len(row_keys)):
         for j in range(len(col_keys)):
             data[i,j] = color_vals[col_keys[j]][row_keys[i]]
-            
+
     assert np.sum(data == -28567) == 0, "There are missing data values!"
 
-    if normalize: 
+    if normalize:
         data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
-    
+
     # sort by performans
     inds = np.argsort(-data.mean(1))
     row_keys = [row_keys[i] for i in inds]
     data = data[inds,:]
-    
+
     return row_keys, col_keys, data
 
 
@@ -451,7 +451,7 @@ def plot_grids(dataset, model_names, out_dir=None):
 
     prefix = "<style type='text/css'> .shap_benchmark__select:focus { outline-width: 0 }</style>"
     out = "" # background: rgb(30, 136, 229)
-    
+
     # out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>\n"
     # out += "<div style='height: 1px; background: #ddd;'></div>\n"
     #out += "<div style='height: 7px; background-image: linear-gradient(to right, rgb(30, 136, 229), rgb(255, 13, 87));'></div>"
@@ -511,8 +511,8 @@ def plot_grids(dataset, model_names, out_dir=None):
                 out += "<div style='opacity: "+str(1)+"; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(data[i,j]-0.8))[:-1])) + "; height: "+str((30*data[i,j]))+"px; margin-left: auto; margin-right: auto; width:"+str((30*data[i,j]))+"px'></div>"
                 #out += "<div style='float: left; background-color: #eee; height: 10px; width: "+str((40*(1-data[i,j])))+"px'></div>"
                 out += "</td>\n"
-            out += "</tr>\n" # 
-            
+            out += "</tr>\n" #
+
         out += "<tr><td colspan='%d' style='background: #fff'></td></tr>" % (data.shape[1] + 1)
     out += "</table>"
 
@@ -531,7 +531,7 @@ def plot_grids(dataset, model_names, out_dir=None):
 #   background: url(http://www.stackoverflow.com/favicon.ico) 96% / 15% no-repeat #eee;
 # }
     #out += "<div style='display: inline-block; margin-right: 20px; font-weight: normal; text-decoration: none; font-size: 18px; color: #000;'>Dataset:</div>\n"
-    
+
     out += "<select id='shap_benchmark__select' onchange=\"document.location = '../' + this.value + '/index.html'\"dir='rtl' class='shap_benchmark__select' style='font-weight: normal; font-size: 20px; color: #000; padding: 10px; background: #fff; border: 1px solid #fff; -webkit-appearance: none; appearance: none;'>\n"
     out += "<option value='human' "+("selected" if dataset == "human" else "")+">Agreement with Human Intuition</option>\n"
     out += "<option value='corrgroups60' "+("selected" if dataset == "corrgroups60" else "")+">Correlated Groups 60 Dataset</option>\n"
@@ -552,7 +552,7 @@ def plot_grids(dataset, model_names, out_dir=None):
         val = (legend_size-i-1) / (legend_size-1)
         out += "<div style='opacity: 1; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(val-0.8)))[:-1]) + "; height: "+str(30*val)+"px; margin-left: auto; margin-right: auto; width:"+str(30*val)+"px'></div>"
         out += "</td>"
-        out += "</tr>\n" # 
+        out += "</tr>\n" #
     out += "<tr><td style='background: #fff; font-weight: normal; text-align: center'>Lower score</td></tr>\n"
     out += "</table>\n"
 
