@@ -227,4 +227,3 @@ def human__decision_tree():
     xor_model.fit(X, y)
 
     return xor_model
-
