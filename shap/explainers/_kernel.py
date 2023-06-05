@@ -32,10 +32,6 @@ from ._explainer import Explainer
 from .._explanation import Explanation
 import time
 
-# Suppress the sklearn warning
-# 'UserWarning: X does not have valid feature names, but <model> was fitted with feature names'
-warnings.filterwarnings('ignore', module='sklearn')
-
 log = logging.getLogger('shap')
 
 
@@ -136,7 +132,6 @@ class Kernel(Explainer):
 
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             feature_names = list(X.columns)
-            X = X.values
         else:
             feature_names = getattr(self, "data_feature_names", None)
        
