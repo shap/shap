@@ -6,7 +6,7 @@ import warnings
 import sklearn
 import copy
 from contextlib import contextmanager
-import sys, os
+import os
 
 
 if (sys.version_info < (3, 0)):
