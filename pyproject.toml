@@ -10,7 +10,6 @@ testpaths = ["tests"]
 select = [
     "F", # Pyflakes
 ]
-ignore = []
 
 [tool.ruff.per-file-ignores]
 # Unused imports often intentional in top-level __init__.py 
