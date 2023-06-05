@@ -1,8 +1,12 @@
-import matplotlib.pyplot as plt 
-import numpy as np 
-import itertools as it 
+import itertools as it
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 from shap.utils import safe_isinstance
+
 from . import perturbation
+
 
 def update(model, attributions, X, y, masker, sort_order, perturbation_method, scores):
     metric = perturbation_method + ' ' + sort_order

@@ -1,8 +1,10 @@
 # Create 'crime.pickle'
 
-from sklearn.model_selection import train_test_split
-import lightgbm as lgb
 import pickle
+
+import lightgbm as lgb
+from sklearn.model_selection import train_test_split
+
 import shap
 
 random_state = 1203344

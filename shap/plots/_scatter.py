@@ -1,18 +1,20 @@
 from __future__ import division
 
-import numpy as np
 import warnings
+
+import numpy as np
+
 try:
-    import matplotlib.pyplot as pl
     import matplotlib
+    import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
-from ..utils import convert_name, approximate_interactions
-from ..utils._general import encode_array_if_needed
 from .._explanation import Explanation
+from ..utils import approximate_interactions, convert_name
+from ..utils._general import encode_array_if_needed
+from . import colors
+from ._labels import labels
 
 
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis

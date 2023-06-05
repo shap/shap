@@ -1,13 +1,13 @@
+import copy
+import os
 import re
-import numpy as np
-import scipy as sp
 import sys
 import warnings
-import sklearn
-import copy
 from contextlib import contextmanager
-import os
 
+import numpy as np
+import scipy.special
+import sklearn
 
 if (sys.version_info < (3, 0)):
     warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
@@ -29,7 +29,7 @@ def record_import_error(package_name, msg, e):
 def shapley_coefficients(n):
     out = np.zeros(n)
     for i in range(n):
-        out[i] = 1 / (n * sp.special.comb(n-1,i))
+        out[i] = 1 / (n * scipy.special.comb(n-1,i))
     return out
 
 

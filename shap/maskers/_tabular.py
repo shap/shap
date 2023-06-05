@@ -1,12 +1,14 @@
 import logging
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from numba import njit
+
 from .. import utils
-from ..utils import safe_isinstance, MaskedModel
+from .._serializable import Deserializer, Serializer
+from ..utils import MaskedModel, safe_isinstance
 from ..utils._exceptions import DimensionError, InvalidClusteringError
 from ._masker import Masker
-from .._serializable import Serializer, Deserializer
 
 log = logging.getLogger('shap')
 

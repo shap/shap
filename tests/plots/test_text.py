@@ -1,5 +1,7 @@
 import numpy as np
+
 import shap
+
 
 def test_single_text_to_text():
     """ Just make sure the test_plot function doesn't crash.

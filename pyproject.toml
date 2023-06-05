@@ -8,7 +8,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 select = [
-    "F", # Pyflakes
+  "F",  # pyflakes
+  "I",  # isort
 ]
 
 [tool.ruff.per-file-ignores]

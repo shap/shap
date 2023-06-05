@@ -4,20 +4,30 @@
 from __future__ import division
 
 import warnings
+
 import numpy as np
-import scipy as sp
+import scipy.cluster
+import scipy.sparse
+import scipy.spatial
 from scipy.stats import gaussian_kde
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
-from ..utils import safe_isinstance
-from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
-from ..utils._exceptions import DimensionError
 from .. import Explanation
+from ..utils import safe_isinstance
+from ..utils._exceptions import DimensionError
+from . import colors
+from ._labels import labels
+from ._utils import (
+    convert_color,
+    convert_ordering,
+    get_sort_order,
+    merge_nodes,
+    sort_inds,
+)
 
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
@@ -64,7 +74,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     # we make a copy here, because later there are places that might modify this array
     values = np.copy(shap_exp.values)
     features = shap_exp.data
-    if sp.sparse.issparse(features):
+    if scipy.sparse.issparse(features):
         features = features.toarray()
     feature_names = shap_exp.feature_names
     # if out_names is None: # TODO: waiting for slicer support
@@ -246,7 +256,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             clust_order = sort_inds(partition_tree, np.abs(values))
 
             # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
-            dist = sp.spatial.distance.squareform(sp.cluster.hierarchy.cophenet(partition_tree))
+            dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
 
             # if the last feature we can display is connected in a tree the next feature then we can't just cut

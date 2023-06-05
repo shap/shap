@@ -2,8 +2,10 @@
 """
 
 import tempfile
-import pytest
+
 import numpy as np
+import pytest
+
 import shap
 from shap.utils import assert_import
 

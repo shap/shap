@@ -1,8 +1,9 @@
+import matplotlib.pyplot as pl
+import numpy as np
+
 from .. import Explanation
 from ..utils import OpChain
 from . import colors
-import numpy as np
-import matplotlib.pyplot as pl
 
 
 def convert_color(color):
