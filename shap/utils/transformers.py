@@ -1,6 +1,5 @@
 from ._general import safe_isinstance
 
-
 MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM = [
         "transformers.T5ForConditionalGeneration",
         "transformers.PegasusForConditionalGeneration",

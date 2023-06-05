@@ -1,12 +1,14 @@
-import numpy as np
 import warnings
+
+import numpy as np
+
 try:
+    import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib import lines
     from matplotlib.font_manager import FontProperties
-    from matplotlib.path import Path
     from matplotlib.patches import PathPatch
-    import matplotlib
+    from matplotlib.path import Path
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass

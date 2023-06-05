@@ -1,19 +1,17 @@
 import copy
 import time
+
 import numpy as np
-import scipy as sp
-from .. import maskers
-from .. import links
-from ..utils import safe_isinstance, show_progress
-from ..utils.transformers import is_transformers_lm
-from .. import models
-from ..models import Model
-from ..maskers import Masker
+import scipy.sparse
+
+from .. import explainers, links, maskers, models
 from .._explanation import Explanation
-from .._serializable import Serializable
-from .. import explainers
-from .._serializable import Serializer, Deserializer
+from .._serializable import Deserializer, Serializable, Serializer
+from ..maskers import Masker
+from ..models import Model
+from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
+from ..utils.transformers import is_transformers_lm
 
 
 class Explainer(Serializable):
@@ -81,7 +79,7 @@ class Explainer(Serializable):
 
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
-                ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+                ((safe_isinstance(masker, "numpy.ndarray") or scipy.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:

@@ -1,9 +1,10 @@
 # pylint: disable=missing-function-docstring
 """ Test gpu accelerated tree functions.
 """
-import sklearn
-import pytest
 import numpy as np
+import pytest
+import sklearn
+
 import shap
 from shap.utils import assert_import
 

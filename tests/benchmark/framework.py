@@ -1,4 +1,5 @@
-import numpy as np 
+import numpy as np
+
 import shap
 
 model = lambda x: np.array([np.linalg.norm(x)])

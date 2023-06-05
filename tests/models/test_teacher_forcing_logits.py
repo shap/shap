@@ -1,9 +1,11 @@
 """ This file contains tests for the TeacherForcingLogits class.
 """
 
-import pytest
 import numpy as np
+import pytest
+
 import shap
+
 
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """ Tests if get_teacher_forced_logits() works for encoder-decoder models.

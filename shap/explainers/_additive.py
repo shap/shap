@@ -1,6 +1,7 @@
 import numpy as np
+
+from ..utils import MaskedModel, safe_isinstance
 from ._explainer import Explainer
-from ..utils import safe_isinstance, MaskedModel
 
 
 class Additive(Explainer):

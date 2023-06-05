@@ -4,6 +4,7 @@
 from __future__ import division
 
 import numpy as np
+
 from ._colorconv import lab2rgb, lch2lab
 
 try:

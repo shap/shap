@@ -1,7 +1,10 @@
-import numpy as np
 import warnings
-from .._explainer import Explainer
+
+import numpy as np
 from packaging import version
+
+from .._explainer import Explainer
+
 torch = None
 
 

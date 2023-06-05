@@ -1,6 +1,8 @@
 import types
-from ._masker import Masker
+
 from ..utils._exceptions import InvalidMaskerError
+from ._masker import Masker
+
 
 class Composite(Masker):
     """ This merges several maskers for different inputs together into a single composite masker.

@@ -1,13 +1,14 @@
-from setuptools import setup, Extension
-import os
-import re
 import codecs
+import os
 import platform
-import sysconfig
-from packaging.version import Version, parse
-import numpy as np
-import sys
+import re
 import subprocess
+import sys
+import sysconfig
+
+import numpy as np
+from packaging.version import Version, parse
+from setuptools import Extension, setup
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload

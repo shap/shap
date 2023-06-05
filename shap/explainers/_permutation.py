@@ -1,9 +1,12 @@
-from ..utils import partition_tree_shuffle, MaskedModel
-from ._explainer import Explainer
-import numpy as np
 import warnings
+
+import numpy as np
+
 from .. import links
 from ..models import Model
+from ..utils import MaskedModel, partition_tree_shuffle
+from ._explainer import Explainer
+
 
 class Permutation(Explainer):
     """ This method approximates the Shapley values by iterating through permutations of the inputs.

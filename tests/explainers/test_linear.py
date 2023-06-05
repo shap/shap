@@ -3,8 +3,9 @@
 
 # pylint: disable=missing-function-docstring
 import numpy as np
-import scipy
 import pytest
+import scipy.special
+
 import shap
 
 # Ignore expected internal shap warnings about deprecated syntax in LinearExplainer

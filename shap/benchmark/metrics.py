@@ -1,11 +1,13 @@
-from .. import __version__
-from . import measures
-from . import methods
-import sklearn
-import numpy as np
-import time
 import hashlib
 import os
+import time
+
+import numpy as np
+import sklearn
+
+from .. import __version__
+from . import measures, methods
+
 try:
     import dill as pickle
 except Exception:

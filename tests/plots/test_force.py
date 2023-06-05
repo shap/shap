@@ -1,7 +1,9 @@
 import matplotlib
 import pytest
+
 matplotlib.use('Agg')
-import shap # pylint: disable=wrong-import-position
+import shap  # pylint: disable=wrong-import-position
+
 
 def test_random_force_plot_mpl_with_data():
     """ Test if force plot with matplotlib works.
