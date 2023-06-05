@@ -37,7 +37,7 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
 def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     if i < 0:
         # see if we should include this index in the ordering
-        if index_mask[i + M]: 
+        if index_mask[i + M]:
             indexes[pos] = i + M
             return pos + 1
         else:
@@ -56,7 +56,7 @@ def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
 def delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
     order = np.arange(len(all_masks))
     for _ in range(num_passes):
-        for length in list(range(2, max_swap_size)): 
+        for length in list(range(2, max_swap_size)):
             for i in range(1, len(order)-length):
                 if _reverse_window_score_gain(all_masks, order, i, length) > 0:
                     _reverse_window(order, i, length)
@@ -73,7 +73,7 @@ def _reverse_window_score_gain(masks, order, start, length):
                     _mask_delta_score(masks[order[start + length-1]], masks[order[start + length]])
     reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length-1]]) + \
                     _mask_delta_score(masks[order[start]], masks[order[start + length]])
-    
+
     return forward_score - reverse_score
 @njit
 def _mask_delta_score(m1, m2):
@@ -83,7 +83,7 @@ def _mask_delta_score(m1, m2):
 def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
     """
-    
+
     # compute a hierarchical clustering and return the optimal leaf ordering
     D = scipy.spatial.distance.pdist(X, metric)
     cluster_matrix = scipy.cluster.hierarchy.complete(D)
@@ -91,7 +91,7 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
 
 def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
     """ Compute reducancy distances scaled from 0-1 amoung all the feature in X relative to the label y.
-    
+
     Distances are measured by training univariate XGBoost models of y for all the features, and then
     predicting the output of these models using univariate XGBoost models of other features. If one
     feature can effectively predict the output of another feature's univariate XGBoost model of y,
@@ -99,9 +99,9 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
     proportion of variance explained). Note these distances are not symmetric.
     """
-    
+
     import xgboost
-    
+
     # pick our train/text split
     X_train,X_test,y_train,y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
@@ -123,20 +123,20 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
             if i == j:
                 dist[i,j] = 0
                 continue
-            
+
             # skip features that have not variance in their predictions (likely because the feature is a constant)
             preds_var = np.var(test_preds[:,i])
             if preds_var < 1e-4:
                 warnings.warn(f"No/low signal found from feature {i} (this is typically caused by constant or near-constant features)! Cluster distances can't be computed for it (so setting all distances to 1).")
                 r2 = 0
-            
+
             # fit the model
             else:
                 model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1)
                 model.fit(X_train[:,j:j+1], train_preds[:,i], eval_set=[(X_test[:,j:j+1], test_preds[:,i])], early_stopping_rounds=early_stopping_rounds, verbose=False)
                 r2 = max(0, 1 - np.mean((test_preds[:,i] - model.predict(X_test[:,j:j+1]))**2) / preds_var)
             dist[i,j] = 1 - r2
-    
+
     return dist
 
 def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
@@ -146,11 +146,11 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
-    
+
     # build the distance matrix
     if metric == "xgboost_distances_r2":
         dist_full = xgboost_distances_r2(X, y, random_state=random_state)
-        
+
         # build a condensed upper triangular version by taking the max distance from either direction
         dist = []
         for i in range(dist_full.shape[0]):
@@ -165,7 +165,7 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
                     else:
                         raise Exception("Unsupported linkage type!")
         dist = np.array(dist)
-    
+
     else:
         if y is not None:
             warnings.warn("Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!")

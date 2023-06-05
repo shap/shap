@@ -13,7 +13,7 @@ select = [
 ]
 
 [tool.ruff.per-file-ignores]
-# Unused imports often intentional in top-level __init__.py 
+# Unused imports often intentional in top-level __init__.py
 "__init__.py" = ["F401"]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]

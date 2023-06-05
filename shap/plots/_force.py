@@ -55,11 +55,11 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
     link : "identity" or "logit"
         The transformation used when drawing the tick mark labels. Using logit will change log-odds numbers
-        into probabilities. 
+        into probabilities.
 
     matplotlib : bool
         Whether to use the default Javascript output, or the (less developed) matplotlib output. Using matplotlib
-        can be helpful in scenarios where rendering Javascript/HTML is inconvenient. 
+        can be helpful in scenarios where rendering Javascript/HTML is inconvenient.
 
     contribution_threshold : float
         Controls the feature names/values that are displayed on force plot.
@@ -158,7 +158,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
             Model(None, out_names),
             DenseData(np.zeros((1, len(feature_names))), list(feature_names))
         )
-        
+
         return visualize(e,
                          plot_cmap,
                          matplotlib,
@@ -166,11 +166,11 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                          show=show,
                          text_rotation=text_rotation,
                          min_perc=contribution_threshold)
-        
+
     else:
         if matplotlib:
             raise NotImplementedError("matplotlib = True is not yet supported for force plots with multiple samples!")
-        
+
         if shap_values.shape[0] > 3000:
             warnings.warn("shap.plots.force is slow for many thousands of rows, try subsampling your data.")
 
@@ -195,15 +195,15 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                 DenseData(np.ones((1, len(feature_names))), list(feature_names))
             )
             exps.append(e)
-        
+
         return visualize(
-                    exps, 
-                    plot_cmap=plot_cmap, 
-                    ordering_keys=ordering_keys, 
-                    ordering_keys_time_format=ordering_keys_time_format, 
+                    exps,
+                    plot_cmap=plot_cmap,
+                    ordering_keys=ordering_keys,
+                    ordering_keys_time_format=ordering_keys_time_format,
                     text_rotation=text_rotation
                 )
-            
+
 
 class Explanation:
     def __init__(self):
@@ -256,7 +256,7 @@ def initjs():
 
 def save_html(out_file, plot, full_html=True):
     """ Save html plots to an output file.
-    
+
     Parameters
     ----------
     out_file : str or file
@@ -264,7 +264,7 @@ def save_html(out_file, plot, full_html=True):
     plot : BaseVisualizer
         Visualizer returned by shap.force_plot()
     full_html : boolean (default: True)
-        If True, writes a complete HTML document starting 
+        If True, writes a complete HTML document starting
         with an <html> tag. If False, only script and div
         tags are included.
     """
@@ -274,10 +274,10 @@ def save_html(out_file, plot, full_html=True):
     if type(out_file) == str:
         out_file = open(out_file, "w", encoding="utf-8")
         internal_open = True
-    
+
     if full_html:
         out_file.write("<html><head><meta http-equiv='content-type' content='text/html'; charset='utf-8'>")
-    
+
     out_file.write("<script>\n")
 
     # dump the js code
@@ -286,12 +286,12 @@ def save_html(out_file, plot, full_html=True):
         bundle_data = f.read()
     out_file.write(bundle_data)
     out_file.write("</script>")
-    
+
     if full_html:
         out_file.write("</head><body>\n")
 
     out_file.write(plot.html())
-    
+
     if full_html:
         out_file.write("</body></html>\n")
 
@@ -349,7 +349,7 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
         assert False, "visualize() can only display Explanation objects (or arrays of them)!"
 
 class BaseVisualizer:
-    pass 
+    pass
 
 class SimpleListVisualizer(BaseVisualizer):
     def __init__(self, e):
@@ -419,19 +419,19 @@ class AdditiveForceVisualizer(BaseVisualizer):
     document.getElementById('{id}')
   );
 </script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
-    
+
     def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
         fig = draw_additive_plot(self.data,
                                  figsize=figsize,
                                  show=show,
                                  text_rotation=text_rotation,
                                  min_perc=min_perc)
-        
+
         return fig
-    
+
     def _repr_html_(self):
         return self.html()
-        
+
 
 class AdditiveForceArrayVisualizer(BaseVisualizer):
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):

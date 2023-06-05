@@ -55,17 +55,17 @@ jobs:
         with:
           name: sdist_files
           path: dist/*.tar.gz
-          
+
   publish_wheels:
     name: Publish wheels on pypi
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Set up Python
         uses: actions/setup-python@v2
-      
+
       - name: install requirements
         run: pip install twine==3.4.2
 
@@ -78,10 +78,10 @@ jobs:
         with:
           name: sdist_files
           path: dist
-        
+
       - name: check
         run: twine check dist/*
-        
+
       - name: upload
         run: twine upload dist/*
         env:

@@ -63,7 +63,7 @@ def local_accuracy(X, y, model_generator, method_name):
         """ Computes local accuracy as the normalized standard deviation of numerical scores.
         """
         return np.std(pred - true) / (np.std(true) + 1e-6)
-    
+
     def score_function(X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
         return measures.local_accuracy(
             X_train, y_train, X_test, y_test, attr_function(X_test),

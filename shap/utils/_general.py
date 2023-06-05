@@ -43,7 +43,7 @@ def convert_name(ind, shap_values, input_names):
 
             # we allow the sum of all the SHAP values to be specified with "sum()"
             # assuming here that the calling method can deal with this case
-            elif ind == "sum()": 
+            elif ind == "sum()":
                 return "sum()"
             else:
                 raise ValueError("Could not find feature named: " + ind)
@@ -196,7 +196,7 @@ def safe_isinstance(obj, class_path_str):
         class_path_strs = class_path_str
     else:
         class_path_strs = ['']
-    
+
     # try each module path in order
     for class_path_str in class_path_strs:
         if "." not in class_path_str:
@@ -213,13 +213,13 @@ def safe_isinstance(obj, class_path_str):
             continue
 
         module = sys.modules[module_name]
-        
+
         #Get class
         _class = getattr(module, class_name, None)
-        
+
         if _class is None:
             continue
-        
+
         if isinstance(obj, _class):
             return True
 
@@ -239,7 +239,7 @@ def format_value(s, format_str):
 
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
 def ordinal_str(n):
-    """ Converts a number to and ordinal string. 
+    """ Converts a number to and ordinal string.
     """
     return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
@@ -250,7 +250,7 @@ class OpChain():
     def __init__(self, root_name=""):
         self._ops = []
         self._root_name = root_name
-    
+
     def apply(self, obj):
         """ Applies all our ops to the given object.
         """
@@ -270,7 +270,7 @@ class OpChain():
         new_self._ops[-1][1] = args
         new_self._ops[-1][2] = kwargs
         return new_self
-        
+
     def __getitem__(self, item):
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)

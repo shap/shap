@@ -639,7 +639,7 @@ class Partition(Explainer):
     #             if fixed_context is None or fixed_context == 1:
     #                 self.dvalues[ind] -= (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    
+
     #                 # recurse on the left node with one context
     #                 args = (m01, f01, f11, lind, new_weight)
     #                 q.put((-np.max(np.abs(f11 - f01)) * new_weight, np.random.randn(), args))

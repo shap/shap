@@ -87,11 +87,11 @@ class Linear(Explainer):
         super(Linear, self).__init__(model, masker, link=link, **kwargs)
 
         self.nsamples = nsamples
-        
+
 
         # extract what we need from the given model object
         self.coef, self.intercept = Linear._parse_model(model)
-        
+
         # extract the data
         if issubclass(type(self.masker), (maskers.Independent, maskers.Partition)):
             self.feature_perturbation = "interventional"
@@ -151,7 +151,7 @@ class Linear(Explainer):
                 self.expected_value = np.array(self.expected_value)[0]
         else:
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
-        
+
         self.M = len(self.mean)
 
         # if needed, estimate the transform matrices
