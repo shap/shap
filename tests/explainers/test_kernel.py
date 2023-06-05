@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import scipy as sp
+import scipy.sparse
 import sklearn
 
 import shap
@@ -86,7 +86,7 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
 
     _, cols = x_train.shape
     shape = 1, cols
-    background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
+    background = scipy.sparse.csr_matrix(shape, dtype=x_train.dtype)
     explainer = shap.KernelExplainer(linear_model.predict, background)
     explainer.shap_values(x_test)
 
@@ -102,12 +102,12 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     linear_model.fit(x_train, y_train)
     # Calculate median of background data
     median_dense = sklearn.utils.sparsefuncs.csc_median_axis_0(x_train.tocsc())
-    median = sp.sparse.csr_matrix(median_dense)
+    median = scipy.sparse.csr_matrix(median_dense)
     explainer = shap.KernelExplainer(linear_model.predict, median)
     shap_values = explainer.shap_values(x_test)
 
     def dense_to_sparse_predict(data):
-        sparse_data = sp.sparse.csr_matrix(data)
+        sparse_data = scipy.sparse.csr_matrix(data)
         return linear_model.predict(sparse_data)
 
     explainer_dense = shap.KernelExplainer(dense_to_sparse_predict, median_dense.reshape((1, len(median_dense))))
@@ -137,7 +137,7 @@ def test_kernel_shap_with_high_dim_sparse():
     linear_model.fit(x_train, y_train)
     _, cols = x_train.shape
     shape = 1, cols
-    background = sp.sparse.csr_matrix(shape, dtype=x_train.dtype)
+    background = scipy.sparse.csr_matrix(shape, dtype=x_train.dtype)
     explainer = shap.KernelExplainer(linear_model.predict, background)
     _ = explainer.shap_values(x_test)
 
@@ -154,8 +154,8 @@ def test_kernel_sparse_vs_dense_multirow_background():
     explainer = shap.KernelExplainer(lr.predict_proba, X_train, nsamples=100, link="logit", l1_reg="rank(3)")
     shap_values = explainer.shap_values(X_test)
 
-    X_sparse_train = sp.sparse.csr_matrix(X_train)
-    X_sparse_test = sp.sparse.csr_matrix(X_test)
+    X_sparse_train = scipy.sparse.csr_matrix(X_train)
+    X_sparse_test = scipy.sparse.csr_matrix(X_test)
 
     lr_sparse = sklearn.linear_model.LogisticRegression(solver='lbfgs')
     lr_sparse.fit(X_sparse_train, Y_train)

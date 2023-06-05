@@ -6,7 +6,7 @@ import warnings
 from contextlib import contextmanager
 
 import numpy as np
-import scipy as sp
+import scipy.special
 import sklearn
 
 if (sys.version_info < (3, 0)):
@@ -29,7 +29,7 @@ def record_import_error(package_name, msg, e):
 def shapley_coefficients(n):
     out = np.zeros(n)
     for i in range(n):
-        out[i] = 1 / (n * sp.special.comb(n-1,i))
+        out[i] = 1 / (n * scipy.special.comb(n-1,i))
     return out
 
 

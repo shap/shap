@@ -1,7 +1,7 @@
 import warnings
 
 import numpy as np
-import scipy
+import scipy.stats
 
 try:
     import matplotlib.pyplot as pl

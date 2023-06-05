@@ -14,7 +14,7 @@ import warnings
 from collections.abc import Sequence
 
 import numpy as np
-import scipy as sp
+import scipy.sparse
 
 try:
     from IPython.display import HTML, display
@@ -77,7 +77,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                 features = shap_exp.data
             else:
                 features = shap_exp.display_data
-        if sp.sparse.issparse(features):
+        if scipy.sparse.issparse(features):
             features = features.toarray().flatten()
         if feature_names is None:
             feature_names = shap_exp.feature_names

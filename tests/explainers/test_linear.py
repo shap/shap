@@ -4,7 +4,7 @@
 # pylint: disable=missing-function-docstring
 import numpy as np
 import pytest
-import scipy
+import scipy.special
 
 import shap
 

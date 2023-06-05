@@ -1,5 +1,5 @@
 import numpy as np
-import scipy as sp
+import scipy.special
 
 from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
@@ -147,7 +147,7 @@ class TopKLM(Model):
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
             probs = np.exp(arr) / np.exp(arr).sum(-1)
-            logodds = sp.special.logit(probs)
+            logodds = scipy.special.logit(probs)
             return logodds
 
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)

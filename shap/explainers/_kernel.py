@@ -6,7 +6,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import scipy as sp
+import scipy.sparse
 import sklearn
 from packaging import version
 from scipy.special import binom
@@ -169,9 +169,9 @@ class Kernel(Explainer):
         x_type = str(type(X))
         arr_type = "'numpy.ndarray'>"
         # if sparse, convert to lil for performance
-        if sp.sparse.issparse(X) and not sp.sparse.isspmatrix_lil(X):
+        if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
             X = X.tolil()
-        assert x_type.endswith(arr_type) or sp.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
+        assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
@@ -419,12 +419,12 @@ class Kernel(Explainer):
             return 0 if i == j else 1
 
     def varying_groups(self, x):
-        if not sp.sparse.issparse(x):
+        if not scipy.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
             for i in range(0, self.data.groups_size):
                 inds = self.data.groups[i]
                 x_group = x[0, inds]
-                if sp.sparse.issparse(x_group):
+                if scipy.sparse.issparse(x_group):
                     if all(j not in x.nonzero()[1] for j in inds):
                         varying[i] = False
                         continue
@@ -447,7 +447,7 @@ class Kernel(Explainer):
 
                 if nonzero_rows.size > 0:
                     background_data_rows = data_rows[nonzero_rows]
-                    if sp.sparse.issparse(background_data_rows):
+                    if scipy.sparse.issparse(background_data_rows):
                         background_data_rows = background_data_rows.toarray()
                     num_mismatches = np.sum(np.abs(background_data_rows - x[0, varying_index]) > 1e-7)
                     # Note: If feature column non-zero but some background zero, can't remove index
@@ -460,7 +460,7 @@ class Kernel(Explainer):
             return varying_indices
 
     def allocate(self):
-        if sp.sparse.issparse(self.data.data):
+        if scipy.sparse.issparse(self.data.data):
             # We tile the sparse matrix in csr format but convert it to lil
             # for performance when adding samples
             shape = self.data.data.shape
@@ -469,7 +469,7 @@ class Kernel(Explainer):
             rows = data_rows * self.nsamples
             shape = rows, data_cols
             if nnz == 0:
-                self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
+                self.synth_data = scipy.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
             else:
                 data = self.data.data.data
                 indices = self.data.data.indices
@@ -483,7 +483,7 @@ class Kernel(Explainer):
                 new_indptr = np.concatenate(new_indptrs)
                 new_data = np.tile(data, self.nsamples)
                 new_indices = np.tile(indices, self.nsamples)
-                self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
+                self.synth_data = scipy.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
         else:
             self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
 
@@ -516,7 +516,7 @@ class Kernel(Explainer):
                 evaluation_data = x[0, groups]
                 # In edge case where background is all dense but evaluation data
                 # is all sparse, make evaluation data dense
-                if sp.sparse.issparse(x) and not sp.sparse.issparse(self.synth_data):
+                if scipy.sparse.issparse(x) and not scipy.sparse.issparse(self.synth_data):
                     evaluation_data = evaluation_data.toarray()
                 self.synth_data[offset:offset+self.N, groups] = evaluation_data
         self.maskMatrix[self.nsamplesAdded, :] = m

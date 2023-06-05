@@ -2,7 +2,7 @@ import copy
 import time
 
 import numpy as np
-import scipy as sp
+import scipy.sparse
 
 from .. import explainers, links, maskers, models
 from .._explanation import Explanation
@@ -79,7 +79,7 @@ class Explainer(Serializable):
 
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
-                ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+                ((safe_isinstance(masker, "numpy.ndarray") or scipy.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:

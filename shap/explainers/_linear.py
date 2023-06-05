@@ -1,7 +1,7 @@
 import warnings
 
 import numpy as np
-import scipy as sp
+from scipy.sparse import issparse
 from tqdm.autonotebook import tqdm
 
 from .. import links, maskers
@@ -73,7 +73,7 @@ class Linear(Explainer):
         # wrap the incoming masker object as a shap.Masker object before calling
         # parent class constructor, which does the same but without respecting
         # the user-provided feature_perturbation choice
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or issparse(masker)) and len(masker.shape) == 2):
             if self.feature_perturbation == "correlation_dependent":
                 masker = maskers.Impute(masker)
             else:
@@ -128,7 +128,7 @@ class Linear(Explainer):
         elif data is None:
             raise ValueError("A background data distribution must be provided!")
         else:
-            if sp.sparse.issparse(data):
+            if issparse(data):
                 self.mean = np.array(np.mean(data, 0))[0]
                 if self.feature_perturbation != "interventional":
                     raise NotImplementedError("Only feature_perturbation = 'interventional' is supported for sparse data")
@@ -138,9 +138,9 @@ class Linear(Explainer):
                     self.cov = np.cov(data, rowvar=False)
         #print(self.coef, self.mean.flatten(), self.intercept)
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
-        if sp.sparse.issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
+        if issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
             # accept both sparse and dense coef
-            # if not sp.sparse.issparse(self.coef):
+            # if not issparse(self.coef):
             #     self.coef = np.asmatrix(self.coef)
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
 
@@ -306,7 +306,7 @@ class Linear(Explainer):
             raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" %len(X.shape))
 
         if self.feature_perturbation == "correlation_dependent":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 raise InvalidFeaturePerturbationError("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
@@ -316,7 +316,7 @@ class Linear(Explainer):
             phi = full_phi
 
         elif self.feature_perturbation == "interventional":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 phi = np.array(np.multiply(X - self.mean, self.coef))
 
                 # if len(self.coef.shape) == 1:
@@ -369,7 +369,7 @@ class Linear(Explainer):
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         if self.feature_perturbation == "correlation_dependent":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 raise InvalidFeaturePerturbationError("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
@@ -380,7 +380,7 @@ class Linear(Explainer):
             return full_phi
 
         elif self.feature_perturbation == "interventional":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
                 else:

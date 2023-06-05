@@ -6,8 +6,8 @@ from __future__ import division
 import warnings
 
 import numpy as np
-import scipy as sp
 import scipy.cluster
+import scipy.sparse
 import scipy.spatial
 from scipy.stats import gaussian_kde
 
@@ -74,7 +74,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     # we make a copy here, because later there are places that might modify this array
     values = np.copy(shap_exp.values)
     features = shap_exp.data
-    if sp.sparse.issparse(features):
+    if scipy.sparse.issparse(features):
         features = features.toarray()
     feature_names = shap_exp.feature_names
     # if out_names is None: # TODO: waiting for slicer support
