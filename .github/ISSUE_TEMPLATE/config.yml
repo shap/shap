@@ -1,7 +1,7 @@
 # For reference, see
 # https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/
 
-blank_issues_enabled: false
+blank_issues_enabled: true  # In future, may disable to force use of standardised issue forms
 contact_links:
   - name: Discussions and Q&A
     url: https://github.com/slundberg/shap/discussions
