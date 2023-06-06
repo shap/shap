@@ -1,0 +1,8 @@
+# For reference, see
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/
+
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions and Q&A
+    url: https://github.com/slundberg/shap/discussions
+    about: Ask general questions about shap and get help from other users
