@@ -1,0 +1,4 @@
+- [ ] Closes #xxxx (Replace xxxx with the GitHub issue number)
+- [ ] Tests added and passed (if fixing a bug or adding a new feature)
+- [ ] [Pre-commit code checks](https://pre-commit.com/#install) pass.
+- [ ] Added an entry in "Unreleased" section of `CHANGELOG.md` if fixing a bug or adding a new feature.
