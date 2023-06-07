@@ -74,8 +74,8 @@ def test_kernel_shap_with_call_method():
     explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
     shap_values = explainer(X_test)
 
-    # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(shap_values[0])
+    # plot the SHAP values for the Versicolour output of the first instance
+    shap.force_plot(shap_values[0][:,1])
 
 def test_kernel_shap_with_dataframe():
     """ Test with a Pandas DataFrame.
