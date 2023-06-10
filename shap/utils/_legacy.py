@@ -104,10 +104,11 @@ def convert_to_model(val):
 
     # Fix for the sklearn warning
     # 'X does not have valid feature names, but <model> was fitted with feature names'
-    out = copy.deepcopy(out)
     f_self = getattr(out.f,'__self__',None)
     if f_self and hasattr(f_self,'feature_names_in_'):
-        f_self.feature_names_in_ = None
+        # Make a copy so that the feature names are not removed from the original model
+        out = copy.deepcopy(out)
+        out.f.__self__.feature_names_in_ = None
 
     return out
 
