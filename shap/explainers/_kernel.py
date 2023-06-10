@@ -56,6 +56,11 @@ class Kernel(Explainer):
         Note: for sparse case we accept any sparse matrix but convert to lil format for
         performance.
 
+    feature_names : list
+        The names of the features in the background dataset. If the background dataset is
+        supplied as a pandas.DataFrame, then feature_names can be set to None (the default value)
+        and the feature names will be taken as the column names of the dataframe.
+
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
