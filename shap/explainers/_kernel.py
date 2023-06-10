@@ -18,11 +18,18 @@ from tqdm.auto import tqdm
 
 from .._explanation import Explanation
 from ..utils import safe_isinstance
-from ..utils._legacy import (DenseData, IdentityLink, SparseData,
-                             convert_to_data, convert_to_instance,
-                             convert_to_instance_with_index, convert_to_link,
-                             convert_to_model, match_instance_to_data,
-                             match_model_to_data)
+from ..utils._legacy import (
+    DenseData,
+    IdentityLink,
+    SparseData,
+    convert_to_data,
+    convert_to_instance,
+    convert_to_instance_with_index,
+    convert_to_link,
+    convert_to_model,
+    match_instance_to_data,
+    match_model_to_data,
+)
 from ._explainer import Explainer
 
 log = logging.getLogger('shap')
@@ -132,11 +139,11 @@ class Kernel(Explainer):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
-       
+
         v = self.shap_values(X)
         if type(v) is list:
             v = np.stack(v, axis=-1) # put outputs at the end
-        
+
         # the explanation object expects an expected value for each row
         if hasattr(self.expected_value, "__len__"):
             ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
