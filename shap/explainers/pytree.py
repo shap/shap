@@ -4,6 +4,7 @@ It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implmentation.
 """
 import numpy as np
+
 #import numba
 from ..utils._exceptions import ExplainerError
 

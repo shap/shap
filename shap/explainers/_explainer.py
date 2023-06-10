@@ -1,19 +1,17 @@
 import copy
 import time
+
 import numpy as np
-import scipy as sp
-from .. import maskers
-from .. import links
-from ..utils import safe_isinstance, show_progress
-from ..utils.transformers import is_transformers_lm
-from .. import models
-from ..models import Model
-from ..maskers import Masker
+import scipy.sparse
+
+from .. import explainers, links, maskers, models
 from .._explanation import Explanation
-from .._serializable import Serializable
-from .. import explainers
-from .._serializable import Serializer, Deserializer
+from .._serializable import Deserializer, Serializable, Serializer
+from ..maskers import Masker
+from ..models import Model
+from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
+from ..utils.transformers import is_transformers_lm
 
 
 class Explainer(Serializable):
@@ -44,7 +42,7 @@ class Explainer(Serializable):
             functions are available in shap such as shap.ImageMasker for images and shap.TokenMasker
             for text. In addition to determining how to replace hidden features, the masker can also
             constrain the rules of the cooperative game used to explain the model. For example
-            shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchial clustering
+            shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchical clustering
             of coalitions for the game (in this special case the attributions are known as the Owen values).
 
         link : function
@@ -57,9 +55,9 @@ class Explainer(Serializable):
         algorithm : "auto", "permutation", "partition", "tree", or "linear"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
-            of these algorithms have various tradeoffs and are preferrable in different situations. By
+            of these algorithms have various tradeoffs and are preferable in different situations. By
             default the "auto" options attempts to make the best choice given the passed model and masker,
-            but this choice can always be overriden by passing the name of a specific algorithm. The type of
+            but this choice can always be overridden by passing the name of a specific algorithm. The type of
             algorithm used will determine what type of subclass object is returned by this constructor, and
             you can also build those subclasses directly if you prefer or need more fine grained control over
             their options.
@@ -81,7 +79,7 @@ class Explainer(Serializable):
 
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
-                ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+                ((safe_isinstance(masker, "numpy.ndarray") or scipy.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
@@ -376,7 +374,7 @@ class Explainer(Serializable):
             are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
             of all the input shapes (since the row_values is always flattened),
         """
-        
+
         return {}
 
     @staticmethod

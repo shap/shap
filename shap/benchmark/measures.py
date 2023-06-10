@@ -1,8 +1,8 @@
-import numpy as np
-from tqdm.autonotebook import tqdm
 import warnings
-import sklearn.utils
 
+import numpy as np
+import sklearn.utils
+from tqdm.autonotebook import tqdm
 
 _remove_cache = {}
 def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
@@ -85,7 +85,7 @@ def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
         if nmask[i] > 0:
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             X_test_tmp[i,ordering[:nmask[i]]] = mean_vals[ordering[:nmask[i]]]
-    
+
     yp_masked_test = trained_model.predict(X_test_tmp)
 
     return metric(y_test, yp_masked_test)
@@ -115,12 +115,12 @@ def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_gene
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             observe_inds = ordering[nmask[i]:]
             impute_inds = ordering[:nmask[i]]
-            
+
             # impute missing data assuming it follows a multivariate normal distribution
             Coo_inv = np.linalg.inv(C[observe_inds,:][:,observe_inds])
             Cio = C[impute_inds,:][:,observe_inds]
             impute = mean_vals[impute_inds] + Cio @ Coo_inv @ (X_test[i, observe_inds] - mean_vals[observe_inds])
-            
+
             X_test_tmp[i, impute_inds] = impute
 
     yp_masked_test = trained_model.predict(X_test_tmp)
@@ -304,12 +304,12 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
             ordering = np.argsort(-attr_test[i,:] + tie_breaking_noise)
             observe_inds = ordering[:nkeep[i]]
             impute_inds = ordering[nkeep[i]:]
-            
+
             # impute missing data assuming it follows a multivariate normal distribution
             Coo_inv = np.linalg.inv(C[observe_inds,:][:,observe_inds])
             Cio = C[impute_inds,:][:,observe_inds]
             impute = mean_vals[impute_inds] + Cio @ Coo_inv @ (X_test[i, observe_inds] - mean_vals[observe_inds])
-            
+
             X_test_tmp[i, impute_inds] = impute
 
     yp_masked_test = trained_model.predict(X_test_tmp)

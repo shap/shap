@@ -1,8 +1,8 @@
 """ Visualize cumulative SHAP values."""
 
 from __future__ import division, unicode_literals
-import warnings
 
+import warnings
 from typing import Union
 
 import numpy as np
@@ -14,10 +14,10 @@ except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
 
+from ..utils import hclust_ordering
+from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
-from ..utils._legacy import convert_to_link, LogitLink
-from ..utils import hclust_ordering
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -289,23 +289,23 @@ def decision(
 
     axis_color : str or int
         Color used to draw plot axes.
-        
+
     y_demarc_color : str or int
         Color used to draw feature demarcation lines on the y-axis.
-        
+
     alpha : float
         Alpha blending value in [0, 1] used to draw plot lines.
-        
+
     color_bar : bool
         Whether to draw the color bar.
-        
+
     auto_size_plot : bool
-        Whether to automatically size the matplotlib plot to fit the number of features displayed. If `False`, 
+        Whether to automatically size the matplotlib plot to fit the number of features displayed. If `False`,
         specify the plot size using matplotlib before calling this function.
-        
+
     title : str
         Title of the plot.
-        
+
     xlim: tuple[float, float]
         The extents of the x-axis (e.g. (-1.0, 1.0)). If not specified, the limits are determined by the
         maximum/minimum predictions centered around base_value when link='identity'. When link='logit', the
@@ -318,7 +318,7 @@ def decision(
     return_objects : bool
         Whether to return a DecisionPlotResult object containing various plotting features. This can be used to
         generate multiple decision plots using the same feature ordering and scale.
-        
+
     ignore_warnings : bool
         Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
         this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.

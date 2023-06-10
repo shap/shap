@@ -1,13 +1,16 @@
-import sklearn
 import warnings
+
+import sklearn
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
 from ..utils import convert_name
+from . import colors
+from ._labels import labels
+
 
 def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
     """ Use the SHAP values as an embedding which we project to 2D for visualization.
@@ -30,16 +33,16 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     method : "pca" or numpy.array
         How to reduce the dimensions of the shap_values to 2D. If "pca" then the 2D
         PCA projection of shap_values is used. If a numpy array then is should be
-        (# samples x 2) and represent the embedding of that values. 
+        (# samples x 2) and represent the embedding of that values.
 
     alpha : float
         The transparency of the data points (between 0 and 1). This can be useful to the
         show density of the data points when using a large dataset.
     """
-    
+
     if feature_names is None:
         feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
-    
+
     ind = convert_name(ind, shap_values, feature_names)
     if ind == "sum()":
         cvals = shap_values.sum(1)
@@ -47,7 +50,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     else:
         cvals = shap_values[:,ind]
         fname = feature_names[ind]
-    
+
     # see if we need to compute the embedding
     if type(method) == str and method == "pca":
         pca = sklearn.decomposition.PCA(2)
@@ -66,8 +69,8 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     cb = pl.colorbar()
     cb.set_label("SHAP value for\n"+fname, size=13)
     cb.outline.set_visible(False)
-    
-    
+
+
     pl.gcf().set_size_inches(7.5, 5)
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 10)

@@ -1,24 +1,23 @@
 from __future__ import print_function
-from .. import datasets
-from . import metrics
-from . import models
-from .. import __version__
+
+import copy
+import itertools
 import os
 import pickle
+import random
+import subprocess
 import sys
 import time
-import subprocess
 from multiprocessing import Pool
-import itertools
-import copy
-import random
-import time
+
+from .. import __version__, datasets
+from . import metrics, models
+
 try:
     from queue import Queue
 except ImportError:
     from Queue import Queue
-from threading import Thread, Lock
-
+from threading import Lock, Thread
 
 regression_metrics = [
     "local_accuracy",
@@ -233,7 +232,7 @@ def run_experiment(experiment, use_cache=True, cache_dir="/tmp"):
         pickle.dump(score, f)
 
     return score
-        
+
 
 def run_experiments_helper(args):
     experiment, cache_dir = args
@@ -249,7 +248,7 @@ def run_experiments(dataset=None, model=None, method=None, metric=None, cache_di
     return list(zip(experiments_arr, out))
 
 
-nexperiments = 0 
+nexperiments = 0
 total_sent = 0
 total_done = 0
 total_failed = 0
@@ -260,7 +259,7 @@ def __thread_worker(q, host):
     global total_sent, total_done
     hostname, python_binary = host.split(":")
     while True:
-        
+
         # make sure we are not sending too many ssh connections to the host
         # (if we send too many connections ssh thottling will lock us out)
         while True:
@@ -270,14 +269,14 @@ def __thread_worker(q, host):
             try:
                 if hostname not in host_records:
                     host_records[hostname] = []
-                
+
                 if len(host_records[hostname]) < ssh_conn_per_min_limit:
                     all_clear = True
                 elif time.time() - host_records[hostname][-ssh_conn_per_min_limit] > 61:
                     all_clear = True
             finally:
                 worker_lock.release()
-            
+
             # if we are clear to send a new ssh connection then break
             if all_clear:
                 break
@@ -304,9 +303,9 @@ def __thread_worker(q, host):
             __print_status()
         finally:
             worker_lock.release()
-        
+
         __run_remote_experiment(experiment, hostname, cache_dir=cache_dir, python_binary=python_binary)
-        
+
         # record how many are finished
         worker_lock.acquire()
         try:
@@ -314,7 +313,7 @@ def __thread_worker(q, host):
             __print_status()
         finally:
             worker_lock.release()
-        
+
         q.task_done()
 
 def __print_status():
@@ -340,7 +339,7 @@ def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
 
     global ssh_conn_per_min_limit
     ssh_conn_per_min_limit = rate_limit
-    
+
     # first we kill any remaining workers from previous runs
     # note we don't check_call because pkill kills our ssh call as well
     thread_hosts = copy.copy(thread_hosts)
@@ -352,7 +351,7 @@ def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
         except subprocess.TimeoutExpired:
             print("Failed to connect to", hostname, "after 15 seconds! Exiting.")
             return
-    
+
     experiments = copy.copy(list(experiments))
     random.shuffle(experiments) # this way all the hard experiments don't get put on one machine
     global nexperiments, total_sent, total_done, total_failed, host_records
@@ -384,7 +383,7 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
     if os.path.isfile(cache_file):
         with open(cache_file, "rb") as f:
             return pickle.load(f)
-    
+
     # this is just so we don't dump everything at once on a machine
     time.sleep(random.uniform(0,5))
 

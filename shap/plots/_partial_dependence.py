@@ -1,7 +1,9 @@
-from ..utils import convert_name
-from .. import Explanation
-from ..plots.colors import light_blue_rgb, blue_rgb, red_rgb, red_blue_transparent
 import warnings
+
+from .. import Explanation
+from ..plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
+from ..utils import convert_name
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
@@ -9,6 +11,7 @@ except ImportError:
     pass
 import numpy as np
 import pandas as pd
+
 
 def compute_bounds(xmin, xmax, xv):
     """ Handles any setting of xmax and xmin.
@@ -101,7 +104,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
         # the histogram of the data
         if hist:
-            #n, bins, patches = 
+            #n, bins, patches =
             ax2.hist(xv, 50, density=False, facecolor='black', alpha=0.1, range=(xmin, xmax))
 
 
@@ -183,7 +186,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:,ind], shap_values.base_values + shap_values.values[:, ind],
-                bottom=shap_values.base_values, 
+                bottom=shap_values.base_values,
                 markerfmt="o", basefmt=" ", use_line_collection=True
             )
             stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])

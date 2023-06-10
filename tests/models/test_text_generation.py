@@ -2,8 +2,11 @@
 """
 
 import sys
+
 import pytest
+
 import shap
+
 
 @pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
 def test_call_function_text_generation():

@@ -1,8 +1,11 @@
 import numpy as np
-from shap.utils import MaskedModel
+
 from shap import links
 from shap.models import Model
+from shap.utils import MaskedModel
+
 from .._explainer import Explainer
+
 
 class Random(Explainer):
     """ Simply returns random (normally distributed) feature attributions.

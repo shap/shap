@@ -4,14 +4,14 @@ body {
     margin: 0px;
     background-color: white;
     color: black;
-    font-weight: 300; 
+    font-weight: 300;
     font-size: 13pt;
 }
 
 
 /* text styling */
 strong {
-  font-weight: 600;         
+  font-weight: 600;
 }
 
 .warm {

@@ -1,22 +1,21 @@
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
-from ..explainers._explainer import Explainer
-from ..explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
-from .._explanation import Explanation
 from packaging import version
 
-try:
-    import tensorflow as tf
-    import tensorflow.keras as keras
-except:
-    tf = None
-    keras = None
+from .._explanation import Explanation
+from ..explainers._explainer import Explainer
+from ..explainers.tf_utils import (
+    _get_graph,
+    _get_model_inputs,
+    _get_model_output,
+    _get_session,
+)
 
-try:
-    import torch
-except:
-    torch = None
+keras = None
+tf = None
+torch = None
 
 
 class Gradient(Explainer):
@@ -30,7 +29,7 @@ class Gradient(Explainer):
     and combines that expectation with sampling reference values from the background dataset. This leads
     to a single combined expectation of gradients that converges to attributions that sum to the
     difference between the expected model output and the current output.
-    
+
     Examples
     --------
     See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
@@ -79,15 +78,15 @@ class Gradient(Explainer):
             self.features = data.columns.values
         else:
             self.features = list(range(data[0].shape[1]))
-        
+
         if framework == 'tensorflow':
             self.explainer = _TFGradient(model, data, session, batch_size, local_smoothing)
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
-        """ Return an explanation object for the model applied to X. 
-        
+        """ Return an explanation object for the model applied to X.
+
         Parameters
         ----------
         X : list,
@@ -99,11 +98,11 @@ class Gradient(Explainer):
             number of background samples
         Returns
         -------
-        shap.Explanation: 
+        shap.Explanation:
         """
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)
-    
+
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
         """ Return the values for the model applied to X.
 
@@ -151,17 +150,17 @@ class _TFGradient(Explainer):
 
         # try and import keras and tensorflow
         global tf, keras
-        try:
+        if tf is None:
+            import tensorflow as tf
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
-        except ImportError:
-            raise ImportError("Tensorflow not found.")
-
-        try:
-            if version.parse(keras.__version__) < version.parse("2.1.0"):
-                warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
-        except ImportError:
-            raise ImportError("tensorflow.keras not found.")
+        if keras is None:
+            try:
+                from tensorflow import keras
+                if version.parse(keras.__version__) < version.parse("2.1.0"):
+                    warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
+            except:
+                pass
 
         # determine the model inputs and outputs
         self.model = model
@@ -308,7 +307,7 @@ class _TFGradient(Explainer):
 
                 # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
-                # regression model with priors of the coefficents equal to the estimated variances for each
+                # regression model with priors of the coefficients equal to the estimated variances for each
                 # value (note that 1e-6 is designed to increase the weight of the sample and so closely
                 # match the correct sum)
                 # if False and self.local_smoothing == 0: # disabled right now to make sure it doesn't mask problems
@@ -320,7 +319,7 @@ class _TFGradient(Explainer):
                 #         sum_error = model_output_values[j] - phis_sum - self.expected_value
 
                 #     # this is a ridge regression with one sample of all ones with sum_error as the label
-                #     # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                #     # and 1/v as the ridge penalties. This simplified (and stable) form comes from the
                 #     # Sherman-Morrison formula
                 #     v = (phi_vars_s / phi_vars_s.max()) * 1e6
                 #     adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
@@ -373,11 +372,10 @@ class _PyTorchGradient(Explainer):
 
         # try and import pytorch
         global torch
-        try:
+        if torch is None:
+            import torch
             if version.parse(torch.__version__) < version.parse("0.4"):
                 warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
-        except ImportError:
-            raise ImportError("torch not found.")
 
         # check if we have multiple inputs
         self.multi_input = False

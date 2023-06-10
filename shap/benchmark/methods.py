@@ -1,14 +1,18 @@
-from .. import LinearExplainer
-from .. import KernelExplainer
-from .. import SamplingExplainer
-from .. import TreeExplainer
-from .. import DeepExplainer
-from .. import GradientExplainer
-from .. import kmeans
-from ..explainers import other
-from .models import KerasWrap
 import numpy as np
 import sklearn
+
+from .. import (
+    DeepExplainer,
+    GradientExplainer,
+    KernelExplainer,
+    LinearExplainer,
+    SamplingExplainer,
+    TreeExplainer,
+    kmeans,
+)
+from ..explainers import other
+from .models import KerasWrap
+
 
 def linear_shap_corr(model, data):
     """ Linear SHAP (corr 1000)
@@ -21,7 +25,7 @@ def linear_shap_ind(model, data):
     return LinearExplainer(model, data, feature_dependence="independent").shap_values
 
 def coef(model, data):
-    """ Coefficents
+    """ Coefficients
     """
     return other.CoefficentExplainer(model).attributions
 
@@ -125,7 +129,7 @@ def deep_shap(model, data):
             return phi[0]
         else:
             return phi
-    
+
     return f
 
 def expected_gradients(model, data):
@@ -140,5 +144,5 @@ def expected_gradients(model, data):
             return phi[0]
         else:
             return phi
-    
+
     return f

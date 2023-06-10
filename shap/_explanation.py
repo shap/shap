@@ -1,14 +1,17 @@
 
-import pandas as pd
-import numpy as np
-import scipy as sp
 import copy
 import operator
+
+import numpy as np
+import pandas as pd
+import scipy.cluster
+import scipy.sparse
+import scipy.spatial
 import sklearn
-from slicer import Slicer, Alias, Obj
-# from ._order import Order
-from .utils._general import OpChain
+from slicer import Alias, Obj, Slicer
+
 from .utils._exceptions import DimensionError
+from .utils._general import OpChain
 
 # slicer confuses pylint...
 # pylint: disable=no-member
@@ -24,7 +27,7 @@ class MetaExplanation(type):
 
     @property
     def abs(cls):
-        """ Element-wize absolute value op.
+        """ Element-wise absolute value op.
         """
         return op_chain_root.abs
 
@@ -72,7 +75,7 @@ class MetaExplanation(type):
 
     @property
     def hclust(cls):
-        """ Hierarchial clustering op.
+        """ Hierarchical clustering op.
         """
         return op_chain_root.hclust
 
@@ -642,9 +645,9 @@ class Explanation(metaclass=MetaExplanation):
             values = values.T
 
         # compute a hierarchical clustering and return the optimal leaf ordering
-        D = sp.spatial.distance.pdist(values, metric)
-        cluster_matrix = sp.cluster.hierarchy.complete(D)
-        inds = sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
+        D = scipy.spatial.distance.pdist(values, metric)
+        cluster_matrix = scipy.cluster.hierarchy.complete(D)
+        inds = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
         return inds
 
     def sample(self, max_samples, replace=False, random_state=0):
@@ -800,7 +803,7 @@ def _first_item(x):
 def _compute_shape(x):
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
-    elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
+    elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
         return (None,)
     else:
         if isinstance(x, dict):
@@ -860,7 +863,7 @@ def _auto_cohorts(shap_values, max_cohorts):
     """ This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values.
     """
 
-    # fit a decision tree that well spearates the SHAP values
+    # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)
 

@@ -1,8 +1,9 @@
+import copy
 import queue
 import warnings
-import copy
+
+from ..utils._exceptions import ConvergenceError, InvalidAction
 from ._action import Action
-from ..utils._exceptions import InvalidAction, ConvergenceError
 
 
 class ActionOptimizer:

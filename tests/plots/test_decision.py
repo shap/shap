@@ -1,8 +1,9 @@
 import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
+
 matplotlib.use('Agg')
-import shap # pylint: disable=wrong-import-position
+import shap  # pylint: disable=wrong-import-position
 
 
 def test_random_decision():

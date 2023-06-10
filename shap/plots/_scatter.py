@@ -1,18 +1,20 @@
 from __future__ import division
 
-import numpy as np
 import warnings
+
+import numpy as np
+
 try:
-    import matplotlib.pyplot as pl
     import matplotlib
+    import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
-from ..utils import convert_name, approximate_interactions
-from ..utils._general import encode_array_if_needed
 from .._explanation import Explanation
+from ..utils import approximate_interactions, convert_name
+from ..utils._general import encode_array_if_needed
+from . import colors
+from ._labels import labels
 
 
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
@@ -134,7 +136,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # wrap np.arrays as Explanations
     if isinstance(color, np.ndarray):
         color = Explanation(values=color, base_values=None, data=color)
-    
+
     # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if str(type(color)).endswith("Explanation'>"):
         shap_values2 = color
@@ -255,14 +257,14 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     np.random.shuffle(oinds)
     xv = encode_array_if_needed(features[oinds, ind])
     xd = display_features[oinds, ind]
-    
+
     s = shap_values_arr[oinds, ind]
     if type(xd[0]) == str:
         name_map = {}
         for i in range(len(xv)):
             name_map[xd[i]] = xv[i]
         xnames = list(name_map.keys())
-    
+
     # allow a single feature name to be passed alone
     if type(feature_names) == str:
         feature_names = [feature_names]
@@ -309,7 +311,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             jitter_amount = x_jitter * smallest_diff
             xv += (np.random.random_sample(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
-    
+
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
@@ -404,7 +406,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # the histogram of the data
     if hist:
         ax2 = ax.twinx()
-        #n, bins, patches = 
+        #n, bins, patches =
         xlim = ax.get_xlim()
         xvals = np.unique(xv_no_jitter)
 
@@ -428,7 +430,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
                 bin_edges = 10
             else:
                 bin_edges = 5
-        
+
         ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
         ax2.set_ylim(0,len(xv))
 
@@ -613,7 +615,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # get both the raw and display feature values
     oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-    
+
     xv = encode_array_if_needed(features[oinds, ind])
 
     xd = display_features[oinds, ind]

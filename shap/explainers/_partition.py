@@ -1,14 +1,14 @@
-from ..utils import MaskedModel
-import numpy as np
-import time
-from tqdm.auto import tqdm
 import queue
-from ..utils import safe_isinstance, make_masks, OpChain
-from .. import Explanation
-from ._explainer import Explainer
-from .. import links
-from ..models import Model
+import time
+
+import numpy as np
 from numba import njit
+from tqdm.auto import tqdm
+
+from .. import Explanation, links
+from ..models import Model
+from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from ._explainer import Explainer
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -639,7 +639,7 @@ class Partition(Explainer):
     #             if fixed_context is None or fixed_context == 1:
     #                 self.dvalues[ind] -= (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    
+
     #                 # recurse on the left node with one context
     #                 args = (m01, f01, f11, lind, new_weight)
     #                 q.put((-np.max(np.abs(f11 - f01)) * new_weight, np.random.randn(), args))

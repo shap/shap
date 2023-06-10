@@ -1,9 +1,12 @@
 import time
+
 import numpy as np
 from tqdm import tqdm
-from shap.utils import safe_isinstance, MaskedModel, partition_tree_shuffle
+
 from shap import Explanation, links
-from shap.maskers import Text, Image, FixedComposite
+from shap.maskers import FixedComposite, Image, Text
+from shap.utils import MaskedModel, partition_tree_shuffle, safe_isinstance
+
 from . import BenchmarkResult
 
 

@@ -1,16 +1,24 @@
 import warnings
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from ..utils import format_value, ordinal_str
-from ._utils import convert_ordering, merge_nodes, get_sort_order, sort_inds, dendrogram_coords
-from . import colors
 import numpy as np
 import scipy
-from .. import Explanation, Cohorts
+
+from .. import Cohorts, Explanation
+from ..utils import format_value, ordinal_str
+from . import colors
+from ._labels import labels
+from ._utils import (
+    convert_ordering,
+    dendrogram_coords,
+    get_sort_order,
+    merge_nodes,
+    sort_inds,
+)
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
@@ -35,7 +43,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     show : bool
         If show is set to False then we don't call the matplotlib.pyplot.show() function. This allows
-        further customization of the plot by the caller after the bar() function is finished. 
+        further customization of the plot by the caller after the bar() function is finished.
 
     """
 
@@ -169,7 +177,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if num_features < len(values[0]):
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
         values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
-    
+
     # build our y-tick labels
     yticklabels = []
     for i in feature_inds:
@@ -255,12 +263,12 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     xmin,xmax = pl.gca().get_xlim()
     ymin,ymax = pl.gca().get_ylim()
-    
+
     if negative_values_present:
         pl.gca().set_xlim(xmin - (xmax-xmin)*0.05, xmax + (xmax-xmin)*0.05)
     else:
         pl.gca().set_xlim(xmin, xmax + (xmax-xmin)*0.05)
-    
+
     # if features is None:
     #     pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
     # else:
@@ -277,11 +285,11 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     # draw a dendrogram if we are given a partition tree
     if partition_tree is not None:
-        
+
         # compute the dendrogram line positions based on our current feature order
         feature_pos = np.argsort(feature_order)
         ylines,xlines = dendrogram_coords(feature_pos, partition_tree)
-        
+
         # plot the distance cut line above which we don't show tree edges
         xmin,xmax = pl.xlim()
         xlines_min,xlines_max = np.min(xlines),np.max(xlines)
@@ -293,9 +301,9 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         )
         l = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
         l.set_clip_on(False)
-        
+
         for (xline, yline) in zip(xlines, ylines):
-            
+
             # normalize the x values to fall between 0 and 1
             xv = (np.array(xline) / (xlines_max - xlines_min))
 
@@ -311,7 +319,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
                     )
                     for v in l:
                         v.set_clip_on(False)
-    
+
     if show:
         pl.show()
 
@@ -320,18 +328,18 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 # def compute_sort_counts(partition_tree, leaf_values, pos=None):
 #     if pos is None:
 #         pos = partition_tree.shape[0]-1
-    
+
 #     M = partition_tree.shape[0] + 1
-        
+
 #     if pos < 0:
 #         return 1,leaf_values[pos + M]
-    
+
 #     left = int(partition_tree[pos, 0]) - M
 #     right = int(partition_tree[pos, 1]) - M
-    
+
 #     left_val,left_sum = compute_sort_counts(partition_tree, leaf_values, left)
 #     right_val,right_sum = compute_sort_counts(partition_tree, leaf_values, right)
-    
+
 #     if left_sum > right_sum:
 #         left_val = right_val + 1
 #     else:
@@ -342,7 +350,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 #     if right >= 0:
 #         partition_tree[right,3] = right_val
 
-    
+
 #     return max(left_val, right_val) + 1, max(left_sum, right_sum)
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
@@ -363,8 +371,8 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
 
 
     feature_order = np.argsort(-np.abs(shap_values))
-    
-    # 
+
+    #
     feature_inds = feature_order[:max_display]
     y_pos = np.arange(len(feature_inds), 0, -1)
     pl.barh(
@@ -395,8 +403,8 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
     pl.gca().spines['right'].set_visible(False)
     pl.gca().spines['top'].set_visible(False)
     #pl.gca().spines['left'].set_visible(False)
-    
+
     pl.xlabel("SHAP value (impact on model output)")
-    
+
     if show:
         pl.show()

@@ -2,7 +2,8 @@
 # here because all we need is a couple color conversion routines, and adding
 # all of skimage as dependecy is really heavy.
 
-
+# Disable linting on vendored code
+# ruff: noqa
 
 # Copyright (C) 2019, the scikit-image team
 # All rights reserved.

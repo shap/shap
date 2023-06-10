@@ -4,16 +4,18 @@
 from __future__ import division
 
 import warnings
+
 import numpy as np
 from scipy.stats import gaussian_kde
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
     pass
-from ._labels import labels
-from . import colors
 from ..utils._exceptions import DimensionError
+from . import colors
+from ._labels import labels
 
 
 # TODO: remove unused title argument / use title argument

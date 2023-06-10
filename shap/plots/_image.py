@@ -1,13 +1,14 @@
+import json
 import random
 import string
 import warnings
-import json
 from typing import Optional
 
 import numpy as np
 from matplotlib.colors import Colormap
 
 from shap._explanation import Explanation
+
 from ..utils import ordinal_str
 
 try:
@@ -15,12 +16,11 @@ try:
 except ImportError:
     warnings.warn("matplotlib could not be loaded!")
 try:
-    from IPython.display import display, HTML
+    from IPython.display import HTML, display
 except ImportError:
     warnings.warn("IPython could not be loaded!")
-from . import colors
 from ..utils._legacy import kmeans
-
+from . import colors
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -299,14 +299,14 @@ def image_to_text(shap_values):
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "grey";
                     {uuid}_update_image_and_overlay(id);
-                }}            
+                }}
             }}
 
             function onMouseOutFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "transparent";
                     {uuid}_update_image_and_overlay(null);
-                }}                
+                }}
             }}
 
             function onMouseClickFlat_{uuid}(id) {{
@@ -330,7 +330,7 @@ def image_to_text(shap_values):
                         {uuid}_heatmap_flat_state = id
                     }}
                 }}
-            }}         
+            }}
 
             const {uuid}_image_data_matrix = {image_data_json};
             const {uuid}_image_data_gray_scale = {image_data_gray_scale_json};
@@ -341,7 +341,7 @@ def image_to_text(shap_values):
             {uuid}_canvas = document.getElementById('{uuid}_image_canvas');
             {uuid}_context = {uuid}_canvas.getContext('2d');
 
-            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);            
+            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);
             var {uuid}_currImagData = {uuid}_imageData;
 
 
@@ -364,7 +364,7 @@ def image_to_text(shap_values):
                 {uuid}_opacity = value/100;
 
                 if ({uuid}_heatmap_flat_state !== null ) {{
-                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);                    
+                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);
                     {uuid}_redraw();
                 }}
             }}

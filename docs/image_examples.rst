@@ -25,4 +25,3 @@ Examples using :class:`shap.explainers.Permutation` to produce explanations in a
     :maxdepth: 1
 
     example_notebooks/image_examples/image_captioning/*
-

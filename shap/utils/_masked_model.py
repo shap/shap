@@ -1,7 +1,9 @@
 import copy
+
 import numpy as np
 import scipy.sparse
 from numba import njit
+
 from .. import links
 
 
@@ -58,7 +60,7 @@ class MaskedModel():
 
             # we need to convert from delta masking to a full masking call because we were given a delta masking
             # input but the masker does not support delta masking
-            else: 
+            else:
                 full_masks = np.zeros((int(np.sum(masks >= 0)), self._masker_cols), dtype=bool)
                 _convert_delta_mask_to_full(masks, full_masks)
                 return self._full_masking_call(full_masks, zero_index=zero_index, batch_size=batch_size)
@@ -92,7 +94,7 @@ class MaskedModel():
                 else:
                     masked_inputs = self.masker(mask, *self.args)
 
-                # get a copy that won't get overwritten by the next iteration 
+                # get a copy that won't get overwritten by the next iteration
                 if not getattr(self.masker, "immutable_outputs", False):
                     masked_inputs = copy.deepcopy(masked_inputs)
 
@@ -151,7 +153,7 @@ class MaskedModel():
             self._linearizing_weights = link_reweighting(self.background_outputs, self.link)
 
         averaged_outs = np.zeros((len(batch_positions)-1,) + outputs.shape[1:])
-        max_outs = self._masker_rows if self._masker_rows is not None else max(len(r) for r in varying_rows) 
+        max_outs = self._masker_rows if self._masker_rows is not None else max(len(r) for r in varying_rows)
         last_outs = np.zeros((max_outs,) + outputs.shape[1:])
         varying_rows = np.array(varying_rows)
 
@@ -256,12 +258,12 @@ class MaskedModel():
         # compute the main effects for the given indexes
         outputs = self(masks, batch_size=batch_size)
         main_effects = outputs[1:] - outputs[0]
-        
+
         # expand the vector to the full input size
         expanded_main_effects = np.zeros((len(self),) + outputs.shape[1:])
         for i,ind in enumerate(inds):
             expanded_main_effects[ind] = main_effects[i]
-        
+
         return expanded_main_effects
 
 def _assert_output_input_match(inputs, outputs):
@@ -271,7 +273,7 @@ def _assert_output_input_match(inputs, outputs):
 def _convert_delta_mask_to_full(masks, full_masks):
     """ This converts a delta masking array to a full bool masking array.
     """
-    
+
     i = -1
     masks_pos = 0
     while masks_pos < len(masks):
@@ -304,7 +306,7 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
         # update the masked inputs
         while delta_indexes[dpos] < 0: # negative values mean keep going
             delta_indexes[dpos] = -delta_indexes[dpos] - 1 # -value + 1 is the original index that needs flipped
-            masker(delta_indexes[dpos], *args) 
+            masker(delta_indexes[dpos], *args)
             dpos += 1
             delta_indexes[dpos] = masks[masks_pos + dpos]
         masked_inputs = masker(delta_indexes[dpos], *args).copy()
@@ -314,7 +316,7 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
         num_mask_samples[i] = len(masked_inputs)
         #print(i, dpos, delta_indexes[dpos])
         # see which rows have been updated, so we can only evaluate the model on the rows we need to
-        if i == 0: 
+        if i == 0:
             varying_rows[i,:] = True
             #varying_rows.append(np.arange(num_mask_samples[i]))
             num_varying_rows[i] = num_mask_samples[i]
@@ -329,7 +331,7 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
 
 
             # more than one column was changed
-            else: 
+            else:
                 varying_rows[i,:] = np.any(variants[:,delta_indexes[:dpos+1]], axis=1)
                 #varying_rows.append(np.any(variants[:,delta_indexes[:dpos+1]], axis=1))
                 num_varying_rows[i] = varying_rows[i,:].sum()
@@ -416,7 +418,7 @@ def make_masks(cluster_matrix):
 
     # build an array of index lists in CSR format
     _init_masks(cluster_matrix, M, indices_row_pos, indptr)
-    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, cluster_matrix.shape[0] - 1 + M)    
+    _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, cluster_matrix.shape[0] - 1 + M)
     mask_matrix = scipy.sparse.csr_matrix(
         (np.ones(len(indices), dtype=bool), indices, indptr),
         shape=(2 * M - 1, M)
@@ -465,14 +467,14 @@ def link_reweighting(p, link):
     expected value. Note that there are many possible reweightings that can satisfy the above
     property. This function returns the one that has the lowest L2 norm.
     """
-    
+
     # the linearized link funciton is a first order Taylor expansion of the link function
     # centered at the expected value
     expected_value = np.mean(p, axis=0)
     epsilon = 0.0001
     link_gradient = (link(expected_value + epsilon) - link(expected_value)) / epsilon
     linearized_link = link_gradient*(p - expected_value) + link(expected_value)
-    
+
     weights = (linearized_link - link(expected_value)) / (link(p) - link(expected_value))
     weights *= weights.shape[0] / np.sum(weights, axis=0)
     return weights

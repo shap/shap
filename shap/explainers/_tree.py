@@ -1,17 +1,24 @@
-import time
-import numpy as np
-import scipy.special
 import json
 import struct
-from packaging import version
-from ._explainer import Explainer
-from ..utils import assert_import, record_import_error, safe_isinstance
-from ..utils._legacy import DenseData
-from ..utils._exceptions import InvalidMaskerError, ExplainerError, InvalidFeaturePerturbationError, InvalidModelError
-from .._explanation import Explanation
-from .. import maskers
+import time
 import warnings
+
+import numpy as np
 import pandas as pd
+import scipy.special
+from packaging import version
+
+from .. import maskers
+from .._explanation import Explanation
+from ..utils import assert_import, record_import_error, safe_isinstance
+from ..utils._exceptions import (
+    ExplainerError,
+    InvalidFeaturePerturbationError,
+    InvalidMaskerError,
+    InvalidModelError,
+)
+from ..utils._legacy import DenseData
+from ._explainer import Explainer
 
 warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
 
@@ -45,7 +52,7 @@ class Tree(Explainer):
 
     Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles of trees,
     under several different possible assumptions about feature dependence. It depends on fast C++
-    implementations either inside an externel model package or in the local compiled C extention.
+    implementations either inside an external model package or in the local compiled C extension.
     """
 
     def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, approximate=False, **deprecated_options):
@@ -223,7 +230,7 @@ class Tree(Explainer):
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        # cf. GH issue #66, this conversion to numpy array should be done AFTER
+        # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
         if safe_isinstance(X, "pandas.core.frame.DataFrame"):
             X = X.values
@@ -620,7 +627,7 @@ class TreeEnsemble:
 
         if type(model) is dict and "trees" in model:
             # This allows a dictionary to be passed that represents the model.
-            # this dictionary has several numerica paramters and also a list of trees
+            # this dictionary has several numerical parameters and also a list of trees
             # where each tree is a dictionary describing that tree
             if "internal_dtype" in model:
                 self.internal_dtype = model["internal_dtype"]
@@ -979,7 +986,7 @@ class TreeEnsemble:
             assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
             if self.model_output == "raw":
                 param_idx = 0 # default to the first parameter of the output distribution
-                warnings.warn("Translating model_ouput=\"raw\" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.")
+                warnings.warn("Translating model_output=\"raw\" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.")
             elif type(self.model_output) is int:
                 param_idx = self.model_output
                 self.model_output = "raw" # note that after loading we have a new model_output type
@@ -1164,7 +1171,7 @@ class SingleTree:
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
-        # deprecated dictionary support (with sklearn singlular style "feature" and "value" names)
+        # deprecated dictionary support (with sklearn singular style "feature" and "value" names)
         elif type(tree) is dict and 'children_left' in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
@@ -1196,10 +1203,10 @@ class SingleTree:
             def buildTree(index, node):
                 index = index + 1
                 if tree._java_obj.getImpurity() == 'variance':
-                    self.values[index] = [node.prediction()] #prediction for the node
+                    self.values[index] = [node.prediction()]  # prediction for the node
                 else:
                     self.values[index] = [e for e in node.impurityStats().stats()] #for gini: NDarray(numLabel): 1 per label: number of item for each label which went through this node
-                self.node_sample_weight[index] = node.impurityStats().count() #weighted count of element trough this node
+                self.node_sample_weight[index] = node.impurityStats().count()  # weighted count of element through this node
 
                 if node.subtreeDepth() == 0:
                     return index
@@ -1387,7 +1394,9 @@ class IsoTree(SingleTree):
     def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
         super(IsoTree, self).__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
-            from sklearn.ensemble._iforest import _average_path_length # pylint: disable=no-name-in-module
+            from sklearn.ensemble._iforest import (
+                _average_path_length,  # pylint: disable=no-name-in-module
+            )
 
             def _recalculate_value(tree, i , level):
                 if tree.children_left[i] == -1 and tree.children_right[i] == -1:

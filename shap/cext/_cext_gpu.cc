@@ -185,4 +185,3 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     PyObject *ret = Py_BuildValue("d", ret_value);
     return ret;
 }
-

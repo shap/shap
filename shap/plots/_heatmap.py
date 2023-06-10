@@ -1,14 +1,16 @@
 import numpy as np
+
 try:
     import matplotlib.pyplot as pl
 except ImportError:
     pass
-from . import colors
 from .. import Explanation
 from ..utils import OpChain
+from . import colors
 from ._utils import convert_ordering
 
-def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0), 
+
+def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0),
             feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
             plot_width=8):
     """ Create a heatmap plot of a set of SHAP values.
@@ -22,7 +24,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     ----------
     shap_values : shap.Explanation
         A multi-row Explanation object that we want to visualize in a cluster ordering.
-    
+
     instance_order : OpChain or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values and an axis, or
         a direct sample ordering given as an numpy.ndarray.
@@ -34,7 +36,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         A function that returns a sort ordering given a matrix of SHAP values and an axis, or
         a direct input feature ordering given as an numpy.ndarray. If None then we use
         feature_values.argsort
-        
+
     max_display : int
         The maximum number of features to display.
 
@@ -85,7 +87,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         feature_names[-1] = "Sum of %d other features" % (values.shape[1] - max_display + 1)
         values = new_values
         feature_values = new_feature_values
-    
+
     # define the plot size
     row_height = 0.5
     pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
@@ -101,11 +103,11 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     yticks_labels = feature_names
 
     pl.yticks([-1.5] + list(yticks_pos), ["f(x)"] + list(yticks_labels), fontsize=13)
-    
+
     pl.ylim(values.shape[1]-0.5, -3)
-    
-    
-    
+
+
+
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('left')
     pl.gca().spines['right'].set_visible(True)
@@ -118,7 +120,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     pl.gca().spines['left'].set_bounds(values.shape[1]-0.5, -0.5)
     pl.gca().spines['right'].set_bounds(values.shape[1]-0.5, -0.5)
     b = pl.barh(
-        yticks_pos, (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20, 
+        yticks_pos, (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
         0.7, align='center', color="#000000", left=values.shape[0] * 1.0 - 0.5
         #color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
     )
@@ -126,9 +128,9 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         v.set_clip_on(False)
     pl.xlim(-0.5, values.shape[0]-0.5)
     pl.xlabel(xlabel)
-    
-    
-    
+
+
+
     if True:
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=cmap)
@@ -141,9 +143,9 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
         cb.ax.set_aspect((bbox.height - 0.9) * 15)
         #cb.draw_all()
-        
+
     for i in [0]:
         pl.gca().get_yticklines()[i].set_visible(False)
-    
+
     if show:
         pl.show()

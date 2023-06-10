@@ -1,13 +1,14 @@
-from setuptools import setup, Extension
-import os
-import re
 import codecs
+import os
 import platform
-import sysconfig
-from packaging.version import Version, parse
-import numpy as np
-import sys
+import re
 import subprocess
+import sys
+import sysconfig
+
+import numpy as np
+from packaging.version import Version, parse
+from setuptools import Extension, setup
 
 # to publish use:
 # > python setup.py sdist bdist_wheel upload
@@ -212,7 +213,7 @@ def run_setup(
             'shap.actions', 'shap.models'
         ],
         package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>4.25.0',
+        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>=4.27.0',
                           'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
@@ -239,7 +240,7 @@ def try_run_setup(**kwargs):
     try:
         run_setup(**kwargs)
     except Exception as e:
-        print("Exception occured during setup,", str(e))
+        print("Exception occurred during setup,", str(e))
         exc_msg = str(e).lower()
 
         if "cuda module" in exc_msg:
