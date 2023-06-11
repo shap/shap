@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -96,9 +98,19 @@ class Model:
 
 def convert_to_model(val):
     if isinstance(val, Model):
-        return val
+        out = val
     else:
-        return Model(val, None)
+        out = Model(val, None)
+
+    # Fix for the sklearn warning
+    # 'X does not have valid feature names, but <model> was fitted with feature names'
+    f_self = getattr(out.f, "__self__", None)
+    if f_self and hasattr(f_self, "feature_names_in_"):
+        # Make a copy so that the feature names are not removed from the original model
+        out = copy.deepcopy(out)
+        out.f.__self__.feature_names_in_ = None
+
+    return out
 
 
 def match_model_to_data(model, data):

@@ -2,6 +2,7 @@ import copy
 import gc
 import itertools
 import logging
+import time
 import warnings
 
 import numpy as np
@@ -15,6 +16,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 
+from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._legacy import (
     DenseData,
@@ -61,6 +63,11 @@ class Kernel(Explainer):
         Note: for sparse case we accept any sparse matrix but convert to lil format for
         performance.
 
+    feature_names : list
+        The names of the features in the background dataset. If the background dataset is
+        supplied as a pandas.DataFrame, then feature_names can be set to None (the default value)
+        and the feature names will be taken as the column names of the dataframe.
+
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
@@ -73,7 +80,12 @@ class Kernel(Explainer):
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
     """
 
-    def __init__(self, model, data, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link=IdentityLink(), **kwargs):
+
+        if feature_names is not None:
+            self.data_feature_names=feature_names
+        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+            self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
@@ -119,6 +131,32 @@ class Kernel(Explainer):
         else:
             self.D = self.fnull.shape[0]
 
+    def __call__(self, X):
+
+        start_time = time.time()
+
+        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+            feature_names = list(X.columns)
+        else:
+            feature_names = getattr(self, "data_feature_names", None)
+
+        v = self.shap_values(X)
+        if type(v) is list:
+            v = np.stack(v, axis=-1) # put outputs at the end
+
+        # the explanation object expects an expected value for each row
+        if hasattr(self.expected_value, "__len__"):
+            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+        else:
+            ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+        return Explanation(
+            v,
+            base_values=ev_tiled,
+            data=X,
+            feature_names=feature_names,
+            compute_time=time.time() - start_time,
+        )
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.

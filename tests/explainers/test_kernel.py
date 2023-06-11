@@ -58,6 +58,25 @@ def test_front_page_model_agnostic_rank():
     # plot the SHAP values for the Setosa output of the first instance
     shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
 
+def test_kernel_shap_with_call_method():
+    """ Test the __call__ method of the Kernel class
+    """
+
+    # print the JS visualization code to the notebook
+    shap.initjs()
+
+    # train a SVM classifier
+    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
+    svm = sklearn.svm.SVC(kernel='rbf', probability=True)
+    svm.fit(X_train, Y_train)
+
+    # use Kernel SHAP to explain test set predictions
+    explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
+    shap_values = explainer(X_test)
+
+    # plot the SHAP values for the Versicolour output of the first instance
+    shap.force_plot(shap_values[0][:,1])
+
 def test_kernel_shap_with_dataframe():
     """ Test with a Pandas DataFrame.
     """
