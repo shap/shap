@@ -203,6 +203,8 @@ class _TFGradient(Explainer):
             self.gradients = [None for i in range(self.model_output.shape[1])]
 
     def gradient(self, i):
+        global tf, keras
+
         if self.gradients[i] is None:
             if not tf.executing_eagerly():
                 out = self.model_output[:,i] if self.multi_output else self.model_output
@@ -230,6 +232,10 @@ class _TFGradient(Explainer):
         return self.gradients[i]
 
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
+        global tf, keras
+
+        import tensorflow as tf
+        import tensorflow.keras as keras
 
         # check if we have multiple inputs
         if not self.multi_input:
@@ -350,6 +356,8 @@ class _TFGradient(Explainer):
                 return output_phis
 
     def run(self, out, model_inputs, X):
+        global tf, keras
+
         if not tf.executing_eagerly():
             feed_dict = dict(zip(model_inputs, X))
             if self.keras_phase_placeholder is not None:
