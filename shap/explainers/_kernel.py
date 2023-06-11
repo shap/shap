@@ -150,7 +150,13 @@ class Kernel(Explainer):
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        return Explanation(v, base_values=ev_tiled, data=X, feature_names=feature_names, compute_time=time.time() - start_time)
+        return Explanation(
+            v,
+            base_values=ev_tiled,
+            data=X,
+            feature_names=feature_names,
+            compute_time=time.time() - start_time,
+        )
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
