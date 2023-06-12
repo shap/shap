@@ -17,7 +17,7 @@ body:
     attributes:
       label: Feature Description
       description: >
-        Please describe how the new feature would be implemented, using psudocode if relevant.
+        Please describe how the new feature would be implemented, using pseudo-code if relevant.
     validations:
       required: true
   - type: textarea
