@@ -547,8 +547,8 @@ class Tree(Explainer):
                 if self.feature_perturbation != "interventional":
                     err_msg += " Consider retrying with the feature_perturbation='interventional' option."
                 err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
-                           " was %f, while the model output was %f. If this difference is acceptable" \
-                           " you can set check_additivity=False to disable this check." % (sum_val[ind], model_output[ind])
+                           " was {:f}, while the model output was {:f}. If this difference is acceptable" \
+                           " you can set check_additivity=False to disable this check.".format(sum_val[ind], model_output[ind])
                 raise ExplainerError(err_msg)
 
         if type(phi) is list:
@@ -1072,7 +1072,7 @@ class TreeEnsemble:
             else:
                 raise NotImplementedError("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
         else:
-            raise ValueError("Unrecognized model_output parameter value: %s! If model.%s is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now." % (str(self.model_output), str(self.model_output)))
+            raise ValueError(f"Unrecognized model_output parameter value: {str(self.model_output)}! If model.{str(self.model_output)} is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now.")
 
         return transform
 
@@ -1392,7 +1392,7 @@ class IsoTree(SingleTree):
     In sklearn the tree of the Isolation Forest does not calculated in a good way.
     """
     def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
-        super(IsoTree, self).__init__(tree, normalize, scaling, data, data_missing)
+        super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
             from sklearn.ensemble._iforest import (
                 _average_path_length,  # pylint: disable=no-name-in-module
@@ -1432,7 +1432,7 @@ def get_xgboost_json(model):
     return json_trees
 
 
-class XGBTreeModelLoader(object):
+class XGBTreeModelLoader:
     """ This loads an XGBoost model directly from a raw memory dump.
 
     We can't use the JSON dump because due to numerical precision issues those
@@ -1609,7 +1609,7 @@ class CatBoostTreeModelLoader:
         import tempfile
         tmp_file = tempfile.NamedTemporaryFile()
         cb_model.save_model(tmp_file.name, format="json")
-        self.loaded_cb_model = json.load(open(tmp_file.name, "r"))
+        self.loaded_cb_model = json.load(open(tmp_file.name))
         tmp_file.close()
 
         # load the CatBoost oblivious trees specific parameters

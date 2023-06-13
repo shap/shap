@@ -1,10 +1,8 @@
 """ Visualize the SHAP values with additive force style layouts.
 """
 
-from __future__ import division, unicode_literals
 
 import base64
-import io
 import json
 import os
 import random
@@ -237,9 +235,9 @@ err_msg = """
 
 def getjs():
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
-    with io.open(bundle_path, encoding="utf-8") as f:
+    with open(bundle_path, encoding="utf-8") as f:
         bundle_data = f.read()
-    return "<script charset='utf-8'>{bundle_data}</script>".format(bundle_data=bundle_data)
+    return f"<script charset='utf-8'>{bundle_data}</script>"
 
 
 def initjs():
@@ -249,7 +247,7 @@ def initjs():
         logo_data = f.read()
     logo_data = base64.b64encode(logo_data).decode('utf-8')
     display(HTML(
-        "<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>".format(logo_data=logo_data) +
+        f"<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>" +
         getjs()
     ))
 
@@ -282,7 +280,7 @@ def save_html(out_file, plot, full_html=True):
 
     # dump the js code
     bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
-    with open(bundle_path, "r", encoding="utf-8") as f:
+    with open(bundle_path, encoding="utf-8") as f:
         bundle_data = f.read()
     out_file.write(bundle_data)
     out_file.write("</script>")

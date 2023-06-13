@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import copy
 import itertools
 import os
@@ -389,7 +387,7 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
 
     # run the benchmark on the remote machine
     #start = time.time()
-    cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+" -c \"import shap; shap.benchmark.run_experiment(['%s', '%s', '%s', '%s'], cache_dir='%s')\" &> %s/%s.output" % (
+    cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+" -c \"import shap; shap.benchmark.run_experiment(['{}', '{}', '{}', '{}'], cache_dir='{}')\" &> {}/{}.output".format(
         dataset_name, model_name, method_name, metric_name, cache_dir, cache_dir, cache_id
     )
     try:

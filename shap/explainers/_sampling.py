@@ -42,7 +42,7 @@ class Sampling(Kernel):
         # silence warning about large datasets
         level = log.level
         log.setLevel(logging.ERROR)
-        super(Sampling, self).__init__(model, data, **kwargs)
+        super().__init__(model, data, **kwargs)
         log.setLevel(level)
 
         assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)

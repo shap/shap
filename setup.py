@@ -189,7 +189,7 @@ def run_setup(
         ],
     }
     extras_require['test'] = extras_require['test-core'] + extras_require['test-extras']
-    extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
+    extras_require["all"] = list({i for val in extras_require.values() for i in val})
 
     setup(
         name='shap',
@@ -228,8 +228,8 @@ def run_setup(
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
         ],
-        zip_safe=False
-        # python_requires='>3.0' we will add this at some point
+        zip_safe=False,
+        python_requires=">=3.7",
     )
 
 

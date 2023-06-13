@@ -29,7 +29,7 @@ class Additive(Explainer):
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
         """
-        super(Additive, self).__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
+        super().__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             self.model = model.decision_function
@@ -69,7 +69,7 @@ class Additive(Explainer):
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
-        return super(Additive, self).__call__(*args, max_evals=max_evals, silent=silent)
+        return super().__call__(*args, max_evals=max_evals, silent=silent)
 
     @staticmethod
     def supports_model_with_masker(model, masker):

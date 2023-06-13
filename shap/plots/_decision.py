@@ -1,6 +1,5 @@
 """ Visualize cumulative SHAP values."""
 
-from __future__ import division, unicode_literals
 
 import warnings
 from typing import Union
@@ -115,9 +114,9 @@ def __decision_plot_matplotlib(
         for i in range(feature_display_count):
             v = features[0, i]
             if isinstance(v, str):
-                v = "({})".format(str(v).strip())
+                v = f"({str(v).strip()})"
             else:
-                v = "({})".format("{0:,.3f}".format(v).rstrip("0").rstrip("."))
+                v = "({})".format(f"{v:,.3f}".rstrip("0").rstrip("."))
             t = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
                     horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
             bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
@@ -413,7 +412,7 @@ def decision(
         a = [None] * shap_values.shape[1]
         a[:feature_count] = feature_names
         for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
-            a[i] = "{0} *\n{1}".format(feature_names[row], feature_names[col])
+            a[i] = f"{feature_names[row]} *\n{feature_names[col]}"
         feature_names = a
         feature_count = shap_values.shape[1]
         features = None  # Can't use feature values for interactions...

@@ -84,7 +84,7 @@ class Linear(Explainer):
             else:
                 masker = maskers.Independent({"mean": masker[0], "cov": masker[1]})
 
-        super(Linear, self).__init__(model, masker, link=link, **kwargs)
+        super().__init__(model, masker, link=link, **kwargs)
 
         self.nsamples = nsamples
 
@@ -311,7 +311,7 @@ class Linear(Explainer):
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
-            full_phi = np.zeros(((phi.shape[0], self.M)))
+            full_phi = np.zeros((phi.shape[0], self.M))
             full_phi[:,self.valid_inds] = phi
             phi = full_phi
 
@@ -372,7 +372,7 @@ class Linear(Explainer):
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
-            full_phi = np.zeros(((phi.shape[0], self.M)))
+            full_phi = np.zeros((phi.shape[0], self.M))
             full_phi[:,self.valid_inds] = phi
 
             return full_phi
