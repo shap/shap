@@ -344,7 +344,7 @@ class Tree(Explainer):
                     tree_limit = 0
                 try:
                     phi = self.model.original_model.predict(
-                        X, ntree_limit=tree_limit, pred_contribs=True,
+                        X, iteration_range=(0, tree_limit), pred_contribs=True,
                         approx_contribs=approximate, validate_features=False
                     )
                 except ValueError as e:
@@ -354,7 +354,7 @@ class Tree(Explainer):
                 if check_additivity and self.model.model_output == "raw":
                     xgb_tree_limit = tree_limit // self.model.num_stacked_models
                     model_output_vals = self.model.original_model.predict(
-                        X, ntree_limit=xgb_tree_limit, output_margin=True,
+                        X, iteration_range=(0, xgb_tree_limit), output_margin=True,
                         validate_features=False
                     )
 
@@ -493,7 +493,7 @@ class Tree(Explainer):
             if tree_limit == -1:
                 tree_limit = 0
             xgb_tree_limit = tree_limit // self.model.num_stacked_models
-            phi = self.model.original_model.predict(X, ntree_limit=xgb_tree_limit, pred_interactions=True, validate_features=False)
+            phi = self.model.original_model.predict(X, iteration_range=(0, xgb_tree_limit), pred_interactions=True, validate_features=False)
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
