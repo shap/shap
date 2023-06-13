@@ -1,7 +1,6 @@
 """ Summary plots of SHAP values across a whole dataset.
 """
 
-from __future__ import division
 
 import warnings
 

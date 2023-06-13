@@ -50,7 +50,7 @@ def add_sample_images(path):
     indexes_list = [25, 26, 30, 44]
     for i, image in enumerate(X):
         if i in indexes_list:
-            path_to_image = os.path.join(path, "{0}.jpg".format(counter))
+            path_to_image = os.path.join(path, f"{counter}.jpg")
             save_image(image, path_to_image)
             counter += 1
 
@@ -67,8 +67,8 @@ def check_valid_image(path_to_image):
     Function to check if a file has valid image extensions and return True if it does.
     Note: Azure Cognitive Services only accepts below file formats.
     """
-    valid_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.jfif']
-    if path_to_image.endswith((tuple(valid_extensions))):
+    valid_extensions = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".jfif")
+    if path_to_image.endswith(valid_extensions):
         return True
 
 def save_image(array, path_to_image):

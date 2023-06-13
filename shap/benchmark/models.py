@@ -4,7 +4,7 @@ import sklearn.ensemble
 from sklearn.preprocessing import StandardScaler
 
 
-class KerasWrap(object):
+class KerasWrap:
     """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
     """
     def __init__(self, model, epochs, flatten_output=False):

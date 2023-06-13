@@ -52,7 +52,7 @@ def trend_plot(benchmarks):
             scores = benchmarks[explainer]
             if metric in scores['values']:
                 x, y, auc = scores['values'][metric]
-                plt.plot(x, y, label='{} - {}'.format(round(auc, 3), explainer))
+                plt.plot(x, y, label=f'{round(auc, 3)} - {explainer}')
 
         if 'keep' in metric:
             xlabel = 'Percent Unmasked'

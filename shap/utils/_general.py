@@ -2,15 +2,11 @@ import copy
 import os
 import re
 import sys
-import warnings
 from contextlib import contextmanager
 
 import numpy as np
 import scipy.special
 import sklearn
-
-if (sys.version_info < (3, 0)):
-    warnings.warn("As of version 0.29.0 shap only supports Python 3 (not 2)!")
 
 import_errors = {}
 
@@ -234,7 +230,7 @@ def format_value(s, format_str):
         s = format_str % s
     s = re.sub(r'\.?0+$', '', s)
     if s[0] == "-":
-        s = u"\u2212" + s[1:]
+        s = "\u2212" + s[1:]
     return s
 
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0

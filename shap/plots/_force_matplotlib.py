@@ -272,7 +272,7 @@ def draw_output_element(out_name, out_value, ax):
     font0 = FontProperties()
     font = font0.copy()
     font.set_weight('bold')
-    text_out_val = plt.text(out_value, 0.25, '{0:.2f}'.format(out_value),
+    text_out_val = plt.text(out_value, 0.25, f'{out_value:.2f}',
                             fontproperties=font,
                             fontsize=14,
                             horizontalalignment='center')

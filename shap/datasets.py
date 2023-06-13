@@ -27,8 +27,8 @@ def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=
     """
 
     prefix = github_data_url + "imagenet50_"
-    X = np.load(cache(prefix + "%sx%s.npy" % (resolution, resolution))).astype(np.float32)
-    y = np.loadtxt(cache(prefix + "labels.csv"))
+    X = np.load(cache(f"{prefix}{resolution}x{resolution}.npy")).astype(np.float32)
+    y = np.loadtxt(cache(f"{prefix}labels.csv"))
 
     if n_points is not None:
         X = shap.utils.sample(X, n_points, random_state=0)

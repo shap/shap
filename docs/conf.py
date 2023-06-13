@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # SHAP documentation build configuration file, created by
 # sphinx-quickstart on Tue May 22 10:44:55 2018.

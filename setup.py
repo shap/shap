@@ -189,7 +189,7 @@ def run_setup(
         ],
     }
     extras_require['test'] = extras_require['test-core'] + extras_require['test-extras']
-    extras_require['all'] = list(set(i for val in extras_require.values() for i in val))
+    extras_require["all"] = list({i for val in extras_require.values() for i in val})
 
     setup(
         name='shap',

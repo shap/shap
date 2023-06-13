@@ -73,7 +73,7 @@ class Exact(Explainer):
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
-        return super(Exact, self).__call__(
+        return super().__call__(
             *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
             batch_size=batch_size, interactions=interactions, silent=silent
         )

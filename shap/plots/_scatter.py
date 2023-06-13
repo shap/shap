@@ -1,5 +1,3 @@
-from __future__ import division
-
 import warnings
 
 import numpy as np
