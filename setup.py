@@ -228,8 +228,8 @@ def run_setup(
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
         ],
-        zip_safe=False
-        # python_requires='>3.0' we will add this at some point
+        zip_safe=False,
+        python_requires=">=3.7",
     )
 
 
