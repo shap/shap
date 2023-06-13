@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Fixed deprecation warnings for ntree_limit in `xgboost>=1.4` in tree explainer
+  ([#2987](https://github.com/slundberg/shap/pull/2987))
 - Fixed failing unit tests
   ([#29](https://github.com/dsgibbons/shap/pull/29),
   [#20](https://github.com/dsgibbons/shap/pull/20),
