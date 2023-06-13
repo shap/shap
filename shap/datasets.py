@@ -1,4 +1,5 @@
 import os
+from urllib.request import urlretrieve
 
 import numpy as np
 import pandas as pd
@@ -7,12 +8,8 @@ from sklearn.utils import deprecated
 
 import shap
 
-try:
-    from urllib.request import urlretrieve
-except ImportError:
-    from urllib import urlretrieve
-
 github_data_url = "https://github.com/slundberg/shap/raw/master/data/"
+
 
 def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=unused-argument
     """ This is a set of 50 images representative of ImageNet images.
