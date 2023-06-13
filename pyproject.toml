@@ -10,7 +10,9 @@ testpaths = ["tests"]
 select = [
   "F",  # pyflakes
   "I",  # isort
+  "UP",  # pyupgrade
 ]
+target-version = "py37"
 
 [tool.ruff.per-file-ignores]
 # Unused imports often intentional in top-level __init__.py
