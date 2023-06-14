@@ -18,8 +18,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- Fixed deprecation warnings for ntree_limit in `xgboost>=1.4` in tree explainer
-  ([#2987](https://github.com/slundberg/shap/pull/2987))
 - Fixed failing unit tests
   ([#29](https://github.com/dsgibbons/shap/pull/29),
   [#20](https://github.com/dsgibbons/shap/pull/20),
@@ -38,6 +36,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ([#16](https://github.com/dsgibbons/shap/pull/16)).
 - Fixed deprecation warnings for `sklearn>=1.2` from `sklearn.linear_model`
   ([#22](https://github.com/dsgibbons/shap/pull/22)).
+- Fixed deprecation warnings for `xgboost>=1.4` from `ntree_limit` in tree explainer
+  ([#2987](https://github.com/slundberg/shap/pull/2987)).
 - Fixed installation of package via setuptools
   ([#51](https://github.com/dsgibbons/shap/pull/51)).
 
