@@ -58,3 +58,25 @@ def test_simple_bar(explainer):
     shap.plots.bar(shap_values, show=False)
     plt.tight_layout()
     return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_simple_bar_with_cohorts_dict():
+    """Ensure that bar plots supports dictionary of Explanations as input."""
+    rs = np.random.RandomState(42)
+    fig = plt.figure()
+    shap.plots.bar(
+        {
+            "t1": shap.Explanation(
+                values=rs.randn(40, 5),
+                base_values=np.ones(40) * 0.5,
+            ),
+            "t2": shap.Explanation(
+                values=rs.randn(20, 5),
+                base_values=np.ones(20) * 0.5,
+            ),
+        },
+        show=False,
+    )
+    plt.tight_layout()
+    return fig

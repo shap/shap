@@ -55,8 +55,14 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         cohorts = {"": shap_values}
     elif isinstance(shap_values, Cohorts):
         cohorts = shap_values.cohorts
+    elif isinstance(shap_values, dict):
+        cohorts = shap_values
     else:
-        assert isinstance(shap_values, dict), "You must pass an Explanation object, Cohorts object, or dictionary to bar plot!"
+        emsg = (
+            "The shap_values argument must be an Explanation object, Cohorts "
+            "object, or dictionary of Explanation objects!"
+        )
+        raise TypeError(emsg)
 
     # unpack our list of Explanation objects we need to plot
     cohort_labels = list(cohorts.keys())
