@@ -319,8 +319,8 @@ class Tree(Explainer):
             An array of label values for each sample. Used when explaining loss functions.
 
         tree_limit : None (default) or int
-            Limit the number of trees used by the model. By default None means no use the limit of the
-            original model, and -1 means no limit.
+            Limit the number of trees used by the model. By default, the limit of the original model
+            is used (``None``). ``-1`` means no limit.
 
         approximate : bool
             Run fast, but only roughly approximate the Tree SHAP values. This runs a method
@@ -338,8 +338,8 @@ class Tree(Explainer):
         array or list
             For models with a single output this returns a matrix of SHAP values
             (# samples x # features). Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored in the expected_value
-            attribute of the explainer when it is constant). For models with vector outputs this returns
+            sample and the expected value of the model output (which is stored in the ``expected_value``
+            attribute of the explainer when it is constant). For models with vector outputs, this returns
             a list of such matrices, one for each output.
         """
         # see if we have a default tree_limit in place.
@@ -415,9 +415,9 @@ class Tree(Explainer):
 
                 return out
 
-        X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(X, y,
-                                                                                           tree_limit,
-                                                                                           check_additivity)
+        X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
+            X, y, tree_limit, check_additivity
+        )
         transform = self.model.get_transform()
 
         # run the core algorithm using the C extension
@@ -479,20 +479,20 @@ class Tree(Explainer):
             An array of label values for each sample. Used when explaining loss functions (not yet supported).
 
         tree_limit : None (default) or int
-            Limit the number of trees used by the model. By default None means no use the limit of the
-            original model, and -1 means no limit.
+            Limit the number of trees used by the model. By default, the limit of the original model
+            is used (``None``). ``-1`` means no limit.
 
         Returns
         -------
         array or list
-            For models with a single output this returns a tensor of SHAP values
+            For models with a single output, this returns a tensor of SHAP values
             (# samples x # features x # features). The matrix (# features x # features) for each sample sums
             to the difference between the model output for that sample and the expected value of the model output
-            (which is stored in the expected_value attribute of the explainer). Each row of this matrix sums to the
+            (which is stored in the ``expected_value`` attribute of the explainer). Each row of this matrix sums to the
             SHAP value for that feature for that sample. The diagonal entries of the matrix represent the
-            "main effect" of that feature on the prediction and the symmetric off-diagonal entries represent the
-            interaction effects between all pairs of features for that sample. For models with vector outputs
-            this returns a list of tensors, one for each output.
+            "main effect" of that feature on the prediction. The symmetric off-diagonal entries represent the
+            interaction effects between all pairs of features for that sample.
+            For models with vector outputs, this returns a list of tensors, one for each output.
         """
 
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"
