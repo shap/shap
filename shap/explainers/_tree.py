@@ -840,19 +840,40 @@ class TreeEnsemble:
                 normalize = False
                 self.tree_output = "raw_value"
             # Spark Random forest, create 1 weighted (avg) tree per sub-model
-            if safe_isinstance(model, "pyspark.ml.classification.RandomForestClassificationModel") \
-                    or safe_isinstance(model, "pyspark.ml.regression.RandomForestRegressionModel"):
+            if safe_isinstance(
+                model,
+                [
+                    "pyspark.ml.classification.RandomForestClassificationModel",
+                    "pyspark.ml.regression.RandomForestRegressionModel",
+                ],
+            ):
                 sum_weight = sum(model.treeWeights)  # output is average of trees
-                self.trees = [SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i]/sum_weight) for i, tree in enumerate(model.trees)]
+                self.trees = [
+                    SingleTree(tree, normalize=normalize, scaling=model.treeWeights[i] / sum_weight)
+                    for i, tree in enumerate(model.trees)
+                ]
             # Spark GBT, create 1 weighted (learning rate) tree per sub-model
-            elif safe_isinstance(model, "pyspark.ml.classification.GBTClassificationModel") \
-                    or safe_isinstance(model, "pyspark.ml.regression.GBTRegressionModel"):
-                self.objective = "squared_error" # GBT subtree use the variance
+            elif safe_isinstance(
+                model,
+                [
+                    "pyspark.ml.classification.GBTClassificationModel",
+                    "pyspark.ml.regression.GBTRegressionModel",
+                ],
+            ):
+                self.objective = "squared_error"  # GBT subtree use the variance
                 self.tree_output = "raw_value"
-                self.trees = [SingleTree(tree, normalize=False, scaling=model.treeWeights[i]) for i, tree in enumerate(model.trees)]
+                self.trees = [
+                    SingleTree(tree, normalize=False, scaling=model.treeWeights[i])
+                    for i, tree in enumerate(model.trees)
+                ]
             # Spark Basic model (single tree)
-            elif safe_isinstance(model, "pyspark.ml.classification.DecisionTreeClassificationModel") \
-                    or safe_isinstance(model, "pyspark.ml.regression.DecisionTreeRegressionModel"):
+            elif safe_isinstance(
+                model,
+                [
+                    "pyspark.ml.classification.DecisionTreeClassificationModel",
+                    "pyspark.ml.regression.DecisionTreeRegressionModel",
+                ]
+            ):
                 self.trees = [SingleTree(model, normalize=normalize, scaling=1)]
             else:
                 emsg = f"Unsupported Spark model type: {type(model)}"
@@ -1008,7 +1029,14 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstance(model, "ngboost.ngboost.NGBoost") or safe_isinstance(model, "ngboost.api.NGBRegressor") or safe_isinstance(model, "ngboost.api.NGBClassifier"):
+        elif safe_isinstance(
+            model,
+            [
+                "ngboost.ngboost.NGBoost",
+                "ngboost.api.NGBRegressor",
+                "ngboost.api.NGBClassifier",
+            ]
+        ):
             assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
             if self.model_output == "raw":
                 param_idx = 0 # default to the first parameter of the output distribution
