@@ -336,7 +336,7 @@ class Tree(Explainer):
         Returns
         -------
         array or list
-            For models with a single output this returns a matrix of SHAP values
+            For models with a single output, this returns a matrix of SHAP values
             (# samples x # features). Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored in the ``expected_value``
             attribute of the explainer when it is constant). For models with vector outputs, this returns
