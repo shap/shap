@@ -98,7 +98,7 @@ def waterfall(shap_values, max_display=10, show=True):
     neg_low = []
     neg_high = []
     loc = base_values + values.sum()
-    yticklabels = ["" for i in range(num_features + 1)]
+    yticklabels = ["" for _ in range(num_features + 1)]
 
     # size the plot based on how many features we are plotting
     plt.gcf().set_size_inches(8, num_features * row_height + 1.5)
@@ -182,20 +182,20 @@ def waterfall(shap_values, max_display=10, show=True):
             pos_lefts[i], pos_inds[i], max(dist-hl_scaled, 0.000001), 0,
             head_length=min(dist, hl_scaled),
             color=colors.red_rgb, width=bar_width,
-            head_width=bar_width
+            head_width=bar_width,
         )
 
         if pos_low is not None and i < len(pos_low):
             plt.errorbar(
                 pos_lefts[i] + pos_widths[i], pos_inds[i],
                 xerr=np.array([[pos_widths[i] - pos_low[i]], [pos_high[i] - pos_widths[i]]]),
-                ecolor=colors.light_red_rgb
+                ecolor=colors.light_red_rgb,
             )
 
         txt_obj = plt.text(
             pos_lefts[i] + 0.5*dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
-            fontsize=12
+            fontsize=12,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -207,7 +207,7 @@ def waterfall(shap_values, max_display=10, show=True):
             txt_obj = plt.text(
                 pos_lefts[i] + (5/72)*bbox_to_xscale + dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
                 horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
-                fontsize=12
+                fontsize=12,
             )
 
     # draw the negative arrows
@@ -218,20 +218,20 @@ def waterfall(shap_values, max_display=10, show=True):
             neg_lefts[i], neg_inds[i], -max(-dist-hl_scaled, 0.000001), 0,
             head_length=min(-dist, hl_scaled),
             color=colors.blue_rgb, width=bar_width,
-            head_width=bar_width
+            head_width=bar_width,
         )
 
         if neg_low is not None and i < len(neg_low):
             plt.errorbar(
                 neg_lefts[i] + neg_widths[i], neg_inds[i],
                 xerr=np.array([[neg_widths[i] - neg_low[i]], [neg_high[i] - neg_widths[i]]]),
-                ecolor=colors.light_blue_rgb
+                ecolor=colors.light_blue_rgb,
             )
 
         txt_obj = plt.text(
             neg_lefts[i] + 0.5*dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
-            fontsize=12
+            fontsize=12,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -243,7 +243,7 @@ def waterfall(shap_values, max_display=10, show=True):
             txt_obj = plt.text(
                 neg_lefts[i] - (5/72)*bbox_to_xscale + dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
                 horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
-                fontsize=12
+                fontsize=12,
             )
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
