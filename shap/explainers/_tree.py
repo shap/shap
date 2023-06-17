@@ -1110,23 +1110,35 @@ class TreeEnsemble:
         """
         if self.model_output == "raw":
             transform = "identity"
-        elif self.model_output == "probability" or self.model_output == "probability_doubled":
+        elif self.model_output in ("probability", "probability_doubled"):
             if self.tree_output == "log_odds":
                 transform = "logistic"
             elif self.tree_output == "probability":
                 transform = "identity"
             else:
-                raise NotImplementedError("model_output = \"probability\" is not yet supported when model.tree_output = \"" + self.tree_output + "\"!")
+                emsg = (
+                    "model_output = \"probability\" is not yet supported when model.tree_output = "
+                    f"\"{self.tree_output}\"!"
+                )
+                raise NotImplementedError(emsg)
         elif self.model_output == "log_loss":
-
             if self.objective == "squared_error":
                 transform = "squared_loss"
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                raise NotImplementedError("model_output = \"log_loss\" is not yet supported when model.objective = \"" + self.objective + "\"!")
+                emsg = (
+                    "model_output = \"log_loss\" is not yet supported when model.objective = "
+                    f"\"{self.objective}\"!"
+                )
+                raise NotImplementedError(emsg)
         else:
-            raise ValueError(f"Unrecognized model_output parameter value: {str(self.model_output)}! If model.{str(self.model_output)} is a valid function open a github issue to ask that this method be supported. If you want 'predict_proba' just use 'probability' for now.")
+            emsg = (
+                f"Unrecognized model_output parameter value: {str(self.model_output)}! "
+                f"If `model.{str(self.model_output)}` is a valid function, open a github issue to ask "
+                "that this method be supported. If you want 'predict_proba' just use 'probability' for now."
+            )
+            raise ValueError(emsg)
 
         return transform
 
@@ -1441,6 +1453,7 @@ class SingleTree:
             self.values
         )
 
+
 class IsoTree(SingleTree):
     """
     In sklearn the tree of the Isolation Forest does not calculated in a good way.
@@ -1613,7 +1626,6 @@ class XGBTreeModelLoader:
                 "node_sample_weight": self.sum_hess[i]
             }, data=data, data_missing=data_missing))
         return trees
-
 
     def read(self, dtype):
         size = struct.calcsize(dtype)
