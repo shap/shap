@@ -627,7 +627,7 @@ class TreeEnsemble:
             "reg:logistic": "binary_crossentropy",
             "binary:logistic": "binary_crossentropy",
             "binary_logloss": "binary_crossentropy",
-            "binary": "binary_crossentropy"
+            "binary": "binary_crossentropy",
         }
 
         tree_output_name_map = {
@@ -638,7 +638,7 @@ class TreeEnsemble:
             "reg:logistic": "log_odds",
             "binary:logistic": "log_odds",
             "binary_logloss": "log_odds",
-            "binary": "log_odds"
+            "binary": "log_odds",
         }
 
         if type(model) is dict and "trees" in model:
@@ -739,7 +739,8 @@ class TreeEnsemble:
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyRegressor"):
                 self.base_offset = model.init_.constant_[0]
             else:
-                assert False, "Unsupported init model type: " + str(type(model.init_))
+                emsg = f"Unsupported init model type: {type(model.init_)}"
+                raise InvalidModelError(emsg)
 
             self.trees = [SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing) for e in model.estimators_[:,0]]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -811,17 +812,19 @@ class TreeEnsemble:
 
             # TODO: deal with estimators for each class
             if model.estimators_.shape[1] > 1:
-                assert False, "GradientBoostingClassifier is only supported for binary classification right now!"
+                emsg =  "GradientBoostingClassifier is only supported for binary classification right now!"
+                raise InvalidModelError(emsg)
 
             # currently we only support the logs odds estimator
             if safe_isinstance(model.init_, ["sklearn.ensemble.LogOddsEstimator", "sklearn.ensemble.gradient_boosting.LogOddsEstimator"]):
                 self.base_offset = model.init_.prior
                 self.tree_output = "log_odds"
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
-                self.base_offset = scipy.special.logit(model.init_.class_prior_[1]) # with two classes the trees only model the second class. # pylint: disable=no-member
+                self.base_offset = scipy.special.logit(model.init_.class_prior_[1])  # with two classes the trees only model the second class. # pylint: disable=no-member
                 self.tree_output = "log_odds"
             else:
-                assert False, "Unsupported init model type: " + str(type(model.init_))
+                emsg = f"Unsupported init model type: {type(model.init_)}"
+                raise InvalidModelError(emsg)
 
             self.trees = [SingleTree(e.tree_, scaling=model.learning_rate, data=data, data_missing=data_missing) for e in model.estimators_[:,0]]
             self.objective = objective_name_map.get(model.criterion, None)
@@ -852,7 +855,8 @@ class TreeEnsemble:
                     or safe_isinstance(model, "pyspark.ml.regression.DecisionTreeRegressionModel"):
                 self.trees = [SingleTree(model, normalize=normalize, scaling=1)]
             else:
-                assert False, "Unsupported Spark model type: " + str(type(model))
+                emsg = f"Unsupported Spark model type: {type(model)}"
+                raise NotImplementedError(emsg)
         elif safe_isinstance(model, "xgboost.core.Booster"):
             self.original_model = model
             self.model_type = "xgboost"
