@@ -18,26 +18,27 @@ from ._labels import labels
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
 def waterfall(shap_values, max_display=10, show=True):
-    """ Plots an explantion of a single prediction as a waterfall plot.
+    """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
     output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature
     move the model output from our prior expectation under the background data distribution, to the final model
     prediction given the evidence of all the features. Features are sorted by the magnitude of their SHAP values
     with the smallest magnitude features grouped together at the bottom of the plot when the number of features
-    in the models exceeds the max_display parameter.
+    in the models exceeds the ``max_display`` parameter.
 
     Parameters
     ----------
     shap_values : Explanation
-        A one-dimensional Explanation object that contains the feature values and SHAP values to plot.
+        A one-dimensional :class:`shap.Explanation` object that contains the feature values and SHAP values to plot.
 
     max_display : str
         The maximum number of features to plot.
 
     show : bool
-        Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
-        to be customized further after it has been created.
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot to be customized further after it
+        has been created.
     """
 
     # Turn off interactive plot
