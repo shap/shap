@@ -38,14 +38,15 @@ output_transform_codes = {
     "identity": 0,
     "logistic": 1,
     "logistic_nlogloss": 2,
-    "squared_loss": 3
+    "squared_loss": 3,
 }
 
 feature_perturbation_codes = {
     "interventional": 0,
     "tree_path_dependent": 1,
-    "global_path_dependent": 2
+    "global_path_dependent": 2,
 }
+
 
 class Tree(Explainer):
     """ Uses Tree SHAP algorithms to explain the output of ensemble tree models.
@@ -55,7 +56,16 @@ class Tree(Explainer):
     implementations either inside an external model package or in the local compiled C extension.
     """
 
-    def __init__(self, model, data = None, model_output="raw", feature_perturbation="interventional", feature_names=None, approximate=False, **deprecated_options):
+    def __init__(
+        self,
+        model,
+        data=None,
+        model_output="raw",
+        feature_perturbation="interventional",
+        feature_names=None,
+        approximate=False,
+        **deprecated_options,
+    ):
         """ Build a new Tree explainer for the passed model.
 
         Parameters
@@ -97,7 +107,7 @@ class Tree(Explainer):
         See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
         """
         if feature_names is not None:
-            self.data_feature_names=feature_names
+            self.data_feature_names = feature_names
         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
             self.data_feature_names = list(data.columns)
 
@@ -133,7 +143,6 @@ class Tree(Explainer):
         if feature_perturbation == "independent":
             raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
-
 
         if safe_isinstance(data, "pandas.core.frame.DataFrame"):
             self.data = data.values
@@ -199,7 +208,7 @@ class Tree(Explainer):
 
         # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled" and self.expected_value is not None:
-            self.expected_value = [1-self.expected_value, self.expected_value]
+            self.expected_value = [1 - self.expected_value, self.expected_value]
 
     def __dynamic_expected_value(self, y):
         """ This computes the expected value conditioned on the given label value.
@@ -219,14 +228,14 @@ class Tree(Explainer):
         if not interactions:
             v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate)
             if type(v) is list:
-                v = np.stack(v, axis=-1) # put outputs at the end
+                v = np.stack(v, axis=-1)  # put outputs at the end
         else:
             assert not self.approximate, "Approximate computation not yet supported for interaction effects!"
             v = self.shap_interaction_values(X)
 
-        # the explanation object expects an expected value for each row
+        # the Explanation object expects an expected value for each row
         if hasattr(self.expected_value, "__len__"):
-            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+            ev_tiled = np.tile(self.expected_value, (v.shape[0], 1))
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
@@ -292,7 +301,6 @@ class Tree(Explainer):
 
         return X, y, X_missing, flat_output, tree_limit, check_additivity
 
-
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
         """ Estimate the SHAP values for a set of samples.
 
@@ -348,8 +356,11 @@ class Tree(Explainer):
                         approx_contribs=approximate, validate_features=False
                     )
                 except ValueError as e:
-                        raise ValueError("This reshape error is often caused by passing a bad data matrix to SHAP. " \
-                                         "See https://github.com/slundberg/shap/issues/580") from e
+                    emsg = (
+                        "This reshape error is often caused by passing a bad data matrix to SHAP. "
+                        "See https://github.com/slundberg/shap/issues/580."
+                    )
+                    raise ValueError(emsg) from e
 
                 if check_additivity and self.model.model_output == "raw":
                     xgb_tree_limit = tree_limit // self.model.num_stacked_models
@@ -370,8 +381,11 @@ class Tree(Explainer):
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
                     except ValueError as e:
-                        raise Exception("This reshape error is often caused by passing a bad data matrix to SHAP. " \
-                                         "See https://github.com/slundberg/shap/issues/580") from e
+                        emsg = (
+                            "This reshape error is often caused by passing a bad data matrix to SHAP. "
+                            "See https://github.com/slundberg/shap/issues/580."
+                        )
+                        raise ValueError(emsg) from e
 
             elif self.model.model_type == "catboost": # thanks to the CatBoost team for implementing this...
                 assert not approximate, "approximate=True is not supported for CatBoost models!"
@@ -425,8 +439,8 @@ class Tree(Explainer):
 
         return out
 
-    # we pull off the last column and keep it as our expected_value
     def _get_shap_output(self, phi, flat_output):
+        """Pull off the last column of ``phi`` and keep it as our expected_value."""
         if self.model.num_outputs == 1:
             if self.expected_value is None and self.model.model_output != "log_loss":
                 self.expected_value = phi[0, -1, 0]
@@ -442,12 +456,10 @@ class Tree(Explainer):
             else:
                 out = [phi[:, :-1, i] for i in range(self.model.num_outputs)]
 
-
-        # if our output format requires binary classificaiton to be represented as two outputs then we do that here
+        # if our output format requires binary classification to be represented as two outputs then we do that here
         if self.model.model_output == "probability_doubled":
             out = [-out, out]
         return out
-
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
         """ Estimate the SHAP interaction values for a set of samples.
@@ -517,8 +529,8 @@ class Tree(Explainer):
 
         return self._get_shap_interactions_output(phi,flat_output)
 
-    # we pull off the last column and keep it as our expected_value
     def _get_shap_interactions_output(self, phi, flat_output):
+        """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
             self.expected_value = phi[0, -1, -1, 0]
             if flat_output:
@@ -532,8 +544,6 @@ class Tree(Explainer):
             else:
                 out = [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)]
         return out
-
-
 
     def assert_additivity(self, phi, model_output):
 
@@ -729,6 +739,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
         elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingRegressor"]):
+            # cf. GH #1028 for implementation notes
             import sklearn
             if self.model_output == "predict":
                 self.model_output = "raw"
@@ -751,6 +762,7 @@ class TreeEnsemble:
             self.objective = objective_name_map.get(model.loss, None)
             self.tree_output = "raw_value"
         elif safe_isinstance(model, ["sklearn.ensemble.HistGradientBoostingClassifier"]):
+            # cf. GH #1028 for implementation notes
             import sklearn
             self.base_offset = model._baseline_prediction
             has_len = hasattr(self.base_offset, "__len__")
@@ -759,12 +771,16 @@ class TreeEnsemble:
                 self.base_offset = self.base_offset[0, 0]
                 has_len = False
             if has_len and self.model_output != "raw":
-                raise NotImplementedError("Multi-output HistGradientBoostingClassifier models are not yet supported unless model_output=\"raw\". See GitHub issue #1028")
+                emsg = (
+                    "Multi-output HistGradientBoostingClassifier models are not yet supported unless "
+                    "model_output=\"raw\". See GitHub issue #1028."
+                )
+                raise NotImplementedError(emsg)
             self.input_dtype = sklearn.ensemble._hist_gradient_boosting.common.X_DTYPE
             self.num_stacked_models = len(model._predictors[0])
             if self.model_output == "predict_proba":
                 if self.num_stacked_models == 1:
-                    self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
+                    self.model_output = "probability_doubled"  # with predict_proba we need to double the outputs to match
                 else:
                     self.model_output = "probability"
             self.trees = []
