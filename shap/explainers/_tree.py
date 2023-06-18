@@ -22,8 +22,6 @@ from ._explainer import Explainer
 
 warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
 
-# pylint: disable=unsubscriptable-object
-
 try:
     from .. import _cext
 except ImportError as e:
@@ -658,7 +656,14 @@ class TreeEnsemble:
             self.trees = [SingleTree(t, data=data, data_missing=data_missing) for t in model["trees"]]
         elif type(model) is list and type(model[0]) == SingleTree: # old-style direct-load format
             self.trees = model
-        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestRegressor", "sklearn.ensemble.forest.RandomForestRegressor", "econml.grf._base_grf.BaseGRF"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestRegressor",
+                "sklearn.ensemble.forest.RandomForestRegressor",
+                "econml.grf._base_grf.BaseGRF",
+            ],
+        ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -666,7 +671,13 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.ensemble.IsolationForest", "sklearn.ensemble._iforest.IsolationForest"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.IsolationForest",
+                "sklearn.ensemble._iforest.IsolationForest",
+            ],
+        ):
             self.dtype = np.float32
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing) for e, f in zip(model.estimators_, model.estimators_features_)]
@@ -684,7 +695,13 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.ensemble.ExtraTreesRegressor", "sklearn.ensemble.forest.ExtraTreesRegressor"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.ExtraTreesRegressor",
+                "sklearn.ensemble.forest.ExtraTreesRegressor",
+            ]
+        ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -700,19 +717,38 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor", "econml.grf._base_grftree.GRFTree"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.tree.DecisionTreeRegressor",
+                "sklearn.tree.tree.DecisionTreeRegressor",
+                "econml.grf._base_grftree.GRFTree",
+            ],
+        ):
             self.internal_dtype = model.tree_.value.dtype.type
             self.input_dtype = np.float32
             self.trees = [SingleTree(model.tree_, data=data, data_missing=data_missing)]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, ["sklearn.tree.DecisionTreeClassifier", "sklearn.tree.tree.DecisionTreeClassifier"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.tree.DecisionTreeClassifier",
+                "sklearn.tree.tree.DecisionTreeClassifier",
+            ],
+        ):
             self.internal_dtype = model.tree_.value.dtype.type
             self.input_dtype = np.float32
             self.trees = [SingleTree(model.tree_, normalize=True, data=data, data_missing=data_missing)]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstance(model, ["sklearn.ensemble.RandomForestClassifier", "sklearn.ensemble.forest.RandomForestClassifier"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.RandomForestClassifier",
+                "sklearn.ensemble.forest.RandomForestClassifier",
+            ],
+        ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -720,7 +756,13 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstance(model, ["sklearn.ensemble.ExtraTreesClassifier", "sklearn.ensemble.forest.ExtraTreesClassifier"]): # TODO: add unit test for this case
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.ExtraTreesClassifier",
+                "sklearn.ensemble.forest.ExtraTreesClassifier",
+            ],
+        ): # TODO: add unit test for this case
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -728,13 +770,31 @@ class TreeEnsemble:
             self.trees = [SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
             self.objective = objective_name_map.get(model.criterion, None)
             self.tree_output = "probability"
-        elif safe_isinstance(model, ["sklearn.ensemble.GradientBoostingRegressor", "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.GradientBoostingRegressor",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingRegressor",
+            ],
+        ):
             self.input_dtype = np.float32
 
             # currently we only support the mean and quantile estimators
-            if safe_isinstance(model.init_, ["sklearn.ensemble.MeanEstimator", "sklearn.ensemble.gradient_boosting.MeanEstimator"]):
+            if safe_isinstance(
+                model.init_,
+                [
+                    "sklearn.ensemble.MeanEstimator",
+                    "sklearn.ensemble.gradient_boosting.MeanEstimator",
+                ],
+            ):
                 self.base_offset = model.init_.mean
-            elif safe_isinstance(model.init_, ["sklearn.ensemble.QuantileEstimator", "sklearn.ensemble.gradient_boosting.QuantileEstimator"]):
+            elif safe_isinstance(
+                model.init_,
+                [
+                    "sklearn.ensemble.QuantileEstimator",
+                    "sklearn.ensemble.gradient_boosting.QuantileEstimator",
+                ],
+            ):
                 self.base_offset = model.init_.quantile
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyRegressor"):
                 self.base_offset = model.init_.constant_[0]
@@ -807,7 +867,14 @@ class TreeEnsemble:
                     self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(model.loss, None)
             self.tree_output = "log_odds"
-        elif safe_isinstance(model, ["sklearn.ensemble.GradientBoostingClassifier","sklearn.ensemble._gb.GradientBoostingClassifier", "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier"]):
+        elif safe_isinstance(
+            model,
+            [
+                "sklearn.ensemble.GradientBoostingClassifier",
+                "sklearn.ensemble._gb.GradientBoostingClassifier",
+                "sklearn.ensemble.gradient_boosting.GradientBoostingClassifier",
+            ],
+        ):
             self.input_dtype = np.float32
 
             # TODO: deal with estimators for each class
@@ -816,7 +883,13 @@ class TreeEnsemble:
                 raise InvalidModelError(emsg)
 
             # currently we only support the logs odds estimator
-            if safe_isinstance(model.init_, ["sklearn.ensemble.LogOddsEstimator", "sklearn.ensemble.gradient_boosting.LogOddsEstimator"]):
+            if safe_isinstance(
+                model.init_,
+                [
+                    "sklearn.ensemble.LogOddsEstimator",
+                    "sklearn.ensemble.gradient_boosting.LogOddsEstimator",
+                ],
+            ):
                 self.base_offset = model.init_.prior
                 self.tree_output = "log_odds"
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
@@ -872,7 +945,7 @@ class TreeEnsemble:
                 [
                     "pyspark.ml.classification.DecisionTreeClassificationModel",
                     "pyspark.ml.regression.DecisionTreeRegressionModel",
-                ]
+                ],
             ):
                 self.trees = [SingleTree(model, normalize=normalize, scaling=1)]
             else:
@@ -1035,7 +1108,7 @@ class TreeEnsemble:
                 "ngboost.ngboost.NGBoost",
                 "ngboost.api.NGBRegressor",
                 "ngboost.api.NGBClassifier",
-            ]
+            ],
         ):
             assert model.base_models, "The NGBoost model has empty `base_models`! Have you called `model.fit`?"
             if self.model_output == "raw":
@@ -1389,7 +1462,8 @@ class SingleTree:
 
             nodes = [t.lstrip() for t in tree[:-1].split("\n")]
             nodes_dict = {}
-            for n in nodes: nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
+            for n in nodes:
+                nodes_dict[int(n.split(":")[0])] = n.split(":")[1]
             m = max(nodes_dict.keys())+1
             children_left = -1*np.ones(m,dtype="int32")
             children_right = -1*np.ones(m,dtype="int32")
@@ -1403,7 +1477,7 @@ class SingleTree:
             for i in range(0,len(keys_lst)):
                 value = values_lst[i]
                 key = keys_lst[i]
-                if ("leaf" in value):
+                if "leaf" in value:
                     # Extract values
                     val = float(value.split("leaf=")[1].split(",")[0])
                     node_sample_weight_val = float(value.split("cover=")[1])
