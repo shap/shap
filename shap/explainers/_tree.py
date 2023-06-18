@@ -502,7 +502,10 @@ class Tree(Explainer):
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
 
         # shortcut using the C++ version of Tree SHAP in XGBoost
-        if self.model.model_type == "xgboost" and self.feature_perturbation == "tree_path_dependent":
+        if (
+            self.model.model_type == "xgboost"
+            and self.feature_perturbation == "tree_path_dependent"
+        ):
             import xgboost
             if not isinstance(X, xgboost.core.DMatrix):
                 X = xgboost.DMatrix(X)
@@ -700,7 +703,7 @@ class TreeEnsemble:
             [
                 "sklearn.ensemble.ExtraTreesRegressor",
                 "sklearn.ensemble.forest.ExtraTreesRegressor",
-            ]
+            ],
         ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
@@ -1208,7 +1211,7 @@ class TreeEnsemble:
         else:
             emsg = (
                 f"Unrecognized model_output parameter value: {str(self.model_output)}! "
-                f"If `model.{str(self.model_output)}` is a valid function, open a github issue to ask "
+                f"If `model.{str(self.model_output)}` is a valid function, open a Github issue to ask "
                 "that this method be supported. If you want 'predict_proba' just use 'probability' for now."
             )
             raise ValueError(emsg)
@@ -1301,7 +1304,7 @@ class SingleTree:
             self.values = self.values * scaling
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
 
-        elif type(tree) is dict and 'features' in tree:
+        elif type(tree) is dict and "features" in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
@@ -1311,7 +1314,7 @@ class SingleTree:
             self.node_sample_weight = tree["node_sample_weight"]
 
         # deprecated dictionary support (with sklearn singular style "feature" and "value" names)
-        elif type(tree) is dict and 'children_left' in tree:
+        elif type(tree) is dict and "children_left" in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
@@ -1320,8 +1323,13 @@ class SingleTree:
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
-        elif safe_isinstance(tree, "pyspark.ml.classification.DecisionTreeClassificationModel") \
-                or safe_isinstance(tree, "pyspark.ml.regression.DecisionTreeRegressionModel"):
+        elif safe_isinstance(
+            tree,
+            [
+                "pyspark.ml.classification.DecisionTreeClassificationModel",
+                "pyspark.ml.regression.DecisionTreeRegressionModel",
+            ],
+        ):
             #model._java_obj.numNodes() doesn't give leaves, need to recompute the size
             def getNumNodes(node, size):
                 size = size + 1

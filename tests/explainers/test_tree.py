@@ -867,7 +867,7 @@ class TestExplainerSklearn:
         note: this test used to fail in native TreeExplainer code due to memory corruption
         """
         newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
-        pipeline = self._create_random_forest_vectorizer()
+        pipeline = self._create_vectorizer_for_randomforestclassifier()
         pipeline.fit(newsgroups_train.data, newsgroups_train.target)
         rf = pipeline.named_steps['rf']
         vectorizer = pipeline.named_steps["vectorizer"]
