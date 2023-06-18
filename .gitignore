@@ -22,16 +22,13 @@ docs/generated/
 .ipynb_checkpoints
 .eggs
 .ruff_cache
-shap/_cext.cpython-36m-darwin.so
-shap/_cext.cpython-35m-darwin.so
 javascript/build/*
 .vscode
-shap/_cext.so
 .DS_Store
 /notebooks/deep_explainer/mnist_data
 /data/CRIC*
 /docs/artwork/local
-/shap/_cext*
+shap/_cext*
 .idea
 catboost_info
 tests/local_scratch.py
