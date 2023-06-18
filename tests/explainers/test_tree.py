@@ -307,40 +307,6 @@ def create_binary_newsgroups_data():
     return newsgroups_train, newsgroups_test, class_names
 
 
-def create_random_forest_vectorizer():
-    # pylint: disable=unused-argument,no-self-use,missing-class-docstring
-    vectorizer = sklearn.feature_extraction.text.CountVectorizer(lowercase=False, min_df=0.0,
-                                                                 binary=True)
-
-    class DenseTransformer(sklearn.base.TransformerMixin):
-        def fit(self, X, y=None, **fit_params):
-            return self
-
-        def transform(self, X, y=None, **fit_params):
-            return X.toarray()
-
-    rf = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=777)
-    return sklearn.pipeline.Pipeline(
-        [('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)])
-
-
-def test_sklearn_random_forest_newsgroups():
-    # note: this test used to fail in native TreeExplainer code due to memory corruption
-    newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
-    pipeline = create_random_forest_vectorizer()
-    pipeline.fit(newsgroups_train.data, newsgroups_train.target)
-    rf = pipeline.named_steps['rf']
-    vectorizer = pipeline.named_steps['vectorizer']
-    densifier = pipeline.named_steps['to_dense']
-
-    dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
-
-    test_row = newsgroups_test.data[83:84]
-    explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
-    vec_row = vectorizer.transform(test_row)
-    dense_row = densifier.transform(vec_row)
-    explainer.shap_values(dense_row)
-
 
 def test_gpboost():
     gpboost = pytest.importorskip("gpboost")
@@ -877,6 +843,43 @@ class TestExplainerSklearn:
 
         # ensure the interaction plot works
         shap.summary_plot(interaction_vals[0], X, show=False)
+
+    def _create_vectorizer_for_randomforestclassifier(self):
+        """Helper setup function"""
+        vectorizer = sklearn.feature_extraction.text.CountVectorizer(
+            lowercase=False, min_df=0.0, binary=True
+        )
+
+        class DenseTransformer(sklearn.base.TransformerMixin):
+            def fit(self, X, y=None, **fit_params):
+                return self
+
+            def transform(self, X, y=None, **fit_params):
+                return X.toarray()
+
+        rf = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=777)
+        return sklearn.pipeline.Pipeline(
+            [('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)]
+        )
+
+    def test_sklearn_random_forest_newsgroups(self):
+        """
+        note: this test used to fail in native TreeExplainer code due to memory corruption
+        """
+        newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
+        pipeline = self._create_random_forest_vectorizer()
+        pipeline.fit(newsgroups_train.data, newsgroups_train.target)
+        rf = pipeline.named_steps['rf']
+        vectorizer = pipeline.named_steps["vectorizer"]
+        densifier = pipeline.named_steps["to_dense"]
+
+        dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
+
+        test_row = newsgroups_test.data[83:84]
+        explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
+        vec_row = vectorizer.transform(test_row)
+        dense_row = densifier.transform(vec_row)
+        explainer.shap_values(dense_row)
 
     def test_multi_target_random_forest_regressor(self):
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
