@@ -104,7 +104,7 @@ class Tree(Explainer):
             sum up to the log loss of the model for each sample. This is helpful for breaking down model
             performance by feature.
             Currently the "probability" and "log_loss" options are only supported when
-            ``feature_dependence="interventional"``.
+            ``feature_perturbation="interventional"``.
 
         Examples
         --------
