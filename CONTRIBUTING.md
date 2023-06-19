@@ -1,13 +1,14 @@
 # Contributing guidelines
 
 - [Introduction](#introduction)
+- [Installing from the master branch](#installing-from-the-master-branch)
+- [Setting up a local development environment](#setting-up-a-local-development-environment)
+  - [Code checks with precommit](#code-checks-with-precommit)
+  - [Unit tests with pytest](#unit-tests-with-pytest)
+  - [Documenation](#documenation)
 - [Pull Requests (PRs)](#pull-requests-prs)
   - [Etiquette for creating PRs](#etiquette-for-creating-prs)
   - [Checklist for publishing PRs](#checklist-for-publishing-prs)
-- [Setting up a local development
-  environment](#setting-up-a-local-development-environment)
-  - [Code checks with pre-commit](#code-checks-with-pre-commit)
-  - [Unit tests with pytest](#unit-tests-with-pytest)
 
 ## Introduction
 
@@ -16,49 +17,55 @@ and contributions of all forms are welcome!
 
 You can contribute by:
 
-- Submitting bug reports and features requests on the GitHub issue tracker
-- Contributing fixes and improvements via Pull Requests
+- Submitting bug reports and features requests on the GitHub
+  [issue tracker](https://github.com/slundberg/shap/issues), or
+- Contributing fixes and improvements via
+  [Pull Requests](https://github.com/slundberg/shap/pulls).
 
-## Pull Requests (PRs)
+## Installing from the master branch
 
-### Etiquette for creating PRs
+To get the very latest version of shap, you can pip-install the library directly
+from the `master` branch:
 
-- Before starting on a PR, please make a proposal by opening an Issue, and check
-  for any duplicates
-- Work on a feature branch with a descriptive name
-- Open a Draft PR as early as possible, do not wait until the feature is ready
+```bash
+pip install git+https://github.com/slundberg/shap.git@master
+```
 
-### Checklist for publishing PRs
-
-Before marking your PR as "ready for review" (by removing the `Draft` status),
-please ensure:
-
-- All [pre-commit hooks](https://pre-commit.com/#install) pass
-- If your PR adds any new features or fixes a bug, ensure unit tests have been
-  added
-- Your feature branch is up-to-date with the master branch
+This can be useful to test if a particular issue or bug is still present in the
+lastest code.
 
 ## Setting up a local development environment
 
-1. Fork the repository on Github to your user area
-2. Clone the repository to your local environment
+To set up a local development environment
+
+1. Fork the repository on Github to your user area.
+2. Clone the repository to your local environment:
+
+   ```bash
+   # Clone with HTTPS
+   git clone https://github.com/slundberg/shap.git
+
+   # Or, clone with SSH
+   git clone git@github.com:slundberg/shap.git
+   ```
+
 3. Create a new environment, e.g. with conda:
 
    ```bash
    conda create -n shap python=3.11
-   conda activte shap
+   conda activate shap
    ```
 
 4. Install the project and dependencies, including the `test` extras:
 
    ```bash
-   pip install --editable .[test,plots]
+   pip install --editable '.[test,plots]'
    ```
 
-### Code checks with pre-commit
+### Code checks with precommit
 
 We use [pre-commit hooks](https://pre-commit.com/#install) to run code checks.
-Enable pre-commit in your local environment with:
+Enable `pre-commit` in your local environment with:
 
 ```bash
 pip install pre-commit
@@ -73,9 +80,10 @@ pre-commit run --all-files
 ```
 
 [Ruff](https://beta.ruff.rs/docs/) is used as a linter, and it is enabled as a
-pre-commit hook. You can also run ruff locally with:
+pre-commit hook. You can also run `ruff` locally with:
 
 ```bash
+pip install ruff
 ruff check .
 ```
 
@@ -86,3 +94,33 @@ The unit test suite can be run locally with:
 ```bash
 pytest
 ```
+
+### Documenation
+
+The documentation is built on CI, and is hosted by readthedocs. To build the
+documentation locally:
+
+1. Run `make docs`
+2. Go to <http://localhost:8000> and check that everything looks good
+
+## Pull Requests (PRs)
+
+### Etiquette for creating PRs
+
+- Before starting on a PR, please make a proposal by opening an Issue, and check
+  for any duplicates. This isn't necessary for trivial PRs such as fixing a
+  typo.
+- Work on a feature branch with a descriptive name such as
+  `fix/lightgbm-warnings` or `doc/contributing`.
+- Open a Draft PR as early as possible, do not wait until the feature is ready.
+- Separate functional code changes (such as bug fixes) from refactoring changes.
+  PRs should contain one or the other, but not both.
+
+### Checklist for publishing PRs
+
+Before marking your PR as "ready for review" (by removing the `Draft` status),
+please ensure:
+
+- Your feature branch is up-to-date with the master branch,
+- All [pre-commit hooks](https://pre-commit.com/#install) pass, and
+- Unit tests have been added (if your PR adds any new features or fixes a bug).
