@@ -5,7 +5,7 @@
 - [Setting up a local development environment](#setting-up-a-local-development-environment)
   - [Code checks with precommit](#code-checks-with-precommit)
   - [Unit tests with pytest](#unit-tests-with-pytest)
-  - [Documenation](#documenation)
+  - [Documentation](#documentation)
 - [Pull Requests (PRs)](#pull-requests-prs)
   - [Etiquette for creating PRs](#etiquette-for-creating-prs)
   - [Checklist for publishing PRs](#checklist-for-publishing-prs)
@@ -95,7 +95,7 @@ The unit test suite can be run locally with:
 pytest
 ```
 
-### Documenation
+### Documentation
 
 The documentation is built on CI, and is hosted by readthedocs. To build the
 documentation locally:
