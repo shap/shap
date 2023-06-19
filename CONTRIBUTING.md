@@ -97,11 +97,15 @@ pytest
 
 ### Documentation
 
-The documentation is built on CI, and is hosted by readthedocs. To build the
-documentation locally:
+The documentation is built on CI, and is hosted by readthedocs. If you have
+modified the docstrings or notebooks, please also check that the changes are
+rendered properly in the generated HTML files.
 
-1. Run `make docs`
-2. Go to <http://localhost:8000> and check that everything looks good
+To build the documentation locally:
+
+1. Navigate to the `docs` directory
+2. Run `make html`
+3. Open "_build/html/index.html" in your browser
 
 ## Pull Requests (PRs)
 
