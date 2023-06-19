@@ -31,8 +31,8 @@ from the `master` branch:
 pip install git+https://github.com/slundberg/shap.git@master
 ```
 
-This can be useful to test if a particular issue or bug is still present in the
-lastest code.
+This can be useful to test if a particular issue or bug has been fixed since the
+most recent release.
 
 ## Setting up a local development environment
 
