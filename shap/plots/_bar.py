@@ -10,6 +10,7 @@ import scipy
 
 from .. import Cohorts, Explanation
 from ..utils import format_value, ordinal_str
+from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
 from ._utils import (
@@ -54,17 +55,35 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         cohorts = {"": shap_values}
     elif isinstance(shap_values, Cohorts):
         cohorts = shap_values.cohorts
+    elif isinstance(shap_values, dict):
+        cohorts = shap_values
     else:
-        assert isinstance(shap_values, dict), "You must pass an Explanation object, Cohorts object, or dictionary to bar plot!"
+        emsg = (
+            "The shap_values argument must be an Explanation object, Cohorts "
+            "object, or dictionary of Explanation objects!"
+        )
+        raise TypeError(emsg)
 
     # unpack our list of Explanation objects we need to plot
     cohort_labels = list(cohorts.keys())
     cohort_exps = list(cohorts.values())
-    for i in range(len(cohort_exps)):
-        if len(cohort_exps[i].shape) == 2:
-            cohort_exps[i] = cohort_exps[i].abs.mean(0)
-        assert isinstance(cohort_exps[i], Explanation), "The shap_values paramemter must be a Explanation object, Cohorts object, or dictionary of Explanation objects!"
-        assert cohort_exps[i].shape == cohort_exps[0].shape, "When passing several Explanation objects they must all have the same shape!"
+    for i, exp in enumerate(cohort_exps):
+        if not isinstance(exp, Explanation):
+            emsg = (
+                "The shap_values argument must be an Explanation object, Cohorts "
+                "object, or dictionary of Explanation objects!"
+            )
+            raise TypeError(emsg)
+
+        if len(exp.shape) == 2:
+            # collapse the Explanation arrays to be of shape (#features,)
+            cohort_exps[i] = exp.abs.mean(0)
+        if cohort_exps[i].shape != cohort_exps[0].shape:
+            emsg = (
+                "When passing several Explanation objects, they must all have "
+                "the same number of feature columns!"
+            )
+            raise DimensionError(emsg)
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
 
     # unpack the Explanation object
