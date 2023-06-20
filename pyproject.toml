@@ -24,6 +24,8 @@ target-version = "py37"
 [tool.cibuildwheel]
 skip = ["cp36-*", "pp*", "*-musllinux_*", "*-manylinux_i686", "*_ppc64le", "*_s390x"]
 build-verbosity = 2
+test-command = "pytest {project}/tests"
+test-extras = ["test", "plots"]
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
