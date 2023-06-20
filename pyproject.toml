@@ -20,3 +20,15 @@ target-version = "py37"
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
+
+[tool.cibuildwheel]
+skip = ["cp36-*", "pp*", "*-musllinux_*", "*-manylinux_i686", "*_ppc64le", "*_s390x"]
+build-verbosity = 2
+test-command = "pytest {project}/tests"
+test-extras = ["test", "plots"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.linux]
+archs = ["auto", "aarch64"]
