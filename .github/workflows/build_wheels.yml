@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-2019, macOS-11]
+        os: [ubuntu-22.04, windows-2022, macOS-12]
 
     steps:
       - name: Check out the repo
