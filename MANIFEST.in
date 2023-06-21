@@ -1,2 +1,0 @@
-include shap/cext/*
-include shap/plots/resources/*
