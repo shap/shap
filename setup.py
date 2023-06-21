@@ -213,6 +213,7 @@ def run_setup(
             'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils',
             'shap.actions', 'shap.models'
         ],
+        package_data={'shap': ['plots/resources/*', 'cext/tree_shap.h']},
         install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>=4.27.0',
                           'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
