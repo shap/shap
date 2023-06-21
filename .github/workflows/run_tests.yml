@@ -61,7 +61,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
-          pip install --upgrade --upgrade-strategy eager -e '.[test,plots]'
+          pip install --upgrade --upgrade-strategy eager '.[test,plots]'
       - name: Test with pytest
         run: |
           python -m pytest --durations=20 \
