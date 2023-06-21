@@ -40,8 +40,10 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Build sdist (pep517)
         run: |
@@ -61,8 +63,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: install requirements
         run: pip install twine==4.0.2
