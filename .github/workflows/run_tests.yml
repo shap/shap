@@ -64,9 +64,17 @@ jobs:
           pip install --upgrade --upgrade-strategy eager '.[test,plots]'
       - name: Path debug information
         run: |
-          pwd
+          echo "** Contents of PATH:"
+          echo $PATH
+          echo "** Contents of PYTHONPATH:"
+          echo $PYTHONPATH
+          echo "** Contents of working directory:"
           ls -lah
-          echo "SHAP file location"
+          echo "** Working directory:"
+          pwd
+          echo "** location of pip-installed shap:"
+          pip show shap
+          echo "** SHAP is being imported from:"
           python -c "import shap;print(shap.__file__)"
       - name: Test with pytest
         run: |
