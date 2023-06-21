@@ -100,7 +100,7 @@ def compile_cuda_module(host_args):
                  "-gencode=arch=compute_70,code=sm_70 " + \
                  "-gencode=arch=compute_75,code=sm_75 " + \
                  "-gencode=arch=compute_75,code=compute_75"
-    nvcc_command = "-allow-unsupported-compiler shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
+    nvcc_command = "-allow-unsupported-compiler src/shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
                    "--std c++14 " \
                    "--expt-extended-lambda " \
                    "--expt-relaxed-constexpr {}".format(
@@ -128,7 +128,7 @@ def run_setup(
             compile_args.append('/MD')
 
         ext_modules.append(
-            Extension('shap._cext', sources=['shap/cext/_cext.cc'],
+            Extension('shap._cext', sources=['src/shap/cext/_cext.cc'],
                       include_dirs=[np.get_include()],
                       extra_compile_args=compile_args))
     if with_cuda:
@@ -143,12 +143,12 @@ def run_setup(
             lib_dir, lib = compile_cuda_module(compile_args)
 
             ext_modules.append(
-                Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
+                Extension('shap._cext_gpu', sources=['src/shap/cext/_cext_gpu.cc'],
                           extra_compile_args=compile_args,
                           include_dirs=[np.get_include()],
                           library_dirs=[lib_dir, cudart_path],
                           libraries=[lib, 'cudart'],
-                          depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h','setup.py'])
+                          depends=['src/shap/cext/_cext_gpu.cu', 'src/shap/cext/gpu_treeshap.h','setup.py'])
             )
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
@@ -193,7 +193,7 @@ def run_setup(
 
     setup(
         name='shap',
-        version=find_version("shap", "__init__.py"),
+        version=find_version("src", "shap", "__init__.py"),
         description='A unified approach to explain the output of any machine learning model.',
         long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain "
                          "the output of " + \
@@ -207,6 +207,7 @@ def run_setup(
         author='Scott Lundberg',
         author_email='slund1@cs.washington.edu',
         license='MIT',
+        package_dir = {"": "src"},
         packages=[
             'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers._deep',
             'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils',

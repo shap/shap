@@ -15,6 +15,7 @@ shap.egg-info
 /build
 /dist
 /shap/cached_data
+/src/shap/cached_data
 notebooks/local_scratch
 docs/local
 docs/_build
@@ -29,6 +30,7 @@ javascript/build/*
 /data/CRIC*
 /docs/artwork/local
 shap/_cext*
+src/shap/_cext*
 .idea
 catboost_info
 tests/local_scratch.py

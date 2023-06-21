@@ -1,2 +1,2 @@
-include shap/cext/*
-include shap/plots/resources/*
+include src/shap/cext/*
+include src/shap/plots/resources/*
