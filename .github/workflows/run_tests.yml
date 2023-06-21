@@ -62,6 +62,12 @@ jobs:
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
           pip install --upgrade --upgrade-strategy eager '.[test,plots]'
+      - name: Path debug information
+        run: |
+          pwd
+          ls -lah
+          echo "SHAP file location"
+          python -c "import shap;print(shap.__file__)"
       - name: Test with pytest
         run: |
           python -m pytest --durations=20 \
