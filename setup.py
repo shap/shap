@@ -1,7 +1,5 @@
-import codecs
 import os
 import platform
-import re
 import subprocess
 import sys
 import sysconfig
@@ -26,21 +24,6 @@ if sys.platform == 'darwin':
         python_target: Version = parse(sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET'))
         if python_target < Version('10.9') and current_system >= Version('10.9'):
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
-
-here = os.path.abspath(os.path.dirname(__file__))
-
-
-def read(*parts):
-    with codecs.open(os.path.join(here, *parts), 'r') as fp:
-        return fp.read()
-
-
-def find_version(*file_paths):
-    version_file = read(*file_paths)
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
 
 
 def find_in_path(name, path):
@@ -83,7 +66,7 @@ def get_cuda_path():
         cuda_home = "/usr/local/cuda"
         nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
 
-    return (cuda_home, nvcc)
+    return cuda_home, nvcc
 
 
 def compile_cuda_module(host_args):
@@ -95,19 +78,21 @@ def compile_cuda_module(host_args):
     _, nvcc = get_cuda_path()
 
     print("NVCC ==> ", nvcc)
-    arch_flags = "-arch=sm_37 " + \
-                 "-gencode=arch=compute_37,code=sm_37 " + \
-                 "-gencode=arch=compute_70,code=sm_70 " + \
-                 "-gencode=arch=compute_75,code=sm_75 " + \
-                 "-gencode=arch=compute_75,code=compute_75"
-    nvcc_command = "-allow-unsupported-compiler shap/cext/_cext_gpu.cu -lib -o {} -Xcompiler {} -I{} " \
-                   "--std c++14 " \
-                   "--expt-extended-lambda " \
-                   "--expt-relaxed-constexpr {}".format(
-                       lib_out,
-                       ','.join(host_args),
-                       sysconfig.get_path("include"),
-                       arch_flags)
+    arch_flags = (
+        "-arch=sm_37 "
+        "-gencode=arch=compute_37,code=sm_37 "
+        "-gencode=arch=compute_70,code=sm_70 "
+        "-gencode=arch=compute_75,code=sm_75 "
+        "-gencode=arch=compute_75,code=compute_75"
+    )
+    nvcc_command = (
+        f"-allow-unsupported-compiler shap/cext/_cext_gpu.cu -lib -o {lib_out} "
+        f"-Xcompiler {','.join(host_args)} "
+        f"--include-path {sysconfig.get_path('include')} "
+        "--std c++14 "
+        "--expt-extended-lambda "
+        f"--expt-relaxed-constexpr {arch_flags}"
+    )
     print("Compiling cuda extension, calling nvcc with arguments:")
     print([nvcc] + nvcc_command.split(' '))
     subprocess.run([nvcc] + nvcc_command.split(' '), check=True)
@@ -148,7 +133,7 @@ def run_setup(
                           include_dirs=[np.get_include()],
                           library_dirs=[lib_dir, cudart_path],
                           libraries=[lib, 'cudart'],
-                          depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h','setup.py'])
+                          depends=['shap/cext/_cext_gpu.cu', 'shap/cext/gpu_treeshap.h', 'setup.py'])
             )
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
@@ -192,43 +177,8 @@ def run_setup(
     extras_require["all"] = list({i for val in extras_require.values() for i in val})
 
     setup(
-        name='shap',
-        version=find_version("shap", "__init__.py"),
-        description='A unified approach to explain the output of any machine learning model.',
-        long_description="SHAP (SHapley Additive exPlanations) is a unified approach to explain "
-                         "the output of " + \
-                         "any machine learning model. SHAP connects game theory with local "
-                         "explanations, uniting " + \
-                         "several previous methods and representing the only possible consistent "
-                         "and locally accurate " + \
-                         "additive feature attribution method based on expectations.",
-        long_description_content_type="text/markdown",
-        url='http://github.com/slundberg/shap',
-        author='Scott Lundberg',
-        author_email='slund1@cs.washington.edu',
-        license='MIT',
-        packages=[
-            'shap', 'shap.explainers', 'shap.explainers.other', 'shap.explainers._deep',
-            'shap.plots', 'shap.plots.colors', 'shap.benchmark', 'shap.maskers', 'shap.utils',
-            'shap.actions', 'shap.models'
-        ],
-        install_requires=['numpy', 'scipy', 'scikit-learn', 'pandas', 'tqdm>=4.27.0',
-                          'packaging>20.9', 'slicer==0.0.7', 'numba', 'cloudpickle'],
         extras_require=extras_require,
         ext_modules=ext_modules,
-        classifiers=[
-            "Operating System :: Microsoft :: Windows",
-            "Operating System :: POSIX",
-            "Operating System :: Unix",
-            "Operating System :: MacOS",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Programming Language :: Python :: 3.9",
-            "Programming Language :: Python :: 3.10",
-            "Programming Language :: Python :: 3.11",
-        ],
-        zip_safe=False,
-        python_requires=">=3.7",
     )
 
 

@@ -1,6 +1,65 @@
 [build-system]
-requires = ["setuptools", "wheel", "oldest-supported-numpy", "packaging>20.9"]
+requires = ["setuptools>=61.0", "wheel", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "shap"
+description = "A unified approach to explain the output of any machine learning model."
+readme = "README.md"
+license = {text = "MIT License"}
+authors = [
+    {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
+]
+requires-python = ">=3.7"
+dependencies = [
+  'numpy',
+  'scipy',
+  'scikit-learn',
+  'pandas',
+  'tqdm>=4.27.0',
+  'packaging>20.9',
+  'slicer==0.0.7',
+  'numba',
+  'cloudpickle'
+]
+classifiers = [
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = 'http://github.com/slundberg/shap'
+Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
+
+[tool.setuptools]
+packages = [
+  'shap',
+  'shap.explainers',
+  'shap.explainers.other',
+  'shap.explainers._deep',
+  'shap.plots',
+  'shap.plots.colors',
+  'shap.benchmark',
+  'shap.maskers',
+  'shap.utils',
+  'shap.actions',
+  'shap.models'
+]
+zip-safe = false
+
+[tool.setuptools.dynamic]
+version = {attr = "shap.__version__"}
+
+[tool.setuptools.package-data]
+shap = ["plots/resources/*", "cext/*"]
 
 [tool.pytest.ini_options]
 addopts = "--mpl"
