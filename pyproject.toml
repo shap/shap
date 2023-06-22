@@ -42,11 +42,13 @@ Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 [tool.setuptools]
 packages = [
   'shap',
+  'shap.cext',
   'shap.explainers',
   'shap.explainers.other',
   'shap.explainers._deep',
   'shap.plots',
   'shap.plots.colors',
+  'shap.plots.resources',
   'shap.benchmark',
   'shap.maskers',
   'shap.utils',
