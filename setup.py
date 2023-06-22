@@ -138,48 +138,7 @@ def run_setup(
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
 
-    extras_require = {
-        'plots': [
-            'matplotlib',
-            'ipython'
-        ],
-        'others': [
-            'lime',
-        ],
-        'docs': [
-            'matplotlib',
-            'ipython',
-            'numpydoc',
-            'sphinx_rtd_theme',
-            'sphinx',
-            'nbsphinx',
-        ],
-        'test-core': [
-            "pytest",
-            "pytest-mpl",
-            "pytest-cov",
-        ],
-        'test-extras': [
-            "xgboost",
-            "lightgbm",
-            "catboost",
-            "pyspark",
-            "pyod",
-            "transformers",
-            "torch",
-            "torchvision",
-            "tensorflow",
-            "sentencepiece",
-            "opencv-python",
-        ],
-    }
-    extras_require['test'] = extras_require['test-core'] + extras_require['test-extras']
-    extras_require["all"] = list({i for val in extras_require.values() for i in val})
-
-    setup(
-        extras_require=extras_require,
-        ext_modules=ext_modules,
-    )
+    setup(ext_modules=ext_modules)
 
 
 def try_run_setup(**kwargs):
@@ -207,7 +166,4 @@ def try_run_setup(**kwargs):
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(
-        with_binary=True,
-        with_cuda=True,
-    )
+    try_run_setup(with_binary=True, with_cuda=True)

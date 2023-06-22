@@ -33,7 +33,29 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
 ]
-dynamic = ["version", "optional-dependencies"]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+plots = ["matplotlib", "ipython"]
+others = ["lime"]
+docs = ["matplotlib", "ipython", "numpydoc", "sphinx_rtd_theme", "sphinx", "nbsphinx"]
+test-core = ["pytest", "pytest-mpl", "pytest-cov"]
+test = [
+  "pytest",
+  "pytest-mpl",
+  "pytest-cov",
+  "xgboost",
+  "lightgbm",
+  "catboost",
+  "pyspark",
+  "pyod",
+  "transformers",
+  "torch",
+  "torchvision",
+  "tensorflow",
+  "sentencepiece",
+  "opencv-python",
+]
 
 [project.urls]
 Repository = 'http://github.com/slundberg/shap'
