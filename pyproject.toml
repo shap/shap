@@ -33,7 +33,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
 ]
-dynamic = ["version"]
+dynamic = ["version", "optional-dependencies"]
 
 [project.urls]
 Repository = 'http://github.com/slundberg/shap'
