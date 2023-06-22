@@ -114,17 +114,17 @@ test-extras = ["test", "plots"]
 # skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
 test-skip = "cp37-* cp38-macosx_x86_64"
 # Temporary debugging steps
-before-test = """\
-  set -x \
-  pwd \
-  ls -lah \
-  mkdir debug \
-  && unzip wheelhouse/*.whl -d debug \
-  && ls -R debug \
-  && echo $PATH
-  %% echo $PYTHONPATH
-  && python -c \"import shap;print(shap.__file__)\"\
-  """
+before-test = [
+  "set -x",
+  "pwd",
+  "ls -lah",
+  "mkdir debug",
+  "unzip wheelhouse/*.whl -d debug",
+  "ls -R debug",
+  "echo $PATH",
+  "echo $PYTHONPATH",
+  'python -c "import shap;print(shap.__file__)"',
+]
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
