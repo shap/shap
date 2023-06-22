@@ -105,9 +105,18 @@ target-version = "py37"
 "shap/plots/colors/_colorconv.py" = ["ALL"]
 
 [tool.cibuildwheel]
-build = ["*-win_amd64", "*-manylinux_x86_64", "*-macosx_x86_64"]
 skip = ["cp36-*", "pp*"]
 build-verbosity = 2
+test-command = "pytest -v {project}/tests"
+test-extras = ["test", "plots"]
+# skipping cp37 since catboost wheel not available
+# skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
+test-skip = "cp37-* cp38-macosx_x86_64"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+# Temporary debugging steps
 test-command = [
   "set -x",
   "pwd",
@@ -116,24 +125,9 @@ test-command = [
   "echo Beginning tests...",
   "pytest -v {project}/tests",
 ]
-test-extras = ["test", "plots"]
-# skipping cp37 since catboost wheel not available
-# skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
-test-skip = "cp37-* cp38-macosx_x86_64"
-# Temporary debugging steps
-before-test = [
-  "set -x",
-  "pwd",
-  "ls -lah",
-  "ls -R wheelhouse",
-  "ls /tmp/cibuildwheel/repaired_wheel",
-  "zipinfo /tmp/cibuildwheel/repaired_wheel/*.whl",
-  "echo Contents of PATH: $PATH",
-  "echo Contents of PYTHONPATH: $PYTHONPATH",
-]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
-
-[tool.cibuildwheel.linux]
-archs = ["auto", "aarch64"]
+archs = ["x86_64"]
