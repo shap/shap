@@ -59,16 +59,20 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         )
         raise TypeError(emsg)
 
-    if len(shap_values.shape) == 1:
-        raise ValueError(
+    sv_shape = shap_values.shape
+    if len(sv_shape) == 1:
+        emsg = (
             "The beeswarm plot does not support plotting a single instance, please pass "
             "an explanation matrix with many instances!"
         )
-    elif len(shap_values.shape) > 2:
-        raise ValueError(
+        raise ValueError(emsg)
+    elif len(sv_shape) > 2:
+        emsg = (
             "The beeswarm plot does not support plotting explanations with instances that have more "
             "than one dimension!"
         )
+        raise ValueError(emsg)
+
     shap_exp = shap_values
     # we make a copy here, because later there are places that might modify this array
     values = np.copy(shap_exp.values)
