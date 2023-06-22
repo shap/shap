@@ -8,11 +8,6 @@ import numpy as np
 from packaging.version import Version, parse
 from setuptools import Extension, setup
 
-# to publish use:
-# > python setup.py sdist bdist_wheel upload
-# which depends on ~/.pypirc
-
-
 # This is copied from @robbuckley's fix for Panda's
 # For mac, ensure extensions are built for macos 10.9 when compiling on a
 # 10.9 system or above, overriding distuitls behavior which is to target
