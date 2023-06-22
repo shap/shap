@@ -108,14 +108,23 @@ target-version = "py37"
 build = ["*-win_amd64", "*-manylinux_x86_64", "*-macosx_x86_64"]
 skip = ["cp36-*", "pp*"]
 build-verbosity = 2
-# Temporary change: disable testing to enable inspection of wheels
-# test-command = "pytest -v {project}/tests"
-# test-extras = ["test", "plots"]
+test-command = "pytest -v {project}/tests"
+test-extras = ["test", "plots"]
 # skipping cp37 since catboost wheel not available
 # skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
-# test-skip = "cp37-* cp38-macosx_x86_64"
-# # Temporary debugging steps
-# before-test = "mkdir debug && unzip wheelhouse/*.whl -d debug && ls -R debug"
+test-skip = "cp37-* cp38-macosx_x86_64"
+# Temporary debugging steps
+before-test = """\
+  set -x \
+  pwd \
+  ls -lah \
+  mkdir debug \
+  && unzip wheelhouse/*.whl -d debug \
+  && ls -R debug \
+  && echo $PATH
+  %% echo $PYTHONPATH
+  && python -c \"import shap;print(shap.__file__)\"\
+  """
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
