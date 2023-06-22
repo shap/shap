@@ -120,6 +120,8 @@ archs = ["x86_64"]
 test-command = [
   "set -x",
   "pwd",
+  "echo Project: {project}",
+  "echo Package: {package}",
   'python -c "import shap; print(shap.__file__)"',
   'python -c "import shap, os; print(os.listdir(os.path.dirname(shap.__file__)))"',
   "echo Beginning tests...",
