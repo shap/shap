@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ([dsgibbons#39](https://github.com/dsgibbons/shap/pull/39) by @thatlittleboy).
 - Added `__call__` to `KernelExplainer`
   ([#2966](https://github.com/slundberg/shap/pull/2966) by @dwolfeu).
+- Added [contributing guidelines](https://github.com/slundberg/shap/blob/master/CONTRIBUTING.md)
+  ([#2996](https://github.com/slundberg/shap/pull/2996) by @connortann)
 
 ### Fixed
 
@@ -64,10 +66,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
    [dsgibbons#26](https://github.com/dsgibbons/shap/pull/26),
    [dsgibbons#27](https://github.com/dsgibbons/shap/pull/27),
    [#2973](https://github.com/slundberg/shap/pull/2973),
-   [#2972](https://github.com/slundberg/shap/pull/2972),
+   [#2972](https://github.com/slundberg/shap/pull/2972) and
    [#2976](https://github.com/slundberg/shap/pull/2976) by @connortann,
    [#2968](https://github.com/slundberg/shap/pull/2968),
    [#2986](https://github.com/slundberg/shap/pull/2986) by @thatlittleboy).
+- Fixed wheel packaging and updated project metadata to PEP 517
+  ([#3022](https://github.com/slundberg/shap/pull/3022) by @connortann)
+- Introduced more thorough testing on CI against newer dependencies
+  ([dsgibbons#61](https://github.com/dsgibbons/shap/pull/61) and
+   [#3017](https://github.com/slundberg/shap/pull/3017)
+  by @connortann)
 
 
 ## [0.41.0] - 2022-06-16
