@@ -77,7 +77,7 @@ class Gradient(Explainer):
         if isinstance(data, pd.DataFrame):
             self.features = data.columns.values
         else:
-            self.features = list(range(data[0].shape[1]))
+            self.features = list(range(data.shape[1]))
 
         if framework == 'tensorflow':
             self.explainer = _TFGradient(model, data, session, batch_size, local_smoothing)
