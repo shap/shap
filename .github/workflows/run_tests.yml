@@ -73,13 +73,13 @@ jobs:
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
       - name: Test with pytest
-        run: |
-          # Ensure we avoid adding current working directory to sys.path:
-          # - Use "pytest" over "python -m pytest"
-          # - Use "append" import mode rather than default "prepend"
-          pytest --durations=20 \
-          --cov=shap --cov-report=xml --cov-report=term-missing \
-          --mpl-generate-summary=html --mpl-results-path=./mpl-results \
+        # Ensure we avoid adding current working directory to sys.path:
+        # - Use "pytest" over "python -m pytest"
+        # - Use "append" import mode rather than default "prepend"
+        run: >
+          pytest --durations=20
+          --cov=shap --cov-report=xml --cov-report=term-missing
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results
           --import-mode=append
       - name: Upload mpl test report
         if: failure()
