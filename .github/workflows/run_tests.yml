@@ -44,15 +44,20 @@ jobs:
           - os: windows-latest
             python-version: "3.11"
             extras: "test"
+            name: windows
           - os: macos-latest
             python-version: "3.11"
             extras: "test"
+            name: windows
           # Also run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.11"
             extras: "test-core"
+            name: core
       fail-fast: false
+    # Workaround to ensure job name stays the same for core tests, so "Required Checks" still present
+    name: ${{ matrix.name && matrix.name || matrix.python-version }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
