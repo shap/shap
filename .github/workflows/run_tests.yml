@@ -65,10 +65,13 @@ jobs:
           pip install --upgrade --upgrade-strategy eager '.[test,plots]'
       - name: Test with pytest
         run: |
-          # Using "pytest" over "python -m pytest" to avoid adding working directory to sys.path
+          # Ensure we avoid adding current working directory to sys.path:
+          # - Use "pytest" over "python -m pytest"
+          # - Use "append" import mode rather than default "prepend"
           pytest --durations=20 \
           --cov=shap --cov-report=xml --cov-report=term-missing \
-          --mpl-generate-summary=html --mpl-results-path=./mpl-results
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results \
+          --import-mode=append
       - name: Upload mpl test report
         if: failure()
         uses: actions/upload-artifact@v3
