@@ -82,7 +82,7 @@ def imdb(display=False, n_points=None): # pylint: disable=unused-argument
     Paper to cite when using the data is: http://www.aclweb.org/anthology/P11-1015
     """
 
-    with open(cache(github_data_url + "imdb_train.txt")) as f:
+    with open(cache(github_data_url + "imdb_train.txt"), encoding="utf-8") as f:
         data = f.readlines()
     y = np.ones(25000, dtype=bool)
     y[:12500] = 0
