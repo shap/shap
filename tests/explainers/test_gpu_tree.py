@@ -120,7 +120,7 @@ def lightgbm_base():
         return pytest.param("lightgbm.LGBMRegressor", marks=pytest.mark.skip)
     X, y = datasets['regression']
 
-    model = lightgbm.LGBMRegressor()
+    model = lightgbm.LGBMRegressor(n_jobs=1)
     model.fit(X, y)
     return model.booster_, X, model.predict(X)
 
@@ -133,7 +133,7 @@ def lightgbm_regression():
         return pytest.param("lightgbm.LGBMRegressor", marks=pytest.mark.skip)
     X, y = datasets['regression']
 
-    model = lightgbm.LGBMRegressor()
+    model = lightgbm.LGBMRegressor(n_jobs=1)
     model.fit(X, y)
     return model, X, model.predict(X)
 
@@ -146,7 +146,7 @@ def lightgbm_binary_classifier():
         return pytest.param("lightgbm.LGBMClassifier", marks=pytest.mark.skip)
     X, y = datasets['binary']
 
-    model = lightgbm.LGBMClassifier()
+    model = lightgbm.LGBMClassifier(n_jobs=1)
     model.fit(X, y)
     return model, X, model.predict(X, raw_score=True)
 
@@ -159,7 +159,7 @@ def lightgbm_multiclass_classifier():
         return pytest.param("lightgbm.LGBMClassifier", marks=pytest.mark.skip)
     X, y = datasets['multiclass']
 
-    model = lightgbm.LGBMClassifier()
+    model = lightgbm.LGBMClassifier(n_jobs=1)
     model.fit(X, y)
     return model, X, model.predict(X, raw_score=True)
 
