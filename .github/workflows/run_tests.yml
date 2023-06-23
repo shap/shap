@@ -38,17 +38,17 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
-        extras: ["test,plots"]
+        extras: ["test"]
         include:
           # Also test on windows
           - os: windows-latest
             python-version: "3.11"
-            extras: "test,plots"
+            extras: "test"
           # Also run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.11"
-            extras: "test-core,plots"
+            extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -71,7 +71,7 @@ jobs:
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
-          pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }}]'
+          pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
       - name: Test with pytest
         run: |
           # Ensure we avoid adding current working directory to sys.path:
