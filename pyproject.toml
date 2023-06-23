@@ -108,7 +108,7 @@ target-version = "py37"
 skip = ["cp36-*", "pp*"]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
-test-command = "pytest -v {project}/tests -k --import-mode=append"
+test-command = "pytest -v {project}/tests --import-mode=append"
 test-extras = ["test", "plots"]
 # skipping cp37 since catboost wheel not available
 # skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
