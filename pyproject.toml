@@ -105,6 +105,7 @@ target-version = "py37"
 "shap/plots/colors/_colorconv.py" = ["ALL"]
 
 [tool.cibuildwheel]
+# Restrict the set of builds to mirror the wheels available in scikit-learn. See #3028
 skip = ["cp36-*", "pp*", "*-musllinux_*"]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
