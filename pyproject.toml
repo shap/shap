@@ -107,7 +107,8 @@ target-version = "py37"
 [tool.cibuildwheel]
 skip = ["cp36-*", "pp*"]
 build-verbosity = 2
-test-command = "pytest -v {project}/tests -k test_simple_bar --import-mode=append"  # Temp: use subset of tests for speed
+# Change import-mode to ensure we test against installed package, not local project
+test-command = "pytest -v {project}/tests -k --import-mode=append"
 test-extras = ["test", "plots"]
 # skipping cp37 since catboost wheel not available
 # skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
@@ -115,19 +116,6 @@ test-skip = "cp37-* cp38-macosx_x86_64"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
-
-# Temporary debugging steps
-test-command = [
-  "set -x",
-  "pwd",
-  "echo Project: {project}",
-  "echo Package: {package}",
-  'python -c "import shap; print(shap.__file__)"',
-  'python -c "import shap, os; print(os.listdir(os.path.dirname(shap.__file__)))"',
-  "echo Beginning tests...",
-  'python -c "import shap._cext; print(shap._cext)"',
-  "pytest -v {project}/tests -k test_simple_bar --import-mode=append",
-]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]

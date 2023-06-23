@@ -1,4 +1,5 @@
-""" This file contains tests for custom (user supplied) maskers."""
+""" This file contains tests for custom (user supplied) maskers.
+"""
 
 import numpy as np
 

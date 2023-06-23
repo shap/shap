@@ -24,18 +24,10 @@ warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore e
 
 # pylint: disable=unsubscriptable-object
 
-from pathlib import Path
-root = Path(__file__).parent.parent.resolve()
-print("shap project path:", root)
-
-print("Contents of project:")
-print(list(root.iterdir()))
-
-import shap._cext as _cext
-# try:
-#     from .. import _cext
-# except ImportError as e:
-#     record_import_error("cext", "C extension was not built during install!", e)
+try:
+    from .. import _cext
+except ImportError as e:
+    record_import_error("cext", "C extension was not built during install!", e)
 
 try:
     import pyspark  # noqa
