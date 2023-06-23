@@ -1,4 +1,3 @@
-# pylint: disable=missing-function-docstring,too-many-lines,fixme
 """Test tree functions."""
 import itertools
 import math
@@ -11,10 +10,22 @@ import sklearn
 import sklearn.pipeline
 
 import shap
+from shap.utils._exceptions import InvalidModelError
+
+
+def test_unsupported_model_raises_error():
+    """Unsupported model inputs to TreeExplainer should raise an Exception."""
+
+    class CustomEstimator:
+        ...
+
+    emsg = "Model type not yet supported by TreeExplainer:"
+    with pytest.raises(InvalidModelError, match=emsg):
+        _ = shap.TreeExplainer(CustomEstimator())
 
 
 def test_front_page_xgboost():
-    xgboost = pytest.importorskip('xgboost')
+    xgboost = pytest.importorskip("xgboost")
 
     # load JS visualization code to notebook
     shap.initjs()
@@ -288,21 +299,6 @@ def test_pyspark_regression_decision_tree():
     spark.stop()
 
 
-def test_sklearn_random_forest_multiclass():
-    X, y = shap.datasets.iris()
-    y[y == 2] = 1
-    model = sklearn.ensemble.RandomForestClassifier(n_estimators=100, max_depth=None,
-                                                    min_samples_split=2,
-                                                    random_state=0)
-    model.fit(X, y)
-
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
-
-    assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-3
-    assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-3
-
-
 def create_binary_newsgroups_data():
     categories = ['alt.atheism', 'soc.religion.christian']
     newsgroups_train = sklearn.datasets.fetch_20newsgroups(subset='train', categories=categories)
@@ -310,52 +306,6 @@ def create_binary_newsgroups_data():
     class_names = ['atheism', 'christian']
     return newsgroups_train, newsgroups_test, class_names
 
-
-def create_random_forest_vectorizer():
-    # pylint: disable=unused-argument,no-self-use,missing-class-docstring
-    vectorizer = sklearn.feature_extraction.text.CountVectorizer(lowercase=False, min_df=0.0,
-                                                                 binary=True)
-
-    class DenseTransformer(sklearn.base.TransformerMixin):
-        def fit(self, X, y=None, **fit_params):
-            return self
-
-        def transform(self, X, y=None, **fit_params):
-            return X.toarray()
-
-    rf = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=777)
-    return sklearn.pipeline.Pipeline(
-        [('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)])
-
-
-def test_sklearn_random_forest_newsgroups():
-    # note: this test used to fail in native TreeExplainer code due to memory corruption
-    newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
-    pipeline = create_random_forest_vectorizer()
-    pipeline.fit(newsgroups_train.data, newsgroups_train.target)
-    rf = pipeline.named_steps['rf']
-    vectorizer = pipeline.named_steps['vectorizer']
-    densifier = pipeline.named_steps['to_dense']
-
-    dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
-
-    test_row = newsgroups_test.data[83:84]
-    explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
-    vec_row = vectorizer.transform(test_row)
-    dense_row = densifier.transform(vec_row)
-    explainer.shap_values(dense_row)
-
-
-def test_sklearn_decision_tree_multiclass():
-    X, y = shap.datasets.iris()
-    y[y == 2] = 1
-    model = sklearn.tree.DecisionTreeClassifier(max_depth=None, min_samples_split=2, random_state=0)
-    model.fit(X, y)
-
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
-    assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-1
-    assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
 
 
 def test_gpboost():
@@ -424,186 +374,6 @@ def test_catboost_categorical():
 
 # TODO: Test tree_limit argument
 
-def test_sklearn_interaction():
-    # train a simple sklean RF model on the iris dataset
-    X, _ = shap.datasets.iris()
-    X_train, _, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(),
-                                                                      test_size=0.2, random_state=0)
-    rforest = sklearn.ensemble.RandomForestClassifier(n_estimators=100, max_depth=None,
-                                                      min_samples_split=2,
-                                                      random_state=0)
-    model = rforest.fit(X_train, Y_train)
-
-    # verify symmetry of the interaction values (this typically breaks if anything is wrong)
-    interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
-    for i, _ in enumerate(interaction_vals):
-        for j, _ in enumerate(interaction_vals[i]):
-            for k, _ in enumerate(interaction_vals[i][j]):
-                for l, _ in enumerate(interaction_vals[i][j][k]):
-                    assert abs(interaction_vals[i][j][k][l] - interaction_vals[i][j][l][k]) < 1e-4
-
-    # ensure the interaction plot works
-    shap.summary_plot(interaction_vals[0], X, show=False)
-
-
-def test_sum_match_random_forest():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
-    clf.fit(X_train, Y_train)
-    predicted = clf.predict_proba(X_test)
-    ex = shap.TreeExplainer(clf)
-    shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:, 0]).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
-def test_sum_match_extra_trees():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
-    clf.fit(X_train, Y_train)
-    predicted = clf.predict(X_test)
-    ex = shap.TreeExplainer(clf)
-    shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
-def test_single_row_random_forest():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
-    clf.fit(X_train, Y_train)
-    predicted = clf.predict_proba(X_test)
-    ex = shap.TreeExplainer(clf)
-    shap_values = ex.shap_values(X_test.iloc[0, :])
-    assert np.abs(shap_values[0].sum() + ex.expected_value[0] - predicted[0, 0]) < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
-def test_sum_match_gradient_boosting_classifier():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.GradientBoostingClassifier(random_state=202, n_estimators=10,
-                                                      max_depth=10)
-    clf.fit(X_train, Y_train)
-
-    # Use decision function to get prediction before it is mapped to a probability
-    predicted = clf.decision_function(X_test)
-
-    # check SHAP values
-    ex = shap.TreeExplainer(clf)
-    initial_ex_value = ex.expected_value
-    shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-    # check initial expected value
-    assert np.abs(initial_ex_value - ex.expected_value) < 1e-4, "Initial expected value is wrong!"
-
-    # check SHAP interaction values
-    shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10, :])
-    assert np.abs(
-        shap_interaction_values.sum(1).sum(1) + ex.expected_value - predicted[:10]).max() < 1e-4, \
-        "SHAP interaction values don't sum to model output!"
-
-
-def test_single_row_gradient_boosting_classifier():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.GradientBoostingClassifier(random_state=202, n_estimators=10,
-                                                      max_depth=10)
-    clf.fit(X_train, Y_train)
-    predicted = clf.decision_function(X_test)
-    ex = shap.TreeExplainer(clf)
-    shap_values = ex.shap_values(X_test.iloc[0, :])
-    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
-def test_HistGradientBoostingRegressor():
-    # train a tree-based model
-    X, y = shap.datasets.diabetes()
-    model = sklearn.ensemble.HistGradientBoostingRegressor(max_iter=1000, max_depth=6).fit(X, y)
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
-    assert np.max(np.abs(shap_values.sum(1) + explainer.expected_value - model.predict(X))) < 1e-4
-
-
-def test_HistGradientBoostingClassifier_proba():
-    # train a tree-based model
-    X, y = shap.datasets.adult()
-    model = sklearn.ensemble.HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
-    explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="predict_proba")
-    shap_values = explainer.shap_values(X)
-    assert np.max(np.abs(
-        shap_values[0].sum(1) + explainer.expected_value[0] - model.predict_proba(X)[:, 0])) < 1e-4
-
-
-def test_HistGradientBoostingClassifier_multidim():
-    # train a tree-based model
-    X, y = shap.datasets.adult(n_points=100)
-    y = np.random.randint(0, 3, len(y))
-    model = sklearn.ensemble.HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
-    explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="raw")
-    shap_values = explainer.shap_values(X)
-    assert np.max(np.abs(shap_values[0].sum(1) +
-                         explainer.expected_value[0] - model.decision_function(X)[:, 0])) < 1e-4
-
-
-def test_sum_match_gradient_boosting_regressor():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.GradientBoostingRegressor(random_state=202, n_estimators=10,
-                                                     max_depth=10)
-    clf.fit(X_train, Y_train)
-
-    predicted = clf.predict(X_test)
-    ex = shap.TreeExplainer(clf)
-    shap_values = ex.shap_values(X_test)
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
-def test_single_row_gradient_boosting_regressor():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(),
-                                                                           test_size=0.2,
-                                                                           random_state=0)
-    clf = sklearn.ensemble.GradientBoostingRegressor(random_state=202, n_estimators=10,
-                                                     max_depth=10)
-    clf.fit(X_train, Y_train)
-
-    predicted = clf.predict(X_test)
-    ex = shap.TreeExplainer(clf)
-    shap_values = ex.shap_values(X_test.iloc[0, :])
-    assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4, \
-        "SHAP values don't sum to model output!"
-
-
-def test_multi_target_random_forest():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
-        *shap.datasets.linnerud(), test_size=0.2,
-        random_state=0)
-    est = sklearn.ensemble.RandomForestRegressor(random_state=202, n_estimators=10, max_depth=10)
-    est.fit(X_train, Y_train)
-    predicted = est.predict(X_test)
-
-    explainer = shap.TreeExplainer(est)
-    expected_values = np.asarray(explainer.expected_value)
-    assert len(
-        expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
-    shap_values = np.asarray(explainer.shap_values(X_test)).reshape(
-        est.n_outputs_ * X_test.shape[0], X_test.shape[1])
-    phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
-    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
-
 
 def test_isolation_forest():
     IsolationForest = pytest.importorskip("sklearn.ensemble.IsolationForest")
@@ -640,26 +410,6 @@ def test_pyod_isolation_forest():
         l = _average_path_length(np.array([iso.max_samples_]))[0]
         score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
         assert np.allclose(iso.detector_.score_samples(X), score_from_shap, atol=1e-7)
-
-
-# TODO: this has sometimes failed with strange answers, should run memcheck on this for any
-#  memory issues at some point...
-def test_multi_target_extra_trees():
-    X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
-        *shap.datasets.linnerud(), test_size=0.2,
-        random_state=0)
-    est = sklearn.ensemble.ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
-    est.fit(X_train, Y_train)
-    predicted = est.predict(X_test)
-
-    explainer = shap.TreeExplainer(est)
-    expected_values = np.asarray(explainer.expected_value)
-    assert len(
-        expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
-    shap_values = np.asarray(explainer.shap_values(X_test)).reshape(
-        est.n_outputs_ * X_test.shape[0], X_test.shape[1])
-    phi = np.hstack((shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1)))
-    assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
 
 
 def test_provided_background_tree_path_dependent():
@@ -1002,8 +752,376 @@ def test_xgboost_buffer_strip():
     assert isinstance(explainer, shap.explainers.Tree)
 
 
+class TestExplainerSklearn:
+    """Tests for the TreeExplainer when the model passed in from scikit-learn (core).
+
+    Included models:
+        * tree.DecisionTreeClassifier
+        * ensemble.RandomForestClassifier
+        * ensemble.RandomForestRegressor
+        * ensemble.ExtraTreesRegressor
+        * ensemble.GradientBoostingClassifier
+        * ensemble.GradientBoostingRegressor
+        * ensemble.HistGradientBoostingClassifier
+        * ensemble.HistGradientBoostingRegressor
+    """
+
+    def test_sklearn_decision_tree_multiclass(self):
+        X, y = shap.datasets.iris()
+        y[y == 2] = 1
+        model = sklearn.tree.DecisionTreeClassifier(
+            max_depth=None, min_samples_split=2, random_state=0
+        )
+        model.fit(X, y)
+
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+        assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-1
+        assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
+
+    def test_sum_match_random_forest_classifier(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(), test_size=0.2, random_state=0
+        )
+        clf = sklearn.ensemble.RandomForestClassifier(
+            random_state=202, n_estimators=10, max_depth=10
+        )
+        clf.fit(X_train, Y_train)
+        predicted = clf.predict_proba(X_test)
+        ex = shap.TreeExplainer(clf)
+        shap_values = ex.shap_values(X_test)
+
+        # check that SHAP values sum to model output
+        assert (
+            np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:, 0]).max()
+            < 1e-4
+        )
+
+    def test_sklearn_random_forest_multiclass(self):
+        X, y = shap.datasets.iris()
+        y[y == 2] = 1
+        model = sklearn.ensemble.RandomForestClassifier(
+            n_estimators=100,
+            max_depth=None,
+            min_samples_split=2,
+            random_state=0,
+        )
+        model.fit(X, y)
+
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+
+        assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-3
+        assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-3
+
+    def test_sklearn_interaction_values(self):
+        X, _ = shap.datasets.iris()
+        X_train, _, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.iris(), test_size=0.2, random_state=0
+        )
+        rforest = sklearn.ensemble.RandomForestClassifier(
+            n_estimators=100,
+            max_depth=None,
+            min_samples_split=2,
+            random_state=0,
+        )
+        model = rforest.fit(X_train, Y_train)
+
+        # verify symmetry of the interaction values (this typically breaks if anything is wrong)
+        interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
+        for i, _ in enumerate(interaction_vals):
+            for j, _ in enumerate(interaction_vals[i]):
+                for k, _ in enumerate(interaction_vals[i][j]):
+                    for l, _ in enumerate(interaction_vals[i][j][k]):
+                        assert (
+                            abs(
+                                interaction_vals[i][j][k][l]
+                                - interaction_vals[i][j][l][k]
+                            )
+                            < 1e-4
+                        )
+
+        # ensure the interaction plot works
+        shap.summary_plot(interaction_vals[0], X, show=False)
+
+    def _create_vectorizer_for_randomforestclassifier(self):
+        """Helper setup function"""
+        vectorizer = sklearn.feature_extraction.text.CountVectorizer(
+            lowercase=False, min_df=0.0, binary=True
+        )
+
+        class DenseTransformer(sklearn.base.TransformerMixin):
+            def fit(self, X, y=None, **fit_params):
+                return self
+
+            def transform(self, X, y=None, **fit_params):
+                return X.toarray()
+
+        rf = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=777)
+        return sklearn.pipeline.Pipeline(
+            [('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)]
+        )
+
+    def test_sklearn_random_forest_newsgroups(self):
+        """
+        note: this test used to fail in native TreeExplainer code due to memory corruption
+        """
+        newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
+        pipeline = self._create_vectorizer_for_randomforestclassifier()
+        pipeline.fit(newsgroups_train.data, newsgroups_train.target)
+        rf = pipeline.named_steps['rf']
+        vectorizer = pipeline.named_steps["vectorizer"]
+        densifier = pipeline.named_steps["to_dense"]
+
+        dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
+
+        test_row = newsgroups_test.data[83:84]
+        explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
+        vec_row = vectorizer.transform(test_row)
+        dense_row = densifier.transform(vec_row)
+        explainer.shap_values(dense_row)
+
+    def test_multi_target_random_forest_regressor(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.linnerud(),
+            test_size=0.2,
+            random_state=0,
+        )
+        est = sklearn.ensemble.RandomForestRegressor(
+            random_state=202, n_estimators=10, max_depth=10
+        )
+        est.fit(X_train, Y_train)
+        predicted = est.predict(X_test)
+
+        explainer = shap.TreeExplainer(est)
+        expected_values = np.asarray(explainer.expected_value)
+        assert (
+            len(expected_values) == est.n_outputs_
+        ), "Length of expected_values doesn't match n_outputs_"
+        shap_values = np.asarray(explainer.shap_values(X_test)).reshape(
+            est.n_outputs_ * X_test.shape[0], X_test.shape[1]
+        )
+        phi = np.hstack(
+            (shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1))
+        )
+        assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
+
+    def test_sum_match_extra_trees(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(), test_size=0.2, random_state=0
+        )
+        clf = sklearn.ensemble.ExtraTreesRegressor(
+            random_state=202, n_estimators=10, max_depth=10
+        )
+        clf.fit(X_train, Y_train)
+        predicted = clf.predict(X_test)
+        ex = shap.TreeExplainer(clf)
+        shap_values = ex.shap_values(X_test)
+
+        # check that SHAP values sum to model output
+        assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4
+
+    # TODO: this has sometimes failed with strange answers, should run memcheck on this for any
+    #  memory issues at some point...
+    def test_multi_target_extra_trees(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.linnerud(),
+            test_size=0.2,
+            random_state=0,
+        )
+        est = sklearn.ensemble.ExtraTreesRegressor(
+            random_state=202, n_estimators=10, max_depth=10
+        )
+        est.fit(X_train, Y_train)
+        predicted = est.predict(X_test)
+
+        explainer = shap.TreeExplainer(est)
+        expected_values = np.asarray(explainer.expected_value)
+        assert (
+            len(expected_values) == est.n_outputs_
+        ), "Length of expected_values doesn't match n_outputs_"
+        shap_values = np.asarray(explainer.shap_values(X_test)).reshape(
+            est.n_outputs_ * X_test.shape[0], X_test.shape[1]
+        )
+        phi = np.hstack(
+            (shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1))
+        )
+        assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
+
+    def test_gradient_boosting_classifier_invalid_init_estimator(self):
+        """Currently only the logodds estimators are supported, so this test checks that
+        an appropriate error is thrown when other estimator types are passed in.
+
+        Remove/modify this test if we support other init estimator types in the future.
+        """
+        clf = sklearn.ensemble.GradientBoostingClassifier(
+            n_estimators=10, init="zero",
+        )
+        clf.fit(*shap.datasets.adult())
+        with pytest.raises(InvalidModelError):
+            shap.TreeExplainer(clf)
+
+    def test_single_row_gradient_boosting_classifier(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(),
+            test_size=0.2,
+            random_state=0,
+        )
+        clf = sklearn.ensemble.GradientBoostingClassifier(
+            random_state=202,
+            n_estimators=10,
+            max_depth=10,
+        )
+        clf.fit(X_train, Y_train)
+        predicted = clf.decision_function(X_test)
+        ex = shap.TreeExplainer(clf)
+        shap_values = ex.shap_values(X_test.iloc[0, :])
+
+        # check that SHAP values sum to model output
+        assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4
+
+    def test_sum_match_gradient_boosting_classifier(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(),
+            test_size=0.2,
+            random_state=0,
+        )
+        clf = sklearn.ensemble.GradientBoostingClassifier(
+            random_state=202,
+            n_estimators=10,
+            max_depth=10,
+        )
+        clf.fit(X_train, Y_train)
+
+        # Use decision function to get prediction before it is mapped to a probability
+        predicted = clf.decision_function(X_test)
+
+        ex = shap.TreeExplainer(clf)
+        initial_ex_value = ex.expected_value
+        shap_values = ex.shap_values(X_test)
+
+        # check that SHAP values sum to model output
+        assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4
+
+        # check initial expected value
+        assert (
+            np.abs(initial_ex_value - ex.expected_value) < 1e-4
+        ), "Initial expected value is wrong!"
+
+        # check SHAP interaction values sum to model output
+        shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10, :])
+        assert (
+            np.abs(
+                shap_interaction_values.sum(1).sum(1)
+                + ex.expected_value
+                - predicted[:10]
+            ).max()
+            < 1e-4
+        )
+
+    def test_single_row_gradient_boosting_regressor(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(),
+            test_size=0.2,
+            random_state=0,
+        )
+        clf = sklearn.ensemble.GradientBoostingRegressor(
+            random_state=202, n_estimators=10, max_depth=10
+        )
+        clf.fit(X_train, Y_train)
+
+        predicted = clf.predict(X_test)
+        ex = shap.TreeExplainer(clf)
+        shap_values = ex.shap_values(X_test.iloc[0, :])
+
+        # check that SHAP values sum to model output
+        assert np.abs(shap_values.sum() + ex.expected_value - predicted[0]) < 1e-4
+
+    def test_sum_match_gradient_boosting_regressor(self):
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(),
+            test_size=0.2,
+            random_state=0,
+        )
+        clf = sklearn.ensemble.GradientBoostingRegressor(
+            random_state=202, n_estimators=10, max_depth=10
+        )
+        clf.fit(X_train, Y_train)
+
+        predicted = clf.predict(X_test)
+        ex = shap.TreeExplainer(clf)
+        shap_values = ex.shap_values(X_test)
+
+        # check that SHAP values sum to model output
+        assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4
+
+    def test_HistGradientBoostingClassifier_proba(self):
+        X, y = shap.datasets.adult()
+        model = sklearn.ensemble.HistGradientBoostingClassifier(
+            max_iter=10, max_depth=6
+        ).fit(X, y)
+        explainer = shap.TreeExplainer(
+            model, shap.sample(X, 10), model_output="predict_proba"
+        )
+        shap_values = explainer.shap_values(X)
+
+        # check that SHAP values sum to model output
+        assert (
+            np.max(
+                np.abs(
+                    shap_values[0].sum(1)
+                    + explainer.expected_value[0]
+                    - model.predict_proba(X)[:, 0]
+                )
+            )
+            < 1e-4
+        )
+
+    def test_HistGradientBoostingClassifier_multidim(self):
+        X, y = shap.datasets.adult(n_points=100)
+        y = np.random.randint(0, 3, len(y))
+        model = sklearn.ensemble.HistGradientBoostingClassifier(
+            max_iter=10, max_depth=6
+        ).fit(X, y)
+        explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="raw")
+        shap_values = explainer.shap_values(X)
+
+        # check that SHAP values sum to model output
+        assert (
+            np.max(
+                np.abs(
+                    shap_values[0].sum(1)
+                    + explainer.expected_value[0]
+                    - model.decision_function(X)[:, 0]
+                )
+            )
+            < 1e-4
+        )
+
+    def test_HistGradientBoostingRegressor(self):
+        X, y = shap.datasets.diabetes()
+        model = sklearn.ensemble.HistGradientBoostingRegressor(
+            max_iter=1000, max_depth=6
+        ).fit(X, y)
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+
+        # check that SHAP values sum to model output
+        assert (
+            np.max(
+                np.abs(shap_values.sum(1) + explainer.expected_value - model.predict(X))
+            )
+            < 1e-4
+        )
+
+
 class TestExplainerLightGBM:
-    """Tests for the TreeExplainer when the model passed in is a LightGBM instance."""
+    """Tests for the TreeExplainer when the model passed in is a LightGBM instance.
+
+    Included models:
+        * LGBMRegressor
+        * LGBMClassifier
+    """
 
     def test_lightgbm(self):
         """Test the basic `shap_values` calculation."""
@@ -1132,7 +1250,10 @@ class TestExplainerLightGBM:
         for j, jval in enumerate(interaction_vals):
             for k, kval in enumerate(jval):
                 for m, _ in enumerate(kval):
-                    assert abs(interaction_vals[j][k][m] - interaction_vals[j][m][k]) < 1e-4
+                    assert (
+                        abs(interaction_vals[j][k][m] - interaction_vals[j][m][k])
+                        < 1e-4
+                    )
 
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
