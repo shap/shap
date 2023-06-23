@@ -62,13 +62,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Cache python libs
         uses: actions/cache@v3
+        if: matrix.extras == 'test'
         with:
           path: |
             # Only cache a subset of libraries, ensuring cache size remains under 10GB. See dsgibbons#42
             ${{ env.pythonLocation }}/**/site-packages/pyspark*
             ${{ env.pythonLocation }}/**/site-packages/nvidia*
             ${{ env.pythonLocation }}/**/site-packages/torch*
-          key: ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.extras }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
+          key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
