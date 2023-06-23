@@ -61,12 +61,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
-          pip install --upgrade --upgrade-strategy eager -e '.[test,plots]'
+          # Using regular install NOT editable install: see GH #3020
+          pip install --upgrade --upgrade-strategy eager '.[test,plots]'
       - name: Test with pytest
         run: |
-          python -m pytest --durations=20 \
+          # Ensure we avoid adding current working directory to sys.path:
+          # - Use "pytest" over "python -m pytest"
+          # - Use "append" import mode rather than default "prepend"
+          pytest --durations=20 \
           --cov=shap --cov-report=xml --cov-report=term-missing \
-          --mpl-generate-summary=html --mpl-results-path=./mpl-results
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results \
+          --import-mode=append
       - name: Upload mpl test report
         if: failure()
         uses: actions/upload-artifact@v3
