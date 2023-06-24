@@ -130,8 +130,10 @@ datasets
 .. autosummary::
     :toctree: generated/
 
+    shap.datasets.a1a
     shap.datasets.adult
     shap.datasets.boston
+    shap.datasets.california
     shap.datasets.communitiesandcrime
     shap.datasets.corrgroups60
     shap.datasets.diabetes
@@ -139,4 +141,6 @@ datasets
     shap.datasets.imdb
     shap.datasets.independentlinear60
     shap.datasets.iris
+    shap.datasets.linnerud
     shap.datasets.nhanesi
+    shap.datasets.rank
