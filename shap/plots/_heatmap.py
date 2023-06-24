@@ -133,6 +133,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     cb = pl.colorbar(
         m,
         ticks=[min(vmin, -vmax), max(-vmin, vmax)],
+        ax=ax,
         aspect=80,
         fraction=0.01,
         pad=0.10,  # padding between the cb and the main axes
