@@ -34,17 +34,33 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     Parameters
     ----------
     shap_values : Explanation
-        This is an Explanation object containing a matrix of SHAP values (# samples x # features).
+        This is an :class:`.Explanation` object containing a matrix of SHAP values
+        (# samples x # features).
 
     max_display : int
-        How many top features to include in the plot (default is 20, or 7 for interaction plots)
+        How many top features to include in the plot (default is 10, or 7 for
+        interaction plots).
+
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    color_bar : bool
+        Whether to draw the color bar (legend).
 
     plot_size : "auto" (default), float, (float, float), or None
-        What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that
-        many inches high. Passing a pair of floats will scale the plot by that
-        number of inches. If None is passed then the size of the current figure will be left
-        unchanged.
+        What size to make the plot. By default, the size is auto-scaled based on the
+        number of features that are being displayed. Passing a single float will cause
+        each row to be that many inches high. Passing a pair of floats will scale the
+        plot by that number of inches. If ``None`` is passed, then the size of the
+        current figure will be left unchanged.
+
+    Examples
+    --------
+
+    See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
+
     """
 
     if not isinstance(shap_values, Explanation):
