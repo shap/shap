@@ -86,7 +86,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         values = new_values
         feature_values = new_feature_values
 
-    # define the plot size
+    # define the plot size based on how many features we are plotting
     row_height = 0.5
     pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
 
@@ -94,37 +94,59 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     vmin = np.nanpercentile(values.flatten(), 1)
     vmax = np.nanpercentile(values.flatten(), 99)
     pl.imshow(
-        values.T, aspect=0.7 * values.shape[0]/values.shape[1], interpolation="nearest", vmin=min(vmin,-vmax), vmax=max(-vmin,vmax),
-        cmap=cmap
+        values.T,
+        aspect=0.7 * values.shape[0] / values.shape[1],
+        interpolation="nearest",
+        vmin=min(vmin,-vmax),
+        vmax=max(-vmin,vmax),
+        cmap=cmap,
     )
-    yticks_pos = np.arange(values.shape[1])
-    yticks_labels = feature_names
 
-    pl.yticks([-1.5] + list(yticks_pos), ["f(x)"] + list(yticks_labels), fontsize=13)
-
-    pl.ylim(values.shape[1]-0.5, -3)
-
+    # adjust the axes ticks and spines for the heat map + f(x) line chart
+    pl.ylim(values.shape[1] - row_height, -3)
+    heatmap_yticks_pos = np.arange(values.shape[1])
+    heatmap_yticks_labels = feature_names
+    pl.yticks(
+        [-1.5, *heatmap_yticks_pos],
+        ["f(x)", *heatmap_yticks_labels],
+        fontsize=13,
+    )
 
     ax = pl.gca()
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('left')
-    ax.spines['right'].set_visible(True)
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("left")
+    ax.spines["left"].set_bounds(values.shape[1] - row_height, -row_height)
+    ax.spines["right"].set_visible(True)
+    ax.spines["right"].set_bounds(values.shape[1] - row_height, -row_height)
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+
+    pl.xlim(-0.5, values.shape[0] - 0.5)
+    pl.xlabel(xlabel)
+
+    # plot the f(x) line chart above the heat map
+    # and remove the y-tick for the f(x) label
     pl.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
     fx = values.T.mean(0)
-    pl.plot(-fx/np.abs(fx).max() - 1.5, color="#000000", linewidth=1)
-    ax.spines['left'].set_bounds(values.shape[1]-0.5, -0.5)
-    ax.spines['right'].set_bounds(values.shape[1]-0.5, -0.5)
-    b = pl.barh(
-        yticks_pos, (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
-        0.7, align='center', color="#000000", left=values.shape[0] * 1.0 - 0.5
-        #color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
+    pl.plot(
+        -fx / np.abs(fx).max() - 1.5,
+        color="#000000",
+        linewidth=1,
     )
-    for v in b:
-        v.set_clip_on(False)
-    pl.xlim(-0.5, values.shape[0]-0.5)
-    pl.xlabel(xlabel)
+    ax.get_yticklines()[0].set_visible(False)
+
+    # plot the bar plot on the right spine of the heat map
+    bar_container = pl.barh(
+        heatmap_yticks_pos,
+        (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
+        height=0.7,
+        align="center",
+        color="#000000",
+        left=values.shape[0] * 1.0 - 0.5,
+        # color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
+    )
+    for b in bar_container:
+        b.set_clip_on(False)
 
     # draw the color bar
     import matplotlib.cm as cm
@@ -145,9 +167,6 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     # cb.ax.set_aspect((bbox.height - 0.9) * 15)
     # cb.draw_all()
-
-    for i in [0]:
-        ax.get_yticklines()[i].set_visible(False)
 
     if show:
         pl.show()
