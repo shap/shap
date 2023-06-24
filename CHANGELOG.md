@@ -28,6 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ([#3001](https://github.com/slundberg/shap/pull/3000) by @thatlittleboy).
 - Fixed tensorflow import issue with Pyspark when using `Gradient`
   ([#2983](https://github.com/slundberg/shap/pull/2983) by @skamdar).
+- Fixed the aspect ratio of the colorbar in `shap.plots.heatmap`, and use the `ax` matplotlib API internally
+  for plotting
+  ([#3040](https://github.com/slundberg/shap/pull/3040) by @thatlittleboy).
 - Fixed deprecation warnings for `numpy>=1.24` from numpy types
   ([dsgibbons#7](https://github.com/dsgibbons/shap/pull/7) by @dsgibbons).
 - Fixed deprecation warnings for `Ipython>=8` from `Ipython.core.display`
