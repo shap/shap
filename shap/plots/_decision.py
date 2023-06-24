@@ -244,29 +244,32 @@ def decision(
     ----------
     base_value : float or numpy.ndarray
         This is the reference value that the feature contributions start from. Usually, this is
-        explainer.expected_value.
+        ``explainer.expected_value``.
 
     shap_values : numpy.ndarray
-        Matrix of SHAP values (# features) or (# samples x # features) from explainer.shap_values(). Or cube of SHAP
-        interaction values (# samples x # features x # features) from explainer.shap_interaction_values().
+        Matrix of SHAP values (# features) or (# samples x # features) from
+        ``explainer.shap_values()``. Or cube of SHAP interaction values (# samples x
+        # features x # features) from ``explainer.shap_interaction_values()``.
 
     features : numpy.array or pandas.Series or pandas.DataFrame or numpy.ndarray or list
         Matrix of feature values (# features) or (# samples x # features). This provides the values of all the
         features and, optionally, the feature names.
 
     feature_names : list or numpy.ndarray
-        List of feature names (# features). If None, names may be derived from the features argument if a Pandas
-        object is provided. Otherwise, numeric feature names will be generated.
+        List of feature names (# features). If ``None``, names may be derived from the
+        ``features`` argument if a Pandas object is provided. Otherwise, numeric feature
+        names will be generated.
 
     feature_order : str or None or list or numpy.ndarray
-        Any of "importance" (the default), "hclust" (hierarchical clustering), "none", or a list/array of indices.
+        Any of "importance" (the default), "hclust" (hierarchical clustering), ``None``,
+        or a list/array of indices.
 
     feature_display_range: slice or range
-        The slice or range of features to plot after ordering features by feature_order. A step of 1 or None
+        The slice or range of features to plot after ordering features by ``feature_order``. A step of 1 or ``None``
         will display the features in ascending order. A step of -1 will display the features in descending order. If
-        feature_display_range=None, slice(-1, -21, -1) is used (i.e. show the last 20 features in descending order).
-        If shap_values contains interaction values, the number of features is automatically expanded to include all
-        possible interactions: N(N + 1)/2 where N = shap_values.shape[1].
+        ``feature_display_range=None``, ``slice(-1, -21, -1)`` is used (i.e. show the last 20 features in descending order).
+        If ``shap_values`` contains interaction values, the number of features is automatically expanded to include all
+        possible interactions: N(N + 1)/2 where N = ``shap_values.shape[1]``.
 
     highlight : Any
         Specify which observations to draw in a different line style. All numpy indexing methods are supported. For
@@ -277,7 +280,7 @@ def decision(
         log-odds into probabilities.
 
     plot_color : str or matplotlib.colors.ColorMap
-        Color spectrum used to draw the plot lines. If str, a registered matplotlib color name is assumed.
+        Color spectrum used to draw the plot lines. If ``str``, a registered matplotlib color name is assumed.
 
     axis_color : str or int
         Color used to draw plot axes.
@@ -289,39 +292,46 @@ def decision(
         Alpha blending value in [0, 1] used to draw plot lines.
 
     color_bar : bool
-        Whether to draw the color bar.
+        Whether to draw the color bar (legend).
 
     auto_size_plot : bool
-        Whether to automatically size the matplotlib plot to fit the number of features displayed. If `False`,
-        specify the plot size using matplotlib before calling this function.
+        Whether to automatically size the matplotlib plot to fit the number of features
+        displayed. If ``False``, specify the plot size using matplotlib before calling
+        this function.
 
     title : str
         Title of the plot.
 
     xlim: tuple[float, float]
-        The extents of the x-axis (e.g. (-1.0, 1.0)). If not specified, the limits are determined by the
-        maximum/minimum predictions centered around base_value when link='identity'. When link='logit', the
-        x-axis extents are (0, 1) centered at 0.5. x_lim values are not transformed by the link function. This
-        argument is provided to simplify producing multiple plots on the same scale for comparison.
+        The extents of the x-axis (e.g. ``(-1.0, 1.0)``). If not specified, the limits
+        are determined by the maximum/minimum predictions centered around base_value
+        when ``link="identity"``. When ``link="logit"``, the x-axis extents are ``(0,
+        1)`` centered at 0.5. ``xlim`` values are not transformed by the ``link``
+        function. This argument is provided to simplify producing multiple plots on the
+        same scale for comparison.
 
     show : bool
-        Whether to automatically display the plot.
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
 
     return_objects : bool
-        Whether to return a DecisionPlotResult object containing various plotting features. This can be used to
-        generate multiple decision plots using the same feature ordering and scale.
+        Whether to return a :obj:`DecisionPlotResult` object containing various plotting
+        features. This can be used to generate multiple decision plots using the same
+        feature ordering and scale.
 
     ignore_warnings : bool
         Plotting many data points or too many features at a time may be slow, or may create very large plots. Set
-        this argument to `True` to override hard-coded limits that prevent plotting large amounts of data.
+        this argument to ``True`` to override hard-coded limits that prevent plotting large amounts of data.
 
     new_base_value : float
-        SHAP values are relative to a base value; by default, the expected value of the model's raw predictions. Use
-        `new_base_value` to shift the base value to an arbitrary value (e.g. the cutoff point for a binary
+        SHAP values are relative to a base value. By default, this base value is the
+        expected value of the model's raw predictions. Use ``new_base_value`` to shift
+        the base value to an arbitrary value (e.g. the cutoff point for a binary
         classification task).
 
     legend_labels : list of str
-        List of legend labels. If `None`, legend will not be shown.
+        List of legend labels. If ``None``, legend will not be shown.
 
     legend_location : str
         Legend location. Any of "best", "upper right", "upper left", "lower left", "lower right", "right",
@@ -330,14 +340,18 @@ def decision(
     Returns
     -------
     DecisionPlotResult or None
-        Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
+        Returns a :obj:`DecisionPlotResult` object if ``return_objects=True``. Returns ``None`` otherwise (the default).
 
-    Example
-    -------
+    Examples
+    --------
+
     Plot two decision plots using the same feature order and x-axis.
+
         >>> range1, range2 = range(20), range(20, 40)
         >>> r = decision_plot(base, shap_values[range1], features[range1], return_objects=True)
         >>> decision_plot(base, shap_values[range2], features[range2], feature_order=r.feature_idx, xlim=r.xlim)
+
+    See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
 
