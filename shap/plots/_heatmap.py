@@ -14,36 +14,45 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     """Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
-    clustering and a heatmap. Supervised clustering involves clustering data points not by their original
-    feature values but by their explanations. By default we cluster using shap.utils.hclust_ordering
+    clustering and a heatmap.
+    Supervised clustering involves clustering data points not by their original
+    feature values but by their explanations.
+    By default, we cluster using :func:`shap.utils.hclust_ordering`,
     but any clustering can be used to order the samples.
 
     Parameters
     ----------
     shap_values : shap.Explanation
-        A multi-row Explanation object that we want to visualize in a cluster ordering.
+        A multi-row :class:`.Explanation` object that we want to visualize in a
+        cluster ordering.
 
     instance_order : OpChain or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values and an axis, or
-        a direct sample ordering given as an numpy.ndarray.
+        a direct sample ordering given as an ``numpy.ndarray``.
 
     feature_values : OpChain or numpy.ndarray
         A function that returns a global summary value for each input feature, or an array of such values.
 
     feature_order : None, OpChain, or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values and an axis, or
-        a direct input feature ordering given as an numpy.ndarray. If None then we use
-        feature_values.argsort
+        a direct input feature ordering given as an ``numpy.ndarray``.
+        If ``None``, then we use ``feature_values.argsort``.
 
     max_display : int
-        The maximum number of features to display.
+        The maximum number of features to display (default is 10).
 
     show : bool
-        If show is set to False then we don't call the matplotlib.pyplot.show() function. This allows
-        further customization of the plot by the caller after the bar() function is finished.
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
 
     plot_width: int, default 8
         The width of the heatmap plot.
+
+    Examples
+    --------
+
+    See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
 
     """
 
