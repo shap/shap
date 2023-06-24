@@ -73,16 +73,19 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     values = shap_values.values[instance_order][:,feature_order]
     feature_values = feature_values[feature_order]
 
-    # collapse
+    # if we have more features than `max_display`, then group all the excess features
+    # into a single feature
     if values.shape[1] > max_display:
         new_values = np.zeros((values.shape[0], max_display))
-        new_values[:, :max_display-1] = values[:, :max_display-1]
-        new_values[:, max_display-1] = values[:, max_display-1:].sum(1)
+        new_values[:, :-1] = values[:, :max_display-1]
+        new_values[:, -1] = values[:, max_display-1:].sum(1)
         new_feature_values = np.zeros(max_display)
-        new_feature_values[:max_display-1] = feature_values[:max_display-1]
-        new_feature_values[max_display-1] = feature_values[max_display-1:].sum()
-        feature_names = list(feature_names[:max_display])
-        feature_names[-1] = "Sum of %d other features" % (values.shape[1] - max_display + 1)
+        new_feature_values[:-1] = feature_values[:max_display-1]
+        new_feature_values[-1] = feature_values[max_display-1:].sum()
+        feature_names = [
+            *feature_names[:max_display-1],
+            f"Sum of {values.shape[1] - max_display + 1} other features",
+        ]
         values = new_values
         feature_values = new_feature_values
 
