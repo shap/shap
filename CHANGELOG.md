@@ -45,7 +45,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Updates to docstrings of several `shap.plots` functions
-  ([#3003](https://github.com/slundberg/shap/pull/3003) by @thatlittleboy).
+  ([#3003](https://github.com/slundberg/shap/pull/3003),
+   [#3005](https://github.com/slundberg/shap/pull/3005) by @thatlittleboy).
 
 ### Removed
 
