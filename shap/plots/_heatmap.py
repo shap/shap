@@ -105,18 +105,17 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     pl.ylim(values.shape[1]-0.5, -3)
 
 
-
-    pl.gca().xaxis.set_ticks_position('bottom')
-    pl.gca().yaxis.set_ticks_position('left')
-    pl.gca().spines['right'].set_visible(True)
-    pl.gca().spines['top'].set_visible(False)
-    pl.gca().spines['bottom'].set_visible(False)
+    ax = pl.gca()
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+    ax.spines['right'].set_visible(True)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
     pl.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
     fx = values.T.mean(0)
     pl.plot(-fx/np.abs(fx).max() - 1.5, color="#000000", linewidth=1)
-    #pl.colorbar()
-    pl.gca().spines['left'].set_bounds(values.shape[1]-0.5, -0.5)
-    pl.gca().spines['right'].set_bounds(values.shape[1]-0.5, -0.5)
+    ax.spines['left'].set_bounds(values.shape[1]-0.5, -0.5)
+    ax.spines['right'].set_bounds(values.shape[1]-0.5, -0.5)
     b = pl.barh(
         yticks_pos, (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
         0.7, align='center', color="#000000", left=values.shape[0] * 1.0 - 0.5
@@ -147,7 +146,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     # cb.draw_all()
 
     for i in [0]:
-        pl.gca().get_yticklines()[i].set_visible(False)
+        ax.get_yticklines()[i].set_visible(False)
 
     if show:
         pl.show()
