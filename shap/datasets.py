@@ -37,7 +37,8 @@ def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=
 def boston(display=False, n_points=None):
     """Return the boston housing data in a nice package (DEPRECATED).
 
-    This dataset is deprecated, please use :func:`shap.datasets.california` instead.
+    This dataset is deprecated and will be removed in the next version (0.43.0).
+    Please use :func:`shap.datasets.california` instead.
     """
     d = sklearn.datasets.load_boston()
     df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
