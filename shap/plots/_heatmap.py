@@ -4,6 +4,7 @@ import numpy as np
 from .. import Explanation
 from ..utils import OpChain
 from . import colors
+from ._labels import labels
 from ._utils import convert_ordering
 
 
@@ -126,20 +127,24 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     pl.xlim(-0.5, values.shape[0]-0.5)
     pl.xlabel(xlabel)
 
-
-
-    if True:
-        import matplotlib.cm as cm
-        m = cm.ScalarMappable(cmap=cmap)
-        m.set_array([min(vmin,-vmax), max(-vmin,vmax)])
-        cb = pl.colorbar(m, ticks=[min(vmin,-vmax), max(-vmin,vmax)], aspect=1000, fraction=0.02, pad=0.10)
-        cb.set_label("SHAP value", size=12, labelpad=-10)
-        cb.ax.tick_params(labelsize=11, length=0)
-        cb.set_alpha(1)
-        cb.outline.set_visible(False)
-        bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-        cb.ax.set_aspect((bbox.height - 0.9) * 15)
-        #cb.draw_all()
+    # draw the color bar
+    import matplotlib.cm as cm
+    m = cm.ScalarMappable(cmap=cmap)
+    m.set_array([min(vmin, -vmax), max(-vmin, vmax)])
+    cb = pl.colorbar(
+        m,
+        ticks=[min(vmin, -vmax), max(-vmin, vmax)],
+        aspect=80,
+        fraction=0.01,
+        pad=0.10,  # padding between the cb and the main axes
+    )
+    cb.set_label(labels["VALUE"], size=12, labelpad=-10)
+    cb.ax.tick_params(labelsize=11, length=0)
+    cb.set_alpha(1)
+    cb.outline.set_visible(False)
+    # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    # cb.ax.set_aspect((bbox.height - 0.9) * 15)
+    # cb.draw_all()
 
     for i in [0]:
         pl.gca().get_yticklines()[i].set_visible(False)
