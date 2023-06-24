@@ -34,12 +34,31 @@ jobs:
 
   run_tests:
 
-    runs-on: ubuntu-latest
     strategy:
       matrix:
+        os: ["ubuntu-latest"]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        extras: ["test"]
+        include:
+          # Also test on windows/mac, just one job each
+          - os: windows-latest
+            python-version: "3.11"
+            extras: "test"
+            name: windows-3.11
+          - os: macos-latest
+            python-version: "3.11"
+            extras: "test"
+            name: macos-3.11
+          # Also run tests with only the core dependencies, to ensure we
+          # cover the latest version of numpy/pandas. See dsgibbons#46
+          - os: ubuntu-latest
+            python-version: "3.11"
+            extras: "test-core"
+            name: core-3.11
       fail-fast: false
-
+    # Workaround to ensure job name stays the same, so "Required Checks" still present
+    name: run_tests (${{ matrix.name && matrix.name || matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -48,29 +67,28 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Cache python libs
         uses: actions/cache@v3
+        if: matrix.extras == 'test'
         with:
           path: |
             # Only cache a subset of libraries, ensuring cache size remains under 10GB. See dsgibbons#42
             ${{ env.pythonLocation }}/**/site-packages/pyspark*
             ${{ env.pythonLocation }}/**/site-packages/nvidia*
             ${{ env.pythonLocation }}/**/site-packages/torch*
-          #  ${{ env.pythonLocation }}/**/site-packages/tensorflow*
-          #  ${{ env.pythonLocation }}/**/site-packages/xgboost*
-          key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-0
+          key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
-          pip install --upgrade --upgrade-strategy eager '.[test,plots]'
+          pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
       - name: Test with pytest
-        run: |
-          # Ensure we avoid adding current working directory to sys.path:
-          # - Use "pytest" over "python -m pytest"
-          # - Use "append" import mode rather than default "prepend"
-          pytest --durations=20 \
-          --cov=shap --cov-report=xml --cov-report=term-missing \
-          --mpl-generate-summary=html --mpl-results-path=./mpl-results \
+        # Ensure we avoid adding current working directory to sys.path:
+        # - Use "pytest" over "python -m pytest"
+        # - Use "append" import mode rather than default "prepend"
+        run: >
+          pytest --durations=20
+          --cov=shap --cov-report=xml --cov-report=term-missing
+          --mpl-generate-summary=html --mpl-results-path=./mpl-results
           --import-mode=append
       - name: Upload mpl test report
         if: failure()
@@ -81,22 +99,3 @@ jobs:
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
-
-  run_tests_core:
-    name: run_tests (core only)
-    # Run tests with only the core dependencies, to ensure we
-    # cover the latest version of numpy/pandas. See dsgibbons#46
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install core dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[test-core,plots]'
-      - name: Test with pytest
-        run: |
-          python -m pytest
