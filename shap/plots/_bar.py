@@ -20,25 +20,31 @@ from ._utils import (
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clustering_cutoff=0.5,
         merge_cohorts=False, show_data="auto", show=True):
-    """ Create a bar plot of a set of SHAP values.
+    """Create a bar plot of a set of SHAP values.
 
-    If a single sample is passed then we plot the SHAP values as a bar chart. If an
-    Explanation with many samples is passed then we plot the mean absolute value for
-    each feature column as a bar chart.
+    If a single sample is passed, then we plot the SHAP values as a bar chart. If an
+    :class:`.Explanation` with many samples is passed, then we plot the mean absolute
+    value for each feature column as a bar chart.
 
 
     Parameters
     ----------
     shap_values : shap.Explanation or shap.Cohorts or dictionary of shap.Explanation objects
-        A single row of a SHAP Explanation object (i.e. shap_values[0]) or a multi-row Explanation
-        object that we want to summarize.
+        A single row of a SHAP :class:`.Explanation` object (i.e. ``shap_values[0]``) or
+        a multi-row Explanation object that we want to summarize.
 
     max_display : int
-        The maximum number of bars to display.
+        How many top features to include in the bar plot (default is 10).
 
     show : bool
-        If show is set to False then we don't call the matplotlib.pyplot.show() function. This allows
-        further customization of the plot by the caller after the bar() function is finished.
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    Examples
+    --------
+
+    See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
 
