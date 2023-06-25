@@ -95,8 +95,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     ax = pl.gca()
 
     # plot the matrix of SHAP values as a heat map
-    vmin = np.nanpercentile(values.flatten(), 1)
-    vmax = np.nanpercentile(values.flatten(), 99)
+    vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
     ax.imshow(
         values.T,
         aspect=0.7 * values.shape[0] / values.shape[1],
