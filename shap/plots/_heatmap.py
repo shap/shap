@@ -11,7 +11,7 @@ from ._utils import convert_ordering
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0),
             feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
             plot_width=8):
-    """ Create a heatmap plot of a set of SHAP values.
+    """Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
     clustering and a heatmap. Supervised clustering involves clustering data points not by their original
@@ -118,7 +118,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     heatmap_yticks_labels = feature_names
     ax.yaxis.set_ticks(
         [-1.5, *heatmap_yticks_pos],
-        ["f(x)", *heatmap_yticks_labels],
+        [r"$f(x)$", *heatmap_yticks_labels],
         fontsize=13,
     )
     # remove the y-tick line for the f(x) label
