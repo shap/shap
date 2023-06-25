@@ -1,13 +1,7 @@
-import warnings
-
+import matplotlib.pyplot as pl
 import numpy as np
 import scipy.stats
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from . import colors
 from ._labels import labels
 

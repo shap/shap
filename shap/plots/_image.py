@@ -4,6 +4,7 @@ import string
 import warnings
 from typing import Optional
 
+import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib.colors import Colormap
 
@@ -11,10 +12,6 @@ from shap._explanation import Explanation
 
 from ..utils import ordinal_str
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
 try:
     from IPython.display import HTML, display
 except ImportError:
