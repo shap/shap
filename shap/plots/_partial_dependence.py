@@ -1,16 +1,10 @@
-import warnings
+import matplotlib.pyplot as pl
+import numpy as np
+import pandas as pd
 
 from .. import Explanation
 from ..plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
 from ..utils import convert_name
-
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
-import numpy as np
-import pandas as pd
 
 
 def compute_bounds(xmin, xmax, xv):

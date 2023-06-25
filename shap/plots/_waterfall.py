@@ -1,13 +1,7 @@
-import warnings
-
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
-try:
-    import matplotlib
-    import matplotlib.pyplot as plt
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from .. import Explanation
 from ..utils import format_value, safe_isinstance
 from . import colors

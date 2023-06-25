@@ -1,12 +1,6 @@
-import warnings
-
+import matplotlib.pyplot as pl
 import sklearn
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from ..utils import convert_name
 from . import colors
 from ._labels import labels

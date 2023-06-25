@@ -1,17 +1,10 @@
-import warnings
-
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
-
-try:
-    import matplotlib
-    import matplotlib.pyplot as plt
-    from matplotlib import lines
-    from matplotlib.font_manager import FontProperties
-    from matplotlib.patches import PathPatch
-    from matplotlib.path import Path
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
+from matplotlib import lines
+from matplotlib.font_manager import FontProperties
+from matplotlib.patches import PathPatch
+from matplotlib.path import Path
 
 
 def draw_bars(out_value, features, feature_type, width_separators, width_bar):

@@ -1,17 +1,12 @@
 """ Summary plots of SHAP values (violin plot) across a whole dataset.
 """
 
-
 import warnings
 
+import matplotlib.pyplot as pl
 import numpy as np
 from scipy.stats import gaussian_kde
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels

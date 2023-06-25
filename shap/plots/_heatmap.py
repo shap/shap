@@ -1,9 +1,6 @@
+import matplotlib.pyplot as pl
 import numpy as np
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    pass
 from .. import Explanation
 from ..utils import OpChain
 from . import colors
