@@ -87,8 +87,8 @@ jobs:
         # - Use "pytest" over "python -m pytest"
         # - Use "append" import mode rather than default "prepend"
         run: >
-          pytest --durations=20 -k installed_package
-          --cov --cov-report=xml --cov-report=term
+          pytest --durations=20
+          --cov --cov-report=xml
           --mpl-generate-summary=html --mpl-results-path=./mpl-results
           --import-mode=append
       - name: Upload mpl test report
