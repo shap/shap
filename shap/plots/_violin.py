@@ -28,29 +28,44 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
     Parameters
     ----------
-    shap_values : numpy.array
-        For single output explanations this is a matrix of SHAP values (# samples x # features).
+    shap_values : Explanation, or numpy.array
+        For single output explanations, this is a matrix of SHAP values (# samples x # features).
 
     features : numpy.array or pandas.DataFrame or list
-        Matrix of feature values (# samples x # features) or a feature_names list as shorthand
+        Matrix of feature values (# samples x # features) or a ``feature_names`` list as
+        shorthand.
 
     feature_names : list
-        Names of the features (length # features)
+        Names of the features (length: # features).
 
     max_display : int
-        How many top features to include in the plot (default is 20)
+        How many top features to include in the plot (default is 20).
 
     plot_type : "violin", or "layered_violin".
-        What type of summary plot to produce. A "layered_violin" plot shows the distribution
-        of the SHAP values of each variable. A "violin" plot is the same, except with outliers
-        drawn as scatter points.
+        What type of summary plot to produce. A "layered_violin" plot shows the
+        distribution of the SHAP values of each variable. A "violin" plot is the same,
+        except with outliers drawn as scatter points.
+
+    color_bar : bool
+        Whether to draw the color bar (legend).
+
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
 
     plot_size : "auto" (default), float, (float, float), or None
-        What size to make the plot. By default the size is auto-scaled based on the number of
+        What size to make the plot. By default, the size is auto-scaled based on the number of
         features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
-        number of inches. If None is passed then the size of the current figure will be left
+        number of inches. If ``None`` is passed, then the size of the current figure will be left
         unchanged.
+
+    Examples
+    --------
+
+    See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
+
     """
 
     # support passing an explanation object

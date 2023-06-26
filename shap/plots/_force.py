@@ -28,21 +28,22 @@ from ._labels import labels
 def force(base_value, shap_values=None, features=None, feature_names=None, out_names=None, link="identity",
           plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
           text_rotation=0, contribution_threshold=0.05):
-    """ Visualize the given SHAP values with an additive force layout.
+    """Visualize the given SHAP values with an additive force layout.
 
     Parameters
     ----------
     base_value : float
-        This is the reference value that the feature contributions start from. For SHAP values it should
-        be the value of explainer.expected_value.
+        This is the reference value that the feature contributions start from.
+        For SHAP values, it should be the value of ``explainer.expected_value``.
 
     shap_values : numpy.array
-        Matrix of SHAP values (# features) or (# samples x # features). If this is a 1D array then a single
-        force plot will be drawn, if it is a 2D array then a stacked force plot will be drawn.
+        Matrix of SHAP values (# features) or (# samples x # features). If this is a
+        1D array, then a single force plot will be drawn. If it is a 2D array, then a
+        stacked force plot will be drawn.
 
     features : numpy.array
         Matrix of feature values (# features) or (# samples x # features). This provides the values of all the
-        features, and should be the same shape as the shap_values argument.
+        features, and should be the same shape as the ``shap_values`` argument.
 
     feature_names : list
         List of feature names (# features).
@@ -51,12 +52,13 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         The name of the output of the model (plural to support multi-output plotting in the future).
 
     link : "identity" or "logit"
-        The transformation used when drawing the tick mark labels. Using logit will change log-odds numbers
+        The transformation used when drawing the tick mark labels. Using "logit" will change log-odds numbers
         into probabilities.
 
     matplotlib : bool
-        Whether to use the default Javascript output, or the (less developed) matplotlib output. Using matplotlib
-        can be helpful in scenarios where rendering Javascript/HTML is inconvenient.
+        Whether to use the default Javascript output, or the (less developed) matplotlib output.
+        Using matplotlib can be helpful in scenarios where rendering Javascript/HTML
+        is inconvenient.
 
     contribution_threshold : float
         Controls the feature names/values that are displayed on force plot.
@@ -257,16 +259,18 @@ def save_html(out_file, plot, full_html=True):
     Parameters
     ----------
     out_file : str or file
-        Location or file to be written to
+        Location or file to be written to.
+
     plot : BaseVisualizer
-        Visualizer returned by shap.force_plot()
+        Visualizer returned by :func:`shap.plots.force()`.
+
     full_html : boolean (default: True)
-        If True, writes a complete HTML document starting
-        with an <html> tag. If False, only script and div
+        If ``True``, writes a complete HTML document starting
+        with an ``<html>`` tag. If ``False``, only script and div
         tags are included.
     """
 
-    assert isinstance(plot, BaseVisualizer), "save_html requires a Visualizer returned by shap.force_plot()."
+    assert isinstance(plot, BaseVisualizer), "`save_html` requires a Visualizer returned by `shap.plots.force()`."
     internal_open = False
     if type(out_file) == str:
         out_file = open(out_file, "w", encoding="utf-8")

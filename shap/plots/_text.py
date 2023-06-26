@@ -17,7 +17,7 @@ except ImportError:
 # TODO: we should support text output explanations (from models that output text not numbers), this would require the force
 # the force plot and the coloring to update based on mouseovers (or clicks to make it fixed) of the output text
 def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator='', xmin=None, xmax=None, cmax=None, display=True):
-    """ Plots an explanation of a string of text using coloring and interactive labels.
+    """Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
@@ -25,19 +25,24 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
     Parameters
     ----------
     shap_values : [numpy.array]
-        List of arrays of SHAP values. Each array has the shap values for a string(# input_tokens x output_tokens).
+        List of arrays of SHAP values. Each array has the shap values for a string (#input_tokens x output_tokens).
 
     num_starting_labels : int
-        Number of tokens (sorted in decending order by corresponding SHAP values) that are uncovered in the initial view. When set to 0 all tokens
-        covered.
+        Number of tokens (sorted in descending order by corresponding SHAP values)
+        that are uncovered in the initial view.
+        When set to 0, all tokens are covered.
 
     grouping_threshold : float
-        If the component substring effects are less than a grouping_threshold fraction of an unlowered interaction effect then we
-        visualize the entire group as a single chunk. This is primarily used for explanations that were computed with fixed_context set to 1 or 0
-        when using the Partition explainer, since this causes interaction effects to be left on internal nodes rather than lowered.
+        If the component substring effects are less than a ``grouping_threshold``
+        fraction of an unlowered interaction effect, then we visualize the entire group
+        as a single chunk. This is primarily used for explanations that were computed
+        with fixed_context set to 1 or 0 when using the :class:`.explainers.Partition`
+        explainer, since this causes interaction effects to be left on internal nodes
+        rather than lowered.
 
     separator : string
-        The string seperator that joins tokens grouped by interation effects and unbroken string spans.
+        The string separator that joins tokens grouped by interaction effects and
+        unbroken string spans. Defaults to the empty string ``""``.
 
     xmin : float
         Minimum shap value bound.
@@ -49,7 +54,12 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
         Maximum absolute shap value for sample. Used for scaling colors for input tokens.
 
     display: bool
-        Whether to display or return html to further manipulate or embed. default: True
+        Whether to display or return html to further manipulate or embed. Default: ``True``
+
+    Examples
+    --------
+
+    See `text plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/text.html>`_.
 
     """
 

@@ -15,44 +15,47 @@ from ._labels import labels
 def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
             overlay=None, ax=None, ylabel="SHAP value", show=True):
-    """ Create a SHAP dependence scatter plot, colored by an interaction feature.
+    """Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
-    richer extenstion of classical parital dependence plots. Vertical dispersion of the
+    richer extension of classical parital dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
 
-    Note that if you want to change the data being displayed you can update the
-    shap_values.display_features attribute and it will then be used for plotting instead of
-    shap_values.data.
-
+    Note that if you want to change the data being displayed, you can update the
+    ``shap_values.display_features`` attribute and it will then be used for plotting instead of
+    ``shap_values.data``.
 
     Parameters
     ----------
     shap_values : shap.Explanation
-        A single column of a SHAP Explanation object (i.e. shap_values[:,"Feature A"]).
+        A single column of an :class:`.Explanation` object (i.e.
+        ``shap_values[:,"Feature A"]``).
 
     color : string or shap.Explanation
-        How to color the scatter plot points. This can be a fixed color string, or a Explanation object.
-        If it is an explanation object then the scatter plot points are colored by the feature that
-        seems to have the strongest interaction effect with the feature given by the shap_values argument.
-        This is calculated using shap.utils.approximate_interactions.
-        If only a single column of an Explanation object is passed then that feature column will be used
-        to color the data points.
+        How to color the scatter plot points. This can be a fixed color string, or an
+        :class:`.Explanation` object. If it is an :class:`.Explanation` object, then the
+        scatter plot points are colored by the feature that seems to have the strongest
+        interaction effect with the feature given by the ``shap_values`` argument. This
+        is calculated using :func:`shap.utils.approximate_interactions`. If only a
+        single column of an :class:`.Explanation` object is passed, then that
+        feature column will be used to color the data points.
 
     hist : bool
-        Whether to show a light histogram along the x-axis to show the density of the data. Note that the
-        histogram is normalized that that if all the point were in a single bin then that bin would span
-        the full height of the plot.
+        Whether to show a light histogram along the x-axis to show the density of the
+        data. Note that the histogram is normalized such that if all the points were in
+        a single bin, then that bin would span the full height of the plot. Defaults to
+        ``True``.
 
-    x_jitter : 'auto' or float (0 - 1)
-        Adds random jitter to feature values. May increase plot readability when a feature
-        is discrete. By default x_jitter is chosen base on auto-detection of categorical features
+    x_jitter : 'auto' or float
+        Adds random jitter to feature values by specifying a float between 0 to 1. May
+        increase plot readability when a feature is discrete. By default, ``x_jitter``
+        is chosen based on auto-detection of categorical features.
 
     alpha : float
-        The transparency of the data points (between 0 and 1). This can be useful to the
-        show density of the data points when using a large dataset.
+        The transparency of the data points (between 0 and 1). This can be useful to
+        show the density of the data points when using a large dataset.
 
     xmin : float or string
         Represents the lower bound of the plot's x-axis. It can be a string of the format
@@ -63,11 +66,20 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
 
     ax : matplotlib Axes object
-         Optionally specify an existing matplotlib Axes object, into which the plot will be placed.
-         In this case we do not create a Figure, otherwise we do.
+        Optionally specify an existing matplotlib ``Axes`` object, into which the plot will be placed.
+        In this case, we do not create a ``Figure``, otherwise we do.
+
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    Examples
+    --------
+
+    See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
     """
-
 
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
@@ -154,7 +166,6 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
                 display_features = np.hstack([display_features, shap_values2.display_data[:,mask]])
         color = None
         interaction_index = "auto"
-
 
     if type(shap_values_arr) is list:
         raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try " \
@@ -457,8 +468,6 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
-
-
 
 
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,

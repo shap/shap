@@ -8,8 +8,7 @@ import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib.colors import Colormap
 
-from shap._explanation import Explanation
-
+from .._explanation import Explanation
 from ..utils import ordinal_str
 
 try:
@@ -33,23 +32,27 @@ def image(shap_values: Explanation or np.ndarray,
           labelpad: Optional[float] = None,
           cmap: Optional[str or Colormap] = colors.red_transparent_blue,
           show: Optional[bool] = True):
-    """ Plots SHAP values for image inputs.
+    """Plots SHAP values for image inputs.
 
     Parameters
     ----------
     shap_values : [numpy.array]
-        List of arrays of SHAP values. Each array has the shap (# samples x width x height x channels), and the
-        length of the list is equal to the number of model outputs that are being explained.
+        List of arrays of SHAP values. Each array has the shape
+        (# samples x width x height x channels), and the
+        length of the list is equal to the number of model outputs that are being
+        explained.
 
     pixel_values : numpy.array
-        Matrix of pixel values (# samples x width x height x channels) for each image. It should be the same
-        shape as each array in the shap_values list of arrays.
+        Matrix of pixel values (# samples x width x height x channels) for each image.
+        It should be the same
+        shape as each array in the ``shap_values`` list of arrays.
 
     labels : list or np.ndarray
-        List or np.ndarray (# samples x top_k classes) of names for each of the model outputs that are being explained.
+        List or ``np.ndarray`` (# samples x top_k classes) of names for each of the
+        model outputs that are being explained.
 
     true_labels: list
-        List of a true image labels to plot
+        List of a true image labels to plot.
 
     width : float
         The width of the produced matplotlib plot.
@@ -58,8 +61,15 @@ def image(shap_values: Explanation or np.ndarray,
         How much padding to use around the model output labels.
 
     show : bool
-        Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+
+    Examples
+    --------
+
+    See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
+
     """
 
     # support passing an explanation object
