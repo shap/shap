@@ -105,16 +105,21 @@ target-version = "py37"
 "shap/plots/colors/_colorconv.py" = ["ALL"]
 
 [tool.cibuildwheel]
-skip = ["cp36-*", "pp*", "*-musllinux_*", "*-manylinux_i686", "*_ppc64le", "*_s390x"]
+# Restrict the set of builds to mirror the wheels available in scikit-learn. See #3028
+skip = ["cp36-*", "pp*", "*-musllinux_*"]
 build-verbosity = 2
-test-command = "pytest -v {project}/tests"
+# Change import-mode to ensure we test against installed package, not local project
+test-command = "pytest -v {project}/tests --import-mode=append"
 test-extras = ["test", "plots"]
 # skipping cp37 since catboost wheel not available
 # skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
 test-skip = "cp37-* cp38-macosx_x86_64"
 
-[tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
-
 [tool.cibuildwheel.linux]
-archs = ["auto", "aarch64"]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64"]
