@@ -2,6 +2,7 @@
 import itertools
 import math
 import pickle
+import sys
 
 import numpy as np
 import pandas as pd
@@ -203,7 +204,13 @@ def test_ngboost():
         explainer.shap_values(X).sum(1) + explainer.expected_value - model.predict(X))) < 1e-5
 
 
-def test_pyspark_classifier_decision_tree():
+@pytest.fixture
+def configure_pyspark_python(monkeypath):
+    monkeypath.setenv("PYSPARK_PYTHON", sys.executable)
+    monkeypath.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
+
+
+def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -258,7 +265,7 @@ def test_pyspark_classifier_decision_tree():
     spark.stop()
 
 
-def test_pyspark_regression_decision_tree():
+def test_pyspark_regression_decision_tree(configure_pyspark_python):
     # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
