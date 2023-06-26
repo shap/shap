@@ -1,7 +1,6 @@
 """ Visualize the SHAP values with additive force style layouts.
 """
 
-
 import base64
 import json
 import os

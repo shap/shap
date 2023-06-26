@@ -1,13 +1,9 @@
 import warnings
 
+import matplotlib
+import matplotlib.pyplot as pl
 import numpy as np
 
-try:
-    import matplotlib
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from .._explanation import Explanation
 from ..utils import approximate_interactions, convert_name
 from ..utils._general import encode_array_if_needed

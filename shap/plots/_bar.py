@@ -1,10 +1,4 @@
-import warnings
-
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
+import matplotlib.pyplot as pl
 import numpy as np
 import scipy
 

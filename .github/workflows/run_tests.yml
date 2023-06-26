@@ -74,6 +74,7 @@ jobs:
             ${{ env.pythonLocation }}/**/site-packages/pyspark*
             ${{ env.pythonLocation }}/**/site-packages/nvidia*
             ${{ env.pythonLocation }}/**/site-packages/torch*
+            ${{ env.pythonLocation }}/**/site-packages/functorch*
           key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
       - name: Install dependencies
         run: |

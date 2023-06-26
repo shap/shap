@@ -1,20 +1,15 @@
 """ Summary plots of SHAP values across a whole dataset.
 """
 
-
 import warnings
 
+import matplotlib.pyplot as pl
 import numpy as np
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
 from scipy.stats import gaussian_kde
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from .. import Explanation
 from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError

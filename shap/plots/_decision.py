@@ -1,17 +1,10 @@
 """ Visualize cumulative SHAP values."""
 
-
-import warnings
 from typing import Union
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as pl
 import numpy as np
-
-try:
-    import matplotlib.cm as cm
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 
 from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
