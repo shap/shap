@@ -205,9 +205,9 @@ def test_ngboost():
 
 
 @pytest.fixture
-def configure_pyspark_python(monkeypath):
-    monkeypath.setenv("PYSPARK_PYTHON", sys.executable)
-    monkeypath.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
+def configure_pyspark_python(monkeypatch):
+    monkeypatch.setenv("PYSPARK_PYTHON", sys.executable)
+    monkeypatch.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
