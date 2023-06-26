@@ -39,7 +39,7 @@ dynamic = ["version"]
 plots = ["matplotlib", "ipython"]
 others = ["lime"]
 docs = ["matplotlib", "ipython", "numpydoc", "sphinx_rtd_theme", "sphinx", "nbsphinx"]
-test-core = ["pytest", "pytest-mpl", "pytest-cov", "protobuf==3.20.0"]
+test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
   "pytest",
   "pytest-mpl",
@@ -55,7 +55,7 @@ test = [
   "tensorflow",
   "sentencepiece",
   "opencv-python",
-  "protobuf==3.20.0",
+  "protobuf==3.20.3",
 ]
 
 [project.urls]
