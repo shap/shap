@@ -105,11 +105,11 @@ target-version = "py37"
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
 
-[tool.coverge.run]
-source_pkgs = "shap"
+[tool.coverage.run]
+source_pkgs = ["shap"]
 
 [tool.coverage.paths]
-combine = ["./", "**/site-packages"]
+combine = ["shap", "*/site-packages/shap"]
 
 [tool.cibuildwheel]
 # Restrict the set of builds to mirror the wheels available in scikit-learn. See #3028
