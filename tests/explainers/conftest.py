@@ -2,13 +2,18 @@ import sys
 
 import pytest
 
-
+@pytest.fixture(scope="session")
+def monkeysession():
+    #session-scoped monkeypatch fixture 
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
+        
 @pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
 @pytest.fixture(scope="session")
-def basic_translation_scenario(monkeypatch):
+def basic_translation_scenario(monkeysession):
     """ Create a basic transformers translation model and tokenizer.
     """
-    monkeypatch.setenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+    monkeysession.setenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
