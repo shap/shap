@@ -44,19 +44,20 @@ jobs:
           - os: windows-latest
             python-version: "3.11"
             extras: "test"
-            name: windows-3.11
+            name: 3.11-windows
           - os: macos-latest
             python-version: "3.11"
             extras: "test"
-            name: macos-3.11
+            name: 3.11-macos
           # Also run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.11"
             extras: "test-core"
-            name: core-3.11
+            name: 3.11-core
       fail-fast: false
-    # Workaround to ensure job name stays the same, so "Required Checks" still present
+    # Workaround to ensure previous job names stay the same
+    # "Required Checks" enfore that a check called "run_tests (3.8)" is present
     name: run_tests (${{ matrix.name && matrix.name || matrix.python-version }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -95,7 +96,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v3
         with:
-          name: mpl-results-${{ matrix.python-version }}
+          name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
           path: mpl-results/
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
