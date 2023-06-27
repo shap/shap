@@ -217,7 +217,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     try:
         spark = pyspark.sql.SparkSession.builder.config(
             conf=pyspark.SparkConf().set("spark.master", "local[*]")).getOrCreate()
-    except:
+    except Exception:
         pytest.skip("Could not create pyspark context")
 
     iris_sk = sklearn.datasets.load_iris()
@@ -272,7 +272,7 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
     try:
         spark = pyspark.sql.SparkSession.builder.config(
             conf=pyspark.SparkConf().set("spark.master", "local[*]")).getOrCreate()
-    except:
+    except Exception:
         pytest.skip("Could not create pyspark context")
 
     iris_sk = sklearn.datasets.load_iris()
@@ -539,7 +539,8 @@ def test_single_tree_compare_with_kernel_shap():
         x = X[x_ind:x_ind + 1, :]
 
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
-        f = lambda inp: model.predict(xgboost.DMatrix(inp))
+        def f(inp):
+            return model.predict(xgboost.DMatrix(inp))
         expl_kern = shap.KernelExplainer(f, X)
 
         itshap = expl.shap_values(x)
@@ -617,7 +618,8 @@ def test_single_tree_nonlinear_transformations():
     trans_pred = model.predict(Xd)  # In probability space
 
     expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
-    f = lambda inp: model.predict(xgboost.DMatrix(inp), output_margin=True)
+    def f(inp):
+        return model.predict(xgboost.DMatrix(inp), output_margin=True)
     expl_kern = shap.KernelExplainer(f, X)
 
     x_ind = 0
@@ -691,7 +693,7 @@ def test_xgboost_classifier_independent_probability():
 # def test_front_page_xgboost_global_path_dependent():
 #     try:
 #         xgboost = pytest.importorskip("xgboost")
-#     except:
+#     except Exception:
 #         print("Skipping test_front_page_xgboost!")
 #         return
 #
@@ -1226,7 +1228,7 @@ class TestExplainerLightGBM:
     # def test_lightgbm_ranking(self):
     #     try:
     #         import lightgbm
-    #     except:
+    #     except Exception:
     #         print("Skipping test_lightgbm_ranking!")
     #         return
     #

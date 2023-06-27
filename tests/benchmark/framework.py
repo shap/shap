@@ -2,7 +2,10 @@ import numpy as np
 
 import shap
 
-model = lambda x: np.array([np.linalg.norm(x)])
+
+def model(x):
+    return np.array([np.linalg.norm(x)])
+
 X = np.array([[3, 4], [5, 12], [7, 24]])
 y = np.array([5, 13, 25])
 explainer = np.array([[-1, 2], [-4, 2], [1, 2]])
@@ -12,7 +15,8 @@ def test_update():
     """ This is to test the update function within benchmark/framework
     """
     sort_order = 'positive'
-    score_function = lambda true, pred: np.mean(pred)
+    def score_function(true, pred):
+        return np.mean(pred)
     perturbation = 'keep'
     scores = {'name': 'test', 'metrics': list(), 'values': dict()}
 

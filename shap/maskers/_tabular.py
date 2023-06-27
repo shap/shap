@@ -36,10 +36,10 @@ class Tabular(Masker):
             The distance metric to use for creating the clustering of the features. The
             distance function can be any valid scipy.spatial.distance.pdist's metric argument.
             However we suggest using 'correlation' in most cases. The full list of options is
-            ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, ‘correlation’, ‘cosine’, ‘dice’,
-            ‘euclidean’, ‘hamming’, ‘jaccard’, ‘jensenshannon’, ‘kulsinski’, ‘mahalanobis’,
-            ‘matching’, ‘minkowski’, ‘rogerstanimoto’, ‘russellrao’, ‘seuclidean’,
-            ‘sokalmichener’, ‘sokalsneath’, ‘sqeuclidean’, ‘yule’. These are all
+            `braycurtis`, `canberra`, `chebyshev`, `cityblock`, `correlation`, `cosine`, `dice`,
+            `euclidean`, `hamming`, `jaccard`, `jensenshannon`, `kulsinski`, `mahalanobis`,
+            `matching`, `minkowski`, `rogerstanimoto`, `russellrao`, `seuclidean`,
+            `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
         """
 
@@ -289,10 +289,10 @@ class Partition(Tabular):
             If a string, then this is the distance metric to use for creating the clustering of
             the features. The distance function can be any valid scipy.spatial.distance.pdist's metric
             argument. However we suggest using 'correlation' in most cases. The full list of options is
-            ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, ‘correlation’, ‘cosine’, ‘dice’,
-            ‘euclidean’, ‘hamming’, ‘jaccard’, ‘jensenshannon’, ‘kulsinski’, ‘mahalanobis’,
-            ‘matching’, ‘minkowski’, ‘rogerstanimoto’, ‘russellrao’, ‘seuclidean’,
-            ‘sokalmichener’, ‘sokalsneath’, ‘sqeuclidean’, ‘yule’. These are all
+            `braycurtis`, `canberra`, `chebyshev`, `cityblock`, `correlation`, `cosine`, `dice`,
+            `euclidean`, `hamming`, `jaccard`, `jensenshannon`, `kulsinski`, `mahalanobis`,
+            `matching`, `minkowski`, `rogerstanimoto`, `russellrao`, `seuclidean`,
+            `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
             If an array, then this is assumed to be the clustering of the features.
         """

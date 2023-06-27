@@ -121,7 +121,7 @@ def match_model_to_data(model, data):
             out_val = model.f(data.convert_to_df())
         else:
             out_val = model.f(data.data)
-    except:
+    except Exception:
         print("Provided model function fails when applied to the provided data set.")
         raise
 

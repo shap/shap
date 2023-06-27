@@ -347,7 +347,8 @@ class Kernel(Explainer):
 
                 # determine how many subsets (and their complements) are of the current size
                 nsubsets = binom(self.M, subset_size)
-                if subset_size <= num_paired_subset_sizes: nsubsets *= 2
+                if subset_size <= num_paired_subset_sizes:
+                    nsubsets *= 2
                 log.debug(f"subset_size = {subset_size}")
                 log.debug(f"nsubsets = {nsubsets}")
                 log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
@@ -366,7 +367,8 @@ class Kernel(Explainer):
 
                     # add all the samples of the current subset size
                     w = weight_vector[subset_size - 1] / binom(self.M, subset_size)
-                    if subset_size <= num_paired_subset_sizes: w /= 2.0
+                    if subset_size <= num_paired_subset_sizes:
+                        w /= 2.0
                     for inds in itertools.combinations(group_inds, subset_size):
                         mask[:] = 0.0
                         mask[np.array(inds, dtype='int64')] = 1.0

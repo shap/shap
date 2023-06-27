@@ -269,7 +269,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             try:
                 if round(features[i]) == features[i]:
                     features[i] = int(features[i])
-            except:
+            except Exception:
                 pass # features[i] must not be a number
 
     pl.gca().xaxis.set_ticks_position('bottom')

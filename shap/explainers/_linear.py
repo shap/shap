@@ -281,7 +281,7 @@ class Linear(Explainer):
 
         try:
             Linear._parse_model(model)
-        except:
+        except Exception:
             return False
         return True
 

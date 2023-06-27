@@ -305,7 +305,8 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # optionally add jitter to feature values
     xv_no_jitter = xv.copy()
     if x_jitter > 0:
-        if x_jitter > 1: x_jitter = 1
+        if x_jitter > 1:
+            x_jitter = 1
         xvals = xv.copy()
         if isinstance(xvals[0], float):
             xvals = xvals.astype(float)
@@ -663,7 +664,8 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     # optionally add jitter to feature values
     if x_jitter > 0:
-        if x_jitter > 1: x_jitter = 1
+        if x_jitter > 1:
+            x_jitter = 1
         xvals = xv.copy()
         if isinstance(xvals[0], float):
             xvals = xvals.astype(float)

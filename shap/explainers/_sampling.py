@@ -132,7 +132,8 @@ class Sampling(Kernel):
             phi_var /= phi_var.sum(0)[np.newaxis, :]
             nsamples_each2 = (phi_var[self.varyingInds,:].mean(1) * round2_samples).astype(int)
             for i in range(len(nsamples_each2)):
-                if nsamples_each2[i] % 2 == 1: nsamples_each2[i] += 1
+                if nsamples_each2[i] % 2 == 1:
+                    nsamples_each2[i] += 1
             for i in range(len(nsamples_each2)):
                 if nsamples_each2.sum() > round2_samples:
                     nsamples_each2[i] -= 2

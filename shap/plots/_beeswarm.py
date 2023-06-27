@@ -336,7 +336,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                 colored_feature = False
             else:
                 fvalues = np.array(fvalues, dtype=np.float64)  # make sure this can be numeric
-        except:
+        except Exception:
             colored_feature = False
         N = len(shaps)
         # hspacing = (np.max(shaps) - np.min(shaps)) / 200
@@ -505,7 +505,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         if plot_type == 'layered_violin':
             color = "coolwarm"
         elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
+            def color(i):
+                return colors.red_blue_circle(i / len(shap_values))
         else:
             color = colors.blue_rgb
 
@@ -659,7 +660,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     colored_feature = False
                 else:
                     values = np.array(values, dtype=np.float64)  # make sure this can be numeric
-            except:
+            except Exception:
                 colored_feature = False
             N = len(shaps)
             # hspacing = (np.max(shaps) - np.min(shaps)) / 200
