@@ -60,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed failing unit tests
   ([dsgibbons#29](https://github.com/dsgibbons/shap/pull/29) by @dsgibbons,
    [dsgibbons#20](https://github.com/dsgibbons/shap/pull/20) by @simonangerbauer,
+   [#3044](https://github.com/slundberg/shap/pull/3044) by @connortann,
    [dsgibbons#24](https://github.com/dsgibbons/shap/pull/24) by @connortann).
 - Include CUDA GPU C extension files in the source distribution
   ([#3009](https://github.com/slundberg/shap/pull/3009) by @jklaise).
