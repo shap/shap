@@ -11,8 +11,11 @@ def basic_translation_scenario():
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
-    tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
-    model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+    # Use a *tiny* tokenizer model, to keep tests running as fast as possible.
+    # Nb. At time of writing, this pretrained model requires "protobuf==3.20.3".
+    name = "mesolitica/finetune-translation-t5-super-super-tiny-standard-bahasa-cased"
+    tokenizer = AutoTokenizer.from_pretrained(name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(name)
 
     # define the input sentences we want to translate
     data = [
