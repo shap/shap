@@ -38,10 +38,12 @@ def test_tf_keras_mnist_cnn():
 
     # the data, split between train and test sets
     #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    x_train = np.random.randn(200, 28, 28)
-    y_train = np.random.randint(0, 9, 200)
-    x_test = np.random.randn(200, 28, 28)
-    y_test = np.random.randint(0, 9, 200)
+    n_samples=200
+    rng = np.random.default_rng(seed=0)
+    x_train = rng.standard_normal(size=(n_samples, 28, 28))
+    y_train = rng.integers(low=0, high=9, size=n_samples)
+    x_test = rng.standard_normal(size=(n_samples, 28, 28))
+    y_test = rng.integers(low=0, high=9, size=n_samples)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
