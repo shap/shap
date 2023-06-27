@@ -2,22 +2,17 @@ import sys
 
 import pytest
 
-@pytest.fixture(scope="session")
-def monkeysession():
-    #session-scoped monkeypatch fixture 
-    with pytest.MonkeyPatch.context() as mp:
-        yield mp
-        
+
 @pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
 @pytest.fixture(scope="session")
-def basic_translation_scenario(monkeysession):
+def basic_translation_scenario():
     """ Create a basic transformers translation model and tokenizer.
     """
-    monkeysession.setenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
-    # Use a very small model, for speed
+    # Use a *tiny* tokenizer model, to keep tests running as fast as possible.
+    # Nb. At time of writing, this pretrained model requires "protobuf==3.20.3".
     name = "mesolitica/finetune-translation-t5-super-super-tiny-standard-bahasa-cased"
     tokenizer = AutoTokenizer.from_pretrained(name)
     model = AutoModelForSeq2SeqLM.from_pretrained(name)

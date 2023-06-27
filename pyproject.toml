@@ -50,12 +50,12 @@ test = [
   "pyspark",
   "pyod",
   "transformers",
+  "protobuf==3.20.3",  # See GH #3046
   "torch",
   "torchvision",
   "tensorflow",
   "sentencepiece",
   "opencv-python",
-  "protobuf==3.20.3",
 ]
 
 [project.urls]
