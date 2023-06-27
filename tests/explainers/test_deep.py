@@ -238,6 +238,8 @@ def test_pytorch_mnist_cnn():
     from torch import nn
     from torch.nn import functional as F
 
+    torch.manual_seed(0)
+
     class RandData:
         """ Random test data.
         """
@@ -315,7 +317,6 @@ def test_pytorch_mnist_cnn():
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
-        np.random.seed(0)
         inds = np.random.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
@@ -358,6 +359,8 @@ def test_pytorch_custom_nested_models():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
+
+    torch.manual_seed(0)
 
     X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
@@ -461,6 +464,8 @@ def test_pytorch_single_output():
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
 
+    torch.manual_seed(0)
+
     X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
@@ -526,6 +531,7 @@ def test_pytorch_multiple_inputs():
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
+    torch.manual_seed(0)
 
     def _run_pytorch_multiple_inputs_test(disconnected):
         """ Testing multiple inputs

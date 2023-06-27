@@ -111,6 +111,7 @@ def test_pytorch_mnist_cnn():
 
     from torch import nn
     from torch.nn import functional as F
+
     torch.manual_seed(0)
 
     batch_size = 128
@@ -228,11 +229,11 @@ def test_pytorch_mnist_cnn():
 
 
 def test_pytorch_multiple_inputs():
-    """ Test multi-input scenarios.
-    """
-    # pylint: disable=no-member
+    """ Test multi-input scenarios."""
+
     torch = pytest.importorskip('torch')
     from torch import nn
+
     torch.manual_seed(1)
     batch_size = 10
     x1 = torch.ones(batch_size, 3)
