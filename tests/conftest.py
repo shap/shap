@@ -8,21 +8,20 @@ import pytest
 def random_seed():
     """Provides a reproducible random seed for tests that use randomness.
 
+    If the test fails, the random seed used will be displayed in the pytest logs.
+
     By default, each run of the test will use a different seed. Alternatively,
     the seed can be fixed setting an environment varable TEST_RANDOM_SEED.
 
-    If the test fails, the random seed used will be displayed in the pytest logs.
-
-    Tests should use the following pattern:
+    Example use in a test:
 
         def test_thing(random_seed):
             # Numpy random values
             rng = np.random.default_rng(seed=random_seed)
             values = rng.integers(...)
 
-            # Pytorch tests
+            # Pytorch random values
             torch.manual_seed(random_seed)
-
 
     """
     try:
@@ -32,6 +31,4 @@ def random_seed():
         # Otherwise, create a new seed for each test
         rng = np.random.default_rng()
         seed = rng.integers(0, 1000)
-
-    print("RANDOM SEED:", seed)
     return seed
