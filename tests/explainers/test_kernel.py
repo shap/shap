@@ -77,16 +77,16 @@ def test_kernel_shap_with_call_method():
     # plot the SHAP values for the Versicolour output of the first instance
     shap.force_plot(shap_values[0][:,1])
 
-def test_kernel_shap_with_dataframe():
+def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
     """
-    np.random.seed(3)
+    rng = np.random.default_rng(seed=random_seed)
 
-    df_X = pd.DataFrame(np.random.random((10, 3)), columns=list('abc'))
+    df_X = pd.DataFrame(rng.random((10, 3)), columns=list('abc'))
     df_X.index = pd.date_range('2018-01-01', periods=10, freq='D', tz='UTC')
 
     df_y = df_X.eval('a - 2 * b + 3 * c')
-    df_y = df_y + np.random.normal(0.0, 0.1, df_y.shape)
+    df_y = df_y + rng.normal(0.0, 0.1, df_y.shape)
 
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(df_X, df_y)

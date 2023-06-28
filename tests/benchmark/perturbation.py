@@ -10,9 +10,12 @@ def model(x, y):
 
 sort_order = 'positive'
 perturbation = 'keep'
-X = np.random.random((10,13))
 
-def test_init():
+def test_init(random_seed):
+
+    rng = np.random.default_rng(seed=random_seed)
+    X = rng.random((10,13))
+
     tabular_masker = Independent(X)
     sequential_perturbation = benchmark.perturbation.SequentialPerturbation(model, tabular_masker, sort_order, perturbation)
     assert sequential_perturbation.data_type == "tabular"
