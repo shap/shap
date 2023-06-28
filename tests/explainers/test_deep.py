@@ -75,9 +75,9 @@ def test_tf_keras_mnist_cnn(random_seed):
 
     # the data, split between train and test sets
     # (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = rng.standard_normal(shape=(200, 28, 28))
+    x_train = rng.standard_normal(size=(200, 28, 28))
     y_train = rng.integers(0, 9, 200)
-    x_test = rng.standard_normal(shape=(200, 28, 28))
+    x_test = rng.standard_normal(size=(200, 28, 28))
     y_test = rng.integers(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
