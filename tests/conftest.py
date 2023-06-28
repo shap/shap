@@ -6,12 +6,23 @@ import pytest
 
 @pytest.fixture()
 def random_seed():
-    """Provides a random seed for tests that require randomness, for reproducibility.
+    """Provides a reproducible random seed for tests that use randomness.
 
-    The seed can be overwritten by setting an environment varable TEST_RANDOM_SEED.
+    By default, each run of the test will use a different seed. Alternatively,
+    the seed can be fixed setting an environment varable TEST_RANDOM_SEED.
 
-    Example use in a test:
-        rng = np.random.default_rng(seed=random_seed)
+    If the test fails, the random seed used will be displayed in the pytest logs.
+
+    Tests should use the following pattern:
+
+        def test_thing(random_seed):
+            # Numpy random values
+            rng = np.random.default_rng(seed=random_seed)
+            values = rng.integers(...)
+
+            # Pytorch tests
+            torch.manual_seed(random_seed)
+
 
     """
     try:
@@ -22,6 +33,5 @@ def random_seed():
         rng = np.random.default_rng()
         seed = rng.integers(0, 1000)
 
-    # Ensure the seed is printed to the pytest logs for failing tests
-    print("RANDOM SEED: ", seed)
+    print("RANDOM SEED:", seed)
     return seed
