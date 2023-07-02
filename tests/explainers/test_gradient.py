@@ -10,9 +10,12 @@ import shap
 def test_tf_keras_mnist_cnn(random_seed):
     """ This is the basic mnist cnn example from keras.
     """
-    rng = np.random.default_rng(seed=random_seed)
 
     tf = pytest.importorskip('tensorflow')
+
+    rng = np.random.default_rng(seed=random_seed)
+    tf.compat.v1.random.set_random_seed(random_seed)
+
     from tensorflow.compat.v1 import ConfigProto, InteractiveSession
     from tensorflow.keras import backend as K
     from tensorflow.keras.layers import (
