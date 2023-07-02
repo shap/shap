@@ -105,6 +105,12 @@ target-version = "py37"
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
 
+[tool.coverage.run]
+source_pkgs = ["shap"]
+
+[tool.coverage.paths]
+combine = ["shap", "*/site-packages/shap"]
+
 [tool.cibuildwheel]
 # Restrict the set of builds to mirror the wheels available in scikit-learn. See #3028
 skip = ["cp36-*", "pp*", "*-musllinux_*"]
