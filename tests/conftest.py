@@ -9,7 +9,7 @@ def random_seed():
     """Provides a test-specific random seed for reproducible "fuzz testing".
 
     By default, each run of the test will use a different seed. Alternatively,
-    the seed can be fixed setting an environment varable TEST_RANDOM_SEED.
+    the seed can be fixed by setting an environment varable TEST_RANDOM_SEED.
 
     If the test fails, the random seed used will be displayed in the pytest
     logs.
@@ -45,6 +45,6 @@ def global_random_seed():
 
     Nb. Tests that use random numbers should instantiate a random number
     Generator with `np.random.default_rng` rather than use the global numpy
-    random seed.
+    random state.
     """
     np.random.seed = 0
