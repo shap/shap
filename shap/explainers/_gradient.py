@@ -65,13 +65,13 @@ class Gradient(Explainer):
             try:
                 a.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
         else:
             try:
                 model.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
 
         if isinstance(data, pd.DataFrame):
@@ -159,7 +159,7 @@ class _TFGradient(Explainer):
                 from tensorflow import keras
                 if version.parse(keras.__version__) < version.parse("2.1.0"):
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
-            except:
+            except Exception:
                 pass
 
         # determine the model inputs and outputs

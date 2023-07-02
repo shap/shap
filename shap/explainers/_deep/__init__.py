@@ -71,13 +71,13 @@ class Deep(Explainer):
             try:
                 a.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
         else:
             try:
                 model.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
 
         if framework == 'tensorflow':

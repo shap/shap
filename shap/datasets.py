@@ -176,7 +176,7 @@ def adult(display=False, n_points=None):
         raw_data = shap.utils.sample(raw_data, n_points, random_state=0)
 
     data = raw_data.drop(["Education"], axis=1)  # redundant with Education-Num
-    filt_dtypes = list(filter(lambda x: not (x[0] in ["Target", "Education"]), dtypes))
+    filt_dtypes = list(filter(lambda x: x[0] not in ["Target", "Education"], dtypes))
     data["Target"] = data["Target"] == " >50K"
     rcode = {
         "Not-in-family": 0,
@@ -238,7 +238,8 @@ def corrgroups60(display=False, n_points=1_000): # pylint: disable=unused-argume
         C[i,i+1] = C[i+1,i] = 0.99
         C[i,i+2] = C[i+2,i] = 0.99
         C[i+1,i+2] = C[i+2,i+1] = 0.99
-    f = lambda X: np.matmul(X, beta)
+    def f(X):
+        return np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
     X_start = np.random.randn(N, M)
@@ -273,7 +274,8 @@ def independentlinear60(display=False, n_points=1_000): # pylint: disable=unused
     # set one coefficent from each group of 3 to 1
     beta = np.zeros(M)
     beta[0:30:3] = 1
-    f = lambda X: np.matmul(X, beta)
+    def f(X):
+        return np.matmul(X, beta)
 
     # Make sure the sample correlation is a perfect match
     X_start = np.random.randn(N, M)

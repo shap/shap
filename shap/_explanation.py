@@ -532,7 +532,7 @@ class Explanation(metaclass=MetaExplanation):
             if new_self.data is not None:
                 try:
                     new_self.data = getattr(np, fname)(np.array(self.data), **kwargs)
-                except:
+                except Exception:
                     new_self.data = None
             if new_self.base_values is not None and issubclass(type(axis), int) and len(self.base_values.shape) > axis:
                 new_self.base_values = getattr(np, fname)(self.base_values, **kwargs)

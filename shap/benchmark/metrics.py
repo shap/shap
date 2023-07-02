@@ -432,8 +432,10 @@ def __score_method(X, y, fcounts, model_generator, score_function, method_name, 
     """ Test an explanation method.
     """
 
-    try: pickle
-    except NameError: assert False, "The 'dill' package could not be loaded and is needed for the benchmark!"
+    try:
+        pickle
+    except NameError:
+        raise ImportError("The 'dill' package could not be loaded and is needed for the benchmark!")
 
     old_seed = np.random.seed()
     np.random.seed(3293)

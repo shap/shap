@@ -39,7 +39,7 @@ def clone_keras_layers(model, start_layer, stop_layer):
                 # behind the next one in line
                 layers_to_process.append(layer)
                 continue
-            if not layer.output.name in new_layers:
+            if layer.output.name not in new_layers:
                 new_layers[layer.output.name] = layer(layer_inputs)
             if layer.output.name == stop_layer.output.name:
                 break

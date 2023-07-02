@@ -100,7 +100,7 @@ class TFDeep(Explainer):
             try:
                 import keras
                 warnings.warn("keras is no longer supported, please use tf.keras instead.")
-            except:
+            except Exception:
                 pass
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
@@ -129,7 +129,7 @@ class TFDeep(Explainer):
             self.multi_input = False
             if type(self.model_inputs) != list:
                 self.model_inputs = [self.model_inputs]
-        if type(data) != list and (hasattr(data, '__call__')==False):
+        if type(data) != list and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
 

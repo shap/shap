@@ -4,7 +4,10 @@ from transformers import AutoTokenizer
 import shap.benchmark as benchmark
 from shap.maskers import FixedComposite, Image, Impute, Independent, Partition, Text
 
-model = lambda x, y: x
+
+def model(x, y):
+    return x
+
 sort_order = 'positive'
 perturbation = 'keep'
 X = np.random.random((10,13))

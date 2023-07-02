@@ -217,9 +217,11 @@ def format_data(data):
 
     # Define link function
     if data['link'] == 'identity':
-        convert_func = lambda x: x
+        def convert_func(x):
+            return x
     elif data['link'] == 'logit':
-        convert_func = lambda x: 1 / (1 + np.exp(-x))
+        def convert_func(x):
+            return 1 / (1 + np.exp(-x))
     else:
         assert False, "ERROR: Unrecognized link function: " + str(data['link'])
 
