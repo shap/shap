@@ -121,13 +121,13 @@ def _brute_force_tree_shap(tree, x):
     return phi / math.factorial(m)
 
 
-def test_xgboost_direct():
+def test_xgboost_direct(random_seed):
     xgboost = pytest.importorskip('xgboost')
-
+    rng = np.random.default_rng(random_seed)
     N = 100
     M = 4
-    X = np.random.randn(N, M)
-    y = np.random.randn(N)
+    X = rng.standard_normal(size=(N, M))
+    y = rng.standard_normal(size=N)
 
     model = xgboost.XGBRegressor()
     model.fit(X, y)
@@ -424,7 +424,6 @@ def test_provided_background_tree_path_dependent():
     data is provided.
     """
     xgboost = pytest.importorskip("xgboost")
-    np.random.seed(10)
 
     X, y = shap.datasets.adult(n_points=100)
     dtrain = xgboost.DMatrix(X, label=y, feature_names=X.columns)
@@ -448,8 +447,6 @@ def test_provided_background_tree_path_dependent():
 
 def test_provided_background_independent():
     xgboost = pytest.importorskip("xgboost")
-
-    np.random.seed(10)
 
     X, y = shap.datasets.iris()
     # Select the first 100 rows, so that the y values contain only 0s and 1s
@@ -482,8 +479,6 @@ def test_provided_background_independent():
 def test_provided_background_independent_prob_output():
     xgboost = pytest.importorskip("xgboost")
 
-    np.random.seed(10)
-
     X, y = shap.datasets.iris()
     # Select the first 100 rows, so that the y values contain only 0s and 1s
     X = X[:100]
@@ -512,16 +507,16 @@ def test_provided_background_independent_prob_output():
             explainer.expected_value - bst.predict(dtest).mean()) < 1e-4, "Bad expected_value!"
 
 
-def test_single_tree_compare_with_kernel_shap():
+def test_single_tree_compare_with_kernel_shap(random_seed):
     """ Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the
     set being conditioned on, and the remainder set.
     """
     xgboost = pytest.importorskip("xgboost")
-    np.random.seed(10)
+    rng = np.random.default_rng(random_seed)
 
     n = 100
-    X = np.random.normal(size=(n, 7))
+    X = rng.normal(size=(n, 7))
     y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
 
     # train a model with single tree
@@ -535,7 +530,7 @@ def test_single_tree_compare_with_kernel_shap():
 
     # Compare for five random samples
     for _ in range(5):
-        x_ind = np.random.choice(X.shape[1])
+        x_ind = rng.choice(X.shape[1])
         x = X[x_ind:x_ind + 1, :]
 
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
@@ -551,15 +546,15 @@ def test_single_tree_compare_with_kernel_shap():
             "SHAP values don't sum to model output!"
 
 
-def test_several_trees():
+def test_several_trees(random_seed):
     """ Make sure Independent Tree SHAP sums up to the correct value for
     larger models (20 trees).
     """
     xgboost = pytest.importorskip("xgboost")
-    np.random.seed(10)
+    rng = np.random.default_rng(random_seed)
 
     n = 1000
-    X = np.random.normal(size=(n, 7))
+    X = rng.normal(size=(n, 7))
     b = np.array([-2, 1, 3, 5, 2, 20, -5])
     y = np.matmul(X, b)
     max_depth = 6
@@ -575,7 +570,7 @@ def test_several_trees():
 
     # Compare for five random samples
     for _ in range(5):
-        x_ind = np.random.choice(X.shape[1])
+        x_ind = rng.choice(X.shape[1])
         x = X[x_ind:x_ind + 1, :]
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
         itshap = expl.shap_values(x)
@@ -583,7 +578,7 @@ def test_several_trees():
             "SHAP values don't sum to model output!"
 
 
-def test_single_tree_nonlinear_transformations():
+def test_single_tree_nonlinear_transformations(random_seed):
     """ Make sure Independent Tree SHAP single trees with non-linear
     transformations.
     """
@@ -598,13 +593,13 @@ def test_single_tree_nonlinear_transformations():
     #     return(np.square(yt-yp))
 
     xgboost = pytest.importorskip("xgboost")
-    np.random.seed(10)
+    rng = np.random.default_rng(random_seed)
 
     n = 100
-    X = np.random.normal(size=(n, 7))
+    X = rng.normal(size=(n, 7))
     y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
     y = y + abs(min(y))
-    y = np.random.binomial(n=1, p=y / max(y))
+    y = rng.binomial(n=1, p=y / max(y))
 
     # train a model with single tree
     Xd = xgboost.DMatrix(X, label=y)
@@ -647,17 +642,17 @@ def test_single_tree_nonlinear_transformations():
     # "SHAP values don't sum to model output on explaining logloss!"
 
 
-def test_xgboost_classifier_independent_margin():
+def test_xgboost_classifier_independent_margin(random_seed):
     xgboost = pytest.importorskip("xgboost")
     # train XGBoost model
-    np.random.seed(10)
+    rng = np.random.default_rng(seed=random_seed)
     n = 1000
-    X = np.random.normal(size=(n, 7))
+    X = rng.normal(size=(n, 7))
     y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
     y = y + abs(min(y))
-    y = np.random.binomial(n=1, p=y / max(y))
+    y = rng.binomial(n=1, p=y / max(y))
 
-    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5)
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
@@ -667,19 +662,19 @@ def test_xgboost_classifier_independent_margin():
     assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
 
 
-def test_xgboost_classifier_independent_probability():
+def test_xgboost_classifier_independent_probability(random_seed):
     xgboost = pytest.importorskip("xgboost")
 
     # train XGBoost model
-    np.random.seed(10)
+    rng = np.random.default_rng(seed=random_seed)
     n = 1000
-    X = np.random.normal(size=(n, 7))
+    X = rng.normal(size=(n, 7))
     b = np.array([-2, 1, 3, 5, 2, 20, -5])
     y = np.matmul(X, b)
     y = y + abs(min(y))
-    y = np.random.binomial(n=1, p=y / max(y))
+    y = rng.binomial(n=1, p=y / max(y))
 
-    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5)
+    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
@@ -1086,9 +1081,10 @@ class TestExplainerSklearn:
             < 1e-4
         )
 
-    def test_HistGradientBoostingClassifier_multidim(self):
+    def test_HistGradientBoostingClassifier_multidim(self, random_seed):
         X, y = shap.datasets.adult(n_points=100)
-        y = np.random.randint(0, 3, len(y))
+        rng = np.random.default_rng(seed=random_seed)
+        y = rng.integers(0, 3, len(y))
         model = sklearn.ensemble.HistGradientBoostingClassifier(
             max_iter=10, max_depth=6
         ).fit(X, y)

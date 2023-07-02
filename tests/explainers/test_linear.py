@@ -126,9 +126,10 @@ def test_shape_values_linear_many_features(random_seed):
 
     coef = np.array([1, 2]).T
 
+    rng = np.random.default_rng(seed=random_seed)
     # generate linear data
-    X = np.random.normal(1, 10, size=(1000, len(coef)))
-    y = np.dot(X, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+    X = rng.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(X, coef) + 1 + rng.normal(scale=0.1, size=1000)
 
     # train linear model
     model = Ridge(0.1)
@@ -150,8 +151,9 @@ def test_single_feature(random_seed):
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # generate linear data
-    X = np.random.normal(1, 10, size=(100, 1))
-    y = 2 * X[:, 0] + 1 + np.random.normal(scale=0.1, size=100)
+    rng = np.random.default_rng(seed=random_seed)
+    X = rng.normal(1, 10, size=(100, 1))
+    y = 2 * X[:, 0] + 1 + rng.normal(scale=0.1, size=100)
 
     # train linear model
     model = Ridge(0.1)
