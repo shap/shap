@@ -47,4 +47,4 @@ def global_random_seed():
     Generator with `np.random.default_rng` rather than use the global numpy
     random state.
     """
-    np.random.seed = 0
+    np.random.seed(0)
