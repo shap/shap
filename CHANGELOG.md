@@ -108,6 +108,9 @@ into the main shap repository. PRs from this origin are labelled here as `fork#1
   by @connortann)
 - Reduced unit test time by ~5 mins
   ([#3046](https://github.com/slundberg/shap/pull/3046) by @connortann).
+- Introduced fixtures for reproducible fuzz testing
+  ([#3048](https://github.com/slundberg/shap/pull/3048) by @connortann).
+
 
 ## [0.41.0] - 2022-06-16
 
