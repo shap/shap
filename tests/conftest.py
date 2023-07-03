@@ -16,7 +16,7 @@ def random_seed(request) -> int:
 
             # Numpy
             rs = np.random.RandomState(seed=random_seed)
-            values = rng.integers(...)
+            values = rs.randint(...)
 
             # Pytorch
             torch.manual_seed(random_seed)
