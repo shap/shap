@@ -18,14 +18,12 @@ from shap import DeepExplainer
 def test_tf_eager(random_seed):
     """ This is a basic eager example from keras.
     """
-
-    rng = np.random.default_rng(seed=random_seed)
-
+    rs = np.random.RandomState(random_seed)
     tf = pytest.importorskip('tensorflow')
     if version.parse(tf.__version__) >= version.parse("2.4.0"):
         pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
 
-    x = pd.DataFrame({"B": rng.random(size=(100,))})
+    x = pd.DataFrame({"B": rs.random(size=(100,))})
     y = x.B
     y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
 
@@ -45,7 +43,7 @@ def test_tf_keras_mnist_cnn(random_seed):
     """ This is the basic mnist cnn example from keras.
     """
     tf = pytest.importorskip('tensorflow')
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     from tensorflow import keras
     from tensorflow.compat.v1 import ConfigProto, InteractiveSession
@@ -75,10 +73,10 @@ def test_tf_keras_mnist_cnn(random_seed):
 
     # the data, split between train and test sets
     # (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = rng.standard_normal(size=(200, 28, 28))
-    y_train = rng.integers(0, 9, 200)
-    x_test = rng.standard_normal(size=(200, 28, 28))
-    y_test = rng.integers(0, 9, 200)
+    x_train = rs.randn(200, 28, 28)
+    y_train = rs.randint(0, 9, 200)
+    x_test = rs.randn(200, 28, 28)
+    y_test = rs.randint(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -122,7 +120,7 @@ def test_tf_keras_mnist_cnn(random_seed):
               validation_data=(x_test[:10, :], y_test[:10, :]))
 
     # explain by passing the tensorflow inputs and outputs
-    inds = rng.choice(x_train.shape[0], 3, replace=False)
+    inds = rs.choice(x_train.shape[0], 3, replace=False)
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
@@ -146,14 +144,14 @@ def test_tf_keras_linear(random_seed):
 
     tf.compat.v1.disable_eager_execution()
 
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     # coefficients relating y with x1 and x2.
     coef = np.array([1, 2]).T
 
     # generate data following a linear relationship
-    x = rng.normal(1, 10, size=(1000, len(coef)))
-    y = np.dot(x, coef) + 1 + rng.normal(scale=0.1, size=1000)
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
 
     # create a linear model
     inputs = Input(shape=(2,))
@@ -182,7 +180,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     """ Basic LSTM example using the keras API defined in tensorflow
     """
     tf = pytest.importorskip('tensorflow')
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     # this fails right now for new TF versions (there is a warning in the code for this)
     if version.parse(tf.__version__) >= version.parse("2.5.0"):
@@ -213,7 +211,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     mod.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     # select the background and test samples
-    inds = rng.choice(X_train.shape[0], 3, replace=False)
+    inds = rs.choice(X_train.shape[0], 3, replace=False)
     background = X_train[inds]
     testx = X_test[10:11]
 
@@ -241,7 +239,7 @@ def test_pytorch_mnist_cnn(random_seed):
     from torch.nn import functional as F
 
     torch.manual_seed(random_seed)
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     class RandData:
         """ Random test data.
@@ -320,7 +318,7 @@ def test_pytorch_mnist_cnn(random_seed):
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
-        inds = rng.choice(next_x.shape[0], 3, replace=False)
+        inds = rs.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
         else:
@@ -364,7 +362,7 @@ def test_pytorch_custom_nested_models(random_seed):
     from torch.utils.data import DataLoader, TensorDataset
 
     torch.manual_seed(random_seed)
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
@@ -443,7 +441,7 @@ def test_pytorch_custom_nested_models(random_seed):
     train(model, device, loader, optimizer, 1)
 
     next_x, _ = next(iter(loader))
-    inds = rng.choice(next_x.shape[0], 20, replace=False)
+    inds = rs.choice(next_x.shape[0], 20, replace=False)
     e = shap.DeepExplainer(model, next_x[inds, :])
     test_x, _ = next(iter(loader))
     shap_values = e.shap_values(test_x[:1])
@@ -468,7 +466,7 @@ def test_pytorch_single_output(random_seed):
     from torch.utils.data import DataLoader, TensorDataset
 
     torch.manual_seed(random_seed)
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
@@ -516,7 +514,7 @@ def test_pytorch_single_output(random_seed):
     train(model, device, loader, optimizer, 1)
 
     next_x, _ = next(iter(loader))
-    inds = rng.choice(next_x.shape[0], 20, replace=False)
+    inds = rs.choice(next_x.shape[0], 20, replace=False)
     e = shap.DeepExplainer(model, next_x[inds, :])
     test_x, _ = next(iter(loader))
     shap_values = e.shap_values(test_x[:1])
@@ -535,7 +533,7 @@ def test_pytorch_multiple_inputs(random_seed):
     """
     torch = pytest.importorskip('torch')
     torch.manual_seed(random_seed)
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     def _run_pytorch_multiple_inputs_test(disconnected):
         """ Testing multiple inputs
@@ -600,7 +598,7 @@ def test_pytorch_multiple_inputs(random_seed):
         train(model, device, loader, optimizer, 1)
 
         next_x1, next_x2, _ = next(iter(loader))
-        inds = rng.choice(next_x1.shape[0], 20, replace=False)
+        inds = rs.choice(next_x1.shape[0], 20, replace=False)
         background = [next_x1[inds, :], next_x2[inds, :]]
         e = shap.DeepExplainer(model, background)
         test_x1, test_x2, _ = next(iter(loader))

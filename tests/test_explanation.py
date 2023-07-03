@@ -12,14 +12,14 @@ def test_explanation_hstack(random_seed):
     And that it returns an Explanation object.
     """
     # generate 2 Explanation objects for stacking
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
     base_vals = np.ones(20) * 0.123
     exp1 = shap.Explanation(
-        values=rng.standard_normal(size=(20, 7)),
+        values=rs.randn(20, 7),
         base_values=base_vals,
     )
     exp2 = shap.Explanation(
-        values=rng.standard_normal(size=(20, 5)),
+        values=rs.randn(20, 5),
         base_values=base_vals,
     )
     new_exp = exp1.hstack(exp2)
@@ -32,10 +32,10 @@ def test_explanation_hstack_errors(random_seed):
     """Checks that `hstack` throws errors on invalid input.
     """
     # generate 2 Explanation objects for stacking
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
     base_vals = np.ones(20) * 0.123
     base_exp = shap.Explanation(
-        values=rng.standard_normal(size=(20, 5)),
+        values=rs.randn(20, 5),
         base_values=base_vals,
     )
 
@@ -44,7 +44,7 @@ def test_explanation_hstack_errors(random_seed):
         match="Can't hstack explanations with different numbers of rows",
     ):
         exp2 = shap.Explanation(
-            values=rng.standard_normal(size=(7, 5)),
+            values=rs.randn(7, 5),
             base_values=np.ones(7),
         )
         _ = base_exp.hstack(exp2)
@@ -54,7 +54,7 @@ def test_explanation_hstack_errors(random_seed):
         match="Can't hstack explanations with different base values",
     ):
         exp2 = shap.Explanation(
-            values=rng.standard_normal(size=(20, 5)),
+            values=rs.randn(20, 5),
             base_values=np.ones(20) * 0.987,
         )
         _ = base_exp.hstack(exp2)

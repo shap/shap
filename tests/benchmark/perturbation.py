@@ -13,8 +13,8 @@ perturbation = 'keep'
 
 def test_init(random_seed):
 
-    rng = np.random.default_rng(seed=random_seed)
-    X = rng.random((10,13))
+    rs = np.random.RandomState(random_seed)
+    X = rs.random((10,13))
 
     tabular_masker = Independent(X)
     sequential_perturbation = benchmark.perturbation.SequentialPerturbation(model, tabular_masker, sort_order, perturbation)

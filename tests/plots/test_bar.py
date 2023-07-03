@@ -29,7 +29,7 @@ def test_input_shap_values_type(unsupported_inputs):
 
 def test_input_shap_values_type_2():
     """Check that a DimensionError is raised if the cohort Explanation objects have different shape."""
-    rng = np.random.default_rng(seed=42)
+    rs = np.random.RandomState(42)
     emsg = (
         "When passing several Explanation objects, they must all have "
         "the same number of feature columns!"
@@ -38,11 +38,11 @@ def test_input_shap_values_type_2():
         shap.plots.bar(
             {
                 "t1": shap.Explanation(
-                    values=rng.standard_normal(size=(40, 10)),
+                    values=rs.randn(40, 10),
                     base_values=np.ones(40) * 0.5,
                 ),
                 "t2": shap.Explanation(
-                    values=rng.standard_normal(size=(20, 5)),
+                    values=rs.randn(20, 5),
                     base_values=np.ones(20) * 0.5,
                 ),
             },
@@ -63,16 +63,16 @@ def test_simple_bar(explainer):
 @pytest.mark.mpl_image_compare
 def test_simple_bar_with_cohorts_dict():
     """Ensure that bar plots supports dictionary of Explanations as input."""
-    rng = np.random.default_rng(42)
+    rs = np.random.RandomState(42)
     fig = plt.figure()
     shap.plots.bar(
         {
             "t1": shap.Explanation(
-                values=rng.standard_normal(size=(40, 5)),
+                values=rs.randn(40, 5),
                 base_values=np.ones(40) * 0.5,
             ),
             "t2": shap.Explanation(
-                values=rng.standard_normal(size=(20, 5)),
+                values=rs.randn(20, 5),
                 base_values=np.ones(20) * 0.5,
             ),
         },

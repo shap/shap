@@ -80,13 +80,13 @@ def test_kernel_shap_with_call_method():
 def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
     """
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
-    df_X = pd.DataFrame(rng.random((10, 3)), columns=list('abc'))
+    df_X = pd.DataFrame(rs.random((10, 3)), columns=list('abc'))
     df_X.index = pd.date_range('2018-01-01', periods=10, freq='D', tz='UTC')
 
     df_y = df_X.eval('a - 2 * b + 3 * c')
-    df_y = df_y + rng.normal(0.0, 0.1, df_y.shape)
+    df_y = df_y + rs.normal(0.0, 0.1, df_y.shape)
 
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(df_X, df_y)
@@ -194,8 +194,8 @@ def test_linear(random_seed):
 
     (as per corollary 1 of https://arxiv.org/abs/1705.07874)
     """
-    rng = np.random.default_rng(random_seed)
-    x = rng.normal(size=(200, 3), scale=1)
+    rs = np.random.RandomState(random_seed)
+    x = rs.normal(size=(200, 3), scale=1)
 
     # a linear model
     def f(x):

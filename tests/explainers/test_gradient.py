@@ -13,7 +13,7 @@ def test_tf_keras_mnist_cnn(random_seed):
 
     tf = pytest.importorskip('tensorflow')
 
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
     tf.compat.v1.random.set_random_seed(random_seed)
 
     from tensorflow.compat.v1 import ConfigProto, InteractiveSession
@@ -43,11 +43,10 @@ def test_tf_keras_mnist_cnn(random_seed):
 
     # the data, split between train and test sets
     #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    n_samples=200
-    x_train = rng.standard_normal(size=(n_samples, 28, 28))
-    y_train = rng.integers(low=0, high=9, size=n_samples)
-    x_test = rng.standard_normal(size=(n_samples, 28, 28))
-    y_test = rng.integers(low=0, high=9, size=n_samples)
+    x_train = rs.randn(200, 28, 28)
+    y_train = rs.randint(0, 9, 200)
+    x_test = rs.randn(200, 28, 28)
+    y_test = rs.randint(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -94,7 +93,7 @@ def test_tf_keras_mnist_cnn(random_seed):
     )
 
     # explain by passing the tensorflow inputs and outputs
-    inds = rng.choice(x_train.shape[0], 20, replace=False)
+    inds = rs.choice(x_train.shape[0], 20, replace=False)
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
@@ -113,7 +112,7 @@ def test_pytorch_mnist_cnn(random_seed):
 
     torch = pytest.importorskip('torch')
     torch.manual_seed(random_seed)
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
 
     from torch import nn
     from torch.nn import functional as F
@@ -207,7 +206,7 @@ def test_pytorch_mnist_cnn(random_seed):
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
-        inds = rng.choice(next_x.shape[0], 3, replace=False)
+        inds = rs.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
         else:

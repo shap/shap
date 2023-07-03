@@ -123,11 +123,11 @@ def _brute_force_tree_shap(tree, x):
 
 def test_xgboost_direct(random_seed):
     xgboost = pytest.importorskip('xgboost')
-    rng = np.random.default_rng(random_seed)
+    rs = np.random.RandomState(random_seed)
     N = 100
     M = 4
-    X = rng.standard_normal(size=(N, M))
-    y = rng.standard_normal(size=N)
+    X = rs.standard_normal(size=(N, M))
+    y = rs.standard_normal(size=N)
 
     model = xgboost.XGBRegressor()
     model.fit(X, y)
@@ -513,10 +513,10 @@ def test_single_tree_compare_with_kernel_shap(random_seed):
     set being conditioned on, and the remainder set.
     """
     xgboost = pytest.importorskip("xgboost")
-    rng = np.random.default_rng(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     n = 100
-    X = rng.normal(size=(n, 7))
+    X = rs.normal(size=(n, 7))
     y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
 
     # train a model with single tree
@@ -530,7 +530,7 @@ def test_single_tree_compare_with_kernel_shap(random_seed):
 
     # Compare for five random samples
     for _ in range(5):
-        x_ind = rng.choice(X.shape[1])
+        x_ind = rs.choice(X.shape[1])
         x = X[x_ind:x_ind + 1, :]
 
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
@@ -551,10 +551,10 @@ def test_several_trees(random_seed):
     larger models (20 trees).
     """
     xgboost = pytest.importorskip("xgboost")
-    rng = np.random.default_rng(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     n = 1000
-    X = rng.normal(size=(n, 7))
+    X = rs.normal(size=(n, 7))
     b = np.array([-2, 1, 3, 5, 2, 20, -5])
     y = np.matmul(X, b)
     max_depth = 6
@@ -570,7 +570,7 @@ def test_several_trees(random_seed):
 
     # Compare for five random samples
     for _ in range(5):
-        x_ind = rng.choice(X.shape[1])
+        x_ind = rs.choice(X.shape[1])
         x = X[x_ind:x_ind + 1, :]
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
         itshap = expl.shap_values(x)
@@ -593,13 +593,13 @@ def test_single_tree_nonlinear_transformations(random_seed):
     #     return(np.square(yt-yp))
 
     xgboost = pytest.importorskip("xgboost")
-    rng = np.random.default_rng(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     n = 100
-    X = rng.normal(size=(n, 7))
+    X = rs.normal(size=(n, 7))
     y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
     y = y + abs(min(y))
-    y = rng.binomial(n=1, p=y / max(y))
+    y = rs.binomial(n=1, p=y / max(y))
 
     # train a model with single tree
     Xd = xgboost.DMatrix(X, label=y)
@@ -645,12 +645,12 @@ def test_single_tree_nonlinear_transformations(random_seed):
 def test_xgboost_classifier_independent_margin(random_seed):
     xgboost = pytest.importorskip("xgboost")
     # train XGBoost model
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
     n = 1000
-    X = rng.normal(size=(n, 7))
+    X = rs.normal(size=(n, 7))
     y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
     y = y + abs(min(y))
-    y = rng.binomial(n=1, p=y / max(y))
+    y = rs.binomial(n=1, p=y / max(y))
 
     model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
     model.fit(X, y)
@@ -666,13 +666,13 @@ def test_xgboost_classifier_independent_probability(random_seed):
     xgboost = pytest.importorskip("xgboost")
 
     # train XGBoost model
-    rng = np.random.default_rng(seed=random_seed)
+    rs = np.random.RandomState(random_seed)
     n = 1000
-    X = rng.normal(size=(n, 7))
+    X = rs.normal(size=(n, 7))
     b = np.array([-2, 1, 3, 5, 2, 20, -5])
     y = np.matmul(X, b)
     y = y + abs(min(y))
-    y = rng.binomial(n=1, p=y / max(y))
+    y = rs.binomial(n=1, p=y / max(y))
 
     model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
     model.fit(X, y)
@@ -1083,8 +1083,8 @@ class TestExplainerSklearn:
 
     def test_HistGradientBoostingClassifier_multidim(self, random_seed):
         X, y = shap.datasets.adult(n_points=100)
-        rng = np.random.default_rng(seed=random_seed)
-        y = rng.integers(0, 3, len(y))
+        rs = np.random.RandomState(random_seed)
+        y = rs.randint(0, 3, len(y))
         model = sklearn.ensemble.HistGradientBoostingClassifier(
             max_iter=10, max_depth=6
         ).fit(X, y)

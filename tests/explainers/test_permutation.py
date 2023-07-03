@@ -14,8 +14,8 @@ from . import common
 def test_exact_second_order(random_seed):
     """ This tests that the Perumtation explain gives exact answers for second order functions.
     """
-    rng = np.random.default_rng(seed=random_seed)
-    data = rng.integers(0, 2, size=(100,5))
+    rs = np.random.RandomState(random_seed)
+    data = rs.randint(0, 2, size=(100,5))
     def model(data):
         return data[:,0] * data[:,2] + data[:,1] + data[:,2] + data[:,2] * data[:,3]
 
