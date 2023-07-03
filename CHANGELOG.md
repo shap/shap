@@ -27,7 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fixed sampling in `shap.datasets` to sample without replacement
   ([#36](https://github.com/dsgibbons/shap/pull/36) by @thatlittleboy).
 - Fixed an `UnboundLocalError` problem arising from passing a dictionary input to `shap.plots.bar`
-  ([#3001](https://github.com/slundberg/shap/pull/3000) by @thatlittleboy).
+  ([#3001](https://github.com/slundberg/shap/pull/3001) by @thatlittleboy).
 - Fixed tensorflow import issue with Pyspark when using `Gradient`
   ([#2983](https://github.com/slundberg/shap/pull/2983) by @skamdar).
 - Fixed the aspect ratio of the colorbar in `shap.plots.heatmap`, and use the `ax` matplotlib API internally
