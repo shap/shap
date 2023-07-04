@@ -1,7 +1,7 @@
 # flake8: noqa
 import warnings
 
-__version__ = "0.41.0"
+__version__ = "0.42.0"
 
 from ._explanation import Explanation, Cohorts
 
