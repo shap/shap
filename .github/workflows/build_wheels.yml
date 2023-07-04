@@ -60,18 +60,7 @@ jobs:
     name: Publish wheels on pypi
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'created'
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: install requirements
-        run: pip install twine==4.0.2
-
       - uses: actions/download-artifact@v3
         with:
           name: bdist_files
@@ -82,11 +71,14 @@ jobs:
           name: sdist_files
           path: dist
 
-      - name: check
-        run: twine check dist/*
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN  }}  # TODO: confirm this token exists (or use trusted publishing instead)
+          repository-url: https://test.pypi.org/legacy/
 
-      - name: upload
-        run: twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: github.event_name == 'release' && github.event.action == 'created'
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
