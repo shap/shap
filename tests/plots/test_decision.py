@@ -6,11 +6,16 @@ matplotlib.use('Agg')
 import shap  # pylint: disable=wrong-import-position
 
 
-def test_random_decision():
+def test_random_decision(random_seed):
     """ Make sure the decision plot does not crash on random data.
     """
-    np.random.seed(0)
-    shap.decision_plot(0, np.random.randn(20, 5), np.random.randn(20, 5), show=False)
+    rs = np.random.RandomState(random_seed)
+    shap.decision_plot(
+        0,
+        rs.standard_normal(size=(20, 5)),
+        rs.standard_normal(size=(20, 5)),
+        show=False
+    )
     pl.close()
 
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##

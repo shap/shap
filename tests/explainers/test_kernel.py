@@ -77,16 +77,16 @@ def test_kernel_shap_with_call_method():
     # plot the SHAP values for the Versicolour output of the first instance
     shap.force_plot(shap_values[0][:,1])
 
-def test_kernel_shap_with_dataframe():
+def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
     """
-    np.random.seed(3)
+    rs = np.random.RandomState(random_seed)
 
-    df_X = pd.DataFrame(np.random.random((10, 3)), columns=list('abc'))
+    df_X = pd.DataFrame(rs.random((10, 3)), columns=list('abc'))
     df_X.index = pd.date_range('2018-01-01', periods=10, freq='D', tz='UTC')
 
     df_y = df_X.eval('a - 2 * b + 3 * c')
-    df_y = df_y + np.random.normal(0.0, 0.1, df_y.shape)
+    df_y = df_y + rs.normal(0.0, 0.1, df_y.shape)
 
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(df_X, df_y)
@@ -113,7 +113,6 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     """ Check with a sparse non zero background matrix.
     """
     np.set_printoptions(threshold=100000)
-    np.random.seed(0)
 
     X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(X, y, test_size=0.01, random_state=0)
@@ -190,14 +189,13 @@ def test_kernel_sparse_vs_dense_multirow_background():
     assert np.allclose(shap_values, sparse_sv_dense_bg, rtol=1e-05, atol=1e-05)
 
 
-def test_linear():
+def test_linear(random_seed):
     """ Tests that KernelExplainer returns the correct result when the model is linear.
 
     (as per corollary 1 of https://arxiv.org/abs/1705.07874)
     """
-
-    np.random.seed(2)
-    x = np.random.normal(size=(200, 3), scale=1)
+    rs = np.random.RandomState(random_seed)
+    x = rs.normal(size=(200, 3), scale=1)
 
     # a linear model
     def f(x):

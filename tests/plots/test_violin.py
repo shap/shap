@@ -72,11 +72,11 @@ def test_violin(explainer):
 )
 def test_random_summary_violin_with_data2():
     """Check a violin chart with shap_values as a np.array."""
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     fig = plt.figure()
     shap.plots.violin(
-        np.random.randn(20, 5),
-        np.random.randn(20, 5),
+        rs.standard_normal(size=(20, 5)),
+        rs.standard_normal(size=(20, 5)),
         plot_type="violin",
         show=False,
     )

@@ -7,10 +7,15 @@ import shap
 
 # pylint: disable=import-error, import-outside-toplevel, no-name-in-module, import-error
 
-def test_tf_keras_mnist_cnn():
+def test_tf_keras_mnist_cnn(random_seed):
     """ This is the basic mnist cnn example from keras.
     """
+
     tf = pytest.importorskip('tensorflow')
+
+    rs = np.random.RandomState(random_seed)
+    tf.compat.v1.random.set_random_seed(random_seed)
+
     from tensorflow.compat.v1 import ConfigProto, InteractiveSession
     from tensorflow.keras import backend as K
     from tensorflow.keras.layers import (
@@ -38,10 +43,10 @@ def test_tf_keras_mnist_cnn():
 
     # the data, split between train and test sets
     #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    x_train = np.random.randn(200, 28, 28)
-    y_train = np.random.randint(0, 9, 200)
-    x_test = np.random.randn(200, 28, 28)
-    y_test = np.random.randint(0, 9, 200)
+    x_train = rs.randn(200, 28, 28)
+    y_train = rs.randint(0, 9, 200)
+    x_test = rs.randn(200, 28, 28)
+    y_test = rs.randint(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -88,8 +93,7 @@ def test_tf_keras_mnist_cnn():
     )
 
     # explain by passing the tensorflow inputs and outputs
-    np.random.seed(0)
-    inds = np.random.choice(x_train.shape[0], 20, replace=False)
+    inds = rs.choice(x_train.shape[0], 20, replace=False)
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
@@ -102,14 +106,17 @@ def test_tf_keras_mnist_cnn():
     sess.close()
 
 
-def test_pytorch_mnist_cnn():
+def test_pytorch_mnist_cnn(random_seed):
     """The same test as above, but for pytorch
     """
+
     torch = pytest.importorskip('torch')
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     from torch import nn
     from torch.nn import functional as F
-    torch.manual_seed(0)
+
 
     batch_size = 128
 
@@ -199,8 +206,7 @@ def test_pytorch_mnist_cnn():
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
-        np.random.seed(0)
-        inds = np.random.choice(next_x.shape[0], 3, replace=False)
+        inds = rs.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
         else:
@@ -225,13 +231,13 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, False)
 
 
-def test_pytorch_multiple_inputs():
-    """ Test multi-input scenarios.
-    """
-    # pylint: disable=no-member
+def test_pytorch_multiple_inputs(random_seed):
+    """ Test multi-input scenarios."""
+
     torch = pytest.importorskip('torch')
     from torch import nn
-    torch.manual_seed(1)
+
+    torch.manual_seed(random_seed)
     batch_size = 10
     x1 = torch.ones(batch_size, 3)
     x2 = torch.ones(batch_size, 4)

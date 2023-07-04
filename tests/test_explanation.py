@@ -7,12 +7,12 @@ import pytest
 import shap
 
 
-def test_explanation_hstack():
+def test_explanation_hstack(random_seed):
     """Checks that `hstack` works as expected with two valid Explanation objects.
     And that it returns an Explanation object.
     """
     # generate 2 Explanation objects for stacking
-    rs = np.random.RandomState(0)
+    rs = np.random.RandomState(random_seed)
     base_vals = np.ones(20) * 0.123
     exp1 = shap.Explanation(
         values=rs.randn(20, 7),
@@ -28,11 +28,11 @@ def test_explanation_hstack():
     assert new_exp.values.shape == (20, 12)
 
 
-def test_explanation_hstack_errors():
+def test_explanation_hstack_errors(random_seed):
     """Checks that `hstack` throws errors on invalid input.
     """
     # generate 2 Explanation objects for stacking
-    rs = np.random.RandomState(1)
+    rs = np.random.RandomState(random_seed)
     base_vals = np.ones(20) * 0.123
     base_exp = shap.Explanation(
         values=rs.randn(20, 5),
