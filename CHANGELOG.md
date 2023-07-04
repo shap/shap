@@ -36,7 +36,7 @@ into the main shap repository. PRs from this origin are labelled here as `fork#1
   DataFrame containing Categorical columns
   ([fork#88](https://github.com/dsgibbons/shap/pull/88) by @thatlittleboy).
 - Fixed sampling in `shap.datasets` to sample without replacement
-  ([#36](https://github.com/dsgibbons/shap/pull/36) by @thatlittleboy).
+  ([fork#36](https://github.com/dsgibbons/shap/pull/36) by @thatlittleboy).
 - Fixed an `UnboundLocalError` problem arising from passing a dictionary input to `shap.plots.bar`
   ([#3001](https://github.com/slundberg/shap/pull/3001) by @thatlittleboy).
   ([fork#36](https://github.com/dsgibbons/shap/pull/36) by @thatlittleboy).
@@ -86,7 +86,7 @@ into the main shap repository. PRs from this origin are labelled here as `fork#1
   ([fork#29](https://github.com/dsgibbons/shap/pull/29) by @dsgibbons,
    [fork#20](https://github.com/dsgibbons/shap/pull/20) by @simonangerbauer,
    [#3044](https://github.com/slundberg/shap/pull/3044) and
-   [#dsgibbons24](https://github.com/dsgibbons/shap/pull/24) by @connortann).
+   [fork#24](https://github.com/dsgibbons/shap/pull/24) by @connortann).
 - Include CUDA GPU C extension files in the source distribution
   ([#3009](https://github.com/slundberg/shap/pull/3009) by @jklaise).
 - Fixed installation of package via setuptools
@@ -103,7 +103,7 @@ into the main shap repository. PRs from this origin are labelled here as `fork#1
 - Updated project metadata to PEP 517
   ([#3022](https://github.com/slundberg/shap/pull/3022) by @connortann).
 - Introduced more thorough testing on CI against newer dependencies
-  ([#dsgibbons61](https://github.com/dsgibbons/shap/pull/61) and
+  ([fork#61](https://github.com/dsgibbons/shap/pull/61) and
    [#3017](https://github.com/slundberg/shap/pull/3017)
   by @connortann)
 - Reduced unit test time by ~5 mins
