@@ -441,6 +441,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
                  cmap=colors.red_blue,
+                 print_values_legend_multioutput=False,
                  # depreciated
                  auto_size_plot=None,
                  use_log_scale=False):
@@ -472,6 +473,10 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
+
+    print_values_legend_multioutput: bool
+        Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
+        by default.
     """
 
     # support passing an explanation object
@@ -880,11 +885,29 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
         elif class_inds == "original":
             class_inds = range(len(shap_values))
+
+        if print_values_legend_multioutput:
+            # Get the smallest significant digit to print on the legend.
+            # Set to 2 if the smallest number is bigger than 1.
+            smallest_shap = np.abs(np.min(np.abs(shap_values).mean((1, 2))))
+            if smallest_shap > 1:
+                n_decimals = 2
+            else:
+                n_decimals = int(-np.floor(
+                    np.log10(
+                        smallest_shap
+                    )
+                ))
+
         for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
+            if print_values_legend_multioutput:
+                label = f'{class_names[ind]}: {np.round(np.mean(global_shap_values),(n_decimals+1))}'
+            else:
+                label = class_names[ind]
             pl.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
-                color=color(i), label=class_names[ind]
+                color=color(i), label=label
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
