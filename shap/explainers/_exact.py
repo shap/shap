@@ -286,7 +286,10 @@ def partition_masks(partition_tree):
             inds_list0[i] = inverse_order[inds_list0[i]]
             inds_list1[i] = inverse_order[inds_list1[i]]
 
-    return all_masks[order], np.array([[np.array(on), np.array(off)] for on,off in inds_lists])
+    # Care: inds_lists have different lengths, so partition_masks_inds is a "ragged" array. See GH #3063
+    partition_masks = all_masks[order]
+    partition_masks_inds = [[np.array(on), np.array(off)] for on, off in inds_lists]
+    return partition_masks, partition_masks_inds
 
 # TODO: this should be a jit function... which would require preallocating the inds_lists (sizes are 2**depth of that ind)
 # TODO: we could also probable avoid making the masks at all and just record the deltas if we want...
