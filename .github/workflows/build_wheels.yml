@@ -60,7 +60,7 @@ jobs:
     name: Publish wheels on pypi
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'created'
+    if: startsWith(github.ref, 'refs/tags')
     steps:
       - uses: actions/download-artifact@v3
         with:
