@@ -39,6 +39,18 @@ def test_random_multi_class_summary():
 
 
 @pytest.mark.mpl_image_compare
+def test_random_multi_class_summary_legend():
+    """ Check the functionality of printing the legend in the plot of a multiclass run.
+    """
+    np.random.seed(0)
+    fig = plt.figure()
+    shap.summary_plot([np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False,
+                      print_values_legend_multioutput=True)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
 def test_random_summary_bar_with_data():
     """ Check a bar chart.
     """

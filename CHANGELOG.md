@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 <!--Changes from new PRs should be put in this section-->
 
+### Added
+- Added `print_values_legend_multioutput` parameter to `summary_legacy`
+  ([#3062](https://github.com/slundberg/shap/pull/3062) by @101AlexMartin).
+
 ## 0.42.0 - 2023-07-05
 
 This release incorporates many changes that were originally contributed by the SHAP
