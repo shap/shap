@@ -32,10 +32,7 @@ if os.path.exists(NOTEBOOKS_DIR):
 
     warnings.warn("example_notebooks directory exists, replacing...")
     shutil.rmtree(NOTEBOOKS_DIR)
-shutil.copytree(
-    os.path.abspath("../notebooks"),
-    NOTEBOOKS_DIR,
-)
+shutil.copytree(os.path.abspath("../notebooks"), NOTEBOOKS_DIR)
 if os.path.exists(NOTEBOOKS_DIR + "/local_scratch"):
     shutil.rmtree(NOTEBOOKS_DIR + "/local_scratch")
 
