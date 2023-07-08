@@ -1381,14 +1381,17 @@ class SingleTree:
         # dictionary output from LightGBM `.dump_model()`
         elif isinstance(tree, dict) and "tree_structure" in tree:
             start = tree['tree_structure']
-            num_parents = tree['num_leaves']-1
-            self.children_left = np.empty((2*num_parents+1), dtype=np.int32)
-            self.children_right = np.empty((2*num_parents+1), dtype=np.int32)
-            self.children_default = np.empty((2*num_parents+1), dtype=np.int32)
-            self.features = np.empty((2*num_parents+1), dtype=np.int32)
-            self.thresholds = np.empty((2*num_parents+1), dtype=np.float64)
-            self.values = [-2]*(2*num_parents+1)
-            self.node_sample_weight = np.empty((2*num_parents+1), dtype=np.float64)
+            num_parents = tree['num_leaves'] - 1
+            num_nodes = 2 * num_parents + 1
+            self.children_left = np.empty(num_nodes, dtype=np.int32)
+            self.children_right = np.empty(num_nodes, dtype=np.int32)
+            self.children_default = np.empty(num_nodes, dtype=np.int32)
+            self.features = np.empty(num_nodes, dtype=np.int32)
+            self.thresholds = np.empty(num_nodes, dtype=np.float64)
+            self.values = [-2 for _ in range(num_nodes)]
+            self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
+
+            # BFS traversal through the tree structure
             visited, queue = [], [start]
             while queue:
                 vertex = queue.pop(0)  # TODO(perf): benchmark this against deque.popleft()
