@@ -1378,7 +1378,8 @@ class SingleTree:
                 self.values = (self.values.T / self.values.sum(1)).T
             self.values = self.values * scaling
 
-        elif type(tree) == dict and 'tree_structure' in tree: # LightGBM model dump
+        # dictionary output from LightGBM `.dump_model()`
+        elif isinstance(tree, dict) and "tree_structure" in tree:
             start = tree['tree_structure']
             num_parents = tree['num_leaves']-1
             self.children_left = np.empty((2*num_parents+1), dtype=np.int32)
