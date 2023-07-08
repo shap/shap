@@ -1421,17 +1421,18 @@ class SingleTree:
                     queue.append(left_child)
                     queue.append(right_child)
                 else:
-                    self.children_left[vertex['leaf_index']+num_parents] = -1
-                    self.children_right[vertex['leaf_index']+num_parents] = -1
-                    self.children_default[vertex['leaf_index']+num_parents] = -1
-                    self.features[vertex['leaf_index']+num_parents] = -1
-                    self.children_left[vertex['leaf_index']+num_parents] = -1
-                    self.children_right[vertex['leaf_index']+num_parents] = -1
-                    self.children_default[vertex['leaf_index']+num_parents] = -1
-                    self.features[vertex['leaf_index']+num_parents] = -1
-                    self.thresholds[vertex['leaf_index']+num_parents] = -1
-                    self.values[vertex['leaf_index']+num_parents] = [vertex['leaf_value']]
-                    self.node_sample_weight[vertex['leaf_index']+num_parents] = vertex['leaf_count']
+                    vleaf_idx = vertex['leaf_index'] + num_parents
+                    self.children_left[vleaf_idx] = -1
+                    self.children_right[vleaf_idx] = -1
+                    self.children_default[vleaf_idx] = -1
+                    self.features[vleaf_idx] = -1
+                    self.children_left[vleaf_idx] = -1
+                    self.children_right[vleaf_idx] = -1
+                    self.children_default[vleaf_idx] = -1
+                    self.features[vleaf_idx] = -1
+                    self.thresholds[vleaf_idx] = -1
+                    self.values[vleaf_idx] = [vertex['leaf_value']]
+                    self.node_sample_weight[vleaf_idx] = vertex['leaf_count']
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
 
