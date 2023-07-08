@@ -887,11 +887,13 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             class_inds = range(len(shap_values))
 
         if print_values_legend_multioutput:
-            # Get the smallest significant digit to print on the legend.
-            # Set to 2 if the smallest number is bigger than 1.
+            # Get the smallest decimal place of the first significant digit
+            # to print on the legend. The legend will print ('n_decimal' + 1)
+            # decimal places.
+            # Set to 1 if the smallest number is bigger than 1.
             smallest_shap = np.abs(np.min(np.abs(shap_values).mean((1, 2))))
             if smallest_shap > 1:
-                n_decimals = 2
+                n_decimals = 1
             else:
                 n_decimals = int(-np.floor(
                     np.log10(
