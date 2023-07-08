@@ -1392,13 +1392,16 @@ class SingleTree:
             visited, queue = [], [start]
             while queue:
                 vertex = queue.pop(0)
-                if 'split_index' in vertex.keys():
+                is_branch_node = "split_index" in vertex
+                if is_branch_node:
                     if vertex['split_index'] not in visited:
-                        if 'split_index' in vertex['left_child'].keys():
+                        left_is_branch_node = "split_index" in vertex["left_child"]
+                        if left_is_branch_node:
                             self.children_left[vertex['split_index']] = vertex['left_child']['split_index']
                         else:
                             self.children_left[vertex['split_index']] = vertex['left_child']['leaf_index']+num_parents
-                        if 'split_index' in vertex['right_child'].keys():
+                        right_is_branch_node = "split_index" in vertex["right_child"]
+                        if right_is_branch_node:
                             self.children_right[vertex['split_index']] = vertex['right_child']['split_index']
                         else:
                             self.children_right[vertex['split_index']] = vertex['right_child']['leaf_index']+num_parents
