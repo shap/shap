@@ -121,10 +121,11 @@ def _brute_force_tree_shap(tree, x):
     return phi / math.factorial(m)
 
 
-def test_xgboost_direct():
-    # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed=0
+def test_xgboost_direct(random_seed):
     xgboost = pytest.importorskip('xgboost')
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
     rs = np.random.RandomState(random_seed)
     N = 100
     M = 4
@@ -515,6 +516,9 @@ def test_single_tree_compare_with_kernel_shap(random_seed):
     set being conditioned on, and the remainder set.
     """
     xgboost = pytest.importorskip("xgboost")
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
     rs = np.random.RandomState(random_seed)
 
     n = 100

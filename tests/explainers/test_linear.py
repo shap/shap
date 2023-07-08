@@ -121,13 +121,15 @@ def test_perfect_colinear():
     shap_values = explainer.shap_values(X)
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
 
-def test_shape_values_linear_many_features():
+def test_shape_values_linear_many_features(random_seed):
 
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     coef = np.array([1, 2]).T
 
-    rs = np.random.RandomState(0)
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+    rs = np.random.RandomState(random_seed)
     # generate linear data
     X = rs.normal(1, 10, size=(1000, len(coef)))
     y = np.dot(X, coef) + 1 + rs.normal(scale=0.1, size=1000)
