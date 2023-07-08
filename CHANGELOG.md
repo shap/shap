@@ -70,6 +70,8 @@ into the main shap repository. PRs from this origin are labelled here as `fork#1
   [#3028](https://github.com/slundberg/shap/pull/3028),
   [#3029](https://github.com/slundberg/shap/pull/3029) and
   [#3031](https://github.com/slundberg/shap/pull/3031) by @connortann).
+- Fixed creation of ragged arrays in `shap.explainers.Exact`
+  ([#3064](https://github.com/slundberg/shap/pull/3064) by @connortann).
 
 ### Changed
 
