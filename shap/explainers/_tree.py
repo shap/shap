@@ -1391,7 +1391,7 @@ class SingleTree:
             self.node_sample_weight = np.empty((2*num_parents+1), dtype=np.float64)
             visited, queue = [], [start]
             while queue:
-                vertex = queue.pop(0)
+                vertex = queue.pop(0)  # TODO(perf): benchmark this against deque.popleft()
                 is_branch_node = "split_index" in vertex
                 if is_branch_node:
                     if vertex['split_index'] not in visited:
