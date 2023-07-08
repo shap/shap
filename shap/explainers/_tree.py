@@ -1400,8 +1400,9 @@ class SingleTree:
                     vsplit_idx: int = vertex["split_index"]
                     if vsplit_idx in visited:
                         continue
-                    left_child = vertex["left_child"]
-                    right_child = vertex["right_child"]
+
+                    left_child: dict = vertex["left_child"]
+                    right_child: dict = vertex["right_child"]
                     left_is_branch_node = "split_index" in left_child
                     if left_is_branch_node:
                         self.children_left[vsplit_idx] = left_child['split_index']
@@ -1416,6 +1417,7 @@ class SingleTree:
                         self.children_default[vsplit_idx] = self.children_left[vsplit_idx]
                     else:
                         self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
+
                     self.features[vsplit_idx] = vertex['split_feature']
                     self.thresholds[vsplit_idx] = vertex['threshold']
                     self.values[vsplit_idx] = [vertex['internal_value']]
@@ -1424,7 +1426,7 @@ class SingleTree:
                     queue.append(left_child)
                     queue.append(right_child)
                 else:
-                    vleaf_idx = vertex['leaf_index'] + num_parents
+                    vleaf_idx: int = vertex['leaf_index'] + num_parents
                     self.children_left[vleaf_idx] = -1
                     self.children_right[vleaf_idx] = -1
                     self.children_default[vleaf_idx] = -1
