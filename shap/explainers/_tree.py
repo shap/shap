@@ -1394,28 +1394,31 @@ class SingleTree:
                 vertex = queue.pop(0)  # TODO(perf): benchmark this against deque.popleft()
                 is_branch_node = "split_index" in vertex
                 if is_branch_node:
-                    if vertex['split_index'] not in visited:
-                        left_is_branch_node = "split_index" in vertex["left_child"]
+                    vsplit_idx: int = vertex["split_index"]
+                    if vsplit_idx not in visited:
+                        left_child = vertex["left_child"]
+                        right_child = vertex["right_child"]
+                        left_is_branch_node = "split_index" in left_child
                         if left_is_branch_node:
-                            self.children_left[vertex['split_index']] = vertex['left_child']['split_index']
+                            self.children_left[vsplit_idx] = left_child['split_index']
                         else:
-                            self.children_left[vertex['split_index']] = vertex['left_child']['leaf_index']+num_parents
-                        right_is_branch_node = "split_index" in vertex["right_child"]
+                            self.children_left[vsplit_idx] = left_child['leaf_index'] + num_parents
+                        right_is_branch_node = "split_index" in right_child
                         if right_is_branch_node:
-                            self.children_right[vertex['split_index']] = vertex['right_child']['split_index']
+                            self.children_right[vsplit_idx] = right_child['split_index']
                         else:
-                            self.children_right[vertex['split_index']] = vertex['right_child']['leaf_index']+num_parents
+                            self.children_right[vsplit_idx] = right_child['leaf_index'] + num_parents
                         if vertex['default_left']:
-                            self.children_default[vertex['split_index']] = self.children_left[vertex['split_index']]
+                            self.children_default[vsplit_idx] = self.children_left[vsplit_idx]
                         else:
-                            self.children_default[vertex['split_index']] = self.children_right[vertex['split_index']]
-                        self.features[vertex['split_index']] = vertex['split_feature']
-                        self.thresholds[vertex['split_index']] = vertex['threshold']
-                        self.values[vertex['split_index']] = [vertex['internal_value']]
-                        self.node_sample_weight[vertex['split_index']] = vertex['internal_count']
-                        visited.append(vertex['split_index'])
-                        queue.append(vertex['left_child'])
-                        queue.append(vertex['right_child'])
+                            self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
+                        self.features[vsplit_idx] = vertex['split_feature']
+                        self.thresholds[vsplit_idx] = vertex['threshold']
+                        self.values[vsplit_idx] = [vertex['internal_value']]
+                        self.node_sample_weight[vsplit_idx] = vertex['internal_count']
+                        visited.append(vsplit_idx)
+                        queue.append(left_child)
+                        queue.append(right_child)
                 else:
                     self.children_left[vertex['leaf_index']+num_parents] = -1
                     self.children_right[vertex['leaf_index']+num_parents] = -1
