@@ -240,7 +240,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_pytorch_mnist_cnn(random_seed):
+def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
     torch = pytest.importorskip('torch')
@@ -468,7 +468,7 @@ def test_pytorch_custom_nested_models(random_seed):
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_single_output(random_seed):
+def test_pytorch_single_output():
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')

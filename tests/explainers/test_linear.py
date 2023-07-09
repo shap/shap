@@ -121,7 +121,7 @@ def test_perfect_colinear():
     shap_values = explainer.shap_values(X)
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
 
-def test_shape_values_linear_many_features(random_seed):
+def test_shape_values_linear_many_features():
 
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
