@@ -10,7 +10,7 @@ from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
 from shap.utils import MaskedModel, safe_isinstance
 
-from . import BenchmarkResult
+from ._result import BenchmarkResult
 
 
 class SequentialMasker():
