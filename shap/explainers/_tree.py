@@ -1285,9 +1285,48 @@ class TreeEnsemble:
 
 
 class SingleTree:
-    """ A single decision tree.
+    """A single decision tree.
 
     The primary point of this object is to parse many different tree types into a common format.
+
+    Attributes
+    ----------
+    children_left : numpy.array
+        A 1d array of length #nodes. The index ``i`` of this array contains the index of
+        the left-child of the ``i-th`` node in the tree. An index of -1 is used to
+        represent that the ``i-th`` node is a leaf/terminal node.
+
+    children_right : numpy.array
+        Same as ``children_left``, except it contains the index of the right child of
+        each ``i-th`` node in the tree.
+
+    children_default : numpy.array
+        A 1d numpy array of length #nodes. The index ``i`` of this array contains either
+        the index of the left-child / right-child of the ``i-th`` node in the tree,
+        depending on whether the default split (for handling missing values) is left /
+        right. An index of -1 is used to represent that the ``i-th`` node is a leaf
+        node.
+
+    features : numpy.array
+        A 1d numpy array of length #nodes. The value at the ``i-th`` position is the
+        index of the feature chosen for the split at node ``i``. Leaf nodes have no
+        splits, so is -1.
+
+    thresholds : numpy.array
+        A 1d numpy array of length #nodes. The value at the ``i-th`` position is the
+        threshold used for the split at node ``i``. Leaf nodes have no thresholds, so is
+        -1.
+
+    values : numpy.array
+        A 1d numpy array of length #nodes. The index ``i`` of this array contains the
+        raw predicted value that would be produced by node ``i`` if it were a leaf node.
+
+    node_sample_weight : numpy.array
+        A 1d numpy array of length #nodes. The index ``i`` contains the number of
+        records (usually from the training data) that falls into node ``i``.
+
+    max_depth : int
+        The max depth of the tree.
     """
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
