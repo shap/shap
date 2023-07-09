@@ -122,9 +122,10 @@ def _brute_force_tree_shap(tree, x):
 
 
 def test_xgboost_direct():
-    # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed=0
     xgboost = pytest.importorskip('xgboost')
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
     rs = np.random.RandomState(random_seed)
     N = 100
     M = 4
@@ -509,12 +510,15 @@ def test_provided_background_independent_prob_output():
             explainer.expected_value - bst.predict(dtest).mean()) < 1e-4, "Bad expected_value!"
 
 
-def test_single_tree_compare_with_kernel_shap(random_seed):
+def test_single_tree_compare_with_kernel_shap():
     """ Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the
     set being conditioned on, and the remainder set.
     """
     xgboost = pytest.importorskip("xgboost")
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
     rs = np.random.RandomState(random_seed)
 
     n = 100

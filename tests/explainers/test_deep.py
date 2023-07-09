@@ -479,7 +479,7 @@ def test_pytorch_single_output():
     from torch.utils.data import DataLoader, TensorDataset
 
     # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed=0
+    random_seed = 0
     torch.manual_seed(random_seed)
     rs = np.random.RandomState(random_seed)
 
