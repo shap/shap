@@ -11,6 +11,7 @@ import sklearn
 import sklearn.pipeline
 
 import shap
+from shap.explainers._tree import SingleTree
 from shap.utils._exceptions import InvalidModelError
 
 
@@ -769,6 +770,57 @@ def test_xgboost_buffer_strip():
     # after this fix, this line should not error
     explainer = shap.TreeExplainer(model)
     assert isinstance(explainer, shap.explainers.Tree)
+
+
+class TestSingleTree:
+    """Tests for the SingleTree class."""
+
+    def test_singletree_lightgbm_basic(self):
+        """A basic test for checking that a LightGBM dump_model() dictionary
+        is parsed properly into a SingleTree object.
+        """
+
+        # Stump (only root node) tree
+        # FIXME: this test should NOT throw a KeyError, see #2044
+        with pytest.raises(KeyError, match="leaf_index"):
+            sample_tree = {
+                "tree_index": 256,
+                "num_leaves": 1,
+                "num_cat": 0,
+                "shrinkage": 1,
+                "tree_structure": {
+                    "leaf_value": 0,
+                },
+            }
+            stree = SingleTree(sample_tree)
+            # just ensure that this does not error out
+            assert stree.children_left[0] == -1
+
+        # Depth=1 tree
+        sample_tree = {
+            "tree_index": 0,
+            "num_leaves": 2,
+            "num_cat": 0,
+            "shrinkage": 0.1,
+            "tree_structure": {
+                "split_index": 0,
+                "split_feature": 1,
+                "split_gain": 0.001471,
+                "threshold": 0,
+                "decision_type": "<=",
+                "default_left": True,
+                "missing_type": "None",
+                "internal_value": 0,
+                "internal_weight": 0,
+                "internal_count": 100,
+                "left_child": {"leaf_index": 0, "leaf_value": 0.0667, "leaf_weight": 0.00157, "leaf_count": 33},
+                "right_child": {"leaf_index": 1, "leaf_value": -0.0667, "leaf_weight": 0.00175, "leaf_count": 67},
+            },
+        }
+
+        stree = SingleTree(sample_tree)
+        # just ensure that the tree is parsed correctly
+        assert stree.node_sample_weight[0] == 100
 
 
 class TestExplainerSklearn:
