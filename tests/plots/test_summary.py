@@ -46,7 +46,7 @@ def test_random_multi_class_summary_legend_decimals():
     np.random.seed(0)
     fig = plt.figure()
     shap.summary_plot([np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False,
-                      print_values_legend_multioutput=True)
+                      show_values_in_legend=True)
     plt.tight_layout()
     return fig
 
@@ -59,7 +59,7 @@ def test_random_multi_class_summary_legend():
     np.random.seed(0)
     fig = plt.figure()
     shap.summary_plot([(2 + np.random.randn(20, 5)) for i in range(3)], 2 + np.random.randn(20, 5), show=False,
-                      print_values_legend_multioutput=True)
+                      show_values_in_legend=True)
     plt.tight_layout()
     return fig
 

@@ -441,7 +441,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
                  cmap=colors.red_blue,
-                 print_values_legend_multioutput=False,
+                 show_values_in_legend=False,
                  # depreciated
                  auto_size_plot=None,
                  use_log_scale=False):
@@ -474,7 +474,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
 
-    print_values_legend_multioutput: bool
+    show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
     """
@@ -886,7 +886,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         elif class_inds == "original":
             class_inds = range(len(shap_values))
 
-        if print_values_legend_multioutput:
+        if show_values_in_legend:
             # Get the smallest decimal place of the first significant digit
             # to print on the legend. The legend will print ('n_decimal' + 1)
             # decimal places.
@@ -903,7 +903,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
         for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
-            if print_values_legend_multioutput:
+            if show_values_in_legend:
                 label = f'{class_names[ind]}: {np.round(np.mean(global_shap_values),(n_decimals+1))}'
             else:
                 label = class_names[ind]
