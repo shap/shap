@@ -1419,8 +1419,8 @@ class SingleTree:
 
         # dictionary output from LightGBM `.dump_model()`
         elif isinstance(tree, dict) and "tree_structure" in tree:
-            start = tree['tree_structure']
-            num_parents = tree['num_leaves'] - 1
+            start = tree["tree_structure"]
+            num_parents = tree["num_leaves"] - 1
             num_nodes = 2 * num_parents + 1
             self.children_left = np.empty(num_nodes, dtype=np.int32)
             self.children_right = np.empty(num_nodes, dtype=np.int32)
@@ -1444,28 +1444,28 @@ class SingleTree:
                     right_child: dict = vertex["right_child"]
                     left_is_branch_node = "split_index" in left_child
                     if left_is_branch_node:
-                        self.children_left[vsplit_idx] = left_child['split_index']
+                        self.children_left[vsplit_idx] = left_child["split_index"]
                     else:
-                        self.children_left[vsplit_idx] = left_child['leaf_index'] + num_parents
+                        self.children_left[vsplit_idx] = left_child["leaf_index"] + num_parents
                     right_is_branch_node = "split_index" in right_child
                     if right_is_branch_node:
-                        self.children_right[vsplit_idx] = right_child['split_index']
+                        self.children_right[vsplit_idx] = right_child["split_index"]
                     else:
-                        self.children_right[vsplit_idx] = right_child['leaf_index'] + num_parents
-                    if vertex['default_left']:
+                        self.children_right[vsplit_idx] = right_child["leaf_index"] + num_parents
+                    if vertex["default_left"]:
                         self.children_default[vsplit_idx] = self.children_left[vsplit_idx]
                     else:
                         self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
 
-                    self.features[vsplit_idx] = vertex['split_feature']
-                    self.thresholds[vsplit_idx] = vertex['threshold']
-                    self.values[vsplit_idx] = [vertex['internal_value']]
-                    self.node_sample_weight[vsplit_idx] = vertex['internal_count']
+                    self.features[vsplit_idx] = vertex["split_feature"]
+                    self.thresholds[vsplit_idx] = vertex["threshold"]
+                    self.values[vsplit_idx] = [vertex["internal_value"]]
+                    self.node_sample_weight[vsplit_idx] = vertex["internal_count"]
                     visited.append(vsplit_idx)
                     queue.append(left_child)
                     queue.append(right_child)
                 else:
-                    vleaf_idx: int = vertex['leaf_index'] + num_parents
+                    vleaf_idx: int = vertex["leaf_index"] + num_parents
                     self.children_left[vleaf_idx] = -1
                     self.children_right[vleaf_idx] = -1
                     self.children_default[vleaf_idx] = -1
@@ -1475,8 +1475,8 @@ class SingleTree:
                     self.children_default[vleaf_idx] = -1
                     self.features[vleaf_idx] = -1
                     self.thresholds[vleaf_idx] = -1
-                    self.values[vleaf_idx] = [vertex['leaf_value']]
-                    self.node_sample_weight[vleaf_idx] = vertex['leaf_count']
+                    self.values[vleaf_idx] = [vertex["leaf_value"]]
+                    self.node_sample_weight[vleaf_idx] = vertex["leaf_count"]
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
 
