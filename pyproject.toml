@@ -137,4 +137,4 @@ archs = ["x86_64"]
 archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64"]
+archs = ["x86_64", "arm64"]
