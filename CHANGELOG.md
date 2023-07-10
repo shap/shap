@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
-## 0.42.1 - 2023-07-10
+## 0.42.1 - 2023-07-11
 
 Patch release to provide wheels for a broader range of architectures.
 
