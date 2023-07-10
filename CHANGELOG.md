@@ -7,8 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 <!--Changes from new PRs should be put in this section-->
 
+### Added
+
 ### Fixed
 
+### Changed
+
+### Removed
+
+## 0.42.1 - 2023-07-10
+
+Patch release to provide wheels for a broader range of architectures.
+
+- Added wheels for `linux:aarch64` and `macos:arm64`
 - Fixed circular import issues with `shap.benchmark`
   ([#3076](https://github.com/slundberg/shap/pull/3076) by @thatlittleboy).
 
