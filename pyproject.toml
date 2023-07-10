@@ -120,8 +120,7 @@ source_pkgs = ["shap"]
 combine = ["shap", "*/site-packages/shap"]
 
 [tool.cibuildwheel]
-# Restrict the set of builds to mirror the wheels available in scikit-learn. See #3028
-skip = ["cp36-*", "pp*", "*-musllinux_*"]
+skip = ["pp*", "*-musllinux_*"]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
 test-command = "pytest -v {project}/tests --import-mode=append"
@@ -131,7 +130,7 @@ test-extras = ["test-core", "plots"]
 test-skip = "cp37-* cp38-macosx_x86_64"
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64"]
+archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
