@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Patch release to provide wheels for a broader range of architectures.
 
 - Added wheels for `linux:aarch64` and `macos:arm64`
+  ([#3078](https://github.com/slundberg/shap/pull/3078) by @PrimozGodec and
+  [#3083](https://github.com/slundberg/shap/pull/3083) by @connortann).
 - Fixed circular import issues with `shap.benchmark`
   ([#3076](https://github.com/slundberg/shap/pull/3076) by @thatlittleboy).
 
