@@ -1,4 +1,4 @@
-from . import BenchmarkResult
+from ._result import BenchmarkResult
 
 
 class ComputeTime():
