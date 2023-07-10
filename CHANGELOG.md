@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 <!--Changes from new PRs should be put in this section-->
 
+### Fixed
+
+- Fixed circular import issues with `shap.benchmark`
+  ([#3076](https://github.com/slundberg/shap/pull/3076) by @thatlittleboy).
+
 ## 0.42.0 - 2023-07-05
 
 This release incorporates many changes that were originally contributed by the SHAP
