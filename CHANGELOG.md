@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Add support for LightGBM ensembles containing single leaf trees in `TreeExplainer`
   ([#3094](https://github.com/slundberg/shap/pull/3094) by @thatlittleboy).
 
+### Fixed
+
 ### Changed
 
 ### Removed
@@ -32,6 +34,7 @@ Patch release to provide wheels for a broader range of architectures.
   [#3083](https://github.com/slundberg/shap/pull/3083) by @connortann).
 - Fixed circular import issues with `shap.benchmark`
   ([#3076](https://github.com/slundberg/shap/pull/3076) by @thatlittleboy).
+- Dropped support for python 3.7
 
 ## 0.42.0 - 2023-07-05
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "oldest-supported-numpy", "packaging>20.9"]
+requires = ["setuptools>=61.0", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,7 @@ license = {text = "MIT License"}
 authors = [
     {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
   'numpy',
   'scipy',
@@ -27,7 +27,6 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
@@ -109,7 +108,6 @@ ignore = [
   "E741",  # Ambiguous variable name: `l`
   "E402",  # Module level import not at top of file
 ]
-target-version = "py37"
 
 [tool.ruff.per-file-ignores]
 # Unused imports often intentional in top-level __init__.py
