@@ -7,7 +7,6 @@ from ...utils._exceptions import DimensionError
 from .._explainer import Explainer
 from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
 
-keras = None
 tf = None
 tf_ops = None
 tf_backprop = None
@@ -79,7 +78,7 @@ class TFDeep(Explainer):
             have a value of False during predictions (and hence explanations).
 
         """
-        # try and import keras and tensorflow
+        # try to import tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
         if tf is None:
             from tensorflow.python.eager import backprop as tf_backprop
@@ -95,13 +94,6 @@ class TFDeep(Explainer):
             import tensorflow as tf
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
-        global keras
-        if keras is None:
-            try:
-                import keras
-                warnings.warn("keras is no longer supported, please use tf.keras instead.")
-            except Exception:
-                pass
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
