@@ -183,7 +183,7 @@ def test_xgboost_ranking():
         "n_estimators": 4,
     }
     model = xgboost.sklearn.XGBRanker(**params)
-    model.fit(x_train, y_train, q_train.astype(int))
+    model.fit(x_train, y_train, group=q_train.astype(int))
     _validate_shap_values(model, x_test)
 
 
@@ -672,7 +672,7 @@ def test_xgboost_classifier_independent_margin():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="margin")
+    e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="raw")
     shap_values = e.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
@@ -755,14 +755,14 @@ def test_skopt_rf_et():
                        result_rf.models[-1].predict(rf_df))
 
 
-def test_xgboost_buffer_strip():
+def test_xgboost_buffer_strip(random_seed):
     # test to make sure bug #1864 doesn't get reintroduced
     xgboost = pytest.importorskip("xgboost")
     X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
     y = np.array([1, 0])
     # specific values (e.g. 1.3) caused the bug previously
-    model = xgboost.XGBRegressor(base_score=1.3)
-    model.fit(X, y, eval_metric="rmse")
+    model = xgboost.XGBRegressor(base_score=1.3, eval_metric="rmse", random_state=random_seed)
+    model.fit(X, y)
     # previous bug did .lstrip('binf'), so would have incorrectly handled
     # buffer starting with binff
     assert model.get_booster().save_raw().startswith(b"binff")
