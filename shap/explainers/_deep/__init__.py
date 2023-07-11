@@ -1,6 +1,6 @@
+from .._explainer import Explainer
 from .deep_pytorch import PyTorchDeep
 from .deep_tf import TFDeep
-from .._explainer import Explainer
 
 
 class Deep(Explainer):
@@ -71,13 +71,13 @@ class Deep(Explainer):
             try:
                 a.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
         else:
             try:
                 model.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
 
         if framework == 'tensorflow':

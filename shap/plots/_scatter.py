@@ -1,62 +1,61 @@
-from __future__ import division
-
-import numpy as np
 import warnings
-try:
-    import matplotlib.pyplot as pl
-    import matplotlib
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
-from ._labels import labels
-from . import colors
-from ..utils import convert_name, approximate_interactions
-from ..utils._general import encode_array_if_needed
+
+import matplotlib
+import matplotlib.pyplot as pl
+import numpy as np
+
 from .._explanation import Explanation
+from ..utils import approximate_interactions, convert_name
+from ..utils._general import encode_array_if_needed
+from . import colors
+from ._labels import labels
 
 
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
 def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
             overlay=None, ax=None, ylabel="SHAP value", show=True):
-    """ Create a SHAP dependence scatter plot, colored by an interaction feature.
+    """Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
-    richer extenstion of classical parital dependence plots. Vertical dispersion of the
+    richer extension of classical parital dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
 
-    Note that if you want to change the data being displayed you can update the
-    shap_values.display_features attribute and it will then be used for plotting instead of
-    shap_values.data.
-
+    Note that if you want to change the data being displayed, you can update the
+    ``shap_values.display_features`` attribute and it will then be used for plotting instead of
+    ``shap_values.data``.
 
     Parameters
     ----------
     shap_values : shap.Explanation
-        A single column of a SHAP Explanation object (i.e. shap_values[:,"Feature A"]).
+        A single column of an :class:`.Explanation` object (i.e.
+        ``shap_values[:,"Feature A"]``).
 
     color : string or shap.Explanation
-        How to color the scatter plot points. This can be a fixed color string, or a Explanation object.
-        If it is an explanation object then the scatter plot points are colored by the feature that
-        seems to have the strongest interaction effect with the feature given by the shap_values argument.
-        This is calculated using shap.utils.approximate_interactions.
-        If only a single column of an Explanation object is passed then that feature column will be used
-        to color the data points.
+        How to color the scatter plot points. This can be a fixed color string, or an
+        :class:`.Explanation` object. If it is an :class:`.Explanation` object, then the
+        scatter plot points are colored by the feature that seems to have the strongest
+        interaction effect with the feature given by the ``shap_values`` argument. This
+        is calculated using :func:`shap.utils.approximate_interactions`. If only a
+        single column of an :class:`.Explanation` object is passed, then that
+        feature column will be used to color the data points.
 
     hist : bool
-        Whether to show a light histogram along the x-axis to show the density of the data. Note that the
-        histogram is normalized that that if all the point were in a single bin then that bin would span
-        the full height of the plot.
+        Whether to show a light histogram along the x-axis to show the density of the
+        data. Note that the histogram is normalized such that if all the points were in
+        a single bin, then that bin would span the full height of the plot. Defaults to
+        ``True``.
 
-    x_jitter : 'auto' or float (0 - 1)
-        Adds random jitter to feature values. May increase plot readability when a feature
-        is discrete. By default x_jitter is chosen base on auto-detection of categorical features
+    x_jitter : 'auto' or float
+        Adds random jitter to feature values by specifying a float between 0 to 1. May
+        increase plot readability when a feature is discrete. By default, ``x_jitter``
+        is chosen based on auto-detection of categorical features.
 
     alpha : float
-        The transparency of the data points (between 0 and 1). This can be useful to the
-        show density of the data points when using a large dataset.
+        The transparency of the data points (between 0 and 1). This can be useful to
+        show the density of the data points when using a large dataset.
 
     xmin : float or string
         Represents the lower bound of the plot's x-axis. It can be a string of the format
@@ -67,13 +66,22 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
 
     ax : matplotlib Axes object
-         Optionally specify an existing matplotlib Axes object, into which the plot will be placed.
-         In this case we do not create a Figure, otherwise we do.
+        Optionally specify an existing matplotlib ``Axes`` object, into which the plot will be placed.
+        In this case, we do not create a ``Figure``, otherwise we do.
+
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    Examples
+    --------
+
+    See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
     """
 
-
-    assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+    assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # see if we are plotting multiple columns
     if not isinstance(shap_values.feature_names, str) and len(shap_values.feature_names) > 0:
@@ -84,7 +92,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             ymin = nan_min - (nan_max - nan_min)/20
         if ymax is None:
             ymax = nan_max + (nan_max - nan_min)/20
-        f = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        _ = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = pl.subplot(1,len(inds),i+1)
             scatter(shap_values[:,i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
@@ -134,7 +142,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # wrap np.arrays as Explanations
     if isinstance(color, np.ndarray):
         color = Explanation(values=color, base_values=None, data=color)
-    
+
     # TODO: This stacking could be avoided if we use the new shap.utils.potential_interactions function
     if str(type(color)).endswith("Explanation'>"):
         shap_values2 = color
@@ -158,7 +166,6 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
                 display_features = np.hstack([display_features, shap_values2.display_data[:,mask]])
         color = None
         interaction_index = "auto"
-
 
     if type(shap_values_arr) is list:
         raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try " \
@@ -255,14 +262,14 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     np.random.shuffle(oinds)
     xv = encode_array_if_needed(features[oinds, ind])
     xd = display_features[oinds, ind]
-    
+
     s = shap_values_arr[oinds, ind]
     if type(xd[0]) == str:
         name_map = {}
         for i in range(len(xv)):
             name_map[xd[i]] = xv[i]
         xnames = list(name_map.keys())
-    
+
     # allow a single feature name to be passed alone
     if type(feature_names) == str:
         feature_names = [feature_names]
@@ -274,11 +281,11 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
         cv = interaction_feature_values
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(cv.astype(np.float), 5)
-        chigh = np.nanpercentile(cv.astype(np.float), 95)
+        clow = np.nanpercentile(cv.astype(float), 5)
+        chigh = np.nanpercentile(cv.astype(float), 95)
         if clow == chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
@@ -290,18 +297,19 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
         # discritize colors for categorical features
         if categorical_interaction and clow != chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
             bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
     # optionally add jitter to feature values
     xv_no_jitter = xv.copy()
     if x_jitter > 0:
-        if x_jitter > 1: x_jitter = 1
+        if x_jitter > 1:
+            x_jitter = 1
         xvals = xv.copy()
         if isinstance(xvals[0], float):
-            xvals = xvals.astype(np.float)
+            xvals = xvals.astype(float)
             xvals = xvals[~np.isnan(xvals)]
         xvals = np.unique(xvals) # returns a sorted array
         if len(xvals) >= 2:
@@ -309,7 +317,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             jitter_amount = x_jitter * smallest_diff
             xv += (np.random.random_sample(size = len(xv))*jitter_amount) - (jitter_amount/2)
 
-    
+
     # the actual scatter plot, TODO: adapt the dot_size to the number of data points?
     xv_nan = np.isnan(xv)
     xv_notnan = np.invert(xv_nan)
@@ -404,7 +412,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # the histogram of the data
     if hist:
         ax2 = ax.twinx()
-        #n, bins, patches = 
+        #n, bins, patches =
         xlim = ax.get_xlim()
         xvals = np.unique(xv_no_jitter)
 
@@ -428,7 +436,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
                 bin_edges = 10
             else:
                 bin_edges = 5
-        
+
         ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
         ax2.set_ylim(0,len(xv))
 
@@ -461,8 +469,6 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
-
-
 
 
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,
@@ -613,7 +619,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # get both the raw and display feature values
     oinds = np.arange(shap_values.shape[0]) # we randomize the ordering so plotting overlaps are not related to data ordering
     np.random.shuffle(oinds)
-    
+
     xv = encode_array_if_needed(features[oinds, ind])
 
     xd = display_features[oinds, ind]
@@ -635,11 +641,11 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         interaction_feature_values = encode_array_if_needed(features[:, interaction_index])
         cv = interaction_feature_values
         cd = display_features[:, interaction_index]
-        clow = np.nanpercentile(cv.astype(np.float), 5)
-        chigh = np.nanpercentile(cv.astype(np.float), 95)
+        clow = np.nanpercentile(cv.astype(float), 5)
+        chigh = np.nanpercentile(cv.astype(float), 95)
         if clow == chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
         if type(cd[0]) == str:
             cname_map = {}
             for i in range(len(cv)):
@@ -651,17 +657,18 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
         # discritize colors for categorical features
         if categorical_interaction and clow != chigh:
-            clow = np.nanmin(cv.astype(np.float))
-            chigh = np.nanmax(cv.astype(np.float))
+            clow = np.nanmin(cv.astype(float))
+            chigh = np.nanmax(cv.astype(float))
             bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
             color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
     # optionally add jitter to feature values
     if x_jitter > 0:
-        if x_jitter > 1: x_jitter = 1
+        if x_jitter > 1:
+            x_jitter = 1
         xvals = xv.copy()
         if isinstance(xvals[0], float):
-            xvals = xvals.astype(np.float)
+            xvals = xvals.astype(float)
             xvals = xvals[~np.isnan(xvals)]
         xvals = np.unique(xvals) # returns a sorted array
         if len(xvals) >= 2:

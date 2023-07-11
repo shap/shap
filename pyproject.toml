@@ -1,3 +1,140 @@
 [build-system]
-requires = ["setuptools", "wheel", "oldest-supported-numpy"]
+requires = ["setuptools>=61.0", "wheel", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "shap"
+description = "A unified approach to explain the output of any machine learning model."
+readme = "README.md"
+license = {text = "MIT License"}
+authors = [
+    {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
+]
+requires-python = ">=3.7"
+dependencies = [
+  'numpy',
+  'scipy',
+  'scikit-learn',
+  'pandas',
+  'tqdm>=4.27.0',
+  'packaging>20.9',
+  'slicer==0.0.7',
+  'numba',
+  'cloudpickle'
+]
+classifiers = [
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+plots = ["matplotlib", "ipython"]
+others = ["lime"]
+docs = ["matplotlib", "ipython", "numpydoc", "sphinx_rtd_theme", "sphinx", "nbsphinx"]
+test-core = ["pytest", "pytest-mpl", "pytest-cov"]
+test = [
+  "pytest",
+  "pytest-mpl",
+  "pytest-cov",
+  "xgboost",
+  "lightgbm",
+  "catboost",
+  "pyspark",
+  "pyod",
+  "transformers",
+  "protobuf==3.20.3",  # See GH #3046
+  "torch",
+  "torchvision",
+  "tensorflow",
+  "sentencepiece",
+  "opencv-python",
+]
+
+[project.urls]
+Repository = 'http://github.com/slundberg/shap'
+Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
+
+[tool.setuptools]
+packages = [
+  'shap',
+  'shap.cext',
+  'shap.explainers',
+  'shap.explainers.other',
+  'shap.explainers._deep',
+  'shap.plots',
+  'shap.plots.colors',
+  'shap.plots.resources',
+  'shap.benchmark',
+  'shap.maskers',
+  'shap.utils',
+  'shap.actions',
+  'shap.models'
+]
+zip-safe = false
+
+[tool.setuptools.dynamic]
+version = {attr = "shap.__version__"}
+
+[tool.setuptools.package-data]
+shap = ["plots/resources/*", "cext/*"]
+
+[tool.pytest.ini_options]
+addopts = "--mpl"
+testpaths = ["tests"]
+
+[tool.ruff]
+select = [
+  "F",  # pyflakes
+  "I",  # isort
+  "UP",  # pyupgrade
+  "E",  # pycodestyle
+  "W",  # warning
+]
+ignore = [
+  # Aim to progressively fix address these codes over time
+  "E501",  # Line too long
+  "E741",  # Ambiguous variable name: `l`
+  "E402",  # Module level import not at top of file
+]
+target-version = "py37"
+
+[tool.ruff.per-file-ignores]
+# Unused imports often intentional in top-level __init__.py
+"__init__.py" = ["F401"]
+# Don't apply linting/formatting to vendored code
+"shap/explainers/other/_maple.py" = ["ALL"]
+"shap/plots/colors/_colorconv.py" = ["ALL"]
+
+[tool.coverage.run]
+source_pkgs = ["shap"]
+
+[tool.coverage.paths]
+combine = ["shap", "*/site-packages/shap"]
+
+[tool.cibuildwheel]
+# Restrict the set of builds to mirror the wheels available in scikit-learn. See #3028
+skip = ["cp36-*", "pp*", "*-musllinux_*"]
+build-verbosity = 2
+# Change import-mode to ensure we test against installed package, not local project
+test-command = "pytest -v {project}/tests --import-mode=append"
+test-extras = ["test", "plots"]
+# skipping cp37 since catboost wheel not available
+# skipping cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
+test-skip = "cp37-* cp38-macosx_x86_64"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]

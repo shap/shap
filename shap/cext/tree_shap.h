@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
-#include <stdio.h> 
+#include <stdio.h>
 #include <cmath>
 #include <ctime>
 #if defined(_WIN32) || defined(WIN32)
@@ -111,7 +111,7 @@ struct ExplanationDataset {
 
     ExplanationDataset() {}
     ExplanationDataset(tfloat *X, bool *X_missing, tfloat *y, tfloat *R, bool *R_missing, unsigned num_X,
-                       unsigned M, unsigned num_R) : 
+                       unsigned M, unsigned num_R) :
         X(X), X_missing(X_missing), y(y), R(R), R_missing(R_missing), num_X(num_X), M(M), num_R(num_R) {}
 
     void get_x_instance(ExplanationDataset &instance, const unsigned i) const {
@@ -180,12 +180,12 @@ inline tfloat *tree_predict(unsigned i, const TreeEnsemble &trees, const tfloat 
     while (true) {
         const unsigned pos = offset + node;
         const unsigned feature = trees.features[pos];
-        
+
         // we hit a leaf so return a pointer to the values
         if (trees.is_leaf(pos)) {
             return trees.values + pos * trees.num_outputs;
         }
-        
+
         // otherwise we are at an internal node and need to recurse
         if (x_missing[feature]) {
             node = trees.children_default[pos];
@@ -244,10 +244,10 @@ inline void tree_update_weights(unsigned i, TreeEnsemble &trees, const tfloat *x
 
         // Record that a sample passed through this node
         trees.node_sample_weights[pos] += 1.0;
-        
+
         // we hit a leaf so return a pointer to the values
         if (trees.children_left[pos] < 0) break;
-        
+
         // otherwise we are at an internal node and need to recurse
         if (x_missing[feature]) {
             node = trees.children_default[pos];
@@ -279,10 +279,10 @@ inline void tree_saabas(tfloat *out, const TreeEnsemble &tree, const Explanation
     unsigned curr_node = 0;
     unsigned next_node = 0;
     while (true) {
-        
+
         // we hit a leaf and are done
         if (tree.children_left[curr_node] < 0) return;
-        
+
         // otherwise we are at an internal node and need to recurse
         const unsigned feature = tree.features[curr_node];
         if (data.X_missing[feature]) {
@@ -516,9 +516,9 @@ inline int compute_expectations(TreeEnsemble &tree, int i = 0, int depth = 0) {
         }
         max_depth = std::max(depth_left, depth_right) + 1;
     }
-    
+
     if (depth == 0) tree.max_depth = max_depth;
-    
+
     return max_depth;
 }
 
@@ -555,7 +555,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
     //tfloat new_leaf_value[trees.num_outputs];
     tfloat *new_leaf_value = (tfloat *) alloca(sizeof(tfloat) * trees.num_outputs); // allocate on the stack
     unsigned row_offset = row * trees.max_nodes;
-  
+
     // we have hit a terminal leaf!!!
     if (trees.children_left[row_offset + i] < 0 && row + 1 == trees.tree_limit) {
 
@@ -579,10 +579,10 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
 
         return pos;
     }
-  
+
     // we hit an intermediate leaf (so just add the value to our accumulator and move to the next tree)
     if (trees.children_left[row_offset + i] < 0) {
-        
+
         // accumulate the value of this original leaf so it will land on all eventual terminal leaves
         const tfloat *vals = trees.values + (row * trees.max_nodes + i) * trees.num_outputs;
         if (leaf_value == NULL) {
@@ -601,7 +601,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
         row_offset += trees.max_nodes;
         i = 0;
     }
-    
+
     // split the data inds by this node's threshold
     const tfloat t = trees.thresholds[row_offset + i];
     const int f = trees.features[row_offset + i];
@@ -628,7 +628,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
     int *right_data_inds = data_inds + low_ptr;
     const unsigned num_right_data_inds = num_data_inds - num_left_data_inds;
     const unsigned num_right_background_data_inds = num_background_data_inds - num_left_background_data_inds;
-  
+
     // all the data went right, so we skip creating this node and just recurse right
     if (num_left_data_inds == 0) {
         return build_merged_tree_recursive(
@@ -647,7 +647,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
 
     // data went both ways so we create this node and recurse down both paths
     } else {
-        
+
         // build the left subtree
         const unsigned new_pos = build_merged_tree_recursive(
             out_tree, trees, data, data_missing, left_data_inds,
@@ -663,7 +663,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
         } else {
             out_tree.children_default[pos] = new_pos + 1;
         }
-        
+
         out_tree.features[pos] = trees.features[row_offset + i];
         out_tree.thresholds[pos] = trees.thresholds[row_offset + i];
         out_tree.node_sample_weights[pos] = num_background_data_inds;
@@ -679,7 +679,7 @@ inline unsigned build_merged_tree_recursive(TreeEnsemble &out_tree, const TreeEn
 
 
 inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &data, const TreeEnsemble &trees) {
-    
+
     // create a joint data matrix from both X and R matrices
     tfloat *joined_data = new tfloat[(data.num_X + data.num_R) * data.M];
     std::copy(data.X, data.X + data.num_X * data.M, joined_data);
@@ -719,16 +719,16 @@ struct Node {
 #define FROM_R_NOT_X 2
 
 // https://www.geeksforgeeks.org/space-and-time-efficient-binomial-coefficient/
-inline int bin_coeff(int n, int k) { 
-    int res = 1; 
+inline int bin_coeff(int n, int k) {
+    int res = 1;
     if (k > n - k)
-        k = n - k; 
-    for (int i = 0; i < k; ++i) { 
-        res *= (n - i); 
-        res /= (i + 1); 
-    } 
-    return res; 
-} 
+        k = n - k;
+    for (int i = 0; i < k; ++i) {
+        res *= (n - i);
+        res /= (i + 1);
+    }
+    return res;
+}
 
 // note this only handles single output models, so multi-output models get explained using multiple passes
 inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
@@ -752,7 +752,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     float thres, pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
     char from_flag;
     unsigned M = 0, N = 0;
-    
+
     Node curr_node = mytree[node];
     feat = curr_node.feat;
     thres = curr_node.thres;
@@ -765,13 +765,13 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         out_contribs[num_feats] += curr_node.value;
         return;
     }
-    
+
 //     if (DEBUG) {
 //       myfile << "\nNode: " << node << "\n";
 //       myfile << "x[feat]: " << x[feat] << ", r[feat]: " << r[feat] << "\n";
 //       myfile << "thres: " << thres << "\n";
 //     }
-    
+
     if (x_missing[feat]) {
         next_xnode = cd;
     } else if (x[feat] > thres) {
@@ -779,7 +779,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     } else if (x[feat] <= thres) {
         next_xnode = cl;
     }
-    
+
     if (r_missing[feat]) {
         next_rnode = cd;
     } else if (r[feat] > thres) {
@@ -787,19 +787,19 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     } else if (r[feat] <= thres) {
         next_rnode = cl;
     }
-    
+
     if (next_xnode != next_rnode) {
         mytree[next_xnode].from_flag = FROM_X_NOT_R;
         mytree[next_rnode].from_flag = FROM_R_NOT_X;
     } else {
         mytree[next_xnode].from_flag = FROM_NEITHER;
     }
-    
+
     // Check if x and r go the same way
     if (next_xnode == next_rnode) {
         next_node = next_xnode;
     }
-    
+
     // If not, go left
     if (next_node < 0) {
         next_node = cl;
@@ -826,8 +826,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         pfeat = curr_node.pfeat;
         from_flag = curr_node.from_flag;
 
-        
-        
+
+
 //         if (DEBUG) {
 //           myfile << "\nNode: " << node << "\n";
 //           myfile << "N: " << N << ", M: " << M << "\n";
@@ -836,7 +836,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 //           myfile << "from_flag==FROM_NEITHER: " << (from_flag==FROM_NEITHER) << "\n";
 //           myfile << "feat_hist[feat]: " << feat_hist[feat] << "\n";
 //         }
-        
+
         // At a leaf
         if (cl < 0) {
             //      if (DEBUG) {
@@ -891,7 +891,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
         } else if (!x_right) {
             next_xnode = cl;
         }
-        
+
         if (r_missing[feat]) {
             next_rnode = cd;
         } else if (r_right) {
@@ -908,7 +908,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
               mytree[next_xnode].from_flag = FROM_NEITHER;
           }
         }
-        
+
         // Arriving at node from parent
         if (from_child == -1) {
             //      if (DEBUG) {
@@ -917,7 +917,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             node_stack[ns_ctr] = node;
             ns_ctr += 1;
             next_node = -1;
-            
+
             //      if (DEBUG) {
             //        myfile << "feat_hist[feat]" << feat_hist[feat] << "\n";
             //      }
@@ -929,19 +929,19 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
                 next_node = next_rnode;
                 feat_hist[feat] -= 1;
             }
-            
+
             // x and r go the same way
             if (next_node < 0) {
                 if (next_xnode == next_rnode) {
                     next_node = next_xnode;
                 }
             }
-            
+
             // Go down one path
             if (next_node >= 0) {
                 continue;
             }
-            
+
             // Go down both paths, but go left first
             next_node = cl;
             if (next_rnode == next_node) {
@@ -955,7 +955,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             from_child = -1;
             continue;
         }
-        
+
         // Arriving at node from child
         if (from_child != -1) {
 //             if (DEBUG) {
@@ -966,7 +966,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
             if ((next_rnode == next_xnode) || (feat_hist[feat] != 0)) {
                 next_node = pnode;
             }
-            
+
             // Came from a single path, so unroll
             if (next_node >= 0) {
 //                 if (DEBUG) {
@@ -986,7 +986,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 //                 }
                 from_child = node;
                 ns_ctr -= 1;
-                
+
                 // Unwind
                 if (feat_hist[pfeat] > 0) {
                     feat_hist[pfeat] -= 1;
@@ -1053,17 +1053,17 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 //                   myfile << "pos_lst[node]: " << pos_lst[node] << "\n";
 //                   myfile << "neg_lst[node]: " << neg_lst[node] << "\n";
 //                 }
-                
+
                 // Check if at root
                 if (node == 0) {
                     break;
                 }
-                
+
                 // Pop
                 ns_ctr -= 1;
                 next_node = node_stack[ns_ctr];
                 from_child = node;
-                
+
                 // Unwind
                 if (feat_hist[pfeat] > 0) {
                     feat_hist[pfeat] -= 1;
@@ -1090,12 +1090,12 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 
 inline void print_progress_bar(tfloat &last_print, tfloat start_time, unsigned i, unsigned total_count) {
     const tfloat elapsed_seconds = difftime(time(NULL), start_time);
-    
+
     if (elapsed_seconds > 10 && elapsed_seconds - last_print > 0.5) {
         const tfloat fraction = static_cast<tfloat>(i) / total_count;
         const double total_seconds = elapsed_seconds / fraction;
         last_print = elapsed_seconds;
-        
+
         PySys_WriteStderr(
             "\r%3.0f%%|%.*s%.*s| %d/%d [%02d:%02d<%02d:%02d]       ",
             fraction * 100, int(0.5 + fraction*20), "===================",
@@ -1210,8 +1210,8 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
 
                 for (unsigned k = 0; k < trees.tree_limit; ++k) {
                     tree_shap_indep(
-                        trees.max_depth, data.M, trees.max_nodes, x, x_missing, r, r_missing, 
-                        tmp_out_contribs, pos_lst, neg_lst, feat_hist, memoized_weights, 
+                        trees.max_depth, data.M, trees.max_nodes, x, x_missing, r, r_missing,
+                        tmp_out_contribs, pos_lst, neg_lst, feat_hist, memoized_weights,
                         node_stack, node_trees + k * trees.max_nodes
                     );
                 }
@@ -1327,7 +1327,7 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
             }
         }
     }
-    
+
     // build an interaction explanation for each sample
     tfloat *instance_out_contribs;
     TreeEnsemble tree;
@@ -1390,7 +1390,7 @@ inline void dense_tree_interactions_path_dependent(const TreeEnsemble& trees, co
 
 /**
  * This runs Tree SHAP with a global path conditional dependence assumption.
- * 
+ *
  * By first merging all the trees in a tree ensemble into an equivalent single tree
  * this method allows arbitrary marginal transformations and also ensures that all the
  * evaluations of the model are consistent with some training data point.
@@ -1401,7 +1401,7 @@ inline void dense_global_path_dependent(const TreeEnsemble& trees, const Explana
     // allocate space for our new merged tree (we save enough room to totally split all samples if need be)
     TreeEnsemble merged_tree;
     merged_tree.allocate(1, (data.num_X + data.num_R) * 2, trees.num_outputs);
-    
+
     // collapse the ensemble of trees into a single tree that has the same behavior
     // for all the X and R samples in the dataset
     build_merged_tree(merged_tree, data, trees);
@@ -1415,7 +1415,7 @@ inline void dense_global_path_dependent(const TreeEnsemble& trees, const Explana
     for (unsigned i = 0; i < data.num_X; ++i) {
         instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
-       
+
         // since we now just have a single merged tree we can just use the tree_path_dependent algorithm
         tree_shap(merged_tree, instance, instance_out_contribs, 0, 0);
 
@@ -1445,7 +1445,7 @@ inline void dense_tree_shap(const TreeEnsemble& trees, const ExplanationDataset 
                 std::cerr << "FEATURE_DEPENDENCE::independent does not support interactions!\n";
             } else dense_independent(trees, data, out_contribs, transform);
             return;
-        
+
         case FEATURE_DEPENDENCE::tree_path_dependent:
             if (interactions) dense_tree_interactions_path_dependent(trees, data, out_contribs, transform);
             else dense_tree_path_dependent(trees, data, out_contribs, transform);

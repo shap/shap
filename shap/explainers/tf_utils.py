@@ -1,6 +1,7 @@
 tf = None
 import warnings
 
+
 def _import_tf():
     """ Tries to import tensorflow.
     """
@@ -26,7 +27,7 @@ def _get_session(session):
     if session is None:
         try:
             session = tf.compat.v1.keras.backend.get_session()
-        except:
+        except Exception:
             session = tf.keras.backend.get_session()
     return tf.get_default_session() if session is None else session
 

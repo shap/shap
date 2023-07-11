@@ -1,9 +1,12 @@
-import numpy as np
 import warnings
-from .._explainer import Explainer
+
+import numpy as np
 from packaging import version
-from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+
 from ...utils._exceptions import DimensionError
+from .._explainer import Explainer
+from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
+
 keras = None
 tf = None
 tf_ops = None
@@ -28,7 +31,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
         out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
     except AttributeError:
         out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
-    
+
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -36,8 +39,8 @@ def custom_record_gradient(op_name, inputs, attrs, results):
 
 class TFDeep(Explainer):
     """
-    Using tf.gradients to implement the backgropagation was
-    inspired by the gradient based implementation approach proposed by Ancona et al, ICLR 2018. Note
+    Using tf.gradients to implement the backpropagation was
+    inspired by the gradient-based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
 
@@ -46,7 +49,7 @@ class TFDeep(Explainer):
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
-        values, but be unreasonably expensive. The variance of the expectation estimates scale by
+        values, but will be computationally expensive. The variance of the expectation estimates scales by
         roughly 1/sqrt(N) for N background data samples. So 100 samples will give a good estimate,
         and 1000 samples a very good estimate of the expected values.
 
@@ -79,10 +82,14 @@ class TFDeep(Explainer):
         # try and import keras and tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
         if tf is None:
-            from tensorflow.python.framework import ops as tf_ops # pylint: disable=E0611
-            from tensorflow.python.ops import gradients_impl as tf_gradients_impl # pylint: disable=E0611
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
+            from tensorflow.python.framework import (
+                ops as tf_ops,  # pylint: disable=E0611
+            )
+            from tensorflow.python.ops import (
+                gradients_impl as tf_gradients_impl,  # pylint: disable=E0611
+            )
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl
             import tensorflow as tf
@@ -93,9 +100,9 @@ class TFDeep(Explainer):
             try:
                 import keras
                 warnings.warn("keras is no longer supported, please use tf.keras instead.")
-            except:
+            except Exception:
                 pass
-        
+
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
 
@@ -122,7 +129,7 @@ class TFDeep(Explainer):
             self.multi_input = False
             if type(self.model_inputs) != list:
                 self.model_inputs = [self.model_inputs]
-        if type(data) != list and (hasattr(data, '__call__')==False):
+        if type(data) != list and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
 
@@ -219,7 +226,7 @@ class TFDeep(Explainer):
         """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
         """
         if op not in self._vinputs:
-            out = np.zeros(len(op.inputs), dtype=np.bool)
+            out = np.zeros(len(op.inputs), dtype=bool)
             for i,t in enumerate(op.inputs):
                 out[i] = t.name in self.between_tensors
             self._vinputs[op] = out
@@ -332,8 +339,8 @@ class TFDeep(Explainer):
                         diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
                 assert np.abs(diffs).max() < 1e-2, "The SHAP explanations do not sum up to the model's output! This is either because of a " \
                                                    "rounding error or because an operator in your computation graph was not fully supported. If " \
-                                                   "the sum difference of %f is significant compared the scale of your model outputs please post " \
-                                                   "as a github issue, with a reproducable example if possible so we can debug it." % np.abs(diffs).max()
+                                                   "the sum difference of %f is significant compared to the scale of your model outputs, please post " \
+                                                   "as a github issue, with a reproducible example so we can debug it." % np.abs(diffs).max()
 
         if not self.multi_output:
             return output_phis[0]
@@ -375,7 +382,7 @@ class TFDeep(Explainer):
         """ Passes a gradient op creation request to the correct handler.
         """
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
-        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefex before the lookup
+        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
 
     def execute_with_overridden_gradients(self, f):

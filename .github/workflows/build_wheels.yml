@@ -12,26 +12,24 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-2019, macOS-10.15]
+        os: [ubuntu-22.04, windows-2022, macOS-12]
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      # Used to host cibuildwheel
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.2.2
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_SKIP: "cp27-* cp35-* pp* *-musllinux_*"
+        uses: pypa/cibuildwheel@v2.13.1
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
           name: bdist_files
@@ -41,49 +39,46 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Build sdist (pep517)
         run: |
-          python -m pip install pep517
-          python -m pep517.build -s .
+          python -m pip install build
+          python -m build --sdist
       - name: Upload sdist
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: sdist_files
           path: dist/*.tar.gz
-          
+
   publish_wheels:
     name: Publish wheels on pypi
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags')
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Set up Python
-        uses: actions/setup-python@v2
-      
-      - name: install requirements
-        run: pip install twine==3.4.2
-
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: bdist_files
           path: dist
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: sdist_files
           path: dist
-        
-      - name: check
-        run: twine check dist/*
-        
-      - name: upload
-        run: twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN  }}
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}

@@ -3,15 +3,19 @@
 
 # pylint: disable=missing-function-docstring
 import pickle
+
 import numpy as np
+
 import shap
+
 from . import common
 
-def test_exact_second_order():
+
+def test_exact_second_order(random_seed):
     """ This tests that the Perumtation explain gives exact answers for second order functions.
     """
-    np.random.seed(0)
-    data = np.random.randint(0, 2, size=(100,5))
+    rs = np.random.RandomState(random_seed)
+    data = rs.randint(0, 2, size=(100,5))
     def model(data):
         return data[:,0] * data[:,2] + data[:,1] + data[:,2] + data[:,2] * data[:,3]
 

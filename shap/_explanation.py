@@ -1,16 +1,17 @@
 
-import pandas as pd
-import numpy as np
-import scipy as sp
-import sys
-import warnings
 import copy
 import operator
+
+import numpy as np
+import pandas as pd
+import scipy.cluster
+import scipy.sparse
+import scipy.spatial
 import sklearn
-from slicer import Slicer, Alias, Obj
-# from ._order import Order
-from .utils._general import OpChain
+from slicer import Alias, Obj, Slicer
+
 from .utils._exceptions import DimensionError
+from .utils._general import OpChain
 
 # slicer confuses pylint...
 # pylint: disable=no-member
@@ -26,7 +27,7 @@ class MetaExplanation(type):
 
     @property
     def abs(cls):
-        """ Element-wize absolute value op.
+        """ Element-wise absolute value op.
         """
         return op_chain_root.abs
 
@@ -74,7 +75,7 @@ class MetaExplanation(type):
 
     @property
     def hclust(cls):
-        """ Hierarchial clustering op.
+        """ Hierarchical clustering op.
         """
         return op_chain_root.hclust
 
@@ -531,7 +532,7 @@ class Explanation(metaclass=MetaExplanation):
             if new_self.data is not None:
                 try:
                     new_self.data = getattr(np, fname)(np.array(self.data), **kwargs)
-                except:
+                except Exception:
                     new_self.data = None
             if new_self.base_values is not None and issubclass(type(axis), int) and len(self.base_values.shape) > axis:
                 new_self.base_values = getattr(np, fname)(self.base_values, **kwargs)
@@ -583,25 +584,24 @@ class Explanation(metaclass=MetaExplanation):
         """
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
         assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
-        
+
         new_exp = Explanation(
-            np.hstack([self.values, other.values]),
-            np.hstack([self.values, other.values]),
-            self.base_values,
-            self.data,
-            self.display_data,
-            self.instance_names,
-            self.feature_names,
-            self.output_names,
-            self.output_indexes,
-            self.lower_bounds,
-            self.upper_bounds,
-            self.error_std,
-            self.main_effects,
-            self.hierarchical_values,
-            self.clustering
+            values=np.hstack([self.values, other.values]),
+            base_values=self.base_values,
+            data=self.data,
+            display_data=self.display_data,
+            instance_names=self.instance_names,
+            feature_names=self.feature_names,
+            output_names=self.output_names,
+            output_indexes=self.output_indexes,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+            error_std=self.error_std,
+            main_effects=self.main_effects,
+            hierarchical_values=self.hierarchical_values,
+            clustering=self.clustering,
         )
-        return self._numpy_func("min", axis=axis)
+        return new_exp
 
     # def reshape(self, *args):
     #     return self._numpy_func("reshape", newshape=args)
@@ -645,9 +645,9 @@ class Explanation(metaclass=MetaExplanation):
             values = values.T
 
         # compute a hierarchical clustering and return the optimal leaf ordering
-        D = sp.spatial.distance.pdist(values, metric)
-        cluster_matrix = sp.cluster.hierarchy.complete(D)
-        inds = sp.cluster.hierarchy.leaves_list(sp.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
+        D = scipy.spatial.distance.pdist(values, metric)
+        cluster_matrix = scipy.cluster.hierarchy.complete(D)
+        inds = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
         return inds
 
     def sample(self, max_samples, replace=False, random_state=0):
@@ -779,7 +779,6 @@ def compute_output_dims(values, base_values, data, output_names):
         output_shape = tuple()
 
     interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
-    values_dims = list(range(len(values_shape)))
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
@@ -804,7 +803,7 @@ def _first_item(x):
 def _compute_shape(x):
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
-    elif not sp.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
+    elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
         return (None,)
     else:
         if isinstance(x, dict):
@@ -824,7 +823,7 @@ def _compute_shape(x):
             if first_shape == tuple():
                 return (len(x),)
             else: # we have an array of arrays...
-                matches = np.ones(len(first_shape), dtype=np.bool)
+                matches = np.ones(len(first_shape), dtype=bool)
                 for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
                     assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
@@ -864,13 +863,12 @@ def _auto_cohorts(shap_values, max_cohorts):
     """ This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values.
     """
 
-    # fit a decision tree that well spearates the SHAP values
+    # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)
 
     # group instances by their decision paths
     paths = m.decision_path(shap_values.data).toarray()
-    unique_paths = np.unique(m.decision_path(shap_values.data).todense(), axis=0)
     path_names = []
 
     # mark each instance with a path name

@@ -2,10 +2,12 @@
 """
 
 from urllib.error import HTTPError
-from packaging import version
+
 import numpy as np
 import pandas as pd
 import pytest
+from packaging import version
+
 import shap
 from shap import DeepExplainer
 
@@ -13,15 +15,18 @@ from shap import DeepExplainer
 
 # pylint: disable=import-outside-toplevel, no-name-in-module, import-error
 
-def test_tf_eager():
+def test_tf_eager(random_seed):
     """ This is a basic eager example from keras.
     """
-
     tf = pytest.importorskip('tensorflow')
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
     if version.parse(tf.__version__) >= version.parse("2.4.0"):
         pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
 
-    x = pd.DataFrame({"B": np.random.random(size=(100,))})
+    x = pd.DataFrame({"B": rs.random(size=(100,))})
     y = x.B
     y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
 
@@ -37,22 +42,29 @@ def test_tf_eager():
     assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
 
 
-def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
+def test_tf_keras_mnist_cnn(random_seed):
     """ This is the basic mnist cnn example from keras.
     """
     tf = pytest.importorskip('tensorflow')
+    rs = np.random.RandomState(random_seed)
+    tf.compat.v1.random.set_random_seed(random_seed)
 
     from tensorflow import keras
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
-    from tensorflow.keras.layers import Conv2D, MaxPooling2D
+    from tensorflow.compat.v1 import ConfigProto, InteractiveSession
     from tensorflow.keras import backend as K
-    from tensorflow.compat.v1 import ConfigProto
-    from tensorflow.compat.v1 import InteractiveSession
+    from tensorflow.keras.layers import (
+        Activation,
+        Conv2D,
+        Dense,
+        Dropout,
+        Flatten,
+        MaxPooling2D,
+    )
+    from tensorflow.keras.models import Sequential
 
     config = ConfigProto()
     config.gpu_options.allow_growth = True
-    InteractiveSession(config=config)
+    sess = InteractiveSession(config=config)
 
     tf.compat.v1.disable_eager_execution()
 
@@ -65,10 +77,10 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
 
     # the data, split between train and test sets
     # (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = np.random.randn(200, 28, 28)
-    y_train = np.random.randint(0, 9, 200)
-    x_test = np.random.randn(200, 28, 28)
-    y_test = np.random.randint(0, 9, 200)
+    x_train = rs.randn(200, 28, 28)
+    y_train = rs.randint(0, 9, 200)
+    x_test = rs.randn(200, 28, 28)
+    y_test = rs.randint(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -102,7 +114,7 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
     model.add(Activation('softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
+                  optimizer=keras.optimizers.legacy.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(x_train[:10, :], y_train[:10, :],
@@ -112,39 +124,43 @@ def test_tf_keras_mnist_cnn(): # pylint: disable=too-many-locals
               validation_data=(x_test[:10, :], y_test[:10, :]))
 
     # explain by passing the tensorflow inputs and outputs
-    np.random.seed(0)
-    inds = np.random.choice(x_train.shape[0], 3, replace=False)
+    inds = rs.choice(x_train.shape[0], 3, replace=False)
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
-    sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    sess.close()
 
 
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.
     """
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
     tf = pytest.importorskip('tensorflow')
 
-    from tensorflow.keras.models import Model
     from tensorflow.keras.layers import Dense, Input
-    from tensorflow.keras.optimizers import SGD
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.optimizers.legacy import SGD
 
     tf.compat.v1.disable_eager_execution()
 
-    np.random.seed(0)
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     # coefficients relating y with x1 and x2.
     coef = np.array([1, 2]).T
 
     # generate data following a linear relationship
-    x = np.random.normal(1, 10, size=(1000, len(coef)))
-    y = np.dot(x, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
 
     # create a linear model
     inputs = Input(shape=(2,))
@@ -169,26 +185,25 @@ def test_tf_keras_linear():
     np.testing.assert_allclose(expected - values, 0, atol=1e-5)
 
 
-def test_tf_keras_imdb_lstm():
+def test_tf_keras_imdb_lstm(random_seed):
     """ Basic LSTM example using the keras API defined in tensorflow
     """
     tf = pytest.importorskip('tensorflow')
+    rs = np.random.RandomState(random_seed)
+    tf.compat.v1.random.set_random_seed(random_seed)
 
     # this fails right now for new TF versions (there is a warning in the code for this)
     if version.parse(tf.__version__) >= version.parse("2.5.0"):
         pytest.skip()
 
     from tensorflow.keras.datasets import imdb
+    from tensorflow.keras.layers import LSTM, Dense, Embedding
     from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense
-    from tensorflow.keras.layers import LSTM
-    from tensorflow.keras.layers import Embedding
     from tensorflow.keras.preprocessing import sequence
 
     tf.compat.v1.disable_eager_execution()
 
     # load the data from keras
-    np.random.seed(7)
     max_features = 1000
     try:
         (X_train, _), (X_test, _) = imdb.load_data(num_words=max_features)
@@ -206,7 +221,7 @@ def test_tf_keras_imdb_lstm():
     mod.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     # select the background and test samples
-    inds = np.random.choice(X_train.shape[0], 3, replace=False)
+    inds = rs.choice(X_train.shape[0], 3, replace=False)
     background = X_train[inds]
     testx = X_test[10:11]
 
@@ -232,6 +247,12 @@ def test_pytorch_mnist_cnn():
 
     from torch import nn
     from torch.nn import functional as F
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     class RandData:
         """ Random test data.
@@ -310,8 +331,7 @@ def test_pytorch_mnist_cnn():
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
-        np.random.seed(0)
-        inds = np.random.choice(next_x.shape[0], 3, replace=False)
+        inds = rs.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
         else:
@@ -344,17 +364,20 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, interim=False)
 
 
-def test_pytorch_custom_nested_models():
+def test_pytorch_custom_nested_models(random_seed):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
 
+    from sklearn.datasets import fetch_california_housing
     from torch import nn
     from torch.nn import functional as F
-    from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from torch.utils.data import DataLoader, TensorDataset
 
-    X, y = load_boston(return_X_y=True)
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -370,7 +393,7 @@ def test_pytorch_custom_nested_models():
                     nn.Conv1d(1, 1, 1),
                     nn.ConvTranspose1d(1, 1, 1),
                 ),
-                nn.AdaptiveAvgPool1d(output_size=6),
+                nn.AdaptiveAvgPool1d(output_size=num_features // 2),
             )
 
         def forward(self, X):
@@ -431,8 +454,7 @@ def test_pytorch_custom_nested_models():
     train(model, device, loader, optimizer, 1)
 
     next_x, _ = next(iter(loader))
-    np.random.seed(0)
-    inds = np.random.choice(next_x.shape[0], 20, replace=False)
+    inds = rs.choice(next_x.shape[0], 20, replace=False)
     e = shap.DeepExplainer(model, next_x[inds, :])
     test_x, _ = next(iter(loader))
     shap_values = e.shap_values(test_x[:1])
@@ -451,12 +473,17 @@ def test_pytorch_single_output():
     """
     torch = pytest.importorskip('torch')
 
+    from sklearn.datasets import fetch_california_housing
     from torch import nn
     from torch.nn import functional as F
-    from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.datasets import load_boston
+    from torch.utils.data import DataLoader, TensorDataset
 
-    X, y = load_boston(return_X_y=True)
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    X, y = fetch_california_housing(return_X_y=True)
     num_features = X.shape[1]
     data = TensorDataset(torch.tensor(X).float(),
                          torch.tensor(y).float())
@@ -471,7 +498,7 @@ def test_pytorch_single_output():
             self.conv1d = nn.Conv1d(1, 1, 1)
             self.convt1d = nn.ConvTranspose1d(1, 1, 1)
             self.leaky_relu = nn.LeakyReLU()
-            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=6)
+            self.aapool1d = nn.AdaptiveAvgPool1d(output_size=num_features // 2)
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
@@ -502,8 +529,7 @@ def test_pytorch_single_output():
     train(model, device, loader, optimizer, 1)
 
     next_x, _ = next(iter(loader))
-    np.random.seed(0)
-    inds = np.random.choice(next_x.shape[0], 20, replace=False)
+    inds = rs.choice(next_x.shape[0], 20, replace=False)
     e = shap.DeepExplainer(model, next_x[inds, :])
     test_x, _ = next(iter(loader))
     shap_values = e.shap_values(test_x[:1])
@@ -517,20 +543,22 @@ def test_pytorch_single_output():
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
-def test_pytorch_multiple_inputs():
+def test_pytorch_multiple_inputs(random_seed):
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     def _run_pytorch_multiple_inputs_test(disconnected):
         """ Testing multiple inputs
         """
+        from sklearn.datasets import fetch_california_housing
         from torch import nn
         from torch.nn import functional as F
-        from torch.utils.data import TensorDataset, DataLoader
-        from sklearn.datasets import load_boston
+        from torch.utils.data import DataLoader, TensorDataset
         torch.manual_seed(1)
-        X, y = load_boston(return_X_y=True)
+        X, y = fetch_california_housing(return_X_y=True)
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
         x2 = X[:, :num_features // 2]
@@ -546,7 +574,7 @@ def test_pytorch_multiple_inputs():
                 super().__init__()
                 self.disconnected = disconnected
                 if disconnected:
-                    num_features = num_features // 2 + 1
+                    num_features = num_features // 2
                 self.linear = nn.Linear(num_features, 2)
                 self.output = nn.Sequential(
                     nn.MaxPool1d(2),
@@ -585,8 +613,7 @@ def test_pytorch_multiple_inputs():
         train(model, device, loader, optimizer, 1)
 
         next_x1, next_x2, _ = next(iter(loader))
-        np.random.seed(0)
-        inds = np.random.choice(next_x1.shape[0], 20, replace=False)
+        inds = rs.choice(next_x1.shape[0], 20, replace=False)
         background = [next_x1[inds, :], next_x2[inds, :]]
         e = shap.DeepExplainer(model, background)
         test_x1, test_x2, _ = next(iter(loader))

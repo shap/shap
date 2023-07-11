@@ -1,7 +1,10 @@
-import numpy as np
 import warnings
-from .._explainer import Explainer
+
+import numpy as np
 from packaging import version
+
+from .._explainer import Explainer
+
 torch = None
 
 
@@ -225,7 +228,7 @@ def deeplift_grad(module, grad_input, grad_output):
         if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
             return op_handler[module_type](module, grad_input, grad_output)
     else:
-        print('Warning: unrecognized nn.Module: {}'.format(module_type))
+        print(f'Warning: unrecognized nn.Module: {module_type}')
         return grad_input
 
 

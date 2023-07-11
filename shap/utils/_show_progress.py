@@ -1,4 +1,5 @@
 import time
+
 import tqdm
 
 
@@ -14,7 +15,7 @@ class ShowProgress():
         self.start_delay = start_delay
         self.silent = silent
         self.unshown_count = 0
-    
+
     def __next__(self):
         if self.pbar is None and time.time() - self.start_time > self.start_delay:
            self.pbar = tqdm.tqdm(total=self.total, initial=self.unshown_count, desc=self.desc, disable=self.silent)

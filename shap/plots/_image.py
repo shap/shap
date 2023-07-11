@@ -1,26 +1,22 @@
+import json
 import random
 import string
 import warnings
-import json
 from typing import Optional
 
+import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib.colors import Colormap
 
-from shap._explanation import Explanation
+from .._explanation import Explanation
 from ..utils import ordinal_str
 
 try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-try:
-    from IPython.core.display import display, HTML
+    from IPython.display import HTML, display
 except ImportError:
     warnings.warn("IPython could not be loaded!")
-from . import colors
 from ..utils._legacy import kmeans
-
+from . import colors
 
 # .shape[0] messes up pylint a lot here
 # pylint: disable=unsubscriptable-object
@@ -36,23 +32,27 @@ def image(shap_values: Explanation or np.ndarray,
           labelpad: Optional[float] = None,
           cmap: Optional[str or Colormap] = colors.red_transparent_blue,
           show: Optional[bool] = True):
-    """ Plots SHAP values for image inputs.
+    """Plots SHAP values for image inputs.
 
     Parameters
     ----------
     shap_values : [numpy.array]
-        List of arrays of SHAP values. Each array has the shap (# samples x width x height x channels), and the
-        length of the list is equal to the number of model outputs that are being explained.
+        List of arrays of SHAP values. Each array has the shape
+        (# samples x width x height x channels), and the
+        length of the list is equal to the number of model outputs that are being
+        explained.
 
     pixel_values : numpy.array
-        Matrix of pixel values (# samples x width x height x channels) for each image. It should be the same
-        shape as each array in the shap_values list of arrays.
+        Matrix of pixel values (# samples x width x height x channels) for each image.
+        It should be the same
+        shape as each array in the ``shap_values`` list of arrays.
 
     labels : list or np.ndarray
-        List or np.ndarray (# samples x top_k classes) of names for each of the model outputs that are being explained.
+        List or ``np.ndarray`` (# samples x top_k classes) of names for each of the
+        model outputs that are being explained.
 
     true_labels: list
-        List of a true image labels to plot
+        List of a true image labels to plot.
 
     width : float
         The width of the produced matplotlib plot.
@@ -61,8 +61,15 @@ def image(shap_values: Explanation or np.ndarray,
         How much padding to use around the model output labels.
 
     show : bool
-        Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+
+    Examples
+    --------
+
+    See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
+
     """
 
     # support passing an explanation object
@@ -81,9 +88,9 @@ def image(shap_values: Explanation or np.ndarray,
         if labels is None:
             labels = shap_exp.output_names
 
-    multi_output = True
+    # multi_output = True
     if not isinstance(shap_values, list):
-        multi_output = False
+        # multi_output = False
         shap_values = [shap_values]
 
     if len(shap_values[0].shape) == 3:
@@ -299,14 +306,14 @@ def image_to_text(shap_values):
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "grey";
                     {uuid}_update_image_and_overlay(id);
-                }}            
+                }}
             }}
 
             function onMouseOutFlat_{uuid}(id) {{
                 if ({uuid}_heatmap_flat_state === null) {{
                     document.getElementById(id).style.backgroundColor  = "transparent";
                     {uuid}_update_image_and_overlay(null);
-                }}                
+                }}
             }}
 
             function onMouseClickFlat_{uuid}(id) {{
@@ -330,7 +337,7 @@ def image_to_text(shap_values):
                         {uuid}_heatmap_flat_state = id
                     }}
                 }}
-            }}         
+            }}
 
             const {uuid}_image_data_matrix = {image_data_json};
             const {uuid}_image_data_gray_scale = {image_data_gray_scale_json};
@@ -341,7 +348,7 @@ def image_to_text(shap_values):
             {uuid}_canvas = document.getElementById('{uuid}_image_canvas');
             {uuid}_context = {uuid}_canvas.getContext('2d');
 
-            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);            
+            var {uuid}_imageData = {uuid}_convert_image_matrix_to_data({uuid}_image_data_matrix, {image_height}, {image_width}, {uuid}_context);
             var {uuid}_currImagData = {uuid}_imageData;
 
 
@@ -364,7 +371,7 @@ def image_to_text(shap_values):
                 {uuid}_opacity = value/100;
 
                 if ({uuid}_heatmap_flat_state !== null ) {{
-                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);                    
+                    {uuid}_currImagData = {uuid}_blend_image_shap_map({uuid}_image_data_gray_scale, {uuid}_shap_values_color_dict[{uuid}_heatmap_flat_state], {image_height}, {image_width}, {uuid}_opacity, {uuid}_context);
                     {uuid}_redraw();
                 }}
             }}

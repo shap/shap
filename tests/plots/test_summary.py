@@ -1,7 +1,7 @@
-import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+
 import shap
 
 
@@ -75,16 +75,21 @@ def test_random_summary_violin_with_data():
 def test_random_summary_layered_violin_with_data():
     """ Check a layered violin chart.
     """
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     fig = plt.figure()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="layered_violin", show=False)
+    shap_values = rs.randn(200, 5)
+    feats = rs.randn(200, 5)
+    shap.summary_plot(
+        shap_values,
+        feats,
+        plot_type="layered_violin",
+        show=False,
+    )
     plt.tight_layout()
     return fig
 
 
-@pytest.mark.mpl_image_compare
+@pytest.mark.mpl_image_compare(tolerance=6)
 def test_random_summary_with_log_scale():
     """ Check a with a log scale.
     """

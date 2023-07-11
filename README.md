@@ -117,7 +117,7 @@ import shap
 model = transformers.pipeline('sentiment-analysis', return_all_scores=True)
 
 # explain the model on two sample inputs
-explainer = shap.Explainer(model) 
+explainer = shap.Explainer(model)
 shap_values = explainer(["What a great movie! ...if you have no taste."])
 
 # visualize the first prediction's explanation for the POSITIVE output class
@@ -273,7 +273,7 @@ An implementation of Deep SHAP, a faster (but only approximate) algorithm to com
 
 - [**MNIST Digit classification with Keras**](https://slundberg.github.io/shap/notebooks/deep_explainer/Front%20Page%20DeepExplainer%20MNIST%20Example.html) - Using the MNIST handwriting recognition dataset, this notebook trains a neural network with Keras and then explains predictions using `shap`.
 
-- [**Keras LSTM for IMDB Sentiment Classification**](https://slundberg.github.io/shap/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.html) - This notebook trains an LSTM with Keras on the IMDB text sentiment analysis dataset and then explains predictions using `shap`. 
+- [**Keras LSTM for IMDB Sentiment Classification**](https://slundberg.github.io/shap/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.html) - This notebook trains an LSTM with Keras on the IMDB text sentiment analysis dataset and then explains predictions using `shap`.
 
 ### GradientExplainer
 
@@ -293,13 +293,13 @@ An implementation of Kernel SHAP, a model agnostic method to estimate SHAP value
 
 - [**Census income classification with scikit-learn**](https://slundberg.github.io/shap/notebooks/Census%20income%20classification%20with%20scikit-learn.html) - Using the standard adult census income dataset, this notebook trains a k-nearest neighbors classifier using scikit-learn and then explains predictions using `shap`.
 
-- [**ImageNet VGG16 Model with Keras**](https://slundberg.github.io/shap/notebooks/ImageNet%20VGG16%20Model%20with%20Keras.html) - Explain the classic VGG16 convolutional nerual network's predictions for an image. This works by applying the model agnostic Kernel SHAP method to a super-pixel segmented image.
+- [**ImageNet VGG16 Model with Keras**](https://slundberg.github.io/shap/notebooks/ImageNet%20VGG16%20Model%20with%20Keras.html) - Explain the classic VGG16 convolutional neural network's predictions for an image. This works by applying the model agnostic Kernel SHAP method to a super-pixel segmented image.
 
 - [**Iris classification**](https://slundberg.github.io/shap/notebooks/Iris%20classification%20with%20scikit-learn.html) - A basic demonstration using the popular iris species dataset. It explains predictions from six different models in scikit-learn using `shap`.
 
 ## Documentation notebooks
 
-These notebooks comprehensively demonstrate how to use specific functions and objects. 
+These notebooks comprehensively demonstrate how to use specific functions and objects.
 
 - [`shap.decision_plot` and `shap.multioutput_decision_plot`](https://slundberg.github.io/shap/notebooks/plots/decision_plot.html)
 
@@ -325,7 +325,7 @@ These notebooks comprehensively demonstrate how to use specific functions and ob
 
 The algorithms and visualizations used in this package came primarily out of research in [Su-In Lee's lab](https://suinlee.cs.washington.edu) at the University of Washington, and Microsoft Research. If you use SHAP in your research we would appreciate a citation to the appropriate paper(s):
 
-- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)). 
+- For general use of SHAP you can read/cite our [NeurIPS paper](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/shap_nips.bib)).
 - For TreeExplainer you can read/cite our [Nature Machine Intelligence paper](https://www.nature.com/articles/s42256-019-0138-9) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/tree_explainer.bib); [free access](https://rdcu.be/b0z70)).
 - For GPUTreeExplainer you can read/cite [this article](https://arxiv.org/abs/2010.13972).
 - For `force_plot` visualizations and medical applications you can read/cite our [Nature Biomedical Engineering paper](https://www.nature.com/articles/s41551-018-0304-0) ([bibtex](https://raw.githubusercontent.com/slundberg/shap/master/docs/references/nature_bme.bib); [free access](https://rdcu.be/baVbR)).
