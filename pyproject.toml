@@ -89,6 +89,11 @@ shap = ["plots/resources/*", "cext/*"]
 [tool.pytest.ini_options]
 addopts = "--mpl"
 testpaths = ["tests"]
+filterwarnings = [
+    # Ignore warnings that are entirely from 3rd party libs outside our control
+    "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
+    "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
+]
 
 [tool.ruff]
 select = [
