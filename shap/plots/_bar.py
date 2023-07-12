@@ -294,7 +294,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     pl.xlabel(xlabel, fontsize=13)
 
     if len(values) > 1:
-        pl.legend(fontsize=12)
+        pl.legend(fontsize=12, bbox_to_anchor=(0, 1.02, 1, 0.2))
 
     # color the y tick labels that have the feature values as gray
     # (these fall behind the black ones with just the feature name)
