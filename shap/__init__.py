@@ -1,5 +1,4 @@
 # flake8: noqa
-import warnings
 
 __version__ = "0.42.0"
 
