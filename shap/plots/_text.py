@@ -112,7 +112,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
             )
         if display:
-            ipython_display(HTML(out))
+            _ipython_display_html(out)
             return
         else:
             return out
@@ -211,7 +211,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
             out += "</div>"
         out += "</div>"
         if display:
-            ipython_display(HTML(out))
+            _ipython_display_html(out)
             return
         else:
             return out
@@ -256,7 +256,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
                 separator=separator, xmin=xmin, xmax=xmax, cmax=cmax, display=False
             )
         if display:
-            ipython_display(HTML(out))
+            _ipython_display_html(out)
             return
         else:
             return out
@@ -325,7 +325,7 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
     out += "</div>"
 
     if display:
-        ipython_display(HTML(out))
+        _ipython_display_html(out)
         return
     else:
         return out
@@ -831,7 +831,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
              + "</div>" \
              + "</div>"
 
-    return ipython_display(HTML(out))
+    return _ipython_display_html(out)
 
 def text_to_text(shap_values):
 
@@ -887,7 +887,7 @@ def text_to_text(shap_values):
     </script>
     """
 
-    ipython_display(HTML(javascript + html))
+    _ipython_display_html(javascript + html)
 
 def saliency_plot(shap_values):
 
@@ -1339,3 +1339,14 @@ def unpack_shap_explanation_contents(shap_values):
     clustering = getattr(shap_values, "clustering", None)
 
     return np.array(values), clustering
+
+
+def _ipython_display_html(data):
+    """Check IPython is installed, then display HTML"""
+    if not have_ipython:
+        msg = (
+            "IPython is required for this function but is not installed."
+            " Fix this with `pip install ipython`."
+        )
+        raise ImportError(msg)
+    return ipython_display(HTML(data))
