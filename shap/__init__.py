@@ -30,7 +30,7 @@ def unsupported(*args, **kwargs):
 
 class UnsupportedModule:
     def __getattribute__(self, item):
-        raise ValueError(_no_matplotlib_warning)
+        raise ImportError(_no_matplotlib_warning)
 
 
 try:
