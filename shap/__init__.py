@@ -1,22 +1,21 @@
-# flake8: noqa
 
 __version__ = "0.42.1"
 
-from ._explanation import Explanation, Cohorts
-
 # explainers
-from .explainers._explainer import Explainer
-from .explainers._kernel import Kernel as KernelExplainer
-from .explainers._sampling import Sampling as SamplingExplainer
-from .explainers._tree import Tree as TreeExplainer
-from .explainers._gpu_tree import GPUTree as GPUTreeExplainer
+
+from ._explanation import Cohorts, Explanation
+from .explainers import other
+from .explainers._additive import Additive as AdditiveExplainer
 from .explainers._deep import Deep as DeepExplainer
+from .explainers._explainer import Explainer
+from .explainers._gpu_tree import GPUTree as GPUTreeExplainer
 from .explainers._gradient import Gradient as GradientExplainer
+from .explainers._kernel import Kernel as KernelExplainer
 from .explainers._linear import Linear as LinearExplainer
 from .explainers._partition import Partition as PartitionExplainer
 from .explainers._permutation import Permutation as PermutationExplainer
-from .explainers._additive import Additive as AdditiveExplainer
-from .explainers import other
+from .explainers._sampling import Sampling as SamplingExplainer
+from .explainers._tree import Tree as TreeExplainer
 
 _no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
                          "to fix this."
@@ -33,24 +32,26 @@ class UnsupportedModule:
 
 
 try:
-    import matplotlib
+    import matplotlib  # noqa: F401
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
 if have_matplotlib:
     from . import plots
+    from .plots._bar import bar_legacy as bar_plot
     from .plots._beeswarm import summary_legacy as summary_plot
-    from .plots._decision import decision as decision_plot, multioutput_decision as multioutput_decision_plot
-    from .plots._scatter import dependence_legacy as dependence_plot
-    from .plots._force import force as force_plot, initjs, save_html, getjs
+    from .plots._decision import decision as decision_plot
+    from .plots._decision import multioutput_decision as multioutput_decision_plot
+    from .plots._embedding import embedding as embedding_plot
+    from .plots._force import force as force_plot
+    from .plots._force import getjs, initjs, save_html
+    from .plots._group_difference import group_difference as group_difference_plot
     from .plots._image import image as image_plot
     from .plots._monitoring import monitoring as monitoring_plot
-    from .plots._embedding import embedding as embedding_plot
     from .plots._partial_dependence import partial_dependence as partial_dependence_plot
-    from .plots._bar import bar_legacy as bar_plot
-    from .plots._waterfall import waterfall as waterfall_plot
-    from .plots._group_difference import group_difference as group_difference_plot
+    from .plots._scatter import dependence_legacy as dependence_plot
     from .plots._text import text as text_plot
+    from .plots._waterfall import waterfall as waterfall_plot
 else:
     summary_plot = unsupported
     decision_plot = unsupported
@@ -73,13 +74,56 @@ else:
 
 
 # other stuff :)
-from . import datasets
-from . import utils
-from . import links
-
+from . import datasets, links, utils
 from .actions._optimizer import ActionOptimizer
+from .utils import approximate_interactions, sample
 
 #from . import benchmark
-
 from .utils._legacy import kmeans
-from .utils import sample, approximate_interactions
+
+# Use __all__ to let type checkers know what is part of the public API.
+__all__ = [
+    # Explanations
+    "Cohorts",
+    "Explanation",
+    "AdditiveExplainer",
+    "DeepExplainer",
+    "Explainer",
+    "GPUTreeExplainer",
+    "GradientExplainer",
+    "KernelExplainer",
+    "LinearExplainer",
+    "PartitionExplainer",
+    "PermutationExplainer",
+    "SamplingExplainer",
+    "TreeExplainer",
+    "other",
+
+    # Plots
+    "plots",
+    "initjs",
+    "getjs",
+    "save_html",
+    "bar_plot",
+    "decision_plot",
+    "dependence_plot",
+    "embedding_plot",
+    "force_plot",
+    "group_difference_plot",
+    "image_plot",
+    "monitoring_plot",
+    "multioutput_decision_plot",
+    "partial_dependence_plot",
+    "summary_plot",
+    "text_plot",
+    "waterfall_plot",
+
+    # Other stuff
+    "datasets",
+    "utils",
+    "links",
+    "ActionOptimizer",
+    "kmeans",
+    "sample",
+    "approximate_interactions",
+]

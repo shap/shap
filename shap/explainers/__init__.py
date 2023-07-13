@@ -7,5 +7,18 @@ from ._partition import Partition
 from ._permutation import Permutation
 from ._sampling import Sampling
 from ._tree import Tree
+
 # from ._gradient import Gradient
 # from ._kernel import Kernel
+
+__all__ = [
+    "Additive",
+    "Deep",
+    "Exact",
+    "GPUTree",
+    "Linear",
+    "Partition",
+    "Permutation",
+    "Sampling",
+    "Tree",
+]
