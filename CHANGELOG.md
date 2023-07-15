@@ -8,7 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 <!--Changes from new PRs should be put in this section-->
 
 ### Added
-- Added `show_values_in_legend` parameter to `summary_legacy`
+
+- Added `show_values_in_legend` parameter to `summary_plot`
   ([#3062](https://github.com/slundberg/shap/pull/3062) by @101AlexMartin).
 
 ### Fixed
