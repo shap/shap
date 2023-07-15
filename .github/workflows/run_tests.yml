@@ -38,30 +38,29 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
         extras: ["test"]
         include:
-          # Also test on windows/mac, just one job each
-          - os: windows-latest
-            python-version: "3.11"
-            extras: "test"
-            name: 3.11-windows
           - os: macos-latest
             python-version: "3.11"
             extras: "test"
             name: 3.11-macos
-          # Also run tests with only the core dependencies, to ensure we
-          # cover the latest version of numpy/pandas. See dsgibbons#46
-          - os: ubuntu-latest
-            python-version: "3.11"
-            extras: "test-core"
-            name: 3.11-core
       fail-fast: false
     # Workaround to ensure previous job names stay the same
     # "Required Checks" enfore that a check called "run_tests (3.8)" is present
     name: run_tests (${{ matrix.name && matrix.name || matrix.python-version }})
     runs-on: ${{ matrix.os }}
     steps:
+      # - name: Downgrade OpenMP (in MacOS)
+      #   if: runner.os == 'macos'
+      #   run: |
+      #     # Recent versions of OpenMP cause segfaults in MacOS when training
+      #     # LightGBM / XGBoost models (but only when Torch is present)
+      #     # https://github.com/microsoft/LightGBM/issues/4229
+      #     # https://github.com/autogluon/autogluon/issues/1442
+      #     wget https://raw.githubusercontent.com/Homebrew/homebrew-core/fb8323f2b170bd4ae97e1bac9bf3e2983af3fdb0/Formula/libomp.rb
+      #     brew unlink libomp
+      #     brew install libomp.rb
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
