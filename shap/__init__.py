@@ -2,6 +2,11 @@
 
 __version__ = "0.42.1"
 
+try:
+    import lightgbm
+except ImportError:
+    pass
+
 from ._explanation import Explanation, Cohorts
 
 # explainers
