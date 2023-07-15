@@ -38,7 +38,7 @@ def kmeans(X, k, round_values=True):
     X = imp.fit_transform(X)
 
     # Specify `n_init` for consistent behaviour between sklearn versions
-    kmeans = KMeans(n_clusters=k, random_state=0, n_init=1).fit(X)
+    kmeans = KMeans(n_clusters=k, random_state=0, n_init=10).fit(X)
 
     if round_values:
         for i in range(k):
