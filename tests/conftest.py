@@ -1,3 +1,8 @@
+# try:
+#     import lightgbm
+# except ImportError:
+#     pass
+
 import numpy as np
 import pytest
 
