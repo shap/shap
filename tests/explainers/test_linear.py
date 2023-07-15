@@ -127,7 +127,9 @@ def test_shape_values_linear_many_features():
 
     coef = np.array([1, 2]).T
 
-    rs = np.random.RandomState(0)
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+    rs = np.random.RandomState(random_seed)
     # generate linear data
     X = rs.normal(1, 10, size=(1000, len(coef)))
     y = np.dot(X, coef) + 1 + rs.normal(scale=0.1, size=1000)

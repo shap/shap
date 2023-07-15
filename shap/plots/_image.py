@@ -1,20 +1,20 @@
 import json
 import random
 import string
-import warnings
 from typing import Optional
 
 import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib.colors import Colormap
 
-from .._explanation import Explanation
-from ..utils import ordinal_str
-
 try:
     from IPython.display import HTML, display
+    have_ipython = True
 except ImportError:
-    warnings.warn("IPython could not be loaded!")
+    have_ipython = False
+
+from .._explanation import Explanation
+from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
 
@@ -190,6 +190,12 @@ def image_to_text(shap_values):
         for each sample
 
     """
+    if not have_ipython:
+        msg = (
+            "IPython is required for this function but is not installed."
+            " Fix this with `pip install ipython`."
+        )
+        raise ImportError(msg)
 
     if len(shap_values.values.shape) == 5:
         for i in range(shap_values.values.shape[0]):

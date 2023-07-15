@@ -1,7 +1,6 @@
 # flake8: noqa
-import warnings
 
-__version__ = "0.42.0"
+__version__ = "0.42.1"
 
 from ._explanation import Explanation, Cohorts
 
@@ -25,12 +24,12 @@ _no_matplotlib_warning = "matplotlib is not installed so plotting is not availab
 
 # plotting (only loaded if matplotlib is present)
 def unsupported(*args, **kwargs):
-    warnings.warn(_no_matplotlib_warning)
+    raise ImportError(_no_matplotlib_warning)
 
 
 class UnsupportedModule:
     def __getattribute__(self, item):
-        raise ValueError(_no_matplotlib_warning)
+        raise ImportError(_no_matplotlib_warning)
 
 
 try:
@@ -39,6 +38,7 @@ try:
 except ImportError:
     have_matplotlib = False
 if have_matplotlib:
+    from . import plots
     from .plots._beeswarm import summary_legacy as summary_plot
     from .plots._decision import decision as decision_plot, multioutput_decision as multioutput_decision_plot
     from .plots._scatter import dependence_legacy as dependence_plot
