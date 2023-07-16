@@ -37,7 +37,8 @@ def kmeans(X, k, round_values=True):
     imp = SimpleImputer(missing_values=np.nan, strategy='mean')
     X = imp.fit_transform(X)
 
-    kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
+    # Specify `n_init` for consistent behaviour between sklearn versions
+    kmeans = KMeans(n_clusters=k, random_state=0, n_init=10).fit(X)
 
     if round_values:
         for i in range(k):
