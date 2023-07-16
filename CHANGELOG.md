@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Fixed segmentation fault errors on our MacOS test suite involving `lightgbm`
+  ([#3093](https://github.com/slundberg/shap/pull/3093) by @thatlittleboy).
+
 ### Changed
 
 ### Removed
