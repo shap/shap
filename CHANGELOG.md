@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed segmentation fault errors on our MacOS test suite involving `lightgbm`
   ([#3093](https://github.com/slundberg/shap/pull/3093) by @thatlittleboy).
+- Add support for LightGBM ensembles containing single leaf trees in `TreeExplainer`
+  ([#3094](https://github.com/slundberg/shap/pull/3094) by @thatlittleboy).
 
 ### Changed
 
