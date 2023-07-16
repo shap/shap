@@ -1392,12 +1392,22 @@ class TestExplainerLightGBM:
         X, Y = shap.datasets.iris()
         model = lightgbm.LGBMClassifier(n_jobs=1)
         model.fit(X, Y)
+        predicted = model.predict(X, raw_score=True)
 
         # explain the model's predictions using SHAP values
-        shap_values = shap.TreeExplainer(model).shap_values(X)
+        explainer = shap.TreeExplainer(model)
 
-        # ensure plot works for first class
-        shap.dependence_plot(0, shap_values[0], X, show=False)
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        num_classes = 3
+        assert explanation.values.shape == (*X.shape, num_classes)
+        assert explanation.base_values.shape == (len(X), num_classes)
+
+        # check that SHAP values sum to model output
+        assert (
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
+        )
 
     # def test_lightgbm_ranking(self):
     #     try:
