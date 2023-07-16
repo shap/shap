@@ -1033,20 +1033,20 @@ class TestExplainerSklearn:
         model = sklearn.ensemble.HistGradientBoostingClassifier(
             max_iter=10, max_depth=6
         ).fit(X, y)
+        predicted = model.predict_proba(X)
         explainer = shap.TreeExplainer(
             model, shap.sample(X, 10), model_output="predict_proba"
         )
-        shap_values = explainer.shap_values(X)
+
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        num_classes = 2
+        assert explanation.values.shape == (*X.shape, num_classes)
+        assert explanation.base_values.shape == (len(X), num_classes)
 
         # check that SHAP values sum to model output
         assert (
-            np.max(
-                np.abs(
-                    shap_values[0].sum(1)
-                    + explainer.expected_value[0]
-                    - model.predict_proba(X)[:, 0]
-                )
-            )
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
             < 1e-4
         )
 
