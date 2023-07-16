@@ -1,0 +1,9 @@
+codecov:
+  notify:
+    after_n_builds: 7
+    wait_for_ci: yes
+coverage:
+  range: 70..90
+comment:
+  require_changes: true
+  after_n_builds: 7
