@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added `show_values_in_legend` parameter to `summary_plot`
+  ([#3062](https://github.com/slundberg/shap/pull/3062) by @101AlexMartin).
+
 ### Fixed
 
 - Fixed segmentation fault errors on our MacOS test suite involving `lightgbm`
