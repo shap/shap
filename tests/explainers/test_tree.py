@@ -849,13 +849,17 @@ class TestExplainerSklearn:
         assert (
             len(expected_values) == est.n_outputs_
         ), "Length of expected_values doesn't match n_outputs_"
-        shap_values = np.asarray(explainer.shap_values(X_test)).reshape(
-            est.n_outputs_ * X_test.shape[0], X_test.shape[1]
+
+        explanation = explainer(X_test)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X_test.shape, est.n_outputs_)
+        assert explanation.base_values.shape == (len(X_test), est.n_outputs_)
+
+        # check that SHAP values sum to model output for all multioutputs
+        assert (
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
         )
-        phi = np.hstack(
-            (shap_values, np.repeat(expected_values, X_test.shape[0]).reshape(-1, 1))
-        )
-        assert np.allclose(phi.sum(1), predicted.flatten(order="F"), atol=1e-4)
 
     def test_sum_match_extra_trees(self):
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
