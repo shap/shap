@@ -733,12 +733,18 @@ class TestExplainerSklearn:
         )
         clf.fit(X_train, Y_train)
         predicted = clf.predict_proba(X_test)
-        ex = shap.TreeExplainer(clf)
-        shap_values = ex.shap_values(X_test)
+        explainer = shap.TreeExplainer(clf)
+
+        explanation = explainer(X_test)
+        # check the properties of Explanation object
+        num_classes = 2
+        assert explanation.values.shape == (*X_test.shape, num_classes)
+        assert explanation.base_values.shape == (len(X_test), num_classes)
 
         # check that SHAP values sum to model output
+        class0_exp = explanation[..., 0]
         assert (
-            np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:, 0]).max()
+            np.abs(class0_exp.values.sum(1) + class0_exp.base_values - predicted[:, 0]).max()
             < 1e-4
         )
 
