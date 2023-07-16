@@ -955,24 +955,31 @@ class TestExplainerSklearn:
         # Use decision function to get prediction before it is mapped to a probability
         predicted = clf.decision_function(X_test)
 
-        ex = shap.TreeExplainer(clf)
-        initial_ex_value = ex.expected_value
-        shap_values = ex.shap_values(X_test)
+        explainer = shap.TreeExplainer(clf)
+        initial_ex_value = explainer.expected_value
+
+        explanation = explainer(X_test)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X_test.shape,)
+        assert explanation.base_values.shape == (len(X_test),)
 
         # check that SHAP values sum to model output
-        assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4
+        assert (
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
+        )
 
         # check initial expected value
         assert (
-            np.abs(initial_ex_value - ex.expected_value) < 1e-4
+            np.abs(initial_ex_value - explainer.expected_value) < 1e-4
         ), "Initial expected value is wrong!"
 
         # check SHAP interaction values sum to model output
-        shap_interaction_values = ex.shap_interaction_values(X_test.iloc[:10, :])
+        shap_interaction_values = explainer.shap_interaction_values(X_test.iloc[:10, :])
         assert (
             np.abs(
                 shap_interaction_values.sum(1).sum(1)
-                + ex.expected_value
+                + explainer.expected_value
                 - predicted[:10]
             ).max()
             < 1e-4
