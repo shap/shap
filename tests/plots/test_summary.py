@@ -39,6 +39,32 @@ def test_random_multi_class_summary():
 
 
 @pytest.mark.mpl_image_compare
+def test_random_multi_class_summary_legend_decimals():
+    """ Check the functionality of printing the legend in the plot of a multiclass run when
+        all the SHAP values are smaller than 1.
+    """
+    np.random.seed(0)
+    fig = plt.figure()
+    shap.summary_plot([np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False,
+                      show_values_in_legend=True)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_random_multi_class_summary_legend():
+    """ Check the functionality of printing the legend in the plot of a multiclass run when
+        SHAP values are bigger than 1.
+    """
+    np.random.seed(0)
+    fig = plt.figure()
+    shap.summary_plot([(2 + np.random.randn(20, 5)) for i in range(3)], 2 + np.random.randn(20, 5), show=False,
+                      show_values_in_legend=True)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
 def test_random_summary_bar_with_data():
     """ Check a bar chart.
     """
