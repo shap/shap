@@ -15,6 +15,7 @@
 - [Documentation](#documentation)
   - [Previewing changes on Pull Requests](#previewing-changes-on-pull-requests)
   - [Building the docs locally](#building-the-docs-locally)
+  - [Jupyter notebook style guide](#jupyter-notebook-style-guide)
 
 ## Introduction
 
@@ -114,6 +115,9 @@ Consequently, is is quite normal to see warnings such as `WARNING: Could not
 compile cuda extensions` when building from source if you do not have CUDA
 available.
 
+Install the `docs` extras as well, if you are modifying the documentation / example
+notebooks.
+
 ### Code checks with precommit
 
 We use [pre-commit hooks](https://pre-commit.com/#install) to run code checks.
@@ -207,9 +211,74 @@ To build the documentation locally:
 
 1. Navigate to the `docs` directory.
 2. Run `make html`.
-3. Open "_build/html/index.html" in your browser.
+3. Open "\_build/html/index.html" in your browser to inspect the documentation.
 
 Note that `nbsphinx` currently requires the stand-alone program `pandoc`. If you
-get an error "Pandoc wasn't found", install that pandoc as described in
+get an error "Pandoc wasn't found", install `pandoc` as described in
 [nbsphinx installation
 guide](https://nbsphinx.readthedocs.io/en/0.9.2/installation.html#pandoc).
+
+### Jupyter notebook style guide
+
+If you are contributing changes to the Jupyter notebooks in the documentation, please
+adhere to the following style guidelines.
+
+#### General Jupyter guidelines
+
+Before committing your notebook(s),
+
+- Ensure that you "Restart Kernel and Run All Cells...", making
+  sure that cells are executed in order, the notebook is reproducible and does not have any hidden states.
+- Ensure that the notebook does not raise syntax warnings in the Sphinx build logs as a result of your
+  changes.
+
+#### Links / Cross-references
+
+You are advised to include links in the notebooks as much as possible if it provides the
+reader with more background / context on the topic at hand.
+
+When doing so, never use URL links to refer to other SHAP notebooks, the SHAP
+documentation or other external Sphinx projects. Use [sphinx
+cross-references](https://docs.readthedocs.io/en/stable/guides/cross-referencing-with-sphinx.html)
+instead.
+
+We have `sphinx.ext.autosectionlabel` extension enabled, which autogenerates targets
+for every section, named `{relative/path/to/page}:{title-of-section}`.
+
+In order to inspect which targets are available for you to reference, you may use
+
+```bash
+python -m sphinx.ext.intersphinx docs/_build/html/objects.inv
+```
+
+#### Watermark
+
+[`watermark`](https://github.com/rasbt/watermark) is a library which automatically
+prints the versions of Python and the packages used in the notebook. It should already
+be installed with the `docs` extras. Otherwise, run `pip install watermark`.
+
+Add the following cells at the end of the notebook:
+
+```markdown
+## Watermark
+```
+
+```python
+%load_ext watermark
+%watermark --updated --date --python --iversions
+```
+
+The presence of the watermark is also enforced by `pre-commit`.
+
+#### Notebook linting and formatting
+
+We use `ruff` and `black-jupyter` to perform code linting and auto-formatting on our notebooks.
+Assuming you have set up `pre-commit` as described [above](#code-checks-with-precommit), these checks will
+run automatically whenever you commit any changes.
+To run the code-quality checks manually, you can do, e.g.:
+
+```bash
+pre-commit run --files notebook1.ipynb notebook2.ipynb
+```
+
+replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have modified.
