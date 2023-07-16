@@ -5,12 +5,12 @@ import numpy as np
 
 from shap.utils import safe_isinstance
 
-from . import perturbation
+from ._sequential import SequentialPerturbation
 
 
 def update(model, attributions, X, y, masker, sort_order, perturbation_method, scores):
     metric = perturbation_method + ' ' + sort_order
-    sp = perturbation.SequentialPerturbation(model, masker, sort_order, perturbation_method)
+    sp = SequentialPerturbation(model, masker, sort_order, perturbation_method)
     xs, ys, auc = sp.model_score(attributions, X, y=y)
     scores['metrics'].append(metric)
     scores['values'][metric] = [xs, ys, auc]
