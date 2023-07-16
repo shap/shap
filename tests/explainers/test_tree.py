@@ -387,8 +387,9 @@ def test_catboost_categorical():
 
 
 def test_isolation_forest():
-    IsolationForest = pytest.importorskip("sklearn.ensemble.IsolationForest")
-    _average_path_length = pytest.importorskip("sklearn.ensemble._iforest._average_path_length")
+    from sklearn.ensemble import IsolationForest
+    from sklearn.ensemble._iforest import _average_path_length
+
     X, _ = shap.datasets.california(n_points=500)
     for max_features in [1.0, 0.75]:
         iso = IsolationForest(max_features=max_features)
@@ -397,18 +398,15 @@ def test_isolation_forest():
         explainer = shap.TreeExplainer(iso)
         shap_values = explainer.shap_values(X)
 
-        l = _average_path_length(  # pylint: disable=protected-access
-            np.array([iso.max_samples_]))[0]
-        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
+        path_length = _average_path_length(np.array([iso.max_samples_]))[0]
+        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / path_length)
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 
 def test_pyod_isolation_forest():
-    try:
-        IForest = pytest.importorskip("pyod.models.iforest.IForest")
-    except Exception: # pylint: disable=broad-except
-        pytest.skip("Failed to import pyod.models.iforest.IForest")
-    _average_path_length = pytest.importorskip("sklearn.ensemble._iforest._average_path_length")
+    pytest.importorskip("pyod.models.iforest")
+    from pyod.models.iforest import IForest
+    from sklearn.ensemble._iforest import _average_path_length
 
     X, _ = shap.datasets.california(n_points=500)
     for max_features in [1.0, 0.75]:
@@ -418,8 +416,8 @@ def test_pyod_isolation_forest():
         explainer = shap.TreeExplainer(iso)
         shap_values = explainer.shap_values(X)
 
-        l = _average_path_length(np.array([iso.max_samples_]))[0]
-        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
+        path_length = _average_path_length(np.array([iso.max_samples_]))[0]
+        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / path_length)
         assert np.allclose(iso.detector_.score_samples(X), score_from_shap, atol=1e-7)
 
 
