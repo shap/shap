@@ -1075,16 +1075,19 @@ class TestExplainerSklearn:
     def test_HistGradientBoostingRegressor(self):
         X, y = shap.datasets.diabetes()
         model = sklearn.ensemble.HistGradientBoostingRegressor(
-            max_iter=1000, max_depth=6
+            max_iter=500, max_depth=6
         ).fit(X, y)
+        predicted = model.predict(X)
         explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(X)
+
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
 
         # check that SHAP values sum to model output
         assert (
-            np.max(
-                np.abs(shap_values.sum(1) + explainer.expected_value - model.predict(X))
-            )
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
             < 1e-4
         )
 
