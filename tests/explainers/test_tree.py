@@ -1015,11 +1015,18 @@ class TestExplainerSklearn:
         clf.fit(X_train, Y_train)
 
         predicted = clf.predict(X_test)
-        ex = shap.TreeExplainer(clf)
-        shap_values = ex.shap_values(X_test)
+        explainer = shap.TreeExplainer(clf)
+
+        explanation = explainer(X_test)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X_test.shape,)
+        assert explanation.base_values.shape == (len(X_test),)
 
         # check that SHAP values sum to model output
-        assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4
+        assert (
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
+        )
 
     def test_HistGradientBoostingClassifier_proba(self):
         X, y = shap.datasets.adult()
