@@ -1465,7 +1465,9 @@ class SingleTree:
                     queue.append(left_child)
                     queue.append(right_child)
                 else:
-                    vleaf_idx: int = vertex["leaf_index"] + num_parents
+                    # NOTE: If "leaf_index" is not present as a key, it means we have a
+                    # stump tree. I.e., num_nodes=1.
+                    vleaf_idx: int = vertex.get("leaf_index", 0) + num_parents
                     self.children_left[vleaf_idx] = -1
                     self.children_right[vleaf_idx] = -1
                     self.children_default[vleaf_idx] = -1
@@ -1476,7 +1478,12 @@ class SingleTree:
                     self.features[vleaf_idx] = -1
                     self.thresholds[vleaf_idx] = -1
                     self.values[vleaf_idx] = [vertex["leaf_value"]]
-                    self.node_sample_weight[vleaf_idx] = vertex["leaf_count"]
+                    # FIXME: "leaf_count" currently doesn't exist if we have a stump tree.
+                    # We should be technically be assigning the number of samples used to
+                    # train the model as the weight here, but unfortunately this info is
+                    # currently unavailable in `tree`, so we set to 0 first.
+                    # cf. https://github.com/microsoft/LightGBM/issues/5962
+                    self.node_sample_weight[vleaf_idx] = vertex.get("leaf_count", 0)
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
 

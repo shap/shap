@@ -776,25 +776,26 @@ class TestSingleTree:
     """Tests for the SingleTree class."""
 
     def test_singletree_lightgbm_basic(self):
-        """A basic test for checking that a LightGBM dump_model() dictionary
-        is parsed properly into a SingleTree object.
+        """A basic test for checking that a LightGBM `dump_model()["tree_info"]`
+        dictionary is parsed properly into a `SingleTree` object.
         """
 
         # Stump (only root node) tree
-        # FIXME: this test should NOT throw a KeyError, see #2044
-        with pytest.raises(KeyError, match="leaf_index"):
-            sample_tree = {
-                "tree_index": 256,
-                "num_leaves": 1,
-                "num_cat": 0,
-                "shrinkage": 1,
-                "tree_structure": {
-                    "leaf_value": 0,
-                },
-            }
-            stree = SingleTree(sample_tree)
-            # just ensure that this does not error out
-            assert stree.children_left[0] == -1
+        sample_tree = {
+            "tree_index": 256,
+            "num_leaves": 1,
+            "num_cat": 0,
+            "shrinkage": 1,
+            "tree_structure": {
+                "leaf_value": 0,
+                # "leaf_count": 123,  # FIXME(upstream): microsoft/LightGBM#5962
+            },
+        }
+        stree = SingleTree(sample_tree)
+        # just ensure that this does not error out
+        assert stree.children_left[0] == -1
+        # assert stree.node_sample_weight[0] == 123
+        assert hasattr(stree, "values")
 
         # Depth=1 tree
         sample_tree = {
@@ -821,6 +822,7 @@ class TestSingleTree:
         stree = SingleTree(sample_tree)
         # just ensure that the tree is parsed correctly
         assert stree.node_sample_weight[0] == 100
+        assert hasattr(stree, "values")
 
 
 class TestExplainerSklearn:
