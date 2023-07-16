@@ -1274,17 +1274,30 @@ class TestExplainerLightGBM:
         # train lightgbm model
         X, y = shap.datasets.california(n_points=500)
         dataset = lightgbm.Dataset(data=X, label=y, categorical_feature=[8])
-        model = lightgbm.train({"objective": "regression", "verbosity": -1,
-                                "num_threads": 1},
-                               train_set=dataset, num_boost_round=1000)
-
-        # explain the model's predictions using SHAP values
-        ex = shap.TreeExplainer(model)
-        shap_values = ex.shap_values(X)
+        model = lightgbm.train(
+            {
+                "objective": "regression",
+                "verbosity": -1,
+                "num_threads": 1,
+            },
+            train_set=dataset,
+            num_boost_round=1_000,
+        )
         predicted = model.predict(X, raw_score=True)
 
-        expected_diff = np.abs(shap_values.sum(1) + ex.expected_value - predicted).max()
-        assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
+        # explain the model's predictions using SHAP values
+        explainer = shap.TreeExplainer(model)
+
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
+
+        # check that SHAP values sum to model output
+        assert (
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
+        )
 
     def test_lightgbm_constant_prediction(self):
         # note: this test used to fail with lightgbm 2.2.1 with error:
