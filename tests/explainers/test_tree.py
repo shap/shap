@@ -795,6 +795,7 @@ class TestSingleTree:
         # just ensure that this does not error out
         assert stree.children_left[0] == -1
         # assert stree.node_sample_weight[0] == 123
+        assert hasattr(stree, "values")
 
         # Depth=1 tree
         sample_tree = {
@@ -821,6 +822,7 @@ class TestSingleTree:
         stree = SingleTree(sample_tree)
         # just ensure that the tree is parsed correctly
         assert stree.node_sample_weight[0] == 100
+        assert hasattr(stree, "values")
 
 
 class TestExplainerSklearn:
