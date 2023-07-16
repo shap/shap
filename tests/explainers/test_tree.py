@@ -1328,19 +1328,37 @@ class TestExplainerLightGBM:
             test_size=0.2,
             random_state=0,
         )
-        # model = lightgbm.LGBMClassifier(n_estimators=10, n_jobs=1)
-        # model.fit(X_train, Y_train)
         dataset = lightgbm.Dataset(data=X_train, label=Y_train)
-        model = lightgbm.train({"objective": "binary", "verbosity": -1,
-                                "num_threads": 1},
-                               train_set=dataset, num_boost_round=1000)
+        model = lightgbm.train(
+            {
+                "objective": "binary",
+                "verbosity": -1,
+                "num_threads": 1,
+            },
+            train_set=dataset,
+            num_boost_round=1_000,
+        )
+        predicted = model.predict(X_test, raw_score=True)
 
         # explain the model's predictions using SHAP values
-        shap_values = shap.TreeExplainer(model).shap_values(X_test)
+        explainer = shap.TreeExplainer(model)
 
+        shap_values = explainer.shap_values(X_test)
         # validate structure of shap values, must be a list of ndarray for both classes
         assert isinstance(shap_values, list)
         assert len(shap_values) == 2
+
+        explanation = explainer(X_test)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X_test.shape, 2)
+        assert explanation.base_values.shape == (len(X_test), 2)
+
+        # check that SHAP values sum to model output
+        class1_exp = explanation[..., 1]
+        assert (
+            np.abs(class1_exp.values.sum(1) + class1_exp.base_values - predicted).max()
+            < 1e-4
+        )
 
         # ensure plot works for first class
         shap.dependence_plot(0, shap_values[0], X_test, show=False)
