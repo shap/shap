@@ -52,6 +52,7 @@ docs = [
   "nbsphinx==0.9.2",
   "sphinx_github_changelog==1.2.1",
   "requests",
+  "watermark",
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
