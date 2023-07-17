@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "webpack-dev-server --content-base build/ --open",
+    "dev": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server --content-base build/ --open",
     "build": "webpack -p",
     "pub": "npm run build && npm publish"
   },
