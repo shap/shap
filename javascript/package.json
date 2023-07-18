@@ -10,8 +10,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server --content-base build/ --open",
-    "build": "webpack -p",
-    "pub": "npm run build && npm publish"
+    "build": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack -p",
+    "pub": "export SET NODE_OPTIONS=--openssl-legacy-provider && npm run build && npm publish"
   },
   "author": "Scott Lundberg",
   "repository": "https://github.com/slundberg/shap",
