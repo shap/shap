@@ -1,0 +1,25 @@
+name: test_js
+
+on:
+  # only run tests and coverage when src code changes
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "javascript/**"
+
+jobs:
+  build-js:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: lts/Hydrogen
+    - run: npm ci
+      working-directory: ./javascript
+    - run: npm run build
+      working-directory: ./javascript
