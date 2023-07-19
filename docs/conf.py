@@ -52,6 +52,7 @@ extensions = [
     "sphinx_rtd_theme",
     "numpydoc",
     "nbsphinx",
+    "sphinx_github_changelog",
 ]
 autodoc_default_options = {"members": True, "inherited-members": True}
 autosummary_generate = True
