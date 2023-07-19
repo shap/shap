@@ -199,7 +199,7 @@ def safe_isinstance(obj, class_path_str):
             raise ValueError("class_path_str must be a string or list of strings specifying a full \
                 module path to a class. Eg, 'sklearn.ensemble.RandomForestRegressor'")
 
-        # Splits on last occurence of "."
+        # Splits on last occurrence of "."
         module_name, class_name = class_path_str.rsplit(".", 1)
 
         # here we don't check further if the model is not imported, since we shouldn't have

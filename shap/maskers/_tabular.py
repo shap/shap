@@ -156,7 +156,7 @@ class Tabular(Masker):
         """
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.maskers.Tabular", version=0) as s:
 
             # save the data in the format it was given to us

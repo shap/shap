@@ -60,7 +60,7 @@ def draw_bars(out_value, features, feature_type, width_separators, width_bar):
                            facecolor=colors[0], linewidth=0)
         rectangle_list += [line]
 
-        # Create seperator
+        # Create separator
         points_separator = [[separator_pos, 0],
                             [separator_pos + separator_indent, (width_bar / 2)],
                             [separator_pos, width_bar]]
@@ -79,11 +79,11 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
     # Define variables specific to positive and negative effect features
     if feature_type == 'positive':
         colors = ['#FF0D57', '#FFC3D5']
-        alignement = 'right'
+        alignment = 'right'
         sign = 1
     else:
         colors = ['#1E88E5', '#D1E6FA']
-        alignement = 'left'
+        alignment = 'left'
         sign = -1
 
     # Draw initial line
@@ -119,7 +119,7 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
         text_out_val = plt.text(start_text - sign * offset_text,
                                 -0.15, text,
                                 fontsize=12, color=colors[0],
-                                horizontalalignment=alignement,
+                                horizontalalignment=alignment,
                                 va=va_alignment,
                                 rotation=text_rotation)
         text_out_val.set_bbox(dict(facecolor='none', edgecolor='none'))
@@ -208,7 +208,7 @@ def format_data(data):
 
     neg_features = np.array(sorted(neg_features, key=lambda x: float(x[0]), reverse=False))
 
-    # Format postive features
+    # Format positive features
     pos_features = np.array([[data['features'][x]['effect'],
                               data['features'][x]['value'],
                               data['featureNames'][x]]

@@ -269,7 +269,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values))
 
-            # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
+            # now relax the requirement to match the partition tree ordering for connections above cluster_threshold
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
 

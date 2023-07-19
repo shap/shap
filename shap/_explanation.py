@@ -81,7 +81,7 @@ class MetaExplanation(type):
 
 
 class Explanation(metaclass=MetaExplanation):
-    """ A slicable set of parallel arrays representing a SHAP explanation.
+    """ A sliceable set of parallel arrays representing a SHAP explanation.
     """
     def __init__( # pylint: disable=too-many-arguments
         self,

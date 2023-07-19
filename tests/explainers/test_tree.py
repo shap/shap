@@ -40,7 +40,7 @@ def test_front_page_xgboost():
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
 
-    # visualize the first prediction's explaination
+    # visualize the first prediction's explanation
     shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
 
     # visualize the training set predictions
@@ -71,7 +71,7 @@ def test_front_page_sklearn():
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
 
-        # visualize the first prediction's explaination
+        # visualize the first prediction's explanation
         shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :])
 
         # visualize the training set predictions
