@@ -162,8 +162,10 @@ def get_latest_tag() -> str:
 
 _latest_tag = get_latest_tag()
 _url = f"https://github.com/shap/shap/compare/{_latest_tag}...master"
+
+# Make an RST substitution that inserts the correct hyperlink
 rst_epilog = f"""
-.. |unreleasedchanges| replace:: unreleasedchanges
+.. |unreleasedchanges| replace:: {_latest_tag}...master
 .. _unreleasedchanges: {_url}
 """
 
