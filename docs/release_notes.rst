@@ -1,7 +1,7 @@
 Release notes
 -------------
 
-Release notes from GitHub:
+For upcoming changes due on the next release, see :unreleasedchanges:
 
 .. changelog::
     :changelog-url: https://shap.readthedocs.io/en/latest/release_notes.html

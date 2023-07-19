@@ -21,6 +21,8 @@ import os
 import shutil
 import sys
 
+import requests
+
 print(os.path.abspath("./shap"))
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -49,6 +51,7 @@ if os.path.exists(NOTEBOOKS_DIR + "/local_scratch"):
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.extlinks",
     "sphinx_rtd_theme",
     "numpydoc",
     "nbsphinx",
@@ -147,6 +150,24 @@ pygments_style = "sphinx"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# -- sphinx.ext.extlinks configuration ------------------------------------
+
+# Save a URL that can be used to preview unreleased changes
+
+def get_latest_tag() -> str:
+    """Query GitHub API to get the most recent git tag"""
+    url = "https://api.github.com/repos/shap/shap/releases/latest"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()['tag_name']
+
+latest_tag = get_latest_tag()
+extlinks = {
+    "unreleasedchanges": (
+        f"https://github.com/shap/shap/compare/{latest_tag}...master",
+        f"{latest_tag}...master"
+    )
+}
 
 # -- Options for HTML output ----------------------------------------------
 
