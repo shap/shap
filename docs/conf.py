@@ -163,10 +163,8 @@ def get_latest_tag() -> str:
 _latest_tag = get_latest_tag()
 _url = f"https://github.com/shap/shap/compare/{_latest_tag}...master"
 rst_epilog = f"""
-.. role:: raw-html(raw)
-   :format: html
-
-.. |unreleasedchanges| replace:: :raw-html:`<a href="{_url}">{_latest_tag}...master</a>`
+.. |unreleasedchanges| replace:: unreleasedchanges
+.. _unreleasedchanges: {_url}
 """
 
 # -- Options for HTML output ----------------------------------------------
