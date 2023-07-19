@@ -125,7 +125,7 @@ struct ExplanationDataset {
 
 // data we keep about our decision path
 // note that pweight is included for convenience and is not tied with the other attributes
-// the pweight of the i'th path element is the permuation weight of paths with i-1 ones in them
+// the pweight of the i'th path element is the permutation weight of paths with i-1 ones in them
 struct PathElement {
     int feature_index;
     tfloat zero_fraction;
@@ -371,7 +371,7 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
     }
 }
 
-// determine what the total permuation weight would be if
+// determine what the total permutation weight would be if
 // we unwound a previous extension in the decision path
 inline tfloat unwound_path_sum(const PathElement *unique_path, unsigned unique_depth,
                                unsigned path_index) {
@@ -760,7 +760,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     cr = curr_node.cr;
     cd = curr_node.cd;
 
-    // short circut when this is a stump tree (with no splits)
+    // short circuit when this is a stump tree (with no splits)
     if (cl < 0) {
         out_contribs[num_feats] += curr_node.value;
         return;
@@ -1169,7 +1169,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
     time_t start_time = time(NULL);
     tfloat last_print = 0;
     for (unsigned oind = 0; oind < trees.num_outputs; ++oind) {
-        // set the values int he reformated tree to the current output index
+        // set the values int he reformatted tree to the current output index
         for (unsigned i = 0; i < trees.tree_limit; ++i) {
             Node *node_tree = node_trees + i * trees.max_nodes;
             for (unsigned j = 0; j < trees.max_nodes; ++j) {
