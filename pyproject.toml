@@ -43,7 +43,15 @@ dynamic = ["version"]
 [project.optional-dependencies]
 plots = ["matplotlib", "ipython"]
 others = ["lime"]
-docs = ["matplotlib", "ipython", "numpydoc", "sphinx_rtd_theme", "sphinx", "nbsphinx"]
+docs = [
+  "matplotlib",
+  "ipython",
+  "numpydoc",
+  "sphinx_rtd_theme",
+  "sphinx",
+  "nbsphinx",
+  "sphinx_github_changelog",
+]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
   "pytest",
