@@ -51,7 +51,6 @@ if os.path.exists(NOTEBOOKS_DIR + "/local_scratch"):
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
-    "sphinx.ext.extlinks",
     "sphinx_rtd_theme",
     "numpydoc",
     "nbsphinx",
@@ -150,9 +149,9 @@ pygments_style = "sphinx"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-# -- sphinx.ext.extlinks configuration ------------------------------------
+# -- Release notes configuration ------------------------------------------
 
-# Save a URL that can be used to preview unreleased changes
+# Make available a URL that points to the latest unreleased changes
 
 def get_latest_tag() -> str:
     """Query GitHub API to get the most recent git tag"""
@@ -161,13 +160,14 @@ def get_latest_tag() -> str:
     response.raise_for_status()
     return response.json()['tag_name']
 
-latest_tag = get_latest_tag()
-extlinks = {
-    "unreleasedchanges": (
-        f"https://github.com/shap/shap/compare/{latest_tag}...master",
-        f"{latest_tag}...master"
-    )
-}
+_latest_tag = get_latest_tag()
+_url = f"https://github.com/shap/shap/compare/{_latest_tag}...master"
+rst_epilog = f"""
+.. role:: raw-html(raw)
+   :format: html
+
+.. |unreleasedchanges| replace:: :raw-html:`<a href="{_url}">{_latest_tag}...master</a>`
+"""
 
 # -- Options for HTML output ----------------------------------------------
 
