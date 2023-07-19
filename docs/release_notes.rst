@@ -1,7 +1,7 @@
 Release notes
 -------------
 
-To see unreleased changes that are due on the next release, see |unreleasedchanges|_
+To see the latest changes that are due on the next release, see |unreleasedchanges|_
 
 .. changelog::
     :changelog-url: https://shap.readthedocs.io/en/latest/release_notes.html
