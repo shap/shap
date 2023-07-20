@@ -25,3 +25,5 @@ jobs:
       working-directory: ./javascript
     - run: npm run build
       working-directory: ./javascript
+    - run: npm run test
+      working-directory: ./javascript
