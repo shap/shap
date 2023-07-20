@@ -1,21 +1,12 @@
 name: tests
 
 on:
-  # only run tests and coverage when src code changes
   push:
     branches:
       - master
   pull_request:
     branches:
       - master
-    # Interim measure: run all tests on all PRs, as these Checks
-    # are configured as Required Status Checks. See #2951
-    # paths:
-    #   - "shap/**"
-    #   - "tests/**"
-    #   - "data/**"
-    #   - ".github/workflows/run_tests.yml"
-    #   - "setup.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,8 +23,34 @@ jobs:
         python-version: '3.10'
     - uses: pre-commit/action@v3.0.0
 
-  run_tests:
+  detectchanges:
+    # Detect if the python package has been changed, or else if tests can be skipped.
+    # Note: path filters cannot be used to skip the entire workflow, as Status Checks
+    # will remain in a "Pending" state. However, if a job within a workflow is skipped
+    # due to a conditional, it will report its status as "Success".
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      packagechanged: ${{ steps.filter.outputs.packagechanged }}
+    steps:
+    - uses: dorny/paths-filter@v2
+      if: github.event_name == 'pull_request'
+      id: filter
+      with:
+        filters: |
+          packagechanged:
+            - 'shap/**'
+            - 'shap/**'
+            - 'tests/**'
+            - 'data/**'
+            - 'pyproject.toml'
+            - 'setup.py'
+            - '.github/workflows/run_tests.yml'
 
+  run_tests:
+    needs: detectchanges
+    if: ${{ github.event_name != 'pull_request' || needs.detectchanges.outputs.packagechanged == 'true' }}
     strategy:
       matrix:
         os: ["ubuntu-latest"]
@@ -57,7 +74,7 @@ jobs:
             extras: "test-core"
             name: 3.11-core
       fail-fast: false
-    # Workaround to ensure previous job names stay the same
+    # Workaround to matrix job names stay the same match the expected names:
     # "Required Checks" enfore that a check called "run_tests (3.8)" is present
     name: run_tests (${{ matrix.name && matrix.name || matrix.python-version }})
     runs-on: ${{ matrix.os }}
