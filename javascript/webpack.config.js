@@ -27,7 +27,7 @@ module.exports = [
   {
     entry: {
       bundle: "./index.jsx",
-      test_bundle: "./test.js"
+      test_bundle: "./test_bundle.js"
     },
     output: {
       path: buildDir,
