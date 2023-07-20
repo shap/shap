@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+- Dropped support for python 3.7 ([#3079](https://github.com/slundberg/shap/pull/3079) by @connortann)
+
 ## 0.42.1 - 2023-07-11
 
 Patch release to provide wheels for a broader range of architectures.

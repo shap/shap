@@ -1,7 +1,9 @@
+# Ensure that the javascript package can be built with webpack
+# Runs on any PRs that modify the javascript directory
+
 name: test_js
 
 on:
-  # only run tests and coverage when src code changes
   push:
     branches:
       - master
