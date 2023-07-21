@@ -7,6 +7,13 @@ on:
   pull_request:
     branches:
       - master
+    paths:
+      - "shap/**"
+      - "tests/**"
+      - "data/**"
+      - ".github/workflows/run_tests.yml"
+      - "pyproject.toml"
+      - "setup.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,34 +30,7 @@ jobs:
         python-version: '3.10'
     - uses: pre-commit/action@v3.0.0
 
-  detectchanges:
-    # Detect if the python package has been changed, or else if tests can be skipped.
-    # Note: path filters cannot be used to skip the entire workflow, as Status Checks
-    # will remain in a "Pending" state. However, if a job within a workflow is skipped
-    # due to a conditional, it will report its status as "Success".
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    outputs:
-      packagechanged: ${{ steps.filter.outputs.packagechanged }}
-    steps:
-    - uses: dorny/paths-filter@v2
-      if: github.event_name == 'pull_request'
-      id: filter
-      with:
-        filters: |
-          packagechanged:
-            - 'shap/**'
-            - 'shap/**'
-            - 'tests/**'
-            - 'data/**'
-            - 'pyproject.toml'
-            - 'setup.py'
-            - '.github/workflows/run_tests.yml'
-
   run_tests:
-    needs: detectchanges
-    if: ${{ github.event_name != 'pull_request' || needs.detectchanges.outputs.packagechanged == 'true' }}
     strategy:
       matrix:
         os: ["ubuntu-latest"]
@@ -58,25 +38,19 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
         extras: ["test"]
         include:
-          # Also test on windows/mac, just one job each
+          # Test on windows/mac, just one job each
           - os: windows-latest
             python-version: "3.11"
             extras: "test"
-            name: 3.11-windows
           - os: macos-latest
             python-version: "3.11"
             extras: "test"
-            name: 3.11-macos
-          # Also run tests with only the core dependencies, to ensure we
+          # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.11"
             extras: "test-core"
-            name: 3.11-core
       fail-fast: false
-    # Workaround to matrix job names stay the same match the expected names:
-    # "Required Checks" enfore that a check called "run_tests (3.8)" is present
-    name: run_tests (${{ matrix.name && matrix.name || matrix.python-version }})
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
