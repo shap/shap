@@ -48,7 +48,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     """
 
-    # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+    # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
@@ -157,7 +157,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values).mean(0))
 
-            # now relax the requirement to match the parition tree ordering for connections above clustering_cutoff
+            # now relax the requirement to match the partition tree ordering for connections above clustering_cutoff
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, clustering_cutoff, feature_order)
 

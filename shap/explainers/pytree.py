@@ -1,7 +1,7 @@
 """
 This module is a pure python implementation of Tree SHAP.
 It is primarily for illustration since it is slower than the 'tree'
-module which uses a compiled C++ implmentation.
+module which uses a compiled C++ implementation.
 """
 import numpy as np
 
@@ -283,7 +283,7 @@ def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights,
         zero_fractions[i] = zero_fractions[i + 1]
         one_fractions[i] = one_fractions[i + 1]
 
-# determine what the total permuation weight would be if
+# determine what the total permutation weight would be if
 # we unwound a previous extension in the decision path
 #@numba.jit(nopython=True, nogil=True)
 def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):

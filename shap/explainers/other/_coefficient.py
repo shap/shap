@@ -3,7 +3,7 @@ import numpy as np
 from .._explainer import Explainer
 
 
-class Coefficent(Explainer):
+class Coefficient(Explainer):
     """ Simply returns the model coefficients as the feature attributions.
 
     This is only for benchmark comparisons and does not approximate SHAP values in a

@@ -835,7 +835,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
 
 def text_to_text(shap_values):
 
-    # unique ID added to HTML elements and function to avoid collision of differnent instances
+    # unique ID added to HTML elements and function to avoid collision of different instances
     uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
 
     saliency_plot_markup = saliency_plot(shap_values)

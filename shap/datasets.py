@@ -16,7 +16,7 @@ def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=
 
     This dataset was collected by randomly finding a working ImageNet link and then pasting the
     original ImageNet image into Google image search restricted to images licensed for reuse. A
-    similar image (now with rights to reuse) was downloaded as a rough replacment for the original
+    similar image (now with rights to reuse) was downloaded as a rough replacement for the original
     ImageNet image. The point is to have a random sample of ImageNet for use as a background
     distribution for explaining models trained on ImageNet data.
 
@@ -228,7 +228,7 @@ def corrgroups60(display=False, n_points=1_000): # pylint: disable=unused-argume
     # generate dataset with known correlation
     N, M = n_points, 60
 
-    # set one coefficent from each group of 3 to 1
+    # set one coefficient from each group of 3 to 1
     beta = np.zeros(M)
     beta[0:30:3] = 1
 
@@ -271,7 +271,7 @@ def independentlinear60(display=False, n_points=1_000): # pylint: disable=unused
     # generate dataset with known correlation
     N, M = n_points, 60
 
-    # set one coefficent from each group of 3 to 1
+    # set one coefficient from each group of 3 to 1
     beta = np.zeros(M)
     beta[0:30:3] = 1
     def f(X):

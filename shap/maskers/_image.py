@@ -82,14 +82,14 @@ class Image(Masker):
 
         if np.prod(x.shape) != np.prod(self.input_shape):
             raise DimensionError("The length of the image to be masked must match the shape given in the " + \
-                            "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
+                            "ImageMasker constructor: "+" * ".join([str(i) for i in x.shape])+ \
                             " != "+" * ".join([str(i) for i in self.input_shape]))
 
         # unwrap single element lists (which are how single input models look in multi-input format)
         if isinstance(x, list) and len(x) == 1:
             x = x[0]
 
-        # we preserve flattend inputs as flattened and full-shaped inputs as their original shape
+        # we preserve flattened inputs as flattened and full-shaped inputs as their original shape
         in_shape = x.shape
         if len(x.shape) > 1:
             x = x.ravel()
@@ -156,7 +156,7 @@ class Image(Masker):
         """
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.maskers.Image", version=0) as s:
             s.save("mask_value", self.input_mask_value)
             s.save("shape", self.input_shape)

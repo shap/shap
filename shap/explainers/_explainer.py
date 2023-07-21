@@ -198,7 +198,7 @@ class Explainer(Serializable):
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False, **kwargs):
-        """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
+        """ Explains the output of model(*args), where args is a list of parallel iterable datasets.
 
         Note this default version could be an abstract method that is implemented by each algorithm-specific
         subclass of Explainer. Descriptions of each subclasses' __call__ arguments

@@ -19,7 +19,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
-    richer extension of classical parital dependence plots. Vertical dispersion of the
+    richer extension of classical partial dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
 
@@ -480,7 +480,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
-    richer extenstion of the classical parital dependence plots. Vertical dispersion of the
+    richer extension of the classical partial dependence plots. Vertical dispersion of the
     data points represents interaction effects. Grey ticks along the y-axis are data
     points where the feature's value was NaN.
 

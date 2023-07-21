@@ -546,7 +546,7 @@ def _fit_human(model_generator, val00, val01, val11):
 def _human_and(X, model_generator, method_name, fever, cough):
     assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
 
-    # these are from the sickness_score mturk user study experiement
+    # these are from the sickness_score mturk user study experiment
     X_test = np.zeros((100,3))
     if not fever and not cough:
         human_consensus = np.array([0., 0., 0.])
@@ -617,7 +617,7 @@ def human_and_11(X, y, model_generator, method_name):
 def _human_or(X, model_generator, method_name, fever, cough):
     assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
 
-    # these are from the sickness_score mturk user study experiement
+    # these are from the sickness_score mturk user study experiment
     X_test = np.zeros((100,3))
     if not fever and not cough:
         human_consensus = np.array([0., 0., 0.])
@@ -688,7 +688,7 @@ def human_or_11(X, y, model_generator, method_name):
 def _human_xor(X, model_generator, method_name, fever, cough):
     assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
 
-    # these are from the sickness_score mturk user study experiement
+    # these are from the sickness_score mturk user study experiment
     X_test = np.zeros((100,3))
     if not fever and not cough:
         human_consensus = np.array([0., 0., 0.])
@@ -759,7 +759,7 @@ def human_xor_11(X, y, model_generator, method_name):
 def _human_sum(X, model_generator, method_name, fever, cough):
     assert np.abs(X).max() == 0, "Human agreement metrics are only for use with the human_agreement dataset!"
 
-    # these are from the sickness_score mturk user study experiement
+    # these are from the sickness_score mturk user study experiment
     X_test = np.zeros((100,3))
     if not fever and not cough:
         human_consensus = np.array([0., 0., 0.])
