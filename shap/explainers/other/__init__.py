@@ -6,7 +6,6 @@ from ._maple import Maple, TreeMaple
 from ._random import Random
 from ._treegain import TreeGain
 
-
 __all__ = [
     "Coefficient",
     "LimeTabular",
