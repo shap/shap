@@ -468,7 +468,7 @@ def link_reweighting(p, link):
     property. This function returns the one that has the lowest L2 norm.
     """
 
-    # the linearized link funciton is a first order Taylor expansion of the link function
+    # the linearized link function is a first order Taylor expansion of the link function
     # centered at the expected value
     expected_value = np.mean(p, axis=0)
     epsilon = 0.0001

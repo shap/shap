@@ -1,6 +1,6 @@
 # This is a small chunk of code from the skimage package. It is reproduced
 # here because all we need is a couple color conversion routines, and adding
-# all of skimage as dependecy is really heavy.
+# all of skimage as dependency is really heavy.
 
 # Disable linting on vendored code
 # ruff: noqa

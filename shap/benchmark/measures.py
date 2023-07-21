@@ -91,7 +91,7 @@ def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
     return metric(y_test, yp_masked_test)
 
 def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is revaluated for each test sample with the important features set to an imputed value.
+    """ The model is reevaluated for each test sample with the important features set to an imputed value.
 
     Note that the imputation is done using a multivariate normality assumption on the dataset. This depends on
     being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
@@ -128,7 +128,7 @@ def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_gene
     return metric(y_test, yp_masked_test)
 
 def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is revaluated for each test sample with the important features set to resample background values.
+    """ The model is reevaluated for each test sample with the important features set to resample background values.
     """
 
     X_train, X_test = to_array(X_train, X_test)
@@ -157,7 +157,7 @@ def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_ge
 def batch_remove_retrain(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
     """ An approximation of holdout that only retraines the model once.
 
-    This is alse called ROAR (RemOve And Retrain) in work by Google. It is much more computationally
+    This is also called ROAR (RemOve And Retrain) in work by Google. It is much more computationally
     efficient that the holdout method because it masks the most important features in every sample
     and then retrains the model once, instead of retraining the model for every test sample like
     the holdout metric.
@@ -257,7 +257,7 @@ def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gener
     return metric(y_test, yp_masked_test)
 
 def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is revaluated for each test sample with the non-important features set to their mean.
+    """ The model is reevaluated for each test sample with the non-important features set to their mean.
     """
 
     X_train, X_test = to_array(X_train, X_test)
@@ -280,7 +280,7 @@ def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
     return metric(y_test, yp_masked_test)
 
 def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is revaluated for each test sample with the non-important features set to an imputed value.
+    """ The model is reevaluated for each test sample with the non-important features set to an imputed value.
 
     Note that the imputation is done using a multivariate normality assumption on the dataset. This depends on
     being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
@@ -317,7 +317,7 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
     return metric(y_test, yp_masked_test)
 
 def keep_resample(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is revaluated for each test sample with the non-important features set to resample background values.
+    """ The model is reevaluated for each test sample with the non-important features set to resample background values.
     """ # why broken? overwriting?
 
     X_train, X_test = to_array(X_train, X_test)
@@ -346,7 +346,7 @@ def keep_resample(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gene
 def batch_keep_retrain(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
     """ An approximation of keep that only retraines the model once.
 
-    This is alse called KAR (Keep And Retrain) in work by Google. It is much more computationally
+    This is also called KAR (Keep And Retrain) in work by Google. It is much more computationally
     efficient that the keep method because it masks the unimportant features in every sample
     and then retrains the model once, instead of retraining the model for every test sample like
     the keep metric.

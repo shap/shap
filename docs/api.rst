@@ -34,7 +34,7 @@ explainers
     shap.explainers.Additive
     shap.explainers.Deep
     shap.explainers.Exact
-    shap.explainers.other.Coefficent
+    shap.explainers.other.Coefficient
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
     shap.explainers.other.Maple

@@ -20,7 +20,7 @@ def test_random_force_plot_mpl_with_data():
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
 
-    # visualize the first prediction's explaination
+    # visualize the first prediction's explanation
     shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, show=False)
 
 def test_random_force_plot_mpl_text_rotation_with_data():
@@ -38,5 +38,5 @@ def test_random_force_plot_mpl_text_rotation_with_data():
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
 
-    # visualize the first prediction's explaination
+    # visualize the first prediction's explanation
     shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, text_rotation=30, show=False)

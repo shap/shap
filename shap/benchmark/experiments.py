@@ -294,7 +294,7 @@ def __thread_worker(q, host):
             finally:
                 worker_lock.release()
 
-        # record how many we have sent off for executation
+        # record how many we have sent off for execution
         worker_lock.acquire()
         try:
             total_sent += 1

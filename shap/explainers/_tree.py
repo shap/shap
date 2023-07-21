@@ -1789,7 +1789,7 @@ class XGBTreeModelLoader:
 
     def print_info(self):
 
-        print("--- global parmeters ---")
+        print("--- global parameters ---")
         print("base_score =", self.base_score)
         print("num_feature =", self.num_feature)
         print("num_class =", self.num_class)

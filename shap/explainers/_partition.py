@@ -465,22 +465,22 @@ class Partition(Explainer):
                 if context is None or context == 0 or ignore_context:
                     self.dvalues[ind] += (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    # recurse on the left node with zero context, flip the context for all decendents if we are ignoring it
+                    # recurse on the left node with zero context, flip the context for all descendents if we are ignoring it
                     args = (m00, f00, f10, lind, new_weight, 0 if context == 1 else context)
                     q.put((-np.max(np.abs(f10 - f00)) * new_weight, np.random.randn(), args))
 
-                    # recurse on the right node with zero context, flip the context for all decendents if we are ignoring it
+                    # recurse on the right node with zero context, flip the context for all descendents if we are ignoring it
                     args = (m00, f00, f01, rind, new_weight, 0 if context == 1 else context)
                     q.put((-np.max(np.abs(f01 - f00)) * new_weight, np.random.randn(), args))
 
                 if context is None or context == 1 or ignore_context:
                     self.dvalues[ind] -= (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    # recurse on the left node with one context, flip the context for all decendents if we are ignoring it
+                    # recurse on the left node with one context, flip the context for all descendents if we are ignoring it
                     args = (m01, f01, f11, lind, new_weight, 1 if context == 0 else context)
                     q.put((-np.max(np.abs(f11 - f01)) * new_weight, np.random.randn(), args))
 
-                    # recurse on the right node with one context, flip the context for all decendents if we are ignoring it
+                    # recurse on the right node with one context, flip the context for all descendents if we are ignoring it
                     args = (m10, f10, f11, rind, new_weight, 1 if context == 0 else context)
                     q.put((-np.max(np.abs(f11 - f10)) * new_weight, np.random.randn(), args))
 
