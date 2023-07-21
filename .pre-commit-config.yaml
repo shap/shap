@@ -16,10 +16,21 @@ repos:
   - id: trailing-whitespace
   - id: end-of-file-fixer
 
+# Hooks just for ReadTheDocs notebooks
+
+- repo: https://github.com/psf/black
+  rev: 23.7.0
+  hooks:
+  - id: black-jupyter
+    files: ^notebooks/
+    types: [jupyter]
+
 - repo: https://github.com/srstevenson/nb-clean
   rev: 2.4.0
   hooks:
   - id: nb-clean
+    files: ^notebooks/
+    types: [jupyter]
     args:
     - --remove-empty-cells
     - --preserve-cell-outputs
