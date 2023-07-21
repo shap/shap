@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from sklearn.utils import check_array
 
 import shap
 from shap.explainers._tree import SingleTree
@@ -386,9 +387,35 @@ def test_catboost_categorical():
 # TODO: Test tree_limit argument
 
 
+def _average_path_length(n_samples_leaf):
+    """
+    Vendored from: https://github.com/scikit-learn/scikit-learn/blob/399131c8545cd525724e4bacf553416c512ac82c/sklearn/ensemble/_iforest.py#L531
+
+    For use in isolation forest tests.
+    """
+    n_samples_leaf = check_array(n_samples_leaf, ensure_2d=False)
+
+    n_samples_leaf_shape = n_samples_leaf.shape
+    n_samples_leaf = n_samples_leaf.reshape((1, -1))
+    average_path_length = np.zeros(n_samples_leaf.shape)
+
+    mask_1 = n_samples_leaf <= 1
+    mask_2 = n_samples_leaf == 2
+    not_mask = ~np.logical_or(mask_1, mask_2)
+
+    average_path_length[mask_1] = 0.0
+    average_path_length[mask_2] = 1.0
+    average_path_length[not_mask] = (
+        2.0 * (np.log(n_samples_leaf[not_mask] - 1.0) + np.euler_gamma)
+        - 2.0 * (n_samples_leaf[not_mask] - 1.0) / n_samples_leaf[not_mask]
+    )
+
+    return average_path_length.reshape(n_samples_leaf_shape)
+
+
 def test_isolation_forest():
-    IsolationForest = pytest.importorskip("sklearn.ensemble.IsolationForest")
-    _average_path_length = pytest.importorskip("sklearn.ensemble._iforest._average_path_length")
+    from sklearn.ensemble import IsolationForest
+
     X, _ = shap.datasets.california(n_points=500)
     for max_features in [1.0, 0.75]:
         iso = IsolationForest(max_features=max_features)
@@ -397,18 +424,14 @@ def test_isolation_forest():
         explainer = shap.TreeExplainer(iso)
         shap_values = explainer.shap_values(X)
 
-        l = _average_path_length(  # pylint: disable=protected-access
-            np.array([iso.max_samples_]))[0]
-        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
+        path_length = _average_path_length(np.array([iso.max_samples_]))[0]
+        score_from_shap = -2 ** (-(np.sum(shap_values, axis=1) + explainer.expected_value) / path_length)
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 
 def test_pyod_isolation_forest():
-    try:
-        IForest = pytest.importorskip("pyod.models.iforest.IForest")
-    except Exception: # pylint: disable=broad-except
-        pytest.skip("Failed to import pyod.models.iforest.IForest")
-    _average_path_length = pytest.importorskip("sklearn.ensemble._iforest._average_path_length")
+    pytest.importorskip("pyod.models.iforest")
+    from pyod.models.iforest import IForest
 
     X, _ = shap.datasets.california(n_points=500)
     for max_features in [1.0, 0.75]:
@@ -418,8 +441,8 @@ def test_pyod_isolation_forest():
         explainer = shap.TreeExplainer(iso)
         shap_values = explainer.shap_values(X)
 
-        l = _average_path_length(np.array([iso.max_samples_]))[0]
-        score_from_shap = - 2 ** (- (np.sum(shap_values, axis=1) + explainer.expected_value) / l)
+        path_length = _average_path_length(np.array([iso.max_samples_]))[0]
+        score_from_shap = -2 ** (-(np.sum(shap_values, axis=1) + explainer.expected_value) / path_length)
         assert np.allclose(iso.detector_.score_samples(X), score_from_shap, atol=1e-7)
 
 
