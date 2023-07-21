@@ -12,8 +12,14 @@ repos:
   - id: check-merge-conflict
   - id: check-toml
   - id: check-yaml
-  - id: check-json
-    types: ["jupyter"]
   - id: mixed-line-ending
   - id: trailing-whitespace
   - id: end-of-file-fixer
+
+- repo: https://github.com/srstevenson/nb-clean
+  rev: 2.4.0
+  hooks:
+  - id: nb-clean
+    args:
+    - --remove-empty-cells
+    - --preserve-cell-outputs
