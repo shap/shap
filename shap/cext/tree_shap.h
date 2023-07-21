@@ -1169,7 +1169,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
     time_t start_time = time(NULL);
     tfloat last_print = 0;
     for (unsigned oind = 0; oind < trees.num_outputs; ++oind) {
-        // set the values int he reformatted tree to the current output index
+        // set the values in the reformatted tree to the current output index
         for (unsigned i = 0; i < trees.tree_limit; ++i) {
             Node *node_tree = node_trees + i * trees.max_nodes;
             for (unsigned j = 0; j < trees.max_nodes; ++j) {
