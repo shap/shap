@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from sklearn.utils import check_array
 
 import shap
 from shap.explainers._tree import SingleTree
@@ -392,8 +393,6 @@ def _average_path_length(n_samples_leaf):
 
     For use in isolation forest tests.
     """
-    from sklearn.utils import check_array
-
     n_samples_leaf = check_array(n_samples_leaf, ensure_2d=False)
 
     n_samples_leaf_shape = n_samples_leaf.shape
