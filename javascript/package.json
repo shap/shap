@@ -10,7 +10,7 @@
   "scripts": {
     "test": "jest --verbose ./tests",
     "dev": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server --content-base build/ --open",
-    "build": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack -p",
+    "build": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack --mode production",
     "pub": "export SET NODE_OPTIONS=--openssl-legacy-provider && npm run build && npm publish"
   },
   "author": "Scott Lundberg",
@@ -33,7 +33,7 @@
     "jest-environment-jsdom": "^29.6.1",
     "react-test-renderer": "^15.7.0",
     "webpack": "^4.42.1",
-    "webpack-cli": "^3.3.11",
+    "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.15.1"
   }
 }
