@@ -252,7 +252,6 @@ def create_binary_newsgroups_data():
     return newsgroups_train, newsgroups_test, class_names
 
 
-
 def test_gpboost():
     gpboost = pytest.importorskip("gpboost")
     # train gpboost model
@@ -1195,12 +1194,25 @@ class TestExplainerXGBoost:
 
         model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
         model.fit(X, y)
+        predicted = model.predict(X, output_margin=True)
 
         # explain the model's predictions using SHAP values
-        e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="raw")
-        shap_values = e.shap_values(X)
+        explainer = shap.TreeExplainer(
+            model,
+            X,
+            feature_perturbation="interventional",
+            model_output="raw",
+        )
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
 
-        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
+        # check that SHAP values sum to model output
+        assert np.allclose(
+            explanation.values.sum(1) + explanation.base_values,
+            predicted,
+        )
 
     def test_xgboost_classifier_independent_probability(self, random_seed):
         xgboost = pytest.importorskip("xgboost")
@@ -1216,13 +1228,25 @@ class TestExplainerXGBoost:
 
         model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
         model.fit(X, y)
+        predicted = model.predict_proba(X)
 
         # explain the model's predictions using SHAP values
-        e = shap.TreeExplainer(model, X, feature_perturbation="interventional",
-                               model_output="probability")
-        shap_values = e.shap_values(X)
+        explainer = shap.TreeExplainer(
+            model,
+            X,
+            feature_perturbation="interventional",
+            model_output="probability",
+        )
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
 
-        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:, 1])
+        # check that SHAP values sum to model output
+        assert np.allclose(
+            explanation.values.sum(1) + explanation.base_values,
+            predicted[:, 1],
+        )
 
     # def test_front_page_xgboost_global_path_dependent():
     #     try:
