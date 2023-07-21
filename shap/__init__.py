@@ -1,9 +1,9 @@
 
 __version__ = "0.42.1"
 
-# explainers
-
 from ._explanation import Cohorts, Explanation
+
+# explainers
 from .explainers import other
 from .explainers._additive import Additive as AdditiveExplainer
 from .explainers._deep import Deep as DeepExplainer
@@ -53,20 +53,22 @@ if have_matplotlib:
     from .plots._text import text as text_plot
     from .plots._waterfall import waterfall as waterfall_plot
 else:
+    bar_plot = unsupported
     summary_plot = unsupported
     decision_plot = unsupported
     multioutput_decision_plot = unsupported
-    dependence_plot = unsupported
+    embedding_plot = unsupported
     force_plot = unsupported
+    getjs = unsupported
     initjs = unsupported
     save_html = unsupported
+    group_difference_plot = unsupported
     image_plot = unsupported
     monitoring_plot = unsupported
-    embedding_plot = unsupported
     partial_dependence_plot = unsupported
-    bar_plot = unsupported
-    waterfall_plot = unsupported
+    dependence_plot = unsupported
     text_plot = unsupported
+    waterfall_plot = unsupported
     # If matplotlib is available, then the plots submodule will be directly available.
     # If not, we need to define something that will issue a meaningful warning message
     # (rather than ModuleNotFound).
