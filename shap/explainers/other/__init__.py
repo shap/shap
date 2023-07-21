@@ -6,6 +6,15 @@ from ._maple import Maple, TreeMaple
 from ._random import Random
 from ._treegain import TreeGain
 
+__all__ = [
+    "Coefficient",
+    "LimeTabular",
+    "Maple",
+    "TreeMaple",
+    "Random",
+    "TreeGain",
+]
+
 
 # Deprecated class alias with incorrect spelling
 def Coefficent(*args, **kwargs):  # noqa
