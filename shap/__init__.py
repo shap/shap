@@ -85,9 +85,11 @@ from .utils._legacy import kmeans
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [
-    # Explanations
     "Cohorts",
     "Explanation",
+
+    # Explainers
+    "other",
     "AdditiveExplainer",
     "DeepExplainer",
     "Explainer",
@@ -99,33 +101,32 @@ __all__ = [
     "PermutationExplainer",
     "SamplingExplainer",
     "TreeExplainer",
-    "other",
 
     # Plots
     "plots",
-    "initjs",
-    "getjs",
-    "save_html",
     "bar_plot",
+    "summary_plot",
     "decision_plot",
-    "dependence_plot",
+    "multioutput_decision_plot",
     "embedding_plot",
     "force_plot",
+    "getjs",
+    "initjs",
+    "save_html",
     "group_difference_plot",
     "image_plot",
     "monitoring_plot",
-    "multioutput_decision_plot",
     "partial_dependence_plot",
-    "summary_plot",
+    "dependence_plot",
     "text_plot",
     "waterfall_plot",
 
     # Other stuff
     "datasets",
-    "utils",
     "links",
+    "utils",
     "ActionOptimizer",
-    "kmeans",
-    "sample",
     "approximate_interactions",
+    "sample",
+    "kmeans",
 ]
