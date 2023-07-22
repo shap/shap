@@ -21,7 +21,7 @@
     "lodash": "^4",
     "react": "^15",
     "react-dom": "^15",
-    "react-tap-event-plugin": "^2"
+    "react-tap-event-plugin": "^3"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",
