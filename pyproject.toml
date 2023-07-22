@@ -43,7 +43,16 @@ dynamic = ["version"]
 [project.optional-dependencies]
 plots = ["matplotlib", "ipython"]
 others = ["lime"]
-docs = ["matplotlib", "ipython", "numpydoc", "sphinx_rtd_theme", "sphinx", "nbsphinx"]
+docs = [
+  "matplotlib",
+  "ipython",
+  "numpydoc",
+  "sphinx_rtd_theme",
+  "sphinx",
+  "nbsphinx",
+  "sphinx_github_changelog",
+  "requests",
+]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
   "pytest",
@@ -68,6 +77,7 @@ test = [
 [project.urls]
 Repository = 'http://github.com/slundberg/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
+"Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
 
 [tool.setuptools]
 packages = [

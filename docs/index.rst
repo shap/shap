@@ -40,3 +40,4 @@ Contents
    Benchmarks <benchmarks>
    API reference <api>
    API examples <api_examples>
+   Release notes <release_notes>
