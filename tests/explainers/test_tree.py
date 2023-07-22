@@ -276,17 +276,26 @@ def test_gpboost():
     # train gpboost model
     X, y = shap.datasets.california(n_points=500)
     data_train = gpboost.Dataset(X, y)
-    model = gpboost.train(params={'objective': 'regression_l2', 'learning_rate': 0.1, 'verbose': 0},
-                          train_set=data_train, num_boost_round=10)
-
-    # explain the model's predictions using SHAP values
-    ex = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
-    shap_values = ex.shap_values(X)
-
+    model = gpboost.train(
+        params={"objective": "regression_l2", "learning_rate": 0.1, "verbose": 0},
+        train_set=data_train,
+        num_boost_round=10,
+    )
     predicted = model.predict(X, pred_latent=True)
 
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+
+    explanation = explainer(X)
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*X.shape,)
+    assert explanation.base_values.shape == (len(X),)
+
+    # check that SHAP values sum to model output
+    assert (
+        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        < 1e-4
+    )
 
 
 def test_catboost():
