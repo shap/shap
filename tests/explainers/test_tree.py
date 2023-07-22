@@ -126,10 +126,17 @@ def _brute_force_tree_shap(tree, x):
 def _validate_shap_values(model, x_test):
     # explain the model's predictions using SHAP values
     tree_explainer = shap.TreeExplainer(model)
-    shap_values = tree_explainer.shap_values(x_test)
-    expected_values = tree_explainer.expected_value
+
+    explanation = tree_explainer(x_test)
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*x_test.shape,)
+    assert explanation.base_values.shape == (x_test.shape[0],)
+
     # validate values sum to the margin prediction of the model plus expected_value
-    assert np.allclose(np.sum(shap_values, axis=1) + expected_values, model.predict(x_test))
+    assert np.allclose(
+        explanation.values.sum(1) + explanation.base_values,
+        model.predict(x_test),
+    )
 
 
 def test_ngboost():
