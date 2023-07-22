@@ -1143,21 +1143,33 @@ class TestExplainerXGBoost:
         assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))
 
     def test_xgboost_multiclass(self):
-        xgboost = pytest.importorskip('xgboost')
+        xgboost = pytest.importorskip("xgboost")
 
         # train XGBoost model
         X, y = shap.datasets.iris()
-        model = xgboost.XGBClassifier(n_estimators=1, max_depth=4)
+        model = xgboost.XGBClassifier(n_estimators=10, max_depth=4)
         model.fit(X, y)
+        predicted = model.predict(X, output_margin=True)
 
+        # explain the model's predictions using SHAP values
         explainer = shap.TreeExplainer(model)
 
-        assert np.allclose(explainer.model.predict(X), model.predict(X, output_margin=True))
+        assert np.allclose(explainer.model.predict(X), predicted)
 
-        shap_values = explainer.shap_values(X)
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        num_classes = 3
+        assert explanation.values.shape == (*X.shape, num_classes)
+        assert explanation.base_values.shape == (len(X), num_classes)
+
+        # check that SHAP values sum to model output
+        assert np.allclose(
+            explanation.values.sum(1) + explanation.base_values,
+            predicted,
+        )
 
         # ensure plot works for first class
-        shap.dependence_plot(0, shap_values[0], X, show=False)
+        shap.dependence_plot(0, explanation[..., 0].values, X, show=False)
 
     def test_xgboost_ranking(self):
         xgboost = pytest.importorskip('xgboost')
