@@ -140,13 +140,25 @@ def _validate_shap_values(model, x_test):
 
 
 def test_ngboost():
-    ngboost = pytest.importorskip('ngboost')
+    ngboost = pytest.importorskip("ngboost")
 
     X, y = shap.datasets.california(n_points=500)
     model = ngboost.NGBRegressor(n_estimators=20).fit(X, y)
+    predicted = model.predict(X)
+
+    # explain the model's predictions using SHAP values
     explainer = shap.TreeExplainer(model, model_output=0)
-    assert np.max(np.abs(
-        explainer.shap_values(X).sum(1) + explainer.expected_value - model.predict(X))) < 1e-5
+
+    explanation = explainer(X)
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*X.shape,)
+    assert explanation.base_values.shape == (len(X),)
+
+    # check that SHAP values sum to model output
+    assert (
+        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        < 1e-5
+    )
 
 
 @pytest.fixture
