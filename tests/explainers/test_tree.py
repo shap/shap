@@ -281,46 +281,68 @@ def test_catboost():
     catboost = pytest.importorskip("catboost")
     # train catboost model
     X, y = shap.datasets.california(n_points=500)
-    X['IsOld'] = (X['HouseAge'] > 30).astype(str)
+    X["IsOld"] = (X["HouseAge"] > 30).astype(str)
     model = catboost.CatBoostRegressor(iterations=30, learning_rate=0.1, random_seed=123)
     p = catboost.Pool(X, y, cat_features=["IsOld"])
     model.fit(p, verbose=False, plot=False)
-
-    # explain the model's predictions using SHAP values
-    ex = shap.TreeExplainer(model)
-    shap_values = ex.shap_values(p)
-
     predicted = model.predict(X)
 
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model)
+
+    explanation = explainer(X)
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*X.shape,)
+    assert explanation.base_values.shape == (len(X),)
+
+    # check that SHAP values sum to model output
+    assert (
+        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        < 1e-4
+    )
 
     X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
     model = catboost.CatBoostClassifier(iterations=10, learning_rate=0.5, random_seed=12)
     model.fit(X, y, verbose=False, plot=False)
-    ex = shap.TreeExplainer(model)
-    shap_values = ex.shap_values(X)
-
     predicted = model.predict(X, prediction_type="RawFormulaVal")
-    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model)
+
+    explanation = explainer(X)
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*X.shape,)
+    assert explanation.base_values.shape == (len(X),)
+
+    # check that SHAP values sum to model output
+    assert (
+        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        < 1e-4
+    )
 
 
 def test_catboost_categorical():
     catboost = pytest.importorskip("catboost")
     X, y = shap.datasets.california(n_points=500)
-    X['IsOld'] = (X['HouseAge'] > 30).astype(str)
+    X["IsOld"] = (X["HouseAge"] > 30).astype(str)
 
     model = catboost.CatBoostRegressor(100, cat_features=['IsOld'], verbose=False)
     model.fit(X, y)
-
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
-
     predicted = model.predict(X)
 
-    assert np.abs(shap_values.sum(1) + explainer.expected_value - predicted).max() < 1e-4, \
-        "SHAP values don't sum to model output!"
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model)
+
+    explanation = explainer(X)
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*X.shape,)
+    assert explanation.base_values.shape == (len(X),)
+
+    # check that SHAP values sum to model output
+    assert (
+        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        < 1e-4
+    )
 
 
 # TODO: Test tree_limit argument
