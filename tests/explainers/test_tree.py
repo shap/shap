@@ -383,10 +383,14 @@ def test_isolation_forest():
         iso.fit(X)
 
         explainer = shap.TreeExplainer(iso)
-        shap_values = explainer.shap_values(X)
+
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
 
         path_length = _average_path_length(np.array([iso.max_samples_]))[0]
-        score_from_shap = -2 ** (-(np.sum(shap_values, axis=1) + explainer.expected_value) / path_length)
+        score_from_shap = -2 ** (-(explanation.values.sum(1) + explanation.base_values) / path_length)
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 
@@ -400,10 +404,14 @@ def test_pyod_isolation_forest():
         iso.fit(X)
 
         explainer = shap.TreeExplainer(iso)
-        shap_values = explainer.shap_values(X)
+
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
 
         path_length = _average_path_length(np.array([iso.max_samples_]))[0]
-        score_from_shap = -2 ** (-(np.sum(shap_values, axis=1) + explainer.expected_value) / path_length)
+        score_from_shap = -2 ** (-(explanation.values.sum(1) + explanation.base_values) / path_length)
         assert np.allclose(iso.detector_.score_samples(X), score_from_shap, atol=1e-7)
 
 
