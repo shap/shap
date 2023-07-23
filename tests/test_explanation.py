@@ -72,10 +72,21 @@ def test_issue_2722(random_seed):
     for square arrays. Since most of the time, the 2D shap values arrays are assembled as
     (# samples, # features).
 
-    cf. GH Issue #2722.
+    cf. GH Issue #2722, #2699.
     """
     rs = np.random.RandomState(random_seed)
     featnames = list("abcde")
+
+    exp = shap.Explanation(
+        # usually this arises as the shap values of N=6 samples, k=5 features
+        values=rs.rand(6, 5),
+        feature_names=featnames,
+        output_names=featnames,
+    )
+    first_sample = exp[0]
+    assert first_sample.feature_names == first_sample.output_names == featnames
+    column_e = exp[..., "e"]
+    assert column_e.feature_names == "e"
 
     exp = shap.Explanation(
         # usually this arises as the shap values of N=5 samples, k=5 features
@@ -86,12 +97,5 @@ def test_issue_2722(random_seed):
     first_sample = exp[0]
     # this used to return "a" incorrectly, instead of ["a","b","c","d","e"]
     assert first_sample.feature_names == first_sample.output_names == featnames
-
-    exp = shap.Explanation(
-        # usually this arises as the shap values of N=6 samples, k=5 features
-        values=rs.rand(6, 5),
-        feature_names=featnames,
-        output_names=featnames,
-    )
-    first_sample = exp[0]
-    assert first_sample.feature_names == first_sample.output_names == featnames
+    column_e = exp[..., "e"]
+    assert column_e.feature_names == "e"
