@@ -60,16 +60,17 @@ def test_explanation_hstack_errors(random_seed):
         _ = base_exp.hstack(exp2)
 
 
-def test_issue_2722(random_seed):
-    """Checks that feature names and output names in Explanations are properly sliced with
-    "square" arrays (N==k).
+def test_square_explanation_feature_names_slicing_issue_2699(random_seed):
+    """Checks that feature names in Explanations are properly sliced with "square"
+    arrays (N==k).
 
-    For 2D arrays, there is an ambiguity in how to assign the feature names to the slicer index.
-    E.g. if feature_names is a list of 5 elements, and the shap_values is a (5,5) array, it's ambiguous
-    whether the axis=0 or axis=1 refers to the "feature columns".
+    For 2D arrays, there is an ambiguity in how to assign the feature names to the
+    slicer index. E.g. if feature_names is a list of 5 elements, and the shap_values is
+    a (5,5) array, it's ambiguous whether the axis=0 or axis=1 refers to the "feature
+    columns".
 
-    This test ensures that we give higher priority to axis=1 for the feature_names (and output_names)
-    for square arrays. Since most of the time, the 2D shap values arrays are assembled as
+    This test ensures that we give higher priority to axis=1 for the feature_names for
+    square arrays. Since most of the time, the 2D shap values arrays are assembled as
     (# samples, # features).
 
     cf. GH Issue #2722, #2699.
