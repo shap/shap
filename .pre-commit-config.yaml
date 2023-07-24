@@ -11,6 +11,8 @@ repos:
   - id: check-added-large-files
   - id: check-merge-conflict
   - id: check-toml
+  - id: check-json
+    types: ["jupyter"]
   - id: check-yaml
   - id: mixed-line-ending
   - id: trailing-whitespace
@@ -24,13 +26,3 @@ repos:
   - id: black-jupyter
     files: ^notebooks/
     types: [jupyter]
-
-- repo: https://github.com/srstevenson/nb-clean
-  rev: 2.4.0
-  hooks:
-  - id: nb-clean
-    files: ^notebooks/
-    types: [jupyter]
-    args:
-    - --remove-empty-cells
-    - --preserve-cell-outputs
