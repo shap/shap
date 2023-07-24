@@ -1,5 +1,5 @@
 var path = require("path");
-// To build use `webpack -p` then copy bundle.js to resources
+// To build use `webpack --mode production` then copy bundle.js to resources
 
 var buildDir = path.resolve(__dirname, "build");
 
@@ -7,13 +7,13 @@ var moduleConfig = {
   rules: [
     {
       test: /\.css$/,
-      loader: "style!css"
+      use: ["style-loader", "css-loader"]
     },
     {
       test: /\.js[x]?$/,
       exclude: /(node_modules)/,
       loader: "babel-loader",
-      query: {
+      options: {
         presets: ["@babel/preset-env", "@babel/preset-react"]
       }
     }
