@@ -26,3 +26,9 @@ repos:
   - id: black-jupyter
     files: ^notebooks/
     types: [jupyter]
+
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 1.7.0
+  hooks:
+    - id: nbqa-ruff
+      files: ^notebooks/
