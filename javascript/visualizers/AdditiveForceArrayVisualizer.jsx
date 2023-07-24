@@ -1,5 +1,5 @@
 import React from "react";
-import { select, mouse } from "d3-selection";
+import { select, pointer } from "d3-selection";
 import { scaleLinear, scaleTime } from "d3-scale";
 import { format } from "d3-format";
 import { timeFormat, timeParse } from "d3-time-format";
@@ -148,7 +148,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
     this.xlabel.node().onchange = () => this.internalDraw();
     this.ylabel.node().onchange = () => this.internalDraw();
 
-    this.svg.on("mousemove", x => this.mouseMoved(x));
+    this.svg.on("mousemove", event => this.mouseMoved(event));
     this.svg.on("click", () => alert("This original index of the sample you clicked is " + this.nearestExpIndex));
 
     this.svg.on("mouseout", x => this.mouseOut(x));
@@ -174,7 +174,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
     this.hoverGroup2.attr("display", "none");
   }
 
-  mouseMoved() {
+  mouseMoved(event) {
     let i, nearestExp;
 
     this.hoverLine.attr("display", "");
@@ -186,7 +186,7 @@ class AdditiveForceArrayVisualizer extends React.Component {
     this.hoverGroup1.attr("display", "");
     this.hoverGroup2.attr("display", "");
 
-    let x = mouse(this.svg.node())[0];
+    let x = pointer(event, this.svg.node())[0];
     if (this.props.explanations) {
 
       // Find the nearest explanation to the cursor position
