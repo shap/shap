@@ -34,7 +34,10 @@ module.exports = [
       filename: "[name].js"
     },
     module: moduleConfig,
-    resolve: resolveConfig
+    resolve: resolveConfig,
+    devServer: {
+      static: buildDir
+    }
   },
   {
     entry: {
