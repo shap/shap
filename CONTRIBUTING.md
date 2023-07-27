@@ -24,15 +24,15 @@ and contributions of all forms are welcome!
 You can contribute by:
 
 - Submitting bug reports and features requests on the GitHub [issue
-  tracker](https://github.com/slundberg/shap/issues),
+  tracker](https://github.com/shap/shap/issues),
 - Contributing fixes and improvements via [Pull
-  Requests](https://github.com/slundberg/shap/pulls), or
+  Requests](https://github.com/shap/shap/pulls), or
 - Discussing ideas and questions in the [Discussions forum](https://github.com/shap/shap/discussions).
 
 ## Writing helpful bug reports
 
 When submitting bug reports on the [issue
-tracker](https://github.com/slundberg/shap/issues), it is very helpful for the
+tracker](https://github.com/shap/shap/issues), it is very helpful for the
 maintainers to include a good **Minimal Reproducible Example** (MRE).
 
 An MRE should be:
