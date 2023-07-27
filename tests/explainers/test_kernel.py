@@ -96,7 +96,7 @@ def test_kernel_shap_with_dataframe(random_seed):
 
 def test_kernel_shap_with_dataframe_explaination(random_seed):
     """ Test with a Pandas DataFrame with Explaination API.
-    The Explanation.data is supposed to be a numpy array in many parts of the code, 
+    The Explanation.data is supposed to be a numpy array in many parts of the code,
     e.g., for scatter plot, and will fail if it is not converted from df to ndarray.
     """
     rs = np.random.RandomState(random_seed)
@@ -266,4 +266,3 @@ def test_non_numeric():
     assert shap.KernelExplainer.not_equal(pd.Timestamp('2017-01-01T12'), pd.Timestamp('2017-01-01T13'))
     assert shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('3Q2005'))
     assert not shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('4Q2005'))
-
