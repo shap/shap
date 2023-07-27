@@ -11,7 +11,7 @@ body:
     id: problem
     attributes:
       label: Issue Description
-      description: Please provide a description of the issue shown in the reproducible example.
+      description: Describe the issue.
     validations:
       required: true
   - type: textarea
@@ -19,8 +19,8 @@ body:
     attributes:
       label: Minimal Reproducible Example
       description: >
-        Please follow [this guide](https://matthewrocklin.com/minimal-bug-reports) on how to
-        provide a minimal, copy-pastable example.
+        Please provide a minimal, self-contained example.
+        See [Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports) for guidance on how to write helpful examples.
       placeholder: |
         import shap
 
