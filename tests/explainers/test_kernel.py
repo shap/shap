@@ -94,6 +94,26 @@ def test_kernel_shap_with_dataframe(random_seed):
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     _ = explainer.shap_values(df_X)
 
+def test_kernel_shap_with_dataframe_explaination(random_seed):
+    """ Test with a Pandas DataFrame with Explaination API.
+    The Explanation.data is supposed to be a numpy array in many parts of the code, 
+    e.g., for scatter plot, and will fail if it is not converted from df to ndarray.
+    """
+    rs = np.random.RandomState(random_seed)
+
+    df_X = pd.DataFrame(rs.random((10, 3)), columns=list('abc'))
+    df_X.index = pd.date_range('2018-01-01', periods=10, freq='D', tz='UTC')
+
+    df_y = df_X.eval('a - 2 * b + 3 * c')
+    df_y = df_y + rs.normal(0.0, 0.1, df_y.shape)
+
+    linear_model = sklearn.linear_model.LinearRegression()
+    linear_model.fit(df_X, df_y)
+
+    explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
+    explanation = explainer(df_X)
+    shap.plots.scatter(explanation[:, "a"], color=explanation[:,"b"], show=False)
+
 def test_kernel_shap_with_a1a_sparse_zero_background():
     """ Test with a sparse matrix for the background.
     """
@@ -246,3 +266,4 @@ def test_non_numeric():
     assert shap.KernelExplainer.not_equal(pd.Timestamp('2017-01-01T12'), pd.Timestamp('2017-01-01T13'))
     assert shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('3Q2005'))
     assert not shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('4Q2005'))
+
