@@ -8,7 +8,7 @@ from sklearn.utils import deprecated
 
 import shap
 
-github_data_url = "https://github.com/slundberg/shap/raw/master/data/"
+github_data_url = "https://github.com/shap/shap/raw/master/data/"
 
 
 def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=unused-argument
