@@ -14,7 +14,7 @@
     "pub": "export SET NODE_OPTIONS=--openssl-legacy-provider && npm run build && npm publish"
   },
   "author": "Scott Lundberg",
-  "repository": "https://github.com/slundberg/shap",
+  "repository": "https://github.com/shap/shap",
   "license": "MIT",
   "dependencies": {
     "d3": "^7",

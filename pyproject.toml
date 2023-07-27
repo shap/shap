@@ -75,7 +75,7 @@ test = [
 ]
 
 [project.urls]
-Repository = 'http://github.com/slundberg/shap'
+Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
 

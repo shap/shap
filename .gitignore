@@ -7,7 +7,7 @@ ENV/
 env.bak/
 venv.bak/
 
-# slundberg/shap
+# shap/shap
 node_modules
 __pycache__
 shap.egg-info

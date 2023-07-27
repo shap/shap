@@ -2,7 +2,7 @@ Tabular examples
 ----------------
 
 These examples explain machine learning models applied to tabular data. They are all generated from Jupyter
-notebooks `available on GitHub <https://github.com/slundberg/shap/tree/master/notebooks/tabular_examples>`_.
+notebooks `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/tabular_examples>`_.
 
 
 Tree-based models

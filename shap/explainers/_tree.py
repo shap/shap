@@ -362,7 +362,7 @@ class Tree(Explainer):
                 except ValueError as e:
                     emsg = (
                         "This reshape error is often caused by passing a bad data matrix to SHAP. "
-                        "See https://github.com/slundberg/shap/issues/580."
+                        "See https://github.com/shap/shap/issues/580."
                     )
                     raise ValueError(emsg) from e
 
@@ -387,7 +387,7 @@ class Tree(Explainer):
                     except ValueError as e:
                         emsg = (
                             "This reshape error is often caused by passing a bad data matrix to SHAP. "
-                            "See https://github.com/slundberg/shap/issues/580."
+                            "See https://github.com/shap/shap/issues/580."
                         )
                         raise ValueError(emsg) from e
 
