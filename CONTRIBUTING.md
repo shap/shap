@@ -24,16 +24,23 @@ and contributions of all forms are welcome!
 You can contribute by:
 
 - Submitting bug reports and features requests on the GitHub [issue
-  tracker](https://github.com/shap/shap/issues),
-- Contributing fixes and improvements via [Pull
-  Requests](https://github.com/shap/shap/pulls), or
-- Discussing ideas and questions in the [Discussions forum](https://github.com/shap/shap/discussions).
+  tracker][issues],
+- Contributing fixes and improvements via [Pull Requests][pulls], or
+- Discussing ideas and questions in the [Discussions forum][discussions].
+
+If you are looking for a good place to get started, look for issues with the
+[good first issue][goodfirstissue] label.
+
+[issues]: https://github.com/shap/shap/issues
+[pulls]: https://github.com/shap/shap/pulls
+[discussions]: https://github.com/shap/shap/discussions
+[goodfirstissue]:
+    https://github.com/shap/shap/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22
 
 ## Writing helpful bug reports
 
-When submitting bug reports on the [issue
-tracker](https://github.com/shap/shap/issues), it is very helpful for the
-maintainers to include a good **Minimal Reproducible Example** (MRE).
+When submitting bug reports on the [issue tracker][issues], it is very helpful
+for the maintainers to include a good **Minimal Reproducible Example** (MRE).
 
 An MRE should be:
 
@@ -168,7 +175,7 @@ Before marking your PR as "ready for review" (by removing the `Draft` status),
 please ensure:
 
 - Your feature branch is up-to-date with the master branch,
-- All [pre-commit hooks](https://pre-commit.com/#install) pass, and
+- All [pre-commit hooks](#code-checks-with-precommit) pass, and
 - Unit tests have been added (if your PR adds any new features or fixes a bug).
 
 ## Documentation
