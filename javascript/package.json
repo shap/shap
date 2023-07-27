@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "jest --verbose ./tests",
-    "dev": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server --content-base build/ --open",
+    "dev": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server --open",
     "build": "export SET NODE_OPTIONS=--openssl-legacy-provider && webpack --mode production",
     "pub": "export SET NODE_OPTIONS=--openssl-legacy-provider && npm run build && npm publish"
   },
