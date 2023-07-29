@@ -2,7 +2,7 @@ Text examples
 -------------
 
 These examples explain machine learning models applied to text data. They are all generated from Jupyter
-notebooks `available on GitHub <https://github.com/slundberg/shap/tree/master/notebooks/text_examples>`_.
+notebooks `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/text_examples>`_.
 
 
 Sentiment analysis
