@@ -271,3 +271,62 @@ def test_pytorch_multiple_inputs(random_seed):
     sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum()+0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+def test_tf_pd_input(random_seed):
+    """ Test tabular (batch_size, features) pd.DataFrame input. """
+    pd = pytest.importorskip('pandas')
+    tf = pytest.importorskip('tensorflow')
+    import pandas as pd
+    import tensorflow as tf
+
+    tf.random.set_seed(random_seed)
+
+    batch_size = 10
+    num_features = 5
+    feature_names = [f"TF_pd_test_feature_{i}" for i in range(num_features)]
+
+    background = np.zeros((batch_size, num_features))
+    background = pd.DataFrame(background, columns=feature_names)
+    x1 = np.ones((batch_size, num_features))
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(10, input_shape=(num_features,), activation='relu'),
+        tf.keras.layers.Dense(1, activation='linear')
+    ])
+    model.compile(optimizer='adam', loss='mse')
+
+    # testing pd input
+    e = shap.GradientExplainer(model, background)
+    shap_values = e.shap_values(x1[:1])
+
+    diff = (model.predict(x1[:1]) - model.predict(background.values)).mean(0)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+def test_tf_np_input(random_seed):
+    """ Test tabular (batch_size, features) np.array input. """
+    tf = pytest.importorskip('tensorflow')
+    import tensorflow as tf
+    tf.random.set_seed(random_seed)
+
+    batch_size = 10
+    num_features = 5
+
+    background = np.zeros((batch_size, num_features))
+    x1 = np.ones((batch_size, num_features))
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(10, input_shape=(num_features,), activation='relu'),
+        tf.keras.layers.Dense(1, activation='linear')
+    ])
+    model.compile(optimizer='adam', loss='mse')
+
+    # testing pd input
+    e = shap.GradientExplainer(model, background)
+    shap_values = e.shap_values(x1[:1])
+
+    diff = (model.predict(x1[:1]) - model.predict(background)).mean(0)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
