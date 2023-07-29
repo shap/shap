@@ -183,7 +183,7 @@ def test_sparse():
 
     # train linear model
     model = LogisticRegression()
-    model.fit(X, y)
+    model.fit(X, y.squeeze())
 
     # explain the model's predictions using SHAP values
     explainer = shap.LinearExplainer(model, X)
