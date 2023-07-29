@@ -94,10 +94,13 @@ def test_kernel_shap_with_dataframe(random_seed):
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     _ = explainer.shap_values(df_X)
 
-def test_kernel_shap_with_dataframe_explaination(random_seed):
-    """ Test with a Pandas DataFrame with Explaination API.
+def test_kernel_shap_with_dataframe_explanation(random_seed):
+    """Test with a Pandas DataFrame with Explanation API.
+
     The Explanation.data is supposed to be a numpy array in many parts of the code,
-    e.g., for scatter plot, and will fail if it is not converted from df to ndarray.
+    e.g., scatter plot will fail if it is not converted from pandas df to ndarray.
+
+    cf. GH #1625
     """
     rs = np.random.RandomState(random_seed)
 
