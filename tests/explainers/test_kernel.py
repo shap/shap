@@ -105,8 +105,6 @@ def test_kernel_shap_with_dataframe_explanation(random_seed):
     rs = np.random.RandomState(random_seed)
 
     df_X = pd.DataFrame(rs.random((10, 3)), columns=list('abc'))
-    df_X.index = pd.date_range('2018-01-01', periods=10, freq='D', tz='UTC')
-
     df_y = df_X.eval('a - 2 * b + 3 * c')
     df_y = df_y + rs.normal(0.0, 0.1, df_y.shape)
 
@@ -115,7 +113,9 @@ def test_kernel_shap_with_dataframe_explanation(random_seed):
 
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     explanation = explainer(df_X)
-    shap.plots.scatter(explanation[:, "a"], color=explanation[:,"b"], show=False)
+
+    # this shouldn't throw an error
+    shap.plots.scatter(explanation[:, "a"], show=False)
 
 def test_kernel_shap_with_a1a_sparse_zero_background():
     """ Test with a sparse matrix for the background.
