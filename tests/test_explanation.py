@@ -79,7 +79,7 @@ def test_feature_names_slicing_for_square_arrays(random_seed):
     featnames = list("abcde")
 
     exp = shap.Explanation(
-        # usually this arises as the shap values of N=6 samples, k=5 features
+        # an array of this shape typically arises as the shap values of N=6 samples, k=5 features
         values=rs.rand(6, 5),
         feature_names=featnames,
         output_names=featnames,
@@ -90,7 +90,7 @@ def test_feature_names_slicing_for_square_arrays(random_seed):
     assert column_e.feature_names == "e"
 
     exp = shap.Explanation(
-        # usually this arises as the shap values of N=5 samples, k=5 features
+        # an array of this shape typically arises as the shap values of N=5 samples, k=5 features
         values=rs.rand(5, 5),
         feature_names=featnames,
         output_names=featnames,
