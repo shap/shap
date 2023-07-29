@@ -94,6 +94,29 @@ def test_kernel_shap_with_dataframe(random_seed):
     explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
     _ = explainer.shap_values(df_X)
 
+def test_kernel_shap_with_dataframe_explanation(random_seed):
+    """Test with a Pandas DataFrame with Explanation API.
+
+    The Explanation.data is supposed to be a numpy array in many parts of the code,
+    e.g., scatter plot will fail if it is not converted from pandas df to ndarray.
+
+    cf. GH #1625
+    """
+    rs = np.random.RandomState(random_seed)
+
+    df_X = pd.DataFrame(rs.random((10, 3)), columns=list('abc'))
+    df_y = df_X.eval('a - 2 * b + 3 * c')
+    df_y = df_y + rs.normal(0.0, 0.1, df_y.shape)
+
+    linear_model = sklearn.linear_model.LinearRegression()
+    linear_model.fit(df_X, df_y)
+
+    explainer = shap.KernelExplainer(linear_model.predict, df_X, keep_index=True)
+    explanation = explainer(df_X)
+
+    # this shouldn't throw an error
+    shap.plots.scatter(explanation[:, "a"], show=False)
+
 def test_kernel_shap_with_a1a_sparse_zero_background():
     """ Test with a sparse matrix for the background.
     """

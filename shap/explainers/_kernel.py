@@ -153,7 +153,7 @@ class Kernel(Explainer):
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X,
+            data=X.to_numpy() if safe_isinstance(X, "pandas.core.frame.DataFrame") else X,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )
