@@ -60,7 +60,7 @@ def test_explanation_hstack_errors(random_seed):
         _ = base_exp.hstack(exp2)
 
 
-def test_square_explanation_feature_names_slicing_issue_2699(random_seed):
+def test_feature_names_slicing_for_square_arrays(random_seed):
     """Checks that feature names in Explanations are properly sliced with "square"
     arrays (N==k).
 
