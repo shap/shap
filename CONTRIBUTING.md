@@ -45,11 +45,11 @@ for the maintainers to include a good **Minimal Reproducible Example** (MRE).
 An MRE should be:
 
 - **Minimal**: Use as little code as possible that still produces the same
-  problem
+  problem.
 - **Self-contained**: Include everything needed to reproduce your problem,
   including imports and input data.
 - **Reproducible**: Test the code you're about to provide to make sure it
-  reproduces the problem
+  reproduces the problem.
 
 For more information, see [How To Craft Minimal Bug
 Reports](https://matthewrocklin.com/minimal-bug-reports).
@@ -181,18 +181,18 @@ please ensure:
 ## Documentation
 
 The documentation is hosted by at
-[shap.readthedocs.io](https://shap.readthedocs.io/en/latest/index.html). If you
-have modified the docstrings or notebooks, please also check that the changes
+[shap.readthedocs.io](https://shap.readthedocs.io/en/latest/). If you have
+modified the docstrings or notebooks, please also check that the changes are
 are rendered properly in the generated HTML files.
 
 ### Previewing changes on Pull Requests
 
 The documentation is built automatically on each Pull Request, to facilitate
-previewing how any changes will render. To see the preview:
+previewing how your changes will render. To see the preview:
 
-1. Look for "All checks have passed", and click "Show all checks"
-2. Browse to the check called "docs/readthedocs.org"
-3. Click the `Details` hyperlink to open a preview of the docs
+1. Look for "All checks have passed", and click "Show all checks".
+2. Browse to the check called "docs/readthedocs.org".
+3. Click the `Details` hyperlink to open a preview of the docs.
 
 The PR previews are typically hosted on a URL of the form below, replacing
 `<pr-number>`:
@@ -205,6 +205,6 @@ https://shap--<pr-number>.org.readthedocs.build/en/<pr-number>
 
 To build the documentation locally:
 
-1. Navigate to the `docs` directory
-2. Run `make html`
-3. Open "_build/html/index.html" in your browser
+1. Navigate to the `docs` directory.
+2. Run `make html`.
+3. Open "_build/html/index.html" in your browser.

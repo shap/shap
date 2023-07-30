@@ -11,7 +11,7 @@ body:
     id: problem
     attributes:
       label: Issue Description
-      description: Describe the issue.
+      description: Please describe the issue.
     validations:
       required: true
   - type: textarea
