@@ -180,7 +180,7 @@ please ensure:
 
 ## Documentation
 
-The documentation is hosted by at
+The documentation is hosted at
 [shap.readthedocs.io](https://shap.readthedocs.io/en/latest/). If you have
 modified the docstrings or notebooks, please also check that the changes are
 are rendered properly in the generated HTML files.

@@ -19,8 +19,9 @@ body:
     attributes:
       label: Minimal Reproducible Example
       description: >
-        Please provide a minimal, self-contained example.
-        See [Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports) for guidance on how to write helpful examples.
+        Please provide a minimal, self-contained example that reproduces the issue.
+        See [this guide](https://matthewrocklin.com/minimal-bug-reports)
+        for guidance on how to write good examples that are helpful for maintainers.
       placeholder: |
         import shap
 
@@ -29,12 +30,21 @@ body:
     validations:
       required: true
   - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback
+      description: Copy & paste the traceback of the error (if relevant).
+      placeholder: |
+        Traceback (most recent call last):
+          File "/shap/__init__.py", line 4, in <module>
+            import foo
+        NameError: name 'foo' is not defined
+      render: shell
+  - type: textarea
     id: expected-behavior
     attributes:
       label: Expected Behavior
       description: Please describe or show a code example of the expected behavior.
-    validations:
-      required: true
   - type: checkboxes
     id: checks
     attributes:
