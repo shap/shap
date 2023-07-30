@@ -286,7 +286,6 @@ def test_tf_input(random_seed, input_type):
     background = np.zeros((batch_size, num_features))
     if input_type == "dataframe":
         background = pd.DataFrame(background, columns=feature_names)
-    x1 = np.ones((batch_size, num_features))
 
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(10, input_shape=(num_features,), activation='relu'),
@@ -294,16 +293,11 @@ def test_tf_input(random_seed, input_type):
     ])
     model.compile(optimizer='adam', loss='mse')
 
-    e = shap.GradientExplainer(model, background)
-    shap_values = e.shap_values(x1[:1])
+    explainer = shap.GradientExplainer(model, background)
+    example = np.ones((1, num_features))
+    explanation = explainer(example)
 
-    if input_type == "dataframe":
-        diff = (model.predict(x1[:1]) - model.predict(background.values)).mean(0)
-    elif input_type == "numpy":
-        diff = (model.predict(x1[:1]) - model.predict(background)).mean(0)
-    else:
-        raise NotImplementedError("Input type %s not implemented" % input_type)
-
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    diff = (model.predict(example) - model.predict(background)).mean(0)
+    sums = np.array([values.sum() for values in explanation.values])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
