@@ -46,11 +46,13 @@ if have_matplotlib:
     from .plots._force import force as force_plot
     from .plots._force import getjs, initjs, save_html
     from .plots._group_difference import group_difference as group_difference_plot
+    from .plots._heatmap import heatmap as heatmap_plot
     from .plots._image import image as image_plot
     from .plots._monitoring import monitoring as monitoring_plot
     from .plots._partial_dependence import partial_dependence as partial_dependence_plot
     from .plots._scatter import dependence_legacy as dependence_plot
     from .plots._text import text as text_plot
+    from .plots._violin import violin as violin_plot
     from .plots._waterfall import waterfall as waterfall_plot
 else:
     bar_plot = unsupported
@@ -63,11 +65,13 @@ else:
     initjs = unsupported
     save_html = unsupported
     group_difference_plot = unsupported
+    heatmap_plot = unsupported
     image_plot = unsupported
     monitoring_plot = unsupported
     partial_dependence_plot = unsupported
     dependence_plot = unsupported
     text_plot = unsupported
+    violin_plot = unsupported
     waterfall_plot = unsupported
     # If matplotlib is available, then the plots submodule will be directly available.
     # If not, we need to define something that will issue a meaningful warning message
@@ -114,11 +118,13 @@ __all__ = [
     "initjs",
     "save_html",
     "group_difference_plot",
+    "heatmap_plot",
     "image_plot",
     "monitoring_plot",
     "partial_dependence_plot",
     "dependence_plot",
     "text_plot",
+    "violin_plot",
     "waterfall_plot",
 
     # Other stuff
