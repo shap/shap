@@ -1,6 +1,7 @@
 from urllib.error import HTTPError
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import shap
@@ -271,3 +272,32 @@ def test_pytorch_multiple_inputs(random_seed):
     sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum()+0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+@pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
+def test_tf_input(random_seed, input_type):
+    """ Test tabular (batch_size, features) pd.DataFrame and numpy input. """
+    tf = pytest.importorskip('tensorflow')
+    tf.random.set_seed(random_seed)
+
+    batch_size = 10
+    num_features = 5
+    feature_names = [f"TF_pd_test_feature_{i}" for i in range(num_features)]
+
+    background = np.zeros((batch_size, num_features))
+    if input_type == "dataframe":
+        background = pd.DataFrame(background, columns=feature_names)
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(10, input_shape=(num_features,), activation='relu'),
+        tf.keras.layers.Dense(1, activation='linear')
+    ])
+    model.compile(optimizer='adam', loss='mse')
+
+    explainer = shap.GradientExplainer(model, background)
+    example = np.ones((1, num_features))
+    explanation = explainer(example)
+
+    diff = (model.predict(example) - model.predict(background)).mean(0)
+    sums = np.array([values.sum() for values in explanation.values])
+    d = np.abs(sums - diff).sum()
+    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
