@@ -213,7 +213,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
                 # plot the nan values in the interaction feature as grey
                 pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
-                           color="#777777", vmin=vmin, vmax=vmax, s=9,
+                           color="#777777", s=9,
                            alpha=alpha, linewidth=0, zorder=1)
                 # plot the non-nan values colored by the trimmed feature value
                 pl.scatter(shaps[np.invert(nan_mask)], np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
