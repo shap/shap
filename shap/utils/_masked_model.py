@@ -7,7 +7,7 @@ from numba import njit
 from .. import links
 
 
-class MaskedModel():
+class MaskedModel:
     """ This is a utility class that combines a model, a masker object, and a current input.
 
     The combination of a model, a masker object, and a current input produces a binary set

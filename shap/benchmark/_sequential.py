@@ -13,7 +13,7 @@ from shap.utils import MaskedModel, safe_isinstance
 from ._result import BenchmarkResult
 
 
-class SequentialMasker():
+class SequentialMasker:
     def __init__(self, mask_type, sort_order, masker, model, *model_args, batch_size=500):
 
         for arg in model_args:
@@ -54,7 +54,7 @@ class SequentialMasker():
     def __call__(self, explanation, name, **kwargs):
         return self.inner(name, explanation, *self.model_args, batch_size=self.batch_size, **kwargs)
 
-class SequentialPerturbation():
+class SequentialPerturbation:
     def __init__(self, model, masker, sort_order, perturbation, linearize_link=False):
         # self.f = lambda masked, x, index: model.predict(masked)
         self.model = model if callable(model) else model.predict

@@ -1,7 +1,7 @@
 from ._result import BenchmarkResult
 
 
-class ComputeTime():
+class ComputeTime:
     """ Extracts a runtime benchmark result from the passed Explanation.
     """
 
