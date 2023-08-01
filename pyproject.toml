@@ -48,7 +48,7 @@ docs = [
   "ipython",
   "numpydoc",
   "sphinx_rtd_theme",
-  "sphinx",
+  "sphinx<7",
   "nbsphinx",
   "sphinx_github_changelog",
   "requests",
