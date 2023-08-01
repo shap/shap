@@ -372,8 +372,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
-            pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                        vmax=vmax, s=16, alpha=alpha, linewidth=0,
+            pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
+                        s=16, alpha=alpha, linewidth=0,
                         zorder=3, rasterized=len(shaps) > 500)
 
             # plot the non-nan fvalues colored by the trimmed feature value
@@ -701,8 +701,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
-                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                           vmax=vmax, s=16, alpha=alpha, linewidth=0,
+                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
+                           s=16, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
 
                 # plot the non-nan values colored by the trimmed feature value
@@ -773,7 +773,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
                 pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
-                           color="#777777", vmin=vmin, vmax=vmax, s=9,
+                           color="#777777", s=9,
                            alpha=alpha, linewidth=0, zorder=1)
                 # plot the non-nan values colored by the trimmed feature value
                 cvals = values[np.invert(nan_mask)].astype(np.float64)
