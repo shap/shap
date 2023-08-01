@@ -3,7 +3,7 @@ import time
 import tqdm
 
 
-class ShowProgress():
+class ShowProgress:
     """ This is a simple wrapper around tqdm that includes a starting delay before printing.
     """
     def __init__(self, iterable, total, desc, silent, start_delay):

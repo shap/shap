@@ -10,7 +10,7 @@ from shap.utils import MaskedModel, partition_tree_shuffle, safe_isinstance
 from ._result import BenchmarkResult
 
 
-class ExplanationError():
+class ExplanationError:
     """ A measure of the explanation error relative to a model's actual output.
 
     This benchmark metric measures the discrepancy between the output of the model predicted by an

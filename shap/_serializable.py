@@ -8,7 +8,7 @@ import numpy as np
 
 log = logging.getLogger('shap')
 
-class Serializable():
+class Serializable:
     """ This is the superclass of all serializable objects.
     """
 
@@ -47,7 +47,7 @@ class Serializable():
         return obj_type(**{k: constructor_args[k] for k in constructor_args if k in used_args})
 
 
-class Serializer():
+class Serializer:
     """ Save data items to an input stream.
     """
     def __init__(self, out_stream, block_name, version):
@@ -101,7 +101,7 @@ class Serializer():
             raise ValueError(f"Unknown encoder type '{encoder}' given for serialization!")
         log.debug("value = %s", str(value))
 
-class Deserializer():
+class Deserializer:
     """ Load data items from an input stream.
     """
 

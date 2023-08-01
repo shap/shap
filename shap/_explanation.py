@@ -785,7 +785,7 @@ def compute_output_dims(values, base_values, data, output_names):
 def is_1d(val):
     return not (isinstance(val[0], list) or isinstance(val[0], np.ndarray))
 
-class Op():
+class Op:
     pass
 
 class Percentile(Op):
@@ -831,7 +831,7 @@ def _compute_shape(x):
                         matches[j] &= shape[j] == first_shape[j]
                 return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
 
-class Cohorts():
+class Cohorts:
     def __init__(self, **kwargs):
         self.cohorts = kwargs
         for k in self.cohorts:

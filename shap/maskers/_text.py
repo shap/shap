@@ -343,7 +343,7 @@ class Text(Masker):
         return kwargs
 
 
-class SimpleTokenizer(): # pylint: disable=too-few-public-methods
+class SimpleTokenizer: # pylint: disable=too-few-public-methods
     """ A basic model agnostic tokenizer.
     """
     def __init__(self, split_pattern=r"\W+"):
@@ -388,7 +388,7 @@ closers = {
 enders = [".", ","]
 connectors = ["but", "and", "or"]
 
-class Token():
+class Token:
     """ A token representation used for token clustering.
     """
     def __init__(self, value):
@@ -406,7 +406,7 @@ class Token():
             return self.s + "!"
         return self.s
 
-class TokenGroup():
+class TokenGroup:
     """ A token group (substring) representation used for token clustering.
     """
     def __init__(self, group, index=None):
