@@ -98,6 +98,17 @@ class Model:
 
 
 def convert_to_model(val, keep_index=False):
+    """ Convert a model to a Model object.
+
+    Parameters
+    ----------
+    val : function or Model object
+        The model function or a Model object.
+
+    keep_index : bool
+        If True then the index values will be passed to the model function as the first argument.
+        When this is False the feature names will be removed from the model object to avoid unnecessary warnings.
+    """
     if isinstance(val, Model):
         out = val
     else:
