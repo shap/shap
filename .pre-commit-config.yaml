@@ -18,15 +18,7 @@ repos:
   - id: trailing-whitespace
   - id: end-of-file-fixer
 
-# Hooks just for ReadTheDocs notebooks
-
-# Black to be enabled in future
-# - repo: https://github.com/psf/black
-#   rev: 23.7.0
-#   hooks:
-#   - id: black-jupyter
-#     files: ^notebooks/
-#     types: [jupyter]
+# Basic notebook checks, to be run on all notebooks
 
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.7.0
@@ -44,3 +36,22 @@ repos:
         "--ignore=F405",  # variable may be undefined
         "--ignore=F841",  # variable assigned to but never used
       ]
+
+# More stringent notebook linting checks, enabled on a subset of notebooks
+# Add a notebook to the "cleanNotebooks" list below once it has been cleaned up
+# See: https://github.com/shap/shap/issues/3036
+
+- repo: https://github.com/psf/black
+  rev: 23.7.0
+  hooks:
+  - id: black-jupyter
+    files: &cleanNotebooks |
+            (?x)^(
+                notebooks/api_examples/explainers/Exact.ipynb|
+                notebooks/api_examples/maskers/custom.ipynb|
+            )$
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 1.7.0
+  hooks:
+    - id: nbqa-ruff
+      files: *cleanNotebooks
