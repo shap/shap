@@ -33,3 +33,14 @@ repos:
   hooks:
     - id: nbqa-ruff
       files: ^notebooks/
+      # Ignore SHAP Paper, as it is a record of a paper rather than maintained docs
+      # Ignore "Simple Boston Demo.ipynb" for now until it is properly written
+      exclude: 'tree_shap_paper|Boston.Demo'
+      args: [
+        "--select=F",
+        "--ignore=F401",  # imported but unused
+        "--ignore=F403",  # import *
+        "--ignore=F404",  # `from __future__` imports must occur at the beginning
+        "--ignore=F405",  # variable may be undefined
+        "--ignore=F841",  # variable assigned to but never used
+      ]
