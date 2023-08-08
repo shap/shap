@@ -51,6 +51,5 @@ SHAP can be installed from either `PyPI <https://pypi.org/project/shap>`_ or
 
 .. toctree::
    :maxdepth: 1
-   :caption: Releases
 
    Release notes <release_notes>
