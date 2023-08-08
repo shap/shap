@@ -208,3 +208,8 @@ To build the documentation locally:
 1. Navigate to the `docs` directory.
 2. Run `make html`.
 3. Open "_build/html/index.html" in your browser.
+
+Note that `nbsphinx` currently requires the stand-alone program `pandoc`. If you
+get an error "Pandoc wasn't found", install that pandoc as described in
+[nbsphinx installation
+guide](https://nbsphinx.readthedocs.io/en/0.9.2/installation.html#pandoc).
