@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
+from sklearn.tree import DecisionTreeRegressor
 
 import shap
 
@@ -43,3 +45,14 @@ def test_waterfall_legacy(explainer):
     shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0])
     plt.tight_layout()
     return fig
+
+
+def test_waterfall_plot_for_decision_tree_explanation():
+    # Regression tests for GH issue #3129
+    X = pd.DataFrame({"A": [1, 2, 3], "B": [2, 1, 3]})
+    y = pd.Series([1, 2, 3])
+    model = DecisionTreeRegressor()
+    model.fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    explanation = explainer(X)
+    shap.plots.waterfall(explanation[0], show=False)

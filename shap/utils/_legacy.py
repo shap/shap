@@ -97,7 +97,18 @@ class Model:
         self.out_names = out_names
 
 
-def convert_to_model(val):
+def convert_to_model(val, keep_index=False):
+    """ Convert a model to a Model object.
+
+    Parameters
+    ----------
+    val : function or Model object
+        The model function or a Model object.
+
+    keep_index : bool
+        If True then the index values will be passed to the model function as the first argument.
+        When this is False the feature names will be removed from the model object to avoid unnecessary warnings.
+    """
     if isinstance(val, Model):
         out = val
     else:
@@ -105,11 +116,12 @@ def convert_to_model(val):
 
     # Fix for the sklearn warning
     # 'X does not have valid feature names, but <model> was fitted with feature names'
-    f_self = getattr(out.f, "__self__", None)
-    if f_self and hasattr(f_self, "feature_names_in_"):
-        # Make a copy so that the feature names are not removed from the original model
-        out = copy.deepcopy(out)
-        out.f.__self__.feature_names_in_ = None
+    if not keep_index: # when using keep index, a dataframe with expected features names is expected to be passed
+        f_self = getattr(out.f, "__self__", None)
+        if f_self and hasattr(f_self, "feature_names_in_"):
+            # Make a copy so that the feature names are not removed from the original model
+            out = copy.deepcopy(out)
+            out.f.__self__.feature_names_in_ = None
 
     return out
 

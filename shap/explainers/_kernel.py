@@ -89,9 +89,9 @@ class Kernel(Explainer):
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
-        self.model = convert_to_model(model)
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
+        self.model = convert_to_model(model, keep_index=self.keep_index)
         self.data = convert_to_data(data, keep_index=self.keep_index)
         model_null = match_model_to_data(self.model, self.data)
 
@@ -153,7 +153,7 @@ class Kernel(Explainer):
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X,
+            data=X.to_numpy() if safe_isinstance(X, "pandas.core.frame.DataFrame") else X,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )

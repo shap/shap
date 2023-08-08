@@ -4,5 +4,5 @@
 blank_issues_enabled: true  # In future, may disable to force use of standardised issue forms
 contact_links:
   - name: Discussions and Q&A
-    url: https://github.com/slundberg/shap/discussions
+    url: https://github.com/shap/shap/discussions
     about: Ask general questions about shap and get help from other users

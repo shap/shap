@@ -1226,8 +1226,10 @@ class TestExplainerLightGBM:
 
         # train lightgbm model
         X, y = shap.datasets.california(n_points=500)
-        model = lightgbm.LGBMRegressor(categorical_feature=[8], n_jobs=1)
-        model.fit(X, y)
+        dataset = lightgbm.Dataset(data=X, label=y, categorical_feature=[8])
+        model = lightgbm.train({"objective": "regression", "verbosity": -1,
+                                "num_threads": 1},
+                               train_set=dataset, num_boost_round=1000)
 
         # explain the model's predictions using SHAP values
         ex = shap.TreeExplainer(model)
@@ -1249,8 +1251,10 @@ class TestExplainerLightGBM:
         X, y = shap.datasets.california(n_points=500)
         # use the mean for all values
         y.fill(np.mean(y))
-        model = lightgbm.LGBMRegressor(n_estimators=1, n_jobs=1)
-        model.fit(X, y)
+        dataset = lightgbm.Dataset(data=X, label=y, categorical_feature=[8])
+        model = lightgbm.train({"objective": "regression", "verbosity": -1,
+                                "num_threads": 1},
+                               train_set=dataset, num_boost_round=1000)
 
         # explain the model's predictions using SHAP values
         shap.TreeExplainer(model).shap_values(X)
@@ -1264,8 +1268,12 @@ class TestExplainerLightGBM:
             test_size=0.2,
             random_state=0,
         )
-        model = lightgbm.LGBMClassifier(n_estimators=10, n_jobs=1)
-        model.fit(X_train, Y_train)
+        # model = lightgbm.LGBMClassifier(n_estimators=10, n_jobs=1)
+        # model.fit(X_train, Y_train)
+        dataset = lightgbm.Dataset(data=X_train, label=Y_train)
+        model = lightgbm.train({"objective": "binary", "verbosity": -1,
+                                "num_threads": 1},
+                               train_set=dataset, num_boost_round=1000)
 
         # explain the model's predictions using SHAP values
         shap_values = shap.TreeExplainer(model).shap_values(X_test)
