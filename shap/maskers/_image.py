@@ -31,7 +31,7 @@ class Image(Masker):
 
     def __init__(self, mask_value, shape=None):
         """ Build a new Image masker with the given masking value.
-        
+
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
