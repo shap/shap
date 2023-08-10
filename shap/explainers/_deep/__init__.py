@@ -31,12 +31,12 @@ class Deep(Explainer):
         Parameters
         ----------
         model : if framework == 'tensorflow', (input : [tf.Tensor], output : tf.Tensor)
-             A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
+            A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
             output of the model to be explained. Note that SHAP values are specific to a single
             output value, so the output tf.Tensor should be a single dimensional output (,1).
 
             if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
-                where both are nn.Module objects
+            where both are nn.Module objects
             The model is an nn.Module object which takes as input a tensor (or list of tensors) of
             shape data, and returns a single dimensional output.
             If the input is a tuple, the returned shap values will be for the input of the
@@ -92,7 +92,7 @@ class Deep(Explainer):
 
         Parameters
         ----------
-        X : list,
+        X : list
             if framework == 'tensorflow': numpy.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
