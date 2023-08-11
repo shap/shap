@@ -221,7 +221,7 @@ class Text(Masker):
         # convert the text segments to tokens that the partition tree function expects
         tokens = []
         space_end = re.compile(r"^.*\W$")
-        letter_start = re.compile(r"^[A-z]")
+        letter_start = re.compile(r"^[A-Za-z]")
         for i, v in enumerate(self._segments_s):
             if i > 0 and space_end.match(self._segments_s[i-1]) is None and letter_start.match(v) is not None and tokens[i-1] != "":
                 tokens.append("##" + v.strip())
