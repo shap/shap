@@ -1146,7 +1146,7 @@ class TestExplainerXGBoost:
         X, y = shap.datasets.california(n_points=500)
         X["HouseAge"] = X["HouseAge"].astype(np.int64)
         X['IsOld'] = (X['HouseAge'] > 30)
-        bst = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 1000)
+        bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 1000)
         shap_values = shap.TreeExplainer(bst).shap_values(X)
         shap.dependence_plot(0, shap_values, X, show=False)
 
