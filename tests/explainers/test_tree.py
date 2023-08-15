@@ -1073,6 +1073,22 @@ class TestExplainerXGBoost:
         * XGBClassifier
     """
 
+    def test_xgboost(self):
+        """Test the basic `shap_values` calculation."""
+        xgboost = pytest.importorskip('xgboost')
+
+        # train lightgbm model
+        X, y = shap.datasets.california(n_points=500)
+        model = xgboost.XGBRegressor().fit(X, y)
+
+        # explain the model's predictions using SHAP values
+        ex = shap.TreeExplainer(model)
+        shap_values = ex.shap_values(X)
+        predicted = model.predict(X)
+
+        expected_diff = np.abs(shap_values.sum(1) + ex.expected_value - predicted).max()
+        assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
+
     def test_xgboost_direct(self):
         xgboost = pytest.importorskip('xgboost')
 
