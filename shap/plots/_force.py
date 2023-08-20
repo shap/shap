@@ -127,7 +127,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
     if out_names is None:
         out_names = ["f(x)"]
-    elif type(out_names) == str:
+    elif isinstance(out_names, str):
         out_names = [out_names]
 
     if shap_values.shape[0] == 1:
@@ -272,7 +272,7 @@ def save_html(out_file, plot, full_html=True):
 
     assert isinstance(plot, BaseVisualizer), "`save_html` requires a Visualizer returned by `shap.plots.force()`."
     internal_open = False
-    if type(out_file) == str:
+    if isinstance(out_file, str):
         out_file = open(out_file, "w", encoding="utf-8")
         internal_open = True
 
