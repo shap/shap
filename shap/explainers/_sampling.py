@@ -12,7 +12,8 @@ log = logging.getLogger('shap')
 
 
 class Sampling(Kernel):
-    """This is an extension of the Shapley sampling values explanation method (also known as IME).
+    """Computes SHAP values using an extension of the Shapley sampling values explanation method
+    (also known as IME).
 
     SamplingExplainer computes SHAP values under the assumption of feature independence and is an
     extension of the algorithm proposed in "An Efficient Explanation of Individual Classifications
