@@ -8,9 +8,9 @@ def clone_keras_layers(model, start_layer, stop_layer):
 
         import tensorflow as tf
 
-        if type(start_layer) is int:
+        if isinstance(start_layer, int):
             start_layer = model.layers[start_layer]
-        if type(stop_layer) is int:
+        if isinstance(stop_layer, int):
             stop_layer = model.layers[stop_layer]
 
         input_shape = start_layer.get_input_shape_at(0) # get the input shape of desired layer
@@ -52,9 +52,9 @@ def split_keras_model(model, layer):
     and mode11(X) == layer(X)
     """
 
-    if type(layer) is str:
+    if isinstance(layer, str):
         layer = model.get_layer(layer)
-    elif type(layer) is int:
+    elif isinstance(layer, int):
         layer = model.layers[layer]
 
     prev_layer = model.get_layer(layer.get_input_at(0).name.split("/")[0])

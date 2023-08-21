@@ -1117,7 +1117,7 @@ class TreeEnsemble:
             if self.model_output == "raw":
                 param_idx = 0 # default to the first parameter of the output distribution
                 warnings.warn("Translating model_output=\"raw\" to model_output=0 for the 0-th parameter in the distribution. Use model_output=0 directly to avoid this warning.")
-            elif type(self.model_output) is int:
+            elif isinstance(self.model_output, int):
                 param_idx = self.model_output
                 self.model_output = "raw" # note that after loading we have a new model_output type
             assert safe_isinstance(model.base_models[0][param_idx], ["sklearn.tree.DecisionTreeRegressor", "sklearn.tree.tree.DecisionTreeRegressor"]), "You must use default_tree_learner!"
@@ -1524,7 +1524,7 @@ class SingleTree:
 
             extract_data(tree, self)
 
-        elif type(tree) == str:
+        elif isinstance(tree, str):
             """ Build a tree from a text dump (with stats) of xgboost.
             """
 

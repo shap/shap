@@ -180,7 +180,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
         X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[  # pylint: disable=E1101
             :100]
 
-        shap_values = explainer.shap_values(X)
+        shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
 
         predictions = model.transform(iris).select("rawPrediction").rdd.map(
@@ -233,7 +233,7 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
         explainer = shap.TreeExplainer(model)
         X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100] # pylint: disable=E1101
 
-        shap_values = explainer.shap_values(X)
+        shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
 
         # validate values sum to the margin prediction of the model plus expected_value
