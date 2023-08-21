@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 from scipy.sparse import issparse
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 from .. import links, maskers
 from ..utils import safe_isinstance

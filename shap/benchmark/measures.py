@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 import sklearn.utils
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 _remove_cache = {}
 def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
