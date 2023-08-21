@@ -1167,7 +1167,7 @@ class TestExplainerXGBoost:
         e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="raw")
         shap_values = e.shap_values(X)
 
-        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True), 1e-4, 1e-7)
+        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
 
     def test_xgboost_classifier_independent_probability(self, random_seed):
         xgboost = pytest.importorskip("xgboost")
@@ -1189,7 +1189,7 @@ class TestExplainerXGBoost:
                                model_output="probability")
         shap_values = e.shap_values(X)
 
-        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:, 1], 1e-4, 1e-7)
+        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:, 1])
 
     # def test_front_page_xgboost_global_path_dependent():
     #     try:
