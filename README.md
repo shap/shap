@@ -64,7 +64,7 @@ shap.plots.force(shap_values[0])
 ```
 
 <p align="center">
-  <img width="811" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_instance.png" />
+  <img width="811" src="./docs/artwork/california_instance.png" />
 </p>
 
 If we take many force plot explanations such as the one shown above, rotate them 90 degrees, and then stack them horizontally, we can see explanations for an entire dataset (in the notebook this plot is interactive):
@@ -75,7 +75,7 @@ shap.plots.force(shap_values)
 ```
 
 <p align="center">
-  <img width="811" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_dataset.png" />
+  <img width="811" src="./docs/artwork/california_dataset.png" />
 </p>
 
 To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as the latitude changes. Vertical dispersion at a single value of latitude represents interaction effects with other features. To help reveal these interactions we can color by another feature. If we pass the whole explanation tensor to the `color` argument the scatter plot will pick the best feature to color by. In this case it picks longitude.
