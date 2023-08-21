@@ -11805,7 +11805,7 @@ div#notebook {
 <span class="n">img_orig</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">img_to_array</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
 
 <span class="c1"># segment the image so we don&#39;t have to explain every pixel</span>
-<span class="n">segments_slic</span> <span class="o">=</span> <span class="n">slic</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">n_segments</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">compactness</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">segments_slic</span> <span class="o">=</span> <span class="n">slic</span><span class="p">(</span><span class="n">img_orig</span><span class="p">,</span> <span class="n">n_segments</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">compactness</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 </pre></div>
 
 </div>
