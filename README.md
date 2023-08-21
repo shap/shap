@@ -40,7 +40,7 @@ import xgboost
 import shap
 
 # train an XGBoost model
-X, y = shap.datasets.boston()
+X, y = shap.datasets.california()
 model = xgboost.XGBRegressor().fit(X, y)
 
 # explain the model's predictions using SHAP
@@ -53,7 +53,7 @@ shap.plots.waterfall(shap_values[0])
 ```
 
 <p align="center">
-  <img width="616" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_waterfall.png" />
+  <img width="616" src="./docs/artwork/california_waterfall.png" />
 </p>
 
 The above explanation shows features each contributing to push the model output from the base value (the average model output over the training dataset we passed) to the model output. Features pushing the prediction higher are shown in red, those pushing the prediction lower are in blue. Another way to visualize the same explanation is to use a force plot (these are introduced in our [Nature BME paper](https://rdcu.be/baVbR)):
@@ -78,19 +78,19 @@ shap.plots.force(shap_values)
   <img width="811" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_dataset.png" />
 </p>
 
-To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as RM (the average number of rooms per house in an area) changes. Vertical dispersion at a single value of RM represents interaction effects with other features. To help reveal these interactions we can color by another feature. If we pass the whole explanation tensor to the `color` argument the scatter plot will pick the best feature to color by. In this case it picks RAD (index of accessibility to radial highways) since that highlights that the average number of rooms per house has less impact on home price for areas with a high RAD value.
+To understand how a single feature effects the output of the model we can plot the SHAP value of that feature vs. the value of the feature for all the examples in a dataset. Since SHAP values represent a feature's responsibility for a change in the model output, the plot below represents the change in predicted house price as the latitude changes. Vertical dispersion at a single value of latitude represents interaction effects with other features. To help reveal these interactions we can color by another feature. If we pass the whole explanation tensor to the `color` argument the scatter plot will pick the best feature to color by. In this case it picks longitude.
 
 ```python
 # create a dependence scatter plot to show the effect of a single feature across the whole dataset
-shap.plots.scatter(shap_values[:,"RM"], color=shap_values)
+shap.plots.scatter(shap_values[:, "Latitude"], color=shap_values)
 ```
 
 <p align="center">
-  <img width="544" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_scatter.png" />
+  <img width="544" src="./docs/artwork/california_scatter.png" />
 </p>
 
 
-To get an overview of which features are most important for a model we can plot the SHAP values of every feature for every sample. The plot below sorts features by the sum of SHAP value magnitudes over all samples, and uses SHAP values to show the distribution of the impacts each feature has on the model output. The color represents the feature value (red high, blue low). This reveals for example that a high LSTAT (% lower status of the population) lowers the predicted home price.
+To get an overview of which features are most important for a model we can plot the SHAP values of every feature for every sample. The plot below sorts features by the sum of SHAP value magnitudes over all samples, and uses SHAP values to show the distribution of the impacts each feature has on the model output. The color represents the feature value (red high, blue low). This reveals for example that higher median incomes improves the predicted home price.
 
 ```python
 # summarize the effects of all the features
@@ -98,7 +98,7 @@ shap.plots.beeswarm(shap_values)
 ```
 
 <p align="center">
-  <img width="583" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_beeswarm.png" />
+  <img width="583" src="./docs/artwork/california_beeswarm.png" />
 </p>
 
 We can also just take the mean absolute value of the SHAP values for each feature to get a standard bar plot (produces stacked bars for multi-class outputs):
@@ -108,7 +108,7 @@ shap.plots.bar(shap_values)
 ```
 
 <p align="center">
-  <img width="570" src="https://raw.githubusercontent.com/shap/shap/master/docs/artwork/boston_global_bar.png" />
+  <img width="570" src="./docs/artwork/california_global_bar.png" />
 </p>
 
 ## Natural language example (transformers)

@@ -1,5 +1,7 @@
 try:
     import matplotlib  # noqa: F401
+    import matplotlib.pyplot as plt
+
 except ImportError:
     raise ImportError("matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this.")
 
@@ -18,6 +20,9 @@ from ._scatter import scatter
 from ._text import text
 from ._violin import violin
 from ._waterfall import waterfall
+
+plt.rcParams['figure.constrained_layout.use'] = True
+
 
 __all__ = [
     "bar",
