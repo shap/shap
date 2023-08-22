@@ -167,7 +167,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         color = None
         interaction_index = "auto"
 
-    if type(shap_values_arr) is list:
+    if isinstance(shap_values_arr, list):
         raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try " \
                         "passing shap_values_arr[0] instead to explain the first output class of a multi-output model.")
 
@@ -264,14 +264,14 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     xd = display_features[oinds, ind]
 
     s = shap_values_arr[oinds, ind]
-    if type(xd[0]) == str:
+    if isinstance(xd[0], str):
         name_map = {}
         for i in range(len(xv)):
             name_map[xd[i]] = xv[i]
         xnames = list(name_map.keys())
 
     # allow a single feature name to be passed alone
-    if type(feature_names) == str:
+    if isinstance(feature_names, str):
         feature_names = [feature_names]
     name = feature_names[ind]
 
@@ -286,7 +286,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if clow == chigh:
             clow = np.nanmin(cv.astype(float))
             chigh = np.nanmax(cv.astype(float))
-        if type(cd[0]) == str:
+        if isinstance(cd[0], str):
             cname_map = {}
             for i in range(len(cv)):
                 cname_map[cd[i]] = cv[i]
@@ -347,7 +347,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
-        if type(cd[0]) == str:
+        if isinstance(cd[0], str):
             tick_positions = np.array([cname_map[n] for n in cnames])
             tick_positions *= 1 - 1 / len(cnames)
             tick_positions += 0.5 * (chigh - clow) / (chigh - clow + 1)
@@ -368,9 +368,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     # handles any setting of xmax and xmin
     # note that we handle None,float, or "percentile(float)" formats
     if xmin is not None or xmax is not None:
-        if type(xmin) == str and xmin.startswith("percentile"):
+        if isinstance(xmin, str) and xmin.startswith("percentile"):
             xmin = np.nanpercentile(xv, float(xmin[11:-1]))
-        if type(xmax) == str and xmax.startswith("percentile"):
+        if isinstance(xmax, str) and xmax.startswith("percentile"):
             xmax = np.nanpercentile(xv, float(xmax[11:-1]))
 
         if xmin is None or xmin == np.nanmin(xv):
@@ -462,7 +462,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
-    if type(xd[0]) == str:
+    if isinstance(xd[0], str):
         ax.set_xticks([name_map[n] for n in xnames])
         ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:
@@ -541,7 +541,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     if cmap is None:
         cmap = colors.red_blue
 
-    if type(shap_values) is list:
+    if isinstance(shap_values, list):
         raise TypeError("The passed shap_values are a list not an array! If you have a list of explanations try " \
                         "passing shap_values[0] instead to explain the first output class of a multi-output model.")
 
@@ -624,14 +624,14 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     xd = display_features[oinds, ind]
     s = shap_values[oinds, ind]
-    if type(xd[0]) == str:
+    if isinstance(xd[0], str):
         name_map = {}
         for i in range(len(xv)):
             name_map[xd[i]] = xv[i]
         xnames = list(name_map.keys())
 
     # allow a single feature name to be passed alone
-    if type(feature_names) == str:
+    if isinstance(feature_names, str):
         feature_names = [feature_names]
     name = feature_names[ind]
 
@@ -646,7 +646,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         if clow == chigh:
             clow = np.nanmin(cv.astype(float))
             chigh = np.nanmax(cv.astype(float))
-        if type(cd[0]) == str:
+        if isinstance(cd[0], str):
             cname_map = {}
             for i in range(len(cv)):
                 cname_map[cd[i]] = cv[i]
@@ -699,7 +699,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     if interaction_index != ind and interaction_index is not None:
         # draw the color bar
-        if type(cd[0]) == str:
+        if isinstance(cd[0], str):
             tick_positions = [cname_map[n] for n in cnames]
             if len(tick_positions) == 2:
                 tick_positions[0] -= 0.25
@@ -721,9 +721,9 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     # handles any setting of xmax and xmin
     # note that we handle None,float, or "percentile(float)" formats
     if xmin is not None or xmax is not None:
-        if type(xmin) == str and xmin.startswith("percentile"):
+        if isinstance(xmin, str) and xmin.startswith("percentile"):
             xmin = np.nanpercentile(xv, float(xmin[11:-1]))
-        if type(xmax) == str and xmax.startswith("percentile"):
+        if isinstance(xmax, str) and xmax.startswith("percentile"):
             xmax = np.nanpercentile(xv, float(xmax[11:-1]))
 
         if xmin is None or xmin == np.nanmin(xv):
@@ -770,7 +770,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
     for spine in ax.spines.values():
         spine.set_edgecolor(axis_color)
-    if type(xd[0]) == str:
+    if isinstance(xd[0], str):
         ax.set_xticks([name_map[n] for n in xnames])
         ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
     if show:

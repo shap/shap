@@ -57,7 +57,7 @@ class Sampling(Kernel):
             feature_names = None # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
-        if type(v) is list:
+        if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)
         return e

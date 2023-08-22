@@ -46,7 +46,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         fname = feature_names[ind]
 
     # see if we need to compute the embedding
-    if type(method) == str and method == "pca":
+    if isinstance(method, str) and method == "pca":
         pca = sklearn.decomposition.PCA(2)
         embedding_values = pca.fit_transform(shap_values)
     elif hasattr(method, "shape") and method.shape[1] == 2:

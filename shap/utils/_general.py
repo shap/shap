@@ -30,7 +30,7 @@ def shapley_coefficients(n):
 
 
 def convert_name(ind, shap_values, input_names):
-    if type(ind) == str:
+    if isinstance(ind, str):
         nzinds = np.where(np.array(input_names) == ind)[0]
         if len(nzinds) == 0:
             # we allow rank based indexing using the format "rank(int)"

@@ -118,13 +118,13 @@ class Explanation(metaclass=MetaExplanation):
         if output_names is None and len(self.output_dims) == 1:
             output_names = [f"Output {i}" for i in range(values_shape[self.output_dims[0]])]
 
-        if len(_compute_shape(feature_names)) == 1: # TODOsomeday: should always be an alias once slicer supports per-row aliases
-            if len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
-                feature_names = Alias(list(feature_names), 0)
-            elif len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
+        if len(_compute_shape(feature_names)) == 1:  # TODO: should always be an alias once slicer supports per-row aliases
+            if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
                 feature_names = Alias(list(feature_names), 1)
+            elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
+                feature_names = Alias(list(feature_names), 0)
 
-        if len(_compute_shape(output_names)) == 1: # TODOsomeday: should always be an alias once slicer supports per-row aliases
+        if len(_compute_shape(output_names)) == 1:  # TODO: should always be an alias once slicer supports per-row aliases
             output_names = Alias(list(output_names), self.output_dims[0])
             # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
             #     output_names = Alias(list(output_names), 0)

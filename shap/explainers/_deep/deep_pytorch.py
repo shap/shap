@@ -20,9 +20,9 @@ class PyTorchDeep(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = False
-        if type(data) == list:
+        if isinstance(data, list):
             self.multi_input = True
-        if type(data) != list:
+        if not isinstance(data, list):
             data = [data]
         self.data = data
         self.layer = None
@@ -138,10 +138,10 @@ class PyTorchDeep(Explainer):
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
+            assert not isinstance(X, list), "Expected a single tensor model input!"
             X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
 
         X = [x.detach().to(self.device) for x in X]
 
