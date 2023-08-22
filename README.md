@@ -71,7 +71,7 @@ If we take many force plot explanations such as the one shown above, rotate them
 
 ```python
 # visualize all the training set predictions
-shap.plots.force(shap_values)
+shap.plots.force(shap_values[:500])
 ```
 
 <p align="center">
