@@ -55,3 +55,9 @@ def test_simple_beeswarm(explainer):
     shap.plots.beeswarm(shap_values)
     plt.tight_layout()
     return fig
+
+def test_summary_legacy_deprecation_warning(explainer):
+    shap_values = explainer(explainer.data)
+    fig = plt.figure()
+    with pytest.warns(FutureWarning, match="summary_legacy is being deprecated in Version 0.43.0"):
+        shap.plots._beeswarm.summary_legacy(shap_values)

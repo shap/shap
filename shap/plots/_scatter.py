@@ -3,6 +3,7 @@ import warnings
 import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
+from sklearn.utils import deprecated
 
 from .._explanation import Explanation
 from ..utils import approximate_interactions, convert_name
@@ -470,7 +471,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
 
-
+@deprecated("dependence_legacy is being deprecated in Version 0.43.0")
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,
                       interaction_index="auto",
                       color="#1E88E5", axis_color="#333333", cmap=None,

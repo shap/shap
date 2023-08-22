@@ -1,6 +1,7 @@
 import matplotlib.pyplot as pl
 import numpy as np
 import scipy
+from sklearn.utils import deprecated
 
 from .. import Cohorts, Explanation
 from ..utils import format_value, ordinal_str
@@ -372,6 +373,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
 #     return max(left_val, right_val) + 1, max(left_sum, right_sum)
 
+@deprecated("bar_legacy is being deprecated in Version 0.43.0")
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
 
     # unwrap pandas series

@@ -1,6 +1,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.utils import deprecated
 
 from .. import Explanation
 from ..utils import format_value, safe_isinstance
@@ -317,7 +318,7 @@ def waterfall(shap_values, max_display=10, show=True):
     else:
         return plt.gcf()
 
-
+@deprecated("waterfall_legacy is being deprecated in Version 0.43.0")
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
     """ Plots an explanation of a single prediction as a waterfall plot.
 
