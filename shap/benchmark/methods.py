@@ -125,7 +125,7 @@ def deep_shap(model, data):
     explainer = DeepExplainer(model, kmeans(data, 1).data)
     def f(X):
         phi = explainer.shap_values(X)
-        if type(phi) is list and len(phi) == 1:
+        if isinstance(phi, list) and len(phi) == 1:
             return phi[0]
         else:
             return phi
@@ -140,7 +140,7 @@ def expected_gradients(model, data):
     explainer = GradientExplainer(model, data)
     def f(X):
         phi = explainer.shap_values(X)
-        if type(phi) is list and len(phi) == 1:
+        if isinstance(phi, list) and len(phi) == 1:
             return phi[0]
         else:
             return phi
