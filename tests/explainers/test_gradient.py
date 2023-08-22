@@ -1,25 +1,37 @@
 from urllib.error import HTTPError
-import numpy as np
-import pytest
-import shap
 
+import numpy as np
+import pandas as pd
+import pytest
+
+import shap
 
 # pylint: disable=import-error, import-outside-toplevel, no-name-in-module, import-error
 
-def test_tf_keras_mnist_cnn():
+def test_tf_keras_mnist_cnn(random_seed):
     """ This is the basic mnist cnn example from keras.
     """
+
     tf = pytest.importorskip('tensorflow')
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense, Dropout, Flatten, Activation
-    from tensorflow.keras.layers import Conv2D, MaxPooling2D
+
+    rs = np.random.RandomState(random_seed)
+    tf.compat.v1.random.set_random_seed(random_seed)
+
+    from tensorflow.compat.v1 import ConfigProto, InteractiveSession
     from tensorflow.keras import backend as K
-    from tensorflow.compat.v1 import ConfigProto
-    from tensorflow.compat.v1 import InteractiveSession
+    from tensorflow.keras.layers import (
+        Activation,
+        Conv2D,
+        Dense,
+        Dropout,
+        Flatten,
+        MaxPooling2D,
+    )
+    from tensorflow.keras.models import Sequential
 
     config = ConfigProto()
     config.gpu_options.allow_growth = True
-    InteractiveSession(config=config)
+    sess = InteractiveSession(config=config)
 
     tf.compat.v1.disable_eager_execution()
 
@@ -32,10 +44,10 @@ def test_tf_keras_mnist_cnn():
 
     # the data, split between train and test sets
     #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-    x_train = np.random.randn(200, 28, 28)
-    y_train = np.random.randint(0, 9, 200)
-    x_test = np.random.randn(200, 28, 28)
-    y_test = np.random.randint(0, 9, 200)
+    x_train = rs.randn(200, 28, 28)
+    y_train = rs.randint(0, 9, 200)
+    x_test = rs.randn(200, 28, 28)
+    y_test = rs.randint(0, 9, 200)
 
     if K.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -69,7 +81,7 @@ def test_tf_keras_mnist_cnn():
     model.add(Activation('softmax'))
 
     model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                  optimizer=tf.keras.optimizers.Adadelta(),
+                  optimizer=tf.keras.optimizers.legacy.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(
@@ -82,28 +94,32 @@ def test_tf_keras_mnist_cnn():
     )
 
     # explain by passing the tensorflow inputs and outputs
-    np.random.seed(0)
-    inds = np.random.choice(x_train.shape[0], 20, replace=False)
+    inds = rs.choice(x_train.shape[0], 20, replace=False)
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
-    sess = tf.compat.v1.keras.backend.get_session()
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+    sess.close()
 
 
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch
     """
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
     torch = pytest.importorskip('torch')
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
 
     from torch import nn
     from torch.nn import functional as F
-    torch.manual_seed(0)
+
 
     batch_size = 128
 
@@ -193,8 +209,7 @@ def test_pytorch_mnist_cnn():
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
-        np.random.seed(0)
-        inds = np.random.choice(next_x.shape[0], 3, replace=False)
+        inds = rs.choice(next_x.shape[0], 3, replace=False)
         if interim:
             e = shap.GradientExplainer((model, model.conv1), next_x[inds, :, :, :])
         else:
@@ -219,13 +234,13 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, False)
 
 
-def test_pytorch_multiple_inputs():
-    """ Test multi-input scenarios.
-    """
-    # pylint: disable=no-member
+def test_pytorch_multiple_inputs(random_seed):
+    """ Test multi-input scenarios."""
+
     torch = pytest.importorskip('torch')
     from torch import nn
-    torch.manual_seed(1)
+
+    torch.manual_seed(random_seed)
     batch_size = 10
     x1 = torch.ones(batch_size, 3)
     x2 = torch.ones(batch_size, 4)
@@ -257,3 +272,32 @@ def test_pytorch_multiple_inputs():
     sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
     d = np.abs(sums - diff).sum()
     assert d / (np.abs(diff).sum()+0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+
+@pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
+def test_tf_input(random_seed, input_type):
+    """ Test tabular (batch_size, features) pd.DataFrame and numpy input. """
+    tf = pytest.importorskip('tensorflow')
+    tf.random.set_seed(random_seed)
+
+    batch_size = 10
+    num_features = 5
+    feature_names = [f"TF_pd_test_feature_{i}" for i in range(num_features)]
+
+    background = np.zeros((batch_size, num_features))
+    if input_type == "dataframe":
+        background = pd.DataFrame(background, columns=feature_names)
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(10, input_shape=(num_features,), activation='relu'),
+        tf.keras.layers.Dense(1, activation='linear')
+    ])
+    model.compile(optimizer='adam', loss='mse')
+
+    explainer = shap.GradientExplainer(model, background)
+    example = np.ones((1, num_features))
+    explanation = explainer(example)
+
+    diff = (model.predict(example) - model.predict(background)).mean(0)
+    sums = np.array([values.sum() for values in explanation.values])
+    d = np.abs(sums - diff).sum()
+    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())

@@ -1,9 +1,11 @@
 import numpy as np
-import scipy as sp
-from ._model import Model
+import scipy.special
+
+from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
 from ..utils.transformers import MODELS_FOR_CAUSAL_LM, getattr_silent
-from .._serializable import Serializer, Deserializer
+from ._model import Model
+
 
 class TopKLM(Model):
     """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
@@ -52,7 +54,7 @@ class TopKLM(Model):
         self.model_type = None
         if safe_isinstance(self.inner_model, "transformers.PreTrainedModel"):
             self.model_type = "pt"
-            import torch # pylint: disable=import-outside-toplevel
+            import torch  # pylint: disable=import-outside-toplevel
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             self.inner_model = self.inner_model.to(self.device)
         elif safe_isinstance(self.inner_model, "transformers.TFPreTrainedModel"):
@@ -145,7 +147,7 @@ class TopKLM(Model):
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
             probs = np.exp(arr) / np.exp(arr).sum(-1)
-            logodds = sp.special.logit(probs)
+            logodds = scipy.special.logit(probs)
             return logodds
 
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
@@ -205,7 +207,7 @@ class TopKLM(Model):
         if safe_isinstance(self.inner_model, MODELS_FOR_CAUSAL_LM):
             inputs = self.get_inputs(X, padding_side="left")
             if self.model_type == "pt":
-                import torch # pylint: disable=import-outside-toplevel
+                import torch  # pylint: disable=import-outside-toplevel
                 inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
                 inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
                 inputs = inputs.to(self.device)
@@ -215,7 +217,7 @@ class TopKLM(Model):
                 # extract only logits corresponding to target sentence ids
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')[:, -1, :]
             elif self.model_type == "tf":
-                import tensorflow as tf # pylint: disable=import-outside-toplevel
+                import tensorflow as tf  # pylint: disable=import-outside-toplevel
                 inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
                 inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
                 if self.device is None:
@@ -232,7 +234,7 @@ class TopKLM(Model):
     def save(self, out_file):
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.models.TextGeneration", version=0) as s:
             s.save("tokenizer", self.tokenizer)
             s.save("k", self.k)

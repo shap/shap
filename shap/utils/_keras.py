@@ -8,14 +8,14 @@ def clone_keras_layers(model, start_layer, stop_layer):
 
         import tensorflow as tf
 
-        if type(start_layer) is int:
+        if isinstance(start_layer, int):
             start_layer = model.layers[start_layer]
-        if type(stop_layer) is int:
+        if isinstance(stop_layer, int):
             stop_layer = model.layers[stop_layer]
-        
+
         input_shape = start_layer.get_input_shape_at(0) # get the input shape of desired layer
         layer_input = tf.keras.Input(shape=input_shape[1:]) # a new input tensor to be able to feed the desired layer
-        
+
         new_layers = {start_layer.input.name: layer_input}
         layers_to_process = [l for l in model.layers]
         last_len = 0
@@ -30,7 +30,7 @@ def clone_keras_layers(model, start_layer, stop_layer):
             if dup_try > len(layers_to_process):
                 raise Exception("Failed to find a complete graph starting at the given layer!")
             try:
-                if type(layer.input) is list:
+                if isinstance(layer.input, list):
                     layer_inputs = [new_layers[v.name] for v in layer.input]
                 else:
                     layer_inputs = new_layers[layer.input.name]
@@ -39,27 +39,27 @@ def clone_keras_layers(model, start_layer, stop_layer):
                 # behind the next one in line
                 layers_to_process.append(layer)
                 continue
-            if not layer.output.name in new_layers:
+            if layer.output.name not in new_layers:
                 new_layers[layer.output.name] = layer(layer_inputs)
             if layer.output.name == stop_layer.output.name:
                 break
         return tf.keras.Model(layer_input, new_layers[stop_layer.output.name])
-    
+
 def split_keras_model(model, layer):
     """ Splits the keras model around layer into two models.
-    
+
     This is done such that model2(model1(X)) = model(X)
     and mode11(X) == layer(X)
     """
-    
-    if type(layer) is str:
+
+    if isinstance(layer, str):
         layer = model.get_layer(layer)
-    elif type(layer) is int:
+    elif isinstance(layer, int):
         layer = model.layers[layer]
-    
+
     prev_layer = model.get_layer(layer.get_input_at(0).name.split("/")[0])
-    
+
     model1 = clone_keras_layers(model, model.layers[1], prev_layer)
     model2 = clone_keras_layers(model, layer, model.layers[-1])
-    
+
     return model1, model2

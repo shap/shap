@@ -1,13 +1,16 @@
 import time
+
 import numpy as np
-from tqdm import tqdm
-from shap.utils import safe_isinstance, MaskedModel, partition_tree_shuffle
+from tqdm.auto import tqdm
+
 from shap import Explanation, links
-from shap.maskers import Text, Image, FixedComposite
-from . import BenchmarkResult
+from shap.maskers import FixedComposite, Image, Text
+from shap.utils import MaskedModel, partition_tree_shuffle, safe_isinstance
+
+from ._result import BenchmarkResult
 
 
-class ExplanationError():
+class ExplanationError:
     """ A measure of the explanation error relative to a model's actual output.
 
     This benchmark metric measures the discrepancy between the output of the model predicted by an
@@ -122,13 +125,13 @@ class ExplanationError():
             total_values = None
             for _ in range(self.num_permutations):
                 masks = []
-                mask = np.zeros(feature_size, dtype=np.bool)
+                mask = np.zeros(feature_size, dtype=bool)
                 masks.append(mask.copy())
                 ordered_inds = np.arange(feature_size)
 
                 # shuffle the indexes so we get a random permutation ordering
                 if row_clustering is not None:
-                    inds_mask = np.ones(feature_size, dtype=np.bool)
+                    inds_mask = np.ones(feature_size, dtype=bool)
                     partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
                 else:
                     np.random.shuffle(ordered_inds)

@@ -1,22 +1,27 @@
 """ Summary plots of SHAP values across a whole dataset.
 """
 
-from __future__ import division
-
 import warnings
+
+import matplotlib.pyplot as pl
 import numpy as np
-import scipy as sp
+import scipy.cluster
+import scipy.sparse
+import scipy.spatial
 from scipy.stats import gaussian_kde
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
-from ._labels import labels
-from . import colors
-from ..utils import safe_isinstance, OpChain, format_value
-from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds
+
 from .. import Explanation
+from ..utils import safe_isinstance
+from ..utils._exceptions import DimensionError
+from . import colors
+from ._labels import labels
+from ._utils import (
+    convert_color,
+    convert_ordering,
+    get_sort_order,
+    merge_nodes,
+    sort_inds,
+)
 
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
@@ -29,44 +34,67 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     Parameters
     ----------
     shap_values : Explanation
-        This is an Explanation object containing a matrix of SHAP values (# samples x # features).
+        This is an :class:`.Explanation` object containing a matrix of SHAP values
+        (# samples x # features).
 
     max_display : int
-        How many top features to include in the plot (default is 20, or 7 for interaction plots)
+        How many top features to include in the plot (default is 10, or 7 for
+        interaction plots).
+
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    color_bar : bool
+        Whether to draw the color bar (legend).
 
     plot_size : "auto" (default), float, (float, float), or None
-        What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
-        many inches high. Passing a pair of floats will scale the plot by that
-        number of inches. If None is passed then the size of the current figure will be left
-        unchanged.
+        What size to make the plot. By default, the size is auto-scaled based on the
+        number of features that are being displayed. Passing a single float will cause
+        each row to be that many inches high. Passing a pair of floats will scale the
+        plot by that number of inches. If ``None`` is passed, then the size of the
+        current figure will be left unchanged.
+
+    Examples
+    --------
+
+    See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
+
     """
 
     if not isinstance(shap_values, Explanation):
-        raise ValueError("the beeswarm plot requires Explanation object as the `shap_values` argument")
+        emsg = (
+            "The beeswarm plot requires an `Explanation` object as the "
+            "`shap_values` argument."
+        )
+        raise TypeError(emsg)
 
-    if len(shap_values.shape) == 1:
-        raise ValueError(
+    sv_shape = shap_values.shape
+    if len(sv_shape) == 1:
+        emsg = (
             "The beeswarm plot does not support plotting a single instance, please pass "
             "an explanation matrix with many instances!"
         )
-    elif len(shap_values.shape) > 2:
-        raise ValueError(
+        raise ValueError(emsg)
+    elif len(sv_shape) > 2:
+        emsg = (
             "The beeswarm plot does not support plotting explanations with instances that have more "
             "than one dimension!"
         )
+        raise ValueError(emsg)
+
     shap_exp = shap_values
     # we make a copy here, because later there are places that might modify this array
     values = np.copy(shap_exp.values)
     features = shap_exp.data
-    if sp.sparse.issparse(features):
+    if scipy.sparse.issparse(features):
         features = features.toarray()
     feature_names = shap_exp.feature_names
     # if out_names is None: # TODO: waiting for slicer support
     #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
-    
 
     # # deprecation warnings
     # if auto_size_plot is not None:
@@ -110,13 +138,18 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the matrix does not match the shape of the " \
-                    "provided data matrix."
+        shape_msg = (
+            "The shape of the shap_values matrix does not match the shape "
+            "of the provided data matrix."
+        )
         if num_features - 1 == features.shape[1]:
-            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
-        else:
-            assert num_features == features.shape[1], shape_msg
+            shape_msg += (
+                " Perhaps the extra column in the shap_values matrix is the "
+                "constant offset? If so, just pass shap_values[:,:-1]."
+            )
+            raise DimensionError(shape_msg)
+        if num_features != features.shape[1]:
+            raise DimensionError(shape_msg)
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
@@ -134,88 +167,91 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         partition_tree = None
     else:
         partition_tree = clustering
-    
+
     if partition_tree is not None:
         assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
 
-    # plotting SHAP interaction values
-    if len(values.shape) == 3:
-
-        if plot_type == "compact_dot":
-            new_values = values.reshape(values.shape[0], -1)
-            new_features = np.tile(features, (1, 1, features.shape[1])).reshape(features.shape[0], -1)
-
-            new_feature_names = []
-            for c1 in feature_names:
-                for c2 in feature_names:
-                    if c1 == c2:
-                        new_feature_names.append(c1)
-                    else:
-                        new_feature_names.append(c1 + "* - " + c2)
-
-            return beeswarm(
-                new_values, new_features, new_feature_names,
-                max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
-                title=title, alpha=alpha, show=show, sort=sort,
-                color_bar=color_bar, plot_size=plot_size, class_names=class_names,
-                color_bar_label="*" + color_bar_label
-            )
-
-        if max_display is None:
-            max_display = 7
-        else:
-            max_display = min(len(feature_names), max_display)
-
-        interaction_sort_inds = order#np.argsort(-np.abs(values.sum(1)).sum(0))
-
-        # get plotting limits
-        delta = 1.0 / (values.shape[1] ** 2)
-        slow = np.nanpercentile(values, delta)
-        shigh = np.nanpercentile(values, 100 - delta)
-        v = max(abs(slow), abs(shigh))
-        slow = -v
-        shigh = v
-
-        pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
-        pl.subplot(1, max_display, 1)
-        proj_values = values[:, interaction_sort_inds[0], interaction_sort_inds]
-        proj_values[:, 1:] *= 2  # because off diag effects are split in half
-        beeswarm(
-            proj_values, features[:, interaction_sort_inds] if features is not None else None,
-            feature_names=feature_names[interaction_sort_inds],
-            sort=False, show=False, color_bar=False,
-            plot_size=None,
-            max_display=max_display
-        )
-        pl.xlim((slow, shigh))
-        pl.xlabel("")
-        title_length_limit = 11
-        pl.title(shorten_text(feature_names[interaction_sort_inds[0]], title_length_limit))
-        for i in range(1, min(len(interaction_sort_inds), max_display)):
-            ind = interaction_sort_inds[i]
-            pl.subplot(1, max_display, i + 1)
-            proj_values = values[:, ind, interaction_sort_inds]
-            proj_values *= 2
-            proj_values[:, i] /= 2  # because only off diag effects are split in half
-            summary(
-                proj_values, features[:, interaction_sort_inds] if features is not None else None,
-                sort=False,
-                feature_names=["" for i in range(len(feature_names))],
-                show=False,
-                color_bar=False,
-                plot_size=None,
-                max_display=max_display
-            )
-            pl.xlim((slow, shigh))
-            pl.xlabel("")
-            if i == min(len(interaction_sort_inds), max_display) // 2:
-                pl.xlabel(labels['INTERACTION_VALUE'])
-            pl.title(shorten_text(feature_names[ind], title_length_limit))
-        pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
-        pl.subplots_adjust(hspace=0, wspace=0.1)
-        if show:
-            pl.show()
-        return
+    # FIXME: introduce beeswarm interaction values as a separate function `beeswarm_interaction()` (?)
+    #   In the meantime, users can use the `shap.summary_plot()` function.
+    #
+    # # plotting SHAP interaction values
+    # if len(values.shape) == 3:
+    #
+    #     if plot_type == "compact_dot":
+    #         new_values = values.reshape(values.shape[0], -1)
+    #         new_features = np.tile(features, (1, 1, features.shape[1])).reshape(features.shape[0], -1)
+    #
+    #         new_feature_names = []
+    #         for c1 in feature_names:
+    #             for c2 in feature_names:
+    #                 if c1 == c2:
+    #                     new_feature_names.append(c1)
+    #                 else:
+    #                     new_feature_names.append(c1 + "* - " + c2)
+    #
+    #         return beeswarm(
+    #             new_values, new_features, new_feature_names,
+    #             max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
+    #             title=title, alpha=alpha, show=show, sort=sort,
+    #             color_bar=color_bar, plot_size=plot_size, class_names=class_names,
+    #             color_bar_label="*" + color_bar_label
+    #         )
+    #
+    #     if max_display is None:
+    #         max_display = 7
+    #     else:
+    #         max_display = min(len(feature_names), max_display)
+    #
+    #     interaction_sort_inds = order#np.argsort(-np.abs(values.sum(1)).sum(0))
+    #
+    #     # get plotting limits
+    #     delta = 1.0 / (values.shape[1] ** 2)
+    #     slow = np.nanpercentile(values, delta)
+    #     shigh = np.nanpercentile(values, 100 - delta)
+    #     v = max(abs(slow), abs(shigh))
+    #     slow = -v
+    #     shigh = v
+    #
+    #     pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
+    #     pl.subplot(1, max_display, 1)
+    #     proj_values = values[:, interaction_sort_inds[0], interaction_sort_inds]
+    #     proj_values[:, 1:] *= 2  # because off diag effects are split in half
+    #     beeswarm(
+    #         proj_values, features[:, interaction_sort_inds] if features is not None else None,
+    #         feature_names=feature_names[interaction_sort_inds],
+    #         sort=False, show=False, color_bar=False,
+    #         plot_size=None,
+    #         max_display=max_display
+    #     )
+    #     pl.xlim((slow, shigh))
+    #     pl.xlabel("")
+    #     title_length_limit = 11
+    #     pl.title(shorten_text(feature_names[interaction_sort_inds[0]], title_length_limit))
+    #     for i in range(1, min(len(interaction_sort_inds), max_display)):
+    #         ind = interaction_sort_inds[i]
+    #         pl.subplot(1, max_display, i + 1)
+    #         proj_values = values[:, ind, interaction_sort_inds]
+    #         proj_values *= 2
+    #         proj_values[:, i] /= 2  # because only off diag effects are split in half
+    #         summary(
+    #             proj_values, features[:, interaction_sort_inds] if features is not None else None,
+    #             sort=False,
+    #             feature_names=["" for i in range(len(feature_names))],
+    #             show=False,
+    #             color_bar=False,
+    #             plot_size=None,
+    #             max_display=max_display
+    #         )
+    #         pl.xlim((slow, shigh))
+    #         pl.xlabel("")
+    #         if i == min(len(interaction_sort_inds), max_display) // 2:
+    #             pl.xlabel(labels['INTERACTION_VALUE'])
+    #         pl.title(shorten_text(feature_names[ind], title_length_limit))
+    #     pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
+    #     pl.subplots_adjust(hspace=0, wspace=0.1)
+    #     if show:
+    #         pl.show()
+    #     return
 
     # determine how many top features we will plot
     if max_display is None:
@@ -233,10 +269,10 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values))
 
-            # now relax the requirement to match the parition tree ordering for connections above cluster_threshold
+            # now relax the requirement to match the partition tree ordering for connections above cluster_threshold
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, cluster_threshold, feature_order)
-        
+
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
             if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= cluster_threshold:
@@ -254,7 +290,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
-    y_pos = np.arange(len(feature_inds), 0, -1)
     feature_names_new = []
     for pos,inds in enumerate(orig_inds):
         if len(inds) == 1:
@@ -270,12 +305,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     if num_features < len(values[0]):
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
         values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
-    
+
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
     if num_features < len(values[0]):
         yticklabels[-1] = "Sum of %d other features" % num_cut
-    
+
     row_height = 0.4
     if plot_size == "auto":
         pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
@@ -301,7 +336,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                 colored_feature = False
             else:
                 fvalues = np.array(fvalues, dtype=np.float64)  # make sure this can be numeric
-        except:
+        except Exception:
             colored_feature = False
         N = len(shaps)
         # hspacing = (np.max(shaps) - np.min(shaps)) / 200
@@ -337,8 +372,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
-            pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                        vmax=vmax, s=16, alpha=alpha, linewidth=0,
+            pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
+                        s=16, alpha=alpha, linewidth=0,
                         zorder=3, rasterized=len(shaps) > 500)
 
             # plot the non-nan fvalues colored by the trimmed feature value
@@ -362,7 +397,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=color)
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ticks=[0, 1], aspect=80)
+        cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
@@ -406,6 +441,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
                  cmap=colors.red_blue,
+                 show_values_in_legend=False,
                  # depreciated
                  auto_size_plot=None,
                  use_log_scale=False):
@@ -433,16 +469,19 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default the size is auto-scaled based on the number of
-        features that are being displayed. Passing a single float will cause each row to be that 
+        features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If None is passed then the size of the current figure will be left
         unchanged.
+
+    show_values_in_legend: bool
+        Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
+        by default.
     """
 
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
-        base_value = shap_exp.base_values
         shap_values = shap_exp.values
         if features is None:
             features = shap_exp.data
@@ -471,7 +510,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         if plot_type == 'layered_violin':
             color = "coolwarm"
         elif multi_class:
-            color = lambda i: colors.red_blue_circle(i/len(shap_values))
+            def color(i):
+                return colors.red_blue_circle(i / len(shap_values))
         else:
             color = colors.blue_rgb
 
@@ -625,7 +665,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     colored_feature = False
                 else:
                     values = np.array(values, dtype=np.float64)  # make sure this can be numeric
-            except:
+            except Exception:
                 colored_feature = False
             N = len(shaps)
             # hspacing = (np.max(shaps) - np.min(shaps)) / 200
@@ -661,8 +701,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
-                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777", vmin=vmin,
-                           vmax=vmax, s=16, alpha=alpha, linewidth=0,
+                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
+                           s=16, alpha=alpha, linewidth=0,
                            zorder=3, rasterized=len(shaps) > 500)
 
                 # plot the non-nan values colored by the trimmed feature value
@@ -699,7 +739,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 ds /= np.max(ds) * 3
 
                 values = features[:, i]
-                window_size = max(10, len(values) // 20)
+                # window_size = max(10, len(values) // 20)
                 smooth_values = np.zeros(len(xs) - 1)
                 sort_inds = np.argsort(shaps)
                 trailing_pos = 0
@@ -733,7 +773,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
                 pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
-                           color="#777777", vmin=vmin, vmax=vmax, s=9,
+                           color="#777777", s=9,
                            alpha=alpha, linewidth=0, zorder=1)
                 # plot the non-nan values colored by the trimmed feature value
                 cvals = values[np.invert(nan_mask)].astype(np.float64)
@@ -788,7 +828,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             # order the feature data so we can apply percentiling
             order = np.argsort(feature)
             # x axis is located at y0 = pos, with pos being there for offset
-            y0 = np.ones(num_x_points) * pos
+            # y0 = np.ones(num_x_points) * pos
             # calculate kdes:
             ys = np.zeros((nbins, num_x_points))
             for i in range(nbins):
@@ -823,7 +863,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 y = ys[i, :] / scale
                 c = pl.get_cmap(color)(i / (
                         nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
-                pl.fill_between(x_points, pos - y, pos + y, facecolor=c)
+                pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
 
     elif not multi_class and plot_type == "bar":
@@ -845,11 +885,31 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
         elif class_inds == "original":
             class_inds = range(len(shap_values))
+
+        if show_values_in_legend:
+            # Get the smallest decimal place of the first significant digit
+            # to print on the legend. The legend will print ('n_decimal'+1)
+            # decimal places.
+            # Set to 1 if the smallest number is bigger than 1.
+            smallest_shap = np.min(np.abs(shap_values).mean((1, 2)))
+            if smallest_shap > 1:
+                n_decimals = 1
+            else:
+                n_decimals = int(-np.floor(
+                    np.log10(
+                        smallest_shap
+                    )
+                ))
+
         for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
+            if show_values_in_legend:
+                label = f'{class_names[ind]} ({np.round(np.mean(global_shap_values),(n_decimals+1))})'
+            else:
+                label = class_names[ind]
             pl.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
-                color=color(i), label=class_names[ind]
+                color=color(i), label=label
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
@@ -862,7 +922,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ticks=[0, 1], aspect=80)
+        cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)

@@ -1,16 +1,14 @@
 import numpy as np
-import scipy as sp
-import warnings
+
+from ..utils import MaskedModel, safe_isinstance
 from ._explainer import Explainer
-from ..utils import safe_isinstance, MaskedModel
-from .. import maskers
 
 
 class Additive(Explainer):
     """ Computes SHAP values for generalized additive models.
 
-    This assumes that the model only has first order effects. Extending this to
-    2nd and third order effects is future work (if you apply this to those models right now
+    This assumes that the model only has first-order effects. Extending this to
+    second- and third-order effects is future work (if you apply this to those models right now
     you will get incorrect answers that fail additivity).
     """
 
@@ -31,9 +29,7 @@ class Additive(Explainer):
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
         """
-        super(Additive, self).__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
-
-        
+        super().__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
             self.model = model.decision_function
@@ -43,7 +39,7 @@ class Additive(Explainer):
                 # num_features = len(model.additive_terms_)
 
                 # fm = MaskedModel(self.model, self.masker, self.link, np.zeros(num_features))
-                # masks = np.ones((1, num_features), dtype=np.bool)
+                # masks = np.ones((1, num_features), dtype=bool)
                 # outputs = fm(masks)
                 # self.model(np.zeros(num_features))
                 # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
@@ -56,7 +52,7 @@ class Additive(Explainer):
 
         # pre-compute per-feature offsets
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, np.zeros(self.masker.shape[1]))
-        masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=np.bool)
+        masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=bool)
         for i in range(1, self.masker.shape[1]+1):
             masks[i,i-1] = False
         outputs = fm(masks)
@@ -68,12 +64,12 @@ class Additive(Explainer):
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
     def __call__(self, *args, max_evals=None, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iteratable args.
+        """ Explains the output of model(*args), where args represents one or more parallel iterable args.
         """
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
-        return super(Additive, self).__call__(*args, max_evals=max_evals, silent=silent)
+        return super().__call__(*args, max_evals=max_evals, silent=silent)
 
     @staticmethod
     def supports_model_with_masker(model, masker):
@@ -82,10 +78,10 @@ class Additive(Explainer):
         This is an abstract static method meant to be implemented by each subclass.
         """
         if safe_isinstance(model, "interpret.glassbox.ExplainableBoostingClassifier"):
-            if model.interactions is not 0:
+            if model.interactions != 0:
                 raise NotImplementedError("Need to add support for interaction effects!")
             return True
-            
+
         return False
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
@@ -96,7 +92,7 @@ class Additive(Explainer):
         inputs = np.zeros((len(x), len(x)))
         for i in range(len(x)):
             inputs[i,i] = x[i]
-        
+
         phi = self.model(inputs) - self._zero_offset - self._input_offsets
 
         return {
@@ -135,17 +131,17 @@ class Additive(Explainer):
 #             self.f = model
 #         else:
 #             raise ValueError("The passed model must be a recognized object or a function!")
-        
+
 #         # convert dataframes
 #         if safe_isinstance(data, "pandas.core.series.Series"):
 #             data = data.values
 #         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
 #             data = data.values
 #         self.data = data
-        
+
 #         # compute the expected value of the model output
 #         self.expected_value = self.f(data).mean()
-        
+
 #         # pre-compute per-feature offsets
 #         tmp = np.zeros(data.shape)
 #         self._zero_offset = self.f(tmp).mean()
@@ -186,13 +182,13 @@ class Additive(Explainer):
 #             X = X.values
 #         elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
 #             X = X.values
-            
-            
+
+
 #         phi = np.zeros(X.shape)
 #         tmp = np.zeros(X.shape)
 #         for i in range(X.shape[1]):
 #             tmp[:,i] = X[:,i]
 #             phi[:,i] = self.f(tmp) - self._zero_offset - self._feature_offset[i]
 #             tmp[:,i] = 0
-            
+
 #         return phi

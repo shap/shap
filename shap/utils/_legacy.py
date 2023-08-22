@@ -1,9 +1,10 @@
+import copy
+
 import numpy as np
 import pandas as pd
-import scipy as sp
+import scipy.sparse
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
-from scipy.sparse import issparse
 
 
 def kmeans(X, k, round_values=True):
@@ -36,12 +37,13 @@ def kmeans(X, k, round_values=True):
     imp = SimpleImputer(missing_values=np.nan, strategy='mean')
     X = imp.fit_transform(X)
 
-    kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
+    # Specify `n_init` for consistent behaviour between sklearn versions
+    kmeans = KMeans(n_clusters=k, random_state=0, n_init=10).fit(X)
 
     if round_values:
         for i in range(k):
             for j in range(X.shape[1]):
-                xj = X[:,j].toarray().flatten() if issparse(X) else X[:, j] # sparse support courtesy of @PrimozGodec
+                xj = X[:,j].toarray().flatten() if scipy.sparse.issparse(X) else X[:, j] # sparse support courtesy of @PrimozGodec
                 ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i,j]))
                 kmeans.cluster_centers_[i,j] = X[ind,j]
     return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
@@ -95,22 +97,44 @@ class Model:
         self.out_names = out_names
 
 
-def convert_to_model(val):
+def convert_to_model(val, keep_index=False):
+    """ Convert a model to a Model object.
+
+    Parameters
+    ----------
+    val : function or Model object
+        The model function or a Model object.
+
+    keep_index : bool
+        If True then the index values will be passed to the model function as the first argument.
+        When this is False the feature names will be removed from the model object to avoid unnecessary warnings.
+    """
     if isinstance(val, Model):
-        return val
+        out = val
     else:
-        return Model(val, None)
+        out = Model(val, None)
+
+    # Fix for the sklearn warning
+    # 'X does not have valid feature names, but <model> was fitted with feature names'
+    if not keep_index: # when using keep index, a dataframe with expected features names is expected to be passed
+        f_self = getattr(out.f, "__self__", None)
+        if f_self and hasattr(f_self, "feature_names_in_"):
+            # Make a copy so that the feature names are not removed from the original model
+            out = copy.deepcopy(out)
+            out.f.__self__.feature_names_in_ = None
+
+    return out
 
 
 def match_model_to_data(model, data):
     assert isinstance(model, Model), "model must be of type Model!"
-    
+
     try:
         if isinstance(data, DenseDataWithIndex):
             out_val = model.f(data.convert_to_df())
         else:
             out_val = model.f(data.data)
-    except:
+    except Exception:
         print("Provided model function fails when applied to the provided data set.")
         raise
 
@@ -119,7 +143,7 @@ def match_model_to_data(model, data):
             model.out_names = ["output value"]
         else:
             model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
-    
+
     return out_val
 
 
@@ -193,8 +217,8 @@ def convert_to_data(val, keep_index=False):
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
         else:
             return DenseData(val.values, list(val.columns))
-    elif sp.sparse.issparse(val):
-        if not sp.sparse.isspmatrix_csr(val):
+    elif scipy.sparse.issparse(val):
+        if not scipy.sparse.isspmatrix_csr(val):
             val = val.tocsr()
         return SparseData(val)
     else:

@@ -1,6 +1,8 @@
-from .._explainer import Explainer
 import numpy as np
 from sklearn.model_selection import train_test_split
+
+from .._explainer import Explainer
+
 
 class Maple(Explainer):
     """ Simply wraps MAPLE into the common SHAP interface.
@@ -9,7 +11,7 @@ class Maple(Explainer):
     ----------
     model : function
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array
@@ -41,7 +43,7 @@ class Maple(Explainer):
         Parameters
         ----------
         multiply_by_input : bool
-            If true, this multiplies the learned coeffients by the mean-centered input. This makes these
+            If true, this multiplies the learned coefficients by the mean-centered input. This makes these
             values roughly comparable to SHAP values.
         """
         if str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
@@ -64,7 +66,7 @@ class TreeMaple(Explainer):
     ----------
     model : function
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array
@@ -112,7 +114,7 @@ class TreeMaple(Explainer):
         Parameters
         ----------
         multiply_by_input : bool
-            If true, this multiplies the learned coeffients by the mean-centered input. This makes these
+            If true, this multiplies the learned coefficients by the mean-centered input. This makes these
             values roughly comparable to SHAP values.
         """
         if str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
@@ -131,7 +133,7 @@ class TreeMaple(Explainer):
 #################################################
 # The code below was authored by Gregory Plumb and is
 # from: https://github.com/GDPlumb/MAPLE/blob/master/Code/MAPLE.py
-# It has by copied here to allow for benchmark comparisions. Please see
+# It has by copied here to allow for benchmark comparisons. Please see
 # the original repo for the latest version, supporting material, and citations.
 #################################################
 
@@ -139,10 +141,11 @@ class TreeMaple(Explainer):
 # -  Assumes any required data normalization has already been done
 # -  Can pass Y (desired response) instead of MR (model fit to Y) to make fitting MAPLE to datasets easy
 
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
-import numpy as np
+
 
 class MAPLE:
 
@@ -256,7 +259,7 @@ class MAPLE:
         lr_model = Ridge(alpha = self.regularization)
         lr_model.fit(self.X, self.MR_train, weights)
 
-        # Get the model coeficients
+        # Get the model coefficients
         coefs = np.zeros(self.num_features + 1)
         coefs[0] = lr_model.intercept_
         coefs[np.sort(mostImpFeats[0:self.retain]) + 1] = lr_model.coef_
@@ -300,5 +303,3 @@ class MAPLE:
             pred[i] = lr_model.predict(x)[0]
 
         return pred
-
-

@@ -1,10 +1,10 @@
+import numpy as np
 import sklearn
 import sklearn.ensemble
-import gc
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 
-class KerasWrap(object):
+
+class KerasWrap:
     """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
     """
     def __init__(self, model, epochs, flatten_output=False):
@@ -13,7 +13,7 @@ class KerasWrap(object):
         self.flatten_output = flatten_output
         self.init_weights = None
         self.scaler = StandardScaler()
-        
+
     def fit(self, X, y, verbose=0):
         if self.init_weights is None:
             self.init_weights = self.model.get_weights()
@@ -65,8 +65,8 @@ def corrgroups60__gbm():
 def corrgroups60__ffnn():
     """ 4-Layer Neural Network
     """
-    from keras.models import Sequential
-    from keras.layers import Dense
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.models import Sequential
 
     model = Sequential()
     model.add(Dense(32, activation='relu', input_dim=60))
@@ -114,8 +114,8 @@ def independentlinear60__gbm():
 def independentlinear60__ffnn():
     """ 4-Layer Neural Network
     """
-    from keras.models import Sequential
-    from keras.layers import Dense
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.models import Sequential
 
     model = Sequential()
     model.add(Dense(32, activation='relu', input_dim=60))
@@ -137,7 +137,7 @@ def cric__lasso():
 
     # we want to explain the raw probability outputs of the trees
     model.predict = lambda X: model.predict_proba(X)[:,1]
-    
+
     return model
 
 def cric__ridge():
@@ -147,7 +147,7 @@ def cric__ridge():
 
     # we want to explain the raw probability outputs of the trees
     model.predict = lambda X: model.predict_proba(X)[:,1]
-    
+
     return model
 
 def cric__decision_tree():
@@ -157,7 +157,7 @@ def cric__decision_tree():
 
     # we want to explain the raw probability outputs of the trees
     model.predict = lambda X: model.predict_proba(X)[:,1]
-    
+
     return model
 
 def cric__random_forest():
@@ -167,7 +167,7 @@ def cric__random_forest():
 
     # we want to explain the raw probability outputs of the trees
     model.predict = lambda X: model.predict_proba(X)[:,1]
-    
+
     return model
 
 def cric__gbm():
@@ -179,7 +179,7 @@ def cric__gbm():
     # learning_rate was set a bit higher to allow for faster runtimes
     # n_estimators was chosen based on a train/test split of the data
     model = xgboost.XGBClassifier(max_depth=5, n_estimators=400, learning_rate=0.01, subsample=0.2, n_jobs=8, random_state=0)
-    
+
     # we want to explain the margin, not the transformed probability outputs
     model.__orig_predict = model.predict
     model.predict = lambda X: model.__orig_predict(X, output_margin=True) # pylint: disable=E1123
@@ -189,8 +189,8 @@ def cric__gbm():
 def cric__ffnn():
     """ 4-Layer Neural Network
     """
-    from keras.models import Sequential
-    from keras.layers import Dense, Dropout
+    from tensorflow.keras.layers import Dense, Dropout
+    from tensorflow.keras.models import Sequential
 
     model = Sequential()
     model.add(Dense(10, activation='relu', input_dim=336))
@@ -228,4 +228,3 @@ def human__decision_tree():
     xor_model.fit(X, y)
 
     return xor_model
-

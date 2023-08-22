@@ -1,63 +1,89 @@
-import warnings
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
-from ._labels import labels
-from ..utils import format_value, ordinal_str
-from ._utils import convert_ordering, convert_color, merge_nodes, get_sort_order, sort_inds, dendrogram_coords
-from . import colors
+import matplotlib.pyplot as pl
 import numpy as np
 import scipy
-import copy
-from .. import Explanation, Cohorts
+
+from .. import Cohorts, Explanation
+from ..utils import format_value, ordinal_str
+from ..utils._exceptions import DimensionError
+from . import colors
+from ._labels import labels
+from ._utils import (
+    convert_ordering,
+    dendrogram_coords,
+    get_sort_order,
+    merge_nodes,
+    sort_inds,
+)
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clustering_cutoff=0.5,
         merge_cohorts=False, show_data="auto", show=True):
-    """ Create a bar plot of a set of SHAP values.
+    """Create a bar plot of a set of SHAP values.
 
-    If a single sample is passed then we plot the SHAP values as a bar chart. If an
-    Explanation with many samples is passed then we plot the mean absolute value for
-    each feature column as a bar chart.
+    If a single sample is passed, then we plot the SHAP values as a bar chart. If an
+    :class:`.Explanation` with many samples is passed, then we plot the mean absolute
+    value for each feature column as a bar chart.
 
 
     Parameters
     ----------
     shap_values : shap.Explanation or shap.Cohorts or dictionary of shap.Explanation objects
-        A single row of a SHAP Explanation object (i.e. shap_values[0]) or a multi-row Explanation
-        object that we want to summarize.
+        A single row of a SHAP :class:`.Explanation` object (i.e. ``shap_values[0]``) or
+        a multi-row Explanation object that we want to summarize.
 
     max_display : int
-        The maximum number of bars to display.
+        How many top features to include in the bar plot (default is 10).
 
     show : bool
-        If show is set to False then we don't call the matplotlib.pyplot.show() function. This allows
-        further customization of the plot by the caller after the bar() function is finished. 
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+
+    Examples
+    --------
+
+    See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
 
-    # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values paramemter must be a shap.Explanation object!"
+    # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
         cohorts = {"": shap_values}
     elif isinstance(shap_values, Cohorts):
         cohorts = shap_values.cohorts
+    elif isinstance(shap_values, dict):
+        cohorts = shap_values
     else:
-        assert isinstance(shap_values, dict), "You must pass an Explanation object, Cohorts object, or dictionary to bar plot!"
+        emsg = (
+            "The shap_values argument must be an Explanation object, Cohorts "
+            "object, or dictionary of Explanation objects!"
+        )
+        raise TypeError(emsg)
 
     # unpack our list of Explanation objects we need to plot
     cohort_labels = list(cohorts.keys())
     cohort_exps = list(cohorts.values())
-    for i in range(len(cohort_exps)):
-        if len(cohort_exps[i].shape) == 2:
-            cohort_exps[i] = cohort_exps[i].abs.mean(0)
-        assert isinstance(cohort_exps[i], Explanation), "The shap_values paramemter must be a Explanation object, Cohorts object, or dictionary of Explanation objects!"
-        assert cohort_exps[i].shape == cohort_exps[0].shape, "When passing several Explanation objects they must all have the same shape!"
+    for i, exp in enumerate(cohort_exps):
+        if not isinstance(exp, Explanation):
+            emsg = (
+                "The shap_values argument must be an Explanation object, Cohorts "
+                "object, or dictionary of Explanation objects!"
+            )
+            raise TypeError(emsg)
+
+        if len(exp.shape) == 2:
+            # collapse the Explanation arrays to be of shape (#features,)
+            cohort_exps[i] = exp.abs.mean(0)
+        if cohort_exps[i].shape != cohort_exps[0].shape:
+            emsg = (
+                "When passing several Explanation objects, they must all have "
+                "the same number of feature columns!"
+            )
+            raise DimensionError(emsg)
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
 
     # unpack the Explanation object
@@ -131,7 +157,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values).mean(0))
 
-            # now relax the requirement to match the parition tree ordering for connections above clustering_cutoff
+            # now relax the requirement to match the partition tree ordering for connections above clustering_cutoff
             dist = scipy.spatial.distance.squareform(scipy.cluster.hierarchy.cophenet(partition_tree))
             feature_order = get_sort_order(dist, clust_order, clustering_cutoff, feature_order)
 
@@ -170,7 +196,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if num_features < len(values[0]):
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
         values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
-    
+
     # build our y-tick labels
     yticklabels = []
     for i in feature_inds:
@@ -211,7 +237,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     ax = pl.gca()
     #xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
+    width = bbox.width
     bbox_to_xscale = xlen/width
 
     for i in range(len(values)):
@@ -234,7 +260,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     # put horizontal lines for each feature row
     for i in range(num_features):
         pl.axhline(i+1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
-    
+
     if features is not None:
         features = list(features)
 
@@ -243,9 +269,9 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             try:
                 if round(features[i]) == features[i]:
                     features[i] = int(features[i])
-            except:
+            except Exception:
                 pass # features[i] must not be a number
-    
+
     pl.gca().xaxis.set_ticks_position('bottom')
     pl.gca().yaxis.set_ticks_position('none')
     pl.gca().spines['right'].set_visible(False)
@@ -256,12 +282,12 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     xmin,xmax = pl.gca().get_xlim()
     ymin,ymax = pl.gca().get_ylim()
-    
+
     if negative_values_present:
         pl.gca().set_xlim(xmin - (xmax-xmin)*0.05, xmax + (xmax-xmin)*0.05)
     else:
         pl.gca().set_xlim(xmin, xmax + (xmax-xmin)*0.05)
-    
+
     # if features is None:
     #     pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
     # else:
@@ -278,11 +304,11 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     # draw a dendrogram if we are given a partition tree
     if partition_tree is not None:
-        
+
         # compute the dendrogram line positions based on our current feature order
         feature_pos = np.argsort(feature_order)
         ylines,xlines = dendrogram_coords(feature_pos, partition_tree)
-        
+
         # plot the distance cut line above which we don't show tree edges
         xmin,xmax = pl.xlim()
         xlines_min,xlines_max = np.min(xlines),np.max(xlines)
@@ -294,9 +320,9 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         )
         l = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
         l.set_clip_on(False)
-        
+
         for (xline, yline) in zip(xlines, ylines):
-            
+
             # normalize the x values to fall between 0 and 1
             xv = (np.array(xline) / (xlines_max - xlines_min))
 
@@ -312,7 +338,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
                     )
                     for v in l:
                         v.set_clip_on(False)
-    
+
     if show:
         pl.show()
 
@@ -321,18 +347,18 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 # def compute_sort_counts(partition_tree, leaf_values, pos=None):
 #     if pos is None:
 #         pos = partition_tree.shape[0]-1
-    
+
 #     M = partition_tree.shape[0] + 1
-        
+
 #     if pos < 0:
 #         return 1,leaf_values[pos + M]
-    
+
 #     left = int(partition_tree[pos, 0]) - M
 #     right = int(partition_tree[pos, 1]) - M
-    
+
 #     left_val,left_sum = compute_sort_counts(partition_tree, leaf_values, left)
 #     right_val,right_sum = compute_sort_counts(partition_tree, leaf_values, right)
-    
+
 #     if left_sum > right_sum:
 #         left_val = right_val + 1
 #     else:
@@ -343,7 +369,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 #     if right >= 0:
 #         partition_tree[right,3] = right_val
 
-    
+
 #     return max(left_val, right_val) + 1, max(left_sum, right_sum)
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
@@ -364,8 +390,8 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
 
 
     feature_order = np.argsort(-np.abs(shap_values))
-    
-    # 
+
+    #
     feature_inds = feature_order[:max_display]
     y_pos = np.arange(len(feature_inds), 0, -1)
     pl.barh(
@@ -396,8 +422,8 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
     pl.gca().spines['right'].set_visible(False)
     pl.gca().spines['top'].set_visible(False)
     #pl.gca().spines['left'].set_visible(False)
-    
+
     pl.xlabel("SHAP value (impact on model output)")
-    
+
     if show:
         pl.show()

@@ -1,7 +1,9 @@
 """GPU accelerated tree explanations"""
 import numpy as np
-from ._tree import Tree, feature_perturbation_codes, output_transform_codes
+
 from ..utils import assert_import, record_import_error
+from ._tree import Tree, feature_perturbation_codes, output_transform_codes
+
 try:
     from .. import _cext_gpu
 except ImportError as e:

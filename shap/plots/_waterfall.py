@@ -1,66 +1,78 @@
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
-import warnings
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
-from ._labels import labels
-from ..utils import safe_isinstance, format_value
+
+from .. import Explanation
+from ..utils import format_value, safe_isinstance
 from . import colors
+from ._labels import labels
 
 
 # TODO: If we make a JS version of this plot then we could let users click on a bar and then see the dependence
-# plot that is associated with that feature get overlayed on the plot...it would quickly allow users to answer
+# plot that is associated with that feature get overlaid on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
 def waterfall(shap_values, max_display=10, show=True):
-    """ Plots an explantion of a single prediction as a waterfall plot.
+    """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
     output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature
     move the model output from our prior expectation under the background data distribution, to the final model
-    prediction given the evidence of all the features. Features are sorted by the magnitude of their SHAP values
-    with the smallest magnitude features grouped together at the bottom of the plot when the number of features
-    in the models exceeds the max_display parameter.
+    prediction given the evidence of all the features.
+
+    Features are sorted by the magnitude of their SHAP values with the smallest
+    magnitude features grouped together at the bottom of the plot when the number of
+    features in the models exceeds the ``max_display`` parameter.
 
     Parameters
     ----------
     shap_values : Explanation
-        A one-dimensional Explanation object that contains the feature values and SHAP values to plot.
+        A one-dimensional :class:`.Explanation` object that contains the feature values and SHAP values to plot.
 
     max_display : str
-        The maximum number of features to plot.
+        The maximum number of features to plot (default is 10).
 
     show : bool
-        Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
-        to be customized further after it has been created.
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot to be customized further after it
+        has been created.
+
+    Examples
+    --------
+
+    See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
+
     """
 
     # Turn off interactive plot
     if show is False:
         plt.ioff()
 
-    base_values = shap_values.base_values
+    # make sure the input is an Explanation object
+    if not isinstance(shap_values, Explanation):
+        emsg = (
+            "The waterfall plot requires an `Explanation` object as the "
+            "`shap_values` argument."
+        )
+        raise TypeError(emsg)
+
+    # make sure we only have a single explanation to plot
+    sv_shape = shap_values.shape
+    if len(sv_shape) != 1:
+        emsg = (
+            "The waterfall plot can currently only plot a single explanation, but a "
+            f"matrix of explanations (shape {sv_shape}) was passed! Perhaps try "
+            "`shap.plots.waterfall(shap_values[0])` or for multi-output models, "
+            "try `shap.plots.waterfall(shap_values[0, 0])`."
+        )
+        raise ValueError(emsg)
+
+    base_values = float(shap_values.base_values)
     features = shap_values.display_data if shap_values.display_data is not None else shap_values.data
     feature_names = shap_values.feature_names
     lower_bounds = getattr(shap_values, "lower_bounds", None)
     upper_bounds = getattr(shap_values, "upper_bounds", None)
     values = shap_values.values
-
-    # make sure we only have a single output to explain
-    if (type(base_values) == np.ndarray and len(base_values) > 0) or type(base_values) == list:
-        raise Exception("waterfall_plot requires a scalar base_values of the model output as the first "
-                        "parameter, but you have passed an array as the first parameter! "
-                        "Try shap.waterfall_plot(explainer.base_values[0], values[0], X[0]) or "
-                        "for multi-output models try "
-                        "shap.waterfall_plot(explainer.base_values[0], values[0][0], X[0]).")
-
-    # make sure we only have a single explanation to plot
-    if len(values.shape) == 2:
-        raise Exception(
-            "The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
 
     # unwrap pandas series
     if safe_isinstance(features, "pandas.core.series.Series"):
@@ -88,7 +100,7 @@ def waterfall(shap_values, max_display=10, show=True):
     neg_low = []
     neg_high = []
     loc = base_values + values.sum()
-    yticklabels = ["" for i in range(num_features + 1)]
+    yticklabels = ["" for _ in range(num_features + 1)]
 
     # size the plot based on how many features we are plotting
     plt.gcf().set_size_inches(8, num_features * row_height + 1.5)
@@ -126,7 +138,7 @@ def waterfall(shap_values, max_display=10, show=True):
             if np.issubdtype(type(features[order[i]]), np.number):
                 yticklabels[rng[i]] = format_value(float(features[order[i]]), "%0.03f") + " = " + feature_names[order[i]]
             else:
-                yticklabels[rng[i]] = features[order[i]] + " = " + feature_names[order[i]]
+                yticklabels[rng[i]] = str(features[order[i]]) + " = " + str(feature_names[order[i]])
 
     # add a last grouped feature to represent the impact of all the features we didn't show
     if num_features < len(values):
@@ -136,12 +148,10 @@ def waterfall(shap_values, max_display=10, show=True):
             pos_inds.append(0)
             pos_widths.append(-remaining_impact)
             pos_lefts.append(loc + remaining_impact)
-            c = colors.red_rgb
         else:
             neg_inds.append(0)
             neg_widths.append(-remaining_impact)
             neg_lefts.append(loc + remaining_impact)
-            c = colors.blue_rgb
 
     points = pos_lefts + list(np.array(pos_lefts) + np.array(pos_widths)) + neg_lefts + \
         list(np.array(neg_lefts) + np.array(neg_widths))
@@ -161,9 +171,8 @@ def waterfall(shap_values, max_display=10, show=True):
     xlen = plt.xlim()[1] - plt.xlim()[0]
     fig = plt.gcf()
     ax = plt.gca()
-    xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
+    width = bbox.width
     bbox_to_xscale = xlen/width
     hl_scaled = bbox_to_xscale * head_length
     renderer = fig.canvas.get_renderer()
@@ -175,20 +184,20 @@ def waterfall(shap_values, max_display=10, show=True):
             pos_lefts[i], pos_inds[i], max(dist-hl_scaled, 0.000001), 0,
             head_length=min(dist, hl_scaled),
             color=colors.red_rgb, width=bar_width,
-            head_width=bar_width
+            head_width=bar_width,
         )
 
         if pos_low is not None and i < len(pos_low):
             plt.errorbar(
                 pos_lefts[i] + pos_widths[i], pos_inds[i],
                 xerr=np.array([[pos_widths[i] - pos_low[i]], [pos_high[i] - pos_widths[i]]]),
-                ecolor=colors.light_red_rgb
+                ecolor=colors.light_red_rgb,
             )
 
         txt_obj = plt.text(
             pos_lefts[i] + 0.5*dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
-            fontsize=12
+            fontsize=12,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -200,7 +209,7 @@ def waterfall(shap_values, max_display=10, show=True):
             txt_obj = plt.text(
                 pos_lefts[i] + (5/72)*bbox_to_xscale + dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
                 horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
-                fontsize=12
+                fontsize=12,
             )
 
     # draw the negative arrows
@@ -211,20 +220,20 @@ def waterfall(shap_values, max_display=10, show=True):
             neg_lefts[i], neg_inds[i], -max(-dist-hl_scaled, 0.000001), 0,
             head_length=min(-dist, hl_scaled),
             color=colors.blue_rgb, width=bar_width,
-            head_width=bar_width
+            head_width=bar_width,
         )
 
         if neg_low is not None and i < len(neg_low):
             plt.errorbar(
                 neg_lefts[i] + neg_widths[i], neg_inds[i],
                 xerr=np.array([[neg_widths[i] - neg_low[i]], [neg_high[i] - neg_widths[i]]]),
-                ecolor=colors.light_blue_rgb
+                ecolor=colors.light_blue_rgb,
             )
 
         txt_obj = plt.text(
             neg_lefts[i] + 0.5*dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
             horizontalalignment='center', verticalalignment='center', color="white",
-            fontsize=12
+            fontsize=12,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
         arrow_bbox = arrow_obj.get_window_extent(renderer=renderer)
@@ -236,7 +245,7 @@ def waterfall(shap_values, max_display=10, show=True):
             txt_obj = plt.text(
                 neg_lefts[i] - (5/72)*bbox_to_xscale + dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
                 horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
-                fontsize=12
+                fontsize=12,
             )
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
@@ -360,7 +369,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         upper_bounds = getattr(shap_exp, "upper_bounds", None)
 
     # make sure we only have a single output to explain
-    if (type(expected_value) == np.ndarray and len(expected_value) > 0) or type(expected_value) == list:
+    if (isinstance(expected_value, np.ndarray) and len(expected_value) > 0) or isinstance(expected_value, list):
         raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first "
                         "parameter, but you have passed an array as the first parameter! "
                         "Try shap.waterfall_plot(explainer.expected_value[0], shap_values[0], X[0]) or "
@@ -443,12 +452,10 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             pos_inds.append(0)
             pos_widths.append(-remaining_impact)
             pos_lefts.append(loc + remaining_impact)
-            c = colors.red_rgb
         else:
             neg_inds.append(0)
             neg_widths.append(-remaining_impact)
             neg_lefts.append(loc + remaining_impact)
-            c = colors.blue_rgb
 
     points = pos_lefts + list(np.array(pos_lefts) + np.array(pos_widths)) + neg_lefts + \
         list(np.array(neg_lefts) + np.array(neg_widths))
@@ -468,9 +475,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     xlen = plt.xlim()[1] - plt.xlim()[0]
     fig = plt.gcf()
     ax = plt.gca()
-    xticks = ax.get_xticks()
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width, height = bbox.width, bbox.height
+    width = bbox.width
     bbox_to_xscale = xlen/width
     hl_scaled = bbox_to_xscale * head_length
     renderer = fig.canvas.get_renderer()
@@ -572,7 +578,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     xmin, xmax = ax.get_xlim()
     ax2 = ax.twiny()
     ax2.set_xlim(xmin, xmax)
-    ax2.set_xticks([expected_value, expected_value])
+    ax2.set_xticks([expected_value, expected_value+1e-8])  # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
     ax2.set_xticklabels(["\n$E[f(X)]$", "\n$ = "+format_value(expected_value, "%0.03f")+"$"], fontsize=12, ha="left")
     ax2.spines['right'].set_visible(False)
     ax2.spines['top'].set_visible(False)
@@ -581,7 +587,11 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     # draw the f(x) tick mark
     ax3 = ax2.twiny()
     ax3.set_xlim(xmin, xmax)
-    ax3.set_xticks([expected_value + shap_values.sum()] * 2)
+    # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
+    ax3.set_xticks([
+        expected_value + shap_values.sum(),
+        expected_value + shap_values.sum() + 1e-8,
+    ])
     ax3.set_xticklabels(["$f(x)$", "$ = "+format_value(fx, "%0.03f")+"$"], fontsize=12, ha="left")
     tick_labels = ax3.xaxis.get_majorticklabels()
     tick_labels[0].set_transform(tick_labels[0].get_transform(

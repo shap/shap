@@ -3,12 +3,19 @@
 
 # pylint: disable=missing-function-docstring
 import numpy as np
-import scipy
 import pytest
+import scipy.special
+
 import shap
 
+# Ignore expected internal shap warnings about deprecated syntax in LinearExplainer
+# In future when the deprecated syntax is fully removed, the tests must be updated
+pytestmark = [
+    pytest.mark.filterwarnings('ignore:The option feature.* has been renamed'),
+    pytest.mark.filterwarnings('ignore:The feature_perturbation option is now deprecated'),
+]
+
 def test_tied_pair():
-    np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
@@ -17,7 +24,6 @@ def test_tied_pair():
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_tied_pair_independent():
-    np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
@@ -26,7 +32,6 @@ def test_tied_pair_independent():
     assert np.abs(explainer.shap_values(X) - np.array([1, 0, 0])).max() < 0.05
 
 def test_tied_pair_new():
-    np.random.seed(0)
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
@@ -36,10 +41,9 @@ def test_tied_pair_new():
 
 def test_wrong_masker():
     with pytest.raises(NotImplementedError):
-        shap.explainers.Linear((0, 0), shap.maskers.Image("blur(10,10)", (10, 10, 3)))
+        shap.explainers.Linear((0, 0), shap.maskers.Fixed())
 
 def test_tied_triple():
-    np.random.seed(0)
     beta = np.array([0, 1, 0, 0])
     mu = 1*np.ones(4)
     Sigma = np.array([[1, 0.999999, 0.999999, 0], [0.999999, 1, 0.999999, 0], [0.999999, 0.999999, 1, 0], [0, 0, 0, 1]])
@@ -49,13 +53,10 @@ def test_tied_triple():
     assert np.abs(explainer.shap_values(X) - np.array([0.33333, 0.33333, 0.33333, 0])).max() < 0.05
 
 def test_sklearn_linear():
-    np.random.seed(0)
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -65,13 +66,10 @@ def test_sklearn_linear():
     explainer.shap_values(X)
 
 def test_sklearn_linear_old_style():
-    np.random.seed(0)
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -81,13 +79,10 @@ def test_sklearn_linear_old_style():
     explainer.shap_values(X)
 
 def test_sklearn_linear_new():
-    np.random.seed(0)
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 
@@ -98,13 +93,10 @@ def test_sklearn_linear_new():
     assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6
 
 def test_sklearn_multiclass_no_intercept():
-    np.random.seed(0)
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
 
     # make y multiclass
     multiclass_y = np.expand_dims(y, axis=-1)
@@ -119,9 +111,7 @@ def test_sklearn_multiclass_no_intercept():
 def test_perfect_colinear():
     LinearRegression = pytest.importorskip('sklearn.linear_model').LinearRegression
 
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     X.iloc[:, 0] = X.iloc[:, 4] # test duplicated features
     X.iloc[:, 5] = X.iloc[:, 6] - X.iloc[:, 6] # test multiple colinear features
     X.iloc[:, 3] = 0 # test null features
@@ -132,15 +122,17 @@ def test_perfect_colinear():
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
 
 def test_shape_values_linear_many_features():
-    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
-    np.random.seed(0)
+    Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     coef = np.array([1, 2]).T
 
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+    rs = np.random.RandomState(random_seed)
     # generate linear data
-    X = np.random.normal(1, 10, size=(1000, len(coef)))
-    y = np.dot(X, coef) + 1 + np.random.normal(scale=0.1, size=1000)
+    X = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(X, coef) + 1 + rs.normal(scale=0.1, size=1000)
 
     # train linear model
     model = Ridge(0.1)
@@ -156,16 +148,15 @@ def test_shape_values_linear_many_features():
     expected = (X - X.mean(0)) * coef
     np.testing.assert_allclose(expected - values, 0, atol=0.01)
 
-def test_single_feature():
+def test_single_feature(random_seed):
     """ Make sure things work with a univariate linear regression.
     """
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
-    np.random.seed(0)
-
     # generate linear data
-    X = np.random.normal(1, 10, size=(100, 1))
-    y = 2 * X[:, 0] + 1 + np.random.normal(scale=0.1, size=100)
+    rs = np.random.RandomState(random_seed)
+    X = rs.normal(1, 10, size=(100, 1))
+    y = 2 * X[:, 0] + 1 + rs.normal(scale=0.1, size=100)
 
     # train linear model
     model = Ridge(0.1)
@@ -180,11 +171,9 @@ def test_single_feature():
 def test_sparse():
     """ Validate running LinearExplainer on scipy sparse data
     """
-    #from scipy.special import expit
     make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
     LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
 
-    np.random.seed(0)
     n_features = 20
     X, y = make_multilabel_classification(n_samples=100,
                                           sparse=True,
@@ -194,7 +183,7 @@ def test_sparse():
 
     # train linear model
     model = LogisticRegression()
-    model.fit(X, y)
+    model.fit(X, y.squeeze())
 
     # explain the model's predictions using SHAP values
     explainer = shap.LinearExplainer(model, X)
@@ -210,13 +199,10 @@ def test_sparse():
     ("correlation", shap.maskers.Impute)
 ])
 def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
-    np.random.seed(0)
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # train linear model
-    X, y = shap.datasets.california(n_points=500)
-    X = X[:100]
-    y = y[:100]
+    X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1)
     model.fit(X, y)
 

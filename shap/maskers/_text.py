@@ -1,10 +1,16 @@
-import re
 import math
+import re
+
 import numpy as np
-from ._masker import Masker
-from .._serializable import Serializer, Deserializer
+
+from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer, SENTENCEPIECE_TOKENIZERS, getattr_silent
+from ..utils.transformers import (
+    SENTENCEPIECE_TOKENIZERS,
+    getattr_silent,
+    parse_prefix_suffix_for_tokenizer,
+)
+from ._masker import Masker
 
 
 class Text(Masker):
@@ -43,7 +49,7 @@ class Text(Masker):
         else:
             try:
                 self.tokenizer = SimpleTokenizer(tokenizer)
-            except:
+            except Exception:
                 raise Exception( # pylint: disable=raise-missing-from
                     "The passed tokenizer cannot be wrapped as a masker because it does not have a __call__ " + \
                     "method, not can it be interpreted as a splitting regexp!"
@@ -215,7 +221,7 @@ class Text(Masker):
         # convert the text segments to tokens that the partition tree function expects
         tokens = []
         space_end = re.compile(r"^.*\W$")
-        letter_start = re.compile(r"^[A-z]")
+        letter_start = re.compile(r"^[A-Za-z]")
         for i, v in enumerate(self._segments_s):
             if i > 0 and space_end.match(self._segments_s[i-1]) is None and letter_start.match(v) is not None and tokens[i-1] != "":
                 tokens.append("##" + v.strip())
@@ -294,7 +300,7 @@ class Text(Masker):
         """
         self._update_s_cache(s)
 
-        invariants = np.zeros(len(self._tokenized_s), dtype=np.bool)
+        invariants = np.zeros(len(self._tokenized_s), dtype=bool)
         if self.keep_prefix > 0:
             invariants[:self.keep_prefix] = True
         if self.keep_suffix > 0:
@@ -337,7 +343,7 @@ class Text(Masker):
         return kwargs
 
 
-class SimpleTokenizer(): # pylint: disable=too-few-public-methods
+class SimpleTokenizer: # pylint: disable=too-few-public-methods
     """ A basic model agnostic tokenizer.
     """
     def __init__(self, split_pattern=r"\W+"):
@@ -382,7 +388,7 @@ closers = {
 enders = [".", ","]
 connectors = ["but", "and", "or"]
 
-class Token():
+class Token:
     """ A token representation used for token clustering.
     """
     def __init__(self, value):
@@ -400,7 +406,7 @@ class Token():
             return self.s + "!"
         return self.s
 
-class TokenGroup():
+class TokenGroup:
     """ A token group (substring) representation used for token clustering.
     """
     def __init__(self, group, index=None):
@@ -451,7 +457,7 @@ def merge_score(group1, group2, special_tokens):
         score -= 100
 
     # attach surrounding an openers and closers a bit later
-    if group1[0].s in openers and not group2[-1] in closers:
+    if group1[0].s in openers and group2[-1] not in closers:
         score -= 2
 
     # reach across connectors later

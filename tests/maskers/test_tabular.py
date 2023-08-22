@@ -2,7 +2,9 @@
 """
 
 import tempfile
+
 import numpy as np
+
 import shap
 
 
@@ -10,7 +12,7 @@ def test_serialization_independent_masker_dataframe():
     """ Test the serialization of an Independent masker based on a data frame.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
 
     # initialize independent masker
     original_independent_masker = shap.maskers.Independent(X)
@@ -25,7 +27,7 @@ def test_serialization_independent_masker_dataframe():
         # deserialize masker
         new_independent_masker = shap.maskers.Independent.load(temp_serialization_file)
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 
@@ -37,7 +39,7 @@ def test_serialization_independent_masker_numpy():
     """
 
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
     X = X.values
 
     # initialize independent masker
@@ -54,7 +56,7 @@ def test_serialization_independent_masker_numpy():
         # deserialize masker
         new_independent_masker = shap.maskers.Masker.load(temp_serialization_file)
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 
@@ -65,7 +67,7 @@ def test_serialization_partion_masker_dataframe():
     """ Test the serialization of a Partition masker based on a DataFrame.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
 
     # initialize partition masker
     original_partition_masker = shap.maskers.Partition(X)
@@ -80,7 +82,7 @@ def test_serialization_partion_masker_dataframe():
         # deserialize masker
         new_partition_masker = shap.maskers.Partition.load(temp_serialization_file)
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 
@@ -91,7 +93,7 @@ def test_serialization_partion_masker_numpy():
     """ Test the serialization of a Partition masker based on a numpy array.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
     X = X.values
 
     # initialize partition masker
@@ -107,7 +109,7 @@ def test_serialization_partion_masker_numpy():
         # deserialize masker
         new_partition_masker = shap.maskers.Masker.load(temp_serialization_file)
 
-    mask = np.ones(X.shape[1]).astype(np.int)
+    mask = np.ones(X.shape[1]).astype(int)
     mask[0] = 0
     mask[4] = 0
 

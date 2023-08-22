@@ -1,9 +1,9 @@
-import queue
-import numpy as np
-import warnings
 import copy
+import queue
+import warnings
+
+from ..utils._exceptions import ConvergenceError, InvalidAction
 from ._action import Action
-from ..utils._exceptions import InvalidAction, ConvergenceError
 
 
 class ActionOptimizer:

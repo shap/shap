@@ -1,0 +1,29 @@
+# Ensure that the javascript package can be built with webpack
+# Runs on any PRs that modify the javascript directory
+
+name: test_js
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "javascript/**"
+
+jobs:
+  build-js:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: lts/Hydrogen
+    - run: npm ci
+      working-directory: ./javascript
+    - run: npm run build
+      working-directory: ./javascript
+    - run: npm run test
+      working-directory: ./javascript
