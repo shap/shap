@@ -90,7 +90,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         elif len(base_value) > 1 and np.all(base_value == base_value[0]):
             base_value = base_value[0]
 
-    if (isinstance(base_value, np.ndarray) or type(base_value) == list):
+    if isinstance(base_value, np.ndarray) or isinstance(base_value, list):
         if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
             raise Exception("In v0.20 force_plot now requires the base value as the first parameter! " \
                             "Try shap.force_plot(explainer.expected_value, shap_values) or " \
@@ -98,7 +98,7 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                             "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
 
 
-    assert not type(shap_values) == list, "The shap_values arg looks multi output, try shap_values[i]."
+    assert not isinstance(shap_values, list), "The shap_values arg looks multi output, try shap_values[i]."
 
     link = convert_to_link(link)
 

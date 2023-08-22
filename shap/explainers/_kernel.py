@@ -141,7 +141,7 @@ class Kernel(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         v = self.shap_values(X)
-        if type(v) is list:
+        if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
 
         # the explanation object expects an expected value for each row

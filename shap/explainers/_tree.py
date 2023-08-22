@@ -231,7 +231,7 @@ class Tree(Explainer):
 
         if not interactions:
             v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate)
-            if type(v) is list:
+            if isinstance(v, list):
                 v = np.stack(v, axis=-1)  # put outputs at the end
         else:
             assert not self.approximate, "Approximate computation not yet supported for interaction effects!"
@@ -568,7 +568,7 @@ class Tree(Explainer):
                            " you can set check_additivity=False to disable this check.".format(sum_val[ind], model_output[ind])
                 raise ExplainerError(err_msg)
 
-        if type(phi) is list:
+        if isinstance(phi, list):
             for i in range(len(phi)):
                 check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:,i])
         else:
@@ -642,7 +642,7 @@ class TreeEnsemble:
             "binary": "log_odds",
         }
 
-        if type(model) is dict and "trees" in model:
+        if isinstance(model, dict) and "trees" in model:
             # This allows a dictionary to be passed that represents the model.
             # this dictionary has several numerical parameters and also a list of trees
             # where each tree is a dictionary describing that tree
@@ -657,7 +657,7 @@ class TreeEnsemble:
             if "base_offset" in model:
                 self.base_offset = model["base_offset"]
             self.trees = [SingleTree(t, data=data, data_missing=data_missing) for t in model["trees"]]
-        elif type(model) is list and type(model[0]) == SingleTree: # old-style direct-load format
+        elif isinstance(model, list) and isinstance(model[0], SingleTree): # old-style direct-load format
             self.trees = model
         elif safe_isinstance(
             model,
@@ -1343,7 +1343,7 @@ class SingleTree:
             self.values = self.values * scaling
             self.node_sample_weight = tree.weighted_n_node_samples.astype(np.float64)
 
-        elif type(tree) is dict and "features" in tree:
+        elif isinstance(tree, dict) and "features" in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
@@ -1353,7 +1353,7 @@ class SingleTree:
             self.node_sample_weight = tree["node_sample_weight"]
 
         # deprecated dictionary support (with sklearn singular style "feature" and "value" names)
-        elif type(tree) is dict and "children_left" in tree:
+        elif isinstance(tree, dict) and "children_left" in tree:
             self.children_left = tree["children_left"].astype(np.int32)
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
@@ -1487,7 +1487,7 @@ class SingleTree:
             self.values = np.asarray(self.values)
             self.values = np.multiply(self.values, scaling)
 
-        elif type(tree) == dict and 'nodeid' in tree:
+        elif isinstance(tree, dict) and 'nodeid' in tree:
             """ Directly create tree given the JSON dump (with stats) of a XGBoost model.
             """
 
