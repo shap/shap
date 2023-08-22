@@ -354,7 +354,7 @@ def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
     # Compute axis limit
     update_axis_limits(ax, total_pos, pos_features, total_neg,
                        neg_features, base_value, out_value)
-    
+
     # Define width of bar
     width_bar = 0.1
     width_separators = (ax.get_xlim()[1] - ax.get_xlim()[0]) / 200
