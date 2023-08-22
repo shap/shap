@@ -83,7 +83,7 @@ def test_simple_bar_with_cohorts_dict():
 
 def test_bar_legacy_deprecation_warning(explainer):
     rs = np.random.RandomState(42)
-    fig = plt.figure()
+    plt.figure()
     with pytest.warns(FutureWarning, match="bar_legacy is being deprecated in Version 0.43.0"):
         shap.plots._bar.bar_legacy({
             "t1": shap.Explanation(
