@@ -1,7 +1,7 @@
 import time
 
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
