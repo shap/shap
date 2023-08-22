@@ -109,7 +109,7 @@ class Linear(Explainer):
         if getattr(self.masker, "mean", None) is not None:
             self.mean = self.masker.mean
             self.cov = self.masker.cov
-        elif type(data) is dict and len(data) == 2:
+        elif isinstance(data, dict) and len(data) == 2:
             self.mean = data["mean"]
             if safe_isinstance(self.mean, "pandas.core.series.Series"):
                 self.mean = self.mean.values

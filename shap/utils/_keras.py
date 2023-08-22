@@ -30,7 +30,7 @@ def clone_keras_layers(model, start_layer, stop_layer):
             if dup_try > len(layers_to_process):
                 raise Exception("Failed to find a complete graph starting at the given layer!")
             try:
-                if type(layer.input) is list:
+                if isinstance(layer.input, list):
                     layer_inputs = [new_layers[v.name] for v in layer.input]
                 else:
                     layer_inputs = new_layers[layer.input.name]

@@ -166,7 +166,7 @@ class _TFGradient(Explainer):
         self.model = model
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
-        assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
+        assert not isinstance(self.model_output, list), "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
         if len(self.model_output.shape) == 1:
@@ -174,12 +174,12 @@ class _TFGradient(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = True
-        if type(self.model_inputs) != list:
+        if not isinstance(self.model_inputs, list):
             self.model_inputs = [self.model_inputs]
         self.multi_input = len(self.model_inputs) > 1
         if isinstance(data, pd.DataFrame):
             data = [data.values]
-        if type(data) != list:
+        if not isinstance(data, list):
             data = [data]
 
         self.data = data
@@ -241,10 +241,10 @@ class _TFGradient(Explainer):
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
+            assert not isinstance(X, list), "Expected a single tensor model input!"
             X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         # rank and determine the model outputs that we will explain
@@ -389,9 +389,9 @@ class _PyTorchGradient(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = False
-        if type(data) == list:
+        if isinstance(data, list):
             self.multi_input = True
-        if type(data) != list:
+        if not isinstance(data, list):
             data = [data]
 
         # for consistency, the method signature calls for data as the model input.
@@ -473,10 +473,10 @@ class _PyTorchGradient(Explainer):
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
+            assert not isinstance(X, list), "Expected a single tensor model input!"
             X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():

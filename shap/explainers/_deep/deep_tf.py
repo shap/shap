@@ -101,14 +101,14 @@ class TFDeep(Explainer):
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
-        assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
+        assert not isinstance(self.model_output, list), "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
         if len(self.model_output.shape) == 1:
             self.multi_output = False
 
         if tf.executing_eagerly():
-            if type(model) is tuple or type(model) is list:
+            if isinstance(model, tuple) or isinstance(model, list):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
                 from tensorflow.keras import Model
                 self.model = Model(model[0], model[1])
@@ -117,11 +117,11 @@ class TFDeep(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = True
-        if type(self.model_inputs) != list or len(self.model_inputs) == 1:
+        if not isinstance(self.model_inputs, list) or len(self.model_inputs) == 1:
             self.multi_input = False
-            if type(self.model_inputs) != list:
+            if not isinstance(self.model_inputs, list):
                 self.model_inputs = [self.model_inputs]
-        if type(data) != list and (hasattr(data, "__call__") is False):
+        if not isinstance(data, list) and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
 
@@ -259,12 +259,12 @@ class TFDeep(Explainer):
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         # check if we have multiple inputs
         if not self.multi_input:
-            if type(X) == list and len(X) != 1:
+            if isinstance(X, list) and len(X) != 1:
                 assert False, "Expected a single tensor as model input!"
-            elif type(X) != list:
+            elif not isinstance(X, list):
                 X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs (%d) does not match the number given (%d)!" % (len(self.model_inputs), len(X))
 
         # rank and determine the model outputs that we will explain
@@ -295,7 +295,7 @@ class TFDeep(Explainer):
             for j in range(X[0].shape[0]):
                 if (hasattr(self.data, '__call__')):
                     bg_data = self.data([X[l][j] for l in range(len(X))])
-                    if type(bg_data) != list:
+                    if not isinstance(bg_data, list):
                         bg_data = [bg_data]
                 else:
                     bg_data = self.data

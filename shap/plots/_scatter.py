@@ -167,7 +167,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         color = None
         interaction_index = "auto"
 
-    if type(shap_values_arr) is list:
+    if isinstance(shap_values_arr, list):
         raise TypeError("The passed shap_values_arr are a list not an array! If you have a list of explanations try " \
                         "passing shap_values_arr[0] instead to explain the first output class of a multi-output model.")
 
@@ -541,7 +541,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     if cmap is None:
         cmap = colors.red_blue
 
-    if type(shap_values) is list:
+    if isinstance(shap_values, list):
         raise TypeError("The passed shap_values are a list not an array! If you have a list of explanations try " \
                         "passing shap_values[0] instead to explain the first output class of a multi-output model.")
 
