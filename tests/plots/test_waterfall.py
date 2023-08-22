@@ -59,6 +59,5 @@ def test_waterfall_plot_for_decision_tree_explanation():
 
 def test_waterfall_legacy_deprecation_warning(explainer):
     shap_values = explainer.shap_values(explainer.data)
-    plt.figure()
-    with pytest.warns(FutureWarning, match="waterfall_legacy is being deprecated in Version 0.43.0"):
+    with pytest.warns(FutureWarning, match="waterfall_legacy is being deprecated in Version 0.43.0. This will be removed in Version 0.44"):
         shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0])

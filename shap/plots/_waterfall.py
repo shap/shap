@@ -318,7 +318,7 @@ def waterfall(shap_values, max_display=10, show=True):
     else:
         return plt.gcf()
 
-@deprecated("waterfall_legacy is being deprecated in Version 0.43.0")
+@deprecated("waterfall_legacy is being deprecated in Version 0.43.0. This will be removed in Version 0.44")
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
     """ Plots an explanation of a single prediction as a waterfall plot.
 

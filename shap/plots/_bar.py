@@ -373,7 +373,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
 #     return max(left_val, right_val) + 1, max(left_sum, right_sum)
 
-@deprecated("bar_legacy is being deprecated in Version 0.43.0")
+@deprecated("bar_legacy is being deprecated in Version 0.43.0. This will be removed in Version 0.44")
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
 
     # unwrap pandas series

@@ -5,8 +5,10 @@ import pandas as pd
 import scipy.sparse
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
+from sklearn.utils import deprecated
 
 
+@deprecated("kmeans is being deprecated in Version 0.43.0. This will be removed in Version 0.44")
 def kmeans(X, k, round_values=True):
     """ Summarize a dataset with k mean samples weighted by the number of data points they
     each represent.
