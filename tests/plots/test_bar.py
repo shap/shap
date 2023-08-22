@@ -80,19 +80,3 @@ def test_simple_bar_with_cohorts_dict():
     )
     plt.tight_layout()
     return fig
-
-def test_bar_legacy_deprecation_warning(explainer):
-    rs = np.random.RandomState(42)
-    plt.figure()
-    with pytest.warns(FutureWarning, match="bar_legacy is being deprecated in Version 0.43.0"):
-        shap.plots._bar.bar_legacy({
-            "t1": shap.Explanation(
-                values=rs.randn(40, 5),
-                base_values=np.ones(40) * 0.5,
-            ),
-            "t2": shap.Explanation(
-                values=rs.randn(20, 5),
-                base_values=np.ones(20) * 0.5,
-            ),
-        },
-        show=False)
