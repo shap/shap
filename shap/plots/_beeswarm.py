@@ -27,7 +27,7 @@ from ._utils import (
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
              clustering=None, cluster_threshold=0.5, color=None,
-             axis_color="#333333", alpha=1, show=True, log_scale=False,
+             axis_color="#333333", alpha=1, show=True, dot_size=16, log_scale=False,
              color_bar=True, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -45,6 +45,9 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+
+    dot_size : int
+        Size of the scatter markers in the beeswarm.
 
     color_bar : bool
         Whether to draw the color bar (legend).
@@ -373,7 +376,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
             pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
-                        s=16, alpha=alpha, linewidth=0,
+                        s=dot_size, alpha=alpha, linewidth=0,
                         zorder=3, rasterized=len(shaps) > 500)
 
             # plot the non-nan fvalues colored by the trimmed feature value
@@ -383,12 +386,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             cvals[cvals_imp > vmax] = vmax
             cvals[cvals_imp < vmin] = vmin
             pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                        cmap=color, vmin=vmin, vmax=vmax, s=16,
+                        cmap=color, vmin=vmin, vmax=vmax, s=dot_size,
                         c=cvals, alpha=alpha, linewidth=0,
                         zorder=3, rasterized=len(shaps) > 500)
         else:
 
-            pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
+            pl.scatter(shaps, pos + ys, s=dot_size, alpha=alpha, linewidth=0, zorder=3,
                         color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
 
 
