@@ -1158,24 +1158,27 @@ class TestExplainerXGBoost:
         * XGBRanker
     """
 
-    def test_xgboost(self):
-        """Test the basic `shap_values` calculation."""
-        xgboost = pytest.importorskip('xgboost')
+    def test_xgboost_regression(self):
+        xgboost = pytest.importorskip("xgboost")
 
         # train xgboost model
         X, y = shap.datasets.california(n_points=500)
         model = xgboost.XGBRegressor().fit(X, y)
-
-        # explain the model's predictions using SHAP values
-        ex = shap.TreeExplainer(model)
-        shap_values = ex.shap_values(X)
         predicted = model.predict(X)
 
-        expected_diff = np.abs(shap_values.sum(1) + ex.expected_value - predicted).max()
+        # explain the model's predictions using SHAP values
+        explainer = shap.TreeExplainer(model)
+        explanation = explainer(X)
+        # check the properties of Explanation object
+        assert explanation.values.shape == (*X.shape,)
+        assert explanation.base_values.shape == (len(X),)
+
+        # check that SHAP values sum to model output
+        expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
     def test_xgboost_direct(self):
-        xgboost = pytest.importorskip('xgboost')
+        xgboost = pytest.importorskip("xgboost")
 
         # FIXME: this test should ideally pass with any random seed. See #2960
         random_seed = 0
@@ -1223,7 +1226,7 @@ class TestExplainerXGBoost:
         shap.dependence_plot(0, explanation[..., 0].values, X, show=False)
 
     def test_xgboost_ranking(self):
-        xgboost = pytest.importorskip('xgboost')
+        xgboost = pytest.importorskip("xgboost")
 
         # train xgboost ranker model
         x_train, y_train, x_test, _, q_train, _ = shap.datasets.rank()
@@ -1240,7 +1243,7 @@ class TestExplainerXGBoost:
         _validate_shap_values(model, x_test)
 
     def test_xgboost_mixed_types(self):
-        xgboost = pytest.importorskip('xgboost')
+        xgboost = pytest.importorskip("xgboost")
 
         X, y = shap.datasets.california(n_points=500)
         X["HouseAge"] = X["HouseAge"].astype(np.int64)
