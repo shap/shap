@@ -123,44 +123,6 @@ def _brute_force_tree_shap(tree, x):
     return phi / math.factorial(m)
 
 
-def test_xgboost_direct():
-    xgboost = pytest.importorskip('xgboost')
-
-    # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed = 0
-    rs = np.random.RandomState(random_seed)
-    N = 100
-    M = 4
-    X = rs.standard_normal(size=(N, M))
-    y = rs.standard_normal(size=N)
-
-    model = xgboost.XGBRegressor(random_state=rs)
-    model.fit(X, y)
-
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
-
-    assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))
-
-
-def test_xgboost_multiclass():
-    xgboost = pytest.importorskip('xgboost')
-
-    # train XGBoost model
-    X, y = shap.datasets.iris()
-    model = xgboost.XGBClassifier(n_estimators=1, max_depth=4)
-    model.fit(X, y)
-
-    explainer = shap.TreeExplainer(model)
-
-    assert np.allclose(explainer.model.predict(X), model.predict(X, output_margin=True))
-
-    shap_values = explainer.shap_values(X)
-
-    # ensure plot works for first class
-    shap.dependence_plot(0, shap_values[0], X, show=False)
-
-
 def _validate_shap_values(model, x_test):
     # explain the model's predictions using SHAP values
     tree_explainer = shap.TreeExplainer(model)
@@ -168,35 +130,6 @@ def _validate_shap_values(model, x_test):
     expected_values = tree_explainer.expected_value
     # validate values sum to the margin prediction of the model plus expected_value
     assert np.allclose(np.sum(shap_values, axis=1) + expected_values, model.predict(x_test))
-
-
-def test_xgboost_ranking():
-    xgboost = pytest.importorskip('xgboost')
-
-    # train xgboost ranker model
-    x_train, y_train, x_test, _, q_train, _ = shap.datasets.rank()
-    params = {
-        "objective": "rank:pairwise",
-        "learning_rate": 0.1,
-        "gamma": 1.0,
-        "min_child_weight": 0.1,
-        "max_depth": 5,
-        "n_estimators": 4,
-    }
-    model = xgboost.sklearn.XGBRanker(**params)
-    model.fit(x_train, y_train, group=q_train.astype(int))
-    _validate_shap_values(model, x_test)
-
-
-def test_xgboost_mixed_types():
-    xgboost = pytest.importorskip('xgboost')
-
-    X, y = shap.datasets.california(n_points=500)
-    X["HouseAge"] = X["HouseAge"].astype(np.int64)
-    X['IsOld'] = (X['HouseAge'] > 30)
-    bst = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 1000)
-    shap_values = shap.TreeExplainer(bst).shap_values(X)
-    shap.dependence_plot(0, shap_values, X, show=False)
 
 
 def test_ngboost():
@@ -677,73 +610,6 @@ def test_single_tree_nonlinear_transformations():
     # "SHAP values don't sum to model output on explaining logloss!"
 
 
-def test_xgboost_classifier_independent_margin():
-
-    # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed = 0
-
-    xgboost = pytest.importorskip("xgboost")
-    # train XGBoost model
-    rs = np.random.RandomState(random_seed)
-    n = 1000
-    X = rs.normal(size=(n, 7))
-    y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
-    y = y + abs(min(y))
-    y = rs.binomial(n=1, p=y / max(y))
-
-    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
-    model.fit(X, y)
-
-    # explain the model's predictions using SHAP values
-    e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="raw")
-    shap_values = e.shap_values(X)
-
-    assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
-
-
-def test_xgboost_classifier_independent_probability(random_seed):
-    xgboost = pytest.importorskip("xgboost")
-
-    # train XGBoost model
-    rs = np.random.RandomState(random_seed)
-    n = 1000
-    X = rs.normal(size=(n, 7))
-    b = np.array([-2, 1, 3, 5, 2, 20, -5])
-    y = np.matmul(X, b)
-    y = y + abs(min(y))
-    y = rs.binomial(n=1, p=y / max(y))
-
-    model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
-    model.fit(X, y)
-
-    # explain the model's predictions using SHAP values
-    e = shap.TreeExplainer(model, X, feature_perturbation="interventional",
-                           model_output="probability")
-    shap_values = e.shap_values(X)
-
-    assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:, 1])
-
-
-# def test_front_page_xgboost_global_path_dependent():
-#     try:
-#         xgboost = pytest.importorskip("xgboost")
-#     except Exception:
-#         print("Skipping test_front_page_xgboost!")
-#         return
-#
-#
-
-#     # train XGBoost model
-#     X, y = shap.datasets.california(n_points=500)
-#     model = xgboost.XGBRegressor()
-#     model.fit(X, y)
-
-#     # explain the model's predictions using SHAP values
-#     explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
-#     shap_values = explainer.shap_values(X)
-
-#     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
-
 def test_skopt_rf_et():
     skopt = pytest.importorskip("skopt")
 
@@ -776,23 +642,6 @@ def test_skopt_rf_et():
                        result_et.models[-1].predict(et_df))
     assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value,
                        result_rf.models[-1].predict(rf_df))
-
-
-def test_xgboost_buffer_strip(random_seed):
-    # test to make sure bug #1864 doesn't get reintroduced
-    xgboost = pytest.importorskip("xgboost")
-    X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
-    y = np.array([1, 0])
-    # specific values (e.g. 1.3) caused the bug previously
-    model = xgboost.XGBRegressor(base_score=1.3, eval_metric="rmse", random_state=random_seed)
-    model.fit(X, y)
-    # previous bug did .lstrip('binf'), so would have incorrectly handled
-    # buffer starting with binff
-    assert model.get_booster().save_raw().startswith(b"binff")
-
-    # after this fix, this line should not error
-    explainer = shap.TreeExplainer(model)
-    assert isinstance(explainer, shap.explainers.Tree)
 
 
 class TestSingleTree:
@@ -1210,6 +1059,173 @@ class TestExplainerSklearn:
             )
             < 1e-4
         )
+
+
+class TestExplainerXGBoost:
+    """Tests for the TreeExplainer with XGBoost models.
+
+    Included models:
+        * XGBRegressor
+        * XGBClassifier
+        * XGBRanker
+    """
+
+    def test_xgboost(self):
+        """Test the basic `shap_values` calculation."""
+        xgboost = pytest.importorskip('xgboost')
+
+        # train xgboost model
+        X, y = shap.datasets.california(n_points=500)
+        model = xgboost.XGBRegressor().fit(X, y)
+
+        # explain the model's predictions using SHAP values
+        ex = shap.TreeExplainer(model)
+        shap_values = ex.shap_values(X)
+        predicted = model.predict(X)
+
+        expected_diff = np.abs(shap_values.sum(1) + ex.expected_value - predicted).max()
+        assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
+
+    def test_xgboost_direct(self):
+        xgboost = pytest.importorskip('xgboost')
+
+        # FIXME: this test should ideally pass with any random seed. See #2960
+        random_seed = 0
+        rs = np.random.RandomState(random_seed)
+        N = 100
+        M = 4
+        X = rs.standard_normal(size=(N, M))
+        y = rs.standard_normal(size=N)
+
+        model = xgboost.XGBRegressor(random_state=rs)
+        model.fit(X, y)
+
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X)
+
+        assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))
+
+    def test_xgboost_multiclass(self):
+        xgboost = pytest.importorskip('xgboost')
+
+        # train XGBoost model
+        X, y = shap.datasets.iris()
+        model = xgboost.XGBClassifier(n_estimators=1, max_depth=4)
+        model.fit(X, y)
+
+        explainer = shap.TreeExplainer(model)
+
+        assert np.allclose(explainer.model.predict(X), model.predict(X, output_margin=True))
+
+        shap_values = explainer.shap_values(X)
+
+        # ensure plot works for first class
+        shap.dependence_plot(0, shap_values[0], X, show=False)
+
+    def test_xgboost_ranking(self):
+        xgboost = pytest.importorskip('xgboost')
+
+        # train xgboost ranker model
+        x_train, y_train, x_test, _, q_train, _ = shap.datasets.rank()
+        params = {
+            "objective": "rank:pairwise",
+            "learning_rate": 0.1,
+            "gamma": 1.0,
+            "min_child_weight": 0.1,
+            "max_depth": 5,
+            "n_estimators": 4,
+        }
+        model = xgboost.sklearn.XGBRanker(**params)
+        model.fit(x_train, y_train, group=q_train.astype(int))
+        _validate_shap_values(model, x_test)
+
+    def test_xgboost_mixed_types(self):
+        xgboost = pytest.importorskip('xgboost')
+
+        X, y = shap.datasets.california(n_points=500)
+        X["HouseAge"] = X["HouseAge"].astype(np.int64)
+        X['IsOld'] = (X['HouseAge'] > 30)
+        bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 1000)
+        shap_values = shap.TreeExplainer(bst).shap_values(X)
+        shap.dependence_plot(0, shap_values, X, show=False)
+
+    def test_xgboost_classifier_independent_margin(self):
+        # FIXME: this test should ideally pass with any random seed. See #2960
+        random_seed = 0
+
+        xgboost = pytest.importorskip("xgboost")
+        # train XGBoost model
+        rs = np.random.RandomState(random_seed)
+        n = 1000
+        X = rs.normal(size=(n, 7))
+        y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
+        y = y + abs(min(y))
+        y = rs.binomial(n=1, p=y / max(y))
+
+        model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
+        model.fit(X, y)
+
+        # explain the model's predictions using SHAP values
+        e = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="raw")
+        shap_values = e.shap_values(X)
+
+        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict(X, output_margin=True))
+
+    def test_xgboost_classifier_independent_probability(self, random_seed):
+        xgboost = pytest.importorskip("xgboost")
+
+        # train XGBoost model
+        rs = np.random.RandomState(random_seed)
+        n = 1000
+        X = rs.normal(size=(n, 7))
+        b = np.array([-2, 1, 3, 5, 2, 20, -5])
+        y = np.matmul(X, b)
+        y = y + abs(min(y))
+        y = rs.binomial(n=1, p=y / max(y))
+
+        model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
+        model.fit(X, y)
+
+        # explain the model's predictions using SHAP values
+        e = shap.TreeExplainer(model, X, feature_perturbation="interventional",
+                               model_output="probability")
+        shap_values = e.shap_values(X)
+
+        assert np.allclose(shap_values.sum(1) + e.expected_value, model.predict_proba(X)[:, 1])
+
+    # def test_front_page_xgboost_global_path_dependent():
+    #     try:
+    #         xgboost = pytest.importorskip("xgboost")
+    #     except Exception:
+    #         print("Skipping test_front_page_xgboost!")
+    #         return
+    #
+    #     # train XGBoost model
+    #     X, y = shap.datasets.california(n_points=500)
+    #     model = xgboost.XGBRegressor()
+    #     model.fit(X, y)
+
+    #     # explain the model's predictions using SHAP values
+    #     explainer = shap.TreeExplainer(model, X, feature_perturbation="global_path_dependent")
+    #     shap_values = explainer.shap_values(X)
+
+    #     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
+
+    def test_xgboost_buffer_strip(self, random_seed):
+        # test to make sure bug #1864 doesn't get reintroduced
+        xgboost = pytest.importorskip("xgboost")
+        X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
+        y = np.array([1, 0])
+        # specific values (e.g. 1.3) caused the bug previously
+        model = xgboost.XGBRegressor(base_score=1.3, eval_metric="rmse", random_state=random_seed)
+        model.fit(X, y)
+        # previous bug did .lstrip('binf'), so would have incorrectly handled
+        # buffer starting with binff
+        assert model.get_booster().save_raw().startswith(b"binff")
+
+        # after this fix, this line should not error
+        explainer = shap.TreeExplainer(model)
+        assert isinstance(explainer, shap.explainers.Tree)
 
 
 class TestExplainerLightGBM:
