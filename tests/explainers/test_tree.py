@@ -1200,8 +1200,6 @@ class TestExplainerXGBoost:
     #         print("Skipping test_front_page_xgboost!")
     #         return
     #
-    #
-
     #     # train XGBoost model
     #     X, y = shap.datasets.california(n_points=500)
     #     model = xgboost.XGBRegressor()
@@ -1212,6 +1210,7 @@ class TestExplainerXGBoost:
     #     shap_values = explainer.shap_values(X)
 
     #     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
+
     def test_xgboost_buffer_strip(self, random_seed):
         # test to make sure bug #1864 doesn't get reintroduced
         xgboost = pytest.importorskip("xgboost")
