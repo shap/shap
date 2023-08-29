@@ -127,12 +127,19 @@ ignore = [
   "E402",  # Module level import not at top of file
   "UP032",  # Use f-string instead of `format` call
 ]
-
-[tool.ruff.per-file-ignores]
-# Don't apply linting/formatting to vendored code
-"shap/explainers/other/_maple.py" = ["ALL"]
-"shap/plots/colors/_colorconv.py" = ["ALL"]
-
+extend-include = [
+  # Also run Ruff on "clean" notebooks
+  # Over time, we aim to include all notebooks here!
+  "api_examples/explainers/Exact.ipynb",
+  "api_examples/maskers/custom.ipynb",
+]
+exclude = [
+  # Don't apply linting/formatting to vendored code
+  "shap/explainers/other/_maple.py",
+  "shap/plots/colors/_colorconv.py",
+  # Ignore SHAP Paper, as it is an unmaintained record of a published paper
+  "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*",
+]
 [tool.coverage.run]
 source_pkgs = ["shap"]
 
