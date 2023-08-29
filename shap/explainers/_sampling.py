@@ -12,7 +12,8 @@ log = logging.getLogger('shap')
 
 
 class Sampling(Kernel):
-    """ This is an extension of the Shapley sampling values explanation method (aka. IME)
+    """Computes SHAP values using an extension of the Shapley sampling values explanation method
+    (also known as IME).
 
     SamplingExplainer computes SHAP values under the assumption of feature independence and is an
     extension of the algorithm proposed in "An Efficient Explanation of Individual Classifications
@@ -34,7 +35,7 @@ class Sampling(Kernel):
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
         we would approximate a feature being missing by setting it to zero. Unlike the
-        KernelExplainer this data can be the whole training set, even if that is a large set. This
+        KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
     """
 
@@ -56,7 +57,7 @@ class Sampling(Kernel):
             feature_names = None # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
-        if type(v) is list:
+        if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)
         return e

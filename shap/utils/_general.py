@@ -30,7 +30,7 @@ def shapley_coefficients(n):
 
 
 def convert_name(ind, shap_values, input_names):
-    if type(ind) == str:
+    if isinstance(ind, str):
         nzinds = np.where(np.array(input_names) == ind)[0]
         if len(nzinds) == 0:
             # we allow rank based indexing using the format "rank(int)"
@@ -157,7 +157,33 @@ def encode_array_if_needed(arr, dtype=np.float64):
         encoded_array = np.array([encoding_dict[string] for string in arr], dtype=dtype)
         return encoded_array
 
+
 def sample(X, nsamples=100, random_state=0):
+    """Performs sampling without replacement of the input data ``X``.
+
+    This is a simple wrapper over scikit-learn's ``shuffle`` function.
+    It is used mainly to downsample ``X`` for use as a background
+    dataset in SHAP :class:`.Explainer` and its subclasses.
+
+    .. versionchanged :: 0.42
+        The behaviour of ``sample`` was changed from sampling *with* replacement to sampling
+        *without* replacement.
+        Note that reproducibility might be broken when using this function pre- and post-0.42,
+        even with the specification of ``random_state``.
+
+    Parameters
+    ----------
+    X : array-like
+        Data to sample from. Input data can be arrays, lists, dataframes
+        or scipy sparse matrices with a consistent first dimension.
+
+    nsamples : int
+        Number of samples to generate from ``X``.
+
+    random_state :
+        Determines random number generation for shuffling the data. Use this to
+        ensure reproducibility across multiple function calls.
+    """
     if hasattr(X, "shape"):
         over_count = nsamples >= X.shape[0]
     else:
@@ -166,6 +192,7 @@ def sample(X, nsamples=100, random_state=0):
     if over_count:
         return X
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
+
 
 def safe_isinstance(obj, class_path_str):
     """

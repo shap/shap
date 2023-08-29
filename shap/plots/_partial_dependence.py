@@ -14,9 +14,9 @@ def compute_bounds(xmin, xmax, xv):
     """
 
     if xmin is not None or xmax is not None:
-        if type(xmin) == str and xmin.startswith("percentile"):
+        if isinstance(xmin, str) and xmin.startswith("percentile"):
             xmin = np.nanpercentile(xv, float(xmin[11:-1]))
-        if type(xmax) == str and xmax.startswith("percentile"):
+        if isinstance(xmax, str) and xmax.startswith("percentile"):
             xmax = np.nanpercentile(xv, float(xmax[11:-1]))
 
         if xmin is None or xmin == np.nanmin(xv):
