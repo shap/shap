@@ -130,8 +130,8 @@ ignore = [
 extend-include = [
   # Also run Ruff on "clean" notebooks
   # Over time, we aim to include all notebooks here!
-  "api_examples/explainers/Exact.ipynb",
-  "api_examples/maskers/custom.ipynb",
+  "notebooks/api_examples/maskers/*.ipynb",
+  "notebooks/api_examples/explainers/*.ipynb",
 ]
 exclude = [
   # Don't apply linting/formatting to vendored code
@@ -140,6 +140,10 @@ exclude = [
   # Ignore SHAP Paper, as it is an unmaintained record of a published paper
   "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*",
 ]
+[tool.ruff.per-file-ignores]
+# Disable some rules on Jupyter notebooks:
+"*.ipynb" = ["E703"]  # Trailing semicolons
+
 [tool.coverage.run]
 source_pkgs = ["shap"]
 
