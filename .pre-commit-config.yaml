@@ -31,8 +31,7 @@ repos:
     # Add a notebook here once it has been cleaned up.
     files: &cleanNotebooks |
             (?x)^(
-                notebooks/api_examples/explainers/Exact.ipynb|
-                notebooks/api_examples/maskers/custom.ipynb|
+                notebooks/api_examples/.*.ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.286
