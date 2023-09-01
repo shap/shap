@@ -112,7 +112,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             pl.legend()
         if show:
             pl.show()
-        return pl.gcf()
+        return
 
     if len(shap_values.shape) != 1:
         raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to " + \
@@ -250,7 +250,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
         if show:
             pl.show()
-        return pl.gcf()
+        return
 
     assert shap_values_arr.shape[0] == features.shape[0], \
         "'shap_values_arr' and 'features' values must have the same number of rows!"
@@ -469,7 +469,6 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
-    return pl.gcf()
 
 
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,
@@ -610,7 +609,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
         if show:
             pl.show()
-        return pl.gcf()
+        return
 
     assert shap_values.shape[0] == features.shape[0], \
         "'shap_values' and 'features' values must have the same number of rows!"
@@ -778,4 +777,3 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         with warnings.catch_warnings(): # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             pl.show()
-    return pl.gcf()
