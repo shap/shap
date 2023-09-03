@@ -4,8 +4,40 @@ import numpy as np
 import pytest
 
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
+import shap  # noqa: E402
 
+
+@pytest.mark.parametrize(
+    "cmap, emsg",
+    [
+        ("coolwarm", None),
+        (["#000000", "#ffffff"], None),
+        (777, "Plot color map must be string or list!"),
+        ([], "Color map must be at least two colors"),
+        (["#8834BB"], "Color map must be at least two colors"),
+        (["#883488", "#Gg8888"], r"Invalid color .+ found in cmap"),
+        (["#883488", "#1111119"], r"Invalid color .+ found in cmap"),
+    ],
+    ids=[
+        "valid-str",
+        "valid-list[str]",
+        "invalid-dtype1",
+        "invalid-insufficient-colors1",
+        "invalid-insufficient-colors2",
+        "invalid-hexcolor-in-list1",
+        "invalid-hexcolor-in-list2",
+    ],
+)
+def test_verify_valid_cmap(cmap, emsg):
+    from shap.plots._force import verify_valid_cmap
+
+    if emsg is None:
+        # Valid cmaps
+        _ = verify_valid_cmap(cmap)
+    else:
+        # Invalid cmaps
+        with pytest.raises(ValueError, match=emsg):
+            verify_valid_cmap(cmap)
 
 def test_random_force_plot_mpl_with_data():
     """ Test if force plot with matplotlib works.
