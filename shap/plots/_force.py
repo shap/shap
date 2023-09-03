@@ -325,9 +325,11 @@ def verify_valid_cmap(cmap):
 
     return cmap
 
+
 def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
               ordering_keys=None, ordering_keys_time_format=None, text_rotation=0, min_perc=0.05):
     plot_cmap = verify_valid_cmap(plot_cmap)
+
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize,
@@ -338,16 +340,20 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
     elif isinstance(e, Explanation):
         if matplotlib:
-            assert False, "Matplotlib plot is only supported for additive explanations"
-        else:
-            return SimpleListVisualizer(e)
+            raise ValueError("Matplotlib plot is only supported for additive explanations")
+        return SimpleListVisualizer(e)
     elif isinstance(e, Sequence) and len(e) > 0 and isinstance(e[0], AdditiveExplanation):
         if matplotlib:
-            assert False, "Matplotlib plot is only supported for additive explanations"
-        else:
-            return AdditiveForceArrayVisualizer(e, plot_cmap=plot_cmap, ordering_keys=ordering_keys, ordering_keys_time_format=ordering_keys_time_format)
+            raise ValueError("Matplotlib plot is only supported for additive explanations")
+        return AdditiveForceArrayVisualizer(
+            e,
+            plot_cmap=plot_cmap,
+            ordering_keys=ordering_keys,
+            ordering_keys_time_format=ordering_keys_time_format,
+        )
     else:
-        assert False, "visualize() can only display Explanation objects (or arrays of them)!"
+        raise ValueError("visualize() can only display Explanation objects (or arrays of them)!")
+
 
 class BaseVisualizer:
     pass
