@@ -32,9 +32,11 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
     Parameters
     ----------
-    base_value : float
-        This is the reference value that the feature contributions start from.
+    base_value : float or shap.Explanation
+        If a float is passed in, this is the reference value that the feature contributions start from.
         For SHAP values, it should be the value of ``explainer.expected_value``.
+        However, it is recommended to pass in a SHAP :class:`.Explanation` object instead (``shap_values``
+        is not necessary in this case).
 
     shap_values : numpy.array
         Matrix of SHAP values (# features) or (# samples x # features). If this is a
