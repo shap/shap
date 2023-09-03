@@ -288,14 +288,8 @@ def save_html(out_file, plot, full_html=True):
     if full_html:
         out_file.write("<html><head><meta http-equiv='content-type' content='text/html'; charset='utf-8'>")
 
-    out_file.write("<script>\n")
-
     # dump the js code
-    bundle_path = os.path.join(os.path.split(__file__)[0], "resources", "bundle.js")
-    with open(bundle_path, encoding="utf-8") as f:
-        bundle_data = f.read()
-    out_file.write(bundle_data)
-    out_file.write("</script>")
+    out_file.write(getjs())
 
     if full_html:
         out_file.write("</head><body>\n")
