@@ -98,7 +98,9 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
                             "shap.force_plot(explainer.expected_value[0], shap_values[0]).")
 
 
-    assert not isinstance(shap_values, list), "The shap_values arg looks multi output, try shap_values[i]."
+    if isinstance(shap_values, list):
+        emsg = "The shap_values arg looks multi output, try `shap_values[i]` instead."
+        raise TypeError(emsg)
 
     link = convert_to_link(link)
 
@@ -270,7 +272,9 @@ def save_html(out_file, plot, full_html=True):
         tags are included.
     """
 
-    assert isinstance(plot, BaseVisualizer), "`save_html` requires a Visualizer returned by `shap.plots.force()`."
+    if not isinstance(plot, BaseVisualizer):
+        raise TypeError("`save_html` requires a Visualizer returned by `shap.plots.force()`.")
+
     internal_open = False
     if isinstance(out_file, str):
         out_file = open(out_file, "w", encoding="utf-8")
@@ -368,7 +372,9 @@ class BaseVisualizer:
 
 class SimpleListVisualizer(BaseVisualizer):
     def __init__(self, e):
-        assert isinstance(e, Explanation), "SimpleListVisualizer can only visualize Explanation objects!"
+        if not isinstance(e, Explanation):
+            emsg = "SimpleListVisualizer can only visualize Explanation objects!"
+            raise TypeError(emsg)
 
         # build the json data
         features = {}
@@ -403,8 +409,9 @@ class SimpleListVisualizer(BaseVisualizer):
 
 class AdditiveForceVisualizer(BaseVisualizer):
     def __init__(self, e, plot_cmap="RdBu"):
-        assert isinstance(e, AdditiveExplanation), \
-            "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"
+        if not isinstance(e, AdditiveExplanation):
+            emsg = "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"
+            raise TypeError(emsg)
 
         # build the json data
         features = {}
@@ -450,14 +457,19 @@ class AdditiveForceVisualizer(BaseVisualizer):
 
 class AdditiveForceArrayVisualizer(BaseVisualizer):
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
-        assert isinstance(arr[0], AdditiveExplanation), \
-            "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
+        if not isinstance(arr[0], AdditiveExplanation):
+            emsg = (
+                "AdditiveForceArrayVisualizer can only visualize arrays of "
+                "AdditiveExplanation objects!"
+            )
+            raise TypeError(emsg)
 
         # order the samples by their position in a hierarchical clustering
         if all([e.model.f == arr[1].model.f for e in arr]):
             clustOrder = hclust_ordering(np.vstack([e.effects for e in arr]))
         else:
-            assert False, "Tried to visualize an array of explanations from different models!"
+            emsg = "Tried to visualize an array of explanations from different models!"
+            raise ValueError(emsg)
 
         # make sure that we put the higher predictions first...just for consistency
         if sum(arr[clustOrder[0]].effects) < sum(arr[clustOrder[-1]].effects):
