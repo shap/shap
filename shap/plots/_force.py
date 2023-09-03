@@ -25,9 +25,22 @@ from ..utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_l
 from ._labels import labels
 
 
-def force(base_value, shap_values=None, features=None, feature_names=None, out_names=None, link="identity",
-          plot_cmap="RdBu", matplotlib=False, show=True, figsize=(20,3), ordering_keys=None, ordering_keys_time_format=None,
-          text_rotation=0, contribution_threshold=0.05):
+def force(
+    base_value,
+    shap_values=None,
+    features=None,
+    feature_names=None,
+    out_names=None,
+    link="identity",
+    plot_cmap="RdBu",
+    matplotlib=False,
+    show=True,
+    figsize=(20, 3),
+    ordering_keys=None,
+    ordering_keys_time_format=None,
+    text_rotation=0,
+    contribution_threshold=0.05,
+):
     """Visualize the given SHAP values with an additive force layout.
 
     Parameters
@@ -57,10 +70,22 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
         The transformation used when drawing the tick mark labels. Using "logit" will change log-odds numbers
         into probabilities.
 
+    plot_cmap : str or list[str]
+        Color map to use. It can be a string (defaults to ``RdBu``) or a list of hex color strings.
+
     matplotlib : bool
         Whether to use the default Javascript output, or the (less developed) matplotlib output.
         Using matplotlib can be helpful in scenarios where rendering Javascript/HTML
-        is inconvenient.
+        is inconvenient. Defaults to False.
+
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` allows the plot
+        to be customized further after it has been created.
+        Only applicable when ``matplotlib`` is set to True.
+
+    figsize :
+        Figure size of the matplotlib output.
 
     contribution_threshold : float
         Controls the feature names/values that are displayed on force plot.
@@ -218,7 +243,21 @@ class Explanation:
 
 
 class AdditiveExplanation(Explanation):
+    """Data structure for AdditiveForceVisualizer / AdditiveForceArrayVisualizer."""
+
     def __init__(self, base_value, out_value, effects, effects_var, instance, link, model, data):
+        """
+
+        Parameters
+        ----------
+        base_value : float
+            This is the reference value that the feature contributions start from.
+            For SHAP values, it should be the value of ``explainer.expected_value``.
+
+        out_value : float
+            The model prediction value, taken as the sum of the SHAP values across all
+            features and the ``base_value``.
+        """
         self.base_value = base_value
         self.out_value = out_value
         self.effects = effects
@@ -341,8 +380,24 @@ def verify_valid_cmap(cmap):
     return cmap
 
 
-def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
-              ordering_keys=None, ordering_keys_time_format=None, text_rotation=0, min_perc=0.05):
+def visualize(
+    e,
+    plot_cmap="RdBu",
+    matplotlib=False,
+    figsize=(20, 3),
+    show=True,
+    ordering_keys=None,
+    ordering_keys_time_format=None,
+    text_rotation=0,
+    min_perc=0.05,
+):
+    """Main interface for switching between matplotlib / javascript force plots.
+
+    Parameters
+    ----------
+    e : AdditiveExplanation
+        Contains the data necessary for additive force plots.
+    """
     plot_cmap = verify_valid_cmap(plot_cmap)
 
     if isinstance(e, AdditiveExplanation):
@@ -413,7 +468,19 @@ class SimpleListVisualizer(BaseVisualizer):
 
 
 class AdditiveForceVisualizer(BaseVisualizer):
+    """Visualizer for a single Additive Force plot."""
+
     def __init__(self, e, plot_cmap="RdBu"):
+        """
+
+        Parameters
+        ----------
+        e : AdditiveExplanation
+            Contains the data necessary for additive force plots.
+
+        plot_cmap : str or list[str]
+            Color map to use. It can be a string (defaults to ``RdBu``) or a list of hex color strings.
+        """
         if not isinstance(e, AdditiveExplanation):
             emsg = "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"
             raise TypeError(emsg)
@@ -432,7 +499,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
             "link": str(e.link),
             "featureNames": e.data.group_names,
             "features": features,
-            "plot_cmap": plot_cmap
+            "plot_cmap": plot_cmap,
         }
 
     def html(self, label_margin=20):
@@ -461,6 +528,8 @@ class AdditiveForceVisualizer(BaseVisualizer):
 
 
 class AdditiveForceArrayVisualizer(BaseVisualizer):
+    """Visualizer for a sequence of AdditiveExplanation, as a stacked force plot."""
+
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
         if not isinstance(arr[0], AdditiveExplanation):
             emsg = (
