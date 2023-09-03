@@ -338,10 +338,12 @@ def visualize(e, plot_cmap="RdBu", matplotlib=False, figsize=(20,3), show=True,
 
     if isinstance(e, AdditiveExplanation):
         if matplotlib:
-            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(figsize=figsize,
-                                                                    show=show,
-                                                                    text_rotation=text_rotation,
-                                                                    min_perc=min_perc)
+            return AdditiveForceVisualizer(e, plot_cmap=plot_cmap).matplotlib(
+                figsize=figsize,
+                show=show,
+                text_rotation=text_rotation,
+                min_perc=min_perc,
+            )
         else:
             return AdditiveForceVisualizer(e, plot_cmap=plot_cmap)
     elif isinstance(e, Explanation):
