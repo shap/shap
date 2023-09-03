@@ -244,11 +244,16 @@ def getjs():
 
 
 def initjs():
+    """Initialize the necessary javascript libraries for interactive force plots.
+
+    Run this only in a notebook environment with IPython installed.
+    """
     assert have_ipython, "IPython must be installed to use initjs()! Run `pip install ipython` and then restart shap."
+
     logo_path = os.path.join(os.path.split(__file__)[0], "resources", "logoSmallGray.png")
     with open(logo_path, "rb") as f:
         logo_data = f.read()
-    logo_data = base64.b64encode(logo_data).decode('utf-8')
+    logo_data = base64.b64encode(logo_data).decode("utf-8")
     display(HTML(
         f"<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>" +
         getjs()
@@ -465,7 +470,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
             raise TypeError(emsg)
 
         # order the samples by their position in a hierarchical clustering
-        if all([e.model.f == arr[1].model.f for e in arr]):
+        if all(e.model.f == arr[1].model.f for e in arr):
             clustOrder = hclust_ordering(np.vstack([e.effects for e in arr]))
         else:
             emsg = "Tried to visualize an array of explanations from different models!"
@@ -487,7 +492,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
             "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, '__iter__') else None,
             "ordering_keys_time_format": ordering_keys_time_format,
         }
-        for (ind,e) in enumerate(arr):
+        for ind, e in enumerate(arr):
             self.data["explanations"].append({
                 "outValue": ensure_not_numpy(e.out_value),
                 "simIndex": ensure_not_numpy(clustOrder[ind])+1,
