@@ -3,4 +3,10 @@ updates:
   - package-ecosystem: "npm"
     directory: "/javascript/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+groups:
+  # Group all minor and patch updates in a single PR
+  js-minor:
+    update-types:
+    - "minor"
+    - "patch"

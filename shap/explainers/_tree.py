@@ -237,10 +237,14 @@ class Tree(Explainer):
             assert not self.approximate, "Approximate computation not yet supported for interaction effects!"
             v = self.shap_interaction_values(X)
 
-        # the Explanation object expects an expected value for each row
-        if hasattr(self.expected_value, "__len__"):
+        # the Explanation object expects an `expected_value` for each row
+        if hasattr(self.expected_value, "__len__") and len(self.expected_value) > 1:
+            # `expected_value` is a list / array of numbers, length k, e.g. for multi-output scenarios
+            # we repeat it N times along the first axis, so ev_tiled.shape == (N, k)
             ev_tiled = np.tile(self.expected_value, (v.shape[0], 1))
         else:
+            # `expected_value` is a scalar / array of 1 number, so we simply repeat it for every row in `v`
+            # ev_tiled.shape == (N,)
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
         # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
