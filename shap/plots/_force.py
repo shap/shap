@@ -144,11 +144,13 @@ def force(base_value, shap_values=None, features=None, feature_names=None, out_n
 
         # check that the shape of the shap_values and features match
         if len(features) != shap_values.shape[1]:
-            msg = "Length of features is not equal to the length of shap_values!"
+            emsg = "Length of features is not equal to the length of shap_values!"
             if len(features) == shap_values.shape[1] - 1:
-                msg += " You might be using an old format shap_values array with the base value " \
-                       "as the last column. In this case just pass the array without the last column."
-            raise Exception(msg)
+                emsg += (
+                    " You might be using an old format shap_values array with the base value "
+                    "as the last column. In this case, just pass the array without the last column."
+                )
+            raise Exception(emsg)
 
         instance = Instance(np.zeros((1, len(feature_names))), features)
         e = AdditiveExplanation(
