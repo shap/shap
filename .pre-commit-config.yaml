@@ -32,6 +32,8 @@ repos:
     files: &cleanNotebooks |
             (?x)^(
                 notebooks/api_examples/.*.ipynb|
+                notebooks/benchmarks/.*.ipynb|
+                notebooks/genomic_examples/.*.ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.286
