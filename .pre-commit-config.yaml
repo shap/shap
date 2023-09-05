@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.286
+  rev: v0.0.287
   hooks:
   - id: ruff
     args: [ --fix, --exit-non-zero-on-fix ]
@@ -36,7 +36,7 @@ repos:
                 notebooks/genomic_examples/.*.ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.286
+  rev: v0.0.287
   hooks:
   - id: ruff
     name: ruff (fixed notebooks)
