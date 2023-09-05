@@ -409,30 +409,27 @@ def setup(app):
 
     # need to assign the names here, otherwise autodoc won't document these classes,
     # and will instead just say 'alias of ...'
-    shap.explainers.Tree.__name__ = "Tree"
-    shap.explainers.Tree.__module__ = "shap.explainers"
-    shap.explainers.GPUTree.__name__ = "GPUTree"
-    shap.explainers.GPUTree.__module__ = "shap.explainers"
-    shap.explainers.Linear.__name__ = "Linear"
-    shap.explainers.Linear.__module__ = "shap.explainers"
-    shap.explainers.Permutation.__name__ = "Permutation"
-    shap.explainers.Permutation.__module__ = "shap.explainers"
-    shap.explainers.Partition.__name__ = "Partition"
-    shap.explainers.Partition.__module__ = "shap.explainers"
-    shap.explainers.Sampling.__name__ = "Sampling"
-    shap.explainers.Sampling.__module__ = "shap.explainers"
-    shap.explainers.Additive.__name__ = "Additive"
-    shap.explainers.Additive.__module__ = "shap.explainers"
-    # shap.TreeExplainer.__name__ = 'TreeExplainer'
-    # shap.GPUTreeExplainer.__name__ = 'GPUTreeExplainer'
-    # shap.LinearExplainer.__name__ = 'LinearExplainer'
-    # shap.KernelExplainer.__name__ = 'KernelExplainer'
-    # shap.SamplingExplainer.__name__ = 'SamplingExplainer'
-    # shap.DeepExplainer.__name__ = 'DeepExplainer'
-    # shap.GradientExplainer.__name__ = 'GradientExplainer'
-    # shap.PartitionExplainer.__name__ = 'PartitionExplainer'
-    # shap.PermutationExplainer.__name__ = 'PermutationExplainer'
-    # shap.AdditiveExplainer.__name__ = 'AdditiveExplainer'
+    shap.AdditiveExplainer.__name__ = "AdditiveExplainer"
+    shap.AdditiveExplainer.__module__ = "shap"
+    shap.DeepExplainer.__name__ = "DeepExplainer"
+    shap.DeepExplainer.__module__ = "shap"
+    shap.GPUTreeExplainer.__name__ = "GPUTreeExplainer"
+    shap.GPUTreeExplainer.__module__ = "shap"
+    shap.GradientExplainer.__name__ = "GradientExplainer"
+    shap.GradientExplainer.__module__ = "shap"
+    shap.KernelExplainer.__name__ = "KernelExplainer"
+    shap.KernelExplainer.__module__ = "shap"
+    shap.LinearExplainer.__name__ = "LinearExplainer"
+    shap.LinearExplainer.__module__ = "shap"
+    shap.PartitionExplainer.__name__ = "PartitionExplainer"
+    shap.PartitionExplainer.__module__ = "shap"
+    shap.PermutationExplainer.__name__ = "PermutationExplainer"
+    shap.PermutationExplainer.__module__ = "shap"
+    shap.SamplingExplainer.__name__ = "SamplingExplainer"
+    shap.SamplingExplainer.__module__ = "shap"
+    shap.TreeExplainer.__name__ = "TreeExplainer"
+    shap.TreeExplainer.__module__ = "shap"
+
     app.connect("build-finished", build_finished)
 
 

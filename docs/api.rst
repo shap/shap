@@ -25,14 +25,16 @@ explainers
     :toctree: generated/
 
     shap.Explainer
-    shap.explainers.Tree
-    shap.explainers.GPUTree
-    shap.explainers.Linear
-    shap.explainers.Permutation
-    shap.explainers.Partition
-    shap.explainers.Sampling
-    shap.explainers.Additive
-    shap.explainers.Deep
+    shap.TreeExplainer
+    shap.GPUTreeExplainer
+    shap.LinearExplainer
+    shap.PermutationExplainer
+    shap.PartitionExplainer
+    shap.SamplingExplainer
+    shap.AdditiveExplainer
+    shap.DeepExplainer
+    shap.KernelExplainer
+    shap.GradientExplainer
     shap.explainers.Exact
     shap.explainers.other.Coefficient
     shap.explainers.other.Random
