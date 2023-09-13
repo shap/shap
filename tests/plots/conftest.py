@@ -22,7 +22,7 @@ def explainer():
     y = y[:100]
 
     # train an XGBoost model (but any other model type would also work)
-    model = xgboost.XGBClassifier(random_state=0).fit(X, y)
+    model = xgboost.XGBClassifier(random_state=0, tree_method="exact").fit(X, y)
 
     # build an Exact explainer and explain the model predictions on the given dataset
     return shap.TreeExplainer(model, X)
