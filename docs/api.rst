@@ -35,7 +35,7 @@ explainers
     shap.DeepExplainer
     shap.KernelExplainer
     shap.GradientExplainer
-    shap.explainers.Exact
+    shap.ExactExplainer
     shap.explainers.other.Coefficient
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular

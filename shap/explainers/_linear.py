@@ -14,7 +14,7 @@ from ..utils._exceptions import (
 from ._explainer import Explainer
 
 
-class Linear(Explainer):
+class LinearExplainer(Explainer):
     """ Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
 
     This computes the SHAP values for a linear model and can account for the correlations among
@@ -51,7 +51,7 @@ class Linear(Explainer):
 
     Examples
     --------
-    See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Linear.html>`_
+    See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/LinearExplainer.html>`_
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
@@ -90,7 +90,7 @@ class Linear(Explainer):
 
 
         # extract what we need from the given model object
-        self.coef, self.intercept = Linear._parse_model(model)
+        self.coef, self.intercept = LinearExplainer._parse_model(model)
 
         # extract the data
         if issubclass(type(self.masker), (maskers.Independent, maskers.Partition)):
@@ -280,7 +280,7 @@ class Linear(Explainer):
             return False
 
         try:
-            Linear._parse_model(model)
+            LinearExplainer._parse_model(model)
         except Exception:
             return False
         return True

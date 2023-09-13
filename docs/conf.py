@@ -405,31 +405,7 @@ texinfo_documents = [
 
 
 def setup(app):
-    import shap
-
-    # need to assign the names here, otherwise autodoc won't document these classes,
-    # and will instead just say 'alias of ...'
-    shap.AdditiveExplainer.__name__ = "AdditiveExplainer"
-    shap.AdditiveExplainer.__module__ = "shap"
-    shap.DeepExplainer.__name__ = "DeepExplainer"
-    shap.DeepExplainer.__module__ = "shap"
-    shap.GPUTreeExplainer.__name__ = "GPUTreeExplainer"
-    shap.GPUTreeExplainer.__module__ = "shap"
-    shap.GradientExplainer.__name__ = "GradientExplainer"
-    shap.GradientExplainer.__module__ = "shap"
-    shap.KernelExplainer.__name__ = "KernelExplainer"
-    shap.KernelExplainer.__module__ = "shap"
-    shap.LinearExplainer.__name__ = "LinearExplainer"
-    shap.LinearExplainer.__module__ = "shap"
-    shap.PartitionExplainer.__name__ = "PartitionExplainer"
-    shap.PartitionExplainer.__module__ = "shap"
-    shap.PermutationExplainer.__name__ = "PermutationExplainer"
-    shap.PermutationExplainer.__module__ = "shap"
-    shap.SamplingExplainer.__name__ = "SamplingExplainer"
-    shap.SamplingExplainer.__module__ = "shap"
-    shap.TreeExplainer.__name__ = "TreeExplainer"
-    shap.TreeExplainer.__module__ = "shap"
-
+    import shap  # noqa: F401
     app.connect("build-finished", build_finished)
 
 
