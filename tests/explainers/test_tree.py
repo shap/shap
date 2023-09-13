@@ -443,7 +443,7 @@ def test_provided_background_tree_path_dependent():
     xgboost = pytest.importorskip("xgboost")
 
     X, y = shap.datasets.adult(n_points=100)
-    dtrain = xgboost.DMatrix(X, label=y, feature_names=X.columns)
+    dtrain = xgboost.DMatrix(X, label=y, feature_names=list(X.columns))
 
     params = {
         "booster": "gbtree",
