@@ -19,7 +19,7 @@ def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
     X = X.values
 
     # train an XGBoost model (but any other model type would also work)
-    model = xgboost.XGBClassifier()
+    model = xgboost.XGBClassifier(tree_method="exact")
     model.fit(X, y)
 
     return model, X
