@@ -1265,7 +1265,9 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
+        model = xgboost.XGBClassifier(
+            n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact"
+        )
         model.fit(X, y)
         predicted = model.predict(X, output_margin=True)
 
