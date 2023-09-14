@@ -79,7 +79,7 @@ class PyTorchDeep(Explainer):
                 handles_list.extend(self.add_handles(child, forward_handle, backward_handle))
         else:  # leaves
             handles_list.append(model.register_forward_hook(forward_handle))
-            handles_list.append(model.register_backward_hook(backward_handle))
+            handles_list.append(model.register_full_backward_hook(backward_handle))
         return handles_list
 
     def remove_attributes(self, model):
@@ -267,8 +267,6 @@ def add_interim_values(module, input, output):
                     setattr(module, 'y', torch.nn.Parameter(output[0].detach()))
                 else:
                     setattr(module, 'y', torch.nn.Parameter(output.detach()))
-            if module_type in failure_case_modules:
-                input[0].register_hook(deeplift_tensor_grad)
 
 
 def get_target_input(module, input, output):
@@ -280,25 +278,6 @@ def get_target_input(module, input, output):
     except AttributeError:
         pass
     setattr(module, 'target_input', input)
-
-# From the documentation: "The current implementation will not have the presented behavior for
-# complex Module that perform many operations. In some failure cases, grad_input and grad_output
-# will only contain the gradients for a subset of the inputs and outputs.
-# The tensor hook below handles such failure cases (currently, MaxPool1d). In such cases, the deeplift
-# grad should still be computed, and then appended to the complex_model_gradients list. The tensor hook
-# will then retrieve the proper gradient from this list.
-
-
-failure_case_modules = ['MaxPool1d']
-
-
-def deeplift_tensor_grad(grad):
-    return_grad = complex_module_gradients[-1]
-    del complex_module_gradients[-1]
-    return return_grad
-
-
-complex_module_gradients = []
 
 
 def passthrough(module, grad_input, grad_output):
@@ -332,15 +311,11 @@ def maxpool(module, grad_input, grad_output):
         xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
             grad_output[0] * diffs, indices, module.kernel_size, module.stride,
             module.padding, list(module.x.shape)), 2)
-    org_input_shape = grad_input[0].shape  # for the maxpool 1d
+        
     grad_input = [None for _ in grad_input]
     grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
                            (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
-    if module.__class__.__name__ == 'MaxPool1d':
-        complex_module_gradients.append(grad_input[0])
-        # the grad input that is returned doesn't matter, since it will immediately be
-        # be overridden by the grad in the complex_module_gradient
-        grad_input[0] = torch.ones(org_input_shape)
+
     return tuple(grad_input)
 
 
