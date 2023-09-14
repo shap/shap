@@ -139,11 +139,12 @@ def _validate_shap_values(model, x_test):
     )
 
 
-def test_ngboost():
+@pytest.mark.parametrize("col_sample", [1.0, 0.9])
+def test_ngboost(col_sample: float):
     ngboost = pytest.importorskip("ngboost")
 
     X, y = shap.datasets.california(n_points=500)
-    model = ngboost.NGBRegressor(n_estimators=20).fit(X, y)
+    model = ngboost.NGBRegressor(n_estimators=20, col_sample=col_sample).fit(X, y)
     predicted = model.predict(X)
 
     # explain the model's predictions using SHAP values
