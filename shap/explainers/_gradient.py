@@ -18,7 +18,7 @@ tf = None
 torch = None
 
 
-class Gradient(Explainer):
+class GradientExplainer(Explainer):
     """ Explains a model using expected gradients (an extension of integrated gradients).
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
