@@ -6,6 +6,7 @@ from packaging import version
 from ...utils._exceptions import DimensionError
 from .._explainer import Explainer
 from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
+from .deep_utils import _check_additivity
 
 tf = None
 tf_ops = None
@@ -322,17 +323,8 @@ class TFDeep(Explainer):
                 model_output = self.run(self.model_output, self.model_inputs, X)
             else:
                 model_output = self.model(X)
-            for l in range(len(self.expected_value)):
-                if not self.multi_input:
-                    diffs = model_output[:, l] - self.expected_value[l] - output_phis[l].sum(axis=tuple(range(1, output_phis[l].ndim)))
-                else:
-                    diffs = model_output[:, l] - self.expected_value[l]
-                    for i in range(len(output_phis[l])):
-                        diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
-                assert np.abs(diffs).max() < 1e-2, "The SHAP explanations do not sum up to the model's output! This is either because of a " \
-                                                   "rounding error or because an operator in your computation graph was not fully supported. If " \
-                                                   "the sum difference of %f is significant compared to the scale of your model outputs, please post " \
-                                                   "as a github issue, with a reproducible example so we can debug it." % np.abs(diffs).max()
+
+            _check_additivity(self, model_output, output_phis)
 
         if not self.multi_output:
             return output_phis[0]
