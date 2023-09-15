@@ -16,7 +16,7 @@ from ._explainer import Explainer
 log = logging.getLogger('shap')
 
 
-class Exact(Explainer):
+class ExactExplainer(Explainer):
     """ Computes SHAP values via an optimized exact enumeration.
 
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
