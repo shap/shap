@@ -1353,7 +1353,7 @@ class TestExplainerXGBoost:
 
         # after this fix, this line should not error
         explainer = shap.TreeExplainer(model)
-        assert isinstance(explainer, shap.explainers.Tree)
+        assert isinstance(explainer, shap.explainers.TreeExplainer)
 
 
 class TestExplainerLightGBM:

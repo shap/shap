@@ -46,7 +46,7 @@ feature_perturbation_codes = {
 }
 
 
-class Tree(Explainer):
+class TreeExplainer(Explainer):
     """ Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
     Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles of trees,
