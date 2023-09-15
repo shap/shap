@@ -36,12 +36,12 @@ def test_tied_pair_new():
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
     X = np.ones((1, 3))
-    explainer = shap.explainers.Linear((beta, 0), shap.maskers.Impute({"mean": mu, "cov": Sigma}))
+    explainer = shap.explainers.LinearExplainer((beta, 0), shap.maskers.Impute({"mean": mu, "cov": Sigma}))
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_wrong_masker():
     with pytest.raises(NotImplementedError):
-        shap.explainers.Linear((0, 0), shap.maskers.Fixed())
+        shap.explainers.LinearExplainer((0, 0), shap.maskers.Fixed())
 
 def test_tied_triple():
     beta = np.array([0, 1, 0, 0])
@@ -87,7 +87,7 @@ def test_sklearn_linear_new():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.explainers.Linear(model, X)
+    explainer = shap.explainers.LinearExplainer(model, X)
     shap_values = explainer(X)
     assert np.abs(shap_values.values.sum(1) + shap_values.base_values - model.predict(X)).max() < 1e-6
     assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6
@@ -206,5 +206,5 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
     model = Ridge(0.1)
     model.fit(X, y)
 
-    explainer = shap.explainers.Linear(model, X, feature_perturbation=feature_pertubation)
+    explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation=feature_pertubation)
     assert isinstance(explainer.masker, masker)

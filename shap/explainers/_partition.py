@@ -14,7 +14,7 @@ from ._explainer import Explainer
 # pylint: disable=unsubscriptable-object
 
 
-class Partition(Explainer):
+class PartitionExplainer(Explainer):
 
     def __init__(self, model, masker, *, output_names=None, link=links.identity, linearize_link=True,
                  feature_names=None, **call_args):
@@ -60,7 +60,7 @@ class Partition(Explainer):
 
         Examples
         --------
-        See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
+        See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/PartitionExplainer.html>`_
         """
 
         super().__init__(model, masker, link=link, linearize_link=linearize_link, algorithm="partition", \
@@ -107,7 +107,7 @@ class Partition(Explainer):
         # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
         # has a call function with those new default arguments
         if len(call_args) > 0:
-            class Partition(self.__class__):
+            class PartitionExplainer(self.__class__):
                 # this signature should match the __call__ signature of the class defined below
                 def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
                              outputs=None, silent=False):
@@ -115,8 +115,8 @@ class Partition(Explainer):
                         *args, max_evals=max_evals, fixed_context=fixed_context, main_effects=main_effects, error_bounds=error_bounds,
                         batch_size=batch_size, outputs=outputs, silent=silent
                     )
-            Partition.__call__.__doc__ = self.__class__.__call__.__doc__
-            self.__class__ = Partition
+            PartitionExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
+            self.__class__ = PartitionExplainer
             for k, v in call_args.items():
                 self.__call__.__kwdefaults__[k] = v
 
@@ -198,7 +198,7 @@ class Partition(Explainer):
         }
 
     def __str__(self):
-        return "shap.explainers.Partition()"
+        return "shap.explainers.PartitionExplainer()"
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
