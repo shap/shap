@@ -35,7 +35,7 @@ from ._explainer import Explainer
 log = logging.getLogger('shap')
 
 
-class Kernel(Explainer):
+class KernelExplainer(Explainer):
     """Uses the Kernel SHAP method to explain the output of any function.
 
     Kernel SHAP is a method that uses a special weighted linear regression

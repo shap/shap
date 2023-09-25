@@ -5,17 +5,18 @@ from ._explanation import Cohorts, Explanation
 
 # explainers
 from .explainers import other
-from .explainers._additive import Additive as AdditiveExplainer
-from .explainers._deep import Deep as DeepExplainer
+from .explainers._additive import AdditiveExplainer
+from .explainers._deep import DeepExplainer
+from .explainers._exact import ExactExplainer
 from .explainers._explainer import Explainer
-from .explainers._gpu_tree import GPUTree as GPUTreeExplainer
-from .explainers._gradient import Gradient as GradientExplainer
-from .explainers._kernel import Kernel as KernelExplainer
-from .explainers._linear import Linear as LinearExplainer
-from .explainers._partition import Partition as PartitionExplainer
-from .explainers._permutation import Permutation as PermutationExplainer
-from .explainers._sampling import Sampling as SamplingExplainer
-from .explainers._tree import Tree as TreeExplainer
+from .explainers._gpu_tree import GPUTreeExplainer
+from .explainers._gradient import GradientExplainer
+from .explainers._kernel import KernelExplainer
+from .explainers._linear import LinearExplainer
+from .explainers._partition import PartitionExplainer
+from .explainers._permutation import PermutationExplainer
+from .explainers._sampling import SamplingExplainer
+from .explainers._tree import TreeExplainer
 
 _no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
                          "to fix this."
@@ -96,6 +97,7 @@ __all__ = [
     "other",
     "AdditiveExplainer",
     "DeepExplainer",
+    "ExactExplainer",
     "Explainer",
     "GPUTreeExplainer",
     "GradientExplainer",

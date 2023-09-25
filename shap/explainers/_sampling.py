@@ -6,12 +6,12 @@ import pandas as pd
 from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._legacy import convert_to_instance, match_instance_to_data
-from ._kernel import Kernel
+from ._kernel import KernelExplainer
 
 log = logging.getLogger('shap')
 
 
-class Sampling(Kernel):
+class SamplingExplainer(KernelExplainer):
     """Computes SHAP values using an extension of the Shapley sampling values explanation method
     (also known as IME).
 
