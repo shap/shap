@@ -4,6 +4,7 @@ import numpy as np
 from packaging import version
 
 from .._explainer import Explainer
+from .deep_utils import _check_additivity
 
 torch = None
 
@@ -131,8 +132,7 @@ class PyTorchDeep(Explainer):
                 grads.append(grad)
             return grads
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=False):
-
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         # X ~ self.model_input
         # X_data ~ self.data
 
@@ -144,6 +144,8 @@ class PyTorchDeep(Explainer):
             assert isinstance(X, list), "Expected a list of model inputs!"
 
         X = [x.detach().to(self.device) for x in X]
+
+        model_output_values = None
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
@@ -206,6 +208,14 @@ class PyTorchDeep(Explainer):
         self.remove_attributes(self.model)
         if self.interim:
             self.target_handle.remove()
+
+        # check that the SHAP values sum up to the model output
+        if check_additivity:
+            if model_output_values is None:
+                with torch.no_grad():
+                    model_output_values = self.model(*X)
+
+            _check_additivity(self, model_output_values, output_phis)
 
         if not self.multi_output:
             return output_phis[0]
