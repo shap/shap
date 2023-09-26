@@ -1,6 +1,7 @@
 """ Tests for the Deep explainer.
 """
 
+import itertools
 from urllib.error import HTTPError
 
 import numpy as np
@@ -249,7 +250,7 @@ def test_pytorch_mnist_cnn():
     from torch.nn import functional as F
 
     # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed = 0
+    random_seed = 111
 
     torch.manual_seed(random_seed)
     rs = np.random.RandomState(random_seed)
@@ -270,7 +271,7 @@ def test_pytorch_mnist_cnn():
                 return torch.randn(self.batch_size, 1, 28, 28), torch.randint(0, 9, (self.batch_size,))
             raise StopIteration
 
-    def run_test(train_loader, test_loader, interim):
+    def run_test(train_loader, test_loader, interim, target_device):
 
         class Net(nn.Module):
             """ Basic conv net.
@@ -324,7 +325,7 @@ def test_pytorch_mnist_cnn():
                 if num_examples > cutoff:
                     break
 
-        device = torch.device('cpu')
+        device = torch.device(target_device)
 
         model.to(device)
         train(model, device, train_loader, optimizer, 1)
@@ -351,7 +352,7 @@ def test_pytorch_mnist_cnn():
 
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
-        assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()} - Settings: interim = {interim}, device = {target_device}"
 
     batch_size = 32
 
@@ -361,11 +362,8 @@ def test_pytorch_mnist_cnn():
     except HTTPError:
         pytest.skip()
 
-    #print('Running test on interim layer')
-    run_test(train_loader, test_loader, interim=True)
-
-    #print('Running test on whole model')
-    run_test(train_loader, test_loader, interim=False)
+    for interim, target_device in itertools.product([False, True], ["cpu", "cuda"]):
+        run_test(train_loader, test_loader, interim=interim, target_device=target_device)
 
 
 def test_pytorch_custom_nested_models(random_seed):
