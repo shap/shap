@@ -316,35 +316,39 @@ def test_pytorch_mnist_cnn():
                 data, target = data.to(device), target.to(device)
                 optimizer.zero_grad()
                 output = model(data)
-                loss = F.mse_loss(output, torch.eye(10)[target])
-                # loss = F.nll_loss(output, target)
+                loss = F.mse_loss(output, torch.eye(10).to(device)[target])
+
                 loss.backward()
                 optimizer.step()
-                # if batch_idx % 10 == 0:
-                #     # print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                #     #     epoch, batch_idx * len(data), len(train_loader.dataset),
-                #         # 100. * batch_idx / len(train_loader), loss.item()))
+
                 if num_examples > cutoff:
                     break
 
         device = torch.device('cpu')
+
+        model.to(device)
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))
         inds = rs.choice(next_x.shape[0], 3, replace=False)
+
+        next_x_random_choices = next_x[inds, :, :, :].to(device)
+
         if interim:
-            e = shap.DeepExplainer((model, model.conv_layers[0]), next_x[inds, :, :, :])
+            e = shap.DeepExplainer((model, model.conv_layers[0]), next_x_random_choices)
         else:
-            e = shap.DeepExplainer(model, next_x[inds, :, :, :])
+            e = shap.DeepExplainer(model, next_x_random_choices)
+
         test_x, _ = next(iter(test_loader))
-        input_tensor = test_x[:1]
-        input_tensor.requires_grad = True
+        input_tensor = test_x[:1].to(device)
         shap_values = e.shap_values(input_tensor)
 
         model.eval()
         model.zero_grad()
+
         with torch.no_grad():
-            diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
+            diff = (model(input_tensor) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
         assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
@@ -451,20 +455,32 @@ def test_pytorch_custom_nested_models(random_seed):
                     100. * batch_idx / len(train_loader), loss.item()))
 
     device = torch.device('cpu')
+
+    model.to(device)
+
     train(model, device, loader, optimizer, 1)
 
     next_x, _ = next(iter(loader))
+
     inds = rs.choice(next_x.shape[0], 20, replace=False)
-    e = shap.DeepExplainer(model, next_x[inds, :])
-    test_x, _ = next(iter(loader))
-    shap_values = e.shap_values(test_x[:1])
+
+    next_x_random_choices = next_x[inds, :].to(device)
+    e = shap.DeepExplainer(model, next_x_random_choices)
+
+    test_x_tmp, _ = next(iter(loader))
+    test_x = test_x_tmp[:1].to(device)
+
+    shap_values = e.shap_values(test_x)
 
     model.eval()
     model.zero_grad()
+
     with torch.no_grad():
-        diff = (model(test_x[:1]) - model(next_x[inds, :])).detach().numpy().mean(0)
+        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
+
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
@@ -526,20 +542,31 @@ def test_pytorch_single_output():
                     100. * batch_idx / len(train_loader), loss.item()))
 
     device = torch.device('cpu')
+
+    model.to(device)
+
     train(model, device, loader, optimizer, 1)
 
     next_x, _ = next(iter(loader))
     inds = rs.choice(next_x.shape[0], 20, replace=False)
-    e = shap.DeepExplainer(model, next_x[inds, :])
-    test_x, _ = next(iter(loader))
-    shap_values = e.shap_values(test_x[:1])
+
+    next_x_random_choices = next_x[inds, :].to(device)
+
+    e = shap.DeepExplainer(model, next_x_random_choices)
+    test_x_tmp, _ = next(iter(loader))
+    test_x = test_x_tmp[:1].to(device)
+
+    shap_values = e.shap_values(test_x)
 
     model.eval()
     model.zero_grad()
+
     with torch.no_grad():
-        diff = (model(test_x[:1]) - model(next_x[inds, :])).detach().numpy().mean(0)
+        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     d = np.abs(sums - diff).sum()
+
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
 
 
@@ -610,19 +637,28 @@ def test_pytorch_multiple_inputs(random_seed):
                         100. * batch_idx / len(train_loader), loss.item()))
 
         device = torch.device('cpu')
+
+        model.to(device)
+
         train(model, device, loader, optimizer, 1)
 
         next_x1, next_x2, _ = next(iter(loader))
         inds = rs.choice(next_x1.shape[0], 20, replace=False)
-        background = [next_x1[inds, :], next_x2[inds, :]]
+        background = [next_x1[inds, :].to(device), next_x2[inds, :].to(device)]
         e = shap.DeepExplainer(model, background)
-        test_x1, test_x2, _ = next(iter(loader))
+
+        test_x1_tmp, test_x2_tmp, _ = next(iter(loader))
+        test_x1 = test_x1_tmp[:1].to(device)
+        test_x2 = test_x2_tmp[:1].to(device)
+
         shap_x1, shap_x2 = e.shap_values([test_x1[:1], test_x2[:1]])
 
         model.eval()
         model.zero_grad()
+
         with torch.no_grad():
-            diff = (model(test_x1[:1], test_x2[:1]) - model(*background)).detach().numpy().mean(0)
+            diff = (model(test_x1, test_x2[:1]) - model(*background)).detach().cpu().numpy().mean(0)
+
         sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
         d = np.abs(sums - diff).sum()
         assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
