@@ -192,6 +192,7 @@ class MaskedModel:
 
         assert getattr(self.masker, "supports_delta_masking", None) is not None, "Masker must support delta masking!"
 
+        import pdb; pdb.set_trace()
         masked_inputs, varying_rows = self.masker(masks, *self.args)
         num_varying_rows = varying_rows.sum(1)
 
@@ -213,6 +214,7 @@ class MaskedModel:
         last_outs = np.zeros((varying_rows.shape[1],) + outputs.shape[1:])
         #print("link", self.link)
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link, self._linearizing_weights)
+        print(f"These are averages outs {averaged_outs} and these are the outputs {outputs.shape}")
 
         return averaged_outs
 
