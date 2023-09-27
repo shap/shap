@@ -10,7 +10,6 @@ except ImportError:
 
 import numpy as np
 import pytest
-import torch
 
 
 def pytest_addoption(parser):
@@ -70,5 +69,7 @@ def global_random_seed():
 def torch_devices_to_test():
     """Looks whether cuda is available. If so, torch-related tests are also tested on gpu.
     """
+
+    torch = pytest.importorskip('torch')
 
     return ["cuda", "cpu"] if torch.cuda.is_available() else ["cpu"]
