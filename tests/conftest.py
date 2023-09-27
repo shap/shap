@@ -63,13 +63,4 @@ def global_random_seed():
     `np.random.RandomState` rather than use the global numpy random state.
     """
     np.random.seed(0)
-
-
-@pytest.fixture()
-def torch_devices_to_test():
-    """Looks whether cuda is available. If so, torch-related tests are also tested on gpu.
-    """
-
-    torch = pytest.importorskip('torch')
-
-    return ["cuda", "cpu"] if torch.cuda.is_available() else ["cpu"]
+    

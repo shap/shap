@@ -1,7 +1,6 @@
 """ Tests for the Deep explainer.
 """
 
-import itertools
 from urllib.error import HTTPError
 
 import numpy as np
@@ -241,7 +240,34 @@ def test_tf_keras_imdb_lstm(random_seed):
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_pytorch_mnist_cnn(torch_devices_to_test):
+@pytest.fixture()
+def torch_cuda_available():
+    """ Looks whether cuda is available. If so, torch-related tests are also tested on gpu.
+    """
+    try:
+        import torch
+                
+        return torch.cuda.is_available()
+    except ImportError:
+        pass
+
+    return False
+
+
+@pytest.mark.parametrize(
+    ("torch_device", "interim"),
+    [
+        ("cpu", False),
+        ("cpu", True),
+        pytest.param(
+            "cuda", False, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+        ),
+        pytest.param(
+            "cuda", True, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+        ),
+    ],
+)
+def test_pytorch_mnist_cnn(torch_device, interim):
     """The same test as above, but for pytorch
     """
     torch = pytest.importorskip('torch')
@@ -352,7 +378,8 @@ def test_pytorch_mnist_cnn(torch_devices_to_test):
 
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
-        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()} - Settings: interim = {interim}, device = {target_device}"
+
+        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}"
 
     batch_size = 32
 
@@ -362,11 +389,19 @@ def test_pytorch_mnist_cnn(torch_devices_to_test):
     except HTTPError:
         pytest.skip()
 
-    for interim, target_device in itertools.product([False, True], torch_devices_to_test):
-        run_test(train_loader, test_loader, interim=interim, target_device=target_device)
+    run_test(train_loader, test_loader, interim=interim, target_device=torch_device)
 
 
-def test_pytorch_custom_nested_models(torch_devices_to_test):
+@pytest.mark.parametrize(
+    "torch_device",
+    [
+        "cpu",
+        pytest.param(
+            "cuda", marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+        ),
+    ],
+)
+def test_pytorch_custom_nested_models(torch_device):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -481,16 +516,24 @@ def test_pytorch_custom_nested_models(torch_devices_to_test):
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
 
-        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}; Target device: {target_device}"
+        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}"
 
 
     X, y = fetch_california_housing(return_X_y=True)
+    
+    run_test(X, y, torch_device)
 
-    for device in torch_devices_to_test:
-        run_test(X, y, device)
 
-
-def test_pytorch_single_output(torch_devices_to_test):
+@pytest.mark.parametrize(
+    "torch_device",
+    [
+        "cpu",
+        pytest.param(
+            "cuda", marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+        ),
+    ],
+)
+def test_pytorch_single_output(torch_device):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -574,16 +617,28 @@ def test_pytorch_single_output(torch_devices_to_test):
         sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
         d = np.abs(sums - diff).sum()
 
-        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}; target device: {target_device}"
+        assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}"
 
 
     X, y = fetch_california_housing(return_X_y=True)
 
-    for device in torch_devices_to_test:
-        run_test(X, y, device)
+    run_test(X, y, torch_device)
 
 
-def test_pytorch_multiple_inputs(torch_devices_to_test):
+@pytest.mark.parametrize(
+    ("torch_device", "disconnected"),
+    [
+        ("cpu", False),
+        ("cpu", True),
+        pytest.param(
+            "cuda", False, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+        ),
+        pytest.param(
+            "cuda", True, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+        ),
+    ],
+)
+def test_pytorch_multiple_inputs(torch_device, disconnected):
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
@@ -677,9 +732,8 @@ def test_pytorch_multiple_inputs(torch_devices_to_test):
         sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
         d = np.abs(sums - diff).sum() / np.abs(diff).sum()
 
-        assert d < 0.001, f"Sum of SHAP values does not match difference! {d}; Configuration: disconnected = {disconnected}; device = {target_device}"
+        assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
 
     X, y = fetch_california_housing(return_X_y=True)
 
-    for dc, device in itertools.product([False, True], torch_devices_to_test):
-        _run_pytorch_multiple_inputs_test(X, y, disconnected=dc, target_device=device)
+    _run_pytorch_multiple_inputs_test(X, y, disconnected=disconnected, target_device=torch_device)
