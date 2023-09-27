@@ -240,8 +240,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-@pytest.fixture()
-def torch_cuda_available():
+def _torch_cuda_available():
     """ Looks whether cuda is available. If so, torch-related tests are also tested on gpu.
     """
     try:
@@ -260,10 +259,10 @@ def torch_cuda_available():
         ("cpu", False),
         ("cpu", True),
         pytest.param(
-            "cuda", False, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+            "cuda", False, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
         ),
         pytest.param(
-            "cuda", True, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+            "cuda", True, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
         ),
     ],
 )
@@ -397,7 +396,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     [
         "cpu",
         pytest.param(
-            "cuda", marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+            "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
         ),
     ],
 )
@@ -529,7 +528,7 @@ def test_pytorch_custom_nested_models(torch_device):
     [
         "cpu",
         pytest.param(
-            "cuda", marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+            "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
         ),
     ],
 )
@@ -631,10 +630,10 @@ def test_pytorch_single_output(torch_device):
         ("cpu", False),
         ("cpu", True),
         pytest.param(
-            "cuda", False, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+            "cuda", False, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
         ),
         pytest.param(
-            "cuda", True, marks=pytest.mark.skipif(not torch_cuda_available(), reason="cuda unavailable (with torch)")
+            "cuda", True, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
         ),
     ],
 )
