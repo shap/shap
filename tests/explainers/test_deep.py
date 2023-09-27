@@ -246,7 +246,7 @@ def torch_cuda_available():
     """
     try:
         import torch
-                
+
         return torch.cuda.is_available()
     except ImportError:
         pass
@@ -520,7 +520,7 @@ def test_pytorch_custom_nested_models(torch_device):
 
 
     X, y = fetch_california_housing(return_X_y=True)
-    
+
     run_test(X, y, torch_device)
 
 

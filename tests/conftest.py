@@ -63,4 +63,3 @@ def global_random_seed():
     `np.random.RandomState` rather than use the global numpy random state.
     """
     np.random.seed(0)
-    
