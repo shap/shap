@@ -10,6 +10,7 @@ except ImportError:
 
 import numpy as np
 import pytest
+import torch
 
 
 def pytest_addoption(parser):
@@ -63,3 +64,11 @@ def global_random_seed():
     `np.random.RandomState` rather than use the global numpy random state.
     """
     np.random.seed(0)
+
+
+@pytest.fixture()
+def torch_devices_to_test():
+    """Looks whether cuda is available. If so, torch-related tests are also tested on gpu.
+    """
+
+    return ["cuda", "cpu"] if torch.cuda.is_available() else ["cpu"]

@@ -241,19 +241,13 @@ def test_tf_keras_imdb_lstm(random_seed):
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_pytorch_mnist_cnn():
+def test_pytorch_mnist_cnn(torch_devices_to_test):
     """The same test as above, but for pytorch
     """
     torch = pytest.importorskip('torch')
 
     from torch import nn
     from torch.nn import functional as F
-
-    # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed = 111
-
-    torch.manual_seed(random_seed)
-    rs = np.random.RandomState(random_seed)
 
     class RandData:
         """ Random test data.
@@ -272,7 +266,6 @@ def test_pytorch_mnist_cnn():
             raise StopIteration
 
     def run_test(train_loader, test_loader, interim, target_device):
-
         class Net(nn.Module):
             """ Basic conv net.
             """
@@ -305,6 +298,13 @@ def test_pytorch_mnist_cnn():
                 x = x.view(-1, 320)
                 x = self.fc_layers(x)
                 return x
+
+
+        # FIXME: this test should ideally pass with any random seed. See #2960
+        random_seed = 42
+
+        torch.manual_seed(random_seed)
+        rs = np.random.RandomState(random_seed)
 
         model = Net()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
@@ -362,11 +362,11 @@ def test_pytorch_mnist_cnn():
     except HTTPError:
         pytest.skip()
 
-    for interim, target_device in itertools.product([False, True], ["cpu", "cuda"]):
+    for interim, target_device in itertools.product([False, True], torch_devices_to_test):
         run_test(train_loader, test_loader, interim=interim, target_device=target_device)
 
 
-def test_pytorch_custom_nested_models():
+def test_pytorch_custom_nested_models(torch_devices_to_test):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -375,13 +375,6 @@ def test_pytorch_custom_nested_models():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
-
-    random_seed = 42  # TODO: #2960
-
-    torch.manual_seed(random_seed)
-    rs = np.random.RandomState(random_seed)
-
-    X, y = fetch_california_housing(return_X_y=True)
 
     class CustomNet1(nn.Module):
         """ Model 1.
@@ -432,6 +425,11 @@ def test_pytorch_custom_nested_models():
             return self.maxpool2(self.net2(x)).squeeze(1)
 
     def run_test(X, y, target_device):
+        random_seed = 777  # TODO: #2960
+
+        torch.manual_seed(random_seed)
+        rs = np.random.RandomState(random_seed)
+
         num_features = X.shape[1]
         data = TensorDataset(torch.tensor(X).float(),
                             torch.tensor(y).float())
@@ -485,11 +483,14 @@ def test_pytorch_custom_nested_models():
 
         assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}; Target device: {target_device}"
 
-    for device in ["cpu", "cuda"]:
+
+    X, y = fetch_california_housing(return_X_y=True)
+
+    for device in torch_devices_to_test:
         run_test(X, y, device)
 
 
-def test_pytorch_single_output():
+def test_pytorch_single_output(torch_devices_to_test):
     """Testing single outputs
     """
     torch = pytest.importorskip('torch')
@@ -498,13 +499,6 @@ def test_pytorch_single_output():
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
-
-    # FIXME: this test should ideally pass with any random seed. See #2960
-    random_seed = 0
-    torch.manual_seed(random_seed)
-    rs = np.random.RandomState(random_seed)
-
-    X, y = fetch_california_housing(return_X_y=True)
 
     class Net(nn.Module):
         """ Test model.
@@ -525,6 +519,11 @@ def test_pytorch_single_output():
             return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
 
     def run_test(X, y, target_device):
+        # FIXME: this test should ideally pass with any random seed. See #2960
+        random_seed = 0
+        torch.manual_seed(random_seed)
+        rs = np.random.RandomState(random_seed)
+
         num_features = X.shape[1]
         data = TensorDataset(torch.tensor(X).float(),
                             torch.tensor(y).float())
@@ -577,26 +576,31 @@ def test_pytorch_single_output():
 
         assert d / np.abs(diff).sum() < 0.001, f"Sum of SHAP values does not match difference! {d / np.abs(diff).sum()}; target device: {target_device}"
 
-    for device in ["cpu", "cuda"]:
+
+    X, y = fetch_california_housing(return_X_y=True)
+
+    for device in torch_devices_to_test:
         run_test(X, y, device)
 
 
-def test_pytorch_multiple_inputs(random_seed):
+def test_pytorch_multiple_inputs(torch_devices_to_test):
     """ Check a multi-input scenario.
     """
     torch = pytest.importorskip('torch')
-    torch.manual_seed(random_seed)
-    rs = np.random.RandomState(random_seed)
 
-    def _run_pytorch_multiple_inputs_test(disconnected, target_device):
+    from sklearn.datasets import fetch_california_housing
+
+    def _run_pytorch_multiple_inputs_test(X, y, disconnected, target_device):
         """ Testing multiple inputs
         """
-        from sklearn.datasets import fetch_california_housing
         from torch import nn
         from torch.nn import functional as F
         from torch.utils.data import DataLoader, TensorDataset
-        torch.manual_seed(1)
-        X, y = fetch_california_housing(return_X_y=True)
+
+        random_seed = 42  # TODO: 2960
+        torch.manual_seed(random_seed)
+        rs = np.random.RandomState(random_seed)
+
         num_features = X.shape[1]
         x1 = X[:, num_features // 2:]
         x2 = X[:, :num_features // 2]
@@ -675,5 +679,7 @@ def test_pytorch_multiple_inputs(random_seed):
 
         assert d < 0.001, f"Sum of SHAP values does not match difference! {d}; Configuration: disconnected = {disconnected}; device = {target_device}"
 
-    for dc, device in itertools.product([False, True], ["cpu", "cuda"]):
-        _run_pytorch_multiple_inputs_test(disconnected=dc, target_device=device)
+    X, y = fetch_california_housing(return_X_y=True)
+
+    for dc, device in itertools.product([False, True], torch_devices_to_test):
+        _run_pytorch_multiple_inputs_test(X, y, disconnected=dc, target_device=device)
