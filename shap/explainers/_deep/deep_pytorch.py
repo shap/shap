@@ -371,6 +371,7 @@ op_handler['AdaptiveAvgPool3d'] = linear_1d
 op_handler['BatchNorm1d'] = linear_1d
 op_handler['BatchNorm2d'] = linear_1d
 op_handler['BatchNorm3d'] = linear_1d
+op_handler['LayerNorm'] = linear_1d
 
 op_handler['LeakyReLU'] = nonlinear_1d
 op_handler['ReLU'] = nonlinear_1d

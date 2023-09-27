@@ -629,3 +629,79 @@ def test_pytorch_multiple_inputs(random_seed):
 
     _run_pytorch_multiple_inputs_test(disconnected=True)
     _run_pytorch_multiple_inputs_test(disconnected=False)
+
+
+def test_pytorch_multiclass():
+    """Check a multiclass classifier with CrossEntropyLoss.
+    """
+    torch = pytest.importorskip('torch')
+
+    from torch import nn
+    from torch.nn import functional as F
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.datasets import load_iris
+
+    torch.manual_seed(1)
+    iris = load_iris()
+    X, y = iris.data, iris.target
+
+    num_features = X.shape[1]
+    num_classes = len(np.unique(y))
+    data = TensorDataset(torch.tensor(X).float(),
+                         torch.tensor(y).long())
+    loader = DataLoader(data, batch_size=128)
+
+    class Net(nn.Module):
+        def __init__(self, num_features, num_classes):
+            super(Net, self).__init__()
+            # Apply layer normalization for stability and perf on wide variety of datasets
+            # https://arxiv.org/pdf/1607.06450.pdf
+            self.norm = nn.LayerNorm(num_features)
+            self.fc1 = nn.Linear(num_features, 100)
+            self.fc3 = nn.Linear(100, num_classes)
+            self.output = nn.Softmax()
+
+        def forward(self, X):
+            X = self.norm(X)
+            X = F.relu(self.fc1(X))
+            X = self.fc3(X)
+            return self.output(X)
+
+    model = Net(num_features, num_classes)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+    def train(model, device, train_loader, optimizer, epoch):
+        model.train()
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 2 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                    100. * batch_idx / len(train_loader), loss.item()))
+
+    device = torch.device('cpu')
+    epochs = 100
+    for epoch in range(epochs):
+        train(model, device, loader, optimizer, epoch)
+
+    next_x, _ = next(iter(loader))
+    np.random.seed(0)
+    inds = np.random.choice(next_x.shape[0], 20, replace=False)
+    e = shap.DeepExplainer(model, next_x[inds, :])
+    test_x, _ = next(iter(loader))
+    input_tensor = test_x[:1]
+    shap_values = e.shap_values(input_tensor)
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        diff = (model(input_tensor) - model(next_x[inds, :])).detach().numpy().mean(0)
+    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.5, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
