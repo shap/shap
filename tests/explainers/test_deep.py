@@ -1,7 +1,6 @@
 """ Tests for the Deep explainer.
 """
 
-from urllib.error import HTTPError
 
 import numpy as np
 import pandas as pd
@@ -295,7 +294,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
             if self.current < 10:
                 return torch.randn(self.batch_size, 1, 28, 28), torch.randint(0, 9, (self.batch_size,))
             raise StopIteration
-        
+
 
     class Net(nn.Module):
         """ Basic conv net.
@@ -361,7 +360,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
 
     model = Net()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
-        
+
     device = torch.device(torch_device)
 
     model.to(device)
@@ -478,12 +477,12 @@ def test_pytorch_custom_nested_models(torch_device):
     X, y = fetch_california_housing(return_X_y=True)
 
     num_features = X.shape[1]
-    
+
     data = TensorDataset(
                 torch.tensor(X).float(),
                 torch.tensor(y).float(),
     )
-    
+
     loader = DataLoader(data, batch_size=128)
 
     model = CustomNet(num_features)
@@ -624,7 +623,6 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
-
     from torch import nn
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
@@ -679,18 +677,18 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     num_features = X.shape[1]
     x1 = X[:, num_features // 2:]
     x2 = X[:, :num_features // 2]
-    
+
     data = TensorDataset(
                 torch.tensor(x1).float(),
                 torch.tensor(x2).float(),
                 torch.tensor(y).float(),
     )
-    
+
     loader = DataLoader(data, batch_size=128)
-    
+
     model = Net(num_features, disconnected)
     optimizer = torch.optim.Adam(model.parameters())
-    
+
     device = torch.device(torch_device)
 
     model.to(device)
