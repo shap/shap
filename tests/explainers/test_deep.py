@@ -15,6 +15,10 @@ from shap import DeepExplainer
 
 # pylint: disable=import-outside-toplevel, no-name-in-module, import-error
 
+##############################
+## Tensorflow related tests ##
+##############################
+
 def test_tf_eager(random_seed):
     """ This is a basic eager example from keras.
     """
@@ -240,6 +244,10 @@ def test_tf_keras_imdb_lstm(random_seed):
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
+#########################
+## Torch related tests ##
+#########################
+
 def _torch_cuda_available():
     """ Looks whether cuda is available. If so, torch-related tests are also tested on gpu.
     """
@@ -254,18 +262,15 @@ def _torch_cuda_available():
 
 
 @pytest.mark.parametrize(
-    ("torch_device", "interim"),
-    [
-        ("cpu", False),
-        ("cpu", True),
-        pytest.param(
-            "cuda", False, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-        ),
-        pytest.param(
-            "cuda", True, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-        ),
-    ],
+        "torch_device", 
+        [
+            "cpu", 
+            pytest.param(
+                "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
+            ),
+        ],
 )
+@pytest.mark.parametrize("interim", [True, False])
 def test_pytorch_mnist_cnn(torch_device, interim):
     """The same test as above, but for pytorch
     """
@@ -625,18 +630,15 @@ def test_pytorch_single_output(torch_device):
 
 
 @pytest.mark.parametrize(
-    ("torch_device", "disconnected"),
-    [
-        ("cpu", False),
-        ("cpu", True),
-        pytest.param(
-            "cuda", False, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-        ),
-        pytest.param(
-            "cuda", True, marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-        ),
-    ],
+        "torch_device", 
+        [
+            "cpu", 
+            pytest.param(
+                "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
+            ),
+        ],
 )
+@pytest.mark.parametrize("disconnected", [True, False])
 def test_pytorch_multiple_inputs(torch_device, disconnected):
     """ Check a multi-input scenario.
     """
