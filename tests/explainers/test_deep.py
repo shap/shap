@@ -262,9 +262,9 @@ def _torch_cuda_available():
 
 
 TORCH_DEVICES = [
-                    "cpu", 
+                    "cpu",
                     pytest.param(
-                        "cuda", 
+                        "cuda",
                         marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
                     ),
 ]
