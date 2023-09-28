@@ -261,15 +261,16 @@ def _torch_cuda_available():
     return False
 
 
-@pytest.mark.parametrize(
-        "torch_device", 
-        [
-            "cpu", 
-            pytest.param(
-                "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-            ),
-        ],
-)
+TORCH_DEVICES = [
+                    "cpu", 
+                    pytest.param(
+                        "cuda", 
+                        marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
+                    ),
+]
+
+
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
 def test_pytorch_mnist_cnn(torch_device, interim):
     """The same test as above, but for pytorch
@@ -396,15 +397,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     run_test(train_loader, test_loader, interim=interim, target_device=torch_device)
 
 
-@pytest.mark.parametrize(
-    "torch_device",
-    [
-        "cpu",
-        pytest.param(
-            "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-        ),
-    ],
-)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
     """Testing single outputs
     """
@@ -528,15 +521,7 @@ def test_pytorch_custom_nested_models(torch_device):
     run_test(X, y, torch_device)
 
 
-@pytest.mark.parametrize(
-    "torch_device",
-    [
-        "cpu",
-        pytest.param(
-            "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-        ),
-    ],
-)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
     """Testing single outputs
     """
@@ -629,15 +614,7 @@ def test_pytorch_single_output(torch_device):
     run_test(X, y, torch_device)
 
 
-@pytest.mark.parametrize(
-        "torch_device", 
-        [
-            "cpu", 
-            pytest.param(
-                "cuda", marks=pytest.mark.skipif(not _torch_cuda_available(), reason="cuda unavailable (with torch)")
-            ),
-        ],
-)
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
 def test_pytorch_multiple_inputs(torch_device, disconnected):
     """ Check a multi-input scenario.
