@@ -56,7 +56,6 @@ def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
 
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model(data)) < 1e6)
 
-
 # def test_multi_class(explainer_type, model, masker, data, **kwargs):
 #     """ Test explainer and masker for additivity on a multi-class prediction problem.
 #     """
