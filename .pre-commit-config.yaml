@@ -37,7 +37,8 @@ repos:
                 notebooks/api_examples/.*.ipynb|
                 notebooks/benchmarks/.*.ipynb|
                 notebooks/genomic_examples/.*.ipynb|
-                notebooks/tabular_methods/tree_base_models/Census\ income\ classification\ with\ XGBoost.ipynb|
+                notebooks/tabular_methods/tree_base_models/Census.*.ipynb|
+
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.287
