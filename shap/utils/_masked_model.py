@@ -203,11 +203,6 @@ class MaskedModel:
 
         # joined_masked_inputs = self._stack_inputs(all_masked_inputs)
         outputs = self.model(*subset_masked_inputs)
-
-        globals().update(locals())
-        print("Stuff that is not in the outputs")
-        print([i for i in range(batch_positions[0], batch_positions[1] + 1) if i not in sorted(outputs[batch_positions[0]:batch_positions[1]])])
-
         _assert_output_input_match(subset_masked_inputs, outputs)
 
         if self.linearize_link and self.link != links.identity and self._linearizing_weights is None:
@@ -218,7 +213,6 @@ class MaskedModel:
         last_outs = np.zeros((varying_rows.shape[1],) + outputs.shape[1:])
         #print("link", self.link)
         _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, self.link, self._linearizing_weights)
-        print(f"These are averages outs {averaged_outs} and these are the outputs {outputs.shape}")
 
         return averaged_outs
 
@@ -367,7 +361,6 @@ def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, vary
     else:
         _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights)
 
-# todo: do not outcomment
 @njit # we can't use this when using a custom link function...
 def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
     # here we can assume that the outputs will always be the same size, and we need
@@ -377,14 +370,10 @@ def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_position
     #     averaged_outs[0] = np.mean(linearizing_weights * link(last_outs))
     # else:
     #     averaged_outs[0] = link(np.mean(last_outs))
-
     for i in range(0, len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
-                # import pdb; pdb.set_trace()
-                # dummy
-                # [i for i in range(101) if i not in last_outs]
             else:
                 last_outs[varying_rows[i]] = outputs[batch_positions[i]:batch_positions[i+1]]
             if linearizing_weights is not None:
