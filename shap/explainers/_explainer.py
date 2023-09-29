@@ -23,7 +23,7 @@ class Explainer(Serializable):
     """
 
     def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True,
-                 seed=None, **kwargs):
+                 seed=None, max_samples=None, **kwargs):
         """ Build a new explainer for the passed model.
 
         Parameters
@@ -52,7 +52,7 @@ class Explainer(Serializable):
             units. For more details on how link functions work see any overview of link functions for generalized
             linear models.
 
-        algorithm : "auto", "permutation", "partition", "tree", or "linear"
+        algorithm : "auto", "permutation", "partition", "tree", "exact" or "linear"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
             of these algorithms have various tradeoffs and are preferable in different situations. By
@@ -83,7 +83,10 @@ class Explainer(Serializable):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
-                self.masker = maskers.Independent(masker)
+                if max_samples is not None:
+                    self.masker = maskers.Independent(masker, max_samples=max_samples)
+                else:
+                    self.masker = maskers.Independent(masker)
         elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
             if is_transformers_lm(self.model):
                 # auto assign text infilling if model is a transformer model with lm head
@@ -93,7 +96,10 @@ class Explainer(Serializable):
         elif (masker is list or masker is tuple) and masker[0] is not str:
             self.masker = maskers.Composite(*masker)
         elif (masker is dict) and ("mean" in masker):
-            self.masker = maskers.Independent(masker)
+            if max_samples is not None:
+                self.masker = maskers.Independent(masker, max_samples=max_samples)
+            else:
+                self.masker = maskers.Independent(masker)
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
             return self.__init__( # pylint: disable=non-parent-init-called
                 self.model, self.model.inner_model.tokenizer,
