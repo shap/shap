@@ -1,6 +1,8 @@
 """ Tests for Explainer class.
 """
 
+import numpy as np
+import pandas as pd
 import pytest
 
 import shap
@@ -38,3 +40,25 @@ def test_wrapping_for_topk_lm_model():
     explainer = shap.Explainer(wrapped_model, masker, seed=1)
 
     assert shap.utils.safe_isinstance(explainer.masker, "shap.maskers.FixedComposite")
+
+def test_max_samples():
+    # GH 3174
+    N = 103
+    x = np.arange(N)
+    X = pd.DataFrame(dict(x1=x, x2=np.flip(x)))
+
+    def true_model(X):
+        return X.x1
+
+    ex = shap.Explainer(true_model, masker=X, algorithm="exact", max_samples=1000)
+    X_sliced = X[0:2]
+    ps = ex(X_sliced)
+    assert (ps.base_values == 51.).all()
+
+
+def test_max_samples_not_defined():
+    def true_model(X):
+        return X.x1
+
+    with pytest.raises(AssertionError):
+        shap.Explainer(true_model, masker=None, max_samples=100)

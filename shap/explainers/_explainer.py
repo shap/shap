@@ -68,6 +68,9 @@ class Explainer(Serializable):
             the Explanation objects produced by this explainer will not have any output_names, which could effect
             downstream plots.
 
+        max_samples : None or int
+            The maximum number of samples to use for the masker.
+
         seed: None or int
             seed for reproducibility
 
@@ -76,12 +79,17 @@ class Explainer(Serializable):
         self.model = model
         self.output_names = output_names
         self.feature_names = feature_names
+        assert ((masker is None) and (max_samples is None)) or (masker is not None), \
+            "If masker is None max_samples must be None as well."
 
         # wrap the incoming masker object as a shap.Masker object
         if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
                 ((safe_isinstance(masker, "numpy.ndarray") or scipy.sparse.issparse(masker)) and len(masker.shape) == 2):
             if algorithm == "partition":
-                self.masker = maskers.Partition(masker)
+                if max_samples is not None:
+                    self.masker = maskers.Partition(masker, max_samples=max_samples)
+                else:
+                    self.masker = maskers.Partition(masker)
             else:
                 if max_samples is not None:
                     self.masker = maskers.Independent(masker, max_samples=max_samples)
