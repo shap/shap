@@ -2,6 +2,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from pytest import param
 
 matplotlib.use('Agg')
 import shap  # noqa: E402
@@ -10,22 +11,13 @@ import shap  # noqa: E402
 @pytest.mark.parametrize(
     "cmap, emsg",
     [
-        ("coolwarm", None),
-        (["#000000", "#ffffff"], None),
-        (777, "Plot color map must be string or list!"),
-        ([], "Color map must be at least two colors"),
-        (["#8834BB"], "Color map must be at least two colors"),
-        (["#883488", "#Gg8888"], r"Invalid color .+ found in cmap"),
-        (["#883488", "#1111119"], r"Invalid color .+ found in cmap"),
-    ],
-    ids=[
-        "valid-str",
-        "valid-list[str]",
-        "invalid-dtype1",
-        "invalid-insufficient-colors1",
-        "invalid-insufficient-colors2",
-        "invalid-hexcolor-in-list1",
-        "invalid-hexcolor-in-list2",
+        param("coolwarm", None, id="valid-str"),
+        param(["#000000", "#ffffff"], None, id="valid-list[str]"),
+        param(777, "Plot color map must be string or list!", id="invalid-dtype1"),
+        param([], "Color map must be at least two colors", id="invalid-insufficient-colors1"),
+        param(["#8834BB"], "Color map must be at least two colors", id="invalid-insufficient-colors2"),
+        param(["#883488", "#Gg8888"], r"Invalid color .+ found in cmap", id="invalid-hexcolor-in-list1"),
+        param(["#883488", "#1111119"], r"Invalid color .+ found in cmap", id="invalid-hexcolor-in-list2"),
     ],
 )
 def test_verify_valid_cmap(cmap, emsg):
@@ -38,6 +30,7 @@ def test_verify_valid_cmap(cmap, emsg):
         # Invalid cmaps
         with pytest.raises(ValueError, match=emsg):
             verify_valid_cmap(cmap)
+
 
 def test_random_force_plot_mpl_with_data():
     """ Test if force plot with matplotlib works.
