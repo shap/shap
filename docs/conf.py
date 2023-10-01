@@ -60,6 +60,9 @@ autodoc_default_options = {"members": True, "inherited-members": True}
 autosummary_generate = True
 numpydoc_show_class_members = False
 
+# Do not create toctree entries for each class/function
+toc_object_entries = False
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
