@@ -4,7 +4,7 @@ from ..utils import MaskedModel, safe_isinstance
 from ._explainer import Explainer
 
 
-class Additive(Explainer):
+class AdditiveExplainer(Explainer):
     """ Computes SHAP values for generalized additive models.
 
     This assumes that the model only has first-order effects. Extending this to

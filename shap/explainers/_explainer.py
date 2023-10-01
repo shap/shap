@@ -142,11 +142,11 @@ class Explainer(Serializable):
             if algorithm == "auto":
 
                 # use implementation-aware methods if possible
-                if explainers.Linear.supports_model_with_masker(model, self.masker):
+                if explainers.LinearExplainer.supports_model_with_masker(model, self.masker):
                     algorithm = "linear"
-                elif explainers.Tree.supports_model_with_masker(model, self.masker): # TODO: check for Partition?
+                elif explainers.TreeExplainer.supports_model_with_masker(model, self.masker): # TODO: check for Partition?
                     algorithm = "tree"
-                elif explainers.Additive.supports_model_with_masker(model, self.masker):
+                elif explainers.AdditiveExplainer.supports_model_with_masker(model, self.masker):
                     algorithm = "additive"
 
                 # otherwise use a model agnostic method
@@ -172,26 +172,26 @@ class Explainer(Serializable):
 
             # build the right subclass
             if algorithm == "exact":
-                self.__class__ = explainers.Exact
-                explainers.Exact.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.ExactExplainer
+                explainers.ExactExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "permutation":
-                self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, seed=seed, **kwargs)
+                self.__class__ = explainers.PermutationExplainer
+                explainers.PermutationExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, seed=seed, **kwargs)
             elif algorithm == "partition":
-                self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
+                self.__class__ = explainers.PartitionExplainer
+                explainers.PartitionExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
             elif algorithm == "tree":
-                self.__class__ = explainers.Tree
-                explainers.Tree.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.TreeExplainer
+                explainers.TreeExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "additive":
-                self.__class__ = explainers.Additive
-                explainers.Additive.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.AdditiveExplainer
+                explainers.AdditiveExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "linear":
-                self.__class__ = explainers.Linear
-                explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.LinearExplainer
+                explainers.LinearExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "deep":
-                self.__class__ = explainers.Deep
-                explainers.Deep.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.DeepExplainer
+                explainers.DeepExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
                 raise InvalidAlgorithmError("Unknown algorithm type passed: %s!" % algorithm)
 

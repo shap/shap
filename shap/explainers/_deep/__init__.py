@@ -3,7 +3,7 @@ from .deep_pytorch import PyTorchDeep
 from .deep_tf import TFDeep
 
 
-class Deep(Explainer):
+class DeepExplainer(Explainer):
     """ Meant to approximate SHAP values for deep learning models.
 
     This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we
@@ -86,6 +86,7 @@ class Deep(Explainer):
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
+        self.explainer.framework = framework
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
         """ Return approximate SHAP values for the model applied to the data given by X.

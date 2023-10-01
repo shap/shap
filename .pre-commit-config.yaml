@@ -1,6 +1,9 @@
+ci:
+  autoupdate_schedule: monthly
+
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.285
+  rev: v0.0.287
   hooks:
   - id: ruff
     args: [ --fix, --exit-non-zero-on-fix ]
@@ -11,7 +14,34 @@ repos:
   - id: check-added-large-files
   - id: check-merge-conflict
   - id: check-toml
+  - id: check-json
+    types: ["jupyter"]
   - id: check-yaml
   - id: mixed-line-ending
   - id: trailing-whitespace
   - id: end-of-file-fixer
+
+# Notebook linting checks, currenly enabled only on a subset of notebooks.
+# Careful: When using pre-commit, ruff's "include" and "exclude" config is ignored.
+# See: https://github.com/shap/shap/issues/3036
+
+- repo: https://github.com/psf/black
+  rev: 23.7.0
+  hooks:
+  - id: black-jupyter
+    name: black (fixed notebooks)
+    # This YAML anchor selects which notebooks are linted with ruff and black.
+    # Add a notebook here once it has been cleaned up.
+    files: &cleanNotebooks |
+            (?x)^(
+                notebooks/api_examples/.*.ipynb|
+                notebooks/benchmarks/.*.ipynb|
+                notebooks/genomic_examples/.*.ipynb|
+            )$
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.0.287
+  hooks:
+  - id: ruff
+    name: ruff (fixed notebooks)
+    types_or: [jupyter]
+    files: *cleanNotebooks
