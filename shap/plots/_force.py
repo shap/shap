@@ -21,6 +21,7 @@ except ImportError:
 
 from ..plots._force_matplotlib import draw_additive_plot
 from ..utils import hclust_ordering
+from ..utils._exceptions import DimensionError
 from ..utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
 from ._labels import labels
 
@@ -125,7 +126,7 @@ def force(
                 "for multi-output models try "
                 "shap.plots.force(explainer.expected_value[0], shap_values[0])."
             )
-            raise Exception(emsg)
+            raise TypeError(emsg)
 
     if isinstance(shap_values, list):
         emsg = "The shap_values arg looks multi output, try `shap_values[i]` instead."
@@ -177,7 +178,7 @@ def force(
                     " You might be using an old format shap_values array with the base value "
                     "as the last column. In this case, just pass the array without the last column."
                 )
-            raise Exception(emsg)
+            raise DimensionError(emsg)
 
         instance = Instance(np.zeros((1, len(feature_names))), features)
         e = AdditiveExplanation(
