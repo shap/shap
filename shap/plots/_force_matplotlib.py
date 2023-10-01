@@ -310,7 +310,7 @@ def draw_higher_lower_element(out_value, offset_text):
 
 
 def update_axis_limits(ax, total_pos, pos_features, total_neg,
-                       neg_features, base_value):
+                       neg_features, base_value, out_value):
     ax.set_ylim(-0.5, 0.15)
     padding = np.max([np.abs(total_pos) * 0.2,
                       np.abs(total_neg) * 0.2])
@@ -318,11 +318,11 @@ def update_axis_limits(ax, total_pos, pos_features, total_neg,
     if len(pos_features) > 0:
         min_x = min(np.min(pos_features[:, 0].astype(float)), base_value) - padding
     else:
-        min_x = 0
+        min_x = out_value - padding
     if len(neg_features) > 0:
         max_x = max(np.max(neg_features[:, 0].astype(float)), base_value) + padding
     else:
-        max_x = 0
+        max_x = out_value + padding
     ax.set_xlim(min_x, max_x)
 
     plt.tick_params(top=True, bottom=False, left=False, right=False, labelleft=False,
@@ -353,7 +353,7 @@ def draw_additive_plot(data, figsize, show, text_rotation=0, min_perc=0.05):
 
     # Compute axis limit
     update_axis_limits(ax, total_pos, pos_features, total_neg,
-                       neg_features, base_value)
+                       neg_features, base_value, out_value)
 
     # Define width of bar
     width_bar = 0.1
