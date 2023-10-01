@@ -367,8 +367,8 @@ def ensure_not_numpy(x):
 def verify_valid_cmap(cmap):
     """Checks that cmap is either a str or list of hex colors"""
     if not (isinstance(cmap, (str, list)) or str(type(cmap)).endswith("unicode'>")):
-        emsg = f"Plot color map must be string or list! Not {type(cmap)}"
-        raise ValueError(emsg)
+        emsg = f"Plot color map must be string or list! Not {type(cmap)}."
+        raise TypeError(emsg)
 
     if isinstance(cmap, list):
         if len(cmap) < 2:
@@ -376,7 +376,7 @@ def verify_valid_cmap(cmap):
         _rgbstring = re.compile(r'#[a-fA-F0-9]{6}$')
         for color in cmap:
             if not _rgbstring.match(color):
-                raise ValueError(f"Invalid color {color} found in cmap")
+                raise ValueError(f"Invalid color {color} found in cmap.")
 
     return cmap
 

@@ -1,3 +1,5 @@
+from contextlib import nullcontext as does_not_raise
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,27 +11,44 @@ import shap  # noqa: E402
 
 
 @pytest.mark.parametrize(
-    "cmap, emsg",
+    "cmap, exp_ctx",
     [
-        param("coolwarm", None, id="valid-str"),
-        param(["#000000", "#ffffff"], None, id="valid-list[str]"),
-        param(777, "Plot color map must be string or list!", id="invalid-dtype1"),
-        param([], "Color map must be at least two colors", id="invalid-insufficient-colors1"),
-        param(["#8834BB"], "Color map must be at least two colors", id="invalid-insufficient-colors2"),
-        param(["#883488", "#Gg8888"], r"Invalid color .+ found in cmap", id="invalid-hexcolor-in-list1"),
-        param(["#883488", "#1111119"], r"Invalid color .+ found in cmap", id="invalid-hexcolor-in-list2"),
+        # Valid cmaps
+        param("coolwarm", does_not_raise(), id="valid-str"),
+        param(["#000000", "#ffffff"], does_not_raise(), id="valid-list[str]"),
+        # Invalid cmaps
+        param(
+            777,
+            pytest.raises(TypeError, match="Plot color map must be string or list!"),
+            id="invalid-dtype1",
+        ),
+        param(
+            [],
+            pytest.raises(ValueError, match="Color map must be at least two colors"),
+            id="invalid-insufficient-colors1",
+        ),
+        param(
+            ["#8834BB"],
+            pytest.raises(ValueError, match="Color map must be at least two colors"),
+            id="invalid-insufficient-colors2",
+        ),
+        param(
+            ["#883488", "#Gg8888"],
+            pytest.raises(ValueError, match=r"Invalid color .+ found in cmap"),
+            id="invalid-hexcolor-in-list1",
+        ),
+        param(
+            ["#883488", "#1111119"],
+            pytest.raises(ValueError, match=r"Invalid color .+ found in cmap"),
+            id="invalid-hexcolor-in-list2",
+        ),
     ],
 )
-def test_verify_valid_cmap(cmap, emsg):
+def test_verify_valid_cmap(cmap, exp_ctx):
     from shap.plots._force import verify_valid_cmap
 
-    if emsg is None:
-        # Valid cmaps
-        _ = verify_valid_cmap(cmap)
-    else:
-        # Invalid cmaps
-        with pytest.raises(ValueError, match=emsg):
-            verify_valid_cmap(cmap)
+    with exp_ctx:
+        verify_valid_cmap(cmap)
 
 
 def test_random_force_plot_mpl_with_data():
