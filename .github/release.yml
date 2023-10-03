@@ -1,0 +1,21 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - documentation
+      - ci
+    authors:
+      - dependabot
+  categories:
+    - title: Added
+      labels:
+        - enhancement
+    - title: Changed
+      labels:
+        - BREAKING
+    - title: Fixed
+      labels:
+        - bug
+    - title: Other Changes
+      labels:
+        - "*"
