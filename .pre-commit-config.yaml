@@ -41,6 +41,7 @@ repos:
                 notebooks/image_examples/.*.ipynb|
                 notebooks/overviews/.*.ipynb|
                 notebooks/tabular_examples/.*.ipynb|
+                notebooks/text_examples/.*.ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.292
