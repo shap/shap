@@ -6,6 +6,7 @@ changelog:
       - ci
     authors:
       - dependabot
+      - pre-commit-ci
   categories:
     - title: Added
       labels:
