@@ -36,9 +36,8 @@ repos:
             (?x)^(
                 notebooks/api_examples/.*.ipynb|
                 notebooks/benchmarks/.*.ipynb|
-                notebooks/tabular_examples/linear_models/.*.ipynb|
                 notebooks/genomic_examples/.*.ipynb|
-                notebooks/tabular_examples/tree_based_models/[\w\s]+.ipynb|
+                notebooks/tabular_examples/(?!.*tree_shap_paper).ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.287
