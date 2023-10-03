@@ -86,6 +86,7 @@ class DeepExplainer(Explainer):
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
+        self.explainer.framework = framework
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
         """ Return approximate SHAP values for the model applied to the data given by X.
