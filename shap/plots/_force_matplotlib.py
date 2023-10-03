@@ -223,7 +223,8 @@ def format_data(data):
         def convert_func(x):
             return 1 / (1 + np.exp(-x))
     else:
-        assert False, "ERROR: Unrecognized link function: " + str(data['link'])
+        emsg = f"ERROR: Unrecognized link function: {data['link']}"
+        raise ValueError(emsg)
 
     # Convert negative feature values to plot values
     neg_val = data['outValue']
