@@ -1,6 +1,7 @@
 ci:
   autoupdate_schedule: monthly
 
+exclude: '.*tree_shap_paper.*|.*user_studies.*'
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.292
@@ -30,14 +31,14 @@ repos:
   hooks:
   - id: black-jupyter
     name: black (fixed notebooks)
-    # This YAML anchor selects which notebooks are linted with ruff and black.
-    # Add a notebook here once it has been cleaned up.
+    # This regular expression selects which notebooks are linted with ruff and black.
+    # Add a notebook (or directory of notebooks) here once it has been cleaned up.
     files: &cleanNotebooks |
             (?x)^(
                 notebooks/api_examples/.*.ipynb|
                 notebooks/benchmarks/.*.ipynb|
                 notebooks/genomic_examples/.*.ipynb|
-                notebooks/tabular_examples/(?!.*tree_shap_paper).ipynb|
+                notebooks/tabular_examples/.*.ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.0.292
@@ -46,3 +47,4 @@ repos:
     name: ruff (fixed notebooks)
     types_or: [jupyter]
     files: *cleanNotebooks
+    args: [ --fix, --exit-non-zero-on-fix ]
