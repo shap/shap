@@ -2,21 +2,25 @@ changelog:
   exclude:
     labels:
       - skip-changelog
-      - documentation
-      - ci
     authors:
       - dependabot
       - pre-commit-ci
   categories:
+    - title: Breaking changes
+      labels:
+        - BREAKING
     - title: Added
       labels:
         - enhancement
-    - title: Changed
-      labels:
-        - BREAKING
     - title: Fixed
       labels:
         - bug
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Maintenance
+      labels:
+        - ci
     - title: Other Changes
       labels:
         - "*"
