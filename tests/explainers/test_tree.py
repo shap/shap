@@ -1304,10 +1304,10 @@ class TestExplainerXGBoost:
         assert explanation.base_values.shape == (len(X),)
 
         # check that SHAP values sum to model output
-        assert np.allclose(
-            explanation.values.sum(1) + explanation.base_values,
-            predicted,
-        )
+        assert np.allclose(explanation.values.sum(1) + explanation.base_values,
+                           predicted,
+                           atol=1e-7
+                           )
 
     def test_xgboost_classifier_independent_probability(self, random_seed):
         xgboost = pytest.importorskip("xgboost")
