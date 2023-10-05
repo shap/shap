@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, NVIDIA CORPORATION.
+ * Copyright (c) 2022, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,27 @@
  */
 
 #pragma once
+
+#include <thrust/copy.h>
 #include <thrust/device_allocator.h>
 #include <thrust/device_vector.h>
-#include <thrust/iterator/discard_iterator.h>
-#include <thrust/logical.h>
-#include <thrust/reduce.h>
+#include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
+#include <thrust/functional.h>
 #include <thrust/host_vector.h>
-#if (CUDART_VERSION >= 11000)
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/discard_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
+#include <thrust/logical.h>
+#include <thrust/pair.h>
+#include <thrust/reduce.h>
+#include <thrust/scan.h>
+#include <thrust/sort.h>
+#include <thrust/system/cuda/error.h>
+#include <thrust/system_error.h>
+
 #include <cub/cub.cuh>
-#else
-// Hack to get cub device reduce on older toolkits
-#include <thrust/system/cuda/detail/cub/device/device_reduce.cuh>
-using namespace thrust::cuda_cub;
-#endif
+
 #include <algorithm>
 #include <functional>
 #include <set>
@@ -167,6 +175,7 @@ __host__ __device__ inline size_t IndexPhiInteractions(size_t row_idx,
   return matrix_offset + i * (num_columns + 1) + j;
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 namespace detail {
 
 // Shorthand for creating a device vector with an appropriate allocator type
@@ -895,7 +904,7 @@ void DeduplicatePaths(PathVectorT* device_paths,
   size_t* h_num_runs_out;
   CheckCuda(cudaMallocHost(&h_num_runs_out, sizeof(size_t)));
 
-  auto combine = [] __device__(PathElement<SplitConditionT> a,
+  auto combine = [] __host__ __device__(PathElement<SplitConditionT> a,
                                PathElement<SplitConditionT> b) {
     // Combine duplicate features
     a.split_condition.Merge(b.split_condition);
@@ -1176,7 +1185,7 @@ void ComputeBias(const PathVectorT& device_paths, DoubleVectorT* bias) {
                                                   PathIdxTransformOp());
   PathVectorT combined(sorted_paths.size());
   auto combined_out = thrust::reduce_by_key(
-      thrust::cuda ::par(alloc), path_key, path_key + sorted_paths.size(),
+      thrust::cuda::par(alloc), path_key, path_key + sorted_paths.size(),
       sorted_paths.begin(), thrust::make_discard_iterator(), combined.begin(),
       thrust::equal_to<size_t>(),
       [=] __device__(PathElement<SplitConditionT> a,
@@ -1212,18 +1221,29 @@ void ComputeBias(const PathVectorT& device_paths, DoubleVectorT* bias) {
 
 };  // namespace detail
 
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+/** \defgroup GPUTreeShap
+ *  @{
+ */
+
+
 /*!
  * Compute feature contributions on the GPU given a set of unique paths through
  * a tree ensemble and a dataset. Uses device memory proportional to the tree
  * ensemble size.
  *
  * \exception std::invalid_argument Thrown when an invalid argument error
- * condition occurs. \tparam  PathIteratorT     Thrust type iterator, may be
+ * condition occurs.
+ * \tparam  PathIteratorT     Thrust type iterator, may be
  * thrust::device_ptr for device memory, or stl iterator/raw pointer for host
- * memory. \tparam  PhiIteratorT      Thrust type iterator, may be
+ * memory.
+ * \tparam  PhiIteratorT      Thrust type iterator, may be
  * thrust::device_ptr for device memory, or stl iterator/raw pointer for host
- * memory. Value type must be floating point. \tparam  DatasetT User-specified
- * dataset container. \tparam  DeviceAllocatorT  Optional thrust style
+ * memory. Value type must be floating point.
+ * \tparam  DatasetT User-specified
+ * dataset container.
+ * \tparam  DeviceAllocatorT  Optional thrust style
  * allocator.
  *
  * \param X           Thin wrapper over a dataset allocated in device memory. X
@@ -1236,10 +1256,14 @@ void ComputeBias(const PathVectorT& device_paths, DoubleVectorT* bias) {
  * root with feature_idx = -1 and zero_fraction = 1.0. The ordering of path
  * elements inside a unique path does not matter - the result will be the same.
  * Paths may contain duplicate features. See the PathElement class for more
- * information. \param end         Path end iterator. \param num_groups  Number
+ * information.
+ * \param end         Path end iterator.
+ * \param num_groups  Number
  * of output groups. In multiclass classification the algorithm outputs feature
- * contributions per output class. \param phis_begin  Begin iterator for output
- * phis. \param phis_end    End iterator for output phis.
+ * contributions per output class.
+ * \param phis_begin  Begin iterator for output
+ * phis.
+ * \param phis_end    End iterator for output phis.
  */
 template <typename DeviceAllocatorT = thrust::device_allocator<int>,
           typename DatasetT, typename PathIteratorT, typename PhiIteratorT>
@@ -1532,4 +1556,7 @@ void GPUTreeShapInterventional(DatasetT X, DatasetT R, PathIteratorT begin,
                                     temp_phi.data().get());
   thrust::copy(temp_phi.begin(), temp_phi.end(), phis_begin);
 }
+
+/** @}*/
+
 }  // namespace gpu_treeshap
