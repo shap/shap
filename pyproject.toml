@@ -58,7 +58,7 @@ test = [
   "pytest",
   "pytest-mpl",
   "pytest-cov",
-  "xgboost==1.7.6",
+  "xgboost",
   "lightgbm",
   "catboost",
   "gpboost",

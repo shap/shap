@@ -14,7 +14,8 @@ def basic_translation_scenario():
     # Use a *tiny* tokenizer model, to keep tests running as fast as possible.
     # Nb. At time of writing, this pretrained model requires "protobuf==3.20.3".
     # name = "mesolitica/finetune-translation-t5-super-super-tiny-standard-bahasa-cased"
-    name = "Helsinki-NLP/opus-mt-en-es"
+    # name = "Helsinki-NLP/opus-mt-en-es"
+    name = "hf-internal-testing/tiny-random-BartModel"
     tokenizer = AutoTokenizer.from_pretrained(name)
     model = AutoModelForSeq2SeqLM.from_pretrained(name)
 
