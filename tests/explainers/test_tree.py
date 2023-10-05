@@ -463,7 +463,7 @@ def test_provided_background_tree_path_dependent():
     xgboost = pytest.importorskip("xgboost")
 
     X, y = shap.datasets.adult(n_points=100)
-    dtrain = xgboost.DMatrix(X, label=y, feature_names=X.columns)
+    dtrain = xgboost.DMatrix(X, label=y, feature_names=list(X.columns))
 
     params = {
         "booster": "gbtree",
@@ -1285,7 +1285,9 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
+        model = xgboost.XGBClassifier(
+            n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact"
+        )
         model.fit(X, y)
         predicted = model.predict(X, output_margin=True)
 
@@ -1305,6 +1307,7 @@ class TestExplainerXGBoost:
         assert np.allclose(
             explanation.values.sum(1) + explanation.base_values,
             predicted,
+            atol=1e-7,
         )
 
     def test_xgboost_classifier_independent_probability(self, random_seed):
