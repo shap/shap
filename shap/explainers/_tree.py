@@ -1129,7 +1129,25 @@ class TreeEnsemble:
             self.internal_dtype = shap_trees[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             scaling = - model.learning_rate * np.array(model.scalings) # output is weighted average of trees
-            self.trees = [SingleTree(e.tree_, scaling=s, data=data, data_missing=data_missing) for e,s in zip(shap_trees,scaling)]
+            # ngboost reorders the features, so we need to map them back to the original order
+            missing_col_idxs = [[i for i in range(model.n_features) if i not in col_idx] for col_idx in model.col_idxs]
+            feature_mapping = [{i: col_idx for i, col_idx in enumerate(list(col_idxs) + missing_col_idx)}
+                               for col_idxs, missing_col_idx in zip(model.col_idxs, missing_col_idxs)]
+            self.trees = []
+            for idx, shap_tree in enumerate(shap_trees):
+                tree_ = shap_tree.tree_
+                values = tree_.value.reshape(tree_.value.shape[0], tree_.value.shape[1] * tree_.value.shape[2])
+                values = values * scaling[idx]
+                tree = {
+                    "children_left": tree_.children_left.astype(np.int32),
+                    "children_right": tree_.children_right.astype(np.int32),
+                    "children_default": tree_.children_left,
+                    "features": np.array([feature_mapping[idx].get(i, i) for i in tree_.feature]),
+                    "thresholds": tree_.threshold.astype(np.float64),
+                    "values": values,
+                    "node_sample_weight": tree_.weighted_n_node_samples.astype(np.float64)
+                }
+                self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
