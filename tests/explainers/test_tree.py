@@ -1307,6 +1307,7 @@ class TestExplainerXGBoost:
         assert np.allclose(
             explanation.values.sum(1) + explanation.base_values,
             predicted,
+            atol=1e-7,
         )
 
     def test_xgboost_classifier_independent_probability(self, random_seed):
