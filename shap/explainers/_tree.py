@@ -1661,7 +1661,10 @@ class IsoTree(SingleTree):
             self.features = np.where(self.features >= 0, tree_features[self.features], self.features)
 
 
-def get_dmatrix_properties(model: xgboost.sklearn.XGBModel):
+def get_dmatrix_properties(model):
+    """
+    Retrieves properties from an xgboost.sklearn.XGBModel instance that should be passed to the xgboost.core.DMatrix object before calling predict on the model
+    """
     properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
     dmatrix_attributes = {}
     for attribute in properties_to_pass:
