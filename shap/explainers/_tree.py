@@ -1669,7 +1669,7 @@ def get_dmatrix_properties(model: xgboost.sklearn.XGBModel):
         if value is not None:
             dmatrix_attributes[attribute] = value
     return dmatrix_attributes
-    
+
 def get_xgboost_json(model):
     """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
     """
