@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=61.0", "oldest-supported-numpy", "packaging>20.9"]
-build-backend = "setuptools.build_meta"
+build-backend = "setuptools.build_meta:__legacy__"
 
 [project]
 name = "shap"
