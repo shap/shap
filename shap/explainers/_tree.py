@@ -355,7 +355,12 @@ class TreeExplainer(Explainer):
             if self.model.model_type == "xgboost":
                 import xgboost
                 if not isinstance(X, xgboost.core.DMatrix):
-                    X = xgboost.DMatrix(X)
+                    # Retrieve any DMatrix properties if they have been set on the class
+                    dmatrix_props = [p for p in dir(self) if p.startswith("dmatrix_")]
+                    dmatrix_kwargs = {p.split("dmatrix_")[-1]: getattr(self, p) for p in dmatrix_props}
+                    if "n_jobs" in dmatrix_kwargs:
+                        dmatrix_kwargs["nthread"] = dmatrix_kwargs.pop("n_jobs")
+                    X = xgboost.DMatrix(X, **dmatrix_kwargs)
                 if tree_limit == -1:
                     tree_limit = 0
                 try:
