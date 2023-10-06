@@ -1197,6 +1197,30 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
+    def test_xgboost_dmatrix_propagation(self):
+        xgboost = pytest.importorskip("xgboost")
+
+        def sigmoid(x):
+            return 1 / (1 + np.exp(-x))
+
+        X, y = shap.datasets.adult()
+
+        # Randomly set some features of X to NaN to test propagation of missing param
+        X_nan = X.copy()
+        X_nan.loc[
+            X_nan.sample(frac=0.3, random_state=42).index,
+            X_nan.columns.to_series().sample(frac=0.5, random_state=42),
+        ] = 1e-8
+
+        clf = xgboost.XGBClassifier(missing=1e-8, random_state=42)
+        clf.fit(X_nan, y)
+        pred_probs = clf.predict_proba(X_nan)[:, 1]
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(X_nan)
+        # check that SHAP values sum to model output
+        expected_diff = np.max((pred_probs - sigmoid(explainer.expected_value + shap_values.sum(axis=1))).abs())
+        assert expected_diff < 1e-5, "SHAP values don't sum to model output!"
+
     def test_xgboost_direct(self):
         xgboost = pytest.importorskip("xgboost")
 
