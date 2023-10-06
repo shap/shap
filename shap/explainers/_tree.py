@@ -991,6 +991,12 @@ class TreeEnsemble:
                     self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
                 else:
                     self.model_output = "probability"
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - gh3313
+            properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
+            for prop in properties_to_pass:
+                if hasattr(model, prop):
+                    setattr(self, f"dmatrix_{prop}", getattr(model, prop))
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1002,6 +1008,12 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - gh3313
+            properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
+            for prop in properties_to_pass:
+                if hasattr(model, prop):
+                    setattr(self, f"dmatrix_{prop}", getattr(model, prop))
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1013,6 +1025,12 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - gh3313
+            properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
+            for prop in properties_to_pass:
+                if hasattr(model, prop):
+                    setattr(self, f"dmatrix_{prop}", getattr(model, prop))
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
