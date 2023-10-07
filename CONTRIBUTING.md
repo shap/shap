@@ -15,7 +15,11 @@
 - [Documentation](#documentation)
   - [Previewing changes on Pull Requests](#previewing-changes-on-pull-requests)
   - [Building the docs locally](#building-the-docs-locally)
-  - [Jupyter notebook style guide](#jupyter-notebook-style-guide)
+- [Jupyter notebook style guide](#jupyter-notebook-style-guide)
+  - [General Jupyter guidelines](#general-jupyter-guidelines)
+  - [Links / Cross-references](#links--cross-references)
+  - [Watermark](#watermark)
+  - [Notebook linting and formatting](#notebook-linting-and-formatting)
 
 ## Introduction
 
@@ -114,9 +118,6 @@ without CUDA support.
 Consequently, is is quite normal to see warnings such as `WARNING: Could not
 compile cuda extensions` when building from source if you do not have CUDA
 available.
-
-Install the `docs` extras as well, if you are modifying the documentation / example
-notebooks.
 
 ### Code checks with precommit
 
@@ -218,12 +219,12 @@ get an error "Pandoc wasn't found", install `pandoc` as described in
 [nbsphinx installation
 guide](https://nbsphinx.readthedocs.io/en/0.9.2/installation.html#pandoc).
 
-### Jupyter notebook style guide
+## Jupyter notebook style guide
 
 If you are contributing changes to the Jupyter notebooks in the documentation, please
 adhere to the following style guidelines.
 
-#### General Jupyter guidelines
+### General Jupyter guidelines
 
 Before committing your notebook(s),
 
@@ -232,7 +233,7 @@ Before committing your notebook(s),
 - Ensure that the notebook does not raise syntax warnings in the Sphinx build logs as a result of your
   changes.
 
-#### Links / Cross-references
+### Links / Cross-references
 
 You are advised to include links in the notebooks as much as possible if it provides the
 reader with more background / context on the topic at hand.
@@ -251,7 +252,7 @@ In order to inspect which targets are available for you to reference, you may us
 python -m sphinx.ext.intersphinx docs/_build/html/objects.inv
 ```
 
-#### Watermark
+### Watermark
 
 [`watermark`](https://github.com/rasbt/watermark) is a library which automatically
 prints the versions of Python and the packages used in the notebook. It should already
@@ -270,7 +271,7 @@ Add the following cells at the end of the notebook:
 
 The presence of the watermark is also enforced by `pre-commit`.
 
-#### Notebook linting and formatting
+### Notebook linting and formatting
 
 We use `ruff` and `black-jupyter` to perform code linting and auto-formatting on our notebooks.
 Assuming you have set up `pre-commit` as described [above](#code-checks-with-precommit), these checks will
