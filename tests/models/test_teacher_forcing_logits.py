@@ -33,7 +33,7 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
 
     transformers = pytest.importorskip("transformers")
 
-    name = "hf-internal-testing/tiny-random-BartForCausalLM"
+    name = "hf-internal-testing/tiny-random-gpt2"
     tokenizer = transformers.AutoTokenizer.from_pretrained(name)
     model = transformers.AutoModelForCausalLM.from_pretrained(name)
     model.config.is_decoder = True
