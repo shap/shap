@@ -50,8 +50,10 @@ def test_wrapping_for_topk_lm_model():
     """
 
     transformers = pytest.importorskip("transformers")
-    tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
-    model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
+
+    name = "hf-internal-testing/tiny-random-BartForCausalLM"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForCausalLM.from_pretrained(name)
     wrapped_model = shap.models.TopKLM(model, tokenizer)
     masker = shap.maskers.Text(tokenizer, mask_token="...")
 

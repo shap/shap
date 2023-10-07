@@ -33,8 +33,9 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
 
     transformers = pytest.importorskip("transformers")
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
-    model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
+    name = "hf-internal-testing/tiny-random-BartForCausalLM"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForCausalLM.from_pretrained(name)
     model.config.is_decoder = True
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device='cpu')
