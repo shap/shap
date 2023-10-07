@@ -18,7 +18,6 @@
 - [Jupyter notebook style guide](#jupyter-notebook-style-guide)
   - [General Jupyter guidelines](#general-jupyter-guidelines)
   - [Links / Cross-references](#links--cross-references)
-  - [Watermark](#watermark)
   - [Notebook linting and formatting](#notebook-linting-and-formatting)
 
 ## Introduction
@@ -251,25 +250,6 @@ In order to inspect which targets are available for you to reference, you may us
 ```bash
 python -m sphinx.ext.intersphinx docs/_build/html/objects.inv
 ```
-
-### Watermark
-
-[`watermark`](https://github.com/rasbt/watermark) is a library which automatically
-prints the versions of Python and the packages used in the notebook. It should already
-be installed with the `docs` extras. Otherwise, run `pip install watermark`.
-
-Add the following cells at the end of the notebook:
-
-```markdown
-## Watermark
-```
-
-```python
-%load_ext watermark
-%watermark --updated --date --python --iversions
-```
-
-The presence of the watermark is also enforced by `pre-commit`.
 
 ### Notebook linting and formatting
 

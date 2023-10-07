@@ -30,17 +30,3 @@ repos:
   - id: black-jupyter
     name: black (notebooks)
     files: notebooks/.*.ipynb
-
-- repo: local
-  hooks:
-  - id: watermark
-    name: Check that notebooks have watermark
-    description: >-
-      Jupyter notebooks should have a cell for watermark (cf. Jupyter style guide from
-      CONTRIBUTING.md)
-    args: ["--negate", "--multiline"]
-    entry: "%load_ext watermark.*\
-      %watermark --updated --date --python --iversions"
-    language: pygrep
-    # types: [jupyter]
-    files: notebooks/.*.ipynb
