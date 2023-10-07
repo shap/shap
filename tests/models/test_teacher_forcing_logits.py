@@ -13,8 +13,9 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
 
     transformers = pytest.importorskip("transformers")
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
-    model = transformers.AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-xsum-12-6")
+    name = "hf-internal-testing/tiny-random-BartModel"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(name)
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device='cpu')
 

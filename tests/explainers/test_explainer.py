@@ -35,8 +35,9 @@ def test_wrapping_for_text_to_text_teacher_forcing_model():
     def f(x): # pylint: disable=unused-argument
         pass
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
-    model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
+    name = "hf-internal-testing/tiny-random-BartForCausalLM"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForCausalLM.from_pretrained(name)
     wrapped_model = shap.models.TeacherForcing(f, similarity_model=model, similarity_tokenizer=tokenizer)
     masker = shap.maskers.Text(tokenizer, mask_token="...")
 
@@ -49,7 +50,6 @@ def test_wrapping_for_topk_lm_model():
     """
 
     transformers = pytest.importorskip("transformers")
-
     tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
     model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
     wrapped_model = shap.models.TopKLM(model, tokenizer)
