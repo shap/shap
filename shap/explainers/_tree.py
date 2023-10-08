@@ -355,10 +355,8 @@ class TreeExplainer(Explainer):
             if self.model.model_type == "xgboost":
                 import xgboost
                 if not isinstance(X, xgboost.core.DMatrix):
-                    # Retrieve any DMatrix properties if they have been set on the class
-                    dmatrix_props = getattr(self, 'dmatrix_props', {})
-                    if "n_jobs" in dmatrix_props:
-                        dmatrix_props["nthread"] = dmatrix_props.pop("n_jobs")
+                    # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
+                    dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
                     X = xgboost.DMatrix(X, **dmatrix_props)
                 if tree_limit == -1:
                     tree_limit = 0
@@ -996,8 +994,8 @@ class TreeEnsemble:
                 else:
                     self.model_output = "probability"
             # Some properties of the sklearn API are passed to a DMatrix object in xgboost
-            # We need to make sure we do the same here - gh3313
-            self.dmatrix_props = get_dmatrix_properties(model)
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1010,8 +1008,8 @@ class TreeEnsemble:
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
             # Some properties of the sklearn API are passed to a DMatrix object in xgboost
-            # We need to make sure we do the same here - gh3313
-            self.dmatrix_props = get_dmatrix_properties(model)
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1024,8 +1022,8 @@ class TreeEnsemble:
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
             # Some properties of the sklearn API are passed to a DMatrix object in xgboost
-            # We need to make sure we do the same here - gh3313
-            self.dmatrix_props = get_dmatrix_properties(model)
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -1661,7 +1659,7 @@ class IsoTree(SingleTree):
             self.features = np.where(self.features >= 0, tree_features[self.features], self.features)
 
 
-def get_dmatrix_properties(model):
+def get_xgboost_dmatrix_properties(model):
     """
     Retrieves properties from an xgboost.sklearn.XGBModel instance that should be passed to the xgboost.core.DMatrix object before calling predict on the model
     """
@@ -1671,6 +1669,10 @@ def get_dmatrix_properties(model):
         value = getattr(model, attribute)
         if value is not None:
             dmatrix_attributes[attribute] = value
+
+    # Convert sklearn n_jobs to xgboost nthread
+    if "n_jobs" in dmatrix_attributes:
+        dmatrix_attributes["nthread"] = dmatrix_attributes.pop("n_jobs")
     return dmatrix_attributes
 
 def get_xgboost_json(model):
