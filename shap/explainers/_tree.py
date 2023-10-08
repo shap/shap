@@ -520,7 +520,6 @@ class TreeExplainer(Explainer):
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
-                print("In IF CASE")
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
             # binary model case
