@@ -520,11 +520,14 @@ class TreeExplainer(Explainer):
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
+                print("In IF CASE")
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+            # binary model case
             else:
                 self.expected_value = phi[0, -1, -1]
-                return phi[:, :-1, :-1]
+                phi = np.stack((-phi, phi), axis=-1)
+                return phi
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
         # run the core algorithm using the C extension
@@ -538,16 +541,17 @@ class TreeExplainer(Explainer):
             output_transform_codes[transform], True
         )
 
-        return self._get_shap_interactions_output(phi,flat_output)
+        return self._get_shap_interactions_output(phi, flat_output)
 
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
-        if self.model.num_outputs == 1:
-            self.expected_value = phi[0, -1, -1, 0]
+        if self.model.num_outputs == 1 or getattr(getattr(self.model, 'original_model', {}), 'params', {}).get('objective') == 'binary':
+            phi = np.concatenate((-phi, phi), axis=-1)
+            self.expected_value = phi[0, -1, -1, -1]
             if flat_output:
-                out = phi[0, :-1, :-1, 0]
+                out = phi[0, :-1, :-1, :]
             else:
-                out = phi[:, :-1, :-1, 0]
+                out = phi[:, :-1, :-1, :]
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:

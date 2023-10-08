@@ -1055,7 +1055,7 @@ class TestExplainerSklearn:
         shap_interaction_values = explainer.shap_interaction_values(X_test.iloc[:10, :])
         assert (
             np.abs(
-                shap_interaction_values.sum(1).sum(1)
+                np.sum(shap_interaction_values[:, :, :, -1], axis=(1, 2))
                 + explainer.expected_value
                 - predicted[:10]
             ).max()
@@ -1560,13 +1560,8 @@ class TestExplainerLightGBM:
 
         # verify symmetry of the interaction values (this typically breaks if anything is wrong)
         interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
-        for j, jval in enumerate(interaction_vals):
-            for k, kval in enumerate(jval):
-                for m, _ in enumerate(kval):
-                    assert (
-                        abs(interaction_vals[j][k][m] - interaction_vals[j][m][k])
-                        < 1e-4
-                    )
+        interaction_vals_swapped = np.swapaxes(np.copy(interaction_vals), 1, 2)
+        assert np.allclose(interaction_vals, interaction_vals_swapped, atol=1e-4)
 
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
