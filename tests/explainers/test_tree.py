@@ -1599,6 +1599,7 @@ class TestExplainerLightGBM:
 
 
 def test_check_consistent_outputs_binary_classification():
+    # GH 3187
     lightgbm = pytest.importorskip("lightgbm")
     catboost = pytest.importorskip("catboost")
     xgboost = pytest.importorskip("xgboost")
