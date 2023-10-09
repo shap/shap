@@ -1666,9 +1666,8 @@ def get_xgboost_dmatrix_properties(model):
     properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
     dmatrix_attributes = {}
     for attribute in properties_to_pass:
-        value = getattr(model, attribute)
-        if value is not None:
-            dmatrix_attributes[attribute] = value
+        if hasattr(model, attribute):
+            dmatrix_attributes[attribute] = getattr(model, attribute)
 
     # Convert sklearn n_jobs to xgboost nthread
     if "n_jobs" in dmatrix_attributes:
