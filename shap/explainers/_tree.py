@@ -363,6 +363,9 @@ class TreeExplainer(Explainer):
                         X, iteration_range=(0, tree_limit), pred_contribs=True,
                         approx_contribs=approximate, validate_features=False
                     )
+                    if self.model.objective == "binary_crossentropy":
+                        phi = np.stack((-phi, phi), axis=-1)
+                        phi = np.swapaxes(phi, 1, 2)
                 except ValueError as e:
                     emsg = (
                         "This reshape error is often caused by passing a bad data matrix to SHAP. "
@@ -376,6 +379,8 @@ class TreeExplainer(Explainer):
                         X, iteration_range=(0, xgb_tree_limit), output_margin=True,
                         validate_features=False
                     )
+                    if self.model.objective == "binary_crossentropy":
+                        model_output_vals = np.stack((-model_output_vals, model_output_vals), axis=-1)
 
             elif self.model.model_type == "lightgbm":
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
@@ -384,7 +389,7 @@ class TreeExplainer(Explainer):
                 if self.model.original_model.params['objective'] == 'binary':
                     if not from_call:
                         warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
-                    phi = np.concatenate((0-phi, phi), axis=-1)
+                    phi = np.concatenate((-phi, phi), axis=-1)
                 if phi.shape[1] != X.shape[1] + 1:
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
@@ -402,6 +407,9 @@ class TreeExplainer(Explainer):
                 if type(X) != catboost.Pool:
                     X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
+                if self.model.objective == "binary_crossentropy":
+                    phi = np.stack((-phi, phi), axis=-1)
+                    phi = np.swapaxes(phi, 1, 2)
 
             # note we pull off the last column and keep it as our expected_value
             if phi is not None:
@@ -411,7 +419,6 @@ class TreeExplainer(Explainer):
                 else:
                     self.expected_value = phi[0, -1]
                     out = phi[:, :-1]
-
                 if check_additivity and model_output_vals is not None:
                     self.assert_additivity(out, model_output_vals)
 
@@ -525,7 +532,7 @@ class TreeExplainer(Explainer):
             # binary model case
             else:
                 self.expected_value = phi[0, -1, -1]
-                phi = np.stack((-phi, phi), axis=-1)
+                phi = np.stack((-phi[:, :-1, :-1], phi[:, :-1, :-1]), axis=-1)
                 return phi
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
