@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import scipy.special
+import os
 from packaging import version
 
 from .. import maskers
@@ -1837,10 +1838,11 @@ class CatBoostTreeModelLoader:
         # cb_model.save_model("cb_model.json", format="json")
         # self.loaded_cb_model = json.load(open("cb_model.json", "r"))
         import tempfile
-        tmp_file = tempfile.NamedTemporaryFile()
+        tmp_file = tempfile.NamedTemporaryFile(delete=False)
         cb_model.save_model(tmp_file.name, format="json")
         self.loaded_cb_model = json.load(open(tmp_file.name))
         tmp_file.close()
+        os.unlink(tmp_file.name)
 
         # load the CatBoost oblivious trees specific parameters
         self.num_trees = len(self.loaded_cb_model['oblivious_trees'])
