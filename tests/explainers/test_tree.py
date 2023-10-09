@@ -352,12 +352,18 @@ def test_catboost():
 
     explanation = explainer(X)
     # check the properties of Explanation object
-    assert explanation.values.shape == (*X.shape,)
-    assert explanation.base_values.shape == (len(X),)
+    assert explanation.values.shape == (*X.shape, 2)
+    assert explanation.base_values.shape == (len(X), 2)
 
     # check that SHAP values sum to model output
+    # check predictions for class 1
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        np.abs(explanation.values[:, :, 1].sum(1) + explanation.base_values[:, 1] - predicted).max()
+        < 1e-4
+    )
+    # check predictions for class 0
+    assert (
+        np.abs(explanation.values[:, :, 0].sum(1) + explanation.base_values[:, 0] + predicted).max()
         < 1e-4
     )
 
@@ -1590,3 +1596,38 @@ class TestExplainerLightGBM:
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
+
+
+def test_check_consistent_outputs_binary_classification():
+    lightgbm = pytest.importorskip("lightgbm")
+    catboost = pytest.importorskip("catboost")
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.adult(n_points=50)
+
+    lgbm = lightgbm.LGBMClassifier(max_depth=1).fit(X, y)
+    xgb = xgboost.XGBClassifier(max_depth=1).fit(X, y)
+    cat = catboost.CatBoostClassifier(depth=1, iterations=10).fit(X, y)
+
+    ex_lgbm = shap.TreeExplainer(lgbm)
+    ex_xgb = shap.TreeExplainer(xgb)
+    ex_cat = shap.TreeExplainer(cat)
+
+    # lightgbm explanations
+    e_lgbm_bin = ex_lgbm(X, interactions=False)
+    e_lgbm = ex_lgbm(X, interactions=True)
+
+    # xgboost explanations
+    e_xgb_bin = ex_xgb(X, interactions=False)
+    e_xgb = ex_xgb(X, interactions=True)
+
+    # catboost explanations
+    e_cat_bin = ex_cat(X, interactions=False)
+    e_cat = ex_cat(X, interactions=True)
+
+    # output shape: examples x features x classes
+    assert (50, 12, 2) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape, \
+        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, CatBoost: {e_cat_bin.shape}"
+    # output shape: examples x features x features x classes
+    assert (50, 12, 12, 2) == e_lgbm.shape == e_xgb.shape == e_cat.shape, \
+        f"LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}"
