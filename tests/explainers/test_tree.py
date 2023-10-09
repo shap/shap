@@ -387,7 +387,7 @@ def test_catboost_categorical():
 
 
 def test_catboost_interactions():
-    # GH 3187
+    # GH 3324
     catboost = pytest.importorskip("catboost")
 
     X, y = shap.datasets.adult(n_points=50)
