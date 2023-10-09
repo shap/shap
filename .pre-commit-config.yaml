@@ -39,6 +39,7 @@ repos:
                 notebooks/benchmarks/.*.ipynb|
                 notebooks/genomic_examples/.*.ipynb|
                 notebooks/image_examples/.*.ipynb|
+                notebooks/overviews/.*.ipynb|
                 notebooks/tabular_examples/.*.ipynb|
             )$
 - repo: https://github.com/astral-sh/ruff-pre-commit
