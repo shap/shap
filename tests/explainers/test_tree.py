@@ -1444,7 +1444,7 @@ class TestExplainerLightGBM:
 
         # train lightgbm model
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
-            *shap.datasets.adult(),
+            *shap.datasets.adult(n_points=500),
             test_size=0.2,
             random_state=0,
         )

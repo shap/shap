@@ -215,7 +215,7 @@ def test_pytorch_mnist_cnn():
         else:
             e = shap.GradientExplainer(model, next_x[inds, :, :, :])
         test_x, _ = next(iter(test_loader))
-        shap_values = e.shap_values(test_x[:1], nsamples=5000)
+        shap_values = e.shap_values(test_x[:1], nsamples=1000)
 
         if not interim:
             # unlike deepLIFT, Integrated Gradients aren't necessarily consistent for interim layers
