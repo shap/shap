@@ -1698,45 +1698,16 @@ class XGBTreeModelLoader:
     tree can actually be wrong when feature values land almost on a threshold.
     """
     def __init__(self, xgb_model):
-        # new in XGBoost 1.1, 'binf' is appended to the buffer
-        self.buf = xgb_model.save_raw()
-        # import pdb; pdb.set_trace()
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
             # Write your JSON data to the temporary file
             xgb_model.save_model(temp_file.name)
             xgb_params = json.load(temp_file)
             xgb_model.save_model("bugs/xgboost_binary_format_to_json/xgb_model_running.json")
 
-        if self.buf.startswith(b'binf'):
-            self.buf = self.buf[4:]
-        self.pos = 0
-
-        # "learner_model_param": {
-        #     "base_score": "2.768782E-1",
-        #     "boost_from_average": "1",
-        #     "num_class": "0",
-        #     "num_feature": "12",
-        #     "num_target": "1"
-        # load the model parameters
-        self.read('f')
-        # self.base_score = self.read('f')
         self.base_score = float(xgb_params["learner"]["learner_model_param"]["base_score"])
-        self.read('I')
-        # self.num_feature = self.read('I')
         self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
-        self.read('i')
-        # self.num_class = self.read('i')
         self.num_class = int(xgb_params["learner"]["learner_model_param"]["num_class"])
-        self.read('i')
-        # self.contain_extra_attrs = self.read('i')
-        self.read('i')
-        # self.contain_eval_metrics = self.read('i')
-        self.read_arr('i', 29) # reserved
-        self.read('Q')
-        # self.name_obj_len = self.read('Q')
         self.name_obj = xgb_params["learner"]["objective"]["name"]
-        self.read('Q')
-        # self.name_gbm_len = self.read('Q')
         self.name_gbm = xgb_params["learner"]["gradient_booster"]["name"]
 
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
@@ -1749,22 +1720,8 @@ class XGBTreeModelLoader:
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
         # load the gbtree specific parameters
-        self.read('i')
         self.num_trees = int(xgb_params["learner"]["gradient_booster"]["model"]["gbtree_model_param"]["num_trees"])
-        self.read('i')  # not needed
-        # self.num_roots = self.read('i')  # not needed
-        self.read('i')
         self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
-        self.read('i')  # not needed
-        # self.pad_32bit = self.read('i')  # not needed
-        self.read('Q')  # not needed
-        # self.num_pbuffer_deprecated = self.read('Q')  # not needed
-        self.read('i')  # not needed
-        # self.num_output_group = self.read('i')  # not needed
-        self.read('i')  # not needed
-        # self.size_leaf_vector = self.read('i')  # not needed
-        self.read_arr('i', 32) # reserved
-
         # load each tree
         self.num_roots = np.zeros(self.num_trees, dtype=np.int32)
         self.num_nodes = np.zeros(self.num_trees, dtype=np.int32)
@@ -1785,63 +1742,24 @@ class XGBTreeModelLoader:
             tree_json = xgb_params["learner"]["gradient_booster"]["model"]["trees"][i]
 
             # load the per-tree params
-            self.read('i')  # brauchen wir denke ich nicht??
-            # self.num_roots[i] = self.read('i')  # brauchen wir denke ich nicht??
-            self.read('i')
-            # self.num_nodes[i] = self.read('i')
             self.num_nodes[i] = tree_json["tree_param"]["num_nodes"]
-            self.read('i')
-            # self.num_deleted[i] = self.read('i')
             self.num_deleted[i] = tree_json["tree_param"]["num_deleted"]
-            self.max_depth[i] = self.read('i') # evtl tree_info
-            self.read('i')
-            # self.num_feature[i] = self.read('i')
+            # self.max_depth[i] = self.read('i') # todo: this is not in the json
             self.num_feature[i] = tree_json["tree_param"]["num_feature"]
-            self.read('i')
-            # self.size_leaf_vector[i] = self.read('i')
             self.size_leaf_vector[i] = tree_json["tree_param"]["size_leaf_vector"]
 
             # load the nodes
-            self.read_arr('i', 31) # reserved
             self.node_parents.append(np.array(tree_json["parents"], dtype=np.int32))
             self.node_cleft.append(np.array(tree_json["left_children"], dtype=np.int32))
             self.node_cright.append(np.array(tree_json["right_children"], dtype=np.int32))
             self.node_sindex.append(np.array(tree_json["split_indices"], dtype=np.uint32))
             self.node_info.append(np.array(tree_json["split_conditions"], dtype=np.float32))
 
-            # self.node_parents.append(np.zeros(self.num_nodes[i], dtype=np.int32))
-            # self.node_cleft.append(np.zeros(self.num_nodes[i], dtype=np.int32))
-            # self.node_cright.append(np.zeros(self.num_nodes[i], dtype=np.int32))
-            # self.node_sindex.append(np.zeros(self.num_nodes[i], dtype=np.uint32))
-            # self.node_info.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            for j in range(self.num_nodes[i]):
-                self.read('i')
-                self.read('i')
-                self.read('i')
-                self.read('I')
-                self.read('f')
-
-                # self.node_parents[-1][j] = self.read('i')
-                # self.node_cleft[-1][j] = self.read('i')
-                # self.node_cright[-1][j] = self.read('i')
-                # self.node_sindex[-1][j] = self.read('I')
-                # self.node_info[-1][j] = self.read('f')
-
             # load the stat nodes
             self.loss_chg.append(np.array(tree_json["loss_changes"], dtype=np.float32))
             self.sum_hess.append(np.array(tree_json["sum_hessian"], dtype=np.float64))
             self.base_weight.append(np.array(tree_json["base_weights"], dtype=np.float32))
             self.leaf_child_cnt.append(np.array(tree_json["default_left"], dtype=int))
-
-            # self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            # self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float64))
-            # self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            # self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=int))
-            # for j in range(self.num_nodes[i]):
-            #     self.loss_chg[-1][j] = self.read('f')
-            #     self.sum_hess[-1][j] = self.read('f')
-            #     self.base_weight[-1][j] = self.read('f')
-            #     self.leaf_child_cnt[-1][j] = self.read('i')
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
