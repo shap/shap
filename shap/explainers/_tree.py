@@ -1828,7 +1828,7 @@ class XGBTreeModelLoader:
                 # self.node_info[-1][j] = self.read('f')
 
             # load the stat nodes
-            self.loss_chg.append(np.array(tree_json["sum_hessian"], dtype=np.float32))
+            self.loss_chg.append(np.array(tree_json["loss_changes"], dtype=np.float32))
             self.sum_hess.append(np.array(tree_json["sum_hessian"], dtype=np.float64))
             self.base_weight.append(np.array(tree_json["base_weights"], dtype=np.float32))
             self.leaf_child_cnt.append(np.array(tree_json["default_left"], dtype=int))
