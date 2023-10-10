@@ -1,4 +1,5 @@
 import json
+import os
 import struct
 import time
 import warnings
@@ -6,7 +7,6 @@ import warnings
 import numpy as np
 import pandas as pd
 import scipy.special
-import os
 from packaging import version
 
 from .. import maskers
