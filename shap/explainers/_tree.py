@@ -1,6 +1,7 @@
 import json
 import os
 import struct
+import tempfile
 import time
 import warnings
 
@@ -1699,6 +1700,13 @@ class XGBTreeModelLoader:
     def __init__(self, xgb_model):
         # new in XGBoost 1.1, 'binf' is appended to the buffer
         self.buf = xgb_model.save_raw()
+        # import pdb; pdb.set_trace()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            # Write your JSON data to the temporary file
+            xgb_model.save_model(temp_file.name)
+            xgb_params = json.load(temp_file)
+            xgb_model.save_model("xgb_model.json")
+
         if self.buf.startswith(b'binf'):
             self.buf = self.buf[4:]
         self.pos = 0
@@ -1725,13 +1733,15 @@ class XGBTreeModelLoader:
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
         # load the gbtree specific parameters
-        self.num_trees = self.read('i')
-        self.num_roots = self.read('i')
-        self.num_feature = self.read('i')
-        self.pad_32bit = self.read('i')
-        self.num_pbuffer_deprecated = self.read('Q')
-        self.num_output_group = self.read('i')
-        self.size_leaf_vector = self.read('i')
+        self.read('i')
+        self.num_trees = int(xgb_params["learner"]["gradient_booster"]["model"]["gbtree_model_param"]["num_trees"])
+        self.num_roots = self.read('i')  # not needed
+        self.read('i')
+        self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
+        self.pad_32bit = self.read('i')  # not needed
+        self.num_pbuffer_deprecated = self.read('Q')  # not needed
+        self.num_output_group = self.read('i')  # not needed
+        self.size_leaf_vector = self.read('i')  # not needed
         self.read_arr('i', 32) # reserved
 
         # load each tree
@@ -1753,7 +1763,8 @@ class XGBTreeModelLoader:
         for i in range(self.num_trees):
 
             # load the per-tree params
-            self.num_roots[i] = self.read('i')
+            self.read('i')  # brauchen wir denke ich nicht??
+            # self.num_roots[i] = self.read('i')  # brauchen wir denke ich nicht??
             self.num_nodes[i] = self.read('i')
             self.num_deleted[i] = self.read('i')
             self.max_depth[i] = self.read('i')
