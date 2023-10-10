@@ -406,7 +406,7 @@ def test_catboost_interactions():
     # catboost explanations
     explanation = ex_cat(X, interactions=True)
     assert (
-        np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max()
+        np.abs(explanation.values[:, :, :, -1].sum(axis=(1, 2)) + explanation.base_values - predicted).max()
         < 1e-4
     )
 
