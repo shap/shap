@@ -392,6 +392,24 @@ def test_catboost_categorical():
     )
 
 
+def test_catboost_interactions():
+    # GH 3324
+    catboost = pytest.importorskip("catboost")
+
+    X, y = shap.datasets.adult(n_points=50)
+
+    model = catboost.CatBoostClassifier(depth=1, iterations=10).fit(X, y)
+    predicted = model.predict(X, prediction_type="RawFormulaVal")
+
+    ex_cat = shap.TreeExplainer(model)
+
+    # catboost explanations
+    explanation = ex_cat(X, interactions=True)
+    assert (
+        np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max()
+        < 1e-4
+    )
+
 # TODO: Test tree_limit argument
 
 
@@ -1450,7 +1468,7 @@ class TestExplainerLightGBM:
 
         # train lightgbm model
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
-            *shap.datasets.adult(),
+            *shap.datasets.adult(n_points=500),
             test_size=0.2,
             random_state=0,
         )
