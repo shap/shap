@@ -1698,11 +1698,17 @@ class XGBTreeModelLoader:
     tree can actually be wrong when feature values land almost on a threshold.
     """
     def __init__(self, xgb_model):
-        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
-            # Write your JSON data to the temporary file
-            xgb_model.save_model(temp_file.name)
-            xgb_params = json.load(temp_file)
-            xgb_model.save_model("bugs/xgboost_binary_format_to_json/xgb_model_running.json")
+        import ubjson
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_file = os.path.join(tmp_dir, "model.ubj")
+            xgb_model.save_model(tmp_file)
+            xgb_model.save_model("bugs/xgboost_binary_format_to_json/model.ubj")
+            xgb_params = ubjson.loadb(open(tmp_file))
+        # with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+        #     # Write your JSON data to the temporary file
+        #     xgb_model.save_model(temp_file.name)
+        #     xgb_params = json.load(temp_file)
+        #     xgb_model.save_model("bugs/xgboost_binary_format_to_json/xgb_model_running.json")
 
         self.base_score = float(xgb_params["learner"]["learner_model_param"]["base_score"])
         self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
