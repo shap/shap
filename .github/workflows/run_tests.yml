@@ -46,11 +46,11 @@ jobs:
       -
         name: Show 20 largest folders
         working-directory: .
-        if: runner.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run: |
           du -h --max-depth=1 / 2>/dev/null | sort -rh | head -n 21
       - name: Free Disk Space (Ubuntu)
-        if: runner.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         uses: jlumbroso/free-disk-space@main
         with:
           # this might remove tools that are actually needed,
@@ -67,7 +67,7 @@ jobs:
           swap-storage: true
       -
         name: Show 20 largest folders
-        if: runner.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         working-directory: .
         run: |
           du -h --max-depth=1 / 2>/dev/null | sort -rh | head -n 21
