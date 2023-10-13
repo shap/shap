@@ -46,9 +46,11 @@ jobs:
       -
         name: Show 20 largest folders
         working-directory: .
+        if: runner.os == 'ubuntu-latest'
         run: |
-          du -Sh | sort -rh | head -20
+          du -h --max-depth=1 / 2>/dev/null | sort -rh | head -n 21
       - name: Free Disk Space (Ubuntu)
+        if: runner.os == 'ubuntu-latest'
         uses: jlumbroso/free-disk-space@main
         with:
           # this might remove tools that are actually needed,
@@ -65,9 +67,10 @@ jobs:
           swap-storage: true
       -
         name: Show 20 largest folders
+        if: runner.os == 'ubuntu-latest'
         working-directory: .
         run: |
-          du -Sh | sort -rh | head -20
+          du -h --max-depth=1 / 2>/dev/null | sort -rh | head -n 21
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -90,11 +93,6 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
-      -
-        name: Show 20 largest folders
-        working-directory: .
-        run: |
-          du -Sh | sort -rh | head -20
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
