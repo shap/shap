@@ -1215,6 +1215,30 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
+    def test_xgboost_dmatrix_propagation(self):
+        """
+        Test that xgboost sklearn attributues are properly passed to the DMatrix
+        initiated during shap value calculation. see GH #3313
+        """
+        xgboost = pytest.importorskip("xgboost")
+
+        X, y = shap.datasets.adult(n_points=100)
+
+        # Randomly add missing data to the input where missing data is encoded as 1e-8
+        X_nan = X.copy()
+        X_nan.loc[
+            X_nan.sample(frac=0.3, random_state=42).index,
+            X_nan.columns.to_series().sample(frac=0.5, random_state=42),
+        ] = 1e-8
+
+        clf = xgboost.XGBClassifier(missing=1e-8, random_state=42)
+        clf.fit(X_nan, y)
+        margin = clf.predict(X_nan, output_margin=True)
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(X_nan)
+        # check that SHAP values sum to model output
+        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+
     def test_xgboost_direct(self):
         xgboost = pytest.importorskip("xgboost")
 
