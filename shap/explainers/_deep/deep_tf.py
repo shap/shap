@@ -85,10 +85,10 @@ class TFDeep(Explainer):
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
             from tensorflow.python.framework import (
-                ops as tf_ops,  # pylint: disable=E0611
+                ops as tf_ops,
             )
             from tensorflow.python.ops import (
-                gradients_impl as tf_gradients_impl,  # pylint: disable=E0611
+                gradients_impl as tf_gradients_impl,
             )
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl

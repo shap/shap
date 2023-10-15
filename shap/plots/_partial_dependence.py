@@ -106,7 +106,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
         # ice line plot
         if ice:
             if ace_linewidth == "auto":
-                ace_linewidth = min(1, 50/ice_vals.shape[1]) # pylint: disable=unsubscriptable-object
+                ace_linewidth = min(1, 50/ice_vals.shape[1])
             ax1.plot(xs, ice_vals, color=light_blue_rgb, linewidth=ace_linewidth, alpha=ace_opacity)
 
         # the line plot

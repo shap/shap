@@ -188,7 +188,6 @@ def configure_pyspark_python(monkeypatch):
 
 
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
-    # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
     try:
@@ -216,8 +215,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
         explainer = shap.TreeExplainer(model)
         # Make sure the model can be serializable to run shap values with spark
         pickle.dumps(explainer)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[  # pylint: disable=E1101
-            :100]
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100]
 
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
@@ -243,7 +241,6 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
 
 
 def test_pyspark_regression_decision_tree(configure_pyspark_python):
-    # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
     try:
@@ -270,7 +267,7 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100] # pylint: disable=E1101
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100]
 
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value

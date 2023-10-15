@@ -918,7 +918,7 @@ class TreeEnsemble:
                 self.base_offset = model.init_.prior
                 self.tree_output = "log_odds"
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
-                self.base_offset = scipy.special.logit(model.init_.class_prior_[1])  # with two classes the trees only model the second class. # pylint: disable=no-member
+                self.base_offset = scipy.special.logit(model.init_.class_prior_[1])  # with two classes the trees only model the second class.
                 self.tree_output = "log_odds"
             else:
                 emsg = f"Unsupported init model type: {type(model.init_)}"
@@ -1651,7 +1651,7 @@ class IsoTree(SingleTree):
         super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
             from sklearn.ensemble._iforest import (
-                _average_path_length,  # pylint: disable=no-name-in-module
+                _average_path_length,
             )
 
             def _recalculate_value(tree, i , level):
@@ -1733,7 +1733,7 @@ class XGBTreeModelLoader:
         import xgboost
         if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
-                self.base_score = scipy.special.logit(self.base_score) # pylint: disable=no-member
+                self.base_score = scipy.special.logit(self.base_score)
 
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 

@@ -2,7 +2,7 @@ import matplotlib
 import numpy as np
 
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
+import shap  # noqa: E402
 
 
 def test_random_dependence():

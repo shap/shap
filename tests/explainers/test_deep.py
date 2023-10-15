@@ -12,8 +12,6 @@ from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-# pylint: disable=import-outside-toplevel, no-name-in-module, import-error
-
 ############################
 # Tensorflow related tests #
 ############################
@@ -210,7 +208,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     max_features = 1000
     try:
         (X_train, _), (X_test, _) = imdb.load_data(num_words=max_features)
-    except Exception: # pylint: disable=broad-except
+    except Exception:
         return # this hides a bug in the most recent version of keras that prevents data loading
     X_train = sequence.pad_sequences(X_train, maxlen=100)
     X_test = sequence.pad_sequences(X_test, maxlen=100)
