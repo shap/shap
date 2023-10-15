@@ -55,15 +55,6 @@ class LinearExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
-        if 'feature_dependence' in kwargs:
-            warnings.warn('The option feature_dependence has been renamed to feature_perturbation!')
-            feature_perturbation = kwargs["feature_dependence"]
-        if feature_perturbation == "independent":
-            warnings.warn('The option feature_perturbation="independent" is has been renamed to feature_perturbation="interventional"!')
-            feature_perturbation = "interventional"
-        elif feature_perturbation == "correlation":
-            warnings.warn('The option feature_perturbation="correlation" is has been renamed to feature_perturbation="correlation_dependent"!')
-            feature_perturbation = "correlation_dependent"
         if feature_perturbation is not None:
             warnings.warn("The feature_perturbation option is now deprecated in favor of using the appropriate masker (maskers.Independent, or maskers.Impute)")
         else:

@@ -64,7 +64,6 @@ class TreeExplainer(Explainer):
         feature_perturbation="interventional",
         feature_names=None,
         approximate=False,
-        **deprecated_options,
     ):
         """ Build a new Tree explainer for the passed model.
 
@@ -127,28 +126,6 @@ class TreeExplainer(Explainer):
 
         if getattr(self.masker, "clustering", None) is not None:
             raise ExplainerError("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
-
-        # check for deprecated options
-        if model_output == "margin":
-            warnings.warn("model_output = \"margin\" has been renamed to model_output = \"raw\"")
-            model_output = "raw"
-        if model_output == "logloss":
-            warnings.warn("model_output = \"logloss\" has been renamed to model_output = \"log_loss\"")
-            model_output = "log_loss"
-        if "feature_dependence" in deprecated_options:
-            dep_val = deprecated_options["feature_dependence"]
-            if dep_val == "independent" and feature_perturbation == "interventional":
-                warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
-                    " = \"interventional\"! See GitHub issue #882.")
-            elif feature_perturbation != "interventional":
-                warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
-                    " = \"interventional\", you can't supply both options! See GitHub issue #882.")
-            if dep_val == "tree_path_dependent" and feature_perturbation == "interventional":
-                raise ValueError("The feature_dependence option has been renamed to feature_perturbation! " \
-                    "Please update the option name before calling TreeExplainer. See GitHub issue #882.")
-        if feature_perturbation == "independent":
-            raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
-                "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
         if isinstance(data, pd.DataFrame):
             self.data = data.values

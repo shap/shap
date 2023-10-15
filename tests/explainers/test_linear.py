@@ -194,9 +194,7 @@ def test_sparse():
 @pytest.mark.parametrize("feature_pertubation,masker", [
     (None, shap.maskers.Independent),
     ("interventional", shap.maskers.Independent),
-    ("independent", shap.maskers.Independent),
     ("correlation_dependent", shap.maskers.Impute),
-    ("correlation", shap.maskers.Impute)
 ])
 def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
