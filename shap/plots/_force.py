@@ -11,6 +11,7 @@ import warnings
 from collections.abc import Sequence
 
 import numpy as np
+import pandas as pd
 import scipy.sparse
 
 try:
@@ -138,11 +139,11 @@ def force(
         return visualize(shap_values)
 
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = list(features.columns)
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values

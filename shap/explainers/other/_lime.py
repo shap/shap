@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from .._explainer import Explainer
 
@@ -30,7 +31,7 @@ class LimeTabular(Explainer):
         assert mode in ["classification", "regression"]
         self.mode = mode
 
-        if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(data, pd.DataFrame):
             data = data.values
         self.data = data
         self.explainer = lime.lime_tabular.LimeTabularExplainer(data, mode=mode)
@@ -52,7 +53,7 @@ class LimeTabular(Explainer):
     def attributions(self, X, nsamples=5000, num_features=None):
         num_features = X.shape[1] if num_features is None else num_features
 
-        if str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(X, pd.DataFrame):
             X = X.values
 
         out = [np.zeros(X.shape) for j in range(self.out_dim)]
