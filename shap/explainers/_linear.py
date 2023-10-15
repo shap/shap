@@ -55,10 +55,17 @@ class LinearExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
+        if "feature_dependence" in kwargs:
+            emsg = "The option feature_dependence has been renamed to feature_perturbation!"
+            raise ValueError(emsg)
+
         if feature_perturbation is not None:
             warnings.warn("The feature_perturbation option is now deprecated in favor of using the appropriate masker (maskers.Independent, or maskers.Impute)")
         else:
             feature_perturbation = "interventional"
+        if feature_perturbation not in ("interventional", "correlation_dependent"):
+            emsg = "feature_perturbation must be one of 'interventional' or 'correlation_dependent'"
+            raise ValueError(emsg)
         self.feature_perturbation = feature_perturbation
 
         # wrap the incoming masker object as a shap.Masker object before calling
