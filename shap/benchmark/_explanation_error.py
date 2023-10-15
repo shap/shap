@@ -6,6 +6,7 @@ from tqdm.auto import tqdm
 from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
 from shap.utils import MaskedModel, partition_tree_shuffle
+from shap.utils._exceptions import DimensionError
 
 from ._result import BenchmarkResult
 
@@ -89,8 +90,12 @@ class ExplanationError:
         else:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
-        assert len(attributions) == len(self.model_args[0]), "The explanation passed must have the same number of rows as " + \
-                                                             "the self.model_args that were passed!"
+        if len(attributions) != len(self.model_args[0]):
+            emsg = (
+                "The explanation passed must have the same number of rows as "
+                "the self.model_args that were passed!"
+            )
+            raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise

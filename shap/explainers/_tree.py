@@ -13,6 +13,7 @@ from .. import maskers
 from .._explanation import Explanation
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._exceptions import (
+    DimensionError,
     ExplainerError,
     InvalidFeaturePerturbationError,
     InvalidMaskerError,
@@ -288,21 +289,31 @@ class TreeExplainer(Explainer):
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
         if self.model.model_output == "log_loss":
-            assert y is not None, "Both samples and labels must be provided when model_output = " \
-                                  "\"log_loss\" (i.e. `explainer.shap_values(X, y)`)!"
-            assert X.shape[0] == len(
-                y), "The number of labels (%d) does not match the number of samples to explain (" \
-                    "%d)!" % (
-                        len(y), X.shape[0])
+            if y is None:
+                emsg = (
+                    "Both samples and labels must be provided when model_output = \"log_loss\" "
+                    "(i.e. `explainer.shap_values(X, y)`)!"
+                )
+                raise ExplainerError(emsg)
+            if X.shape[0] != len(y):
+                emsg = (
+                    f"The number of labels ({len(y)}) does not match the number of samples "
+                    f"to explain ({X.shape[0]})!"
+                )
+                raise DimensionError(emsg)
 
         if self.feature_perturbation == "tree_path_dependent":
-            assert self.model.fully_defined_weighting, "The background dataset you provided does " \
-                                                       "not cover all the leaves in the model, " \
-                                                       "so TreeExplainer cannot run with the " \
-                                                       "feature_perturbation=\"tree_path_dependent\" option! " \
-                                                       "Try providing a larger background " \
-                                                       "dataset, no background dataset, or using " \
-                                                       "feature_perturbation=\"interventional\"."
+            if not self.model.fully_defined_weighting:
+                emsg = (
+                    "The background dataset you provided does "
+                    "not cover all the leaves in the model, "
+                    "so TreeExplainer cannot run with the "
+                    "feature_perturbation=\"tree_path_dependent\" option! "
+                    "Try providing a larger background "
+                    "dataset, no background dataset, or using "
+                    "feature_perturbation=\"interventional\"."
+                )
+                raise ExplainerError(emsg)
 
         if check_additivity and self.model.model_type == "pyspark":
             warnings.warn(

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from .._explanation import Explanation
+from ..utils._exceptions import ExplainerError
 from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ._kernel import KernelExplainer
 
@@ -45,7 +46,9 @@ class SamplingExplainer(KernelExplainer):
         super().__init__(model, data, **kwargs)
         log.setLevel(level)
 
-        assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)
+        if str(self.link) != "identity":
+            emsg = f"SamplingExplainer only supports the identity link, not {self.link}"
+            raise ValueError(emsg)
 
     def __call__(self, X, y=None, nsamples=2000):
 
@@ -66,7 +69,9 @@ class SamplingExplainer(KernelExplainer):
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
 
-        assert len(self.data.groups) == self.P, "SamplingExplainer does not support feature groups!"
+        if len(self.data.groups) != self.P:
+            emsg = "SamplingExplainer does not support feature groups!"
+            raise ExplainerError(emsg)
 
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model

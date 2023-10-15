@@ -18,6 +18,7 @@ from tqdm.auto import tqdm
 
 from .._explanation import Explanation
 from ..utils import safe_isinstance
+from ..utils._exceptions import DimensionError
 from ..utils._legacy import (
     DenseData,
     IdentityLink,
@@ -96,9 +97,12 @@ class KernelExplainer(Explainer):
         model_null = match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations
-        assert isinstance(self.data, DenseData) or isinstance(self.data, SparseData), \
-               "Shap explainer only supports the DenseData and SparseData input currently."
-        assert not self.data.transposed, "Shap explainer does not support transposed DenseData or SparseData currently."
+        if not isinstance(self.data, (DenseData, SparseData)):
+            emsg = "Shap explainer only supports the DenseData and SparseData input currently."
+            raise TypeError(emsg)
+        if self.data.transposed:
+            emsg = "Shap explainer does not support transposed DenseData or SparseData currently."
+            raise DimensionError(emsg)
 
         # warn users about large background data sets
         if len(self.data.weights) > 100:
@@ -209,7 +213,6 @@ class KernelExplainer(Explainer):
         if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
             X = X.tolil()
         assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
         if len(X.shape) == 1:
@@ -258,6 +261,10 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
                 return out
+
+        else:
+            emsg = "Instance must have 1 or 2 dimensions!"
+            raise DimensionError(emsg)
 
     def explain(self, incoming_instance, **kwargs):
         # convert incoming input to a standardized iml object
