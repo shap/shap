@@ -158,9 +158,12 @@ class TreeExplainer(Explainer):
         if self.data is None:
             feature_perturbation = "tree_path_dependent"
             #warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
-        elif feature_perturbation == "interventional" and self.data.shape[0] > 1000:
-                warnings.warn("Passing "+str(self.data.shape[0]) + " background samples may lead to slow runtimes. Consider "
-                    "using shap.sample(data, 100) to create a smaller background data set.")
+        elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
+            wmsg = (
+                f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
+                "using shap.sample(data, 100) to create a smaller background data set."
+            )
+            warnings.warn(wmsg)
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
@@ -182,8 +185,11 @@ class TreeExplainer(Explainer):
 
         if self.model.model_output != "raw":
             if self.model.objective is None and self.model.tree_output is None:
-                raise Exception("Model does not have a known objective or output type! When model_output is " \
-                                "not \"raw\" then we need to know the model's objective or link function.")
+                emsg = (
+                    "Model does not have a known objective or output type! When model_output is "
+                    "not \"raw\" then we need to know the model's objective or link function."
+                )
+                raise Exception(emsg)
 
         # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
         if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
