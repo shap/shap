@@ -338,10 +338,10 @@ class KernelExplainer(Explainer):
             weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
             weight_vector[:num_paired_subset_sizes] *= 2
             weight_vector /= np.sum(weight_vector)
-            log.debug(f"weight_vector = {weight_vector}")
-            log.debug(f"num_subset_sizes = {num_subset_sizes}")
-            log.debug(f"num_paired_subset_sizes = {num_paired_subset_sizes}")
-            log.debug(f"M = {self.M}")
+            log.debug(f"{weight_vector = }")
+            log.debug(f"{num_subset_sizes = }")
+            log.debug(f"{num_paired_subset_sizes = }")
+            log.debug(f"{self.M = }")
 
             # fill out all the subset sizes we can completely enumerate
             # given nsamples*remaining_weight_vector[subset_size]
@@ -356,8 +356,8 @@ class KernelExplainer(Explainer):
                 nsubsets = binom(self.M, subset_size)
                 if subset_size <= num_paired_subset_sizes:
                     nsubsets *= 2
-                log.debug(f"subset_size = {subset_size}")
-                log.debug(f"nsubsets = {nsubsets}")
+                log.debug(f"{subset_size = }")
+                log.debug(f"{nsubsets = }")
                 log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
                     num_samples_left * remaining_weight_vector[subset_size - 1]))
                 log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {}".format(
@@ -385,19 +385,19 @@ class KernelExplainer(Explainer):
                             self.addsample(instance.x, mask, w)
                 else:
                     break
-            log.info(f"num_full_subsets = {num_full_subsets}")
+            log.info(f"{num_full_subsets = }")
 
             # add random samples from what is left of the subset space
             nfixed_samples = self.nsamplesAdded
             samples_left = self.nsamples - self.nsamplesAdded
-            log.debug(f"samples_left = {samples_left}")
+            log.debug(f"{samples_left = }")
             if num_full_subsets != num_subset_sizes:
                 remaining_weight_vector = copy.copy(weight_vector)
                 remaining_weight_vector[:num_paired_subset_sizes] /= 2 # because we draw two samples each below
                 remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
-                log.info(f"remaining_weight_vector = {remaining_weight_vector}")
-                log.info(f"num_paired_subset_sizes = {num_paired_subset_sizes}")
+                log.info(f"{remaining_weight_vector = }")
+                log.info(f"{num_paired_subset_sizes = }")
                 ind_set = np.random.choice(len(remaining_weight_vector), 4 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
@@ -436,7 +436,7 @@ class KernelExplainer(Explainer):
                 # normalize the kernel weights for the random samples to equal the weight left after
                 # the fixed enumerated samples have been already counted
                 weight_left = np.sum(weight_vector[num_full_subsets:])
-                log.info(f"weight_left = {weight_left}")
+                log.info(f"{weight_left = }")
                 self.kernelWeights[nfixed_samples:] *= weight_left / self.kernelWeights[nfixed_samples:].sum()
 
             # execute the model on the synthetic samples we have created
@@ -599,7 +599,7 @@ class KernelExplainer(Explainer):
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
-        log.debug(f"fraction_evaluated = {fraction_evaluated}")
+        log.debug(f"{fraction_evaluated = }")
         # if self.l1_reg == "auto":
         #     warnings.warn(
         #         "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
@@ -607,8 +607,8 @@ class KernelExplainer(Explainer):
         #     )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
-            log.info(f"np.sum(w_aug) = {np.sum(w_aug)}")
-            log.info(f"np.sum(self.kernelWeights) = {np.sum(self.kernelWeights)}")
+            log.info(f"{np.sum(w_aug) = }")
+            log.info(f"{np.sum(self.kernelWeights) = }")
             w_sqrt_aug = np.sqrt(w_aug)
             eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))))
             eyAdj_aug *= w_sqrt_aug
@@ -643,7 +643,7 @@ class KernelExplainer(Explainer):
         eyAdj2 = eyAdj - self.maskMatrix[:, nonzero_inds[-1]] * (
                     self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))
         etmp = np.transpose(np.transpose(self.maskMatrix[:, nonzero_inds[:-1]]) - self.maskMatrix[:, nonzero_inds[-1]])
-        log.debug(f"etmp[:4,:] {etmp[:4, :]}")
+        log.debug(f"{etmp[:4, :] = }")
 
         # solve a weighted least squares equation to estimate phi
         # least squares:
@@ -677,7 +677,7 @@ class KernelExplainer(Explainer):
             # w = np.dot(XWX, np.dot(np.transpose(WX), y))
             sqrt_W = np.sqrt(self.kernelWeights)
             w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
-        log.debug(f"np.sum(w) = {np.sum(w)}")
+        log.debug(f"{np.sum(w) = }")
         log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
             self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
         log.debug(f"self.fx = {self.fx[dim]}")
@@ -687,7 +687,7 @@ class KernelExplainer(Explainer):
         phi = np.zeros(self.M)
         phi[nonzero_inds[:-1]] = w
         phi[nonzero_inds[-1]] = (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])) - sum(w)
-        log.info(f"phi = {phi}")
+        log.info(f"{phi = }")
 
         # clean up any rounding errors
         for i in range(self.M):
