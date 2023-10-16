@@ -1700,10 +1700,16 @@ class XGBTreeModelLoader:
     def __init__(self, xgb_model):
         import ubjson
         with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_file = os.path.join(tmp_dir, "model.ubj")
-            xgb_model.save_model(tmp_file)
-            xgb_model.save_model("bugs/xgboost_binary_format_to_json/model.ubj")
-            xgb_params = ubjson.loadb(open(tmp_file))
+            os.path.join(tmp_dir, "model.ubj")
+            # xgb_model.save_model(tmp_file)
+            xgb_model.save_model("model.ubj")
+            # import pdb; pdb.set_trace()
+            with open("model.ubj", "rb") as f:
+                data = f.read()
+                xgb_params = ubjson.loadb(data)
+                # it fails from here on since there is still some binary stuff encoded
+                for tree in xgb_params["learner"]["gradient_booster"]["model"]["trees"]:
+                    tree["default_left"] = np.array([0])
         # with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
         #     # Write your JSON data to the temporary file
         #     xgb_model.save_model(temp_file.name)
