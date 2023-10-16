@@ -112,6 +112,8 @@ def _decode_array_optimized(fp):
             return list()
         buffer = fp.read(array_length * value_type_length)
         return list(struct.unpack('>' + f'{struct_mapping[value_type_byte]}' * array_length, buffer))
+    else:
+        raise ValueError("Expected optimized array but got received bytes of unoptimized array.")
 
 def _decode_object(tag, fp):
     result_dict = dict()
@@ -175,6 +177,8 @@ def _decode_simple_key_value_pair(fp, key_type):
             return key, []
         elif value_type_byte == b'' and key == '}':
             return key, None
+        else:
+            raise ValueError(f"Unmatched value type for {value_type_byte}.")
     else:
         raise ValueError(f"Expected type size for {key_type} but could not find any.")
 
