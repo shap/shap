@@ -21,6 +21,7 @@ from ..utils._exceptions import (
 )
 from ..utils._legacy import DenseData
 from ._explainer import Explainer
+from .other._ubjson import decode_ubjson_buffer
 
 warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
 
@@ -1698,23 +1699,25 @@ class XGBTreeModelLoader:
     tree can actually be wrong when feature values land almost on a threshold.
     """
     def __init__(self, xgb_model):
-        import ubjson
+        # import ubjson
         with tempfile.TemporaryDirectory() as tmp_dir:
-            os.path.join(tmp_dir, "model.ubj")
+            tmp_file = os.path.join(tmp_dir, "model.ubj")
             # xgb_model.save_model(tmp_file)
-            xgb_model.save_model("model.ubj")
+            xgb_model.save_model(tmp_file)
+
+            xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
             # import pdb; pdb.set_trace()
-            with open("model.ubj", "rb") as f:
-                data = f.read()
-                xgb_params = ubjson.loadb(data)
-                # it fails from here on since there is still some binary stuff encoded
-                for tree in xgb_params["learner"]["gradient_booster"]["model"]["trees"]:
-                    tree["default_left"] = np.array([0])
+            # with open("model.ubj", "rb") as f:
+            #     data = f.read()
+            #     xgb_params = ubjson.loadb(data)
+            #     # it fails from here on since there is still some binary stuff encoded
+            #     for tree in xgb_params["learner"]["gradient_booster"]["model"]["trees"]:
+            #         tree["default_left"] = np.array([0])
         # with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
         #     # Write your JSON data to the temporary file
         #     xgb_model.save_model(temp_file.name)
-        #     xgb_params = json.load(temp_file)
-        #     xgb_model.save_model("bugs/xgboost_binary_format_to_json/xgb_model_running.json")
+        #     xgb_params = decode_ubjson_buffer(temp_file)
+        #     # xgb_model.save_model("bugs/xgboost_binary_format_to_json/xgb_model_running.json")
 
         self.base_score = float(xgb_params["learner"]["learner_model_param"]["base_score"])
         self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
