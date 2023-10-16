@@ -1699,11 +1699,16 @@ class XGBTreeModelLoader:
     tree can actually be wrong when feature values land almost on a threshold.
     """
     def __init__(self, xgb_model):
-        # import ubjson
+        import xgboost
         with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_file = os.path.join(tmp_dir, "model.ubj")
-            xgb_model.save_model(tmp_file)
-            xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
+            if version.parse(xgboost.__version__) >= version.parse("1.6.0"):
+                tmp_file = os.path.join(tmp_dir, "model.ubj")
+                xgb_model.save_model(tmp_file)
+                xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
+            else:
+                tmp_file = os.path.join(tmp_dir, "model.json")
+                xgb_model.save_model(tmp_file)
+                xgb_params = json.load(open(tmp_file))
 
         self.base_score = float(xgb_params["learner"]["learner_model_param"]["base_score"])
         self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
@@ -1713,7 +1718,6 @@ class XGBTreeModelLoader:
 
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
         # so we have to transform it depending on the objective
-        import xgboost
         if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
                 self.base_score = scipy.special.logit(self.base_score) # pylint: disable=no-member

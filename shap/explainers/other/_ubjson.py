@@ -1,5 +1,4 @@
 import struct
-from typing import Any
 
 import numpy as np
 
@@ -84,7 +83,7 @@ arrays = [ARRAY_CLOSE, ARRAY_OPEN]
 #     [2.113]
 #     [23.8889]
 # // No end marker since a count was specified.
-def _decode_array_optimized(fp) -> list[Any] | np.ndarray:
+def _decode_array_optimized(fp):
     tag = fp.read(1)
     # optimized array with count
     if tag == b"#":
