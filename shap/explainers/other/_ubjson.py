@@ -144,8 +144,6 @@ def __decode_element(tag, fp):
         length = __decode_element(string_length_type, fp)
         string_bytes = fp.read(length)
         return string_bytes.decode("utf-8")
-    elif tag == OBJECT_OPEN:
-        return _decode_object(tag, fp)
     else:
         raise ValueError(f"Expected type size for {tag} but got {element_type_length}")
 
