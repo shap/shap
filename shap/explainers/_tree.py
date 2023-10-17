@@ -1749,7 +1749,6 @@ class XGBTreeModelLoader:
             # load the per-tree params
             self.num_nodes[i] = tree_json["tree_param"]["num_nodes"]
             self.num_deleted[i] = tree_json["tree_param"]["num_deleted"]
-            # self.max_depth[i] = self.read('i') # todo: this is not in the json
             self.num_feature[i] = tree_json["tree_param"]["num_feature"]
             self.size_leaf_vector[i] = tree_json["tree_param"]["size_leaf_vector"]
 
@@ -1823,20 +1822,13 @@ class XGBTreeModelLoader:
         print("base_score =", self.base_score)
         print("num_feature =", self.num_feature)
         print("num_class =", self.num_class)
-        print("contain_extra_attrs =", self.contain_extra_attrs)
-        print("contain_eval_metrics =", self.contain_eval_metrics)
-        print("name_obj_len =", self.name_obj_len)
         print("name_obj =", self.name_obj)
-        print("name_gbm_len =", self.name_gbm_len)
         print("name_gbm =", self.name_gbm)
         print()
         print("--- gbtree specific parameters ---")
         print("num_trees =", self.num_trees)
         print("num_roots =", self.num_roots)
         print("num_feature =", self.num_feature)
-        print("pad_32bit =", self.pad_32bit)
-        print("num_pbuffer_deprecated =", self.num_pbuffer_deprecated)
-        print("num_output_group =", self.num_output_group)
         print("size_leaf_vector =", self.size_leaf_vector)
 
 

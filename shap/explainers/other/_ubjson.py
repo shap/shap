@@ -1,3 +1,9 @@
+"""This is an incomplete implementation of the UBJSON specification. Expected is a readable file pointer to a UBJSON file.
+Things that are not implemented:
+- High precision numbers
+- Optimized arrays with type & count
+- nested arrays, so arrays in arrays are not supported, objects in arrays are supported
+"""
 import struct
 
 import numpy as np
