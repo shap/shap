@@ -161,6 +161,7 @@ class TFDeep(Explainer):
                 #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
+        import pdb; pdb.set_trace()
         if not tf.executing_eagerly():
             self._init_between_tensors(self.model_output.op, self.model_inputs)
 
@@ -186,6 +187,7 @@ class TFDeep(Explainer):
 
     def _init_between_tensors(self, out_op, model_inputs):
         # find all the operations in the graph between our inputs and outputs
+        import pdb; pdb.set_trace()
         tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops) # don't follow learning phase branches
         dependence_breakers = [k for k in op_handlers if op_handlers[k] == break_dependence]
         back_ops = backward_walk_ops(
