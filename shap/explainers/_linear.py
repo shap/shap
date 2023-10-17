@@ -65,7 +65,7 @@ class LinearExplainer(Explainer):
             feature_perturbation = "interventional"
         if feature_perturbation not in ("interventional", "correlation_dependent"):
             emsg = "feature_perturbation must be one of 'interventional' or 'correlation_dependent'"
-            raise ValueError(emsg)
+            raise InvalidFeaturePerturbationError(emsg)
         self.feature_perturbation = feature_perturbation
 
         # wrap the incoming masker object as a shap.Masker object before calling

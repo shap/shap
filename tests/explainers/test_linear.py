@@ -7,6 +7,7 @@ import pytest
 import scipy.special
 
 import shap
+from shap.utils._exceptions import InvalidFeaturePerturbationError
 
 
 def test_tied_pair():
@@ -183,6 +184,17 @@ def test_sparse():
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer.shap_values(X)
     assert np.max(np.abs(scipy.special.expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
+
+
+def test_invalid_feature_perturbation_raises():
+    Ridge = pytest.importorskip("sklearn.linear_model").Ridge
+
+    # train linear model
+    X, y = shap.datasets.california(n_points=100)
+    model = Ridge(0.1).fit(X, y)
+
+    with pytest.raises(InvalidFeaturePerturbationError, match="feature_perturbation must be one of "):
+        shap.LinearExplainer(model, X, feature_perturbation="nonsense")
 
 
 @pytest.mark.parametrize("feature_pertubation,masker", [
