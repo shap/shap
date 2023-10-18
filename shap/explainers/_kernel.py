@@ -657,7 +657,7 @@ class KernelExplainer(Explainer):
         X = etmp
         WX = self.kernelWeights[:, None] * X
         try:
-            w = np.linalg.solve(X.T @ WX, WX.T @ eyAdj2)
+            w = np.linalg.solve(X.T @ WX, WX.T @ y)
         except np.linalg.LinAlgError:
             warnings.warn(
                 "Linear regression equation is singular, a least squares solutions is used instead.\n"
@@ -666,10 +666,10 @@ class KernelExplainer(Explainer):
                 "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
                 "3) group features together to reduce the number of inputs that need to be explained."
             )
-            # tmp2 = np.linalg.pinv(X.T @ WX)
-            # w = np.dot(tmp2, np.dot(np.transpose(WX), eyAdj2))
+            # XWX = np.linalg.pinv(X.T @ WX)
+            # w = np.dot(XWX, np.dot(np.transpose(WX), y))
             sqrt_W = np.sqrt(self.kernelWeights)
-            w = np.linalg.lstsq(sqrt_W[:, None] * etmp, sqrt_W * y)
+            w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
         log.debug(f"np.sum(w) = {np.sum(w)}")
         log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
             self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
