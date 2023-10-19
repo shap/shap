@@ -58,7 +58,7 @@ test = [
   "pytest",
   "pytest-mpl",
   "pytest-cov",
-  "xgboost==1.7.6",
+  "xgboost",
   "lightgbm",
   "catboost",
   "gpboost",
@@ -129,13 +129,17 @@ ignore = [
 ]
 
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config
-# options are ignored! So, use the "per-file-ignores" config to disable linting
-# for specific files.
+# options are ignored! So, instead of "exclude", use the "per-file-ignores"
+# config to always disable linting for specific files.
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 
 [tool.ruff.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
+
+# Ignore notebooks in user_studies, which are not maintained
+"docs/user_studies/*.ipynb" = ["ALL"]
 
 # Ignore SHAP Paper, as it is an unmaintained record of a published paper
 "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*"  = ["ALL"]

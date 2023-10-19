@@ -134,7 +134,6 @@ datasets
 
     shap.datasets.a1a
     shap.datasets.adult
-    shap.datasets.boston
     shap.datasets.california
     shap.datasets.communitiesandcrime
     shap.datasets.corrgroups60

@@ -139,11 +139,31 @@ def _validate_shap_values(model, x_test):
     )
 
 
-def test_ngboost():
+@pytest.mark.parametrize("col_sample", [1.0, 0.9])
+def test_ngboost_models_prediction_equal(col_sample):
+    from shap.explainers._tree import TreeEnsemble
+
+    ngboost = pytest.importorskip("ngboost")
+    X, y = shap.datasets.california(n_points=500)
+
+    model = ngboost.NGBRegressor(n_estimators=2, col_sample=col_sample).fit(X, y)
+
+    tree_ensemble = TreeEnsemble(model=model,
+                                data=X,
+                                data_missing=None,
+                                model_output=0,
+                                )
+    y_pred = model.predict(X)
+    y_pred_tree_ensemble = tree_ensemble.predict(X)
+    assert (y_pred == y_pred_tree_ensemble).all()
+
+
+@pytest.mark.parametrize("col_sample", [1.0, 0.9])
+def test_ngboost_sum_of_shap_values(col_sample):
     ngboost = pytest.importorskip("ngboost")
 
     X, y = shap.datasets.california(n_points=500)
-    model = ngboost.NGBRegressor(n_estimators=20).fit(X, y)
+    model = ngboost.NGBRegressor(n_estimators=20, col_sample=col_sample).fit(X, y)
     predicted = model.predict(X)
 
     # explain the model's predictions using SHAP values
@@ -366,6 +386,24 @@ def test_catboost_categorical():
     )
 
 
+def test_catboost_interactions():
+    # GH 3324
+    catboost = pytest.importorskip("catboost")
+
+    X, y = shap.datasets.adult(n_points=50)
+
+    model = catboost.CatBoostClassifier(depth=1, iterations=10).fit(X, y)
+    predicted = model.predict(X, prediction_type="RawFormulaVal")
+
+    ex_cat = shap.TreeExplainer(model)
+
+    # catboost explanations
+    explanation = ex_cat(X, interactions=True)
+    assert (
+        np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max()
+        < 1e-4
+    )
+
 # TODO: Test tree_limit argument
 
 
@@ -443,7 +481,7 @@ def test_provided_background_tree_path_dependent():
     xgboost = pytest.importorskip("xgboost")
 
     X, y = shap.datasets.adult(n_points=100)
-    dtrain = xgboost.DMatrix(X, label=y, feature_names=X.columns)
+    dtrain = xgboost.DMatrix(X, label=y, feature_names=list(X.columns))
 
     params = {
         "booster": "gbtree",
@@ -1177,6 +1215,30 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
+    def test_xgboost_dmatrix_propagation(self):
+        """
+        Test that xgboost sklearn attributues are properly passed to the DMatrix
+        initiated during shap value calculation. see GH #3313
+        """
+        xgboost = pytest.importorskip("xgboost")
+
+        X, y = shap.datasets.adult(n_points=100)
+
+        # Randomly add missing data to the input where missing data is encoded as 1e-8
+        X_nan = X.copy()
+        X_nan.loc[
+            X_nan.sample(frac=0.3, random_state=42).index,
+            X_nan.columns.to_series().sample(frac=0.5, random_state=42),
+        ] = 1e-8
+
+        clf = xgboost.XGBClassifier(missing=1e-8, random_state=42)
+        clf.fit(X_nan, y)
+        margin = clf.predict(X_nan, output_margin=True)
+        explainer = shap.TreeExplainer(clf)
+        shap_values = explainer.shap_values(X_nan)
+        # check that SHAP values sum to model output
+        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+
     def test_xgboost_direct(self):
         xgboost = pytest.importorskip("xgboost")
 
@@ -1265,7 +1327,9 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
+        model = xgboost.XGBClassifier(
+            n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact"
+        )
         model.fit(X, y)
         predicted = model.predict(X, output_margin=True)
 
@@ -1285,6 +1349,7 @@ class TestExplainerXGBoost:
         assert np.allclose(
             explanation.values.sum(1) + explanation.base_values,
             predicted,
+            atol=1e-7,
         )
 
     def test_xgboost_classifier_independent_probability(self, random_seed):
@@ -1421,7 +1486,7 @@ class TestExplainerLightGBM:
 
         # train lightgbm model
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
-            *shap.datasets.adult(),
+            *shap.datasets.adult(n_points=500),
             test_size=0.2,
             random_state=0,
         )

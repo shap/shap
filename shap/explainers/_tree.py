@@ -1,4 +1,5 @@
 import json
+import os
 import struct
 import time
 import warnings
@@ -355,7 +356,9 @@ class TreeExplainer(Explainer):
             if self.model.model_type == "xgboost":
                 import xgboost
                 if not isinstance(X, xgboost.core.DMatrix):
-                    X = xgboost.DMatrix(X)
+                    # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
+                    dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                    X = xgboost.DMatrix(X, **dmatrix_props)
                 if tree_limit == -1:
                     tree_limit = 0
                 try:
@@ -991,6 +994,9 @@ class TreeEnsemble:
                     self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
                 else:
                     self.model_output = "probability"
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1002,6 +1008,9 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1013,6 +1022,9 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -1129,7 +1141,25 @@ class TreeEnsemble:
             self.internal_dtype = shap_trees[0].tree_.value.dtype.type
             self.input_dtype = np.float32
             scaling = - model.learning_rate * np.array(model.scalings) # output is weighted average of trees
-            self.trees = [SingleTree(e.tree_, scaling=s, data=data, data_missing=data_missing) for e,s in zip(shap_trees,scaling)]
+            # ngboost reorders the features, so we need to map them back to the original order
+            missing_col_idxs = [[i for i in range(model.n_features) if i not in col_idx] for col_idx in model.col_idxs]
+            feature_mapping = [{i: col_idx for i, col_idx in enumerate(list(col_idxs) + missing_col_idx)}
+                               for col_idxs, missing_col_idx in zip(model.col_idxs, missing_col_idxs)]
+            self.trees = []
+            for idx, shap_tree in enumerate(shap_trees):
+                tree_ = shap_tree.tree_
+                values = tree_.value.reshape(tree_.value.shape[0], tree_.value.shape[1] * tree_.value.shape[2])
+                values = values * scaling[idx]
+                tree = {
+                    "children_left": tree_.children_left.astype(np.int32),
+                    "children_right": tree_.children_right.astype(np.int32),
+                    "children_default": tree_.children_left,
+                    "features": np.array([feature_mapping[idx].get(i, i) for i in tree_.feature]),
+                    "thresholds": tree_.threshold.astype(np.float64),
+                    "values": values,
+                    "node_sample_weight": tree_.weighted_n_node_samples.astype(np.float64)
+                }
+                self.trees.append(SingleTree(tree, data=data, data_missing=data_missing))
             self.objective = objective_name_map.get(shap_trees[0].criterion, None)
             self.tree_output = "raw_value"
             self.base_offset = model.init_params[param_idx]
@@ -1630,6 +1660,21 @@ class IsoTree(SingleTree):
             self.features = np.where(self.features >= 0, tree_features[self.features], self.features)
 
 
+def get_xgboost_dmatrix_properties(model):
+    """
+    Retrieves properties from an xgboost.sklearn.XGBModel instance that should be passed to the xgboost.core.DMatrix object before calling predict on the model
+    """
+    properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
+    dmatrix_attributes = {}
+    for attribute in properties_to_pass:
+        if hasattr(model, attribute):
+            dmatrix_attributes[attribute] = getattr(model, attribute)
+
+    # Convert sklearn n_jobs to xgboost nthread
+    if "n_jobs" in dmatrix_attributes:
+        dmatrix_attributes["nthread"] = dmatrix_attributes.pop("n_jobs")
+    return dmatrix_attributes
+
 def get_xgboost_json(model):
     """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
     """
@@ -1816,13 +1861,11 @@ class XGBTreeModelLoader:
 
 class CatBoostTreeModelLoader:
     def __init__(self, cb_model):
-        # cb_model.save_model("cb_model.json", format="json")
-        # self.loaded_cb_model = json.load(open("cb_model.json", "r"))
         import tempfile
-        tmp_file = tempfile.NamedTemporaryFile()
-        cb_model.save_model(tmp_file.name, format="json")
-        self.loaded_cb_model = json.load(open(tmp_file.name))
-        tmp_file.close()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_file = os.path.join(tmp_dir, "model.json")
+            cb_model.save_model(tmp_file, format="json")
+            self.loaded_cb_model = json.load(open(tmp_file))
 
         # load the CatBoost oblivious trees specific parameters
         self.num_trees = len(self.loaded_cb_model['oblivious_trees'])
