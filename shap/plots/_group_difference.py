@@ -52,13 +52,13 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
 
     if max_display is not None:
         inds = inds[:max_display]
-    # Draw the figure
-    if not ax:
-        figsize = (6.4, 0.2 + 0.9 * len(inds))
-        _, ax = pl.subplots(figsize=figsize)
-    else:
+    if ax:
         # Disable plotting out if an ax has been provided
         show = False
+    else:
+        # Draw the figure if no ax has been provided
+        figsize = (6.4, 0.2 + 0.9 * len(inds))
+        _, ax = pl.subplots(figsize=figsize)
     ticks = range(len(inds)-1, -1, -1)
     ax.axvline(0, color="#999999", linewidth=0.5)
     ax.barh(
