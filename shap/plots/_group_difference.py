@@ -24,7 +24,7 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
         A list of feature names.
     """
 
-    # compute confidence bounds for the group difference value
+    # Compute confidence bounds for the group difference value
     vs = []
     gmean = group_mask.mean()
     for i in range(200):
@@ -39,7 +39,7 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
         if feature_names is None:
             feature_names = [""]
 
-    # fill in any missing feature names
+    # Fill in any missing feature names
     if feature_names is None:
         feature_names = ["Feature %d" % i for i in range(shap_values.shape[1])]
 
@@ -52,10 +52,13 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
 
     if max_display is not None:
         inds = inds[:max_display]
-    # draw the figure
+    # Draw the figure
     if not ax:
         figsize = (6.4, 0.2 + 0.9 * len(inds))
         _, ax = pl.subplots(figsize=figsize)
+    else:
+        # Disable plotting out if an ax has been provided
+        show = False
     ticks = range(len(inds)-1, -1, -1)
     ax.axvline(0, color="#999999", linewidth=0.5)
     ax.barh(
@@ -66,9 +69,10 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
     for i in range(len(inds)):
         ax.axhline(y=i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
-    ax.set_yticklabels([feature_names[i] for i in inds])
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('none')
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([feature_names[i] for i in inds], fontsize=13)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.spines['left'].set_visible(False)
@@ -76,7 +80,6 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
     if xlabel is None:
         xlabel = "Group SHAP value difference"
     ax.set_xlabel(xlabel, fontsize=13)
-    ax.set_yticks(ticks, fontsize=13)
     ax.set_xlim(xmin, xmax)
     if show:
-        ax.figure.show()
+        pl.show()
