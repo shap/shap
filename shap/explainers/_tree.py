@@ -185,11 +185,12 @@ class TreeExplainer(Explainer):
                 raise Exception("Model does not have a known objective or output type! When model_output is " \
                                 "not \"raw\" then we need to know the model's objective or link function.")
 
-        # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
-        if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
+        # A change in the signature of `xgboost.Booster.predict()` method has been introduced in XGBoost v1.4:
+        # The introduced `iteration_range` parameter is used when obtaining SHAP (incl. interaction) values from XGBoost models.
+        if self.model.model_type == 'xgboost':
             import xgboost
-            if version.parse(xgboost.__version__) < version.parse('0.81'):
-                raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
+            if version.parse(xgboost.__version__) < version.parse('1.4'):
+                raise RuntimeError("The parameters of a method used to obtain SHAP values have changed in XGBoost v1.4! Please upgrade to XGBoost >= v1.4!")
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
