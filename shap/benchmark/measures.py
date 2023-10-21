@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+import pandas as pd
 import sklearn.utils
 from tqdm.auto import tqdm
 
@@ -395,7 +396,7 @@ def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator,
     return metric(yp_test, strip_list(attr_test).sum(1))
 
 def to_array(*args):
-    return [a.values if str(type(a)).endswith("'pandas.core.frame.DataFrame'>") else a for a in args]
+    return [a.values if isinstance(a, pd.DataFrame) else a for a in args]
 
 def const_rand(size, seed=23980):
     """ Generate a random array with a fixed seed.

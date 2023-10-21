@@ -84,7 +84,7 @@ class KernelExplainer(Explainer):
 
         if feature_names is not None:
             self.data_feature_names=feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
@@ -135,7 +135,7 @@ class KernelExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -153,7 +153,7 @@ class KernelExplainer(Explainer):
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X.to_numpy() if safe_isinstance(X, "pandas.core.frame.DataFrame") else X,
+            data=X.to_numpy() if isinstance(X, pd.DataFrame) else X,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )
@@ -194,9 +194,9 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
+        if isinstance(X, pd.Series):
             X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        elif isinstance(X, pd.DataFrame):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
