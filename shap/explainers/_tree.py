@@ -190,7 +190,7 @@ class TreeExplainer(Explainer):
         if self.model.model_type == 'xgboost':
             import xgboost
             if version.parse(xgboost.__version__) < version.parse('1.4'):
-                raise RuntimeError("The parameters of a method used to obtain SHAP values have changed in XGBoost v1.4! Please upgrade to XGBoost >= v1.4!")
+                raise RuntimeError(f"SHAP requires XGBoost >= v1.4 , but found version {xgboost.__version__}. Please upgrade XGBoost!")
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
