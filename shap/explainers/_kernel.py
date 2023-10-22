@@ -84,7 +84,7 @@ class KernelExplainer(Explainer):
 
         if feature_names is not None:
             self.data_feature_names=feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
@@ -135,7 +135,7 @@ class KernelExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -153,7 +153,7 @@ class KernelExplainer(Explainer):
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X.to_numpy() if safe_isinstance(X, "pandas.core.frame.DataFrame") else X,
+            data=X.to_numpy() if isinstance(X, pd.DataFrame) else X,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )
@@ -194,9 +194,9 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
+        if isinstance(X, pd.Series):
             X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        elif isinstance(X, pd.DataFrame):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
@@ -639,20 +639,37 @@ class KernelExplainer(Explainer):
         log.debug(f"etmp[:4,:] {etmp[:4, :]}")
 
         # solve a weighted least squares equation to estimate phi
-        tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
-        etmp_dot = np.dot(np.transpose(tmp), etmp)
+        # least squares:
+        #     phi = min_w ||W^(1/2) (y - X w)||^2
+        # the corresponding normal equation:
+        #     (X' W X) phi = X' W y
+        # with
+        #     X = etmp
+        #     W = np.diag(self.kernelWeights)
+        #     y = eyAdj2
+        #
+        # We could just rely on sciki-learn
+        #     from sklearn.linear_model import LinearRegression
+        #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
+        # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
+        # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
+        y = eyAdj2
+        X = etmp
+        WX = self.kernelWeights[:, None] * X
         try:
-            tmp2 = np.linalg.inv(etmp_dot)
+            w = np.linalg.solve(X.T @ WX, WX.T @ y)
         except np.linalg.LinAlgError:
-            tmp2 = np.linalg.pinv(etmp_dot)
             warnings.warn(
-                "Linear regression equation is singular, Moore-Penrose pseudoinverse is used instead of the regular inverse.\n"
-                "To use regular inverse do one of the following:\n"
+                "Linear regression equation is singular, a least squares solutions is used instead.\n"
+                "To avoid this situation and get a regular matrix do one of the following:\n"
                 "1) turn up the number of samples,\n"
                 "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
                 "3) group features together to reduce the number of inputs that need to be explained."
             )
-        w = np.dot(tmp2, np.dot(np.transpose(tmp), eyAdj2))
+            # XWX = np.linalg.pinv(X.T @ WX)
+            # w = np.dot(XWX, np.dot(np.transpose(WX), y))
+            sqrt_W = np.sqrt(self.kernelWeights)
+            w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
         log.debug(f"np.sum(w) = {np.sum(w)}")
         log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
             self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
