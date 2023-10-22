@@ -113,7 +113,7 @@ class TreeExplainer(Explainer):
         """
         if feature_names is not None:
             self.data_feature_names = feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         masker = data
@@ -149,7 +149,7 @@ class TreeExplainer(Explainer):
             raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
-        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        if isinstance(data, pd.DataFrame):
             self.data = data.values
         elif isinstance(data, DenseData):
             self.data = data.data
@@ -226,7 +226,7 @@ class TreeExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -251,7 +251,7 @@ class TreeExplainer(Explainer):
 
         # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             X = X.values
 
         return Explanation(
@@ -270,9 +270,7 @@ class TreeExplainer(Explainer):
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
         flat_output = False
         if len(X.shape) == 1:
@@ -1276,9 +1274,7 @@ class TreeEnsemble:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
         flat_output = False
         if len(X.shape) == 1:
