@@ -5,6 +5,7 @@ from typing import Union
 import matplotlib.cm as cm
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 
 from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
@@ -374,11 +375,11 @@ def decision(
     feature_count = shap_values.shape[1]
 
     # code taken from force_plot. convert features from other types.
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns.to_list()
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = features.index.to_list()
         features = features.values
@@ -611,7 +612,7 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
         features = kwargs["features"]
         if isinstance(features, np.ndarray) and (features.ndim == 2):
             kwargs["features"] = features[[row_index]]
-        elif str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+        elif isinstance(features, pd.DataFrame):
             kwargs["features"] = features.iloc[row_index]
 
     return decision(base_values_mean, shap_values[:, row_index, :], **kwargs)

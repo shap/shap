@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 
 from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
-from shap.utils import MaskedModel, safe_isinstance
+from shap.utils import MaskedModel
 
 from ._result import BenchmarkResult
 
@@ -89,7 +89,7 @@ class SequentialPerturbation:
 
     def __call__(self, name, explanation, *model_args, percent=0.01, indices=[], y=None, label=None, silent=False, debug_mode=False, batch_size=10):
         # if explainer is already the attributions
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
@@ -102,7 +102,7 @@ class SequentialPerturbation:
             label = "Score %d" % len(self.score_values)
 
         # convert dataframes
-        # if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        # if isinstance(X, (pd.Series, pd.DataFrame)):
         #     X = X.values
 
         # convert all single-sample vectors to matrices
@@ -202,7 +202,7 @@ class SequentialPerturbation:
         Will be deprecated once MaskedModel is in complete support
         '''
         # if explainer is already the attributions
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
@@ -211,7 +211,7 @@ class SequentialPerturbation:
             label = "Score %d" % len(self.score_values)
 
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
         # convert all single-sample vectors to matrices

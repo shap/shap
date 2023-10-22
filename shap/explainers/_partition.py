@@ -67,9 +67,9 @@ class PartitionExplainer(Explainer):
                          output_names = output_names, feature_names=feature_names)
 
         # convert dataframes
-        # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
+        # if isinstance(masker, pd.DataFrame):
         #     masker = TabularMasker(masker)
-        # elif safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2:
+        # elif isinstance(masker, np.ndarray) and len(masker.shape) == 2:
         #     masker = TabularMasker(masker)
         # elif safe_isinstance(masker, "transformers.PreTrainedTokenizer"):
         #     masker = TextMasker(masker)

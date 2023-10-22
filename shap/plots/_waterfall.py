@@ -1,9 +1,10 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from .. import Explanation
-from ..utils import format_value, safe_isinstance
+from ..utils import format_value
 from . import colors
 from ._labels import labels
 
@@ -75,7 +76,7 @@ def waterfall(shap_values, max_display=10, show=True):
     values = shap_values.values
 
     # unwrap pandas series
-    if safe_isinstance(features, "pandas.core.series.Series"):
+    if isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
@@ -382,7 +383,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             "The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
 
     # unwrap pandas series
-    if safe_isinstance(features, "pandas.core.series.Series"):
+    if isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values

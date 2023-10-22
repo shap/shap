@@ -6,7 +6,7 @@ from numba import njit
 
 from .. import utils
 from .._serializable import Deserializer, Serializer
-from ..utils import MaskedModel, safe_isinstance
+from ..utils import MaskedModel
 from ..utils._exceptions import DimensionError, InvalidClusteringError
 from ._masker import Masker
 
@@ -44,7 +44,7 @@ class Tabular(Masker):
         """
 
         self.output_dataframe = False
-        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        if isinstance(data, pd.DataFrame):
             self.feature_names = data.columns
             data = data.values
             self.output_dataframe = True
@@ -70,7 +70,7 @@ class Tabular(Masker):
         if clustering is not None:
             if isinstance(clustering, str):
                 self.clustering = utils.hclust(data, metric=clustering)
-            elif safe_isinstance(clustering, "numpy.ndarray"):
+            elif isinstance(clustering, np.ndarray):
                 self.clustering = clustering
             else:
                 raise InvalidClusteringError(
