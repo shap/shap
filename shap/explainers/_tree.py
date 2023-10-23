@@ -255,7 +255,7 @@ class TreeExplainer(Explainer):
             # ev_tiled.shape == (N,)
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
+        # cf. GH dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
         if isinstance(X, pd.DataFrame):
             X = X.values
