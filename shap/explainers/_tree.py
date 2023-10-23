@@ -259,10 +259,11 @@ class TreeExplainer(Explainer):
             if version.parse(xgboost.__version__) < version.parse("1.7.0"):  # pragma: no cover
                 # cf. GH #3357
                 wmsg = (
-                    "xgboost DMatrix is not supported in `Explanation.data`, setting it to None for "
-                    "now. If you require the `data` attribute (e.g. using `shap.plots`), then either "
+                    "`shap.Explanation` does not support `xgboost.DMatrix` objects for xgboost < 1.7, "
+                    "so the `data` attribute of the `Explanation` object will be set to None. If "
+                    "you require the `data` attribute (e.g. using `shap.plots`), then either "
                     "update your xgboost to >=1.7.0 or explicitly set `Explanation.data = X`, where "
-                    "X is a numpy or scipy array."
+                    "`X` is a numpy or scipy array."
                 )
                 warnings.warn(wmsg)
                 X = None
