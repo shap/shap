@@ -20,7 +20,6 @@ from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._legacy import (
     DenseData,
-    IdentityLink,
     SparseData,
     convert_to_data,
     convert_to_instance,
@@ -80,7 +79,7 @@ class KernelExplainer(Explainer):
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
     """
 
-    def __init__(self, model, data, feature_names=None, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
 
         if feature_names is not None:
             self.data_feature_names=feature_names
