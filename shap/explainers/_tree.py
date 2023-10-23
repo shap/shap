@@ -6,6 +6,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import scipy.sparse
 import scipy.special
 from packaging import version
 
@@ -252,6 +253,21 @@ class TreeExplainer(Explainer):
         # calculation of shap values
         if isinstance(X, pd.DataFrame):
             X = X.values
+        elif safe_isinstance(X, "xgboost.core.DMatrix"):
+            import xgboost
+
+            if version.parse(xgboost.__version__) < version.parse("1.7.0"):  # pragma: no cover
+                # cf. GH #3357
+                wmsg = (
+                    "xgboost DMatrix is not supported in `Explanation.data`, setting it to None for "
+                    "now. If you require the `data` attribute (e.g. using `shap.plots`), then either "
+                    "update your xgboost to >=1.7.0 or explicitly set `Explanation.data = X`, where "
+                    "X is a numpy or scipy array."
+                )
+                warnings.warn(wmsg)
+                X = None
+            else:
+                X: scipy.sparse.csr_matrix = X.get_data()
 
         return Explanation(
             v,
