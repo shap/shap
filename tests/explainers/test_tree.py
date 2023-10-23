@@ -1420,6 +1420,27 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(model)
         assert isinstance(explainer, shap.explainers.TreeExplainer)
 
+    def test_explanation_data_not_dmatrix(self, random_seed):
+        """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,
+        since it is not supported by our plotting functions.
+
+        See GH #3357 for more information."""
+        xgboost = pytest.importorskip("xgboost")
+
+        rs = np.random.RandomState(random_seed)
+        X = rs.normal(size=(100, 7))
+        y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
+
+        # train a model with single tree
+        Xd = xgboost.DMatrix(X, label=y)
+        model = xgboost.train({"eta": 1, "max_depth": 6, "base_score": 0, "lambda": 0}, Xd, 1)
+
+        explainer = shap.TreeExplainer(model)
+        explanation = explainer(Xd)
+
+        assert not isinstance(explanation.data, xgboost.core.DMatrix)
+        assert hasattr(explanation.data, "shape")
+
 
 class TestExplainerLightGBM:
     """Tests for the TreeExplainer when the model passed in is a LightGBM instance.
