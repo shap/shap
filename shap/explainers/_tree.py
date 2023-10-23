@@ -6,6 +6,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import scipy.sparse
 import scipy.special
 from packaging import version
 
@@ -185,11 +186,12 @@ class TreeExplainer(Explainer):
                 raise Exception("Model does not have a known objective or output type! When model_output is " \
                                 "not \"raw\" then we need to know the model's objective or link function.")
 
-        # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
-        if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
+        # A change in the signature of `xgboost.Booster.predict()` method has been introduced in XGBoost v1.4:
+        # The introduced `iteration_range` parameter is used when obtaining SHAP (incl. interaction) values from XGBoost models.
+        if self.model.model_type == 'xgboost':
             import xgboost
-            if version.parse(xgboost.__version__) < version.parse('0.81'):
-                raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
+            if version.parse(xgboost.__version__) < version.parse('1.4'):
+                raise RuntimeError(f"SHAP requires XGBoost >= v1.4 , but found version {xgboost.__version__}. Please upgrade XGBoost!")
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
@@ -252,6 +254,22 @@ class TreeExplainer(Explainer):
         # calculation of shap values
         if isinstance(X, pd.DataFrame):
             X = X.values
+        elif safe_isinstance(X, "xgboost.core.DMatrix"):
+            import xgboost
+
+            if version.parse(xgboost.__version__) < version.parse("1.7.0"):  # pragma: no cover
+                # cf. GH #3357
+                wmsg = (
+                    "`shap.Explanation` does not support `xgboost.DMatrix` objects for xgboost < 1.7, "
+                    "so the `data` attribute of the `Explanation` object will be set to None. If "
+                    "you require the `data` attribute (e.g. using `shap.plots`), then either "
+                    "update your xgboost to >=1.7.0 or explicitly set `Explanation.data = X`, where "
+                    "`X` is a numpy or scipy array."
+                )
+                warnings.warn(wmsg)
+                X = None
+            else:
+                X: scipy.sparse.csr_matrix = X.get_data()
 
         return Explanation(
             v,
