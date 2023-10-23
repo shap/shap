@@ -5,6 +5,7 @@
 import numpy as np
 import pytest
 import scipy.special
+from sklearn.linear_model import Ridge
 
 import shap
 from shap.utils._exceptions import InvalidFeaturePerturbationError
@@ -187,8 +188,6 @@ def test_sparse():
 
 
 def test_invalid_feature_perturbation_raises():
-    Ridge = pytest.importorskip("sklearn.linear_model").Ridge
-
     # train linear model
     X, y = shap.datasets.california(n_points=100)
     model = Ridge(0.1).fit(X, y)
