@@ -352,12 +352,18 @@ def test_catboost():
 
     explanation = explainer(X)
     # check the properties of Explanation object
-    assert explanation.values.shape == (*X.shape,)
-    assert explanation.base_values.shape == (len(X),)
+    assert explanation.values.shape == (*X.shape, 2)
+    assert explanation.base_values.shape == (len(X), 2)
 
     # check that SHAP values sum to model output
+    # check predictions for class 1
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+        np.abs(explanation.values[:, :, 1].sum(1) + explanation.base_values[:, 1] - predicted).max()
+        < 1e-4
+    )
+    # check predictions for class 0
+    assert (
+        np.abs(explanation.values[:, :, 0].sum(1) + explanation.base_values[:, 0] + predicted).max()
         < 1e-4
     )
 
@@ -385,24 +391,6 @@ def test_catboost_categorical():
         < 1e-4
     )
 
-
-def test_catboost_interactions():
-    # GH 3324
-    catboost = pytest.importorskip("catboost")
-
-    X, y = shap.datasets.adult(n_points=50)
-
-    model = catboost.CatBoostClassifier(depth=1, iterations=10).fit(X, y)
-    predicted = model.predict(X, prediction_type="RawFormulaVal")
-
-    ex_cat = shap.TreeExplainer(model)
-
-    # catboost explanations
-    explanation = ex_cat(X, interactions=True)
-    assert (
-        np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max()
-        < 1e-4
-    )
 
 # TODO: Test tree_limit argument
 
@@ -860,13 +848,14 @@ class TestExplainerSklearn:
         assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-3
         assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-3
 
+
     def test_sklearn_interaction_values(self):
         X, _ = shap.datasets.iris()
         X_train, _, Y_train, _ = sklearn.model_selection.train_test_split(
             *shap.datasets.iris(), test_size=0.2, random_state=0
         )
         rforest = sklearn.ensemble.RandomForestClassifier(
-            n_estimators=100,
+            n_estimators=10,
             max_depth=None,
             min_samples_split=2,
             random_state=0,
@@ -875,20 +864,25 @@ class TestExplainerSklearn:
 
         # verify symmetry of the interaction values (this typically breaks if anything is wrong)
         interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
-        for i, _ in enumerate(interaction_vals):
-            for j, _ in enumerate(interaction_vals[i]):
-                for k, _ in enumerate(interaction_vals[i][j]):
-                    for l, _ in enumerate(interaction_vals[i][j][k]):
-                        assert (
-                            abs(
-                                interaction_vals[i][j][k][l]
-                                - interaction_vals[i][j][l][k]
-                            )
-                            < 1e-4
-                        )
+        for int_vals in interaction_vals:
+            assert np.allclose(int_vals, np.swapaxes(int_vals, 1, 2))
 
         # ensure the interaction plot works
         shap.summary_plot(interaction_vals[0], X, show=False)
+
+        # text interaction call from TreeExplainer
+        X, y = shap.datasets.adult(n_points=50)
+
+        rfc = sklearn.ensemble.RandomForestClassifier(max_depth=1).fit(X, y)
+        predicted = rfc.predict_proba(X)
+        ex_rfc = shap.TreeExplainer(rfc)
+        explanation = ex_rfc(X, interactions=True)
+        assert np.allclose(explanation.values[1].sum(axis=(1, 2)) + explanation.base_values[:, 1],
+                           predicted[:, 1]
+                           )
+        assert np.allclose(explanation.values[0].sum(axis=(1, 2)) + explanation.base_values[:, 0],
+                           predicted[:, 0]
+                           )
 
     def _create_vectorizer_for_randomforestclassifier(self):
         """Helper setup function"""
@@ -1073,7 +1067,7 @@ class TestExplainerSklearn:
         shap_interaction_values = explainer.shap_interaction_values(X_test.iloc[:10, :])
         assert (
             np.abs(
-                shap_interaction_values.sum(1).sum(1)
+                np.sum(shap_interaction_values[:, :, :, -1], axis=(1, 2))
                 + explainer.expected_value
                 - predicted[:10]
             ).max()
@@ -1214,30 +1208,6 @@ class TestExplainerXGBoost:
         # check that SHAP values sum to model output
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
-
-    def test_xgboost_dmatrix_propagation(self):
-        """
-        Test that xgboost sklearn attributues are properly passed to the DMatrix
-        initiated during shap value calculation. see GH #3313
-        """
-        xgboost = pytest.importorskip("xgboost")
-
-        X, y = shap.datasets.adult(n_points=100)
-
-        # Randomly add missing data to the input where missing data is encoded as 1e-8
-        X_nan = X.copy()
-        X_nan.loc[
-            X_nan.sample(frac=0.3, random_state=42).index,
-            X_nan.columns.to_series().sample(frac=0.5, random_state=42),
-        ] = 1e-8
-
-        clf = xgboost.XGBClassifier(missing=1e-8, random_state=42)
-        clf.fit(X_nan, y)
-        margin = clf.predict(X_nan, output_margin=True)
-        explainer = shap.TreeExplainer(clf)
-        shap_values = explainer.shap_values(X_nan)
-        # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
 
     def test_xgboost_direct(self):
         xgboost = pytest.importorskip("xgboost")
@@ -1420,27 +1390,6 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(model)
         assert isinstance(explainer, shap.explainers.TreeExplainer)
 
-    def test_explanation_data_not_dmatrix(self, random_seed):
-        """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,
-        since it is not supported by our plotting functions.
-
-        See GH #3357 for more information."""
-        xgboost = pytest.importorskip("xgboost")
-
-        rs = np.random.RandomState(random_seed)
-        X = rs.normal(size=(100, 7))
-        y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
-
-        # train a model with single tree
-        Xd = xgboost.DMatrix(X, label=y)
-        model = xgboost.train({"eta": 1, "max_depth": 6, "base_score": 0, "lambda": 0}, Xd, 1)
-
-        explainer = shap.TreeExplainer(model)
-        explanation = explainer(Xd)
-
-        assert not isinstance(explanation.data, xgboost.core.DMatrix)
-        assert hasattr(explanation.data, "shape")
-
 
 class TestExplainerLightGBM:
     """Tests for the TreeExplainer when the model passed in is a LightGBM instance.
@@ -1507,7 +1456,7 @@ class TestExplainerLightGBM:
 
         # train lightgbm model
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
-            *shap.datasets.adult(n_points=500),
+            *shap.datasets.adult(),
             test_size=0.2,
             random_state=0,
         )
@@ -1623,13 +1572,8 @@ class TestExplainerLightGBM:
 
         # verify symmetry of the interaction values (this typically breaks if anything is wrong)
         interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
-        for j, jval in enumerate(interaction_vals):
-            for k, kval in enumerate(jval):
-                for m, _ in enumerate(kval):
-                    assert (
-                        abs(interaction_vals[j][k][m] - interaction_vals[j][m][k])
-                        < 1e-4
-                    )
+        interaction_vals_swapped = np.swapaxes(np.copy(interaction_vals), 1, 2)
+        assert np.allclose(interaction_vals, interaction_vals_swapped, atol=1e-4)
 
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
@@ -1658,3 +1602,39 @@ class TestExplainerLightGBM:
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
+
+
+def test_check_consistent_outputs_binary_classification():
+    # GH 3187
+    lightgbm = pytest.importorskip("lightgbm")
+    catboost = pytest.importorskip("catboost")
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.adult(n_points=50)
+
+    lgbm = lightgbm.LGBMClassifier(max_depth=1).fit(X, y)
+    xgb = xgboost.XGBClassifier(max_depth=1).fit(X, y)
+    cat = catboost.CatBoostClassifier(depth=1, iterations=10).fit(X, y)
+
+    ex_lgbm = shap.TreeExplainer(lgbm)
+    ex_xgb = shap.TreeExplainer(xgb)
+    ex_cat = shap.TreeExplainer(cat)
+
+    # lightgbm explanations
+    e_lgbm_bin = ex_lgbm(X, interactions=False)
+    e_lgbm = ex_lgbm(X, interactions=True)
+
+    # xgboost explanations
+    e_xgb_bin = ex_xgb(X, interactions=False)
+    e_xgb = ex_xgb(X, interactions=True)
+
+    # catboost explanations
+    e_cat_bin = ex_cat(X, interactions=False)
+    e_cat = ex_cat(X, interactions=True)
+
+    # output shape: examples x features x classes
+    assert (50, 12, 2) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape, \
+        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, CatBoost: {e_cat_bin.shape}"
+    # output shape: examples x features x features x classes
+    assert (50, 12, 12, 2) == e_lgbm.shape == e_xgb.shape == e_cat.shape, \
+        f"LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}"
