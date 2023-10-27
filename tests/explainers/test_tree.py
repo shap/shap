@@ -860,13 +860,14 @@ class TestExplainerSklearn:
         assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-3
         assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-3
 
+
     def test_sklearn_interaction_values(self):
         X, _ = shap.datasets.iris()
         X_train, _, Y_train, _ = sklearn.model_selection.train_test_split(
             *shap.datasets.iris(), test_size=0.2, random_state=0
         )
         rforest = sklearn.ensemble.RandomForestClassifier(
-            n_estimators=100,
+            n_estimators=10,
             max_depth=None,
             min_samples_split=2,
             random_state=0,
@@ -875,20 +876,25 @@ class TestExplainerSklearn:
 
         # verify symmetry of the interaction values (this typically breaks if anything is wrong)
         interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
-        for i, _ in enumerate(interaction_vals):
-            for j, _ in enumerate(interaction_vals[i]):
-                for k, _ in enumerate(interaction_vals[i][j]):
-                    for l, _ in enumerate(interaction_vals[i][j][k]):
-                        assert (
-                            abs(
-                                interaction_vals[i][j][k][l]
-                                - interaction_vals[i][j][l][k]
-                            )
-                            < 1e-4
-                        )
+        for int_vals in interaction_vals:
+            assert np.allclose(int_vals, np.swapaxes(int_vals, 1, 2))
 
         # ensure the interaction plot works
         shap.summary_plot(interaction_vals[0], X, show=False)
+
+        # text interaction call from TreeExplainer
+        X, y = shap.datasets.adult(n_points=50)
+
+        rfc = sklearn.ensemble.RandomForestClassifier(max_depth=1).fit(X, y)
+        predicted = rfc.predict_proba(X)
+        ex_rfc = shap.TreeExplainer(rfc)
+        explanation = ex_rfc(X, interactions=True)
+        assert np.allclose(explanation.values[1].sum(axis=(1, 2)) + explanation.base_values[:, 1],
+                           predicted[:, 1]
+                           )
+        assert np.allclose(explanation.values[0].sum(axis=(1, 2)) + explanation.base_values[:, 0],
+                           predicted[:, 0]
+                           )
 
     def _create_vectorizer_for_randomforestclassifier(self):
         """Helper setup function"""
