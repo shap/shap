@@ -161,8 +161,9 @@ class TFDeep(Explainer):
                 #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
-        import pdb; pdb.set_trace()
+        breakpoint()
         if not tf.executing_eagerly():
+            breakpoint()
             self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
@@ -187,7 +188,7 @@ class TFDeep(Explainer):
 
     def _init_between_tensors(self, out_op, model_inputs):
         # find all the operations in the graph between our inputs and outputs
-        import pdb; pdb.set_trace()
+        breakpoint()
         tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops) # don't follow learning phase branches
         dependence_breakers = [k for k in op_handlers if op_handlers[k] == break_dependence]
         back_ops = backward_walk_ops(
@@ -664,7 +665,9 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     # make sure the given inputs don't vary (negative is measured from the end of the list)
     for i in range(len(op.inputs)):
         if i in input_inds or i - len(op.inputs) in input_inds:
+            breakpoint()
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
+            # pass
     if op.type.startswith("shap_"):
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
