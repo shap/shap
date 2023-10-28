@@ -2,8 +2,7 @@ import itertools as it
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from shap.utils import safe_isinstance
+import pandas as pd
 
 from . import perturbation
 
@@ -17,9 +16,9 @@ def update(model, attributions, X, y, masker, sort_order, perturbation_method, s
 
 def get_benchmark(model, attributions, X, y, masker, metrics):
     # convert dataframes
-    if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
+    if isinstance(X, (pd.Series, pd.DataFrame)):
         X = X.values
-    if safe_isinstance(masker, "pandas.core.series.Series") or safe_isinstance(masker, "pandas.core.frame.DataFrame"):
+    if isinstance(masker, (pd.Series, pd.DataFrame)):
         masker = masker.values
 
     # record scores per metric

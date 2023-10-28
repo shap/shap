@@ -1,5 +1,6 @@
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy.stats
 
 from . import colors
@@ -36,7 +37,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
         Names of the features (length # features)
     """
 
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values

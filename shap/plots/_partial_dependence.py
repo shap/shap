@@ -42,7 +42,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
     # convert from DataFrames if we got any
     use_dataframe = False
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
@@ -176,7 +176,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             #         model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
             #     else:
             #         model_expected_value = model(features).mean()
-            # if str(type(shap_value_features)).endswith("'pandas.core.frame.DataFrame'>"):
+            # if isinstance(shap_value_features, pd.DataFrame):
             #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:,ind], shap_values.base_values + shap_values.values[:, ind],

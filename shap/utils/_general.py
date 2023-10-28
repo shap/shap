@@ -5,6 +5,7 @@ import sys
 from contextlib import contextmanager
 
 import numpy as np
+import pandas as pd
 import scipy.special
 import sklearn
 
@@ -105,7 +106,7 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     """
 
     # convert from DataFrames if we got any
-    if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(X, pd.DataFrame):
         if feature_names is None:
             feature_names = X.columns
         X = X.values

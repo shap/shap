@@ -4,7 +4,6 @@ from urllib.request import urlretrieve
 import numpy as np
 import pandas as pd
 import sklearn.datasets
-from sklearn.utils import deprecated
 
 import shap
 
@@ -32,23 +31,6 @@ def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=
         y = shap.utils.sample(y, n_points, random_state=0)
 
     return X, y
-
-@deprecated()
-def boston(display=False, n_points=None):
-    """Return the boston housing data in a nice package (DEPRECATED).
-
-    This dataset is deprecated and will be removed in the next version (0.43.0).
-    Please use :func:`shap.datasets.california` instead.
-    """
-    d = sklearn.datasets.load_boston()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    target = d.target # pylint: disable=E1101
-
-    if n_points is not None:
-        df = shap.utils.sample(df, n_points, random_state=0)
-        target = shap.utils.sample(target, n_points, random_state=0)
-
-    return df, target
 
 
 def california(display=False, n_points=None): # pylint: disable=unused-argument

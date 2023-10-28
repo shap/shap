@@ -1,10 +1,12 @@
 import json
+import os
 import struct
 import time
 import warnings
 
 import numpy as np
 import pandas as pd
+import scipy.sparse
 import scipy.special
 from packaging import version
 
@@ -112,7 +114,7 @@ class TreeExplainer(Explainer):
         """
         if feature_names is not None:
             self.data_feature_names = feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         masker = data
@@ -148,7 +150,7 @@ class TreeExplainer(Explainer):
             raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
-        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        if isinstance(data, pd.DataFrame):
             self.data = data.values
         elif isinstance(data, DenseData):
             self.data = data.data
@@ -184,11 +186,12 @@ class TreeExplainer(Explainer):
                 raise Exception("Model does not have a known objective or output type! When model_output is " \
                                 "not \"raw\" then we need to know the model's objective or link function.")
 
-        # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
-        if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
+        # A change in the signature of `xgboost.Booster.predict()` method has been introduced in XGBoost v1.4:
+        # The introduced `iteration_range` parameter is used when obtaining SHAP (incl. interaction) values from XGBoost models.
+        if self.model.model_type == 'xgboost':
             import xgboost
-            if version.parse(xgboost.__version__) < version.parse('0.81'):
-                raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
+            if version.parse(xgboost.__version__) < version.parse('1.4'):
+                raise RuntimeError(f"SHAP requires XGBoost >= v1.4 , but found version {xgboost.__version__}. Please upgrade XGBoost!")
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
@@ -224,7 +227,7 @@ class TreeExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -241,7 +244,11 @@ class TreeExplainer(Explainer):
         if hasattr(self.expected_value, "__len__") and len(self.expected_value) > 1:
             # `expected_value` is a list / array of numbers, length k, e.g. for multi-output scenarios
             # we repeat it N times along the first axis, so ev_tiled.shape == (N, k)
-            ev_tiled = np.tile(self.expected_value, (v.shape[0], 1))
+            if isinstance(v, list):
+                num_rows = v[0].shape[0]
+            else:
+                num_rows = v.shape[0]
+            ev_tiled = np.tile(self.expected_value, (num_rows, 1))
         else:
             # `expected_value` is a scalar / array of 1 number, so we simply repeat it for every row in `v`
             # ev_tiled.shape == (N,)
@@ -249,8 +256,24 @@ class TreeExplainer(Explainer):
 
         # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             X = X.values
+        elif safe_isinstance(X, "xgboost.core.DMatrix"):
+            import xgboost
+
+            if version.parse(xgboost.__version__) < version.parse("1.7.0"):  # pragma: no cover
+                # cf. GH #3357
+                wmsg = (
+                    "`shap.Explanation` does not support `xgboost.DMatrix` objects for xgboost < 1.7, "
+                    "so the `data` attribute of the `Explanation` object will be set to None. If "
+                    "you require the `data` attribute (e.g. using `shap.plots`), then either "
+                    "update your xgboost to >=1.7.0 or explicitly set `Explanation.data = X`, where "
+                    "`X` is a numpy or scipy array."
+                )
+                warnings.warn(wmsg)
+                X = None
+            else:
+                X: scipy.sparse.csr_matrix = X.get_data()
 
         return Explanation(
             v,
@@ -268,9 +291,7 @@ class TreeExplainer(Explainer):
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
         flat_output = False
         if len(X.shape) == 1:
@@ -355,7 +376,9 @@ class TreeExplainer(Explainer):
             if self.model.model_type == "xgboost":
                 import xgboost
                 if not isinstance(X, xgboost.core.DMatrix):
-                    X = xgboost.DMatrix(X)
+                    # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
+                    dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
+                    X = xgboost.DMatrix(X, **dmatrix_props)
                 if tree_limit == -1:
                     tree_limit = 0
                 try:
@@ -991,6 +1014,9 @@ class TreeEnsemble:
                     self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
                 else:
                     self.model_output = "probability"
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1002,6 +1028,9 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             self.original_model = model.get_booster()
             self.model_type = "xgboost"
@@ -1013,6 +1042,9 @@ class TreeEnsemble:
             self.tree_limit = getattr(model, "best_ntree_limit", None)
             if xgb_loader.num_class > 0:
                 self.num_stacked_models = xgb_loader.num_class
+            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
+            # We need to make sure we do the same here - GH #3313
+            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
             self.model_type = "lightgbm"
@@ -1263,9 +1295,7 @@ class TreeEnsemble:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
         flat_output = False
         if len(X.shape) == 1:
@@ -1648,6 +1678,21 @@ class IsoTree(SingleTree):
             self.features = np.where(self.features >= 0, tree_features[self.features], self.features)
 
 
+def get_xgboost_dmatrix_properties(model):
+    """
+    Retrieves properties from an xgboost.sklearn.XGBModel instance that should be passed to the xgboost.core.DMatrix object before calling predict on the model
+    """
+    properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
+    dmatrix_attributes = {}
+    for attribute in properties_to_pass:
+        if hasattr(model, attribute):
+            dmatrix_attributes[attribute] = getattr(model, attribute)
+
+    # Convert sklearn n_jobs to xgboost nthread
+    if "n_jobs" in dmatrix_attributes:
+        dmatrix_attributes["nthread"] = dmatrix_attributes.pop("n_jobs")
+    return dmatrix_attributes
+
 def get_xgboost_json(model):
     """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
     """
@@ -1834,13 +1879,11 @@ class XGBTreeModelLoader:
 
 class CatBoostTreeModelLoader:
     def __init__(self, cb_model):
-        # cb_model.save_model("cb_model.json", format="json")
-        # self.loaded_cb_model = json.load(open("cb_model.json", "r"))
         import tempfile
-        tmp_file = tempfile.NamedTemporaryFile()
-        cb_model.save_model(tmp_file.name, format="json")
-        self.loaded_cb_model = json.load(open(tmp_file.name))
-        tmp_file.close()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_file = os.path.join(tmp_dir, "model.json")
+            cb_model.save_model(tmp_file, format="json")
+            self.loaded_cb_model = json.load(open(tmp_file))
 
         # load the CatBoost oblivious trees specific parameters
         self.num_trees = len(self.loaded_cb_model['oblivious_trees'])
