@@ -163,8 +163,12 @@ class TFDeep(Explainer):
 
         breakpoint()
         if not tf.executing_eagerly():
-            breakpoint()
             self._init_between_tensors(self.model_output.op, self.model_inputs)
+        else:
+            from tensorflow.python.framework.ops import disable_eager_execution
+            disable_eager_execution()
+            self._init_between_tensors_eager(model, self.model_inputs)
+            # self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
@@ -206,6 +210,48 @@ class TFDeep(Explainer):
         )
 
         # note all the tensors that are on the path between the inputs and the output
+        self.between_tensors = {}
+        for op in self.between_ops:
+            for t in op.outputs:
+                self.between_tensors[t.name] = True
+        for t in model_inputs:
+            self.between_tensors[t.name] = True
+
+        # save what types are being used
+        self.used_types = {}
+        for op in self.between_ops:
+            self.used_types[op.type] = True
+
+    def _init_between_tensors_eager(self, model, model_inputs):
+        class OperationCaptureModel(tf.keras.Model):
+            def __init__(self, layers):
+                super().__init__()
+                self._layers = layers
+                self.ops = []
+
+            @tf.function
+            def __call__(self, inputs):
+                layer_outputs = []
+                for layer in self._layers:
+                    inputs = layer(inputs)
+                    self.ops.append(inputs.op)
+                    layer_outputs.append(inputs)
+                return layer_outputs
+
+        capture_model = OperationCaptureModel(model.layers)
+
+        # tt = list(self.model_inputs.as_numpy_iterator())
+        # ss = [k[0] for k in tt]
+        # input_tensor = tf.convert_to_tensor(ss[3], dtype=tf.float32)
+
+        # capture_model(input_tensor)
+        breakpoint()
+        t = np.array(tf.convert_to_tensor(model_inputs[0]))
+        model_input = tf.convert_to_tensor(t, dtype=tf.float32)
+        capture_model(model_input)
+
+        self.between_ops = capture_model.ops
+
         self.between_tensors = {}
         for op in self.between_ops:
             for t in op.outputs:
