@@ -181,7 +181,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:,ind], shap_values.base_values + shap_values.values[:, ind],
                 bottom=shap_values.base_values,
-                markerfmt="o", basefmt=" ", use_line_collection=True
+                markerfmt="o", basefmt=" ",
             )
             stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])
             pl.setp(stemlines, 'zorder', -1)
