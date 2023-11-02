@@ -54,7 +54,8 @@ def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[Waterfall
         has been created.
     plot_cmap: shap.plots.WaterfallColorConfig, dict, str, list[str] or None
         Colormap to plot. This is either a dictionary with the keys can be either a numpy array or a list (with 3 float entries between 0 and 1)
-            a [matplotlib color names](https://matplotlib.org/cheatsheets/_images/cheatsheets-2.png) (see section Color names) or a hex code.
+        a [matplotlib color name](https://matplotlib.org/cheatsheets/_images/cheatsheets-2.png) (see section Color names) or a hex code.
+        ```python
             positive_arrow: Union[np.ndarray, str, List[float]] = [1., 0., 0.31796406]
             negative_arrow: Union[np.ndarray, str, List[float]] = np.array([0., 0.54337757, 0.98337906])
             default_positive_color: Union[np.ndarray, str, List[float]] = np.array([1., 0.49803922, 0.65490196])
@@ -63,8 +64,9 @@ def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[Waterfall
             vlines: Union[np.ndarray, str, List[float]] = "#bbbbbb"
             text: Union[np.ndarray, str, List[float]] = "white"
             tick_labels: Union[np.ndarray, str, List[float]] = "#999999"
+        ```
         Missing keys will filled with default values.
-        Furthermore one can pass a list of lists or strings directly, e.g. ["white", "blue", "yellow", "black", "beige"] to this argument,
+        Furthermore one can pass a list of lists or strings directly, e.g. ``["white", "blue", "yellow", "black", "beige"]`` to this argument,
         which will set the first `len(plot_cmaps)` colors according to the list elements. Usage of a single string is also possible, e.g.
         "kmcmrb" which works correspondingly by converting the string to list before applying the same logic. If the list is shorter than the number of configuration
         option the latter options will filled with default values.
