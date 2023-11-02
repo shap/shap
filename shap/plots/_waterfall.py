@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
 import matplotlib
@@ -14,10 +14,10 @@ from ._labels import labels
 
 @dataclass
 class WaterfallColorConfig:
-    positive_arrow: Union[np.ndarray, str, List[float]] = colors.red_rgb
-    negative_arrow: Union[np.ndarray, str, List[float]] = colors.blue_rgb
-    default_positive_color: Union[np.ndarray, str, List[float]] = colors.light_red_rgb
-    default_negative_color: Union[np.ndarray, str, List[float]] = colors.light_blue_rgb
+    positive_arrow: Union[np.ndarray, str, List[float]] = field(default_factory=lambda: colors.red_rgb)
+    negative_arrow: Union[np.ndarray, str, List[float]] = field(default_factory=lambda: colors.blue_rgb)
+    default_positive_color: Union[np.ndarray, str, List[float]] = field(default_factory=lambda: colors.light_red_rgb)
+    default_negative_color: Union[np.ndarray, str, List[float]] = field(default_factory=lambda: colors.light_blue_rgb)
     hlines: Union[np.ndarray, str, List[float]] = "#cccccc"
     vlines: Union[np.ndarray, str, List[float]] = "#bbbbbb"
     text: Union[np.ndarray, str, List[float]] = "white"
