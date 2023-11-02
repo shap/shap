@@ -30,7 +30,11 @@ class WaterfallColorConfig:
 # plot that is associated with that feature get overlaid on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
-def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[WaterfallColorConfig, Dict[str, Union[str, List[float], np.ndarray]], None, str, List[str]] = None):
+def waterfall(shap_values: Explanation,
+              max_display: int = 10,
+              show: bool = True,
+              plot_cmap: Union[WaterfallColorConfig, Dict[str, Union[str, List[float], np.ndarray]], None, str, List[str]] = None
+              ):
     """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -47,7 +51,7 @@ def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[Waterfall
     shap_values : Explanation
         A one-dimensional :class:`.Explanation` object that contains the feature values and SHAP values to plot.
 
-    max_display : str
+    max_display : int
         The maximum number of features to plot (default is 10).
 
     show : bool
