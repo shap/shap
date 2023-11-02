@@ -1,14 +1,15 @@
+from dataclasses import dataclass
+from typing import Dict, List, Union
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass, make_dataclass
 
 from .. import Explanation
 from ..utils import format_value
 from . import colors
 from ._labels import labels
-from typing import Union, Dict, List
 
 
 @dataclass

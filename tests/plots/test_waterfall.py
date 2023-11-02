@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
-from shap.plots import colors, WaterfallColorConfig
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.tree import DecisionTreeRegressor
 
 import shap
+from shap.plots import WaterfallColorConfig, colors
 
 
 def test_waterfall_input_is_explanation():
@@ -87,4 +87,3 @@ def test_waterfall_plot_for_decision_tree_explanation():
     explainer = shap.TreeExplainer(model)
     explanation = explainer(X)
     shap.plots.waterfall(explanation[0], show=False)
-
