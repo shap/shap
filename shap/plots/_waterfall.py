@@ -30,7 +30,7 @@ class WaterfallColorConfig:
 # plot that is associated with that feature get overlaid on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
-def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[WaterfallColorConfig, Dict, None, str, List[str]] = None):
+def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[WaterfallColorConfig, Dict[str, Union[str, List[float], np.ndarray]], None, str, List[str]] = None):
     """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -54,12 +54,12 @@ def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[Waterfall
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot to be customized further after it
         has been created.
-    plot_cmap: shap.plots.WaterfallColorConfig, dict, str, list[str] or None
+    plot_cmap: shap.plots.WaterfallColorConfig, dict[str, Union[list[float], np.ndarray, str]], str, list[str] or None
         Colormap to plot. This is either a dictionary with the keys can be either a numpy array or a list (with 3 float entries between 0 and 1)
         a `matplotlib color name <https://matplotlib.org/cheatsheets/_images/cheatsheets-2.png>`_ (see section Color names) or a hex code.
         Configurable keys: ``positive_arrow, negative_arrow, default_positive_color, default_negative_color, hlines, vlines, text, tick_labels``.
         Missing keys will be filled with default values.
-        Furthermore one can pass a list of lists of strings directly, e.g. ``["white", "blue", "yellow", "black", "beige"]`` to this argument,
+        Furthermore one can pass a list of strings directly, e.g. ``["white", "blue", "yellow", "black", "beige"]`` to this argument,
         which will set the first ``len(plot_cmaps)`` colors according to the list elements. Usage of a single string is also possible, e.g.
         "kmcmrb" which works correspondingly by converting the string to list before applying the same logic. If the list is shorter than the number of configuration
         option the latter options will filled with default values.
