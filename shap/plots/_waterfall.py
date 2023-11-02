@@ -86,7 +86,7 @@ def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[Waterfall
         color_config = WaterfallColorConfig(*plot_cmap)
 
     if not isinstance(color_config, WaterfallColorConfig):
-        raise TypeError(f"Expected color_config to be of type shap.plots.WaterfallColorConfig or dict. Received {type(color_config)} instead.")
+        raise TypeError(f"Expected color_config to be of type shap.plots.WaterfallColorConfig, dict, str or list. Received {type(color_config)} instead.")
 
     # Turn off interactive plot
     if show is False:
