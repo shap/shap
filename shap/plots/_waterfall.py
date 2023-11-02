@@ -2,18 +2,32 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from dataclasses import dataclass, make_dataclass
 
 from .. import Explanation
 from ..utils import format_value
 from . import colors
 from ._labels import labels
+from typing import Union, Dict, List
+
+
+@dataclass
+class WaterfallColorConfig:
+    positive_arrow: Union[np.ndarray, str, List[float]] = colors.red_rgb
+    negative_arrow: Union[np.ndarray, str, List[float]] = colors.blue_rgb
+    default_positive_color: Union[np.ndarray, str, List[float]] = colors.light_red_rgb
+    default_negative_color: Union[np.ndarray, str, List[float]] = colors.light_blue_rgb
+    hlines: Union[np.ndarray, str, List[float]] = "#cccccc"
+    vlines: Union[np.ndarray, str, List[float]] = "#bbbbbb"
+    text: Union[np.ndarray, str, List[float]] = "white"
+    tick_labels: Union[np.ndarray, str, List[float]] = "#999999"
 
 
 # TODO: If we make a JS version of this plot then we could let users click on a bar and then see the dependence
 # plot that is associated with that feature get overlaid on the plot...it would quickly allow users to answer
 # why a feature is pushing down or up. Perhaps the best way to do this would be with an ICE plot hanging off
 # of the bar...
-def waterfall(shap_values, max_display=10, show=True):
+def waterfall(shap_values, max_display=10, show=True, plot_cmap: Union[WaterfallColorConfig, Dict, None, str, list[str]] = None):
     """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
@@ -37,6 +51,22 @@ def waterfall(shap_values, max_display=10, show=True):
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot to be customized further after it
         has been created.
+    plot_cmap: shap.plots.WaterfallColorConfig, dict, str, list[str] or None
+        Colormap to plot. This is either a dictionary with the keys can be either a numpy array or a list (with 3 float entries between 0 and 1)
+            a [matplotlib color names](https://matplotlib.org/cheatsheets/_images/cheatsheets-2.png) (see section Color names) or a hex code.
+            positive_arrow: Union[np.ndarray, str, List[float]] = [1., 0., 0.31796406]
+            negative_arrow: Union[np.ndarray, str, List[float]] = np.array([0., 0.54337757, 0.98337906])
+            default_positive_color: Union[np.ndarray, str, List[float]] = np.array([1., 0.49803922, 0.65490196])
+            default_negative_color: Union[np.ndarray, str, List[float]] = np.array([0.49803922, 0.76862745, 0.98823529])
+            hlines: Union[np.ndarray, str, List[float]] = "#cccccc"
+            vlines: Union[np.ndarray, str, List[float]] = "#bbbbbb"
+            text: Union[np.ndarray, str, List[float]] = "white"
+            tick_labels: Union[np.ndarray, str, List[float]] = "#999999"
+        Missing keys will filled with default values.
+        Furthermore one can pass a list of lists or strings directly, e.g. ["white", "blue", "yellow", "black", "beige"] to this argument,
+        which will set the first `len(plot_cmaps)` colors according to the list elements. Usage of a single string is also possible, e.g.
+        "kmcmrb" which works correspondingly by converting the string to list before applying the same logic. If the list is shorter than the number of configuration
+        option the latter options will filled with default values.
 
     Examples
     --------
@@ -44,6 +74,19 @@ def waterfall(shap_values, max_display=10, show=True):
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
 
     """
+    if plot_cmap is None:
+        color_config = WaterfallColorConfig()
+    elif isinstance(plot_cmap, dict):
+        color_config = WaterfallColorConfig(**plot_cmap)
+    elif isinstance(plot_cmap, WaterfallColorConfig):
+        color_config = plot_cmap
+    elif isinstance(plot_cmap, str):
+        color_config = WaterfallColorConfig(*list(plot_cmap))
+    elif isinstance(plot_cmap, list):
+        color_config = WaterfallColorConfig(*plot_cmap)
+
+    if not isinstance(color_config, WaterfallColorConfig):
+        raise TypeError(f"Expected color_config to be of type shap.plots.WaterfallColorConfig or dict. Received {type(color_config)} instead.")
 
     # Turn off interactive plot
     if show is False:
@@ -132,7 +175,7 @@ def waterfall(shap_values, max_display=10, show=True):
             neg_lefts.append(loc)
         if num_individual != num_features or i + 4 < num_individual:
             plt.plot([loc, loc], [rng[i] - 1 - 0.4, rng[i] + 0.4],
-                     color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1)
+                     color=color_config.vlines, linestyle="--", linewidth=0.5, zorder=-1)
         if features is None:
             yticklabels[rng[i]] = feature_names[order[i]]
         else:
@@ -161,10 +204,10 @@ def waterfall(shap_values, max_display=10, show=True):
     # draw invisible bars just for sizing the axes
     label_padding = np.array([0.1*dataw if w < 1 else 0 for w in pos_widths])
     plt.barh(pos_inds, np.array(pos_widths) + label_padding + 0.02*dataw,
-             left=np.array(pos_lefts) - 0.01*dataw, color=colors.red_rgb, alpha=0)
+             left=np.array(pos_lefts) - 0.01*dataw, color=color_config.positive_arrow, alpha=0)
     label_padding = np.array([-0.1*dataw if -w < 1 else 0 for w in neg_widths])
     plt.barh(neg_inds, np.array(neg_widths) + label_padding - 0.02*dataw,
-             left=np.array(neg_lefts) + 0.01*dataw, color=colors.blue_rgb, alpha=0)
+             left=np.array(neg_lefts) + 0.01*dataw, color=color_config.negative_arrow, alpha=0)
 
     # define variable we need for plotting the arrows
     head_length = 0.08
@@ -184,7 +227,7 @@ def waterfall(shap_values, max_display=10, show=True):
         arrow_obj = plt.arrow(
             pos_lefts[i], pos_inds[i], max(dist-hl_scaled, 0.000001), 0,
             head_length=min(dist, hl_scaled),
-            color=colors.red_rgb, width=bar_width,
+            color=color_config.positive_arrow, width=bar_width,
             head_width=bar_width,
         )
 
@@ -192,12 +235,12 @@ def waterfall(shap_values, max_display=10, show=True):
             plt.errorbar(
                 pos_lefts[i] + pos_widths[i], pos_inds[i],
                 xerr=np.array([[pos_widths[i] - pos_low[i]], [pos_high[i] - pos_widths[i]]]),
-                ecolor=colors.light_red_rgb,
+                ecolor=color_config.default_positive_color,
             )
 
         txt_obj = plt.text(
             pos_lefts[i] + 0.5*dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
-            horizontalalignment='center', verticalalignment='center', color="white",
+            horizontalalignment='center', verticalalignment='center', color=color_config.text,
             fontsize=12,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
@@ -209,7 +252,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
             txt_obj = plt.text(
                 pos_lefts[i] + (5/72)*bbox_to_xscale + dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
-                horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
+                horizontalalignment='left', verticalalignment='center', color=color_config.positive_arrow,
                 fontsize=12,
             )
 
@@ -220,7 +263,7 @@ def waterfall(shap_values, max_display=10, show=True):
         arrow_obj = plt.arrow(
             neg_lefts[i], neg_inds[i], -max(-dist-hl_scaled, 0.000001), 0,
             head_length=min(-dist, hl_scaled),
-            color=colors.blue_rgb, width=bar_width,
+            color=color_config.negative_arrow, width=bar_width,
             head_width=bar_width,
         )
 
@@ -228,12 +271,12 @@ def waterfall(shap_values, max_display=10, show=True):
             plt.errorbar(
                 neg_lefts[i] + neg_widths[i], neg_inds[i],
                 xerr=np.array([[neg_widths[i] - neg_low[i]], [neg_high[i] - neg_widths[i]]]),
-                ecolor=colors.light_blue_rgb,
+                ecolor=color_config.default_negative_color,
             )
 
         txt_obj = plt.text(
             neg_lefts[i] + 0.5*dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
-            horizontalalignment='center', verticalalignment='center', color="white",
+            horizontalalignment='center', verticalalignment='center', color=color_config.text,
             fontsize=12,
         )
         text_bbox = txt_obj.get_window_extent(renderer=renderer)
@@ -245,7 +288,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
             txt_obj = plt.text(
                 neg_lefts[i] - (5/72)*bbox_to_xscale + dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
-                horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
+                horizontalalignment='right', verticalalignment='center', color=color_config.negative_arrow,
                 fontsize=12,
             )
 
@@ -256,12 +299,12 @@ def waterfall(shap_values, max_display=10, show=True):
 
     # put horizontal lines for each feature row
     for i in range(num_features):
-        plt.axhline(i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+        plt.axhline(i, color=color_config.hlines, lw=0.5, dashes=(1, 5), zorder=-1)
 
     # mark the prior expected value and the model prediction
-    plt.axvline(base_values, 0, 1/num_features, color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(base_values, 0, 1/num_features, color=color_config.vlines, linestyle="--", linewidth=0.5, zorder=-1)
     fx = base_values + values.sum()
-    plt.axvline(fx, 0, 1, color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(fx, 0, 1, color=color_config.vlines, linestyle="--", linewidth=0.5, zorder=-1)
 
     # clean up the main axis
     plt.gca().xaxis.set_ticks_position('bottom')
@@ -270,7 +313,6 @@ def waterfall(shap_values, max_display=10, show=True):
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['left'].set_visible(False)
     ax.tick_params(labelsize=13)
-    #plt.xlabel("\nModel output", fontsize=12)
 
     # draw the E[f(X)] tick mark
     xmin, xmax = ax.get_xlim()
@@ -293,7 +335,7 @@ def waterfall(shap_values, max_display=10, show=True):
     ) + matplotlib.transforms.ScaledTranslation(-10/72., 0, fig.dpi_scale_trans))
     tick_labels[1].set_transform(tick_labels[1].get_transform(
     ) + matplotlib.transforms.ScaledTranslation(12/72., 0, fig.dpi_scale_trans))
-    tick_labels[1].set_color("#999999")
+    tick_labels[1].set_color(color_config.tick_labels)
     ax3.spines['right'].set_visible(False)
     ax3.spines['top'].set_visible(False)
     ax3.spines['left'].set_visible(False)
@@ -305,13 +347,13 @@ def waterfall(shap_values, max_display=10, show=True):
     tick_labels[1].set_transform(tick_labels[1].get_transform(
     ) + matplotlib.transforms.ScaledTranslation(22/72., -1/72., fig.dpi_scale_trans))
 
-    tick_labels[1].set_color("#999999")
+    tick_labels[1].set_color(color_config.tick_labels)
 
     # color the y tick labels that have the feature values as gray
     # (these fall behind the black ones with just the feature name)
     tick_labels = ax.yaxis.get_majorticklabels()
     for i in range(num_features):
-        tick_labels[i].set_color("#999999")
+        tick_labels[i].set_color(color_config.tick_labels)
 
     if show:
         plt.show()
@@ -465,10 +507,12 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     # draw invisible bars just for sizing the axes
     label_padding = np.array([0.1*dataw if w < 1 else 0 for w in pos_widths])
     plt.barh(pos_inds, np.array(pos_widths) + label_padding + 0.02*dataw,
-             left=np.array(pos_lefts) - 0.01*dataw, color=colors.red_rgb, alpha=0)
+             # left=np.array(pos_lefts) - 0.01*dataw, color=colors.red_rgb, alpha=0)
+             left=np.array(pos_lefts) - 0.01*dataw, color=color_config.positive_arrow, alpha=0)
     label_padding = np.array([-0.1*dataw if -w < 1 else 0 for w in neg_widths])
     plt.barh(neg_inds, np.array(neg_widths) + label_padding - 0.02*dataw,
-             left=np.array(neg_lefts) + 0.01*dataw, color=colors.blue_rgb, alpha=0)
+             # left=np.array(neg_lefts) + 0.01*dataw, color=colors.blue_rgb, alpha=0)
+             left=np.array(neg_lefts) + 0.01*dataw, color=color_config.negative_arrow, alpha=0)
 
     # define variable we need for plotting the arrows
     head_length = 0.08
@@ -488,7 +532,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         arrow_obj = plt.arrow(
             pos_lefts[i], pos_inds[i], max(dist-hl_scaled, 0.000001), 0,
             head_length=min(dist, hl_scaled),
-            color=colors.red_rgb, width=bar_width,
+            # color=colors.red_rgb, width=bar_width,
+            color=color_config.positive_arrow, width=bar_width,
             head_width=bar_width
         )
 
@@ -496,7 +541,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             plt.errorbar(
                 pos_lefts[i] + pos_widths[i], pos_inds[i],
                 xerr=np.array([[pos_widths[i] - pos_low[i]], [pos_high[i] - pos_widths[i]]]),
-                ecolor=colors.light_red_rgb
+                # ecolor=colors.light_red_rgb
+                ecolor=color_config.default_positive_color
             )
 
         txt_obj = plt.text(
@@ -513,7 +559,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
 
             txt_obj = plt.text(
                 pos_lefts[i] + (5/72)*bbox_to_xscale + dist, pos_inds[i], format_value(pos_widths[i], '%+0.02f'),
-                horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
+                # horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
+                horizontalalignment='left', verticalalignment='center', color=color_config.positive_arrow,
                 fontsize=12
             )
 
@@ -524,7 +571,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         arrow_obj = plt.arrow(
             neg_lefts[i], neg_inds[i], -max(-dist-hl_scaled, 0.000001), 0,
             head_length=min(-dist, hl_scaled),
-            color=colors.blue_rgb, width=bar_width,
+            color=color_config.negative_arrow, width=bar_width,
+            # color=colors.blue_rgb, width=bar_width,
             head_width=bar_width
         )
 
@@ -532,7 +580,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
             plt.errorbar(
                 neg_lefts[i] + neg_widths[i], neg_inds[i],
                 xerr=np.array([[neg_widths[i] - neg_low[i]], [neg_high[i] - neg_widths[i]]]),
-                ecolor=colors.light_blue_rgb
+                # ecolor=colors.light_blue_rgb
+                ecolor=color_config.default_negative_color
             )
 
         txt_obj = plt.text(
@@ -549,7 +598,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
 
             txt_obj = plt.text(
                 neg_lefts[i] - (5/72)*bbox_to_xscale + dist, neg_inds[i], format_value(neg_widths[i], '%+0.02f'),
-                horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
+                # horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
+                horizontalalignment='right', verticalalignment='center', color=color_config.negative_arrow,
                 fontsize=12
             )
 

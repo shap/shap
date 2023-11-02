@@ -17,7 +17,7 @@ from ._partial_dependence import partial_dependence
 from ._scatter import scatter
 from ._text import text
 from ._violin import violin
-from ._waterfall import waterfall
+from ._waterfall import waterfall, WaterfallColorConfig
 
 __all__ = [
     "bar",
@@ -37,4 +37,5 @@ __all__ = [
     "text",
     "violin",
     "waterfall",
+    "WaterfallColorConfig"
 ]

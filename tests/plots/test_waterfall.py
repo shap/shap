@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from shap.plots import colors, WaterfallColorConfig
 import numpy as np
 import pandas as pd
 import pytest
@@ -45,7 +46,37 @@ def test_waterfall_legacy(explainer):
     shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0])
     plt.tight_layout()
     return fig
-
+# todo: use parametrize to use all possible config options
+@pytest.mark.parametrize("color_config", [{"positive_arrow": colors.red_rgb,
+                                           "negative_arrow": colors.blue_rgb,
+                                           "default_positive_color": colors.light_red_rgb,
+                                           "default_negative_color": colors.light_blue_rgb
+                                           },
+                                          {
+                                           'positive_arrow': np.array([1., 0., 0.31796406]),
+                                           'negative_arrow': np.array([0., 0.54337757, 0.98337906]),
+                                           'default_positive_color': np.array([1., 0.49803922, 0.65490196]),
+                                           'default_negative_color': np.array([0.49803922, 0.76862745, 0.98823529])
+                                           },
+                                          WaterfallColorConfig(
+                                           positive_arrow=np.array([1., 0., 0.31796406]),
+                                           negative_arrow=np.array([0., 0.54337757, 0.98337906]),
+                                           default_positive_color=np.array([1., 0.49803922, 0.65490196]),
+                                           default_negative_color=np.array([0.49803922, 0.76862745, 0.98823529])
+                                          ),
+                                          [[1., 0., 0.31796406], [0., 0.54337757, 0.98337906], [1., 0.49803922, 0.65490196], [0.49803922, 0.76862745, 0.98823529]],
+                                          ['#FF0051', '#008BFB', '#FF7FB1', '#7FC4FC'],
+                                          "kgry",
+                                          ["black", "green", "red", "yellow"],
+                                          ])
+@pytest.mark.mpl_image_compare(tolerance=3)
+def test_waterfall_color_config_default(explainer, color_config):
+    """Test waterfall config options."""
+    fig = plt.figure()
+    shap_values = explainer(explainer.data)
+    shap.plots.waterfall(shap_values[0], plot_cmap=color_config)
+    plt.tight_layout()
+    return fig
 
 def test_waterfall_plot_for_decision_tree_explanation():
     # Regression tests for GH issue #3129
@@ -56,3 +87,4 @@ def test_waterfall_plot_for_decision_tree_explanation():
     explainer = shap.TreeExplainer(model)
     explanation = explainer(X)
     shap.plots.waterfall(explanation[0], show=False)
+
