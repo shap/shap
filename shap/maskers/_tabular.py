@@ -299,7 +299,7 @@ class Partition(Tabular):
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
 
-class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking
+class Impute(Tabular):
     """ This imputes the values of missing features using the values of the observed features.
 
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
