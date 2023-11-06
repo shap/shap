@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 from numba import njit
+from sklearn.impute import KNNImputer, SimpleImputer
 
 from .. import utils
 from .._serializable import Deserializer, Serializer
@@ -17,7 +18,7 @@ class Tabular(Masker):
     """ A common base class for Independent and Partition.
     """
 
-    def __init__(self, data, max_samples=100, clustering=None):
+    def __init__(self, data, max_samples=100, clustering=None, impute=None):
         """ This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -60,6 +61,11 @@ class Tabular(Masker):
         self.data = data
         self.clustering = clustering
         self.max_samples = max_samples
+
+        # prepare by fitting sklearn imputer
+        self.impute = impute
+        if self.impute is not None:
+            self.impute.fit(self.data)
 
         # # warn users about large background data sets
         # if self.data.shape[0] > 100:
@@ -116,6 +122,9 @@ class Tabular(Masker):
                 return (pd.DataFrame(masked_inputs_out, columns=self.feature_names),), varying_rows_out
 
             return (masked_inputs_out,), varying_rows_out
+
+        if self.impute is not None:
+            self.data = self.impute.transform(x)
 
         # otherwise we update the whole set of masked data for a single sample
         self._masked_data[:] = x * mask + self.data * np.invert(mask)
@@ -305,18 +314,41 @@ class Impute(Tabular):
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
     """
 
-    def __init__(self, data, method="linear"):
+    def __init__(self, data, max_samples=100, method="mean"):
         """ Build a Partition masker with the given background data and clustering.
 
         Parameters
         ----------
-        data : numpy.ndarray, pandas.DataFrame or {"mean: numpy.ndarray, "cov": numpy.ndarray} dictionary
+        data : numpy.ndarray, pandas.DataFrame
             The background dataset that is used for masking.
-        """
-        if data is dict and "mean" in data:
-            self.mean = data.get("mean", None)
-            self.cov = data.get("cov", None)
-            data = np.expand_dims(data["mean"], 0)
 
-        self.data = data
-        self.method = method
+        max_samples : int
+            The maximum number of samples to use from the passed background data. If data has more
+            than max_samples then shap.utils.sample is used to subsample the dataset. The number of
+            samples coming out of the masker (to be integrated over) matches the number of samples in
+            the background dataset. This means larger background dataset cause longer runtimes. Normally
+            about 1, 10, 100, or 1000 background samples are reasonable choices.
+
+        method : string or sklearn.impute object
+            If a string, then this is shorthand for the type of sklearn.impute object to generate.
+            Either a SimpleImputer or KNNImputer is used with default settings.
+            Mean, median, and mode refer to the supported SimpleImputer strategies.
+            For more finetuning, pass an already initialized sklearn.impute object.
+            Supported methods are:
+                mean - SimpleImputer with elements replaced by mean of feature in data.
+                median - SimpleImputer with elements replaced by median of feature in data.
+                mode - SimpleImputer with elements replaced by most frequent of feature in data.
+                knn - KNNImputer with elements replaced by mean value within 5 NNs of feature in data.
+        """
+        methods = ["mean", "median", "mode", "knn"]
+        if isinstance(method, str):
+            if method not in methods:
+                raise NotImplementedError("Given imputation method is not supported.")
+            elif method == "knn":
+                impute = KNNImputer(missing_values=0)
+            else:
+                impute = SimpleImputer(missing_values=0, strategy=method)
+        else:
+            impute = method
+
+        super().__init__(data, max_samples=max_samples, impute=impute)
