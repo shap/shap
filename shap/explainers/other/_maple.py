@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from .._explainer import Explainer
@@ -21,7 +22,7 @@ class Maple(Explainer):
     def __init__(self, model, data):
         self.model = model
 
-        if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(data, pd.DataFrame):
             data = data.values
         self.data = data
         self.data_mean = self.data.mean(0)
@@ -46,7 +47,7 @@ class Maple(Explainer):
             If true, this multiplies the learned coefficients by the mean-centered input. This makes these
             values roughly comparable to SHAP values.
         """
-        if str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(X, pd.DataFrame):
             X = X.values
 
         out = [np.zeros(X.shape) for j in range(self.out_dim)]
@@ -91,7 +92,7 @@ class TreeMaple(Explainer):
         else:
             raise NotImplementedError("The passed model is not yet supported by TreeMapleExplainer: " + str(type(model)))
 
-        if str(type(data)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(data, pd.DataFrame):
             data = data.values
         self.data = data
         self.data_mean = self.data.mean(0)
@@ -117,7 +118,7 @@ class TreeMaple(Explainer):
             If true, this multiplies the learned coefficients by the mean-centered input. This makes these
             values roughly comparable to SHAP values.
         """
-        if str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(X, pd.DataFrame):
             X = X.values
 
         out = [np.zeros(X.shape) for j in range(self.out_dim)]

@@ -5,7 +5,7 @@ from tqdm.auto import tqdm
 
 from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
-from shap.utils import MaskedModel, partition_tree_shuffle, safe_isinstance
+from shap.utils import MaskedModel, partition_tree_shuffle
 
 from ._result import BenchmarkResult
 
@@ -82,7 +82,7 @@ class ExplanationError:
         """ Run this benchmark on the given explanation.
         """
 
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values

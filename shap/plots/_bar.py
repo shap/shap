@@ -1,5 +1,6 @@
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy
 
 from .. import Cohorts, Explanation
@@ -131,7 +132,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
 
     # unwrap any pandas series
-    if str(type(features)) == "<class 'pandas.core.series.Series'>":
+    if isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
@@ -375,7 +376,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
 
     # unwrap pandas series
-    if str(type(features)) == "<class 'pandas.core.series.Series'>":
+    if isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values

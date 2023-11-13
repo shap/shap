@@ -5,6 +5,7 @@ import warnings
 
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
@@ -121,7 +122,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     idx2cat = None
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         # feature index to category flag
@@ -517,7 +518,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     idx2cat = None
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         # feature index to category flag

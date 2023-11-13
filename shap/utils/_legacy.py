@@ -29,7 +29,7 @@ def kmeans(X, k, round_values=True):
     """
 
     group_names = [str(i) for i in range(X.shape[1])]
-    if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(X, pd.DataFrame):
         group_names = X.columns
         X = X.values
 
@@ -208,11 +208,11 @@ class DenseDataWithIndex(DenseData):
 def convert_to_data(val, keep_index=False):
     if isinstance(val, Data):
         return val
-    elif type(val) == np.ndarray:
+    elif isinstance(val, np.ndarray):
         return DenseData(val, [str(i) for i in range(val.shape[1])])
-    elif str(type(val)).endswith("'pandas.core.series.Series'>"):
+    elif isinstance(val, pd.Series):
         return DenseData(val.values.reshape((1,len(val))), list(val.index))
-    elif str(type(val)).endswith("'pandas.core.frame.DataFrame'>"):
+    elif isinstance(val, pd.DataFrame):
         if keep_index:
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
         else:

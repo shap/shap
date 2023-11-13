@@ -7,6 +7,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import scipy.sparse
 import scipy.special
 from packaging import version
 
@@ -115,7 +116,7 @@ class TreeExplainer(Explainer):
         """
         if feature_names is not None:
             self.data_feature_names = feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         masker = data
@@ -151,7 +152,7 @@ class TreeExplainer(Explainer):
             raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
                 "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
-        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        if isinstance(data, pd.DataFrame):
             self.data = data.values
         elif isinstance(data, DenseData):
             self.data = data.data
@@ -187,11 +188,12 @@ class TreeExplainer(Explainer):
                 raise Exception("Model does not have a known objective or output type! When model_output is " \
                                 "not \"raw\" then we need to know the model's objective or link function.")
 
-        # A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs
-        if safe_isinstance(model, "xgboost.sklearn.XGBClassifier") and self.model.model_output != "raw":
+        # A change in the signature of `xgboost.Booster.predict()` method has been introduced in XGBoost v1.4:
+        # The introduced `iteration_range` parameter is used when obtaining SHAP (incl. interaction) values from XGBoost models.
+        if self.model.model_type == 'xgboost':
             import xgboost
-            if version.parse(xgboost.__version__) < version.parse('0.81'):
-                raise RuntimeError("A bug in XGBoost fixed in v0.81 makes XGBClassifier fail to give margin outputs! Please upgrade to XGBoost >= v0.81!")
+            if version.parse(xgboost.__version__) < version.parse('1.4'):
+                raise RuntimeError(f"SHAP requires XGBoost >= v1.4 , but found version {xgboost.__version__}. Please upgrade XGBoost!")
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
@@ -227,7 +229,7 @@ class TreeExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -244,7 +246,11 @@ class TreeExplainer(Explainer):
         if hasattr(self.expected_value, "__len__") and len(self.expected_value) > 1:
             # `expected_value` is a list / array of numbers, length k, e.g. for multi-output scenarios
             # we repeat it N times along the first axis, so ev_tiled.shape == (N, k)
-            ev_tiled = np.tile(self.expected_value, (v.shape[0], 1))
+            if isinstance(v, list):
+                num_rows = v[0].shape[0]
+            else:
+                num_rows = v.shape[0]
+            ev_tiled = np.tile(self.expected_value, (num_rows, 1))
         else:
             # `expected_value` is a scalar / array of 1 number, so we simply repeat it for every row in `v`
             # ev_tiled.shape == (N,)
@@ -252,8 +258,24 @@ class TreeExplainer(Explainer):
 
         # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             X = X.values
+        elif safe_isinstance(X, "xgboost.core.DMatrix"):
+            import xgboost
+
+            if version.parse(xgboost.__version__) < version.parse("1.7.0"):  # pragma: no cover
+                # cf. GH #3357
+                wmsg = (
+                    "`shap.Explanation` does not support `xgboost.DMatrix` objects for xgboost < 1.7, "
+                    "so the `data` attribute of the `Explanation` object will be set to None. If "
+                    "you require the `data` attribute (e.g. using `shap.plots`), then either "
+                    "update your xgboost to >=1.7.0 or explicitly set `Explanation.data = X`, where "
+                    "`X` is a numpy or scipy array."
+                )
+                warnings.warn(wmsg)
+                X = None
+            else:
+                X: scipy.sparse.csr_matrix = X.get_data()
 
         return Explanation(
             v,
@@ -271,9 +293,7 @@ class TreeExplainer(Explainer):
         if tree_limit < 0 or tree_limit > self.model.values.shape[0]:
             tree_limit = self.model.values.shape[0]
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
         flat_output = False
         if len(X.shape) == 1:
@@ -1277,9 +1297,7 @@ class TreeEnsemble:
             tree_limit = -1 if self.tree_limit is None else self.tree_limit
 
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series"):
-            X = X.values
-        elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
         flat_output = False
         if len(X.shape) == 1:
