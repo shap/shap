@@ -1,16 +1,16 @@
+from .._explainer import Explainer
 from .deep_pytorch import PyTorchDeep
 from .deep_tf import TFDeep
-from .._explainer import Explainer
 
 
-class Deep(Explainer):
+class DeepExplainer(Explainer):
     """ Meant to approximate SHAP values for deep learning models.
 
     This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we
     approximate the conditional expectations of SHAP values using a selection of background samples.
     Lundberg and Lee, NIPS 2017 showed that the per node attribution rules in DeepLIFT (Shrikumar,
     Greenside, and Kundaje, arXiv 2017) can be chosen to approximate Shapley values. By integrating
-    over many backgound samples Deep estimates approximate SHAP values such that they sum
+    over many background samples Deep estimates approximate SHAP values such that they sum
     up to the difference between the expected model output on the passed background samples and the
     current model output (f(x) - E[f(x)]).
 
@@ -71,13 +71,13 @@ class Deep(Explainer):
             try:
                 a.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
         else:
             try:
                 model.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
 
         if framework == 'tensorflow':
@@ -86,6 +86,7 @@ class Deep(Explainer):
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
+        self.explainer.framework = framework
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
         """ Return approximate SHAP values for the model applied to the data given by X.

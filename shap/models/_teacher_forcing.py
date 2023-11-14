@@ -1,10 +1,11 @@
 import numpy as np
-import scipy as sp
-from ._model import Model
-from ..utils import safe_isinstance
-from ..utils.transformers import parse_prefix_suffix_for_tokenizer, getattr_silent
+import scipy.special
+
 from .. import models
-from .._serializable import Serializer, Deserializer
+from .._serializable import Deserializer, Serializer
+from ..utils import safe_isinstance
+from ..utils.transformers import getattr_silent, parse_prefix_suffix_for_tokenizer
+from ._model import Model
 
 
 class TeacherForcing(Model):
@@ -229,7 +230,7 @@ class TeacherForcing(Model):
 
         def calc_logodds(arr):
             probs = np.exp(arr) / np.exp(arr).sum(-1)
-            logodds = sp.special.logit(probs)
+            logodds = scipy.special.logit(probs)
             return logodds
 
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
@@ -254,7 +255,7 @@ class TeacherForcing(Model):
             Returns output logits from the model.
         """
         if self.similarity_model_type == "pt":
-            import torch # pylint: disable=import-outside-toplevel
+            import torch  # pylint: disable=import-outside-toplevel
             # create torch tensors and move to device
             if self.device is not None:
                 inputs = inputs.to(self.device)
@@ -276,7 +277,7 @@ class TeacherForcing(Model):
                     outputs = self.similarity_model(**inputs, return_dict=True)
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')
         elif self.similarity_model_type == "tf":
-            import tensorflow as tf # pylint: disable=import-outside-toplevel
+            import tensorflow as tf  # pylint: disable=import-outside-toplevel
             output_ids = tf.convert_to_tensor(output_ids, dtype=tf.int32)
             if self.similarity_model.config.is_encoder_decoder:
                 if self.device is None:
@@ -367,7 +368,7 @@ class TeacherForcing(Model):
     def save(self, out_file):
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.models.TeacherForcing", version=0) as s:
             s.save("tokenizer", self.tokenizer)
             s.save("similarity_model", self.similarity_model)

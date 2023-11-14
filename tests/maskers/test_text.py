@@ -2,8 +2,10 @@
 """
 
 import tempfile
-import pytest
+
 import numpy as np
+import pytest
+
 import shap
 
 
@@ -73,6 +75,8 @@ def test_masker_call_pretrained_tokenizer_fast():
 
     assert output_masked_text[0] == correct_masked_text
 
+
+@pytest.mark.filterwarnings(r"ignore:Recommended. pip install sacremoses")
 def test_sentencepiece_tokenizer_output():
     """ Tests for output for sentencepiece tokenizers to not have '_' in output of masker when passed a mask of ones.
     """

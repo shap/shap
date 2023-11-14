@@ -1,38 +1,52 @@
-from ..utils._legacy import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
-from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData, SparseData
-from ..utils import safe_isinstance
-from scipy.special import binom
-from scipy.sparse import issparse
+import copy
+import gc
+import itertools
+import logging
+import time
+import warnings
+
 import numpy as np
 import pandas as pd
-import scipy as sp
-import logging
-import copy
-import itertools
-import warnings
-import gc
-from sklearn.linear_model import LassoLarsIC, Lasso, lars_path
+import scipy.sparse
+import sklearn
+from packaging import version
+from scipy.special import binom
+from sklearn.linear_model import Lasso, LassoLarsIC, lars_path
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
+
+from .._explanation import Explanation
+from ..utils import safe_isinstance
+from ..utils._legacy import (
+    DenseData,
+    SparseData,
+    convert_to_data,
+    convert_to_instance,
+    convert_to_instance_with_index,
+    convert_to_link,
+    convert_to_model,
+    match_instance_to_data,
+    match_model_to_data,
+)
 from ._explainer import Explainer
 
 log = logging.getLogger('shap')
 
 
-
-class Kernel(Explainer):
+class KernelExplainer(Explainer):
     """Uses the Kernel SHAP method to explain the output of any function.
 
     Kernel SHAP is a method that uses a special weighted linear regression
     to compute the importance of each feature. The computed importance values
-    are Shapley values from game theory and also coefficents from a local linear
+    are Shapley values from game theory and also coefficients from a local linear
     regression.
-
 
     Parameters
     ----------
     model : function or iml.Model
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array or pandas.DataFrame or shap.common.DenseData or any scipy.sparse matrix
@@ -41,31 +55,42 @@ class Kernel(Explainer):
         is observed. Since most models aren't designed to handle arbitrary missing data at test
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
-        we would approximate a feature being missing by setting it to zero. For small problems
+        we would approximate a feature being missing by setting it to zero. For small problems,
         this background dataset can be the whole training set, but for larger problems consider
-        using a single reference value or using the kmeans function to summarize the dataset.
-        Note: for sparse case we accept any sparse matrix but convert to lil format for
+        using a single reference value or using the ``kmeans`` function to summarize the dataset.
+        Note: for the sparse case, we accept any sparse matrix but convert to lil format for
         performance.
+
+    feature_names : list
+        The names of the features in the background dataset. If the background dataset is
+        supplied as a pandas.DataFrame, then ``feature_names`` can be set to ``None`` (default),
+        and the feature names will be taken as the column names of the dataframe.
 
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
         sense to connect them to the output with a link function where link(output) = sum(phi).
-        If the model output is a probability then the LogitLink link function makes the feature
-        importance values have log-odds units.
+        Default is "identity" (a no-op).
+        If the model output is a probability, then "logit" can be used to transform the SHAP values
+        into log-odds units.
 
     Examples
     --------
-    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
+    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
     """
 
-    def __init__(self, model, data, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
+
+        if feature_names is not None:
+            self.data_feature_names=feature_names
+        elif isinstance(data, pd.DataFrame):
+            self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
         self.link = convert_to_link(link)
-        self.model = convert_to_model(model)
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
+        self.model = convert_to_model(model, keep_index=self.keep_index)
         self.data = convert_to_data(data, keep_index=self.keep_index)
         model_null = match_model_to_data(self.model, self.data)
 
@@ -105,6 +130,32 @@ class Kernel(Explainer):
         else:
             self.D = self.fnull.shape[0]
 
+    def __call__(self, X):
+
+        start_time = time.time()
+
+        if isinstance(X, pd.DataFrame):
+            feature_names = list(X.columns)
+        else:
+            feature_names = getattr(self, "data_feature_names", None)
+
+        v = self.shap_values(X)
+        if isinstance(v, list):
+            v = np.stack(v, axis=-1) # put outputs at the end
+
+        # the explanation object expects an expected value for each row
+        if hasattr(self.expected_value, "__len__"):
+            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+        else:
+            ev_tiled = np.tile(self.expected_value, v.shape[0])
+
+        return Explanation(
+            v,
+            base_values=ev_tiled,
+            data=X.to_numpy() if isinstance(X, pd.DataFrame) else X,
+            feature_names=feature_names,
+            compute_time=time.time() - start_time,
+        )
 
     def shap_values(self, X, **kwargs):
         """ Estimate the SHAP values for a set of samples.
@@ -127,7 +178,7 @@ class Kernel(Explainer):
             The "aic" and "bic" options use the AIC and BIC rules for regularization.
             Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
             "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
-            
+
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
 
@@ -142,9 +193,9 @@ class Kernel(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
+        if isinstance(X, pd.Series):
             X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        elif isinstance(X, pd.DataFrame):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
@@ -154,9 +205,9 @@ class Kernel(Explainer):
         x_type = str(type(X))
         arr_type = "'numpy.ndarray'>"
         # if sparse, convert to lil for performance
-        if sp.sparse.issparse(X) and not sp.sparse.isspmatrix_lil(X):
+        if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
             X = X.tolil()
-        assert x_type.endswith(arr_type) or sp.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
+        assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
@@ -274,15 +325,15 @@ class Kernel(Explainer):
             self.allocate()
 
             # weight the different subset sizes
-            num_subset_sizes = np.int(np.ceil((self.M - 1) / 2.0))
-            num_paired_subset_sizes = np.int(np.floor((self.M - 1) / 2.0))
+            num_subset_sizes = int(np.ceil((self.M - 1) / 2.0))
+            num_paired_subset_sizes = int(np.floor((self.M - 1) / 2.0))
             weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
             weight_vector[:num_paired_subset_sizes] *= 2
             weight_vector /= np.sum(weight_vector)
-            log.debug("weight_vector = {0}".format(weight_vector))
-            log.debug("num_subset_sizes = {0}".format(num_subset_sizes))
-            log.debug("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
-            log.debug("M = {0}".format(self.M))
+            log.debug(f"weight_vector = {weight_vector}")
+            log.debug(f"num_subset_sizes = {num_subset_sizes}")
+            log.debug(f"num_paired_subset_sizes = {num_paired_subset_sizes}")
+            log.debug(f"M = {self.M}")
 
             # fill out all the subset sizes we can completely enumerate
             # given nsamples*remaining_weight_vector[subset_size]
@@ -295,12 +346,13 @@ class Kernel(Explainer):
 
                 # determine how many subsets (and their complements) are of the current size
                 nsubsets = binom(self.M, subset_size)
-                if subset_size <= num_paired_subset_sizes: nsubsets *= 2
-                log.debug("subset_size = {0}".format(subset_size))
-                log.debug("nsubsets = {0}".format(nsubsets))
-                log.debug("self.nsamples*weight_vector[subset_size-1] = {0}".format(
+                if subset_size <= num_paired_subset_sizes:
+                    nsubsets *= 2
+                log.debug(f"subset_size = {subset_size}")
+                log.debug(f"nsubsets = {nsubsets}")
+                log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
                     num_samples_left * remaining_weight_vector[subset_size - 1]))
-                log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {0}".format(
+                log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {}".format(
                     num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
 
                 # see if we have enough samples to enumerate all subsets of this size
@@ -314,7 +366,8 @@ class Kernel(Explainer):
 
                     # add all the samples of the current subset size
                     w = weight_vector[subset_size - 1] / binom(self.M, subset_size)
-                    if subset_size <= num_paired_subset_sizes: w /= 2.0
+                    if subset_size <= num_paired_subset_sizes:
+                        w /= 2.0
                     for inds in itertools.combinations(group_inds, subset_size):
                         mask[:] = 0.0
                         mask[np.array(inds, dtype='int64')] = 1.0
@@ -324,19 +377,19 @@ class Kernel(Explainer):
                             self.addsample(instance.x, mask, w)
                 else:
                     break
-            log.info("num_full_subsets = {0}".format(num_full_subsets))
+            log.info(f"num_full_subsets = {num_full_subsets}")
 
             # add random samples from what is left of the subset space
             nfixed_samples = self.nsamplesAdded
             samples_left = self.nsamples - self.nsamplesAdded
-            log.debug("samples_left = {0}".format(samples_left))
+            log.debug(f"samples_left = {samples_left}")
             if num_full_subsets != num_subset_sizes:
                 remaining_weight_vector = copy.copy(weight_vector)
                 remaining_weight_vector[:num_paired_subset_sizes] /= 2 # because we draw two samples each below
                 remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
-                log.info("remaining_weight_vector = {0}".format(remaining_weight_vector))
-                log.info("num_paired_subset_sizes = {0}".format(num_paired_subset_sizes))
+                log.info(f"remaining_weight_vector = {remaining_weight_vector}")
+                log.info(f"num_paired_subset_sizes = {num_paired_subset_sizes}")
                 ind_set = np.random.choice(len(remaining_weight_vector), 4 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
@@ -375,7 +428,7 @@ class Kernel(Explainer):
                 # normalize the kernel weights for the random samples to equal the weight left after
                 # the fixed enumerated samples have been already counted
                 weight_left = np.sum(weight_vector[num_full_subsets:])
-                log.info("weight_left = {0}".format(weight_left))
+                log.info(f"weight_left = {weight_left}")
                 self.kernelWeights[nfixed_samples:] *= weight_left / self.kernelWeights[nfixed_samples:].sum()
 
             # execute the model on the synthetic samples we have created
@@ -404,12 +457,12 @@ class Kernel(Explainer):
             return 0 if i == j else 1
 
     def varying_groups(self, x):
-        if not sp.sparse.issparse(x):
+        if not scipy.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
             for i in range(0, self.data.groups_size):
                 inds = self.data.groups[i]
                 x_group = x[0, inds]
-                if sp.sparse.issparse(x_group):
+                if scipy.sparse.issparse(x_group):
                     if all(j not in x.nonzero()[1] for j in inds):
                         varying[i] = False
                         continue
@@ -432,7 +485,7 @@ class Kernel(Explainer):
 
                 if nonzero_rows.size > 0:
                     background_data_rows = data_rows[nonzero_rows]
-                    if sp.sparse.issparse(background_data_rows):
+                    if scipy.sparse.issparse(background_data_rows):
                         background_data_rows = background_data_rows.toarray()
                     num_mismatches = np.sum(np.abs(background_data_rows - x[0, varying_index]) > 1e-7)
                     # Note: If feature column non-zero but some background zero, can't remove index
@@ -445,7 +498,7 @@ class Kernel(Explainer):
             return varying_indices
 
     def allocate(self):
-        if sp.sparse.issparse(self.data.data):
+        if scipy.sparse.issparse(self.data.data):
             # We tile the sparse matrix in csr format but convert it to lil
             # for performance when adding samples
             shape = self.data.data.shape
@@ -454,7 +507,7 @@ class Kernel(Explainer):
             rows = data_rows * self.nsamples
             shape = rows, data_cols
             if nnz == 0:
-                self.synth_data = sp.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
+                self.synth_data = scipy.sparse.csr_matrix(shape, dtype=self.data.data.dtype).tolil()
             else:
                 data = self.data.data.data
                 indices = self.data.data.indices
@@ -468,7 +521,7 @@ class Kernel(Explainer):
                 new_indptr = np.concatenate(new_indptrs)
                 new_data = np.tile(data, self.nsamples)
                 new_indices = np.tile(indices, self.nsamples)
-                self.synth_data = sp.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
+                self.synth_data = scipy.sparse.csr_matrix((new_data, new_indices, new_indptr), shape=shape).tolil()
         else:
             self.synth_data = np.tile(self.data.data, (self.nsamples, 1))
 
@@ -501,7 +554,7 @@ class Kernel(Explainer):
                 evaluation_data = x[0, groups]
                 # In edge case where background is all dense but evaluation data
                 # is all sparse, make evaluation data dense
-                if sp.sparse.issparse(x) and not sp.sparse.issparse(self.synth_data):
+                if scipy.sparse.issparse(x) and not scipy.sparse.issparse(self.synth_data):
                     evaluation_data = evaluation_data.toarray()
                 self.synth_data[offset:offset+self.N, groups] = evaluation_data
         self.maskMatrix[self.nsamplesAdded, :] = m
@@ -538,7 +591,7 @@ class Kernel(Explainer):
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
-        log.debug("fraction_evaluated = {0}".format(fraction_evaluated))
+        log.debug(f"fraction_evaluated = {fraction_evaluated}")
         # if self.l1_reg == "auto":
         #     warnings.warn(
         #         "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
@@ -546,8 +599,8 @@ class Kernel(Explainer):
         #     )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
-            log.info("np.sum(w_aug) = {0}".format(np.sum(w_aug)))
-            log.info("np.sum(self.kernelWeights) = {0}".format(np.sum(self.kernelWeights)))
+            log.info(f"np.sum(w_aug) = {np.sum(w_aug)}")
+            log.info(f"np.sum(self.kernelWeights) = {np.sum(self.kernelWeights)}")
             w_sqrt_aug = np.sqrt(w_aug)
             eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))))
             eyAdj_aug *= w_sqrt_aug
@@ -562,9 +615,16 @@ class Kernel(Explainer):
             # use an adaptive regularization method
             elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
-                nonzero_inds = np.nonzero(LassoLarsIC(criterion=c).fit(mask_aug, eyAdj_aug).coef_)[0]
 
-            # use a fixed regularization coeffcient
+                # "Normalize" parameter of LassoLarsIC was deprecated in sklearn version 1.2
+                if version.parse(sklearn.__version__) < version.parse("1.2.0"):
+                    kwg = dict(normalize=False)
+                else:
+                    kwg = {}
+                model = make_pipeline(StandardScaler(with_mean=False), LassoLarsIC(criterion=c, **kwg))
+                nonzero_inds = np.nonzero(model.fit(mask_aug, eyAdj_aug)[1].coef_)[0]
+
+            # use a fixed regularization coefficient
             else:
                 nonzero_inds = np.nonzero(Lasso(alpha=self.l1_reg).fit(mask_aug, eyAdj_aug).coef_)[0]
 
@@ -575,34 +635,51 @@ class Kernel(Explainer):
         eyAdj2 = eyAdj - self.maskMatrix[:, nonzero_inds[-1]] * (
                     self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))
         etmp = np.transpose(np.transpose(self.maskMatrix[:, nonzero_inds[:-1]]) - self.maskMatrix[:, nonzero_inds[-1]])
-        log.debug("etmp[:4,:] {0}".format(etmp[:4, :]))
+        log.debug(f"etmp[:4,:] {etmp[:4, :]}")
 
         # solve a weighted least squares equation to estimate phi
-        tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
-        etmp_dot = np.dot(np.transpose(tmp), etmp)
+        # least squares:
+        #     phi = min_w ||W^(1/2) (y - X w)||^2
+        # the corresponding normal equation:
+        #     (X' W X) phi = X' W y
+        # with
+        #     X = etmp
+        #     W = np.diag(self.kernelWeights)
+        #     y = eyAdj2
+        #
+        # We could just rely on sciki-learn
+        #     from sklearn.linear_model import LinearRegression
+        #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
+        # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
+        # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
+        y = eyAdj2
+        X = etmp
+        WX = self.kernelWeights[:, None] * X
         try:
-            tmp2 = np.linalg.inv(etmp_dot)
+            w = np.linalg.solve(X.T @ WX, WX.T @ y)
         except np.linalg.LinAlgError:
-            tmp2 = np.linalg.pinv(etmp_dot)
             warnings.warn(
-                "Linear regression equation is singular, Moore-Penrose pseudoinverse is used instead of the regular inverse.\n"
-                "To use regular inverse do one of the following:\n"
+                "Linear regression equation is singular, a least squares solutions is used instead.\n"
+                "To avoid this situation and get a regular matrix do one of the following:\n"
                 "1) turn up the number of samples,\n"
                 "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
                 "3) group features together to reduce the number of inputs that need to be explained."
             )
-        w = np.dot(tmp2, np.dot(np.transpose(tmp), eyAdj2))
-        log.debug("np.sum(w) = {0}".format(np.sum(w)))
-        log.debug("self.link(self.fx) - self.link(self.fnull) = {0}".format(
+            # XWX = np.linalg.pinv(X.T @ WX)
+            # w = np.dot(XWX, np.dot(np.transpose(WX), y))
+            sqrt_W = np.sqrt(self.kernelWeights)
+            w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
+        log.debug(f"np.sum(w) = {np.sum(w)}")
+        log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
             self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
-        log.debug("self.fx = {0}".format(self.fx[dim]))
-        log.debug("self.link(self.fx) = {0}".format(self.link.f(self.fx[dim])))
-        log.debug("self.fnull = {0}".format(self.fnull[dim]))
-        log.debug("self.link(self.fnull) = {0}".format(self.link.f(self.fnull[dim])))
+        log.debug(f"self.fx = {self.fx[dim]}")
+        log.debug(f"self.link(self.fx) = {self.link.f(self.fx[dim])}")
+        log.debug(f"self.fnull = {self.fnull[dim]}")
+        log.debug(f"self.link(self.fnull) = {self.link.f(self.fnull[dim])}")
         phi = np.zeros(self.M)
         phi[nonzero_inds[:-1]] = w
         phi[nonzero_inds[-1]] = (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])) - sum(w)
-        log.info("phi = {0}".format(phi))
+        log.info(f"phi = {phi}")
 
         # clean up any rounding errors
         for i in range(self.M):

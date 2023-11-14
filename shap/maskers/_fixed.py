@@ -1,5 +1,7 @@
 import numpy as np
+
 from ._masker import Masker
+
 
 class Fixed(Masker):
     """ This leaves the input unchanged during masking, and is used for things like scoring labels.

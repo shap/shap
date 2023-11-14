@@ -1,19 +1,18 @@
 import copy
 import time
+
 import numpy as np
-import scipy as sp
-from .. import maskers
-from .. import links
-from ..utils import safe_isinstance, show_progress
-from ..utils.transformers import is_transformers_lm
-from .. import models
-from ..models import Model
-from ..maskers import Masker
+import pandas as pd
+import scipy.sparse
+
+from .. import explainers, links, maskers, models
 from .._explanation import Explanation
-from .._serializable import Serializable
-from .. import explainers
-from .._serializable import Serializer, Deserializer
+from .._serializable import Deserializer, Serializable, Serializer
+from ..maskers import Masker
+from ..models import Model
+from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
+from ..utils.transformers import is_transformers_lm
 
 
 class Explainer(Serializable):
@@ -44,7 +43,7 @@ class Explainer(Serializable):
             functions are available in shap such as shap.ImageMasker for images and shap.TokenMasker
             for text. In addition to determining how to replace hidden features, the masker can also
             constrain the rules of the cooperative game used to explain the model. For example
-            shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchial clustering
+            shap.TabularMasker(data, hclustering="correlation") will enforce a hierarchical clustering
             of coalitions for the game (in this special case the attributions are known as the Owen values).
 
         link : function
@@ -57,9 +56,9 @@ class Explainer(Serializable):
         algorithm : "auto", "permutation", "partition", "tree", or "linear"
             The algorithm used to estimate the Shapley values. There are many different algorithms that
             can be used to estimate the Shapley values (and the related value for constrained games), each
-            of these algorithms have various tradeoffs and are preferrable in different situations. By
+            of these algorithms have various tradeoffs and are preferable in different situations. By
             default the "auto" options attempts to make the best choice given the passed model and masker,
-            but this choice can always be overriden by passing the name of a specific algorithm. The type of
+            but this choice can always be overridden by passing the name of a specific algorithm. The type of
             algorithm used will determine what type of subclass object is returned by this constructor, and
             you can also build those subclasses directly if you prefer or need more fine grained control over
             their options.
@@ -80,8 +79,10 @@ class Explainer(Serializable):
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
-                ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+        if (
+            isinstance(masker, pd.DataFrame)
+            or ((isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2)
+        ):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
@@ -144,11 +145,11 @@ class Explainer(Serializable):
             if algorithm == "auto":
 
                 # use implementation-aware methods if possible
-                if explainers.Linear.supports_model_with_masker(model, self.masker):
+                if explainers.LinearExplainer.supports_model_with_masker(model, self.masker):
                     algorithm = "linear"
-                elif explainers.Tree.supports_model_with_masker(model, self.masker): # TODO: check for Partition?
+                elif explainers.TreeExplainer.supports_model_with_masker(model, self.masker): # TODO: check for Partition?
                     algorithm = "tree"
-                elif explainers.Additive.supports_model_with_masker(model, self.masker):
+                elif explainers.AdditiveExplainer.supports_model_with_masker(model, self.masker):
                     algorithm = "additive"
 
                 # otherwise use a model agnostic method
@@ -174,33 +175,33 @@ class Explainer(Serializable):
 
             # build the right subclass
             if algorithm == "exact":
-                self.__class__ = explainers.Exact
-                explainers.Exact.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.ExactExplainer
+                explainers.ExactExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "permutation":
-                self.__class__ = explainers.Permutation
-                explainers.Permutation.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, seed=seed, **kwargs)
+                self.__class__ = explainers.PermutationExplainer
+                explainers.PermutationExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, seed=seed, **kwargs)
             elif algorithm == "partition":
-                self.__class__ = explainers.Partition
-                explainers.Partition.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
+                self.__class__ = explainers.PartitionExplainer
+                explainers.PartitionExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
             elif algorithm == "tree":
-                self.__class__ = explainers.Tree
-                explainers.Tree.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.TreeExplainer
+                explainers.TreeExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "additive":
-                self.__class__ = explainers.Additive
-                explainers.Additive.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.AdditiveExplainer
+                explainers.AdditiveExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "linear":
-                self.__class__ = explainers.Linear
-                explainers.Linear.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.LinearExplainer
+                explainers.LinearExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             elif algorithm == "deep":
-                self.__class__ = explainers.Deep
-                explainers.Deep.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                self.__class__ = explainers.DeepExplainer
+                explainers.DeepExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
                 raise InvalidAlgorithmError("Unknown algorithm type passed: %s!" % algorithm)
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False, **kwargs):
-        """ Explains the output of model(*args), where args is a list of parallel iteratable datasets.
+        """ Explains the output of model(*args), where args is a list of parallel iterable datasets.
 
         Note this default version could be an abstract method that is implemented by each algorithm-specific
         subclass of Explainer. Descriptions of each subclasses' __call__ arguments
@@ -234,7 +235,7 @@ class Explainer(Serializable):
                     pass
 
             # convert DataFrames to numpy arrays
-            if safe_isinstance(args[i], "pandas.core.frame.DataFrame"):
+            if isinstance(args[i], pd.DataFrame):
                 feature_names[i] = list(args[i].columns)
                 args[i] = args[i].to_numpy()
 
@@ -376,7 +377,7 @@ class Explainer(Serializable):
             are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
             of all the input shapes (since the row_values is always flattened),
         """
-        
+
         return {}
 
     @staticmethod
@@ -393,7 +394,7 @@ class Explainer(Serializable):
         """
 
         # mask each input on in isolation
-        masks = np.zeros(2*len(inds)-1, dtype=np.int)
+        masks = np.zeros(2*len(inds)-1, dtype=int)
         last_ind = -1
         for i in range(len(inds)):
             if i > 0:
@@ -453,4 +454,4 @@ def pack_values(values):
     elif np.issubdtype(type(values[0]), np.number) or len(np.unique([len(v) for v in values])) == 1:
         return np.array(values)
     else:
-        return np.array(values, dtype=np.object)
+        return np.array(values, dtype=object)

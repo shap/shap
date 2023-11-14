@@ -1,5 +1,7 @@
-from .._explainer import Explainer
 import numpy as np
+
+from .._explainer import Explainer
+
 
 class TreeGain(Explainer):
     """ Simply returns the global gain/gini feature importances for tree models.

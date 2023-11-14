@@ -1,9 +1,11 @@
 """ This file contains tests for the TeacherForcingLogits class.
 """
 
-import pytest
 import numpy as np
+import pytest
+
 import shap
+
 
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """ Tests if get_teacher_forced_logits() works for encoder-decoder models.
@@ -11,8 +13,9 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
 
     transformers = pytest.importorskip("transformers")
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
-    model = transformers.AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-xsum-12-6")
+    name = "hf-internal-testing/tiny-random-BartModel"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(name)
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device='cpu')
 
@@ -30,8 +33,9 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
 
     transformers = pytest.importorskip("transformers")
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained("gpt2")
-    model = transformers.AutoModelForCausalLM.from_pretrained("gpt2")
+    name = "hf-internal-testing/tiny-random-gpt2"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForCausalLM.from_pretrained(name)
     model.config.is_decoder = True
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device='cpu')

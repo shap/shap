@@ -1,14 +1,17 @@
 import numpy as np
-from shap.utils import MaskedModel
+
 from shap import links
 from shap.models import Model
+from shap.utils import MaskedModel
+
 from .._explainer import Explainer
+
 
 class Random(Explainer):
     """ Simply returns random (normally distributed) feature attributions.
 
     This is only for benchmark comparisons. It supports both fully random attributions and random
-    attributions that are constant across all explainations.
+    attributions that are constant across all explanations.
     """
     def __init__(self, model, masker, link=links.identity, feature_names=None, linearize_link=True, constant=False, **call_args):
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
@@ -40,7 +43,7 @@ class Random(Explainer):
                 raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
 
         # compute the correct expected value
-        masks = np.zeros(1, dtype=np.int)
+        masks = np.zeros(1, dtype=int)
         outputs = fm(masks, zero_index=0, batch_size=1)
         expected_value = outputs[0]
 

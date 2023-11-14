@@ -1,0 +1,9 @@
+# This file helps clean up the git "blame" view, by ignoring repo-wide style & refactoring commits.
+# Sorted imports with isort
+6be5b996cc7f048bf04875a8dc7775b2233dbeb4
+# Removed trailing whitespace
+b2a60a31edcc22ed41778cbe3ef93a499d76277f
+# Fixed end-of-file line endings
+9438e81732d04f9e9c56d98074e6b35615e21a9a
+# Renormalised file endings
+edb34644a218127437f9e6bb1588bc3246a2c222

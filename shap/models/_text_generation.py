@@ -1,7 +1,9 @@
 import numpy as np
-from ._model import Model
+
+from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
-from .._serializable import Serializer, Deserializer
+from ._model import Model
+
 
 class TextGeneration(Model):
     """ Generates target sentence/ids using a base model.
@@ -146,11 +148,11 @@ class TextGeneration(Model):
                     del text_generation_params[k]
         if self.model_type == "pt":
             # create torch tensors and move to device
-            # TODOmaybe: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks piplines)
+            # TODOmaybe: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks pipelines)
             # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             # self.inner_model = self.inner_model.to(device)
             # self.inner_model.eval()
-            import torch # pylint: disable=import-outside-toplevel
+            import torch  # pylint: disable=import-outside-toplevel
             with torch.no_grad():
                 if self.inner_model.config.is_encoder_decoder:
                     inputs = self.get_inputs(X)
@@ -168,7 +170,7 @@ class TextGeneration(Model):
                 outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
             else:
                 try:
-                    import tensorflow as tf # pylint: disable=import-outside-toplevel
+                    import tensorflow as tf  # pylint: disable=import-outside-toplevel
                     with tf.device(self.device):
                         outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
                 except RuntimeError as err:
@@ -187,7 +189,7 @@ class TextGeneration(Model):
         return target_X
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
-        """ Calculates if special tokens are present in the begining/end of the model generated output.
+        """ Calculates if special tokens are present in the beginning/end of the model generated output.
 
         Parameters
         ----------
@@ -212,7 +214,7 @@ class TextGeneration(Model):
     def save(self, out_file):
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.models.TextGeneration", version=0) as s:
             s.save("tokenizer", self.tokenizer)
             s.save("device", self.device)

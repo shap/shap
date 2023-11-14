@@ -1,0 +1,40 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders correctly 1`] = `
+<svg
+  style={
+    {
+      "display": "block",
+      "fontFamily": "arial",
+      "sansSerif": true,
+      "userSelect": "none",
+    }
+  }
+>
+  <style
+    dangerouslySetInnerHTML={
+      {
+        "__html": "
+          .force-bar-axis path {
+            fill: none;
+            opacity: 0.4;
+          }
+          .force-bar-axis paths {
+            display: none;
+          }
+          .tick line {
+            stroke: #000;
+            stroke-width: 1px;
+            opacity: 0.4;
+          }
+          .tick text {
+            fill: #000;
+            opacity: 0.5;
+            font-size: 12px;
+            padding: 0px;
+          }",
+      }
+    }
+  />
+</svg>
+`;

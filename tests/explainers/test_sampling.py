@@ -4,6 +4,7 @@
 # pylint: disable=missing-function-docstring
 import numpy as np
 import pytest
+
 import shap
 
 
@@ -16,7 +17,7 @@ def test_null_model_small():
 
 def test_null_model_small_new():
 
-    explainer = shap.explainers.Sampling(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
+    explainer = shap.explainers.SamplingExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
     shap_values = explainer(np.ones((1, 4)))
     assert np.sum(np.abs(shap_values.values)) < 1e-8
 
