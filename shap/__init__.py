@@ -1,6 +1,3 @@
-
-__version__ = "0.43.0"
-
 from ._explanation import Cohorts, Explanation
 
 # explainers
@@ -17,6 +14,13 @@ from .explainers._partition import PartitionExplainer
 from .explainers._permutation import PermutationExplainer
 from .explainers._sampling import SamplingExplainer
 from .explainers._tree import TreeExplainer
+
+try:
+    # Version from setuptools-scm
+    from ._version import version as __version__
+except ImportError:
+    # Expected when running locally without build
+    __version__ = "0.0.0-not-built"
 
 _no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
                          "to fix this."
