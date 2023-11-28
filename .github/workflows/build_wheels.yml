@@ -45,7 +45,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          # Ensure all git tags are present so version number is extracted
+          # See https://github.com/actions/checkout/issues/1471
+          fetch-depth: 100
+          fetch-tags: true
+
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
@@ -68,7 +74,12 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          # Ensure all git tags are present so version number is extracted
+          # See https://github.com/actions/checkout/issues/1471
+          fetch-depth: 100
+          fetch-tags: true
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
