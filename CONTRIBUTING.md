@@ -270,24 +270,40 @@ replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have 
 ## Maintainer guide
 
 We try to use automation to make the release process reliable, transparent and
-reproducible.
+reproducible. This also helps us make releases more frequently.
 
 ### Versioning
 
 We use `setuptools-scm` to source the version number from the git history
 automatically. At build time, the version number is determined from the git tag.
 
-### Releases
+shap uses a PEP 440-compliant versioning scheme of `MAJOR.MINOR.PATCH`. Like
+[numpy](numpy_versioning), shap does *not* use semantic versioning, and has
+never made a `major` release. Most releases increment `minor`, typically made
+every month or two. `patch` releases are sometimes made for any important
+bugfixes.
+
+Breaking changes are done with care, given that shap is a very popular package.
+When breaking changes are made, the PR should be tagged with the `BREAKING`
+label to ensure it is highlighted in the release notes. Deprecation cycless are
+used to mitigate the impact on downstream users.
+
+GitHub milestones can be used to track any actions that need to be completed for
+a given release, such as those relating to deprecation cycles.
+
+[numpy_versioning]: https://numpy.org/doc/stable/dev/depending_on_numpy.html
+
+
+### Making releases
+
+In the run-up to a release, create a GitHub issue for the release such as [[Meta
+issue] Release 0.43.0](https://github.com/shap/shap/issues/3289). This can be
+used to co-ordinate with other maintainers and agree to make a release.
 
 When a new GitHub [release](https://github.com/shap/shap/releases) is made, the
 wheels will be built and published to GitHub automatically by the `build_wheels`
-GitHub action. This can be triggered manually at any time to do a dry-run of
-cibuildwheel.
-
-The conda package is managed in a separate repo:
-https://github.com/conda-forge/shap-feedstock . The conda-forge bot will
-automatically make a PR to this repo to update the conda package, typically
-within a few hours of the PyPSA package being published.
+GitHub action. This workflow can also be triggered manually at any time to do a
+dry-run of cibuildwheel.
 
 Suggested release checklist:
 
@@ -298,11 +314,17 @@ Suggested release checklist:
 - [ ] Conda forge published
 ```
 
+The conda package is managed in a separate repo:
+https://github.com/conda-forge/shap-feedstock . The conda-forge bot will
+automatically make a PR to this repo to update the conda package, typically
+within a few hours of the PyPSA package being published.
+
 ### Release notes from PR labels
 
-The PR titles and labels are used to help draft release notes automatically.The
-draft notes are configured in [.github/release.yml](.github/release.yml). See
-the [GitHub docs][auto_release_notes] for more info.
+Release notes can be automatically drafted by Github using the titles and labels
+of PRs that were merged since the previous release.The draft notes are
+configured in [.github/release.yml](.github/release.yml). See the [GitHub
+docs][auto_release_notes] for more info.
 
 It's helpful to assign labels such as `BREAKING`, `bug`, `enhancement` or
 `skip-changelog` to each PR, so that the change will show up in the notes under
