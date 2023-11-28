@@ -96,11 +96,7 @@ def compile_cuda_module(host_args):
     return 'build', '_cext_gpu'
 
 
-def run_setup(
-    *,
-    with_binary,
-    with_cuda,
-):
+def run_setup(*, with_binary, with_cuda):
     ext_modules = []
     if with_binary:
         compile_args = []
