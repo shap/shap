@@ -101,11 +101,20 @@ jobs:
           name: sdist_files
           path: dist
 
-      - name: Publish package to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.TEST_PYPI_TOKEN  }}
-          repository-url: https://test.pypi.org/legacy/
+
+      # The step below can be uncommented for testing / debugging purposes.
+
+      # We do not publish to TestPyPI here, as the job will fail if the version
+      # number already exists on TestPyPI.
+
+      # Note: if the non-release builds may fail to upload to TestPyPI if the version
+      # number is "non-local": https://github.com/pypa/setuptools_scm/issues/342
+
+      # - name: Publish package to TestPyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     password: ${{ secrets.TEST_PYPI_TOKEN  }}
+      #     repository-url: https://test.pypi.org/legacy/
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
