@@ -47,10 +47,11 @@ docs = [
   "matplotlib",
   "ipython",
   "numpydoc",
-  "sphinx_rtd_theme==1.2.2",
-  "sphinx==6.2.1",
-  "nbsphinx==0.9.2",
+  "sphinx_rtd_theme==2.0.0",
+  "sphinx==7.2.6",
+  "nbsphinx==0.9.3",
   "sphinx_github_changelog==1.2.1",
+  "myst-parser==2.0.0",
   "requests",
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
