@@ -54,4 +54,4 @@ SHAP can be installed from either `PyPI <https://pypi.org/project/shap>`_ or
    :caption: Development
 
    Release notes <release_notes>
-   Contributing <contributing>
+   Contributing guide <contributing>
