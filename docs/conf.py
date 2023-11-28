@@ -202,6 +202,7 @@ html_theme_options = {
     "navigation_depth": 4,
     "includehidden": True,
     "titles_only": False,
+    "github_url": "https://github.com/shap/shap",
 }
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
