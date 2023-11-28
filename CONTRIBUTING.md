@@ -19,6 +19,10 @@
   - [General Jupyter guidelines](#general-jupyter-guidelines)
   - [Links / Cross-references](#links--cross-references)
   - [Notebook linting and formatting](#notebook-linting-and-formatting)
+- [Maintainer guide](#maintainer-guide)
+  - [Versioning](#versioning)
+  - [Releases](#releases)
+  - [Release notes from PR labels](#release-notes-from-pr-labels)
 
 ## Introduction
 
@@ -262,3 +266,50 @@ pre-commit run --files notebook1.ipynb notebook2.ipynb
 ```
 
 replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have modified.
+
+## Maintainer guide
+
+We try to use automation to make the release process reliable, transparent and
+reproducible.
+
+### Versioning
+
+We use `setuptools-scm` to source the version number from the git history
+automatically. At build time, the version number is determined from the git tag.
+
+### Releases
+
+When a new GitHub [release](https://github.com/shap/shap/releases) is made, the
+wheels will be built and published to GitHub automatically by the `build_wheels`
+GitHub action. This can be triggered manually at any time to do a dry-run of
+cibuildwheel.
+
+The conda package is managed in a separate repo:
+https://github.com/conda-forge/shap-feedstock . The conda-forge bot will
+automatically make a PR to this repo to update the conda package, typically
+within a few hours of the PyPSA package being published.
+
+Suggested release checklist:
+
+```
+- [ ] Dry-run cibuildwheel & test
+- [ ] Make GitHub release & tag
+- [ ] Confirm PyPI wheels published
+- [ ] Conda forge published
+```
+
+### Release notes from PR labels
+
+The PR titles and labels are used to help draft release notes automatically.The
+draft notes are configured in [.github/release.yml](.github/release.yml). See
+the [GitHub docs][auto_release_notes] for more info.
+
+It's helpful to assign labels such as `BREAKING`, `bug`, `enhancement` or
+`skip-changelog` to each PR, so that the change will show up in the notes under
+the right section. It also helps to ensure each PR has a descriptive name.
+
+The notes can be edited (both before and after release) to remove information
+that is unlikely to be of high interest to users, such as maintenance updates.
+
+[auto_release_notes]:
+    https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
