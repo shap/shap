@@ -129,8 +129,6 @@ select = [
   "W",  # warning
 ]
 ignore = [
-  # Aim to progressively fix address these codes over time
-  "E402",  # Module level import not at top of file
   "UP032",  # Use f-string instead of `format` call
   # Recommended rules to disable when using ruff formatter:
   "E117",  # Over-indented
@@ -153,7 +151,7 @@ exclude = ["**.py"]
 "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*"  = ["ALL"]
 
 # Disable some unwanted rules on Jupyter notebooks
-"*.ipynb" = ["E703"]  # Trailing semicolons, used to supress outputs
+"*.ipynb" = ["E703", "E402"]  # Allow trailing semicolons, allow imports not at top
 
 [tool.coverage.run]
 source_pkgs = ["shap"]

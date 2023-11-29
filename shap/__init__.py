@@ -81,12 +81,12 @@ else:
 
 
 # other stuff :)
-from . import datasets, links, utils
-from .actions._optimizer import ActionOptimizer
-from .utils import approximate_interactions, sample
+from . import datasets, links, utils  # noqa: E402
+from .actions._optimizer import ActionOptimizer  # noqa: E402
+from .utils import approximate_interactions, sample  # noqa: E402
 
 #from . import benchmark
-from .utils._legacy import kmeans
+from .utils._legacy import kmeans  # noqa: E402
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [
