@@ -272,8 +272,8 @@ class _TFGradient(Explainer):
         # compute the attributions
         output_phis = []
         output_phi_vars = []
-        samples_input = [np.zeros((nsamples,) + X[l].shape[1:], dtype=np.float32) for l in range(len(X))]
-        samples_delta = [np.zeros((nsamples,) + X[l].shape[1:], dtype=np.float32) for l in range(len(X))]
+        samples_input = [np.zeros((nsamples,) + X[t].shape[1:], dtype=np.float32) for t in range(len(X))]
+        samples_delta = [np.zeros((nsamples,) + X[t].shape[1:], dtype=np.float32) for t in range(len(X))]
         # use random seed if no argument given
         if rseed is None:
             rseed = np.random.randint(0, 1e6)
@@ -291,13 +291,13 @@ class _TFGradient(Explainer):
                 for k in range(nsamples):
                     rind = np.random.choice(self.data[0].shape[0])
                     t = np.random.uniform()
-                    for l in range(len(X)):
+                    for u in range(len(X)):
                         if self.local_smoothing > 0:
-                            x = X[l][j] + np.random.randn(*X[l][j].shape) * self.local_smoothing
+                            x = X[u][j] + np.random.randn(*X[u][j].shape) * self.local_smoothing
                         else:
-                            x = X[l][j]
-                        samples_input[l][k] = t * x + (1 - t) * self.data[l][rind]
-                        samples_delta[l][k] = x - self.data[l][rind]
+                            x = X[u][j]
+                        samples_input[u][k] = t * x + (1 - t) * self.data[u][rind]
+                        samples_delta[u][k] = x - self.data[u][rind]
 
                 # compute the gradients at all the sample points
                 find = model_output_ranks[j,i]

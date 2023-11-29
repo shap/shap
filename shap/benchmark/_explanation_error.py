@@ -148,8 +148,8 @@ class ExplanationError:
                     values.append(masked_model(masks_arr[j:j + self.batch_size]))
                 values = np.concatenate(values)
                 base_value = values[0]
-                for l, v in enumerate(values):
-                    values[l] = (v - (base_value + np.sum(sample_attributions[masks_arr[l]])))**2
+                for j, v in enumerate(values):
+                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]])))**2
 
                 if total_values is None:
                     total_values = values
