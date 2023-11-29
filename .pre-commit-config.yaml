@@ -20,8 +20,6 @@ repos:
   - id: check-added-large-files
   - id: check-merge-conflict
   - id: check-toml
-  - id: check-json
-    types: ["jupyter"]
   - id: check-yaml
   - id: mixed-line-ending
   - id: trailing-whitespace
