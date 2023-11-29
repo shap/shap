@@ -113,6 +113,12 @@ filterwarnings = [
 ]
 
 [tool.ruff]
+# Careful: when running on pre-commit, ruff's "include" and "exclude" config
+# options are ignored! So, instead of "exclude", use the "per-file-ignores"
+# config to always disable linting for specific files.
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+
+[tool.ruff.lint]
 select = [
   "F",  # pyflakes
   "I",  # isort
@@ -128,12 +134,7 @@ ignore = [
   "UP032",  # Use f-string instead of `format` call
 ]
 
-# Careful: when running on pre-commit, ruff's "include" and "exclude" config
-# options are ignored! So, instead of "exclude", use the "per-file-ignores"
-# config to always disable linting for specific files.
-include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
-
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
