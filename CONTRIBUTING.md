@@ -98,6 +98,13 @@ conda activate shap
 
 ### Installing from source
 
+To build from source, you need a compiler to build the C extension. For example
+on linux, you can install gcc with:
+
+```bash
+sudo apt install build-essential
+```
+
 Pip-install the project with the `--editable` flag, which ensures that any
 changes you make to the source code are immediately reflected in your
 environment.
