@@ -169,14 +169,14 @@ class DenseData(Data):
     def __init__(self, data, group_names, *args):
         self.groups = args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
 
-        l = sum(len(g) for g in self.groups)
+        j = sum(len(g) for g in self.groups)
         num_samples = data.shape[0]
         t = False
-        if l != data.shape[1]:
+        if j != data.shape[1]:
             t = True
             num_samples = data.shape[1]
 
-        valid = (not t and l == data.shape[1]) or (t and l == data.shape[0])
+        valid = (not t and j == data.shape[1]) or (t and j == data.shape[0])
         assert valid, "# of names must match data matrix!"
 
         self.weights = args[1] if len(args) > 1 else np.ones(num_samples)

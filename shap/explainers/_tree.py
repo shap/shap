@@ -1824,14 +1824,14 @@ class XGBTreeModelLoader:
                 else:
                     self.values[i,j] = self.node_info[i][j]
 
-            l = len(self.node_cleft[i])
+            k = len(self.node_cleft[i])
             trees.append(SingleTree({
                 "children_left": self.node_cleft[i],
                 "children_right": self.node_cright[i],
-                "children_default": self.children_default[i,:l],
-                "feature": self.features[i,:l],
-                "threshold": self.thresholds[i,:l],
-                "value": self.values[i,:l],
+                "children_default": self.children_default[i,:k],
+                "feature": self.features[i,:k],
+                "threshold": self.thresholds[i,:k],
+                "value": self.values[i,:k],
                 "node_sample_weight": self.sum_hess[i]
             }, data=data, data_missing=data_missing))
         return trees

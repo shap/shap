@@ -123,7 +123,6 @@ select = [
 ignore = [
   # Aim to progressively fix address these codes over time
   "E501",  # Line too long
-  "E741",  # Ambiguous variable name: `l`
   "E402",  # Module level import not at top of file
   "UP032",  # Use f-string instead of `format` call
 ]
