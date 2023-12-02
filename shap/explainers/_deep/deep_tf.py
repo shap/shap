@@ -81,6 +81,7 @@ class TFDeep(Explainer):
         """
         # try to import tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
+        # breakpoint()
         if tf is None:
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
@@ -122,6 +123,7 @@ class TFDeep(Explainer):
             self.multi_input = False
             if not isinstance(self.model_inputs, list):
                 self.model_inputs = [self.model_inputs]
+        orig_data = data
         if not isinstance(data, list) and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
@@ -161,13 +163,13 @@ class TFDeep(Explainer):
                 #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
-        breakpoint()
+        # breakpoint()
         if not tf.executing_eagerly():
             self._init_between_tensors(self.model_output.op, self.model_inputs)
         else:
-            from tensorflow.python.framework.ops import disable_eager_execution
-            disable_eager_execution()
-            self._init_between_tensors_eager(model, self.model_inputs)
+            # from tensorflow.python.framework.ops import disable_eager_execution
+            # disable_eager_execution()
+            self._init_between_tensors_eager(model, self.model_inputs, orig_data)
             # self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
@@ -192,7 +194,7 @@ class TFDeep(Explainer):
 
     def _init_between_tensors(self, out_op, model_inputs):
         # find all the operations in the graph between our inputs and outputs
-        breakpoint()
+        # breakpoint()
         tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops) # don't follow learning phase branches
         dependence_breakers = [k for k in op_handlers if op_handlers[k] == break_dependence]
         back_ops = backward_walk_ops(
@@ -222,7 +224,7 @@ class TFDeep(Explainer):
         for op in self.between_ops:
             self.used_types[op.type] = True
 
-    def _init_between_tensors_eager(self, model, model_inputs):
+    def _init_between_tensors_eager(self, model, model_inputs, data):
         class OperationCaptureModel(tf.keras.Model):
             def __init__(self, layers):
                 super().__init__()
@@ -245,9 +247,14 @@ class TFDeep(Explainer):
         # input_tensor = tf.convert_to_tensor(ss[3], dtype=tf.float32)
 
         # capture_model(input_tensor)
-        breakpoint()
-        t = np.array(tf.convert_to_tensor(model_inputs[0]))
-        model_input = tf.convert_to_tensor(t, dtype=tf.float32)
+        # breakpoint()
+        # import keras.backend as K
+        # model_inputs_cleaned = K.eval(K.ones([k or 1 for k in list(model_inputs[0].shape)]))
+
+        model_input = tf.convert_to_tensor(data, dtype=tf.float32)
+        # t = np.array(tf.convert_to_tensor(model_inputs[0]))
+        # model_input = tf.convert_to_tensor(t, dtype=tf.float32)
+        # model_input = tf.convert_to_tensor(model_inputs_cleaned, dtype=tf.float32)
         capture_model(model_input)
 
         self.between_ops = capture_model.ops
@@ -428,14 +435,15 @@ class TFDeep(Explainer):
         # TODO: unclear why some ops are not in the registry with TF 2.0 like TensorListReserve
         for non_reg_ops in ops_not_in_registry:
             reg[non_reg_ops] = {'type': None, 'location': location_tag}
-        for n in op_handlers:
-            if n in reg:
-                self.orig_grads[n] = reg[n]["type"]
-                reg["shap_"+n] = {
+        # breakpoint()
+        for n_op in op_handlers:
+            if n_op in reg:
+                self.orig_grads[n_op] = reg[n_op]["type"]
+                reg["shap_"+n_op] = {
                     "type": self.custom_grad,
-                    "location": reg[n]["location"]
+                    "location": reg[n_op]["location"]
                 }
-                reg[n]["type"] = self.custom_grad
+                reg[n_op]["type"] = self.custom_grad
 
         # In TensorFlow 1.10 they started pruning out nodes that they think can't be backpropped
         # unfortunately that includes the index of embedding layers so we disable that check here
@@ -711,7 +719,7 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     # make sure the given inputs don't vary (negative is measured from the end of the list)
     for i in range(len(op.inputs)):
         if i in input_inds or i - len(op.inputs) in input_inds:
-            breakpoint()
+            # breakpoint()
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
             # pass
     if op.type.startswith("shap_"):
@@ -720,6 +728,7 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
 
 def passthrough(explainer, op, *grads):
     if op.type.startswith("shap_"):
+        # breakpoint()
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
 
@@ -756,6 +765,10 @@ op_handlers["Tile"] = passthrough
 op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
+# todo: is this correct?
+op_handlers["TensorListStack"] = passthrough
+op_handlers["While"] = passthrough
+op_handlers["TensorListFromTensor"] = passthrough
 
 
 # ops that don't pass any attributions to their inputs
