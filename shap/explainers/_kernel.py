@@ -20,7 +20,6 @@ from .._explanation import Explanation
 from ..utils import safe_isinstance
 from ..utils._legacy import (
     DenseData,
-    IdentityLink,
     SparseData,
     convert_to_data,
     convert_to_instance,
@@ -43,7 +42,6 @@ class KernelExplainer(Explainer):
     are Shapley values from game theory and also coefficients from a local linear
     regression.
 
-
     Parameters
     ----------
     model : function or iml.Model
@@ -57,34 +55,35 @@ class KernelExplainer(Explainer):
         is observed. Since most models aren't designed to handle arbitrary missing data at test
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
-        we would approximate a feature being missing by setting it to zero. For small problems
+        we would approximate a feature being missing by setting it to zero. For small problems,
         this background dataset can be the whole training set, but for larger problems consider
-        using a single reference value or using the kmeans function to summarize the dataset.
-        Note: for sparse case we accept any sparse matrix but convert to lil format for
+        using a single reference value or using the ``kmeans`` function to summarize the dataset.
+        Note: for the sparse case, we accept any sparse matrix but convert to lil format for
         performance.
 
     feature_names : list
         The names of the features in the background dataset. If the background dataset is
-        supplied as a pandas.DataFrame, then feature_names can be set to None (the default value)
+        supplied as a pandas.DataFrame, then ``feature_names`` can be set to ``None`` (default),
         and the feature names will be taken as the column names of the dataframe.
 
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
         sense to connect them to the output with a link function where link(output) = sum(phi).
-        If the model output is a probability then the LogitLink link function makes the feature
-        importance values have log-odds units.
+        Default is "identity" (a no-op).
+        If the model output is a probability, then "logit" can be used to transform the SHAP values
+        into log-odds units.
 
     Examples
     --------
-    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
+    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
     """
 
-    def __init__(self, model, data, feature_names=None, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
 
         if feature_names is not None:
             self.data_feature_names=feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
@@ -135,7 +134,7 @@ class KernelExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -153,7 +152,7 @@ class KernelExplainer(Explainer):
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X.to_numpy() if safe_isinstance(X, "pandas.core.frame.DataFrame") else X,
+            data=X.to_numpy() if isinstance(X, pd.DataFrame) else X,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )
@@ -194,9 +193,9 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
+        if isinstance(X, pd.Series):
             X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        elif isinstance(X, pd.DataFrame):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
@@ -639,20 +638,37 @@ class KernelExplainer(Explainer):
         log.debug(f"etmp[:4,:] {etmp[:4, :]}")
 
         # solve a weighted least squares equation to estimate phi
-        tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
-        etmp_dot = np.dot(np.transpose(tmp), etmp)
+        # least squares:
+        #     phi = min_w ||W^(1/2) (y - X w)||^2
+        # the corresponding normal equation:
+        #     (X' W X) phi = X' W y
+        # with
+        #     X = etmp
+        #     W = np.diag(self.kernelWeights)
+        #     y = eyAdj2
+        #
+        # We could just rely on sciki-learn
+        #     from sklearn.linear_model import LinearRegression
+        #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
+        # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
+        # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
+        y = eyAdj2
+        X = etmp
+        WX = self.kernelWeights[:, None] * X
         try:
-            tmp2 = np.linalg.inv(etmp_dot)
+            w = np.linalg.solve(X.T @ WX, WX.T @ y)
         except np.linalg.LinAlgError:
-            tmp2 = np.linalg.pinv(etmp_dot)
             warnings.warn(
-                "Linear regression equation is singular, Moore-Penrose pseudoinverse is used instead of the regular inverse.\n"
-                "To use regular inverse do one of the following:\n"
+                "Linear regression equation is singular, a least squares solutions is used instead.\n"
+                "To avoid this situation and get a regular matrix do one of the following:\n"
                 "1) turn up the number of samples,\n"
                 "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
                 "3) group features together to reduce the number of inputs that need to be explained."
             )
-        w = np.dot(tmp2, np.dot(np.transpose(tmp), eyAdj2))
+            # XWX = np.linalg.pinv(X.T @ WX)
+            # w = np.dot(XWX, np.dot(np.transpose(WX), y))
+            sqrt_W = np.sqrt(self.kernelWeights)
+            w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
         log.debug(f"np.sum(w) = {np.sum(w)}")
         log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
             self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))

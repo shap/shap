@@ -133,9 +133,7 @@ class AdditiveExplainer(Explainer):
 #             raise ValueError("The passed model must be a recognized object or a function!")
 
 #         # convert dataframes
-#         if safe_isinstance(data, "pandas.core.series.Series"):
-#             data = data.values
-#         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+#         if isinstance(data, (pd.Series, pd.DataFrame)):
 #             data = data.values
 #         self.data = data
 
@@ -169,20 +167,15 @@ class AdditiveExplainer(Explainer):
 #         """
 
 #         # convert dataframes
-#         if str(type(X)).endswith("pandas.core.series.Series'>"):
-#             X = X.values
-#         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+#         if isinstance(X, (pd.Series, pd.DataFrame)):
 #             X = X.values
 
-#         #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+#         # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
 #         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
 #         # convert dataframes
-#         if safe_isinstance(X, "pandas.core.series.Series"):
+#         if isinstance(X, (pd.Series, pd.DataFrame)):
 #             X = X.values
-#         elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
-#             X = X.values
-
 
 #         phi = np.zeros(X.shape)
 #         tmp = np.zeros(X.shape)
