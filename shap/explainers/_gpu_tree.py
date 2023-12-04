@@ -1,15 +1,16 @@
 """GPU accelerated tree explanations"""
 import numpy as np
-from ._tree import Tree, feature_perturbation_codes, output_transform_codes
+
 from ..utils import assert_import, record_import_error
+from ._tree import TreeExplainer, feature_perturbation_codes, output_transform_codes
+
 try:
     from .. import _cext_gpu
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
-# pylint: disable=W0223
 
 
-class GPUTree(Tree):
+class GPUTreeExplainer(TreeExplainer):
     """
     Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
     cuda available and 'CUDA_PATH' environment variable defined.
@@ -53,7 +54,7 @@ class GPUTree(Tree):
 
     Examples
     --------
-    See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/GPUTree.html>`_
+    See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/GPUTreeExplainer.html>`_
     """
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True,

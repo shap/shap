@@ -1,17 +1,19 @@
-from ..utils._legacy import convert_to_instance, convert_to_model, match_instance_to_data, match_model_to_data
-from ..utils._legacy import convert_to_instance_with_index, convert_to_link, IdentityLink, convert_to_data, DenseData
-from ..utils import safe_isinstance
-from .._explanation import Explanation
-from ._kernel import Kernel
+import logging
+
 import numpy as np
 import pandas as pd
-import logging
+
+from .._explanation import Explanation
+from ..utils._exceptions import ExplainerError
+from ..utils._legacy import convert_to_instance, match_instance_to_data
+from ._kernel import KernelExplainer
 
 log = logging.getLogger('shap')
 
 
-class Sampling(Kernel):
-    """ This is an extension of the Shapley sampling values explanation method (aka. IME)
+class SamplingExplainer(KernelExplainer):
+    """Computes SHAP values using an extension of the Shapley sampling values explanation method
+    (also known as IME).
 
     SamplingExplainer computes SHAP values under the assumption of feature independence and is an
     extension of the algorithm proposed in "An Efficient Explanation of Individual Classifications
@@ -23,7 +25,7 @@ class Sampling(Kernel):
     ----------
     model : function
         User supplied function that takes a matrix of samples (# samples x # features) and
-        computes a the output of the model for those samples. The output can be a vector
+        computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
 
     data : numpy.array or pandas.DataFrame
@@ -33,7 +35,7 @@ class Sampling(Kernel):
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
         we would approximate a feature being missing by setting it to zero. Unlike the
-        KernelExplainer this data can be the whole training set, even if that is a large set. This
+        KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
     """
 
@@ -41,25 +43,25 @@ class Sampling(Kernel):
         # silence warning about large datasets
         level = log.level
         log.setLevel(logging.ERROR)
-        super(Sampling, self).__init__(model, data, **kwargs)
+        super().__init__(model, data, **kwargs)
         log.setLevel(level)
 
-        assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)
+        if str(self.link) != "identity":
+            emsg = f"SamplingExplainer only supports the identity link, not {self.link}"
+            raise ValueError(emsg)
 
     def __call__(self, X, y=None, nsamples=2000):
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
             X = X.values
         else:
             feature_names = None # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
-        output_shape = tuple()
-        if type(v) is list:
-            output_shape = (len(v),)
+        if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
-        e = Explanation(v, self.expected_value, X, feature_names=feature_names)#, output_shape=output_shape)
+        e = Explanation(v, self.expected_value, X, feature_names=feature_names)
         return e
 
     def explain(self, incoming_instance, **kwargs):
@@ -67,7 +69,9 @@ class Sampling(Kernel):
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
 
-        assert len(self.data.groups) == self.P, "SamplingExplainer does not support feature groups!"
+        if len(self.data.groups) != self.P:
+            emsg = "SamplingExplainer does not support feature groups!"
+            raise ExplainerError(emsg)
 
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model
@@ -131,9 +135,10 @@ class Sampling(Kernel):
             if phi_var.sum() == 0:
                 phi_var += 1 # spread samples uniformally if we found no variability
             phi_var /= phi_var.sum(0)[np.newaxis, :]
-            nsamples_each2 = (phi_var[self.varyingInds,:].mean(1) * round2_samples).astype(np.int)
+            nsamples_each2 = (phi_var[self.varyingInds,:].mean(1) * round2_samples).astype(int)
             for i in range(len(nsamples_each2)):
-                if nsamples_each2[i] % 2 == 1: nsamples_each2[i] += 1
+                if nsamples_each2[i] % 2 == 1:
+                    nsamples_each2[i] += 1
             for i in range(len(nsamples_each2)):
                 if nsamples_each2.sum() > round2_samples:
                     nsamples_each2[i] -= 2
@@ -156,13 +161,13 @@ class Sampling(Kernel):
                 phi_var[ind,:] /= np.sqrt(nsamples_each1[i] + nsamples_each2[i])
 
             # correct the sum of the SHAP values to equal the output of the model using a linear
-            # regression model with priors of the coefficents equal to the estimated variances for each
+            # regression model with priors of the coefficients equal to the estimated variances for each
             # SHAP value (note that 1e6 is designed to increase the weight of the sample and so closely
             # match the correct sum)
             sum_error = self.fx - phi.sum(0) - self.fnull
             for i in range(self.D):
                 # this is a ridge regression with one sample of all ones with sum_error[i] as the label
-                # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                # and 1/v as the ridge penalties. This simplified (and stable) form comes from the
                 # Sherman-Morrison formula
                 v = (phi_var[:,i] / phi_var[:,i].max()) * 1e6
                 adj = sum_error[i] * (v - (v * v.sum()) / (1 + v.sum()))

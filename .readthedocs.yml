@@ -1,10 +1,15 @@
 version: 2
 
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+
+# Optionally declare the Python requirements required to build your docs
 python:
-   version: 3.7
-   install:
-      - method: pip
-        path: .
-        extra_requirements:
-            - docs
-   system_packages: true
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs

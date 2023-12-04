@@ -1,0 +1,13 @@
+codecov:
+  notify:
+    after_n_builds: 7
+    wait_for_ci: yes
+coverage:
+  range: 70..90
+comment:
+  require_changes: true
+  after_n_builds: 7
+ignore:
+  # Ignore coverage on vendored code
+  - "shap/plots/colors/_colorconv.py"
+  - "shap/explainers/other/_maple.py"

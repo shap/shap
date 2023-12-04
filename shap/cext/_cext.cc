@@ -62,7 +62,7 @@ static PyObject *_cext_compute_expectations(PyObject *self, PyObject *args)
     PyObject *children_right_obj;
     PyObject *node_sample_weight_obj;
     PyObject *values_obj;
-    
+
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
         args, "OOOO", &children_left_obj, &children_right_obj, &node_sample_weight_obj, &values_obj
@@ -131,7 +131,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     int model_output;
     PyObject *base_offset_obj;
     bool interactions;
-  
+
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
         args, "OOOOOOOiOOOOOiOOiib", &children_left_obj, &children_right_obj, &children_default_obj,
@@ -209,7 +209,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     tfloat *base_offset = (tfloat*)PyArray_DATA(base_offset_array);
 
     // these are just a wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         node_sample_weights, max_depth, tree_limit, base_offset,
@@ -222,7 +222,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     // retrieve return value before python cleanup of objects
     tfloat ret_value = (double)values[0];
 
-    // clean up the created python objects 
+    // clean up the created python objects
     Py_XDECREF(children_left_array);
     Py_XDECREF(children_right_array);
     Py_XDECREF(children_default_array);
@@ -261,7 +261,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     PyObject *X_missing_obj;
     PyObject *y_obj;
     PyObject *out_pred_obj;
-  
+
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
         args, "OOOOOOiiOiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
@@ -329,7 +329,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     tfloat *out_pred = (tfloat*)PyArray_DATA(out_pred_array);
 
     // these are just wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         NULL, max_depth, tree_limit, base_offset,
@@ -339,7 +339,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
 
     dense_tree_predict(out_pred, trees, data, model_output);
 
-    // clean up the created python objects 
+    // clean up the created python objects
     Py_XDECREF(children_left_array);
     Py_XDECREF(children_right_array);
     Py_XDECREF(children_default_array);
@@ -371,7 +371,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     PyObject *node_sample_weight_obj;
     PyObject *X_obj;
     PyObject *X_missing_obj;
-  
+
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
         args, "OOOOOOiOOO", &children_left_obj, &children_right_obj, &children_default_obj,
@@ -424,7 +424,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     bool *X_missing = (bool*)PyArray_DATA(X_missing_array);
 
     // these are just wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         node_sample_weight, 0, tree_limit, 0, max_nodes, 0
@@ -433,14 +433,14 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
 
     dense_tree_update_weights(trees, data);
 
-    // clean up the created python objects 
+    // clean up the created python objects
     Py_XDECREF(children_left_array);
     Py_XDECREF(children_right_array);
     Py_XDECREF(children_default_array);
     Py_XDECREF(features_array);
     Py_XDECREF(thresholds_array);
     Py_XDECREF(values_array);
-    //PyArray_ResolveWritebackIfCopy(node_sample_weight_array);
+    // PyArray_ResolveWritebackIfCopy(node_sample_weight_array);
     Py_XDECREF(node_sample_weight_array);
     Py_XDECREF(X_array);
     Py_XDECREF(X_missing_array);
@@ -467,8 +467,8 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     PyObject *X_missing_obj;
     PyObject *y_obj;
     PyObject *out_pred_obj;
-    
-  
+
+
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(
         args, "OOOOOOiiOiOOOO", &children_left_obj, &children_right_obj, &children_default_obj,
@@ -530,7 +530,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     tfloat *out_pred = (tfloat*)PyArray_DATA(out_pred_array);
 
     // these are just wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         NULL, max_depth, tree_limit, base_offset,
@@ -540,7 +540,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
 
     dense_tree_saabas(out_pred, trees, data);
 
-    // clean up the created python objects 
+    // clean up the created python objects
     Py_XDECREF(children_left_array);
     Py_XDECREF(children_right_array);
     Py_XDECREF(children_default_array);

@@ -1,7 +1,11 @@
-import numpy as np
 import warnings
-from .._explainer import Explainer
+
+import numpy as np
 from packaging import version
+
+from .._explainer import Explainer
+from .deep_utils import _check_additivity
+
 torch = None
 
 
@@ -17,9 +21,9 @@ class PyTorchDeep(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = False
-        if type(data) == list:
+        if isinstance(data, list):
             self.multi_input = True
-        if type(data) != list:
+        if not isinstance(data, list):
             data = [data]
         self.data = data
         self.layer = None
@@ -76,7 +80,7 @@ class PyTorchDeep(Explainer):
                 handles_list.extend(self.add_handles(child, forward_handle, backward_handle))
         else:  # leaves
             handles_list.append(model.register_forward_hook(forward_handle))
-            handles_list.append(model.register_backward_hook(backward_handle))
+            handles_list.append(model.register_full_backward_hook(backward_handle))
         return handles_list
 
     def remove_attributes(self, model):
@@ -128,19 +132,20 @@ class PyTorchDeep(Explainer):
                 grads.append(grad)
             return grads
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=False):
-
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         # X ~ self.model_input
         # X_data ~ self.data
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
+            assert not isinstance(X, list), "Expected a single tensor model input!"
             X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
 
         X = [x.detach().to(self.device) for x in X]
+
+        model_output_values = None
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
@@ -153,7 +158,8 @@ class PyTorchDeep(Explainer):
             elif output_rank_order == "max_abs":
                 _, model_output_ranks = torch.sort(torch.abs(model_output_values), descending=True)
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], self.num_outputs)).int() *
@@ -204,6 +210,14 @@ class PyTorchDeep(Explainer):
         if self.interim:
             self.target_handle.remove()
 
+        # check that the SHAP values sum up to the model output
+        if check_additivity:
+            if model_output_values is None:
+                with torch.no_grad():
+                    model_output_values = self.model(*X)
+
+            _check_additivity(self, model_output_values.cpu(), output_phis)
+
         if not self.multi_output:
             return output_phis[0]
         elif ranked_outputs is not None:
@@ -225,7 +239,7 @@ def deeplift_grad(module, grad_input, grad_output):
         if op_handler[module_type].__name__ not in ['passthrough', 'linear_1d']:
             return op_handler[module_type](module, grad_input, grad_output)
     else:
-        print('Warning: unrecognized nn.Module: {}'.format(module_type))
+        warnings.warn(f'unrecognized nn.Module: {module_type}')
         return grad_input
 
 
@@ -264,8 +278,6 @@ def add_interim_values(module, input, output):
                     setattr(module, 'y', torch.nn.Parameter(output[0].detach()))
                 else:
                     setattr(module, 'y', torch.nn.Parameter(output.detach()))
-            if module_type in failure_case_modules:
-                input[0].register_hook(deeplift_tensor_grad)
 
 
 def get_target_input(module, input, output):
@@ -277,25 +289,6 @@ def get_target_input(module, input, output):
     except AttributeError:
         pass
     setattr(module, 'target_input', input)
-
-# From the documentation: "The current implementation will not have the presented behavior for
-# complex Module that perform many operations. In some failure cases, grad_input and grad_output
-# will only contain the gradients for a subset of the inputs and outputs.
-# The tensor hook below handles such failure cases (currently, MaxPool1d). In such cases, the deeplift
-# grad should still be computed, and then appended to the complex_model_gradients list. The tensor hook
-# will then retrieve the proper gradient from this list.
-
-
-failure_case_modules = ['MaxPool1d']
-
-
-def deeplift_tensor_grad(grad):
-    return_grad = complex_module_gradients[-1]
-    del complex_module_gradients[-1]
-    return return_grad
-
-
-complex_module_gradients = []
 
 
 def passthrough(module, grad_input, grad_output):
@@ -329,15 +322,11 @@ def maxpool(module, grad_input, grad_output):
         xmax_pos, rmax_pos = torch.chunk(pool_to_unpool[module.__class__.__name__](
             grad_output[0] * diffs, indices, module.kernel_size, module.stride,
             module.padding, list(module.x.shape)), 2)
-    org_input_shape = grad_input[0].shape  # for the maxpool 1d
+
     grad_input = [None for _ in grad_input]
     grad_input[0] = torch.where(torch.abs(delta_in) < 1e-7, torch.zeros_like(delta_in),
                            (xmax_pos + rmax_pos) / delta_in).repeat(dup0)
-    if module.__class__.__name__ == 'MaxPool1d':
-        complex_module_gradients.append(grad_input[0])
-        # the grad input that is returned doesn't matter, since it will immediately be
-        # be overridden by the grad in the complex_module_gradient
-        grad_input[0] = torch.ones(org_input_shape)
+
     return tuple(grad_input)
 
 

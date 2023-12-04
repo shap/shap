@@ -12,7 +12,7 @@ sign_defaults = {
     "explanation error": -1
 }
 
-class BenchmarkResult():
+class BenchmarkResult:
     """ The result of a benchmark run.
     """
 

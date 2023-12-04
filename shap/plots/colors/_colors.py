@@ -1,13 +1,13 @@
 """ This defines some common colors.
 """
 
-from __future__ import division
 
 import numpy as np
+
 from ._colorconv import lab2rgb, lch2lab
 
 try:
-    import matplotlib
+    import matplotlib  # noqa: F401
     from matplotlib.colors import LinearSegmentedColormap
 
     def lch2rgb(x):
@@ -25,8 +25,8 @@ try:
     red_rgb = lch2rgb(red_lch)
     gray_rgb = lch2rgb(gray_lch)
     white_rgb = np.array([1.,1.,1.])
-    
-    
+
+
     light_blue_rgb = np.array([127., 196, 252])/255
     light_red_rgb = np.array([255., 127, 167])/255
 

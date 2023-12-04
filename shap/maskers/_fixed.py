@@ -1,5 +1,7 @@
 import numpy as np
+
 from ._masker import Masker
+
 
 class Fixed(Masker):
     """ This leaves the input unchanged during masking, and is used for things like scoring labels.
@@ -18,7 +20,7 @@ class Fixed(Masker):
     def __call__(self, mask, x):
         return ([x],)
 
-    def mask_shapes(self, x): # pylint: disable=no-self-use,unused-argument
+    def mask_shapes(self, x):
         """ The shape of the masks we expect.
         """
         return [(0,)]
