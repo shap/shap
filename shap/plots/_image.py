@@ -159,10 +159,10 @@ def image(shap_values: Explanation or np.ndarray,
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
             abs_vals = np.stack([np.abs(shap_values[i].sum(-1)) for i in range(len(shap_values))], 0).flatten()
-        
+
         if max_val is None:
             max_val = np.nanpercentile(abs_vals, 99.9)
-        
+
         for i in range(len(shap_values)):
             if labels is not None:
                 axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
