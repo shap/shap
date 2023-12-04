@@ -1,17 +1,20 @@
-import numpy as np
-from .experiments import run_experiments
-from ..plots import colors
-from .. import __version__
-from . import models
-from . import methods
-from . import metrics
-import sklearn
-import io
 import base64
+import io
 import os
+
+import numpy as np
+import sklearn
+from matplotlib.colors import LinearSegmentedColormap
+
+from .. import __version__
+from ..plots import colors
+from . import methods, metrics, models
+from .experiments import run_experiments
+
 try:
-    import matplotlib.pyplot as pl
     import matplotlib
+    import matplotlib.pyplot as pl
+    from IPython.display import HTML
 except ImportError:
     pass
 
@@ -173,7 +176,7 @@ metadata = {
     #     "ylabel": "ROC AUC",
     #     "sort_order": 8
     # },
-    
+
     # "linear_shap_corr": {
     #     "title": "Linear SHAP (corr)"
     # },
@@ -181,7 +184,7 @@ metadata = {
     #     "title": "Linear SHAP (ind)"
     # },
     # "coef": {
-    #     "title": "Coefficents"
+    #     "title": "Coefficients"
     # },
     # "random": {
     #     "title": "Random"
@@ -270,7 +273,7 @@ def get_metric_attr(metric, attr):
         suffix = "\""
         if l.startswith(prefix) and l.endswith(suffix):
             return l[len(prefix):-len(suffix)]
-        
+
         # number
         prefix = attr+" = "
         if l.startswith(prefix):
@@ -292,7 +295,7 @@ def plot_curve(dataset, model, metric, cmap=benchmark_color_map):
         method_arr.append((auc, method, scores))
     for (auc,method,scores) in sorted(method_arr):
         method_title = getattr(methods, method).__doc__.split("\n")[0].strip()
-        l = "{:6.3f} - ".format(auc) + method_title
+        l = f"{auc:6.3f} - " + method_title
         pl.plot(
             fcounts / fcounts[-1], scores, label=l,
             color=get_method_color(method), linewidth=2,
@@ -319,7 +322,7 @@ def plot_human(dataset, model, metric, cmap=benchmark_color_map):
         _,_,method,_ = name
         diff_sum = np.sum(np.abs(scores[1] - scores[0]))
         method_arr.append((diff_sum, method, scores[0], scores[1]))
-    
+
     inds = np.arange(3)    # the x locations for the groups
     inc_width = (1.0 / len(method_arr)) * 0.8
     width = inc_width * 0.9
@@ -331,7 +334,7 @@ def plot_human(dataset, model, metric, cmap=benchmark_color_map):
     }
     for (diff_sum, method, _, methods_attrs) in sorted(method_arr):
         method_title = getattr(methods, method).__doc__.split("\n")[0].strip()
-        l = "{:.2f} - ".format(diff_sum) + method_title
+        l = f"{diff_sum:.2f} - " + method_title
         pl.bar(
             inds + inc_width * i, methods_attrs.flatten(), width, label=l, edgecolor="white",
             color=get_method_color(method), hatch=line_style_to_hatch.get(get_method_linestyle(method), None)
@@ -402,27 +405,28 @@ def make_grid(scores, dataset, model, normalize=True, transform=True):
     # col_keys = sorted(list(color_vals.keys()), key=lambda v: metric_sort_order[v])
     # print(col_keys)
     col_keys = list(color_vals.keys())
-    row_keys = list(set([v for k in col_keys for v in color_vals[k].keys()]))
-    
+    row_keys = list({v for k in col_keys for v in color_vals[k].keys()})
+
     data = -28567 * np.ones((len(row_keys), len(col_keys)))
-    
+
     for i in range(len(row_keys)):
         for j in range(len(col_keys)):
             data[i,j] = color_vals[col_keys[j]][row_keys[i]]
-            
+
     assert np.sum(data == -28567) == 0, "There are missing data values!"
 
-    if normalize: 
+    if normalize:
         data = (data - data.min(0)) / (data.max(0) - data.min(0) + 1e-8)
-    
+
     # sort by performans
     inds = np.argsort(-data.mean(1))
     row_keys = [row_keys[i] for i in inds]
     data = data[inds,:]
-    
+
     return row_keys, col_keys, data
 
-from matplotlib.colors import LinearSegmentedColormap
+
+
 red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
     'red': ((0.0, 198./255, 198./255),
             (1.0, 5./255, 5./255)),
@@ -436,7 +440,6 @@ red_blue_solid = LinearSegmentedColormap('red_blue_solid', {
     'alpha': ((0.0, 1, 1),
               (1.0, 1, 1))
 })
-from IPython.core.display import HTML
 def plot_grids(dataset, model_names, out_dir=None):
 
     if out_dir is not None:
@@ -448,7 +451,7 @@ def plot_grids(dataset, model_names, out_dir=None):
 
     prefix = "<style type='text/css'> .shap_benchmark__select:focus { outline-width: 0 }</style>"
     out = "" # background: rgb(30, 136, 229)
-    
+
     # out += "<div style='font-weight: regular; font-size: 24px; text-align: center; background: #f8f8f8; color: #000; padding: 20px;'>SHAP Benchmark</div>\n"
     # out += "<div style='height: 1px; background: #ddd;'></div>\n"
     #out += "<div style='height: 7px; background-image: linear-gradient(to right, rgb(30, 136, 229), rgb(255, 13, 87));'></div>"
@@ -475,12 +478,12 @@ def plot_grids(dataset, model_names, out_dir=None):
                 pl.gcf().set_size_inches(1200.0/175,1000.0/175)
                 pl.savefig(buf, format='png', dpi=175)
                 if out_dir is not None:
-                    pl.savefig("%s/plot_%s_%s_%s.pdf" % (out_dir, dataset, model, metric), format='pdf')
+                    pl.savefig(f"{out_dir}/plot_{dataset}_{model}_{metric}.pdf", format='pdf')
                 pl.close()
                 buf.seek(0)
                 data_uri = base64.b64encode(buf.read()).decode('utf-8').replace('\n', '')
                 plot_id = "plot__"+dataset+"__"+model+"__"+metric
-                prefix += "<div onclick='document.getElementById(\"%s\").style.display = \"none\"' style='display: none; position: fixed; z-index: 10000; left: 0px; right: 0px; top: 0px; bottom: 0px; background: rgba(255,255,255,0.9);' id='%s'>" % (plot_id, plot_id)
+                prefix += f"<div onclick='document.getElementById(\"{plot_id}\").style.display = \"none\"' style='display: none; position: fixed; z-index: 10000; left: 0px; right: 0px; top: 0px; bottom: 0px; background: rgba(255,255,255,0.9);' id='{plot_id}'>"
                 prefix += "<img width='600' height='500' style='margin-left: auto; margin-right: auto; margin-top: 230px; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);' src='data:image/png;base64,%s'>" % data_uri
                 prefix += "</div>"
 
@@ -505,11 +508,11 @@ def plot_grids(dataset, model_names, out_dir=None):
                 plot_id = "plot__"+dataset+"__"+model+"__"+col_keys[j]
                 out += "<td onclick='document.getElementById(\"%s\").style.display = \"block\"' style='padding: 0px; padding-left: 0px; padding-right: 0px; border-left: 0px solid #999; width: 42px; min-width: 42px; height: 34px; background-color: #fff'>" % plot_id
                 #out += "<div style='opacity: "+str(2*(max(1-data[i,j], data[i,j])-0.5))+"; background-color: rgb" + str(tuple(v*255 for v in colors.red_blue_solid(0. if data[i,j] < 0.5 else 1.)[:-1])) + "; height: "+str((30*max(1-data[i,j], data[i,j])))+"px; margin-left: auto; margin-right: auto; width:"+str((30*max(1-data[i,j], data[i,j])))+"px'></div>"
-                out += "<div style='opacity: "+str(1)+"; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(data[i,j]-0.8))[:-1])) + "; height: "+str((30*data[i,j]))+"px; margin-left: auto; margin-right: auto; width:"+str((30*data[i,j]))+"px'></div>"
+                out += "<div style='opacity: "+str(1)+"; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(data[i,j]-0.8))[:-1])) + "; height: "+str(30*data[i,j])+"px; margin-left: auto; margin-right: auto; width:"+str(30*data[i,j])+"px'></div>"
                 #out += "<div style='float: left; background-color: #eee; height: 10px; width: "+str((40*(1-data[i,j])))+"px'></div>"
                 out += "</td>\n"
-            out += "</tr>\n" # 
-            
+            out += "</tr>\n" #
+
         out += "<tr><td colspan='%d' style='background: #fff'></td></tr>" % (data.shape[1] + 1)
     out += "</table>"
 
@@ -528,7 +531,7 @@ def plot_grids(dataset, model_names, out_dir=None):
 #   background: url(http://www.stackoverflow.com/favicon.ico) 96% / 15% no-repeat #eee;
 # }
     #out += "<div style='display: inline-block; margin-right: 20px; font-weight: normal; text-decoration: none; font-size: 18px; color: #000;'>Dataset:</div>\n"
-    
+
     out += "<select id='shap_benchmark__select' onchange=\"document.location = '../' + this.value + '/index.html'\"dir='rtl' class='shap_benchmark__select' style='font-weight: normal; font-size: 20px; color: #000; padding: 10px; background: #fff; border: 1px solid #fff; -webkit-appearance: none; appearance: none;'>\n"
     out += "<option value='human' "+("selected" if dataset == "human" else "")+">Agreement with Human Intuition</option>\n"
     out += "<option value='corrgroups60' "+("selected" if dataset == "corrgroups60" else "")+">Correlated Groups 60 Dataset</option>\n"
@@ -549,7 +552,7 @@ def plot_grids(dataset, model_names, out_dir=None):
         val = (legend_size-i-1) / (legend_size-1)
         out += "<div style='opacity: 1; background-color: rgb" + str(tuple(int(v*255) for v in colors.red_blue_no_bounds(5*(val-0.8)))[:-1]) + "; height: "+str(30*val)+"px; margin-left: auto; margin-right: auto; width:"+str(30*val)+"px'></div>"
         out += "</td>"
-        out += "</tr>\n" # 
+        out += "</tr>\n" #
     out += "<tr><td style='background: #fff; font-weight: normal; text-align: center'>Lower score</td></tr>\n"
     out += "</table>\n"
 

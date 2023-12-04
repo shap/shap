@@ -1,14 +1,14 @@
-import pickle
-#import types
+
 import inspect
 import logging
-#import warnings
-import numpy as np
+import pickle
+
 import cloudpickle
+import numpy as np
 
 log = logging.getLogger('shap')
 
-class Serializable():
+class Serializable:
     """ This is the superclass of all serializable objects.
     """
 
@@ -19,7 +19,7 @@ class Serializable():
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ This is meant to be overriden by subclasses and called with super.
+        """ This is meant to be overridden by subclasses and called with super.
 
         We return constructor argument values when not being instantiated. Since there are no
         constructor arguments for the Serializable class we just return an empty dictionary.
@@ -30,7 +30,7 @@ class Serializable():
 
     @classmethod
     def _instantiated_load(cls, in_file, **kwargs):
-        """ This is meant to be overriden by subclasses and called with super.
+        """ This is meant to be overridden by subclasses and called with super.
 
         We return constructor argument values (we have no values to load in this abstract class).
         """
@@ -47,7 +47,7 @@ class Serializable():
         return obj_type(**{k: constructor_args[k] for k in constructor_args if k in used_args})
 
 
-class Serializer():
+class Serializer:
     """ Save data items to an input stream.
     """
     def __init__(self, out_stream, block_name, version):
@@ -101,7 +101,7 @@ class Serializer():
             raise ValueError(f"Unknown encoder type '{encoder}' given for serialization!")
         log.debug("value = %s", str(value))
 
-class Deserializer():
+class Deserializer:
     """ Load data items from an input stream.
     """
 

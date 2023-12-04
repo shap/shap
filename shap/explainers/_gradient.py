@@ -1,16 +1,24 @@
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
-from ..explainers._explainer import Explainer
-from ..explainers.tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
-from .._explanation import Explanation
 from packaging import version
+
+from .._explanation import Explanation
+from ..explainers._explainer import Explainer
+from ..explainers.tf_utils import (
+    _get_graph,
+    _get_model_inputs,
+    _get_model_output,
+    _get_session,
+)
+
 keras = None
 tf = None
 torch = None
 
 
-class Gradient(Explainer):
+class GradientExplainer(Explainer):
     """ Explains a model using expected gradients (an extension of integrated gradients).
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
@@ -21,7 +29,7 @@ class Gradient(Explainer):
     and combines that expectation with sampling reference values from the background dataset. This leads
     to a single combined expectation of gradients that converges to attributions that sum to the
     difference between the expected model output and the current output.
-    
+
     Examples
     --------
     See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
@@ -57,28 +65,28 @@ class Gradient(Explainer):
             try:
                 a.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
         else:
             try:
                 model.named_parameters()
                 framework = 'pytorch'
-            except:
+            except Exception:
                 framework = 'tensorflow'
 
         if isinstance(data, pd.DataFrame):
             self.features = data.columns.values
         else:
-            self.features = list(range(data[0].shape[1]))
-        
+            self.features = None
+
         if framework == 'tensorflow':
             self.explainer = _TFGradient(model, data, session, batch_size, local_smoothing)
         elif framework == 'pytorch':
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
-        """ Return an explanation object for the model applied to X. 
-        
+        """ Return an explanation object for the model applied to X.
+
         Parameters
         ----------
         X : list,
@@ -90,11 +98,11 @@ class Gradient(Explainer):
             number of background samples
         Returns
         -------
-        shap.Explanation: 
+        shap.Explanation:
         """
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)
-    
+
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
         """ Return the values for the model applied to X.
 
@@ -148,17 +156,17 @@ class _TFGradient(Explainer):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         if keras is None:
             try:
-                import keras
+                from tensorflow import keras
                 if version.parse(keras.__version__) < version.parse("2.1.0"):
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
-            except:
+            except Exception:
                 pass
 
         # determine the model inputs and outputs
         self.model = model
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
-        assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
+        assert not isinstance(self.model_output, list), "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
         if len(self.model_output.shape) == 1:
@@ -166,10 +174,12 @@ class _TFGradient(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = True
-        if type(self.model_inputs) != list:
+        if not isinstance(self.model_inputs, list):
             self.model_inputs = [self.model_inputs]
         self.multi_input = len(self.model_inputs) > 1
-        if type(data) != list:
+        if isinstance(data, pd.DataFrame):
+            data = [data.values]
+        if not isinstance(data, list):
             data = [data]
 
         self.data = data
@@ -195,6 +205,8 @@ class _TFGradient(Explainer):
             self.gradients = [None for i in range(self.model_output.shape[1])]
 
     def gradient(self, i):
+        global tf, keras
+
         if self.gradients[i] is None:
             if not tf.executing_eagerly():
                 out = self.model_output[:,i] if self.multi_output else self.model_output
@@ -222,13 +234,17 @@ class _TFGradient(Explainer):
         return self.gradients[i]
 
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
+        global tf, keras
+
+        import tensorflow as tf
+        import tensorflow.keras as keras
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
+            assert not isinstance(X, list), "Expected a single tensor model input!"
             X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         # rank and determine the model outputs that we will explain
@@ -246,7 +262,8 @@ class _TFGradient(Explainer):
             elif output_rank_order == "custom":
                 model_output_ranks = ranked_outputs
             else:
-                assert False, "output_rank_order must be max, min, max_abs or custom!"
+                emsg = "output_rank_order must be max, min, max_abs or custom!"
+                raise ValueError(emsg)
 
             if output_rank_order in ["max", "min", "max_abs"]:
                 model_output_ranks = model_output_ranks[:,:ranked_outputs]
@@ -299,7 +316,7 @@ class _TFGradient(Explainer):
 
                 # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
-                # regression model with priors of the coefficents equal to the estimated variances for each
+                # regression model with priors of the coefficients equal to the estimated variances for each
                 # value (note that 1e-6 is designed to increase the weight of the sample and so closely
                 # match the correct sum)
                 # if False and self.local_smoothing == 0: # disabled right now to make sure it doesn't mask problems
@@ -311,7 +328,7 @@ class _TFGradient(Explainer):
                 #         sum_error = model_output_values[j] - phis_sum - self.expected_value
 
                 #     # this is a ridge regression with one sample of all ones with sum_error as the label
-                #     # and 1/v as the ridge penalties. This simlified (and stable) form comes from the
+                #     # and 1/v as the ridge penalties. This simplified (and stable) form comes from the
                 #     # Sherman-Morrison formula
                 #     v = (phi_vars_s / phi_vars_s.max()) * 1e6
                 #     adj = sum_error * (v - (v * v.sum()) / (1 + v.sum()))
@@ -342,6 +359,8 @@ class _TFGradient(Explainer):
                 return output_phis
 
     def run(self, out, model_inputs, X):
+        global tf, keras
+
         if not tf.executing_eagerly():
             feed_dict = dict(zip(model_inputs, X))
             if self.keras_phase_placeholder is not None:
@@ -371,9 +390,9 @@ class _PyTorchGradient(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = False
-        if type(data) == list:
+        if isinstance(data, list):
             self.multi_input = True
-        if type(data) != list:
+        if not isinstance(data, list):
             data = [data]
 
         # for consistency, the method signature calls for data as the model input.
@@ -455,10 +474,10 @@ class _PyTorchGradient(Explainer):
 
         # check if we have multiple inputs
         if not self.multi_input:
-            assert type(X) != list, "Expected a single tensor model input!"
+            assert not isinstance(X, list), "Expected a single tensor model input!"
             X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
 
         if ranked_outputs is not None and self.multi_output:
             with torch.no_grad():
@@ -471,7 +490,8 @@ class _PyTorchGradient(Explainer):
             elif output_rank_order == "max_abs":
                 _, model_output_ranks = torch.sort(torch.abs(model_output_values), descending=True)
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *

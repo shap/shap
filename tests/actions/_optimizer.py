@@ -1,12 +1,13 @@
 """ Unit tests for the Exact explainer.
 """
 
-# pylint: disable=missing-function-docstring
 import numpy as np
 import pandas as pd
 import pytest
+
 import shap
 from shap.utils._exceptions import ConvergenceError, InvalidAction
+
 
 def create_basic_scenario():
     X = pd.DataFrame({"feature1": np.ones(5), "feature2": np.ones(5), "feature3": np.ones(5)})

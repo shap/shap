@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/javascript/"
+    schedule:
+      interval: "monthly"
+    groups:
+      # Group all minor and patch updates in a single PR
+      js-minor:
+        update-types:
+        - "minor"
+        - "patch"

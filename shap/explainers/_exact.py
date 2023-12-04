@@ -1,23 +1,30 @@
 import logging
+
 import numpy as np
-from numba import jit
+from numba import njit
+
 from .. import links
 from ..models import Model
-from ..utils import MaskedModel, shapley_coefficients, make_masks, delta_minimization_order
+from ..utils import (
+    MaskedModel,
+    delta_minimization_order,
+    make_masks,
+    shapley_coefficients,
+)
 from ._explainer import Explainer
 
 log = logging.getLogger('shap')
 
 
-class Exact(Explainer):
+class ExactExplainer(Explainer):
     """ Computes SHAP values via an optimized exact enumeration.
 
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
     from the background per sample. It also works well for Owen values from hclustering structured
     maskers when there are less than ~100 features that vary from the background per sample. This
-    explainer minmizes the number of function evaluations needed by ordering the masking sets to
+    explainer minimizes the number of function evaluations needed by ordering the masking sets to
     minimize sequential differences. This is done using gray codes for standard Shapley values
-    and a greedly sorting method for hclustering structured maskers.
+    and a greedy sorting method for hclustering structured maskers.
     """
 
     def __init__(self, model, masker, link=links.identity, linearize_link=True, feature_names=None):
@@ -46,7 +53,7 @@ class Exact(Explainer):
         linearize_link : bool
             If we use a non-linear link function to take expectations then models that are additive with respect to that
             link function for a single background sample will no longer be additive when using a background masker with
-            many samples. This for example means that a linear logisitic regression model would have interaction effects
+            many samples. This for example means that a linear logistic regression model would have interaction effects
             that arise from the non-linear changes in expectation averaging. To retain the additively of the model with
             still respecting the link function we linearize the link function by default.
         """ # TODO link to the link linearization paper when done
@@ -66,7 +73,7 @@ class Exact(Explainer):
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
-        return super(Exact, self).__call__(
+        return super().__call__(
             *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
             batch_size=batch_size, interactions=interactions, silent=silent
         )
@@ -101,8 +108,8 @@ class Exact(Explainer):
             # don't vary from the background)
             delta_indexes = self._cached_gray_codes(len(inds))
 
-            # map to a larger mask that includes the invarient entries
-            extended_delta_indexes = np.zeros(2**len(inds), dtype=np.int)
+            # map to a larger mask that includes the invariant entries
+            extended_delta_indexes = np.zeros(2**len(inds), dtype=int)
             for i in range(2**len(inds)):
                 if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
                     extended_delta_indexes[i] = delta_indexes[i]
@@ -113,21 +120,22 @@ class Exact(Explainer):
             outputs = fm(extended_delta_indexes, zero_index=0, batch_size=batch_size)
 
             # Shapley values
-            if interactions is False or interactions is 1: # pylint: disable=literal-comparison
+            # Care: Need to distinguish between `True` and `1`
+            if interactions is False or (interactions == 1 and interactions is not True):
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm),) + outputs.shape[1:])
-                mask = np.zeros(len(fm), dtype=np.bool)
+                mask = np.zeros(len(fm), dtype=bool)
                 _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             # Shapley-Taylor interaction values
-            elif interactions is True or interactions is 2: # pylint: disable=literal-comparison
+            elif interactions is True or interactions == 2:
 
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:])
-                mask = np.zeros(len(fm), dtype=np.bool)
+                mask = np.zeros(len(fm), dtype=bool)
                 _compute_grey_code_row_values_st(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
 
             elif interactions > 2:
@@ -159,11 +167,11 @@ class Exact(Explainer):
 
         # compute the main effects if we need to
         main_effect_values = None
-        if main_effects or interactions is True or interactions is 2: # pylint: disable=literal-comparison
+        if main_effects or interactions is True or interactions == 2:
             if inds is None:
                 inds = np.arange(len(fm))
             main_effect_values = fm.main_effects(inds)
-            if interactions is True or interactions is 2:
+            if interactions is True or interactions == 2:
                 for i in range(len(fm)):
                     row_values[i, i] = main_effect_values[i]
 
@@ -175,7 +183,7 @@ class Exact(Explainer):
             "clustering": getattr(self.masker, "clustering", None)
         }
 
-@jit
+@njit
 def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
     set_size = 0
     M = len(inds)
@@ -201,7 +209,7 @@ def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff
             else:
                 row_values[j] -= out * off_coeff
 
-@jit
+@njit
 def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
     set_size = 0
     M = len(inds)
@@ -234,7 +242,7 @@ def partition_delta_indexes(partition_tree, all_masks):
     """
 
     # convert the masks to delta index format
-    mask = np.zeros(all_masks.shape[1], dtype=np.bool)
+    mask = np.zeros(all_masks.shape[1], dtype=bool)
     delta_inds = []
     for i in range(len(all_masks)):
         inds = np.where(mask ^ all_masks[i,:])[0]
@@ -256,7 +264,7 @@ def partition_masks(partition_tree):
     M = partition_tree.shape[0] + 1
     mask_matrix = make_masks(partition_tree)
     all_masks = []
-    m00 = np.zeros(M, dtype=np.bool)
+    m00 = np.zeros(M, dtype=bool)
     all_masks.append(m00)
     all_masks.append(~m00)
     #inds_stack = [0,1]
@@ -278,7 +286,10 @@ def partition_masks(partition_tree):
             inds_list0[i] = inverse_order[inds_list0[i]]
             inds_list1[i] = inverse_order[inds_list1[i]]
 
-    return all_masks[order], np.array([[np.array(on), np.array(off)] for on,off in inds_lists])
+    # Care: inds_lists have different lengths, so partition_masks_inds is a "ragged" array. See GH #3063
+    partition_masks = all_masks[order]
+    partition_masks_inds = [[np.array(on), np.array(off)] for on, off in inds_lists]
+    return partition_masks, partition_masks_inds
 
 # TODO: this should be a jit function... which would require preallocating the inds_lists (sizes are 2**depth of that ind)
 # TODO: we could also probable avoid making the masks at all and just record the deltas if we want...
@@ -296,7 +307,7 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
     m10 = m00.copy() # we separate the copy from the add so as to not get converted to a matrix
     m10[:] += mask_matrix[left_index+M, :]
     m01 = m00.copy()
-    m01[:] += mask_matrix[right_index+M, :]    
+    m01[:] += mask_matrix[right_index+M, :]
 
     # record the new masks we made
     ind01 = len(all_masks)
@@ -319,8 +330,8 @@ def gray_code_masks(nbits):
 
     This is based on code from: http://code.activestate.com/recipes/576592-gray-code-generatoriterator/
     """
-    out = np.zeros((2**nbits, nbits), dtype=np.bool)
-    li = np.zeros(nbits, dtype=np.bool)
+    out = np.zeros((2**nbits, nbits), dtype=bool)
+    li = np.zeros(nbits, dtype=bool)
 
     for term in range(2, (1<<nbits)+1):
         if term % 2 == 1: # odd
@@ -338,10 +349,10 @@ def gray_code_indexes(nbits):
     """ Produces an array of which bits flip at which position.
 
     We assume the masks start at all zero and -1 means don't do a flip.
-    This is a more efficient represenation of the gray_code_masks version.
+    This is a more efficient representation of the gray_code_masks version.
     """
-    out = np.ones(2**nbits, dtype=np.int) * MaskedModel.delta_mask_noop_value
-    li = np.zeros(nbits, dtype=np.bool)
+    out = np.ones(2**nbits, dtype=int) * MaskedModel.delta_mask_noop_value
+    li = np.zeros(nbits, dtype=bool)
     for term in range((1<<nbits)-1):
         if term % 2 == 1: # odd
             for i in range(-1,-nbits,-1):

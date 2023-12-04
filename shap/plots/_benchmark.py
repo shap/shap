@@ -1,8 +1,8 @@
-import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
+import matplotlib.pyplot as plt
 import numpy as np
-from . import colors
 
+from . import colors
 
 xlabel_names = {
     "remove absolute": "Fraction removed",
@@ -35,7 +35,7 @@ def benchmark(benchmark, show=True):
             if b.curve_x is None or b.curve_y is None:
                 has_curves = False
 
-        methods = list(set(b.method for b in benchmark))
+        methods = list({b.method for b in benchmark})
         methods.sort()
         method_color = {}
 
@@ -164,7 +164,7 @@ def benchmark(benchmark, show=True):
                 for x, y, value in zip(xs, scores, values):
                     if value is None:
                         continue
-                    label = "{:.2f}".format(value)
+                    label = f"{value:.2f}"
                     txt = plt.annotate(
                         label, # this is the text
                         (x, y), # these are the coordinates to position the label

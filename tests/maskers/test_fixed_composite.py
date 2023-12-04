@@ -2,9 +2,12 @@
 """
 
 import tempfile
-import pytest
+
 import numpy as np
+import pytest
+
 import shap
+
 
 @pytest.mark.skip(reason="fails on travis and I don't know why yet...Ryan might need to take a look since this API will change soon anyway")
 def test_fixed_composite_masker_call():
