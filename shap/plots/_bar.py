@@ -88,7 +88,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
 
     # unpack the Explanation object
-    features = cohort_exps[0].data
+    features = cohort_exps[0].display_data if cohort_exps[0].display_data is not None else cohort_exps[0].data
     feature_names = cohort_exps[0].feature_names
     if clustering is None:
         partition_tree = getattr(cohort_exps[0], "clustering", None)

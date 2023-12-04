@@ -21,7 +21,6 @@ from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError
 from ..utils._legacy import (
     DenseData,
-    IdentityLink,
     SparseData,
     convert_to_data,
     convert_to_instance,
@@ -44,7 +43,6 @@ class KernelExplainer(Explainer):
     are Shapley values from game theory and also coefficients from a local linear
     regression.
 
-
     Parameters
     ----------
     model : function or iml.Model
@@ -58,30 +56,31 @@ class KernelExplainer(Explainer):
         is observed. Since most models aren't designed to handle arbitrary missing data at test
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
-        we would approximate a feature being missing by setting it to zero. For small problems
+        we would approximate a feature being missing by setting it to zero. For small problems,
         this background dataset can be the whole training set, but for larger problems consider
-        using a single reference value or using the kmeans function to summarize the dataset.
-        Note: for sparse case we accept any sparse matrix but convert to lil format for
+        using a single reference value or using the ``kmeans`` function to summarize the dataset.
+        Note: for the sparse case, we accept any sparse matrix but convert to lil format for
         performance.
 
     feature_names : list
         The names of the features in the background dataset. If the background dataset is
-        supplied as a pandas.DataFrame, then feature_names can be set to None (the default value)
+        supplied as a pandas.DataFrame, then ``feature_names`` can be set to ``None`` (default),
         and the feature names will be taken as the column names of the dataframe.
 
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
         sense to connect them to the output with a link function where link(output) = sum(phi).
-        If the model output is a probability then the LogitLink link function makes the feature
-        importance values have log-odds units.
+        Default is "identity" (a no-op).
+        If the model output is a probability, then "logit" can be used to transform the SHAP values
+        into log-odds units.
 
     Examples
     --------
-    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
+    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
     """
 
-    def __init__(self, model, data, feature_names=None, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
 
         if feature_names is not None:
             self.data_feature_names=feature_names

@@ -5,14 +5,14 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.292
+  rev: v0.1.4
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
     args: [ --fix, --exit-non-zero-on-fix ]
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
   - id: check-added-large-files
   - id: check-merge-conflict
@@ -25,7 +25,7 @@ repos:
   - id: end-of-file-fixer
 
 - repo: https://github.com/psf/black
-  rev: 23.9.1
+  rev: 23.10.1
   hooks:
   - id: black-jupyter
     name: black (notebooks)
