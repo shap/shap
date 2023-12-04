@@ -13,10 +13,6 @@ from slicer import Alias, Obj, Slicer
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
-# slicer confuses pylint...
-# pylint: disable=no-member
-
-
 op_chain_root = OpChain("shap.Explanation")
 class MetaExplanation(type):
     """ This metaclass exposes the Explanation object's methods for creating template op chains.
@@ -83,7 +79,7 @@ class MetaExplanation(type):
 class Explanation(metaclass=MetaExplanation):
     """ A sliceable set of parallel arrays representing a SHAP explanation.
     """
-    def __init__( # pylint: disable=too-many-arguments
+    def __init__(
         self,
         values,
         base_values=None,
@@ -321,7 +317,7 @@ class Explanation(metaclass=MetaExplanation):
 
         # convert any OpChains or magic strings
         pos = -1
-        for t in item: # pylint: disable=too-many-nested-blocks
+        for t in item:
             pos += 1
 
             # skip over Ellipsis

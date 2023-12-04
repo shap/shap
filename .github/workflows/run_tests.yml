@@ -37,7 +37,7 @@ jobs:
             python-version: "3.11"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
-          # cover the latest version of numpy/pandas. See dsgibbons#46
+          # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.11"
             extras: "test-core"
@@ -70,7 +70,7 @@ jobs:
         if: matrix.extras == 'test'
         with:
           path: |
-            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See dsgibbons#42
+            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See GH dsgibbons#42
             ${{ env.pythonLocation }}/**/site-packages/pyspark*
             ${{ env.pythonLocation }}/**/site-packages/nvidia*
             ${{ env.pythonLocation }}/**/site-packages/torch*

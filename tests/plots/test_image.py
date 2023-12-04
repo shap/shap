@@ -2,7 +2,7 @@ import matplotlib
 import numpy as np
 
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
+import shap  # noqa: E402
 
 
 def test_random_single_image():
@@ -21,7 +21,7 @@ def test_image_to_text_single():
     """ Just make sure the image_to_text function doesn't crash.
     """
 
-    class MockImageExplanation: # pylint: disable=too-few-public-methods
+    class MockImageExplanation:
         """ Fake explanation object.
         """
         def __init__(self, data, values, output_names):

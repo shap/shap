@@ -182,7 +182,7 @@ def cric__gbm():
 
     # we want to explain the margin, not the transformed probability outputs
     model.__orig_predict = model.predict
-    model.predict = lambda X: model.__orig_predict(X, output_margin=True) # pylint: disable=E1123
+    model.predict = lambda X: model.__orig_predict(X, output_margin=True)
 
     return model
 

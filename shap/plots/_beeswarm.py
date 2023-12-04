@@ -170,7 +170,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         partition_tree = clustering
 
     if partition_tree is not None:
-        assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
+        if partition_tree.shape[1] != 4:
+            emsg = (
+                "The clustering provided by the Explanation object does not seem to "
+                "be a partition tree (which is all shap.plots.bar supports)!"
+            )
+            raise ValueError(emsg)
 
     # FIXME: introduce beeswarm interaction values as a separate function `beeswarm_interaction()` (?)
     #   In the meantime, users can use the `shap.summary_plot()` function.
@@ -369,7 +374,9 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             if vmin > vmax: # fixes rare numerical precision issues
                 vmin = vmax
 
-            assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
+            if features.shape[0] != len(shaps):
+                emsg = "Feature and SHAP matrices must have the same number of rows!"
+                raise DimensionError(emsg)
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)

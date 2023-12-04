@@ -188,7 +188,6 @@ def configure_pyspark_python(monkeypatch):
 
 
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
-    # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
     try:
@@ -216,8 +215,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
         explainer = shap.TreeExplainer(model)
         # Make sure the model can be serializable to run shap values with spark
         pickle.dumps(explainer)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[  # pylint: disable=E1101
-            :100]
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names)[:100]
 
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
@@ -243,7 +241,6 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
 
 
 def test_pyspark_regression_decision_tree(configure_pyspark_python):
-    # pylint: disable=bare-except
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
     try:
@@ -270,7 +267,7 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100] # pylint: disable=E1101
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100]
 
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
@@ -387,7 +384,7 @@ def test_catboost_categorical():
 
 
 def test_catboost_interactions():
-    # GH 3324
+    # GH #3324
     catboost = pytest.importorskip("catboost")
 
     X, y = shap.datasets.adult(n_points=50)
@@ -1411,7 +1408,7 @@ class TestExplainerXGBoost:
     #     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
 
     def test_xgboost_buffer_strip(self, random_seed):
-        # test to make sure bug #1864 doesn't get reintroduced
+        # test to make sure bug in GH #1864 doesn't get reintroduced
         xgboost = pytest.importorskip("xgboost")
         X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
         y = np.array([1, 0])
@@ -1640,11 +1637,11 @@ class TestExplainerLightGBM:
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
 
-        Related to GH issue dsgibbons#66.
+        Related to GH dsgibbons#66.
         """
         lightgbm = pytest.importorskip("lightgbm")
 
-        # NOTE: the categorical column is necessary for testing GH issue dsgibbons#66.
+        # NOTE: the categorical column is necessary for testing GH dsgibbons#66.
         X, y = shap.datasets.adult(n_points=300)
         X["categ"] = pd.Categorical(
             [p for p in ("M", "F") for _ in range(150)],

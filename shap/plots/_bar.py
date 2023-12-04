@@ -88,7 +88,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
 
     # unpack the Explanation object
-    features = cohort_exps[0].data
+    features = cohort_exps[0].display_data if cohort_exps[0].display_data is not None else cohort_exps[0].data
     feature_names = cohort_exps[0].feature_names
     if clustering is None:
         partition_tree = getattr(cohort_exps[0], "clustering", None)
@@ -343,35 +343,6 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if show:
         pl.show()
 
-
-
-# def compute_sort_counts(partition_tree, leaf_values, pos=None):
-#     if pos is None:
-#         pos = partition_tree.shape[0]-1
-
-#     M = partition_tree.shape[0] + 1
-
-#     if pos < 0:
-#         return 1,leaf_values[pos + M]
-
-#     left = int(partition_tree[pos, 0]) - M
-#     right = int(partition_tree[pos, 1]) - M
-
-#     left_val,left_sum = compute_sort_counts(partition_tree, leaf_values, left)
-#     right_val,right_sum = compute_sort_counts(partition_tree, leaf_values, right)
-
-#     if left_sum > right_sum:
-#         left_val = right_val + 1
-#     else:
-#         right_val = left_val + 1
-
-#     if left >= 0:
-#         partition_tree[left,3] = left_val
-#     if right >= 0:
-#         partition_tree[right,3] = right_val
-
-
-#     return max(left_val, right_val) + 1, max(left_sum, right_sum)
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
 
