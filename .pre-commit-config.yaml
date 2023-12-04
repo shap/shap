@@ -5,7 +5,7 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.4
+  rev: v0.1.6
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
@@ -25,7 +25,7 @@ repos:
   - id: end-of-file-fixer
 
 - repo: https://github.com/psf/black
-  rev: 23.10.1
+  rev: 23.11.0
   hooks:
   - id: black-jupyter
     name: black (notebooks)
