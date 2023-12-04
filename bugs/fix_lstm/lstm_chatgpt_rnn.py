@@ -1,7 +1,7 @@
 import numpy as np
-import tensorflow as tf
+from tensorflow.keras.layers import Dense, SimpleRNN
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Dense
+
 from shap.explainers._deep import DeepExplainer
 
 

@@ -1,10 +1,11 @@
 # univariate lstm example
 import numpy as np
-from keras.models import Sequential
-from keras.layers import LSTM
-from keras.layers import Dense
-from shap.explainers._deep import DeepExplainer
 import tensorflow as tf
+from keras.layers import LSTM, Dense
+from keras.models import Sequential
+
+from shap.explainers._deep import DeepExplainer
+
 
 # split a univariate sequence into samples
 def split_sequence(sequence, n_steps):
@@ -20,7 +21,7 @@ def split_sequence(sequence, n_steps):
         X.append(seq_x)
         y.append(seq_y)
         return np.array(X), np.array(y)
- 
+
 # define input sequence
 raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
 # choose a number of time steps

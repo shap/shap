@@ -1,9 +1,10 @@
-import tensorflow as tf
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import GRU, Dense
+from tensorflow.keras.models import Sequential
+
 from shap.explainers._deep import DeepExplainer
+
 
 # Generate some sample time series data
 def generate_time_series(num_data_points):

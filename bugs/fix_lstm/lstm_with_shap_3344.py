@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow.python.framework.ops import disable_eager_execution
+
 import shap
-from tqdm import tqdm
+
 shap.initjs()
 
 # does not work with this kind of data creation
@@ -39,7 +38,7 @@ def windowed_dataset(series=None, in_horizon=None, out_horizon=None, delay=None,
     total_horizon: an integer representing the size of the input window.
     out_horizon: an integer representing the size of the output window.
     delay: an integer representing the number of steps between each input window.
-    batch_size: an integer representing the batch size. 
+    batch_size: an integer representing the batch size.
     '''
     total_horizon = in_horizon + out_horizon
     dataset = tf.data.Dataset.from_tensor_slices(series)
@@ -69,22 +68,22 @@ df_test = df.iloc[valid_split:]
 n_features = df.shape[1]
 
 # split the data into sliding sequential windows
-train_dataset = windowed_dataset(series=df_train.values, 
-                                in_horizon=100, 
-                                out_horizon=3, 
-                                delay=1, 
+train_dataset = windowed_dataset(series=df_train.values,
+                                in_horizon=100,
+                                out_horizon=3,
+                                delay=1,
                                 batch_size=32)
 
-valid_dataset = windowed_dataset(series=df_valid.values, 
-                                in_horizon=100, 
-                                out_horizon=3, 
-                                delay=1, 
+valid_dataset = windowed_dataset(series=df_valid.values,
+                                in_horizon=100,
+                                out_horizon=3,
+                                delay=1,
                                 batch_size=32)
 
-test_dataset = windowed_dataset(series=df_test.values, 
-                            in_horizon=100, 
-                            out_horizon=3, 
-                            delay=1, 
+test_dataset = windowed_dataset(series=df_test.values,
+                            in_horizon=100,
+                            out_horizon=3,
+                            delay=1,
                             batch_size=32)
 
 input_layer = tf.keras.layers.Input(shape=(100, n_features))
@@ -119,11 +118,11 @@ ss = [k[0] for k in tt]
 input_tensor = tf.convert_to_tensor(ss[3], dtype=tf.float32)
 
 layer_outputs = capture_model(input_tensor)
-# 
+#
 # @tf.function
 # def get_ops(input_data):
 #     return model(input_data)
-# 
+#
 # breakpoint()
 # history = model.fit(train_dataset, epochs=1, validation_data=valid_dataset, verbose=1)
 # output = get_ops(input_tensor)
@@ -138,14 +137,14 @@ def tensor_to_arrays(input_obj=None):
     '''
     x = list(map(lambda x: x[0], input_obj))
     y = list(map(lambda x: x[1], input_obj))
-    
+
     x_ = [xtmp.numpy() for xtmp in x]
     y_ = [ytmp.numpy() for ytmp in y]
-    
+
     # Stack the arrays vertically
     x = np.vstack(x_)
     y = np.vstack(y_)
-    
+
     return x, y
 
 
@@ -159,5 +158,3 @@ explainer = shap.DeepExplainer(model, xarr[:100, :, :])
 #shap_values = explainer(xarr)
 shap_values = explainer.shap_values(xarr[:1000, :, :], check_additivity=True)
 import pdb; pdb.set_trace()
-
-

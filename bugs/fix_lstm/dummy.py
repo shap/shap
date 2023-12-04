@@ -1,5 +1,5 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 # Define your model architecture
 input_data = tf.keras.layers.Input(shape=(4,))

@@ -11,7 +11,7 @@ from keras.layers import TimeDistributed
 from shap.explainers._deep import DeepExplainer
 
 import pdb; pdb.set_trace()
- 
+
 # split a univariate sequence into samples
 def split_sequence(sequence, n_steps_in, n_steps_out):
     X, y = list(), list()
@@ -27,7 +27,7 @@ def split_sequence(sequence, n_steps_in, n_steps_out):
         X.append(seq_x)
         y.append(seq_y)
         return array(X), array(y)
- 
+
 # define input sequence
 raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
 # choose a number of time steps
