@@ -106,8 +106,8 @@ def _conditional_expectation(tree, S, x):
         return (R(lc) * lw + R(rc) * rw) / (lw + rw)
 
     out = 0.0
-    l = tree.values.shape[0] if tree.tree_limit is None else tree.tree_limit
-    for i in range(l):
+    j = tree.values.shape[0] if tree.tree_limit is None else tree.tree_limit
+    for i in range(j):
         tree_ind = i
         out += R(0)
     return out

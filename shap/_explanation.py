@@ -128,12 +128,12 @@ class Explanation(metaclass=MetaExplanation):
             #     output_names = Alias(list(output_names), 1)
 
         if output_names is not None and not isinstance(output_names, Alias):
-            l = len(_compute_shape(output_names))
-            if l == 0:
+            output_names_order = len(_compute_shape(output_names))
+            if output_names_order == 0:
                 pass
-            elif l == 1:
+            elif output_names_order == 1:
                 output_names = Obj(output_names, self.output_dims)
-            elif l == 2:
+            elif output_names_order == 2:
                 output_names = Obj(output_names, [0] + list(self.output_dims))
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")

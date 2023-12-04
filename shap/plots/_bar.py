@@ -231,7 +231,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
-    pl.yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [l.split('=')[-1] for l in yticklabels], fontsize=13)
+    pl.yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split('=')[-1] for t in yticklabels], fontsize=13)
 
     xlen = pl.xlim()[1] - pl.xlim()[0]
     fig = pl.gcf()
@@ -319,8 +319,8 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             horizontalalignment='left', verticalalignment='center', color="#999999",
             fontsize=12, rotation=-90
         )
-        l = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
-        l.set_clip_on(False)
+        line = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
+        line.set_clip_on(False)
 
         for (xline, yline) in zip(xlines, ylines):
 
@@ -332,13 +332,13 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
                 # only draw if we are not going past the bottom of the plot
                 if yline.max() < max_display:
-                    l = pl.plot(
+                    lines = pl.plot(
                         xv * 0.1 * (xmax - xmin) + xmax,
                         max_display - np.array(yline),
                         color="#999999"
                     )
-                    for v in l:
-                        v.set_clip_on(False)
+                    for line in lines:
+                        line.set_clip_on(False)
 
     if show:
         pl.show()

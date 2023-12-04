@@ -17,7 +17,7 @@ def clone_keras_layers(model, start_layer, stop_layer):
         layer_input = tf.keras.Input(shape=input_shape[1:]) # a new input tensor to be able to feed the desired layer
 
         new_layers = {start_layer.input.name: layer_input}
-        layers_to_process = [l for l in model.layers]
+        layers_to_process = list(model.layers)
         last_len = 0
         dup_try = 0
         while len(layers_to_process) > 0:

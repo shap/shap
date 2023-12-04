@@ -130,7 +130,6 @@ select = [
 ]
 ignore = [
   # Aim to progressively fix address these codes over time
-  "E741",  # Ambiguous variable name: `l`
   "E402",  # Module level import not at top of file
   "UP032",  # Use f-string instead of `format` call
   # Recommended rules to disable when using ruff formatter:
