@@ -20,7 +20,7 @@ class Fixed(Masker):
     def __call__(self, mask, x):
         return ([x],)
 
-    def mask_shapes(self, x): # pylint: disable=no-self-use,unused-argument
+    def mask_shapes(self, x):
         """ The shape of the masks we expect.
         """
         return [(0,)]

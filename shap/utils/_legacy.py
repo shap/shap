@@ -82,7 +82,8 @@ def convert_to_instance_with_index(val, column_name, index_value, index_name):
 
 
 def match_instance_to_data(instance, data):
-    assert isinstance(instance, Instance), "instance must be of type Instance!"
+    if not isinstance(instance, Instance):
+        raise TypeError("instance must be of type Instance!")
 
     if isinstance(data, DenseData):
         if instance.group_display_values is None:
@@ -127,7 +128,8 @@ def convert_to_model(val, keep_index=False):
 
 
 def match_model_to_data(model, data):
-    assert isinstance(model, Model), "model must be of type Model!"
+    if not isinstance(model, Model):
+        raise TypeError("model must be of type Model!")
 
     try:
         if isinstance(data, DenseDataWithIndex):
@@ -145,7 +147,6 @@ def match_model_to_data(model, data):
             model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
 
     return out_val
-
 
 
 class Data:
@@ -177,13 +178,15 @@ class DenseData(Data):
             num_samples = data.shape[1]
 
         valid = (not t and l == data.shape[1]) or (t and l == data.shape[0])
-        assert valid, "# of names must match data matrix!"
+        if not valid:
+            raise ValueError("# of names must match data matrix!")
 
         self.weights = args[1] if len(args) > 1 else np.ones(num_samples)
         self.weights /= np.sum(self.weights)
         wl = len(self.weights)
         valid = (not t and wl == data.shape[0]) or (t and wl == data.shape[1])
-        assert valid, "# weights must match data matrix!"
+        if not valid:
+            raise ValueError("# of weights must match data matrix!")
 
         self.transposed = t
         self.group_names = group_names
@@ -208,21 +211,23 @@ class DenseDataWithIndex(DenseData):
 def convert_to_data(val, keep_index=False):
     if isinstance(val, Data):
         return val
-    elif isinstance(val, np.ndarray):
+    if isinstance(val, np.ndarray):
         return DenseData(val, [str(i) for i in range(val.shape[1])])
-    elif isinstance(val, pd.Series):
+    if isinstance(val, pd.Series):
         return DenseData(val.values.reshape((1,len(val))), list(val.index))
-    elif isinstance(val, pd.DataFrame):
+    if isinstance(val, pd.DataFrame):
         if keep_index:
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
         else:
             return DenseData(val.values, list(val.columns))
-    elif scipy.sparse.issparse(val):
+    if scipy.sparse.issparse(val):
         if not scipy.sparse.isspmatrix_csr(val):
             val = val.tocsr()
         return SparseData(val)
-    else:
-        assert False, "Unknown type passed as data object: "+str(type(val))
+
+    emsg = f"Unknown type passed as data object: {type(val)}"
+    raise TypeError(emsg)
+
 
 class Link:
     def __init__(self):
@@ -242,10 +247,6 @@ class IdentityLink(Link):
         return x
 
 
-
-
-
-
 class LogitLink(Link):
     def __str__(self):
         return "logit"
@@ -262,9 +263,8 @@ class LogitLink(Link):
 def convert_to_link(val):
     if isinstance(val, Link):
         return val
-    elif val == "identity":
+    if val == "identity":
         return IdentityLink()
-    elif val == "logit":
+    if val == "logit":
         return LogitLink()
-    else:
-        assert False, "Passed link object must be a subclass of iml.Link"
+    raise TypeError("Passed link object must be a subclass of iml.Link")

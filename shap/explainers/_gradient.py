@@ -262,7 +262,8 @@ class _TFGradient(Explainer):
             elif output_rank_order == "custom":
                 model_output_ranks = ranked_outputs
             else:
-                assert False, "output_rank_order must be max, min, max_abs or custom!"
+                emsg = "output_rank_order must be max, min, max_abs or custom!"
+                raise ValueError(emsg)
 
             if output_rank_order in ["max", "min", "max_abs"]:
                 model_output_ranks = model_output_ranks[:,:ranked_outputs]
@@ -489,7 +490,8 @@ class _PyTorchGradient(Explainer):
             elif output_rank_order == "max_abs":
                 _, model_output_ranks = torch.sort(torch.abs(model_output_values), descending=True)
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *

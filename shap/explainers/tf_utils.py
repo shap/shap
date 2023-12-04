@@ -63,10 +63,12 @@ def _get_model_inputs(model):
         str(type(model)).endswith("keras.engine.training.Model'>") or \
         isinstance(model, tf.keras.Model):
         return model.inputs
-    elif str(type(model)).endswith("tuple'>"):
+    if str(type(model)).endswith("tuple'>"):
         return model[0]
-    else:
-        assert False, str(type(model)) + " is not currently a supported model type!"
+
+    emsg = f"{type(model)} is not currently a supported model type!"
+    raise ValueError(emsg)
+
 
 def _get_model_output(model):
     """ Common utility to determine the model output.
@@ -88,7 +90,8 @@ def _get_model_output(model):
             return model.outputs[0]
         else:
             return model.layers[-1].output
-    elif str(type(model)).endswith("tuple'>"):
+    if str(type(model)).endswith("tuple'>"):
         return model[1]
-    else:
-        assert False, str(type(model)) + " is not currently a supported model type!"
+
+    emsg = f"{type(model)} is not currently a supported model type!"
+    raise ValueError(emsg)
