@@ -114,6 +114,13 @@ filterwarnings = [
 ]
 
 [tool.ruff]
+# Careful: when running on pre-commit, ruff's "include" and "exclude" config
+# options are ignored! So, instead of "exclude", use the "per-file-ignores"
+# config to always disable linting for specific files.
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+extend-exclude = ["**/tree_shap_paper/**", "docs/user_studies/*"]
+
+[tool.ruff.lint]
 select = [
   "F",  # pyflakes
   "I",  # isort
@@ -123,18 +130,19 @@ select = [
 ]
 ignore = [
   # Aim to progressively fix address these codes over time
-  "E501",  # Line too long
   "E741",  # Ambiguous variable name: `l`
   "E402",  # Module level import not at top of file
   "UP032",  # Use f-string instead of `format` call
+  # Recommended rules to disable when using ruff formatter:
+  "E117",  # Over-indented
+  "E501",  # Line too long
 ]
 
-# Careful: when running on pre-commit, ruff's "include" and "exclude" config
-# options are ignored! So, instead of "exclude", use the "per-file-ignores"
-# config to always disable linting for specific files.
-include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+[tool.ruff.format]
+# For now, only Jupyter notebooks are autoformatted.
+exclude = ["**.py"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
