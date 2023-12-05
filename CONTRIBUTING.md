@@ -98,12 +98,16 @@ conda activate shap
 
 ### Installing from source
 
-To build from source, you need a compiler to build the C extension. For example
-on linux, you can install gcc with:
+To build from source, you need a compiler to build the C extension.
 
-```bash
-sudo apt install build-essential
-```
+- On linux, you can install gcc with:
+
+  ```bash
+  sudo apt install build-essential
+  ```
+
+- Or on Windows, one way of getting a compiler is to [install
+  mingw64](https://www.mingw-w64.org/downloads/).
 
 Pip-install the project with the `--editable` flag, which ensures that any
 changes you make to the source code are immediately reflected in your
@@ -329,9 +333,18 @@ within a few hours of the PyPSA package being published.
 ### Release notes from PR labels
 
 Release notes can be automatically drafted by Github using the titles and labels
-of PRs that were merged since the previous release. The draft notes are
-configured in [.github/release.yml](.github/release.yml). See the [GitHub
-docs][auto_release_notes] for more info.
+of PRs that were merged since the previous release. See the GitHub docs on
+[automatically generated release notes][auto_release_notes] for more
+information.
+
+The generated notes will follow the template defined in
+[.github/release.yml](.github/release.yml), arranging PRs into subheadings by
+label and excluding PRs made by bots. See the [docs][auto_release_notes] for the
+available configuration options.
+
+[auto_release_notes]:
+    https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
 
 It's helpful to assign labels such as `BREAKING`, `bug`, `enhancement` or
 `skip-changelog` to each PR, so that the change will show up in the notes under
@@ -339,6 +352,3 @@ the right section. It also helps to ensure each PR has a descriptive name.
 
 The notes can be edited (both before and after release) to remove information
 that is unlikely to be of high interest to users, such as maintenance updates.
-
-[auto_release_notes]:
-    https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
