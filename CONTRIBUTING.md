@@ -21,7 +21,7 @@
   - [Notebook linting and formatting](#notebook-linting-and-formatting)
 - [Maintainer guide](#maintainer-guide)
   - [Versioning](#versioning)
-  - [Releases](#releases)
+  - [Making releases](#making-releases)
   - [Release notes from PR labels](#release-notes-from-pr-labels)
 
 ## Introduction
@@ -267,9 +267,11 @@ Prefer relative links over absolute paths.
 
 ### Notebook linting and formatting
 
-We use `ruff` and `black-jupyter` to perform code linting and auto-formatting on our notebooks.
-Assuming you have set up `pre-commit` as described [above](#code-checks-with-precommit), these checks will
-run automatically whenever you commit any changes.
+We use `ruff` to perform code linting and auto-formatting on our notebooks.
+Assuming you have set up `pre-commit` as described
+[above](#code-checks-with-precommit), these checks will run automatically
+whenever you commit any changes.
+
 To run the code-quality checks manually, you can do, e.g.:
 
 ```bash
