@@ -292,7 +292,7 @@ bugfixes.
 
 Breaking changes are done with care, given that shap is a very popular package.
 When breaking changes are made, the PR should be tagged with the `BREAKING`
-label to ensure it is highlighted in the release notes. Deprecation cycless are
+label to ensure it is highlighted in the release notes. Deprecation cycles are
 used to mitigate the impact on downstream users.
 
 GitHub milestones can be used to track any actions that need to be completed for
