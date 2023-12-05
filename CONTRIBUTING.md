@@ -329,7 +329,7 @@ within a few hours of the PyPSA package being published.
 ### Release notes from PR labels
 
 Release notes can be automatically drafted by Github using the titles and labels
-of PRs that were merged since the previous release.The draft notes are
+of PRs that were merged since the previous release. The draft notes are
 configured in [.github/release.yml](.github/release.yml). See the [GitHub
 docs][auto_release_notes] for more info.
 
