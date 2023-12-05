@@ -65,23 +65,80 @@ def define_callbacks():
     return callbacks, model_file_name
 
 
+def _convert_numpy_or_python_types(x):
+    if isinstance(x, (tf.Tensor, np.ndarray, float, int)):
+        return tf.convert_to_tensor(x)
+    return x
+
 class OperationCaptureModel(tf.keras.Model):
-    def __init__(self, layers):
+    def __init__(self, layers, model):
         super().__init__()
+        self.model = model
         self._layers = layers
         self.ops = []
 
     # unfortunately this cannot be a simple function since tf.function must return tensors or None
     @tf.function
     def __call__(self, inputs):
-        for layer in self._layers:
-            inputs = layer(inputs)
-            if isinstance(inputs, list):
-                for input in inputs:
-                    if hasattr(input, "op"):
-                        self.ops.append(input.op)
-            else:
-                self.ops.append(inputs.op)
+        # for layer in self._layers:
+        #     inputs = layer(inputs)
+        #     if isinstance(inputs, list):
+        #         for input in inputs:
+        #             if hasattr(input, "op"):
+        #                 self.ops.append(input.op)
+        #     else:
+        #         self.ops.append(inputs.op)
+        inputs = tf.nest.map_structure(
+                    _convert_numpy_or_python_types, inputs
+                )
+        inputs = self.model._flatten_to_reference_inputs(inputs)
+        # if mask is None:
+        masks = [None] * len(inputs)
+        # else:
+        #     masks = self.model._flatten_to_reference_inputs(mask)
+        for input_t, mask in zip(inputs, masks):
+            input_t._keras_mask = mask
+
+        # Dictionary mapping reference tensors to computed tensors.
+        tensor_dict = {}
+        tensor_usage_count = self.model._tensor_usage_count
+        for x, y in zip(self.model.inputs, inputs):
+            y = self.model._conform_to_reference_input(y, ref_input=x)
+            x_id = str(id(x))
+            tensor_dict[x_id] = [y] * tensor_usage_count[x_id]
+
+        nodes_by_depth = self.model._nodes_by_depth
+        depth_keys = list(nodes_by_depth.keys())
+        depth_keys.sort(reverse=True)
+
+        for depth in depth_keys:
+            nodes = nodes_by_depth[depth]
+            for node in nodes:
+                if node.is_input:
+                    continue  # Input tensors already exist.
+
+                if any(t_id not in tensor_dict for t_id in node.flat_input_ids):
+                    continue  # Node is not computable, try skipping.
+
+                args, kwargs = node.map_arguments(tensor_dict)
+                outputs = node.layer(*args, **kwargs)
+                if hasattr(outputs, "op"):
+                    self.ops.append(outputs.op)
+
+                # Update tensor_dict.
+                for x_id, y in zip(
+                    node.flat_output_ids, tf.nest.flatten(outputs)
+                ):
+                    tensor_dict[x_id] = [y] * tensor_usage_count[x_id]
+
+        output_tensors = []
+        for x in self.model.outputs:
+            x_id = str(id(x))
+            assert x_id in tensor_dict, 'Could not compute output ' + str(x)
+            output_tensors.append(tensor_dict[x_id].pop())
+            if hasattr(outputs, "op"):
+                self.ops.append(outputs.op)
+
 
 # we basically need to adapt this function and capture the ops
 # This is a copy of keras.functional._run_internal_graph
@@ -156,7 +213,7 @@ def main():
     model = create_model(X)
     model.compile(loss='binary_crossentropy', optimizer="Adam", metrics=['accuracy', tf.keras.metrics.AUC()])
     # checke /home/tobias/programming/github/shap/.venv/lib/python3.11/site-packages/keras/src/utils/layer_utils.py(462)
-    import pdb; pdb.set_trace()
+#     import ipdb; ipdb.set_trace(context=20)
     model.summary()
 
     callbacks, model_file_name = define_callbacks()
@@ -165,11 +222,15 @@ def main():
     # model = tf.keras.models.load_model(model_file_name)  # load best model
 
     # capture operations
-    capture_model = OperationCaptureModel(model.layers)
-    import pdb; pdb.set_trace()
+    # capture_model = OperationCaptureModel(model.layers, model)
+
+    # import ipdb; ipdb.set_trace(context=20)
     # debug the model call, to see how the graph structure of the layers is executed
-    model(X)
-    capture_model(X)
+    # _keras_inputs_ids_and_indices
+    # _single_positional_tensor_passed
+    # model(X)
+    # capture_model(X)
+    # import ipdb; ipdb.set_trace(context=20)
 
     n_example = 100
     n_explainer = 100

@@ -13,6 +13,7 @@ tf_ops = None
 tf_backprop = None
 tf_execute = None
 tf_gradients_impl = None
+keras = None
 
 def custom_record_gradient(op_name, inputs, attrs, results):
     """ This overrides tensorflow.python.eager.backprop._record_gradient.
@@ -80,7 +81,7 @@ class TFDeep(Explainer):
 
         """
         # try to import tensorflow
-        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
+        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl, keras
         # breakpoint()
         if tf is None:
             from tensorflow.python.eager import backprop as tf_backprop
@@ -96,6 +97,7 @@ class TFDeep(Explainer):
             import tensorflow as tf
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
+            import keras
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
@@ -225,36 +227,88 @@ class TFDeep(Explainer):
             self.used_types[op.type] = True
 
     def _init_between_tensors_eager(self, model, model_inputs, data):
+
+        def _convert_numpy_or_python_types(x):
+            if isinstance(x, (tf.Tensor, np.ndarray, float, int)):
+                return tf.convert_to_tensor(x)
+            return x
         class OperationCaptureModel(tf.keras.Model):
-            def __init__(self, layers):
+            def __init__(self, layers, model=None):
                 super().__init__()
                 self._layers = layers
                 self.ops = []
+                self.model = model
+                if model is not None:
+                    print(f"This is the model type {type(self.model)}")
 
             @tf.function
             def __call__(self, inputs):
-                layer_outputs = []
-                for layer in self._layers:
-                    inputs = layer(inputs)
-                    self.ops.append(inputs.op)
-                    layer_outputs.append(inputs)
-                return layer_outputs
+                inputs = tf.nest.map_structure(
+                            _convert_numpy_or_python_types, inputs
+                        )
+                if isinstance(self.model, tf.keras.models.Sequential):
+                    layer_outputs = []
+                    for layer in self._layers:
+                        inputs = layer(inputs)
+                        self.ops.append(inputs.op)
+                        layer_outputs.append(inputs)
+                    return layer_outputs
+                elif isinstance(self.model, keras.src.models.Functional):
+                    inputs = self.model._flatten_to_reference_inputs(inputs)
+                    # if mask is None:
+                    masks = [None] * len(inputs)
+                    # else:
+                    #     masks = self.model._flatten_to_reference_inputs(mask)
+                    for input_t, mask in zip(inputs, masks):
+                        input_t._keras_mask = mask
 
-        capture_model = OperationCaptureModel(model.layers)
+                    # Dictionary mapping reference tensors to computed tensors.
+                    tensor_dict = {}
+                    tensor_usage_count = self.model._tensor_usage_count
+                    for x, y in zip(self.model.inputs, inputs):
+                        y = self.model._conform_to_reference_input(y, ref_input=x)
+                        x_id = str(id(x))
+                        tensor_dict[x_id] = [y] * tensor_usage_count[x_id]
 
-        # tt = list(self.model_inputs.as_numpy_iterator())
-        # ss = [k[0] for k in tt]
-        # input_tensor = tf.convert_to_tensor(ss[3], dtype=tf.float32)
+                    nodes_by_depth = self.model._nodes_by_depth
+                    depth_keys = list(nodes_by_depth.keys())
+                    depth_keys.sort(reverse=True)
 
-        # capture_model(input_tensor)
-        # breakpoint()
-        # import keras.backend as K
-        # model_inputs_cleaned = K.eval(K.ones([k or 1 for k in list(model_inputs[0].shape)]))
+                    for depth in depth_keys:
+                        nodes = nodes_by_depth[depth]
+                        for node in nodes:
+                            if node.is_input:
+                                continue  # Input tensors already exist.
 
-        model_input = tf.convert_to_tensor(data, dtype=tf.float32)
-        # t = np.array(tf.convert_to_tensor(model_inputs[0]))
-        # model_input = tf.convert_to_tensor(t, dtype=tf.float32)
-        # model_input = tf.convert_to_tensor(model_inputs_cleaned, dtype=tf.float32)
+                            if any(t_id not in tensor_dict for t_id in node.flat_input_ids):
+                                continue  # Node is not computable, try skipping.
+
+                            args, kwargs = node.map_arguments(tensor_dict)
+                            outputs = node.layer(*args, **kwargs)
+                            if hasattr(outputs, "op"):
+                                self.ops.append(outputs.op)
+
+                            # Update tensor_dict.
+                            for x_id, y in zip(
+                                node.flat_output_ids, tf.nest.flatten(outputs)
+                            ):
+                                tensor_dict[x_id] = [y] * tensor_usage_count[x_id]
+
+                    output_tensors = []
+                    for x in self.model.outputs:
+                        x_id = str(id(x))
+                        assert x_id in tensor_dict, 'Could not compute output ' + str(x)
+                        output_tensors.append(tensor_dict[x_id].pop())
+                        if hasattr(outputs, "op"):
+                            self.ops.append(outputs.op)
+                else:
+                    raise TypeError(f'Not a valid model type: {type(self.model)}')
+
+        import ipdb; ipdb.set_trace(context=20)
+        capture_model = OperationCaptureModel(model.layers, model=model)
+
+        # model_input = tf.convert_to_tensor(data, dtype=tf.float32)
+        model_input = data
         capture_model(model_input)
 
         self.between_ops = capture_model.ops
@@ -368,6 +422,7 @@ class TFDeep(Explainer):
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
+                import ipdb; ipdb.set_trace(context=20)
                 for l in range(len(X)):
                     phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
 
@@ -469,7 +524,7 @@ class TFDeep(Explainer):
         if not tf.executing_eagerly():
             return out
         else:
-            return [v.numpy() for v in out]
+            return [v.numpy() for v in out if v is not None]
 
 def tensors_blocked_by_false(ops):
     """ Follows a set of ops assuming their value is False and find blocked Switch paths.
@@ -752,6 +807,7 @@ op_handlers["Pack"] = passthrough
 op_handlers["BiasAdd"] = passthrough
 op_handlers["Unpack"] = passthrough
 op_handlers["Add"] = passthrough
+op_handlers["AddV2"] = passthrough
 op_handlers["Sub"] = passthrough
 op_handlers["Merge"] = passthrough
 op_handlers["Sum"] = passthrough
