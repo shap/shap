@@ -331,7 +331,7 @@ class LinearImpute:
             Array to impute missing values for, should be masked
             using missing_value.
         """
-        self.data = pd.Series(data)
+        self.data = pd.DataFrame(data)
         self.data = self.data.replace(self.missing_value, np.NaN)
         interpolated = self.data.interpolate(
             method="linear",
