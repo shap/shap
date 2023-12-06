@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "oldest-supported-numpy", "packaging>20.9"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -96,13 +96,11 @@ packages = [
   'shap.actions',
   'shap.models'
 ]
-zip-safe = false
 
-[tool.setuptools.dynamic]
-version = {attr = "shap.__version__"}
-
-[tool.setuptools.package-data]
-shap = ["plots/resources/*", "cext/*"]
+[tool.setuptools_scm]
+version_file = "shap/_version.py"
+# Use "no-local-version" so dev releases are compatibile with PyPI
+local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
 addopts = "--mpl"
