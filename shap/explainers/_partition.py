@@ -10,9 +10,6 @@ from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
 from ._explainer import Explainer
 
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
-
 
 class PartitionExplainer(Explainer):
 

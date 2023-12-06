@@ -8,6 +8,8 @@ import numpy as np
 from packaging.version import Version, parse
 from setuptools import Extension, setup
 
+_BUILD_ATTEMPTS = 0
+
 # This is copied from @robbuckley's fix for Panda's
 # For mac, ensure extensions are built for macos 10.9 when compiling on a
 # 10.9 system or above, overriding distuitls behavior which is to target
@@ -94,11 +96,7 @@ def compile_cuda_module(host_args):
     return 'build', '_cext_gpu'
 
 
-def run_setup(
-    *,
-    with_binary,
-    with_cuda,
-):
+def run_setup(*, with_binary, with_cuda):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -136,27 +134,31 @@ def run_setup(
     setup(ext_modules=ext_modules)
 
 
-def try_run_setup(**kwargs):
+def try_run_setup(*, with_binary, with_cuda):
     """ Fails gracefully when various install steps don't work.
     """
+    global _BUILD_ATTEMPTS
+    _BUILD_ATTEMPTS += 1
 
     try:
-        run_setup(**kwargs)
+        print(f"Attempting to build SHAP: {with_binary=}, {with_cuda=} (Attempt {_BUILD_ATTEMPTS})")
+        run_setup(with_binary=with_binary, with_cuda=with_cuda)
     except Exception as e:
         print("Exception occurred during setup,", str(e))
-        exc_msg = str(e).lower()
 
-        if "cuda module" in exc_msg:
-            kwargs["with_cuda"] = False
+        if with_cuda:
+            with_cuda = False
             print("WARNING: Could not compile cuda extensions.")
-        elif kwargs["with_binary"]:
-            kwargs["with_binary"] = False
+            print("Retrying SHAP build without cuda extension...")
+        elif with_binary:
+            with_binary = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
+            print("Retrying SHAP build without binary extension...")
         else:
             print("ERROR: Failed to build!")
-            return
+            raise
 
-        try_run_setup(**kwargs)
+        try_run_setup(with_binary=with_binary, with_cuda=with_cuda)
 
 
 # we seem to need this import guard for appveyor

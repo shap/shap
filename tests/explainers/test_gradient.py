@@ -6,7 +6,6 @@ import pytest
 
 import shap
 
-# pylint: disable=import-error, import-outside-toplevel, no-name-in-module, import-error
 
 def test_tf_keras_mnist_cnn(random_seed):
     """ This is the basic mnist cnn example from keras.
@@ -205,7 +204,7 @@ def test_pytorch_mnist_cnn():
                 if num_examples > cutoff:
                     break
 
-        device = torch.device('cpu') # pylint: disable=no-member
+        device = torch.device("cpu")
         train(model, device, train_loader, optimizer, 1)
 
         next_x, _ = next(iter(train_loader))

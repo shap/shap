@@ -18,9 +18,6 @@ from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
 
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
-
 
 def image(shap_values: Explanation or np.ndarray,
           pixel_values: Optional[np.ndarray] = None,
