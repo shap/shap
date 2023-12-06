@@ -308,7 +308,7 @@ class Partition(Tabular):
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
 
-class LinearImpute():
+class LinearImpute:
     """ Simple class for imputing missing values using pandas.Series.interpolate.
     """
 
@@ -324,7 +324,7 @@ class LinearImpute():
 
     def fit(self, data):
         """ Linearly impute missing values in the data and return as array.
-        
+
         Parameters
         ----------
         data : numpy.ndarray
