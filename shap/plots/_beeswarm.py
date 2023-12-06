@@ -422,7 +422,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     if show:
         pl.show()
     else:
-        return pl.gcf()
+        return pl.gca()
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
