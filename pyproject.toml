@@ -96,15 +96,11 @@ packages = [
   'shap.actions',
   'shap.models'
 ]
-zip-safe = false
 
 [tool.setuptools_scm]
 version_file = "shap/_version.py"
 # Use "no-local-version" so dev releases are compatibile with PyPI
 local_scheme = "no-local-version"
-
-[tool.setuptools.package-data]
-shap = ["plots/resources/*", "cext/*"]
 
 [tool.pytest.ini_options]
 addopts = "--mpl"
