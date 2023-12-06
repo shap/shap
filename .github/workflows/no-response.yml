@@ -1,0 +1,21 @@
+name: No Response bot
+# Close issues where the original author doesn't resond to a request for information
+# For more info see https://github.com/lee-dohm/no-response
+
+on:
+  issue_comment:
+    types: [created]
+  schedule:
+    # Schedule for five minutes after the hour, every hour
+    - cron: '5 * * * *'
+
+jobs:
+  noResponse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lee-dohm/no-response@v0.5.0
+        with:
+          token: ${{ github.token }}
+          responseRequiredLabel: "awaiting feedback"
+          # TODO: use default time (14 days) after an initial implementation period 
+          daysUntilClose: 30  
