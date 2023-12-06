@@ -95,7 +95,7 @@ jobs:
         with:
           name: sdist_files
           path: dist/*.tar.gz
-  
+
   publish_test_pypi:
     name: Publish wheels to TestPyPI
     needs: [build_wheels, build_sdist]
@@ -116,7 +116,7 @@ jobs:
         with:
           password: ${{ secrets.TEST_PYPI_TOKEN  }}
           repository-url: https://test.pypi.org/legacy/
-  
+
   publish_pypi:
     name: Publish wheels to PyPI
     needs: [build_wheels, build_sdist]
