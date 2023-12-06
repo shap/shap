@@ -17,5 +17,5 @@ jobs:
         with:
           token: ${{ github.token }}
           responseRequiredLabel: "awaiting feedback"
-          # TODO: use default time (14 days) after an initial implementation period 
-          daysUntilClose: 30  
+          # TODO: use default time (14 days) after an initial implementation period
+          daysUntilClose: 30
