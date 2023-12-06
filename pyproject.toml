@@ -129,7 +129,6 @@ select = [
   "W",  # warning
 ]
 ignore = [
-  "UP032",  # Use f-string instead of `format` call
   # Recommended rules to disable when using ruff formatter:
   "E117",  # Over-indented
   "E501",  # Line too long
