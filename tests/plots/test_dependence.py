@@ -2,9 +2,9 @@ import matplotlib
 import numpy as np
 import pytest
 
-matplotlib.use('Agg')
-import shap  # noqa: E402
+import shap
 
+matplotlib.use('Agg')
 
 def test_random_dependence():
     """ Make sure a dependence plot does not crash.

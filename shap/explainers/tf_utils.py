@@ -1,5 +1,6 @@
-tf = None
 import warnings
+
+tf = None
 
 
 def _import_tf():
