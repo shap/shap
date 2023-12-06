@@ -36,7 +36,7 @@ def waterfall(shap_values, max_display=10, show=True):
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot to be customized further after it
-        has been created.
+        has been created, returning the current axis via plt.gca().
 
     Examples
     --------
@@ -316,7 +316,7 @@ def waterfall(shap_values, max_display=10, show=True):
     if show:
         plt.show()
     else:
-        return plt.gcf()
+        return plt.gca()
 
 
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
