@@ -308,6 +308,39 @@ class Partition(Tabular):
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
 
+class LinearImpute():
+    """ Simple class for imputing missing values using pandas.Series.interpolate.
+    """
+
+    def __init__(self, missing_value=0):
+        """ Build a linear imputer for Impute classes when method=linear
+
+        Parameters
+        ----------
+        missing_value : int, numpy.NaN
+            The missing value to impute.
+        """
+        self.missing_value = missing_value
+
+    def fit(self, data):
+        """ Linearly impute missing values in the data and return as array.
+        
+        Parameters
+        ----------
+        data : numpy.ndarray
+            Array to impute missing values for, should be masked
+            using missing_value.
+        """
+        self.data = pd.Series(data)
+        self.data = self.data.replace(self.missing_value, np.NaN)
+        interpolated = self.data.interpolate(
+            method="linear",
+            limit_direction="both"
+        )
+
+        return interpolated.values()
+
+
 class Impute(Tabular):
     """ This imputes the values of missing features using the values of the observed features.
 
@@ -340,12 +373,14 @@ class Impute(Tabular):
                 mode - SimpleImputer with elements replaced by most frequent of feature in data.
                 knn - KNNImputer with elements replaced by mean value within 5 NNs of feature in data.
         """
-        methods = ["mean", "median", "mode", "knn"]
+        methods = ["linear", "mean", "median", "mode", "knn"]
         if isinstance(method, str):
             if method not in methods:
                 raise NotImplementedError("Given imputation method is not supported.")
             elif method == "knn":
                 impute = KNNImputer(missing_values=0)
+            elif method == "linear":
+                impute = LinearImpute(missing_value=0)
             else:
                 impute = SimpleImputer(missing_values=0, strategy=method)
         else:
