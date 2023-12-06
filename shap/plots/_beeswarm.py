@@ -44,8 +44,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
+        Setting this to ``False`` allows the plot to be customized further
+        after it has been created, returning the current axis via plt.gca().
 
     color_bar : bool
         Whether to draw the color bar (legend).
@@ -428,6 +428,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+    else:
+        return pl.gca()
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
