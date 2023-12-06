@@ -95,12 +95,11 @@ jobs:
         with:
           name: sdist_files
           path: dist/*.tar.gz
-
-  publish_wheels:
-    name: Publish wheels on pypi
+  
+  publish_test_pypi:
+    name: Publish wheels to TestPyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags')
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -112,20 +111,28 @@ jobs:
           name: sdist_files
           path: dist
 
+      - name: Publish package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_TOKEN  }}
+          repository-url: https://test.pypi.org/legacy/
+  
+  publish_pypi:
+    name: Publish wheels to PyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    # Only publish tagged releases to PyPI
+    if: startsWith(github.ref, 'refs/tags')
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: bdist_files
+          path: dist
 
-      # The step below can be uncommented for testing / debugging purposes.
-
-      # We do not publish to TestPyPI here, as the job will fail if the version
-      # number already exists on TestPyPI.
-
-      # Note: if the non-release builds may fail to upload to TestPyPI if the version
-      # number is "non-local": https://github.com/pypa/setuptools_scm/issues/342
-
-      # - name: Publish package to TestPyPI
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     password: ${{ secrets.TEST_PYPI_TOKEN  }}
-      #     repository-url: https://test.pypi.org/legacy/
+      - uses: actions/download-artifact@v3
+        with:
+          name: sdist_files
+          path: dist
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
