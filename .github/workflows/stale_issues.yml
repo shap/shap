@@ -53,3 +53,6 @@ jobs:
           # If an issue or PR is marked with the "todo" label, never mark it as stale.
           exempt-issue-labels: todo
           exempt-pr-labels: todo
+          # Each run is limited to operations_per_turn=30.
+          # So, process the oldest issues first:
+          ascending: true
