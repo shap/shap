@@ -1,4 +1,7 @@
 name: 'Close stale issues and PRs'
+# See CONTIBUTING.md : "Issue Triage"
+# See also: https://github.com/shap/shap/discussions/3051
+
 on:
   schedule:
     # Run at 2:30 AM every day
