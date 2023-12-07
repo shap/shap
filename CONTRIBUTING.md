@@ -216,7 +216,7 @@ previewing how your changes will render. To see the preview:
 The PR previews are typically hosted on a URL of the form below, replacing
 `<pr-number>`:
 
-```
+```text
 https://shap--<pr-number>.org.readthedocs.build/en/<pr-number>
 ```
 
@@ -291,7 +291,7 @@ We use `setuptools-scm` to source the version number from the git history
 automatically. At build time, the version number is determined from the git tag.
 
 shap uses a PEP 440-compliant versioning scheme of `MAJOR.MINOR.PATCH`. Like
-[numpy](numpy_versioning), shap does *not* use semantic versioning, and has
+[numpy][numpy_versioning], shap does *not* use semantic versioning, and has
 never made a `major` release. Most releases increment `minor`, typically made
 every month or two. `patch` releases are sometimes made for any important
 bugfixes.
@@ -306,7 +306,6 @@ a given release, such as those relating to deprecation cycles.
 
 [numpy_versioning]: https://numpy.org/doc/stable/dev/depending_on_numpy.html
 
-
 ### Making releases
 
 In the run-up to a release, create a GitHub issue for the release such as [[Meta
@@ -320,15 +319,15 @@ dry-run of cibuildwheel.
 
 Suggested release checklist:
 
-```
+```markdown
 - [ ] Dry-run cibuildwheel & test
 - [ ] Make GitHub release & tag
 - [ ] Confirm PyPI wheels published
 - [ ] Conda forge published
 ```
 
-The conda package is managed in a separate repo:
-https://github.com/conda-forge/shap-feedstock . The conda-forge bot will
+The conda package is managed in a [separate
+repo](https://github.com/conda-forge/shap-feedstock). The conda-forge bot will
 automatically make a PR to this repo to update the conda package, typically
 within a few hours of the PyPSA package being published.
 
@@ -346,7 +345,6 @@ available configuration options.
 
 [auto_release_notes]:
     https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
-
 
 It's helpful to assign labels such as `BREAKING`, `bug`, `enhancement` or
 `skip-changelog` to each PR, so that the change will show up in the notes under
