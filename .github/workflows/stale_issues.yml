@@ -19,8 +19,6 @@ jobs:
     steps:
       - uses: actions/stale@v8
         with:
-          # Set for dry-run only. TODO: remove debug-only
-          debug-only: true
           # See discussion on generous time limits:
           # https://github.com/shap/shap/discussions/3051
           days-before-stale: 730  # 2 years
