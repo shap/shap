@@ -288,6 +288,12 @@ replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have 
 Bug reports and feature requests are managed on the github issue tracker. We use
 automation to help prioritise and organise the issues.
 
+The `good first issue` label should be assigned to any issue that could be suitable for new contributors.
+
+The `awaiting feedback` label should be assigned if more information is required from
+the author, such as a reproducible example.
+
+
 The [stale bot](https://github.com/actions/stale) will mark issues and PRs that
 have not had any activity for a long period of time with the `stale` label, and
 comment to solicit feedback from our community. If there is still no activity,
@@ -300,12 +306,18 @@ Issues marked with the `todo` label will never be marked as stale, so this label
 should be assigned to any issues that should be kept open such as long-running
 feature requests.
 
-Issues are marked with `awaiting feedback` if more information is required from
-the author, such as a reproducible example.
+### PR triage
 
 Pull Requests should generally be assigned a category label such as `bug`,
 `enhancement` or `BREAKING`. These labels are used to categorise the PR in the
 release notes, as described [below](#release-notes-from-pr-labels).
+
+All PRs should have at least one review before being merged. In particular,
+maintainers should generally ensure that PRs have sufficient unit tests to cover
+any fixed bugs or new features.
+
+PRs are usually completed with "squash and merge" in order to maintain a clear
+linear history and make it easier to debug any issues.
 
 ### Versioning
 
