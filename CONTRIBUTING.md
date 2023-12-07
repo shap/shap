@@ -289,10 +289,11 @@ replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have 
 Bug reports and feature requests are managed on the github issue tracker. We use
 automation to help prioritise and organise the issues.
 
-The `good first issue` label should be assigned to any issue that could be suitable for new contributors.
+The `good first issue` label should be assigned to any issue that could be
+suitable for new contributors.
 
-The `awaiting feedback` label should be assigned if more information is required from
-the author, such as a reproducible example.
+The `awaiting feedback` label should be assigned if more information is required
+from the author, such as a reproducible example.
 
 The [stale bot](https://github.com/actions/stale) will mark issues and PRs that
 have not had any activity for a long period of time with the `stale` label, and
