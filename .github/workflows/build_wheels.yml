@@ -44,14 +44,17 @@ jobs:
         include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
     runs-on: ${{ matrix.os }}
     steps:
+      # Ensure all git tags are present so version number is extracted.
+      # https://github.com/actions/checkout/issues/1471
+      # Careful: the "fetch-tags" option to the checkout action is broken
+      # when the workflow is triggered by a tag!
+      # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          # Ensure all git tags are present so version number is extracted
-          # See https://github.com/actions/checkout/issues/1471
-          fetch-depth: 100
-          fetch-tags: true
-
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
@@ -73,13 +76,17 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-20.04
     steps:
+      # Ensure all git tags are present so version number is extracted.
+      # https://github.com/actions/checkout/issues/1471
+      # Careful: the "fetch-tags" option to the checkout action is broken
+      # when the workflow is triggered by a tag!
+      # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          # Ensure all git tags are present so version number is extracted
-          # See https://github.com/actions/checkout/issues/1471
-          fetch-depth: 100
-          fetch-tags: true
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
