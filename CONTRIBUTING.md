@@ -21,6 +21,7 @@
   - [Notebook linting and formatting](#notebook-linting-and-formatting)
 - [Maintainer guide](#maintainer-guide)
   - [Issue triage](#issue-triage)
+  - [PR triage](#pr-triage)
   - [Versioning](#versioning)
   - [Making releases](#making-releases)
   - [Release notes from PR labels](#release-notes-from-pr-labels)
@@ -292,7 +293,6 @@ The `good first issue` label should be assigned to any issue that could be suita
 
 The `awaiting feedback` label should be assigned if more information is required from
 the author, such as a reproducible example.
-
 
 The [stale bot](https://github.com/actions/stale) will mark issues and PRs that
 have not had any activity for a long period of time with the `stale` label, and
