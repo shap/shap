@@ -20,6 +20,8 @@
   - [Links / Cross-references](#links--cross-references)
   - [Notebook linting and formatting](#notebook-linting-and-formatting)
 - [Maintainer guide](#maintainer-guide)
+  - [Issue triage](#issue-triage)
+  - [PR triage](#pr-triage)
   - [Versioning](#versioning)
   - [Making releases](#making-releases)
   - [Release notes from PR labels](#release-notes-from-pr-labels)
@@ -216,7 +218,7 @@ previewing how your changes will render. To see the preview:
 The PR previews are typically hosted on a URL of the form below, replacing
 `<pr-number>`:
 
-```
+```text
 https://shap--<pr-number>.org.readthedocs.build/en/<pr-number>
 ```
 
@@ -282,19 +284,51 @@ replacing `notebook1.ipynb` and `notebook2.ipynb` with any notebook(s) you have 
 
 ## Maintainer guide
 
-We try to use automation to make the release process reliable, transparent and
-reproducible. This also helps us make releases more frequently.
+### Issue triage
+
+Bug reports and feature requests are managed on the github issue tracker. We use
+automation to help prioritise and organise the issues.
+
+The `good first issue` label should be assigned to any issue that could be
+suitable for new contributors.
+
+The `awaiting feedback` label should be assigned if more information is required
+from the author, such as a reproducible example.
+
+The [stale bot](https://github.com/actions/stale) will mark issues and PRs that
+have not had any activity for a long period of time with the `stale` label, and
+comment to solicit feedback from our community. If there is still no activity,
+the issue will be closed after a further period of time.
+
+We value feedback from our users very highly, so the bot is configured with long
+time periods before marking issues as stale.
+
+Issues marked with the `todo` label will never be marked as stale, so this label
+should be assigned to any issues that should be kept open such as long-running
+feature requests.
+
+### PR triage
+
+Pull Requests should generally be assigned a category label such as `bug`,
+`enhancement` or `BREAKING`. These labels are used to categorise the PR in the
+release notes, as described [below](#release-notes-from-pr-labels).
+
+All PRs should have at least one review before being merged. In particular,
+maintainers should generally ensure that PRs have sufficient unit tests to cover
+any fixed bugs or new features.
+
+PRs are usually completed with "squash and merge" in order to maintain a clear
+linear history and make it easier to debug any issues.
 
 ### Versioning
 
-We use `setuptools-scm` to source the version number from the git history
-automatically. At build time, the version number is determined from the git tag.
-
 shap uses a PEP 440-compliant versioning scheme of `MAJOR.MINOR.PATCH`. Like
-[numpy](numpy_versioning), shap does *not* use semantic versioning, and has
+[numpy][numpy_versioning], shap does *not* use semantic versioning, and has
 never made a `major` release. Most releases increment `minor`, typically made
 every month or two. `patch` releases are sometimes made for any important
 bugfixes.
+
+[numpy_versioning]: https://numpy.org/doc/stable/dev/depending_on_numpy.html
 
 Breaking changes are done with care, given that shap is a very popular package.
 When breaking changes are made, the PR should be tagged with the `BREAKING`
@@ -304,31 +338,37 @@ used to mitigate the impact on downstream users.
 GitHub milestones can be used to track any actions that need to be completed for
 a given release, such as those relating to deprecation cycles.
 
-[numpy_versioning]: https://numpy.org/doc/stable/dev/depending_on_numpy.html
-
+We use `setuptools-scm` to source the version number from the git history
+automatically. At build time, the version number is determined from the git tag.
 
 ### Making releases
+
+We try to use automation to make the release process reliable, transparent and
+reproducible. This also helps us make releases more frequently.
+
+A release is made by publishing a [GitHub
+Release](https://github.com/shap/shap/releases), tagged with an appropriately
+incremented version number.
+
+When a release is published, the wheels will be built and published to PyPI
+automatically by the `build_wheels` GitHub action. This workflow can also be
+triggered manually at any time to do a dry-run of cibuildwheel.
 
 In the run-up to a release, create a GitHub issue for the release such as [[Meta
 issue] Release 0.43.0](https://github.com/shap/shap/issues/3289). This can be
 used to co-ordinate with other maintainers and agree to make a release.
 
-When a new GitHub [release](https://github.com/shap/shap/releases) is made, the
-wheels will be built and published to GitHub automatically by the `build_wheels`
-GitHub action. This workflow can also be triggered manually at any time to do a
-dry-run of cibuildwheel.
-
 Suggested release checklist:
 
-```
+```markdown
 - [ ] Dry-run cibuildwheel & test
 - [ ] Make GitHub release & tag
 - [ ] Confirm PyPI wheels published
 - [ ] Conda forge published
 ```
 
-The conda package is managed in a separate repo:
-https://github.com/conda-forge/shap-feedstock . The conda-forge bot will
+The conda package is managed in a [separate
+repo](https://github.com/conda-forge/shap-feedstock). The conda-forge bot will
 automatically make a PR to this repo to update the conda package, typically
 within a few hours of the PyPSA package being published.
 
@@ -346,7 +386,6 @@ available configuration options.
 
 [auto_release_notes]:
     https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
-
 
 It's helpful to assign labels such as `BREAKING`, `bug`, `enhancement` or
 `skip-changelog` to each PR, so that the change will show up in the notes under
