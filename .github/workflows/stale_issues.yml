@@ -19,8 +19,6 @@ jobs:
     steps:
       - uses: actions/stale@v8
         with:
-          # Set for dry-run only. TODO: remove debug-only
-          debug-only: true
           # See discussion on generous time limits:
           # https://github.com/shap/shap/discussions/3051
           days-before-stale: 730  # 2 years
@@ -28,8 +26,8 @@ jobs:
           stale-issue-message: "This issue has been inactive for two years, so it's
             been automatically marked as 'stale'.
             \n\n
-            We value your input! If you think this issue is still relevant, please
-            leave a comment to keep it open and remove the 'stale' label.
+            We value your input! If this issue is still relevant, please leave a
+            comment below. This will remove the 'stale' label and keep it open.
             \n\n
             If there's no activity in the next 90 days the issue will be closed."
           stale-pr-message: "We appreciate your contribution! This Pull Request has
