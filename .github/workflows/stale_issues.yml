@@ -28,14 +28,14 @@ jobs:
             We value your input! If you think this issue is still relevant, please
             leave a comment to keep it open and remove the 'stale' label.
             \n\n
-            If there's no activity in the next 30 days the issue will be closed."
+            If there's no activity in the next 90 days the issue will be closed."
           stale-pr-message: "We appreciate your contribution! This Pull Request has
             been inactive for two years, so it's been automatically marked as 'stale'.
             \n\n
             Please leave a comment if you would still like the PR to remain open, and
             the 'stale' label will be removed.
             \n\n
-            Otherwise, if there is no activity in the next 30 days the PR will be
+            Otherwise, if there is no activity in the next 90 days the PR will be
             closed."
           close-issue-message: "This issue has been automatically closed due to lack of
             recent activity.
