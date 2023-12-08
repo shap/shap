@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write  # Workaround for https://github.com/actions/stale/issues/1090
   issues: write
   pull-requests: write
 
