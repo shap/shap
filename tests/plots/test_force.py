@@ -1,10 +1,54 @@
+from contextlib import nullcontext as does_not_raise
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from pytest import param
 
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
+import shap  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "cmap, exp_ctx",
+    [
+        # Valid cmaps
+        param("coolwarm", does_not_raise(), id="valid-str"),
+        param(["#000000", "#ffffff"], does_not_raise(), id="valid-list[str]"),
+        # Invalid cmaps
+        param(
+            777,
+            pytest.raises(TypeError, match="Plot color map must be string or list!"),
+            id="invalid-dtype1",
+        ),
+        param(
+            [],
+            pytest.raises(ValueError, match="Color map must be at least two colors"),
+            id="invalid-insufficient-colors1",
+        ),
+        param(
+            ["#8834BB"],
+            pytest.raises(ValueError, match="Color map must be at least two colors"),
+            id="invalid-insufficient-colors2",
+        ),
+        param(
+            ["#883488", "#Gg8888"],
+            pytest.raises(ValueError, match=r"Invalid color .+ found in cmap"),
+            id="invalid-hexcolor-in-list1",
+        ),
+        param(
+            ["#883488", "#1111119"],
+            pytest.raises(ValueError, match=r"Invalid color .+ found in cmap"),
+            id="invalid-hexcolor-in-list2",
+        ),
+    ],
+)
+def test_verify_valid_cmap(cmap, exp_ctx):
+    from shap.plots._force import verify_valid_cmap
+
+    with exp_ctx:
+        verify_valid_cmap(cmap)
 
 
 def test_random_force_plot_mpl_with_data():

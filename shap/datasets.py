@@ -4,14 +4,13 @@ from urllib.request import urlretrieve
 import numpy as np
 import pandas as pd
 import sklearn.datasets
-from sklearn.utils import deprecated
 
 import shap
 
 github_data_url = "https://github.com/shap/shap/raw/master/data/"
 
 
-def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=unused-argument
+def imagenet50(display=False, resolution=224, n_points=None):
     """ This is a set of 50 images representative of ImageNet images.
 
     This dataset was collected by randomly finding a working ImageNet link and then pasting the
@@ -33,16 +32,13 @@ def imagenet50(display=False, resolution=224, n_points=None): # pylint: disable=
 
     return X, y
 
-@deprecated()
-def boston(display=False, n_points=None):
-    """Return the boston housing data in a nice package (DEPRECATED).
 
-    This dataset is deprecated and will be removed in the next version (0.43.0).
-    Please use :func:`shap.datasets.california` instead.
-    """
-    d = sklearn.datasets.load_boston()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    target = d.target # pylint: disable=E1101
+def california(display=False, n_points=None):
+    """ Return the california housing data in a nice package. """
+
+    d = sklearn.datasets.fetch_california_housing()
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)
+    target = d.target
 
     if n_points is not None:
         df = shap.utils.sample(df, n_points, random_state=0)
@@ -51,26 +47,12 @@ def boston(display=False, n_points=None):
     return df, target
 
 
-def california(display=False, n_points=None): # pylint: disable=unused-argument
-    """ Return the california housing data in a nice package. """
-
-    d = sklearn.datasets.fetch_california_housing()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    target = d.target
-
-    if n_points is not None:
-        df = shap.utils.sample(df, n_points, random_state=0)
-        target = shap.utils.sample(target, n_points, random_state=0)
-
-    return df, target # pylint: disable=E1101
-
-
-def linnerud(display=False, n_points=None): # pylint: disable=unused-argument
+def linnerud(display=False, n_points=None):
     """ Return the linnerud data in a nice package (multi-target regression). """
 
     d = sklearn.datasets.load_linnerud()
-    X = pd.DataFrame(d.data, columns=d.feature_names) # pylint: disable=E1101
-    y = pd.DataFrame(d.target, columns=d.target_names) # pylint: disable=E1101
+    X = pd.DataFrame(d.data, columns=d.feature_names)
+    y = pd.DataFrame(d.target, columns=d.target_names)
 
     if n_points is not None:
         X = shap.utils.sample(X, n_points, random_state=0)
@@ -79,7 +61,7 @@ def linnerud(display=False, n_points=None): # pylint: disable=unused-argument
     return X, y
 
 
-def imdb(display=False, n_points=None): # pylint: disable=unused-argument
+def imdb(display=False, n_points=None):
     """ Return the classic IMDB sentiment analysis training data in a nice package.
 
     Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
@@ -98,7 +80,7 @@ def imdb(display=False, n_points=None): # pylint: disable=unused-argument
     return data, y
 
 
-def communitiesandcrime(display=False, n_points=None): # pylint: disable=unused-argument
+def communitiesandcrime(display=False, n_points=None):
     """ Predict total number of non-violent crimes per 100K popuation.
 
     This dataset is from the classic UCI Machine Learning repository:
@@ -126,12 +108,12 @@ def communitiesandcrime(display=False, n_points=None): # pylint: disable=unused-
     return X, y
 
 
-def diabetes(display=False, n_points=None): # pylint: disable=unused-argument
+def diabetes(display=False, n_points=None):
     """ Return the diabetes data in a nice package. """
 
     d = sklearn.datasets.load_diabetes()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    target = d.target # pylint: disable=E1101
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)
+    target = d.target
 
     if n_points is not None:
         df = shap.utils.sample(df, n_points, random_state=0)
@@ -144,8 +126,8 @@ def iris(display=False, n_points=None):
     """ Return the classic iris data in a nice package. """
 
     d = sklearn.datasets.load_iris()
-    df = pd.DataFrame(data=d.data, columns=d.feature_names) # pylint: disable=E1101
-    target = d.target # pylint: disable=E1101
+    df = pd.DataFrame(data=d.data, columns=d.feature_names)
+    target = d.target
 
     if n_points is not None:
         df = shap.utils.sample(df, n_points, random_state=0)
@@ -215,7 +197,7 @@ def nhanesi(display=False, n_points=None):
     return X, np.array(y)
 
 
-def corrgroups60(display=False, n_points=1_000): # pylint: disable=unused-argument
+def corrgroups60(display=False, n_points=1_000):
     """ Correlated Groups 60
 
     A simulated dataset with tight correlations among distinct groups of features.
@@ -260,7 +242,7 @@ def corrgroups60(display=False, n_points=1_000): # pylint: disable=unused-argume
     return pd.DataFrame(X), y
 
 
-def independentlinear60(display=False, n_points=1_000): # pylint: disable=unused-argument
+def independentlinear60(display=False, n_points=1_000):
     """ A simulated dataset with tight correlations among distinct groups of features.
     """
 

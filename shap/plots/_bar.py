@@ -1,5 +1,6 @@
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy
 
 from .. import Cohorts, Explanation
@@ -87,7 +88,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
 
     # unpack the Explanation object
-    features = cohort_exps[0].data
+    features = cohort_exps[0].display_data if cohort_exps[0].display_data is not None else cohort_exps[0].data
     feature_names = cohort_exps[0].feature_names
     if clustering is None:
         partition_tree = getattr(cohort_exps[0], "clustering", None)
@@ -131,7 +132,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
 
     # unwrap any pandas series
-    if str(type(features)) == "<class 'pandas.core.series.Series'>":
+    if isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
@@ -230,7 +231,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         )
 
     # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
-    pl.yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [l.split('=')[-1] for l in yticklabels], fontsize=13)
+    pl.yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split('=')[-1] for t in yticklabels], fontsize=13)
 
     xlen = pl.xlim()[1] - pl.xlim()[0]
     fig = pl.gcf()
@@ -318,8 +319,8 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
             horizontalalignment='left', verticalalignment='center', color="#999999",
             fontsize=12, rotation=-90
         )
-        l = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
-        l.set_clip_on(False)
+        line = pl.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
+        line.set_clip_on(False)
 
         for (xline, yline) in zip(xlines, ylines):
 
@@ -331,51 +332,22 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
                 # only draw if we are not going past the bottom of the plot
                 if yline.max() < max_display:
-                    l = pl.plot(
+                    lines = pl.plot(
                         xv * 0.1 * (xmax - xmin) + xmax,
                         max_display - np.array(yline),
                         color="#999999"
                     )
-                    for v in l:
-                        v.set_clip_on(False)
+                    for line in lines:
+                        line.set_clip_on(False)
 
     if show:
         pl.show()
 
 
-
-# def compute_sort_counts(partition_tree, leaf_values, pos=None):
-#     if pos is None:
-#         pos = partition_tree.shape[0]-1
-
-#     M = partition_tree.shape[0] + 1
-
-#     if pos < 0:
-#         return 1,leaf_values[pos + M]
-
-#     left = int(partition_tree[pos, 0]) - M
-#     right = int(partition_tree[pos, 1]) - M
-
-#     left_val,left_sum = compute_sort_counts(partition_tree, leaf_values, left)
-#     right_val,right_sum = compute_sort_counts(partition_tree, leaf_values, right)
-
-#     if left_sum > right_sum:
-#         left_val = right_val + 1
-#     else:
-#         right_val = left_val + 1
-
-#     if left >= 0:
-#         partition_tree[left,3] = left_val
-#     if right >= 0:
-#         partition_tree[right,3] = right_val
-
-
-#     return max(left_val, right_val) + 1, max(left_sum, right_sum)
-
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
 
     # unwrap pandas series
-    if str(type(features)) == "<class 'pandas.core.series.Series'>":
+    if isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values

@@ -47,6 +47,9 @@ class PermutationExplainer(Explainer):
         # setting seed for random generation: if seed is not None, then shap values computation should be reproducible
         np.random.seed(seed)
 
+        if masker is None:
+            raise ValueError("masker cannot be None.")
+
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
         if not isinstance(self.model, Model):

@@ -48,7 +48,7 @@ def test_waterfall_legacy(explainer):
 
 
 def test_waterfall_plot_for_decision_tree_explanation():
-    # Regression tests for GH issue #3129
+    # Regression tests for GH #3129
     X = pd.DataFrame({"A": [1, 2, 3], "B": [2, 1, 3]})
     y = pd.Series([1, 2, 3])
     model = DecisionTreeRegressor()

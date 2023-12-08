@@ -42,7 +42,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
     # convert from DataFrames if we got any
     use_dataframe = False
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
@@ -106,7 +106,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
         # ice line plot
         if ice:
             if ace_linewidth == "auto":
-                ace_linewidth = min(1, 50/ice_vals.shape[1]) # pylint: disable=unsubscriptable-object
+                ace_linewidth = min(1, 50/ice_vals.shape[1])
             ax1.plot(xs, ice_vals, color=light_blue_rgb, linewidth=ace_linewidth, alpha=ace_opacity)
 
         # the line plot
@@ -176,12 +176,12 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
             #         model_expected_value = model(pd.DataFrame(features, columns=feature_names)).mean()
             #     else:
             #         model_expected_value = model(features).mean()
-            # if str(type(shap_value_features)).endswith("'pandas.core.frame.DataFrame'>"):
+            # if isinstance(shap_value_features, pd.DataFrame):
             #     shap_value_features = shap_value_features.values
             markerline, stemlines, _ = ax1.stem(
                 shap_values.data[:,ind], shap_values.base_values + shap_values.values[:, ind],
                 bottom=shap_values.base_values,
-                markerfmt="o", basefmt=" ", use_line_collection=True
+                markerfmt="o", basefmt=" ",
             )
             stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])
             pl.setp(stemlines, 'zorder', -1)

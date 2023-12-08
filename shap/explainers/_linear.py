@@ -1,11 +1,11 @@
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
 
 from .. import links, maskers
-from ..utils import safe_isinstance
 from ..utils._exceptions import (
     DimensionError,
     InvalidFeaturePerturbationError,
@@ -73,7 +73,7 @@ class LinearExplainer(Explainer):
         # wrap the incoming masker object as a shap.Masker object before calling
         # parent class constructor, which does the same but without respecting
         # the user-provided feature_perturbation choice
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or issparse(masker)) and len(masker.shape) == 2):
+        if isinstance(masker, pd.DataFrame) or ((isinstance(masker, np.ndarray) or issparse(masker)) and len(masker.shape) == 2):
             if self.feature_perturbation == "correlation_dependent":
                 masker = maskers.Impute(masker)
             else:
@@ -102,7 +102,7 @@ class LinearExplainer(Explainer):
         data = getattr(self.masker, "data", None)
 
         # convert DataFrame's to numpy arrays
-        if safe_isinstance(type(data), 'pandas.core.frame.DataFrame'):
+        if isinstance(data, pd.DataFrame):
             data = data.values
 
         # get the mean and covariance of the model
@@ -111,19 +111,19 @@ class LinearExplainer(Explainer):
             self.cov = self.masker.cov
         elif isinstance(data, dict) and len(data) == 2:
             self.mean = data["mean"]
-            if safe_isinstance(self.mean, "pandas.core.series.Series"):
+            if isinstance(self.mean, pd.Series):
                 self.mean = self.mean.values
 
             self.cov = data["cov"]
-            if safe_isinstance(self.cov, "pandas.core.frame.DataFrame"):
+            if isinstance(self.cov, pd.DataFrame):
                 self.cov = self.cov.values
-        elif type(data) is tuple and len(data) == 2:
+        elif isinstance(data, tuple) and len(data) == 2:
             self.mean = data[0]
-            if safe_isinstance(self.mean, "pandas.core.series.Series"):
+            if isinstance(self.mean, pd.Series):
                 self.mean = self.mean.values
 
             self.cov = data[1]
-            if safe_isinstance(self.cov, "pandas.core.frame.DataFrame"):
+            if isinstance(self.cov, pd.DataFrame):
                 self.cov = self.cov.values
         elif data is None:
             raise ValueError("A background data distribution must be provided!")
@@ -296,12 +296,9 @@ class LinearExplainer(Explainer):
             X = X.reshape(1, -1)
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
-        #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         if len(X.shape) not in (1, 2):
             raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" %len(X.shape))
 
@@ -358,13 +355,12 @@ class LinearExplainer(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
-        #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
+        # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
+        if len(X.shape) not in (1, 2):
+            raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" % len(X.shape))
 
         if self.feature_perturbation == "correlation_dependent":
             if issparse(X):

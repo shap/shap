@@ -5,6 +5,7 @@ import warnings
 
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
@@ -43,8 +44,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
+        Setting this to ``False`` allows the plot to be customized further
+        after it has been created, returning the current axis via plt.gca().
 
     color_bar : bool
         Whether to draw the color bar (legend).
@@ -121,7 +122,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     idx2cat = None
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         # feature index to category flag
@@ -169,7 +170,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         partition_tree = clustering
 
     if partition_tree is not None:
-        assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
+        if partition_tree.shape[1] != 4:
+            emsg = (
+                "The clustering provided by the Explanation object does not seem to "
+                "be a partition tree (which is all shap.plots.bar supports)!"
+            )
+            raise ValueError(emsg)
 
     # FIXME: introduce beeswarm interaction values as a separate function `beeswarm_interaction()` (?)
     #   In the meantime, users can use the `shap.summary_plot()` function.
@@ -368,7 +374,9 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             if vmin > vmax: # fixes rare numerical precision issues
                 vmin = vmax
 
-            assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
+            if features.shape[0] != len(shaps):
+                emsg = "Feature and SHAP matrices must have the same number of rows!"
+                raise DimensionError(emsg)
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
@@ -420,6 +428,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+    else:
+        return pl.gca()
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
@@ -517,7 +527,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     idx2cat = None
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         # feature index to category flag

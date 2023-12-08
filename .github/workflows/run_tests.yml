@@ -17,7 +17,8 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel only PR intermediate builds
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
   run_tests:
@@ -36,13 +37,29 @@ jobs:
             python-version: "3.11"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
-          # cover the latest version of numpy/pandas. See dsgibbons#46
+          # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.11"
             extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Free Disk Space (Ubuntu)
+        if: runner.os == 'Linux'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -53,7 +70,7 @@ jobs:
         if: matrix.extras == 'test'
         with:
           path: |
-            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See dsgibbons#42
+            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See GH dsgibbons#42
             ${{ env.pythonLocation }}/**/site-packages/pyspark*
             ${{ env.pythonLocation }}/**/site-packages/nvidia*
             ${{ env.pythonLocation }}/**/site-packages/torch*

@@ -2,6 +2,7 @@ import copy
 import time
 
 import numpy as np
+import pandas as pd
 import scipy.sparse
 
 from .. import explainers, links, maskers, models
@@ -78,8 +79,10 @@ class Explainer(Serializable):
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
-                ((safe_isinstance(masker, "numpy.ndarray") or scipy.sparse.issparse(masker)) and len(masker.shape) == 2):
+        if (
+            isinstance(masker, pd.DataFrame)
+            or ((isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2)
+        ):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
@@ -95,7 +98,7 @@ class Explainer(Serializable):
         elif (masker is dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
-            return self.__init__( # pylint: disable=non-parent-init-called
+            return self.__init__(
                 self.model, self.model.inner_model.tokenizer,
                 link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
             )
@@ -105,12 +108,12 @@ class Explainer(Serializable):
         # Check for transformer pipeline objects and wrap them
         if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
             if is_transformers_lm(self.model.model):
-                return self.__init__( # pylint: disable=non-parent-init-called
+                return self.__init__(
                     self.model.model, self.model.tokenizer if self.masker is None else self.masker,
                     link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
                 )
             else:
-                return self.__init__( # pylint: disable=non-parent-init-called
+                return self.__init__(
                     models.TransformersPipeline(self.model), self.masker,
                     link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
                 )
@@ -228,11 +231,11 @@ class Explainer(Serializable):
             if num_rows is None:
                 try:
                     num_rows = len(args[i])
-                except Exception: # pylint: disable=broad-except
+                except Exception:
                     pass
 
             # convert DataFrames to numpy arrays
-            if safe_isinstance(args[i], "pandas.core.frame.DataFrame"):
+            if isinstance(args[i], pd.DataFrame):
                 feature_names[i] = list(args[i].columns)
                 args[i] = args[i].to_numpy()
 

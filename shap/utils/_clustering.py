@@ -1,12 +1,12 @@
 import warnings
 
 import numpy as np
+import pandas as pd
 import scipy.cluster
 import scipy.spatial
 import sklearn
 from numba import njit
 
-from ._general import safe_isinstance
 from ._show_progress import show_progress
 
 
@@ -109,8 +109,8 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     test_preds = []
     train_preds = []
     for i in range(X.shape[1]):
-        model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1)
-        model.fit(X_train[:,i:i+1], y_train, eval_set=[(X_test[:,i:i+1], y_test)], early_stopping_rounds=early_stopping_rounds, verbose=False)
+        model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1, early_stopping_rounds=early_stopping_rounds)
+        model.fit(X_train[:,i:i+1], y_train, eval_set=[(X_test[:,i:i+1], y_test)], verbose=False)
         train_preds.append(model.predict(X_train[:,i:i+1]))
         test_preds.append(model.predict(X_test[:,i:i+1]))
     train_preds = np.vstack(train_preds).T
@@ -132,15 +132,15 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
 
             # fit the model
             else:
-                model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1)
-                model.fit(X_train[:,j:j+1], train_preds[:,i], eval_set=[(X_test[:,j:j+1], test_preds[:,i])], early_stopping_rounds=early_stopping_rounds, verbose=False)
+                model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1, early_stopping_rounds=early_stopping_rounds)
+                model.fit(X_train[:,j:j+1], train_preds[:,i], eval_set=[(X_test[:,j:j+1], test_preds[:,i])], verbose=False)
                 r2 = max(0, 1 - np.mean((test_preds[:,i] - model.predict(X_test[:,j:j+1]))**2) / preds_var)
             dist[i,j] = 1 - r2
 
     return dist
 
 def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
-    if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+    if isinstance(X, pd.DataFrame):
         X = X.values
 
     if metric == "auto":
@@ -169,7 +169,7 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     else:
         if y is not None:
             warnings.warn("Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!")
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             bg_no_nan = X.values.copy()
         else:
             bg_no_nan = X.copy()

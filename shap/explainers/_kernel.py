@@ -18,9 +18,9 @@ from tqdm.auto import tqdm
 
 from .._explanation import Explanation
 from ..utils import safe_isinstance
+from ..utils._exceptions import DimensionError
 from ..utils._legacy import (
     DenseData,
-    IdentityLink,
     SparseData,
     convert_to_data,
     convert_to_instance,
@@ -43,7 +43,6 @@ class KernelExplainer(Explainer):
     are Shapley values from game theory and also coefficients from a local linear
     regression.
 
-
     Parameters
     ----------
     model : function or iml.Model
@@ -57,34 +56,35 @@ class KernelExplainer(Explainer):
         is observed. Since most models aren't designed to handle arbitrary missing data at test
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
-        we would approximate a feature being missing by setting it to zero. For small problems
+        we would approximate a feature being missing by setting it to zero. For small problems,
         this background dataset can be the whole training set, but for larger problems consider
-        using a single reference value or using the kmeans function to summarize the dataset.
-        Note: for sparse case we accept any sparse matrix but convert to lil format for
+        using a single reference value or using the ``kmeans`` function to summarize the dataset.
+        Note: for the sparse case, we accept any sparse matrix but convert to lil format for
         performance.
 
     feature_names : list
         The names of the features in the background dataset. If the background dataset is
-        supplied as a pandas.DataFrame, then feature_names can be set to None (the default value)
+        supplied as a pandas.DataFrame, then ``feature_names`` can be set to ``None`` (default),
         and the feature names will be taken as the column names of the dataframe.
 
     link : "identity" or "logit"
         A generalized linear model link to connect the feature importance values to the model
         output. Since the feature importance values, phi, sum up to the model output, it often makes
         sense to connect them to the output with a link function where link(output) = sum(phi).
-        If the model output is a probability then the LogitLink link function makes the feature
-        importance values have log-odds units.
+        Default is "identity" (a no-op).
+        If the model output is a probability, then "logit" can be used to transform the SHAP values
+        into log-odds units.
 
     Examples
     --------
-    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`
+    See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
     """
 
-    def __init__(self, model, data, feature_names=None, link=IdentityLink(), **kwargs):
+    def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
 
         if feature_names is not None:
             self.data_feature_names=feature_names
-        elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
         # convert incoming inputs to standardized iml objects
@@ -96,9 +96,12 @@ class KernelExplainer(Explainer):
         model_null = match_model_to_data(self.model, self.data)
 
         # enforce our current input type limitations
-        assert isinstance(self.data, DenseData) or isinstance(self.data, SparseData), \
-               "Shap explainer only supports the DenseData and SparseData input currently."
-        assert not self.data.transposed, "Shap explainer does not support transposed DenseData or SparseData currently."
+        if not isinstance(self.data, (DenseData, SparseData)):
+            emsg = "Shap explainer only supports the DenseData and SparseData input currently."
+            raise TypeError(emsg)
+        if self.data.transposed:
+            emsg = "Shap explainer does not support transposed DenseData or SparseData currently."
+            raise DimensionError(emsg)
 
         # warn users about large background data sets
         if len(self.data.weights) > 100:
@@ -135,7 +138,7 @@ class KernelExplainer(Explainer):
 
         start_time = time.time()
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
             feature_names = getattr(self, "data_feature_names", None)
@@ -153,7 +156,7 @@ class KernelExplainer(Explainer):
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X.to_numpy() if safe_isinstance(X, "pandas.core.frame.DataFrame") else X,
+            data=X.to_numpy() if isinstance(X, pd.DataFrame) else X,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )
@@ -194,9 +197,9 @@ class KernelExplainer(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
+        if isinstance(X, pd.Series):
             X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        elif isinstance(X, pd.DataFrame):
             if self.keep_index:
                 index_value = X.index.values
                 index_name = X.index.name
@@ -209,7 +212,6 @@ class KernelExplainer(Explainer):
         if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
             X = X.tolil()
         assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         # single instance
         if len(X.shape) == 1:
@@ -258,6 +260,10 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
                 return out
+
+        else:
+            emsg = "Instance must have 1 or 2 dimensions!"
+            raise DimensionError(emsg)
 
     def explain(self, incoming_instance, **kwargs):
         # convert incoming input to a standardized iml object
@@ -331,10 +337,10 @@ class KernelExplainer(Explainer):
             weight_vector = np.array([(self.M - 1.0) / (i * (self.M - i)) for i in range(1, num_subset_sizes + 1)])
             weight_vector[:num_paired_subset_sizes] *= 2
             weight_vector /= np.sum(weight_vector)
-            log.debug(f"weight_vector = {weight_vector}")
-            log.debug(f"num_subset_sizes = {num_subset_sizes}")
-            log.debug(f"num_paired_subset_sizes = {num_paired_subset_sizes}")
-            log.debug(f"M = {self.M}")
+            log.debug(f"{weight_vector = }")
+            log.debug(f"{num_subset_sizes = }")
+            log.debug(f"{num_paired_subset_sizes = }")
+            log.debug(f"{self.M = }")
 
             # fill out all the subset sizes we can completely enumerate
             # given nsamples*remaining_weight_vector[subset_size]
@@ -349,8 +355,8 @@ class KernelExplainer(Explainer):
                 nsubsets = binom(self.M, subset_size)
                 if subset_size <= num_paired_subset_sizes:
                     nsubsets *= 2
-                log.debug(f"subset_size = {subset_size}")
-                log.debug(f"nsubsets = {nsubsets}")
+                log.debug(f"{subset_size = }")
+                log.debug(f"{nsubsets = }")
                 log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
                     num_samples_left * remaining_weight_vector[subset_size - 1]))
                 log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {}".format(
@@ -378,19 +384,19 @@ class KernelExplainer(Explainer):
                             self.addsample(instance.x, mask, w)
                 else:
                     break
-            log.info(f"num_full_subsets = {num_full_subsets}")
+            log.info(f"{num_full_subsets = }")
 
             # add random samples from what is left of the subset space
             nfixed_samples = self.nsamplesAdded
             samples_left = self.nsamples - self.nsamplesAdded
-            log.debug(f"samples_left = {samples_left}")
+            log.debug(f"{samples_left = }")
             if num_full_subsets != num_subset_sizes:
                 remaining_weight_vector = copy.copy(weight_vector)
                 remaining_weight_vector[:num_paired_subset_sizes] /= 2 # because we draw two samples each below
                 remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
-                log.info(f"remaining_weight_vector = {remaining_weight_vector}")
-                log.info(f"num_paired_subset_sizes = {num_paired_subset_sizes}")
+                log.info(f"{remaining_weight_vector = }")
+                log.info(f"{num_paired_subset_sizes = }")
                 ind_set = np.random.choice(len(remaining_weight_vector), 4 * samples_left, p=remaining_weight_vector)
                 ind_set_pos = 0
                 used_masks = {}
@@ -429,7 +435,7 @@ class KernelExplainer(Explainer):
                 # normalize the kernel weights for the random samples to equal the weight left after
                 # the fixed enumerated samples have been already counted
                 weight_left = np.sum(weight_vector[num_full_subsets:])
-                log.info(f"weight_left = {weight_left}")
+                log.info(f"{weight_left = }")
                 self.kernelWeights[nfixed_samples:] *= weight_left / self.kernelWeights[nfixed_samples:].sum()
 
             # execute the model on the synthetic samples we have created
@@ -592,7 +598,7 @@ class KernelExplainer(Explainer):
 
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
-        log.debug(f"fraction_evaluated = {fraction_evaluated}")
+        log.debug(f"{fraction_evaluated = }")
         # if self.l1_reg == "auto":
         #     warnings.warn(
         #         "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
@@ -600,8 +606,8 @@ class KernelExplainer(Explainer):
         #     )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
-            log.info(f"np.sum(w_aug) = {np.sum(w_aug)}")
-            log.info(f"np.sum(self.kernelWeights) = {np.sum(self.kernelWeights)}")
+            log.info(f"{np.sum(w_aug) = }")
+            log.info(f"{np.sum(self.kernelWeights) = }")
             w_sqrt_aug = np.sqrt(w_aug)
             eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))))
             eyAdj_aug *= w_sqrt_aug
@@ -636,24 +642,41 @@ class KernelExplainer(Explainer):
         eyAdj2 = eyAdj - self.maskMatrix[:, nonzero_inds[-1]] * (
                     self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))
         etmp = np.transpose(np.transpose(self.maskMatrix[:, nonzero_inds[:-1]]) - self.maskMatrix[:, nonzero_inds[-1]])
-        log.debug(f"etmp[:4,:] {etmp[:4, :]}")
+        log.debug(f"{etmp[:4, :] = }")
 
         # solve a weighted least squares equation to estimate phi
-        tmp = np.transpose(np.transpose(etmp) * np.transpose(self.kernelWeights))
-        etmp_dot = np.dot(np.transpose(tmp), etmp)
+        # least squares:
+        #     phi = min_w ||W^(1/2) (y - X w)||^2
+        # the corresponding normal equation:
+        #     (X' W X) phi = X' W y
+        # with
+        #     X = etmp
+        #     W = np.diag(self.kernelWeights)
+        #     y = eyAdj2
+        #
+        # We could just rely on sciki-learn
+        #     from sklearn.linear_model import LinearRegression
+        #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
+        # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
+        # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
+        y = eyAdj2
+        X = etmp
+        WX = self.kernelWeights[:, None] * X
         try:
-            tmp2 = np.linalg.inv(etmp_dot)
+            w = np.linalg.solve(X.T @ WX, WX.T @ y)
         except np.linalg.LinAlgError:
-            tmp2 = np.linalg.pinv(etmp_dot)
             warnings.warn(
-                "Linear regression equation is singular, Moore-Penrose pseudoinverse is used instead of the regular inverse.\n"
-                "To use regular inverse do one of the following:\n"
+                "Linear regression equation is singular, a least squares solutions is used instead.\n"
+                "To avoid this situation and get a regular matrix do one of the following:\n"
                 "1) turn up the number of samples,\n"
                 "2) turn up the L1 regularization with num_features(N) where N is less than the number of samples,\n"
                 "3) group features together to reduce the number of inputs that need to be explained."
             )
-        w = np.dot(tmp2, np.dot(np.transpose(tmp), eyAdj2))
-        log.debug(f"np.sum(w) = {np.sum(w)}")
+            # XWX = np.linalg.pinv(X.T @ WX)
+            # w = np.dot(XWX, np.dot(np.transpose(WX), y))
+            sqrt_W = np.sqrt(self.kernelWeights)
+            w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
+        log.debug(f"{np.sum(w) = }")
         log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
             self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
         log.debug(f"self.fx = {self.fx[dim]}")
@@ -663,7 +686,7 @@ class KernelExplainer(Explainer):
         phi = np.zeros(self.M)
         phi[nonzero_inds[:-1]] = w
         phi[nonzero_inds[-1]] = (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])) - sum(w)
-        log.info(f"phi = {phi}")
+        log.info(f"{phi = }")
 
         # clean up any rounding errors
         for i in range(self.M):

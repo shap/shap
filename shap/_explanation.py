@@ -13,10 +13,6 @@ from slicer import Alias, Obj, Slicer
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
-# slicer confuses pylint...
-# pylint: disable=no-member
-
-
 op_chain_root = OpChain("shap.Explanation")
 class MetaExplanation(type):
     """ This metaclass exposes the Explanation object's methods for creating template op chains.
@@ -83,7 +79,7 @@ class MetaExplanation(type):
 class Explanation(metaclass=MetaExplanation):
     """ A sliceable set of parallel arrays representing a SHAP explanation.
     """
-    def __init__( # pylint: disable=too-many-arguments
+    def __init__(
         self,
         values,
         base_values=None,
@@ -132,12 +128,12 @@ class Explanation(metaclass=MetaExplanation):
             #     output_names = Alias(list(output_names), 1)
 
         if output_names is not None and not isinstance(output_names, Alias):
-            l = len(_compute_shape(output_names))
-            if l == 0:
+            output_names_order = len(_compute_shape(output_names))
+            if output_names_order == 0:
                 pass
-            elif l == 1:
+            elif output_names_order == 1:
                 output_names = Obj(output_names, self.output_dims)
-            elif l == 2:
+            elif output_names_order == 2:
                 output_names = Obj(output_names, [0] + list(self.output_dims))
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
@@ -321,7 +317,7 @@ class Explanation(metaclass=MetaExplanation):
 
         # convert any OpChains or magic strings
         pos = -1
-        for t in item: # pylint: disable=too-many-nested-blocks
+        for t in item:
             pos += 1
 
             # skip over Ellipsis
