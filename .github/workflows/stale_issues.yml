@@ -17,7 +17,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v8
+      - uses: actions/stale@v9
         with:
           # See discussion on generous time limits:
           # https://github.com/shap/shap/discussions/3051
@@ -53,3 +53,6 @@ jobs:
           # If an issue or PR is marked with the "todo" label, never mark it as stale.
           exempt-issue-labels: todo
           exempt-pr-labels: todo
+          # Each run is limited to operations_per_turn=30.
+          # So, process the oldest issues first:
+          ascending: true
