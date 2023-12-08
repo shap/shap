@@ -156,8 +156,8 @@ def test_ngboost():
 
     # check that SHAP values sum to model output
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-5
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-5
     )
 
 
@@ -250,7 +250,8 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100] # pylint: disable=E1101
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[
+            :100]  # pylint: disable=E1101
 
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
@@ -293,8 +294,8 @@ def test_gpboost():
 
     # check that SHAP values sum to model output
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
     )
 
 
@@ -318,8 +319,8 @@ def test_catboost():
 
     # check that SHAP values sum to model output
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
     )
 
     X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
@@ -337,8 +338,8 @@ def test_catboost():
 
     # check that SHAP values sum to model output
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
     )
 
 
@@ -361,8 +362,8 @@ def test_catboost_categorical():
 
     # check that SHAP values sum to model output
     assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
+            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+            < 1e-4
     )
 
 
@@ -388,8 +389,8 @@ def _average_path_length(n_samples_leaf):
     average_path_length[mask_1] = 0.0
     average_path_length[mask_2] = 1.0
     average_path_length[not_mask] = (
-        2.0 * (np.log(n_samples_leaf[not_mask] - 1.0) + np.euler_gamma)
-        - 2.0 * (n_samples_leaf[not_mask] - 1.0) / n_samples_leaf[not_mask]
+            2.0 * (np.log(n_samples_leaf[not_mask] - 1.0) + np.euler_gamma)
+            - 2.0 * (n_samples_leaf[not_mask] - 1.0) / n_samples_leaf[not_mask]
     )
 
     return average_path_length.reshape(n_samples_leaf_shape)
@@ -554,8 +555,10 @@ def test_single_tree_compare_with_kernel_shap():
         x = X[x_ind:x_ind + 1, :]
 
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
+
         def f(inp):
             return model.predict(xgboost.DMatrix(inp))
+
         expl_kern = shap.KernelExplainer(f, X)
 
         itshap = expl.shap_values(x)
@@ -638,8 +641,10 @@ def test_single_tree_nonlinear_transformations():
     trans_pred = model.predict(Xd)  # In probability space
 
     expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
+
     def f(inp):
         return model.predict(xgboost.DMatrix(inp), output_margin=True)
+
     expl_kern = shap.KernelExplainer(f, X)
 
     x_ind = 0
@@ -801,8 +806,8 @@ class TestExplainerSklearn:
         # check that SHAP values sum to model output
         class0_exp = explanation[..., 0]
         assert (
-            np.abs(class0_exp.values.sum(1) + class0_exp.base_values - predicted[:, 0]).max()
-            < 1e-4
+                np.abs(class0_exp.values.sum(1) + class0_exp.base_values - predicted[:, 0]).max()
+                < 1e-4
         )
 
     def test_sklearn_random_forest_multiclass(self):
@@ -842,11 +847,11 @@ class TestExplainerSklearn:
                 for k, _ in enumerate(interaction_vals[i][j]):
                     for l, _ in enumerate(interaction_vals[i][j][k]):
                         assert (
-                            abs(
-                                interaction_vals[i][j][k][l]
-                                - interaction_vals[i][j][l][k]
-                            )
-                            < 1e-4
+                                abs(
+                                    interaction_vals[i][j][k][l]
+                                    - interaction_vals[i][j][l][k]
+                                )
+                                < 1e-4
                         )
 
         # ensure the interaction plot works
@@ -904,7 +909,7 @@ class TestExplainerSklearn:
         explainer = shap.TreeExplainer(est)
         expected_values = np.asarray(explainer.expected_value)
         assert (
-            len(expected_values) == est.n_outputs_
+                len(expected_values) == est.n_outputs_
         ), "Length of expected_values doesn't match n_outputs_"
 
         explanation = explainer(X_test)
@@ -914,8 +919,8 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output for all multioutputs
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     def test_sum_match_extra_trees(self):
@@ -950,7 +955,7 @@ class TestExplainerSklearn:
         explainer = shap.TreeExplainer(est)
         expected_values = np.asarray(explainer.expected_value)
         assert (
-            len(expected_values) == est.n_outputs_
+                len(expected_values) == est.n_outputs_
         ), "Length of expected_values doesn't match n_outputs_"
 
         explanation = explainer(X_test)
@@ -960,8 +965,8 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output for all multioutputs
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     def test_gradient_boosting_classifier_invalid_init_estimator(self):
@@ -1022,24 +1027,24 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
         # check initial expected value
         assert (
-            np.abs(initial_ex_value - explainer.expected_value) < 1e-4
+                np.abs(initial_ex_value - explainer.expected_value) < 1e-4
         ), "Initial expected value is wrong!"
 
         # check SHAP interaction values sum to model output
         shap_interaction_values = explainer.shap_interaction_values(X_test.iloc[:10, :])
         assert (
-            np.abs(
-                shap_interaction_values.sum(1).sum(1)
-                + explainer.expected_value
-                - predicted[:10]
-            ).max()
-            < 1e-4
+                np.abs(
+                    shap_interaction_values.sum(1).sum(1)
+                    + explainer.expected_value
+                    - predicted[:10]
+                ).max()
+                < 1e-4
         )
 
     def test_single_row_gradient_boosting_regressor(self):
@@ -1081,8 +1086,8 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     def test_HistGradientBoostingClassifier_proba(self):
@@ -1103,8 +1108,8 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     def test_HistGradientBoostingClassifier_multidim(self, random_seed):
@@ -1125,8 +1130,8 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     def test_HistGradientBoostingRegressor(self):
@@ -1144,8 +1149,8 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
 
@@ -1392,8 +1397,8 @@ class TestExplainerLightGBM:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     def test_lightgbm_constant_prediction(self):
@@ -1453,8 +1458,8 @@ class TestExplainerLightGBM:
         # check that SHAP values sum to model output
         class1_exp = explanation[..., 1]
         assert (
-            np.abs(class1_exp.values.sum(1) + class1_exp.base_values - predicted).max()
-            < 1e-4
+                np.abs(class1_exp.values.sum(1) + class1_exp.base_values - predicted).max()
+                < 1e-4
         )
 
         # ensure plot works for first class
@@ -1502,8 +1507,8 @@ class TestExplainerLightGBM:
 
         # check that SHAP values sum to model output
         assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
+                np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
+                < 1e-4
         )
 
     # def test_lightgbm_ranking(self):
@@ -1541,8 +1546,8 @@ class TestExplainerLightGBM:
             for k, kval in enumerate(jval):
                 for m, _ in enumerate(kval):
                     assert (
-                        abs(interaction_vals[j][k][m] - interaction_vals[j][m][k])
-                        < 1e-4
+                            abs(interaction_vals[j][k][m] - interaction_vals[j][m][k])
+                            < 1e-4
                     )
 
     def test_lightgbm_call_explanation(self):
@@ -1568,6 +1573,68 @@ class TestExplainerLightGBM:
         shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
 
         # checks that the call returns a valid Explanation object
+        assert len(explanation.base_values) == len(y)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+        assert (explanation.values == shap_values).all()
+
+
+class TestCausalmlCausalTrees:
+    """Tests for the TreeExplainer when the model passed in is a causalml causal tree instance.
+
+    Included models:
+        * CausalTreeRegressor
+        * CausalRandomForestRegressor
+    """
+
+    data_mode = 1
+    n_features = 8
+    sigma = 0.1
+    data_size = 100
+    n_outcomes = 2
+    random_seed = 42
+    n_estimators = 5
+
+    def prepare_data(self, generate_data: callable) -> tuple:
+        data = generate_data(mode=self.data_mode, n=self.data_size, p=self.n_features, sigma=self.sigma)
+        y, X, treatment, tau, b, e = data
+        return X, y, treatment
+
+    def test_causal_tree_explanation(self):
+
+        from causalml.dataset import synthetic_data
+        from causalml.inference.tree import CausalTreeRegressor
+
+        X, y, treatment = self.prepare_data(synthetic_data)
+        ctree = CausalTreeRegressor(random_state=self.random_seed)
+        ctree.fit(X=X, treatment=treatment, y=y)
+        ctree_explainer = shap.TreeExplainer(ctree)
+        explanation = ctree_explainer(X)
+
+        shap_values_raw: list[np.ndarray] = ctree_explainer.shap_values(X)
+        shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+        assert shap_values.shape == (self.data_size, self.n_features, self.n_outcomes)
+        assert len(explanation.base_values) == len(y)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+        assert (explanation.values == shap_values).all()
+
+    def test_causal_random_forest_explanation(self):
+
+        from causalml.dataset import synthetic_data
+        from causalml.inference.tree import CausalRandomForestRegressor
+
+        X, y, treatment = self.prepare_data(synthetic_data)
+        cforest = CausalRandomForestRegressor(n_estimators=self.n_estimators, random_state=self.random_seed)
+        cforest.fit(X=X, treatment=treatment, y=y)
+        cforest_explainer = shap.TreeExplainer(cforest)
+        explanation = cforest_explainer(X)
+
+        shap_values_raw: list[np.ndarray] = cforest_explainer.shap_values(X)
+        shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+        assert shap_values.shape == (self.data_size, self.n_features, self.n_outcomes)
         assert len(explanation.base_values) == len(y)
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
