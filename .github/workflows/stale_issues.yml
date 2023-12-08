@@ -17,7 +17,9 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v8
+      # Current latest release v8 has issues with statefullness, so use "main" branch:
+      # https://github.com/actions/stale/issues/792
+      - uses: actions/stale@main
         with:
           # See discussion on generous time limits:
           # https://github.com/shap/shap/discussions/3051
