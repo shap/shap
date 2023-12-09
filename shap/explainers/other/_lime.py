@@ -28,7 +28,9 @@ class LimeTabular(Explainer):
 
     def __init__(self, model, data, mode="classification"):
         self.model = model
-        assert mode in ["classification", "regression"]
+        if mode not in ["classification", "regression"]:
+            emsg = f"Invalid mode {mode!r}, must be one of 'classification' or 'regression'"
+            raise ValueError(emsg)
         self.mode = mode
 
         if isinstance(data, pd.DataFrame):

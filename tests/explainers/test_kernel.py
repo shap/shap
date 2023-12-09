@@ -121,7 +121,7 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
     """ Test with a sparse matrix for the background.
     """
 
-    X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
+    X, y = shap.datasets.a1a()
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(X, y, test_size=0.01, random_state=0)
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)
@@ -137,7 +137,7 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     """
     np.set_printoptions(threshold=100000)
 
-    X, y = shap.datasets.a1a() # pylint: disable=unbalanced-tuple-unpacking
+    X, y = shap.datasets.a1a()
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(X, y, test_size=0.01, random_state=0)
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)

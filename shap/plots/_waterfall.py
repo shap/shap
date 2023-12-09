@@ -36,7 +36,7 @@ def waterfall(shap_values, max_display=10, show=True):
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot to be customized further after it
-        has been created.
+        has been created, returning the current axis via plt.gca().
 
     Examples
     --------
@@ -252,7 +252,7 @@ def waterfall(shap_values, max_display=10, show=True):
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
     # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
     ytick_pos = list(range(num_features)) + list(np.arange(num_features)+1e-8)
-    plt.yticks(ytick_pos, yticklabels[:-1] + [l.split('=')[-1] for l in yticklabels[:-1]], fontsize=13)
+    plt.yticks(ytick_pos, yticklabels[:-1] + [label.split('=')[-1] for label in yticklabels[:-1]], fontsize=13)
 
     # put horizontal lines for each feature row
     for i in range(num_features):
@@ -316,7 +316,7 @@ def waterfall(shap_values, max_display=10, show=True):
     if show:
         plt.show()
     else:
-        return plt.gcf()
+        return plt.gca()
 
 
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
@@ -555,7 +555,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
 
     # draw the y-ticks twice, once in gray and then again with just the feature names in black
     plt.yticks(list(range(num_features))*2, yticklabels[:-1] +
-               [l.split('=')[-1] for l in yticklabels[:-1]], fontsize=13)
+               [label.split('=')[-1] for label in yticklabels[:-1]], fontsize=13)
 
     # put horizontal lines for each feature row
     for i in range(num_features):
