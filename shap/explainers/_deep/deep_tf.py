@@ -230,6 +230,8 @@ class TFDeep(Explainer):
                 return tf.convert_to_tensor(x)
             return x
         class OperationCaptureModel(tf.keras.Model):
+            """This class is used to capture the operations between the model inputs and outputs.
+            """
             def __init__(self, layers, model=None):
                 super().__init__()
                 self._layers = layers
@@ -252,6 +254,8 @@ class TFDeep(Explainer):
                         layer_outputs.append(inputs)
                     return layer_outputs
                 elif isinstance(self.model, keras.src.models.Functional):
+                    # This is basically a slight adaptation of
+                    # tf.python.keras.engine.functional._run_internal_graph so that we can capture the ops
                     inputs = self.model._flatten_to_reference_inputs(inputs)
                     # if mask is None:
                     masks = [None] * len(inputs)
