@@ -241,6 +241,7 @@ class TFDeep(Explainer):
                 if model is not None:
                     print(f"This is the model type {type(self.model)}")
 
+            # unfortunately this cannot be a simple function since tf.function must return tensors or None
             @tf.function
             def __call__(self, inputs):
                 inputs = tf.nest.map_structure(
@@ -304,7 +305,7 @@ class TFDeep(Explainer):
                 else:
                     raise TypeError(f'Not a valid model type: {type(self.model)}')
 
-        import ipdb; ipdb.set_trace(context=20)
+        # breakpoint()
         capture_model = OperationCaptureModel(model.layers, model=model)
 
         # model_input = tf.convert_to_tensor(data, dtype=tf.float32)
@@ -347,6 +348,7 @@ class TFDeep(Explainer):
 
                 self.phi_symbolics[i] = self.execute_with_overridden_gradients(anon)
             else:
+                print("use grad graph")
                 @tf.function
                 def grad_graph(shap_rAnD):
                     phase = tf.keras.backend.learning_phase()
@@ -375,6 +377,7 @@ class TFDeep(Explainer):
             elif not isinstance(X, list):
                 X = [X]
         else:
+            # breakpoint()
             assert isinstance(X, list), "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs (%d) does not match the number given (%d)!" % (len(self.model_inputs), len(X))
 
@@ -412,7 +415,7 @@ class TFDeep(Explainer):
                     bg_data = self.data
 
                 # tile the inputs to line up with the background data samples
-                tiled_X = [np.tile(X[l][j:j+1], (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
+                tiled_X = [np.tile(X[l][j:j+1], (bg_data[l].shape[0],) + tuple([1 for _ in range(len(X[l].shape)-1)])) for l in range(len(X))]
 
                 # we use the first sample for the current sample and the rest for the references
                 joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
@@ -422,7 +425,7 @@ class TFDeep(Explainer):
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
-                import ipdb; ipdb.set_trace(context=20)
+                # breakpoint()
                 for l in range(len(X)):
                     phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
 
@@ -464,6 +467,7 @@ class TFDeep(Explainer):
                     data = X[i].reshape(shape)
                     v = tf.constant(data, dtype=self.model_inputs[i].dtype)
                     inputs.append(v)
+                # breakpoint()
                 final_out = out(inputs)
                 try:
                     tf_execute.record_gradient = tf_backprop._record_gradient
@@ -476,6 +480,7 @@ class TFDeep(Explainer):
     def custom_grad(self, op, *grads):
         """ Passes a gradient op creation request to the correct handler.
         """
+        print("We are in custom grad", op, grads)
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
@@ -524,7 +529,8 @@ class TFDeep(Explainer):
         if not tf.executing_eagerly():
             return out
         else:
-            return [v.numpy() for v in out if v is not None]
+            # breakpoint()
+            return [v.numpy() for v in out]
 
 def tensors_blocked_by_false(ops):
     """ Follows a set of ops assuming their value is False and find blocked Switch paths.
@@ -783,7 +789,6 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
 
 def passthrough(explainer, op, *grads):
     if op.type.startswith("shap_"):
-        # breakpoint()
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
 
@@ -821,11 +826,11 @@ op_handlers["Tile"] = passthrough
 op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
+
 # todo: is this correct?
 op_handlers["TensorListStack"] = passthrough
 op_handlers["While"] = passthrough
 op_handlers["TensorListFromTensor"] = passthrough
-
 
 # ops that don't pass any attributions to their inputs
 op_handlers["Shape"] = break_dependence
