@@ -1,4 +1,5 @@
 import logging
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -65,7 +66,12 @@ class Tabular(Masker):
         # prepare by fitting sklearn imputer
         self.impute = impute
         if self.impute is not None:
-            self.impute.fit(self.data)
+            if len(self.data.shape) == 1:
+                self.impute.fit(self.data.reshape(1, -1))
+            elif len(self.data.shape) == 2:
+                self.impute.fit(self.data)
+            elif len(self.data.shape) >= 2:
+                raise NotImplementedError(f"Currently only 1 and 2 dimensional data can by processed with the LinearImpute class. You provided {len(self.data.shape)}. If this is crucial to you, feel free to open an issue: https://github.com/shap/shap/issues.")
 
         # # warn users about large background data sets
         # if self.data.shape[0] > 100:
@@ -124,7 +130,12 @@ class Tabular(Masker):
             return (masked_inputs_out,), varying_rows_out
 
         if self.impute is not None:
-            self.data = self.impute.transform(x)
+            if len(x.shape) == 1:
+                self.data = self.impute.transform(x.reshape(1, -1))
+            elif len(x.shape) == 2:
+                self.data = self.impute.transform(x)
+            elif len(x.shape) >= 2:
+                raise NotImplementedError(f"Currently only 1 and 2 dimensional data can by processed with the LinearImpute class. You provided {len(x.shape)}. If this is crucial to you, feel free to open an issue: https://github.com/shap/shap/issues.")
 
         # otherwise we update the whole set of masked data for a single sample
         self._masked_data[:] = x * mask + self.data * np.invert(mask)
@@ -323,6 +334,9 @@ class LinearImpute:
         self.missing_value = missing_value
 
     def fit(self, data):
+        self.data = pd.DataFrame(data)
+
+    def transform(self, x):
         """ Linearly impute missing values in the data and return as array.
 
         Parameters
@@ -331,16 +345,23 @@ class LinearImpute:
             Array to impute missing values for, should be masked
             using missing_value.
         """
-        if len(data.shape) != 2:
-            raise NotImplementedError(f"Currently only 2 dimensional data can by processed with the LinearImpute class. You provided {len(data.shape)}. If this is crucial to you, feel free to open an issue: https://github.com/shap/shap/issues.")
-        self.data = pd.DataFrame(data)
-        self.data = self.data.replace(self.missing_value, np.NaN)
-        interpolated = self.data.interpolate(
+        self.x = x
+        if len(x.shape) == 1:
+            self.x = x.reshape(1, -1)
+        elif len(x.shape) > 2:
+            raise NotImplementedError(f"Currently only 1 and 2 dimensional data can by processed with the LinearImpute class. You provided {len(x.shape)}. If this is crucial to you, feel free to open an issue: https://github.com/shap/shap/issues.")
+        self.x = pd.DataFrame(self.x)
+        # Pandas interpolate uses NaN as missing value
+        self.x = self.x.replace(self.missing_value, np.NaN)
+        # number of imputed samples for indexing later
+        n_samples = self.x.shape[0]
+        # combine with background data for interpolation
+        interpolated = pd.concat([self.data, self.x], axis=0).interpolate(
             method="linear",
             limit_direction="both"
         )
 
-        return interpolated.values()
+        return interpolated.values[-n_samples]
 
 
 class Impute(Tabular):
@@ -375,7 +396,7 @@ class Impute(Tabular):
                 mode - SimpleImputer with elements replaced by most frequent of feature in data.
                 knn - KNNImputer with elements replaced by mean value within 5 NNs of feature in data.
         """
-        methods = ["linear", "mean", "median", "mode", "knn"]
+        methods = ["linear", "mean", "median", "most_frequent", "knn"]
         if isinstance(method, str):
             if method not in methods:
                 raise NotImplementedError(f"Given imputation method is not supported. Please provide one of the following methods: {', '.join(methods)}")
@@ -385,7 +406,9 @@ class Impute(Tabular):
                 impute = LinearImpute(missing_value=0)
             else:
                 impute = SimpleImputer(missing_values=0, strategy=method)
-        else:
+        elif isinstance(method, Callable):
             impute = method
+        else:
+            raise NotImplementedError(f"Given imputation method is not supported. Please provide one of the following methods: {', '.join(methods)}")
 
         super().__init__(data, max_samples=max_samples, impute=impute)
