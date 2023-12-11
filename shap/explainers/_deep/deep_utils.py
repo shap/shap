@@ -7,7 +7,6 @@ def _check_additivity(explainer, model_output_values, output_phis):
     assert len(explainer.expected_value) == model_output_values.shape[1], "Length of expected values and model outputs does not match."
 
     for l in range(len(explainer.expected_value)):
-        breakpoint()
         if not explainer.multi_input:
             diffs = model_output_values[:, l] - explainer.expected_value[l] - output_phis[l].sum(axis=tuple(range(1, output_phis[l].ndim)))
         else:

@@ -11,7 +11,6 @@ except ImportError as e:
 
 class Model(Serializable):
     """ This is the superclass of all models.
-    JUST A TEST
     """
 
     def __init__(self, model=None):

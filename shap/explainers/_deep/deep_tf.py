@@ -82,7 +82,6 @@ class TFDeep(Explainer):
         """
         # try to import tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl, keras
-        # breakpoint()
         if tf is None:
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
@@ -165,7 +164,6 @@ class TFDeep(Explainer):
                 #    self.fModel(cnn.inputs, cnn.get_layer(theNameYouWant).outputs)
                 self.expected_value = tf.reduce_mean(self.model(self.data), 0)
 
-        # breakpoint()
         if not tf.executing_eagerly():
             self._init_between_tensors(self.model_output.op, self.model_inputs)
         else:
@@ -196,7 +194,6 @@ class TFDeep(Explainer):
 
     def _init_between_tensors(self, out_op, model_inputs):
         # find all the operations in the graph between our inputs and outputs
-        # breakpoint()
         tensor_blacklist = tensors_blocked_by_false(self.learning_phase_ops) # don't follow learning phase branches
         dependence_breakers = [k for k in op_handlers if op_handlers[k] == break_dependence]
         back_ops = backward_walk_ops(
@@ -305,7 +302,6 @@ class TFDeep(Explainer):
                 else:
                     raise TypeError(f'Not a valid model type: {type(self.model)}')
 
-        # breakpoint()
         capture_model = OperationCaptureModel(model.layers, model=model)
 
         # model_input = tf.convert_to_tensor(data, dtype=tf.float32)
@@ -348,7 +344,6 @@ class TFDeep(Explainer):
 
                 self.phi_symbolics[i] = self.execute_with_overridden_gradients(anon)
             else:
-                print("use grad graph")
                 @tf.function
                 def grad_graph(shap_rAnD):
                     phase = tf.keras.backend.learning_phase()
@@ -377,7 +372,6 @@ class TFDeep(Explainer):
             elif not isinstance(X, list):
                 X = [X]
         else:
-            # breakpoint()
             assert isinstance(X, list), "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs (%d) does not match the number given (%d)!" % (len(self.model_inputs), len(X))
 
@@ -425,7 +419,6 @@ class TFDeep(Explainer):
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
-                # breakpoint()
                 for l in range(len(X)):
                     phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
 
@@ -467,7 +460,6 @@ class TFDeep(Explainer):
                     data = X[i].reshape(shape)
                     v = tf.constant(data, dtype=self.model_inputs[i].dtype)
                     inputs.append(v)
-                # breakpoint()
                 final_out = out(inputs)
                 try:
                     tf_execute.record_gradient = tf_backprop._record_gradient
@@ -480,7 +472,6 @@ class TFDeep(Explainer):
     def custom_grad(self, op, *grads):
         """ Passes a gradient op creation request to the correct handler.
         """
-        print("We are in custom grad", op, grads)
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
@@ -495,7 +486,6 @@ class TFDeep(Explainer):
         # TODO: unclear why some ops are not in the registry with TF 2.0 like TensorListReserve
         for non_reg_ops in ops_not_in_registry:
             reg[non_reg_ops] = {'type': None, 'location': location_tag}
-        # breakpoint()
         for n_op in op_handlers:
             if n_op in reg:
                 self.orig_grads[n_op] = reg[n_op]["type"]
@@ -529,7 +519,6 @@ class TFDeep(Explainer):
         if not tf.executing_eagerly():
             return out
         else:
-            # breakpoint()
             return [v.numpy() for v in out]
 
 def tensors_blocked_by_false(ops):
@@ -780,7 +769,6 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     # make sure the given inputs don't vary (negative is measured from the end of the list)
     for i in range(len(op.inputs)):
         if i in input_inds or i - len(op.inputs) in input_inds:
-            # breakpoint()
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
             # pass
     if op.type.startswith("shap_"):
