@@ -351,8 +351,8 @@ def test_tf_eager_stacked_lstms():
     model_output_values = model(xarr[:100, :, :])
 
     # todo: this might indicate an error in how the gradients are overwritten
-    for l in range(3):
-        assert (model_output_values[:, l].numpy() - e.expected_value[l].numpy() - sv[l].sum(axis=tuple(range(1, sv[l].ndim)))).max() < 0.02
+    for dim in range(3):
+        assert (model_output_values[:, dim].numpy() - e.expected_value[dim].numpy() - sv[dim].sum(axis=tuple(range(1, sv[dim].ndim)))).max() < 0.02
 
 
 def test_tf_eager(random_seed):
