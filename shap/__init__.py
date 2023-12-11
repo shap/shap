@@ -1,6 +1,3 @@
-
-__version__ = "0.43.0"
-
 from ._explanation import Cohorts, Explanation
 
 # explainers
@@ -17,6 +14,13 @@ from .explainers._partition import PartitionExplainer
 from .explainers._permutation import PermutationExplainer
 from .explainers._sampling import SamplingExplainer
 from .explainers._tree import TreeExplainer
+
+try:
+    # Version from setuptools-scm
+    from ._version import version as __version__
+except ImportError:
+    # Expected when running locally without build
+    __version__ = "0.0.0-not-built"
 
 _no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
                          "to fix this."
@@ -81,12 +85,12 @@ else:
 
 
 # other stuff :)
-from . import datasets, links, utils
-from .actions._optimizer import ActionOptimizer
-from .utils import approximate_interactions, sample
+from . import datasets, links, utils  # noqa: E402
+from .actions._optimizer import ActionOptimizer  # noqa: E402
+from .utils import approximate_interactions, sample  # noqa: E402
 
 #from . import benchmark
-from .utils._legacy import kmeans
+from .utils._legacy import kmeans  # noqa: E402
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [

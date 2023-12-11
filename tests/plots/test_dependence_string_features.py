@@ -2,8 +2,9 @@ import matplotlib
 import numpy as np
 import pandas as pd
 
+import shap
+
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
 
 
 def test_dependence_one_string_feature():

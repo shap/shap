@@ -3,7 +3,7 @@ try:
     # cause segfaults to occur when pytorch + lightgbm are imported (in that order).
     # The error does not occur when we import lightgbm first because lightgbm
     # distributes its own libomp which takes precedence.
-    # cf. GH issue #3092 for more context.
+    # cf. GH #3092 for more context.
     import lightgbm  # noqa: F401
 except ImportError:
     pass

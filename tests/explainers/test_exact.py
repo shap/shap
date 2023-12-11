@@ -1,7 +1,6 @@
 """ Unit tests for the Exact explainer.
 """
 
-# pylint: disable=missing-function-docstring
 import pickle
 
 import shap
