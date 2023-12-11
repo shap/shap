@@ -331,6 +331,8 @@ class LinearImpute:
             Array to impute missing values for, should be masked
             using missing_value.
         """
+        if len(data.shape) != 2:
+            raise NotImplementedError(f"Currently only 2 dimensional data can by processed with the LinearImpute class. You provided {len(data.shape)}. If this is crucial to you, feel free to open an issue: https://github.com/shap/shap/issues.")
         self.data = pd.DataFrame(data)
         self.data = self.data.replace(self.missing_value, np.NaN)
         interpolated = self.data.interpolate(
@@ -376,7 +378,7 @@ class Impute(Tabular):
         methods = ["linear", "mean", "median", "mode", "knn"]
         if isinstance(method, str):
             if method not in methods:
-                raise NotImplementedError("Given imputation method is not supported.")
+                raise NotImplementedError(f"Given imputation method is not supported. Please provide one of the following methods: {', '.join(methods)}")
             elif method == "knn":
                 impute = KNNImputer(missing_values=0)
             elif method == "linear":
