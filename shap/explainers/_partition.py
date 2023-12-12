@@ -16,9 +16,9 @@ class PartitionExplainer(Explainer):
 
     Partition SHAP computes Shapley values recursively through a hierarchy of features, this
     hierarchy defines feature coalitions and results in the Owen values from game theory.
-    
+
     The PartitionExplainer has two particularly nice properties:
-    
+
     1) PartitionExplainer is model-agnostic but when using a balanced partition tree only has
        quadradic exact runtime (in term of the number of input features). This is in contrast to the
        exponential exact runtime of KernelExplainer or SamplingExplainer.
@@ -28,7 +28,7 @@ class PartitionExplainer(Explainer):
        "accounted for" in the sense that the total credit assigned to a group of tightly dependent features
        does net depend on how they behave if their correlation structure was broken during the explanation's
        perterbation process.
-    
+
     Note that for linear models the Owen values that PartitionExplainer returns are the same as the standard
     non-hierarchical Shapley values.
     """
