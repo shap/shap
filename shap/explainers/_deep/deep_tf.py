@@ -170,7 +170,7 @@ class TFDeep(Explainer):
             # from tensorflow.python.framework.ops import disable_eager_execution
             # disable_eager_execution()
             self._init_between_tensors_eager(model, self.model_inputs, orig_data)
-            # self._init_between_tensors(self.model_output.op, self.model_inputs)
+        #     # self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
@@ -222,6 +222,16 @@ class TFDeep(Explainer):
         self.used_types = {}
         for op in self.between_ops:
             self.used_types[op.type] = True
+
+    def _init_between_tensors_eager2(self, model, model_inputs, data):
+        @tf.function
+        def grad_graph(shap_rAnD):
+            out = model(shap_rAnD, training=False)
+            if self.multi_output:
+                # todo: this needs to be fixed
+                out = out[:,0]
+            self._init_between_tensors(out.op, shap_rAnD)
+        grad_graph(data)
 
     def _init_between_tensors_eager(self, model, model_inputs, data):
 
@@ -350,18 +360,20 @@ class TFDeep(Explainer):
             else:
                 @tf.function
                 def grad_graph(shap_rAnD):
-                    phase = tf.keras.backend.learning_phase()
-                    tf.keras.backend.set_learning_phase(0)
-
                     with tf.GradientTape(watch_accessed_variables=False) as tape:
                         tape.watch(shap_rAnD)
-                        out = self.model(shap_rAnD)
+                        out = self.model(shap_rAnD, training=False)
                         if self.multi_output:
                             out = out[:,i]
 
                     self._init_between_tensors(out.op, shap_rAnD)
                     x_grad = tape.gradient(out, shap_rAnD)
-                    tf.keras.backend.set_learning_phase(phase)
+                    tf.print("shap_rAnD:")
+                    tf.print(shap_rAnD)
+                    tf.print("out:")
+                    tf.print(out)
+                    tf.print("x_grad:")
+                    tf.print(x_grad)
                     return x_grad
 
                 self.phi_symbolics[i] = grad_graph
@@ -421,11 +433,15 @@ class TFDeep(Explainer):
 
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
+                # import ipdb; ipdb.set_trace()
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
                 for t in range(len(X)):
                     phis[t][j] = (sample_phis[t][bg_data[t].shape[0]:] * (X[t][j] - bg_data[t])).mean(0)
+                print("result of sample phis: ", sample_phis)
+                print("These are the phis: ", phis)
+                print("\n\n\n")
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
@@ -466,6 +482,7 @@ class TFDeep(Explainer):
                     v = tf.constant(data, dtype=self.model_inputs[i].dtype)
                     inputs.append(v)
                 final_out = out(inputs)
+                print("this is final_out: ", final_out)
                 try:
                     tf_execute.record_gradient = tf_backprop._record_gradient
                 except AttributeError:
@@ -478,6 +495,7 @@ class TFDeep(Explainer):
         """ Passes a gradient op creation request to the correct handler.
         """
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
+        tf.print("type_name: ", type_name)
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
 
@@ -694,9 +712,11 @@ def nonlinearity_1d(input_ind):
 
 def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     # make sure only the given input varies
+    print("this is the op: ", op.type)
     op_inputs = op.inputs
     if op_inputs is None:
         op_inputs = op.outputs[0].op.inputs
+    tf.print("this is the op_inputs: ", op_inputs)
 
     for i in range(len(op_inputs)):
         if i != input_ind:
@@ -718,6 +738,9 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
         orig_grad[input_ind] if len(op_inputs) > 1 else orig_grad,
         grads[0] * tf.tile((xout - rout) / delta_in0, dup0)
     )
+    tf.print("output for type: ", op.type)
+    tf.print(out)
+    tf.print("\n")
     return out
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
@@ -784,6 +807,8 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
 def passthrough(explainer, op, *grads):
+    tf.print("In passthroug")
+    tf.print("This is the op: ", op.type)
     if op.type.startswith("shap_"):
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
