@@ -20,15 +20,14 @@ class PartitionExplainer(Explainer):
     The PartitionExplainer has two particularly nice properties:
 
     1) PartitionExplainer is model-agnostic but when using a balanced partition tree only has
-       quadradic exact runtime (in term of the number of input features). This is in contrast to the
+       quadratic exact runtime (in term of the number of input features). This is in contrast to the
        exponential exact runtime of KernelExplainer or SamplingExplainer.
     2) PartitionExplainer always assigns to groups of correlated features the credit that set of features
        would have had if treated as a group. This means if the hierarchical clustering given to
        PartitionExplainer groups correlated features together, then feature correlations are
        "accounted for" in the sense that the total credit assigned to a group of tightly dependent features
-       does net depend on how they behave if their correlation structure was broken during the explanation's
-       perterbation process.
-
+       does not depend on how they behave if their correlation structure was broken during the explanation's
+       perturbation process.
     Note that for linear models the Owen values that PartitionExplainer returns are the same as the standard
     non-hierarchical Shapley values.
     """
