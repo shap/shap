@@ -4,15 +4,10 @@
 
 #include <hip/hip_runtime.h>
 #include <hip/hip_cooperative_groups.h>
-#include <hip/device_functions.h>
 
 #ifdef __AMDGCN_WAVEFRONT_SIZE
 #undef WAVEFRONT_SIZE
 #define WAVEFRONT_SIZE __AMDGCN_WAVEFRONT_SIZE
-#endif
-
-#if WAVEFRONT_SIZE != 64
-#error "WAVEFRONT_SIZE 64 required"
 #endif
 
 /* this header file provides _*_sync functions, which is a hack only,
@@ -58,7 +53,12 @@ __device__ inline bool __is_thread_in_mask(lane_mask mask, unsigned int i)
 __device__ inline int __thread_rank(lane_mask mask)
 {
     /* calling thread must be set in the mask */
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
+#endif
 
     return cooperative_groups::internal::coalesced_group::masked_bit_count(mask, 0);
 }
@@ -67,7 +67,7 @@ __device__ inline unsigned int __mask_size(lane_mask mask)
 {
 #if WAVEFRONT_SIZE == 64
     return __popcll(mask);
-#elif
+#else
     return __popc(mask);
 #endif
 }
@@ -103,8 +103,11 @@ __device__ inline void __syncwarp()
 __device__ inline int __all_sync(lane_mask mask, int predicate)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     return ((__branchmask() & mask) ==  __ballot(predicate)) ? 1 : 0;
@@ -113,8 +116,11 @@ __device__ inline int __all_sync(lane_mask mask, int predicate)
 __device__ inline int __any_sync(lane_mask mask, int predicate)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     return (__ballot(predicate) & mask) ? 1 : 0;
@@ -123,8 +129,11 @@ __device__ inline int __any_sync(lane_mask mask, int predicate)
 __device__ inline lane_mask __ballot_sync(lane_mask mask, int predicate)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     return __ballot(predicate) & mask;
@@ -134,8 +143,11 @@ template <class T>
 __device__ inline T __shfl_sync(lane_mask mask, T var, int src, int width = WAVEFRONT_SIZE)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     return __shfl(var, src, width);
@@ -145,8 +157,11 @@ template <class T>
 __device__ inline T __shfl_down_sync(lane_mask mask, T var, unsigned int lane_delta, int width = WAVEFRONT_SIZE)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     return __shfl_down(var, lane_delta, width);
@@ -156,93 +171,28 @@ template <class T>
 __device__ inline T __shfl_up_sync(lane_mask mask, T var, unsigned int lane_delta, int width = WAVEFRONT_SIZE)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     return __shfl_up(var, lane_delta, width);
 }
 
 template <class T>
-__device__ inline T __shfl_local_sync(lane_mask mask, T var, int src, int width = WAVEFRONT_SIZE)
+__device__ inline T __shfl_xor_sync(lane_mask mask, T var, int lane_mask, int width = WAVEFRONT_SIZE)
 {
     /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
-    unsigned int size = __mask_size(mask);
-
-    /* check src lane */
-    src = src % size;
-
-    int lane = (size == WAVEFRONT_SIZE) ? src
-        : (WAVEFRONT_SIZE == 64) ? __fns64(mask, 0, (src + 1))
-        : __fns32(mask, 0, (src + 1));
-
-    return __shfl(var, lane, width);
-}
-
-template <class T>
-__device__ inline T __shfl_down_local_sync(lane_mask mask, T var, unsigned int lane_delta, int width = WAVEFRONT_SIZE)
-{
-    /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
-    assert(__is_thread_in_mask(mask));
-#endif
-
-    unsigned int size = __mask_size(mask);
-
-    /* if mask uses all lanes */
-    if (size == WAVEFRONT_SIZE) {
-        return __shfl_down(var, lane_delta, width);
-    }
-
-    int lane;
-
-    if (WAVEFRONT_SIZE == 64) {
-        lane = __fns64(mask, __lane_id(), lane_delta + 1);
-    }
-    else {
-        lane = __fns32(mask, __lane_id(), lane_delta + 1);
-    }
-
-    if (lane == -1) {
-        lane = __lane_id();
-    }
-
-    return __shfl(var, lane, width);
-}
-
-template <class T>
-__device__ inline T __shfl_up_local_sync(lane_mask mask, T var, unsigned int lane_delta, int width = WAVEFRONT_SIZE)
-{
-    /* calling thread must be set in the mask */
-#ifndef WARP_NO_ASSERT
-    assert(__is_thread_in_mask(mask));
-#endif
-
-    unsigned int size = __mask_size(mask);
-
-    /* if mask uses all lanes */
-    if (size == WAVEFRONT_SIZE) {
-        return __shfl_up(var, lane_delta, width);
-    }
-
-    int lane;
-
-    if (WAVEFRONT_SIZE == 64) {
-        lane = __fns64(mask, __lane_id(), -((int)lane_delta + 1));
-    }
-    else if (WAVEFRONT_SIZE == 32) {
-        lane = __fns32(mask, __lane_id(), -((int)lane_delta + 1));
-    }
-
-    if (lane == -1) {
-        lane = __lane_id();
-    }
-
-    return __shfl(var, lane, width);
+    return __shfl_xor(var, lane_mask, width);
 }
 
 template <class T>
@@ -252,8 +202,11 @@ __device__ inline lane_mask __match_any_sync(lane_mask mask, T value)
     lane_mask smask = 0, bmask;
 
     /* each calling lane/thread must be in mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     /* all threads */
@@ -283,8 +236,11 @@ __device__ inline lane_mask __match_any_sync(lane_mask mask, T value)
     lane_mask smask = 0, tmask;
 
     /* each calling lane/thread must be in mask */
-#ifndef WARP_NO_ASSERT
+#ifndef WARP_NO_MASK_CHECK
     assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
 #endif
 
     while (1) {

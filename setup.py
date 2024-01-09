@@ -137,7 +137,7 @@ def get_hip_path():
         hip_home = os.environ["ROCM_PATH"]
     else:
         # otherwise, search the PATH for HIPCC
-        found_hipcc = find_in_path(hipcc_bin, os.environ["PATH"])
+        found_hipcc = find_in_path(hipcc_bin, "/opt/rocm/bin")
         if found_hipcc is None:
             print(
                 "The hipcc binary could not be located in your $PATH. Either " +
