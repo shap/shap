@@ -2,41 +2,25 @@ ci:
   autoupdate_schedule: monthly
 
 exclude: '.*tree_shap_paper.*|.*user_studies.*'
+
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.292
+  rev: v0.1.9
   hooks:
   - id: ruff
+    types_or: [python, pyi, jupyter]
     args: [ --fix, --exit-non-zero-on-fix ]
+  - id: ruff-format
+    # Nb. python files currently excluded in ruff's config
+    types_or: [python, pyi, jupyter]
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
   - id: check-added-large-files
   - id: check-merge-conflict
   - id: check-toml
-  - id: check-json
-    types: ["jupyter"]
   - id: check-yaml
   - id: mixed-line-ending
   - id: trailing-whitespace
   - id: end-of-file-fixer
-
-# Notebook linting checks
-# Careful: When using pre-commit, ruff's "include" and "exclude" config is ignored.
-# See: https://github.com/shap/shap/issues/3036
-
-- repo: https://github.com/psf/black
-  rev: 23.9.1
-  hooks:
-  - id: black-jupyter
-    name: black (notebooks)
-    files:  notebooks/.*.ipynb
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.0.292
-  hooks:
-  - id: ruff
-    name: ruff (notebooks)
-    types_or: [jupyter]
-    files: notebooks/.*.ipynb
-    args: [ --fix, --exit-non-zero-on-fix ]

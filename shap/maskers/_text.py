@@ -50,8 +50,8 @@ class Text(Masker):
             try:
                 self.tokenizer = SimpleTokenizer(tokenizer)
             except Exception:
-                raise Exception( # pylint: disable=raise-missing-from
-                    "The passed tokenizer cannot be wrapped as a masker because it does not have a __call__ " + \
+                raise Exception(
+                    "The passed tokenizer cannot be wrapped as a masker because it does not have a __call__ "
                     "method, not can it be interpreted as a splitting regexp!"
                 )
 
@@ -343,7 +343,7 @@ class Text(Masker):
         return kwargs
 
 
-class SimpleTokenizer: # pylint: disable=too-few-public-methods
+class SimpleTokenizer:
     """ A basic model agnostic tokenizer.
     """
     def __init__(self, split_pattern=r"\W+"):

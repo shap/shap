@@ -11,6 +11,7 @@ import warnings
 from collections.abc import Sequence
 
 import numpy as np
+import pandas as pd
 import scipy.sparse
 
 try:
@@ -138,11 +139,11 @@ def force(
         return visualize(shap_values)
 
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = list(features.columns)
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
@@ -455,14 +456,14 @@ class SimpleListVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return """
-<div id='{id}'>{err_msg}</div>
+        return f"""
+<div id='{id_generator()}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.SimpleListVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.SimpleListVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{id_generator()}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def _repr_html_(self):
         return self.html()
@@ -506,14 +507,14 @@ class AdditiveForceVisualizer(BaseVisualizer):
     def html(self, label_margin=20):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
-        return """
-<div id='{id}'>{err_msg}</div>
+        return f"""
+<div id='{id_generator()}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{id_generator()}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
         fig = draw_additive_plot(self.data,

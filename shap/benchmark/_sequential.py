@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 
 from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
-from shap.utils import MaskedModel, safe_isinstance
+from shap.utils import MaskedModel
 
 from ._result import BenchmarkResult
 
@@ -89,7 +89,7 @@ class SequentialPerturbation:
 
     def __call__(self, name, explanation, *model_args, percent=0.01, indices=[], y=None, label=None, silent=False, debug_mode=False, batch_size=10):
         # if explainer is already the attributions
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
@@ -102,7 +102,7 @@ class SequentialPerturbation:
             label = "Score %d" % len(self.score_values)
 
         # convert dataframes
-        # if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        # if isinstance(X, (pd.Series, pd.DataFrame)):
         #     X = X.values
 
         # convert all single-sample vectors to matrices
@@ -139,7 +139,7 @@ class SequentialPerturbation:
             ordered_inds = self.sort_order_map(sample_attributions)
             increment = max(1,int(feature_size*percent))
             for j in range(0, feature_size, increment):
-                oind_list = [ordered_inds[l] for l in range(j, min(feature_size, j+increment))]
+                oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j+increment))]
 
                 for oind in oind_list:
                     if not ((self.sort_order == "positive" and sample_attributions[oind] <= 0) or \
@@ -202,7 +202,7 @@ class SequentialPerturbation:
         Will be deprecated once MaskedModel is in complete support
         '''
         # if explainer is already the attributions
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
@@ -211,7 +211,7 @@ class SequentialPerturbation:
             label = "Score %d" % len(self.score_values)
 
         # convert dataframes
-        if safe_isinstance(X, "pandas.core.series.Series") or safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
         # convert all single-sample vectors to matrices
@@ -264,7 +264,7 @@ class SequentialPerturbation:
                 ordered_inds = self.sort_order_map(test_attributions)
                 increment = max(1,int(feature_size*percent))
                 for j in range(0, feature_size, increment):
-                    oind_list = [ordered_inds[l] for l in range(j, min(feature_size, j+increment))]
+                    oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j+increment))]
 
                     for oind in oind_list:
                         if not ((self.sort_order == "positive" and test_attributions[oind] <= 0) or \
@@ -280,8 +280,8 @@ class SequentialPerturbation:
                     masked = self.masker(mask, X[i])
                     curr_val = self.f(masked, data, k).mean(0)
 
-                    for l in range(j, min(feature_size, j+increment)):
-                        values[l+1] = curr_val
+                    for t in range(j, min(feature_size, j+increment)):
+                        values[t+1] = curr_val
 
                 svals.append(values)
                 mask_vals.append(masks)

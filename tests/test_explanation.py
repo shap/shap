@@ -74,7 +74,7 @@ def test_feature_names_slicing_for_square_arrays(random_seed, N):
     square arrays. Since most of the time, the 2D shap values arrays are assembled as
     (# samples, # features).
 
-    cf. GH Issue #2722, #2699.
+    cf. GH #2722, GH #2699.
     """
     rs = np.random.RandomState(random_seed)
     featnames = list("abcde")

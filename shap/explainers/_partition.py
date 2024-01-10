@@ -10,30 +10,31 @@ from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
 from ._explainer import Explainer
 
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
-
 
 class PartitionExplainer(Explainer):
+    """Uses the Partition SHAP method to explain the output of any function.
+
+    Partition SHAP computes Shapley values recursively through a hierarchy of features, this
+    hierarchy defines feature coalitions and results in the Owen values from game theory.
+
+    The PartitionExplainer has two particularly nice properties:
+
+    1) PartitionExplainer is model-agnostic but when using a balanced partition tree only has
+       quadratic exact runtime (in term of the number of input features). This is in contrast to the
+       exponential exact runtime of KernelExplainer or SamplingExplainer.
+    2) PartitionExplainer always assigns to groups of correlated features the credit that set of features
+       would have had if treated as a group. This means if the hierarchical clustering given to
+       PartitionExplainer groups correlated features together, then feature correlations are
+       "accounted for" in the sense that the total credit assigned to a group of tightly dependent features
+       does not depend on how they behave if their correlation structure was broken during the explanation's
+       perturbation process.
+    Note that for linear models the Owen values that PartitionExplainer returns are the same as the standard
+    non-hierarchical Shapley values.
+    """
 
     def __init__(self, model, masker, *, output_names=None, link=links.identity, linearize_link=True,
                  feature_names=None, **call_args):
-        """ Uses the Partition SHAP method to explain the output of any function.
-
-        Partition SHAP computes Shapley values recursively through a hierarchy of features, this
-        hierarchy defines feature coalitions and results in the Owen values from game theory. The
-        PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
-        model-agnostic but when using a balanced partition tree only has quadradic exact runtime
-        (in term of the number of input features). This is in contrast to the exponential exact
-        runtime of KernelExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
-        correlated features the credit that set of features would have had if treated as a group. This
-        means if the hierarchical clustering given to PartitionExplainer groups correlated features
-        together, then feature correlations are "accounted for" ... in the sense that the total credit assigned
-        to a group of tightly dependent features does net depend on how they behave if their correlation
-        structure was broken during the explanation's perterbation process. Note that for linear models
-        the Owen values that PartitionExplainer returns are the same as the standard non-hierarchical
-        Shapley values.
-
+        """Build a PartitionExplainer for the given model with the given masker.
 
         Parameters
         ----------
@@ -67,9 +68,9 @@ class PartitionExplainer(Explainer):
                          output_names = output_names, feature_names=feature_names)
 
         # convert dataframes
-        # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
+        # if isinstance(masker, pd.DataFrame):
         #     masker = TabularMasker(masker)
-        # elif safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2:
+        # elif isinstance(masker, np.ndarray) and len(masker.shape) == 2:
         #     masker = TabularMasker(masker)
         # elif safe_isinstance(masker, "transformers.PreTrainedTokenizer"):
         #     masker = TextMasker(masker)

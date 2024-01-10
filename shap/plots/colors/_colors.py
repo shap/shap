@@ -39,7 +39,7 @@ try:
     l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps//2)) + list(np.linspace(l_mid, red_lch[0], nsteps//2))
     c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
     h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
-    for pos,l,c,h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals):
+    for pos,l,c,h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals): # noqa: E741
         lch = [l, c, h]
         rgb = lch2rgb(lch)
         reds.append((pos, rgb[0], rgb[0]))
@@ -104,20 +104,20 @@ try:
     })
 
     colors = []
-    for l in np.linspace(1, 0, 100):
-        colors.append((30./255, 136./255, 229./255,l))
-    for l in np.linspace(0, 1, 100):
-        colors.append((255./255, 13./255, 87./255,l))
+    for j in np.linspace(1, 0, 100):
+        colors.append((30./255, 136./255, 229./255,j))
+    for j in np.linspace(0, 1, 100):
+        colors.append((255./255, 13./255, 87./255,j))
     red_transparent_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
 
     colors = []
-    for l in np.linspace(0, 1, 100):
-        colors.append((30./255, 136./255, 229./255,l))
+    for j in np.linspace(0, 1, 100):
+        colors.append((30./255, 136./255, 229./255,j))
     transparent_blue = LinearSegmentedColormap.from_list("transparent_blue", colors)
 
     colors = []
-    for l in np.linspace(0, 1, 100):
-        colors.append((255./255, 13./255, 87./255,l))
+    for j in np.linspace(0, 1, 100):
+        colors.append((255./255, 13./255, 87./255,j))
     transparent_red = LinearSegmentedColormap.from_list("transparent_red", colors)
 
     old_blue_rgb = np.array([30, 136, 229]) / 255

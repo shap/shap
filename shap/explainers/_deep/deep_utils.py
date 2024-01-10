@@ -6,14 +6,14 @@ def _check_additivity(explainer, model_output_values, output_phis):
 
     assert len(explainer.expected_value) == model_output_values.shape[1], "Length of expected values and model outputs does not match."
 
-    for l in range(len(explainer.expected_value)):
+    for t in range(len(explainer.expected_value)):
         if not explainer.multi_input:
-            diffs = model_output_values[:, l] - explainer.expected_value[l] - output_phis[l].sum(axis=tuple(range(1, output_phis[l].ndim)))
+            diffs = model_output_values[:, t] - explainer.expected_value[t] - output_phis[t].sum(axis=tuple(range(1, output_phis[t].ndim)))
         else:
-            diffs = model_output_values[:, l] - explainer.expected_value[l]
+            diffs = model_output_values[:, t] - explainer.expected_value[t]
 
-            for i in range(len(output_phis[l])):
-                diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
+            for i in range(len(output_phis[t])):
+                diffs -= output_phis[t][i].sum(axis=tuple(range(1, output_phis[t][i].ndim)))
 
         maxdiff = np.abs(diffs).max()
 
