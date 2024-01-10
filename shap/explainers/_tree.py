@@ -4,7 +4,7 @@ import struct
 import tempfile
 import time
 import warnings
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -1777,7 +1777,7 @@ class XGBTreeModelLoader:
             self.leaf_child_cnt.append(np.array(tree_json["default_left"], dtype=int))
 
     @staticmethod
-    def read_xgb_params(xgb_model) -> dict[str, Any]:
+    def read_xgb_params(xgb_model) -> Dict[str, Any]:
         import xgboost
         with tempfile.TemporaryDirectory() as tmp_dir:
             if version.parse(xgboost.__version__) >= version.parse("1.6.0"):
