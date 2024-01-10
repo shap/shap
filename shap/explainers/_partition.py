@@ -1,47 +1,40 @@
-import types
-import copy
-import inspect
-from ..utils import MaskedModel
-import numpy as np
-import warnings
-import time
-from tqdm.auto import tqdm
 import queue
-from ..utils import assert_import, record_import_error, safe_isinstance, make_masks, OpChain
-from .. import Explanation
-from .. import maskers
-from ._explainer import Explainer
-from .. import links
-import cloudpickle
-import pickle
-from ..maskers import Masker
+import time
+
+import numpy as np
+from numba import njit
+from tqdm.auto import tqdm
+
+from .. import Explanation, links
 from ..models import Model
-from numba import jit
-
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
+from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from ._explainer import Explainer
 
 
-class Partition(Explainer):
+class PartitionExplainer(Explainer):
+    """Uses the Partition SHAP method to explain the output of any function.
+
+    Partition SHAP computes Shapley values recursively through a hierarchy of features, this
+    hierarchy defines feature coalitions and results in the Owen values from game theory.
+
+    The PartitionExplainer has two particularly nice properties:
+
+    1) PartitionExplainer is model-agnostic but when using a balanced partition tree only has
+       quadratic exact runtime (in term of the number of input features). This is in contrast to the
+       exponential exact runtime of KernelExplainer or SamplingExplainer.
+    2) PartitionExplainer always assigns to groups of correlated features the credit that set of features
+       would have had if treated as a group. This means if the hierarchical clustering given to
+       PartitionExplainer groups correlated features together, then feature correlations are
+       "accounted for" in the sense that the total credit assigned to a group of tightly dependent features
+       does not depend on how they behave if their correlation structure was broken during the explanation's
+       perturbation process.
+    Note that for linear models the Owen values that PartitionExplainer returns are the same as the standard
+    non-hierarchical Shapley values.
+    """
 
     def __init__(self, model, masker, *, output_names=None, link=links.identity, linearize_link=True,
                  feature_names=None, **call_args):
-        """ Uses the Partition SHAP method to explain the output of any function.
-
-        Partition SHAP computes Shapley values recursively through a hierarchy of features, this
-        hierarchy defines feature coalitions and results in the Owen values from game theory. The
-        PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
-        model-agnostic but when using a balanced partition tree only has quadradic exact runtime
-        (in term of the number of input features). This is in contrast to the exponential exact
-        runtime of KernelExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
-        correlated features the credit that set of features would have had if treated as a group. This
-        means if the hierarchical clustering given to PartitionExplainer groups correlated features
-        together, then feature correlations are "accounted for" ... in the sense that the total credit assigned
-        to a group of tightly dependent features does net depend on how they behave if their correlation
-        structure was broken during the explanation's perterbation process. Note that for linear models
-        the Owen values that PartitionExplainer returns are the same as the standard non-hierarchical
-        Shapley values.
-
+        """Build a PartitionExplainer for the given model with the given masker.
 
         Parameters
         ----------
@@ -68,16 +61,16 @@ class Partition(Explainer):
 
         Examples
         --------
-        See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Partition.html>`_
+        See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/PartitionExplainer.html>`_
         """
 
         super().__init__(model, masker, link=link, linearize_link=linearize_link, algorithm="partition", \
                          output_names = output_names, feature_names=feature_names)
 
         # convert dataframes
-        # if safe_isinstance(masker, "pandas.core.frame.DataFrame"):
+        # if isinstance(masker, pd.DataFrame):
         #     masker = TabularMasker(masker)
-        # elif safe_isinstance(masker, "numpy.ndarray") and len(masker.shape) == 2:
+        # elif isinstance(masker, np.ndarray) and len(masker.shape) == 2:
         #     masker = TabularMasker(masker)
         # elif safe_isinstance(masker, "transformers.PreTrainedTokenizer"):
         #     masker = TextMasker(masker)
@@ -115,7 +108,7 @@ class Partition(Explainer):
         # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
         # has a call function with those new default arguments
         if len(call_args) > 0:
-            class Partition(self.__class__):
+            class PartitionExplainer(self.__class__):
                 # this signature should match the __call__ signature of the class defined below
                 def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
                              outputs=None, silent=False):
@@ -123,8 +116,8 @@ class Partition(Explainer):
                         *args, max_evals=max_evals, fixed_context=fixed_context, main_effects=main_effects, error_bounds=error_bounds,
                         batch_size=batch_size, outputs=outputs, silent=silent
                     )
-            Partition.__call__.__doc__ = self.__class__.__call__.__doc__
-            self.__class__ = Partition
+            PartitionExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
+            self.__class__ = PartitionExplainer
             for k, v in call_args.items():
                 self.__call__.__kwdefaults__[k] = v
 
@@ -155,7 +148,7 @@ class Partition(Explainer):
 
         # make sure we have the base value and current value outputs
         M = len(fm)
-        m00 = np.zeros(M, dtype=np.bool)
+        m00 = np.zeros(M, dtype=bool)
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             self._curr_base_value = fm(m00.reshape(1, -1), zero_index=0)[0] # the zero index param tells the masked model what the baseline is
@@ -206,7 +199,7 @@ class Partition(Explainer):
         }
 
     def __str__(self):
-        return "shap.explainers.Partition()"
+        return "shap.explainers.PartitionExplainer()"
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """ Compute a nested set of recursive Owen values based on an ordering recursion.
@@ -214,9 +207,9 @@ class Partition(Explainer):
 
         #f = self._reshaped_model
         #r = self.masker
-        #masks = np.zeros(2*len(inds)+1, dtype=np.int)
+        #masks = np.zeros(2*len(inds)+1, dtype=int)
         M = len(fm)
-        m00 = np.zeros(M, dtype=np.bool)
+        m00 = np.zeros(M, dtype=bool)
         #f00 = fm(m00.reshape(1,-1))[0]
         base_value = f00
         #f11 = fm(~m00.reshape(1,-1))[0]
@@ -353,9 +346,9 @@ class Partition(Explainer):
 
         #f = self._reshaped_model
         #r = self.masker
-        #masks = np.zeros(2*len(inds)+1, dtype=np.int)
+        #masks = np.zeros(2*len(inds)+1, dtype=int)
         M = len(fm)
-        m00 = np.zeros(M, dtype=np.bool)
+        m00 = np.zeros(M, dtype=bool)
         #f00 = fm(m00.reshape(1,-1))[0]
         base_value = f00
         #f11 = fm(~m00.reshape(1,-1))[0]
@@ -473,22 +466,22 @@ class Partition(Explainer):
                 if context is None or context == 0 or ignore_context:
                     self.dvalues[ind] += (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    # recurse on the left node with zero context, flip the context for all decendents if we are ignoring it
+                    # recurse on the left node with zero context, flip the context for all descendents if we are ignoring it
                     args = (m00, f00, f10, lind, new_weight, 0 if context == 1 else context)
                     q.put((-np.max(np.abs(f10 - f00)) * new_weight, np.random.randn(), args))
 
-                    # recurse on the right node with zero context, flip the context for all decendents if we are ignoring it
+                    # recurse on the right node with zero context, flip the context for all descendents if we are ignoring it
                     args = (m00, f00, f01, rind, new_weight, 0 if context == 1 else context)
                     q.put((-np.max(np.abs(f01 - f00)) * new_weight, np.random.randn(), args))
 
                 if context is None or context == 1 or ignore_context:
                     self.dvalues[ind] -= (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    # recurse on the left node with one context, flip the context for all decendents if we are ignoring it
+                    # recurse on the left node with one context, flip the context for all descendents if we are ignoring it
                     args = (m01, f01, f11, lind, new_weight, 1 if context == 0 else context)
                     q.put((-np.max(np.abs(f11 - f01)) * new_weight, np.random.randn(), args))
 
-                    # recurse on the right node with one context, flip the context for all decendents if we are ignoring it
+                    # recurse on the right node with one context, flip the context for all descendents if we are ignoring it
                     args = (m10, f10, f11, rind, new_weight, 1 if context == 0 else context)
                     q.put((-np.max(np.abs(f11 - f10)) * new_weight, np.random.randn(), args))
 
@@ -507,9 +500,9 @@ class Partition(Explainer):
 
     #     #f = self._reshaped_model
     #     #r = self.masker
-    #     #masks = np.zeros(2*len(inds)+1, dtype=np.int)
+    #     #masks = np.zeros(2*len(inds)+1, dtype=int)
     #     M = len(fm)
-    #     m00 = np.zeros(M, dtype=np.bool)
+    #     m00 = np.zeros(M, dtype=bool)
     #     #f00 = fm(m00.reshape(1,-1))[0]
     #     base_value = f00
     #     #f11 = fm(~m00.reshape(1,-1))[0]
@@ -647,7 +640,7 @@ class Partition(Explainer):
     #             if fixed_context is None or fixed_context == 1:
     #                 self.dvalues[ind] -= (f11 - f10 - f01 + f00) * weight # leave the interaction effect on the internal node
 
-                    
+
     #                 # recurse on the left node with one context
     #                 args = (m01, f01, f11, lind, new_weight)
     #                 q.put((-np.max(np.abs(f11 - f01)) * new_weight, np.random.randn(), args))
@@ -672,7 +665,7 @@ def output_indexes_len(output_indexes):
     elif not isinstance(output_indexes, str):
         return len(output_indexes)
 
-@jit
+@njit
 def lower_credit(i, value, M, values, clustering):
     if i < M:
         values[i] += value

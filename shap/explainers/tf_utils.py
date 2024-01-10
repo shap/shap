@@ -1,5 +1,7 @@
-tf = None
 import warnings
+
+tf = None
+
 
 def _import_tf():
     """ Tries to import tensorflow.
@@ -26,7 +28,7 @@ def _get_session(session):
     if session is None:
         try:
             session = tf.compat.v1.keras.backend.get_session()
-        except:
+        except Exception:
             session = tf.keras.backend.get_session()
     return tf.get_default_session() if session is None else session
 
@@ -62,10 +64,12 @@ def _get_model_inputs(model):
         str(type(model)).endswith("keras.engine.training.Model'>") or \
         isinstance(model, tf.keras.Model):
         return model.inputs
-    elif str(type(model)).endswith("tuple'>"):
+    if str(type(model)).endswith("tuple'>"):
         return model[0]
-    else:
-        assert False, str(type(model)) + " is not currently a supported model type!"
+
+    emsg = f"{type(model)} is not currently a supported model type!"
+    raise ValueError(emsg)
+
 
 def _get_model_output(model):
     """ Common utility to determine the model output.
@@ -87,7 +91,8 @@ def _get_model_output(model):
             return model.outputs[0]
         else:
             return model.layers[-1].output
-    elif str(type(model)).endswith("tuple'>"):
+    if str(type(model)).endswith("tuple'>"):
         return model[1]
-    else:
-        assert False, str(type(model)) + " is not currently a supported model type!"
+
+    emsg = f"{type(model)} is not currently a supported model type!"
+    raise ValueError(emsg)

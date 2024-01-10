@@ -1,21 +1,26 @@
-import numpy as np
-import scipy as sp
 import warnings
-from tqdm.autonotebook import tqdm
+
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse
+from tqdm.auto import tqdm
+
+from .. import links, maskers
+from ..utils._exceptions import (
+    DimensionError,
+    InvalidFeaturePerturbationError,
+    InvalidModelError,
+)
 from ._explainer import Explainer
-from ..utils import safe_isinstance
-from ..utils._exceptions import InvalidFeaturePerturbationError, InvalidModelError, DimensionError
-from .. import maskers
-from .. import links
 
 
-class Linear(Explainer):
+class LinearExplainer(Explainer):
     """ Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
 
     This computes the SHAP values for a linear model and can account for the correlations among
     the input features. Assuming features are independent leads to interventional SHAP values which
     for a linear model are coef[i] * (x[i] - X.mean(0)[i]) for the ith feature. If instead we account
-    for correlations then we prevent any problems arising from colinearity and share credit among
+    for correlations then we prevent any problems arising from collinearity and share credit among
     correlated features. Accounting for correlations can be computationally challenging, but
     LinearExplainer uses sampling to estimate a transform that can then be applied to explain
     any prediction of the model.
@@ -28,7 +33,7 @@ class Linear(Explainer):
     data : (mean, cov), numpy.array, pandas.DataFrame, iml.DenseData or scipy.csr_matrix
         The background dataset to use for computing conditional expectations. Note that only the
         mean and covariance of the dataset are used. This means passing a raw data matrix is just
-        a convienent alternative to passing the mean and covariance directly.
+        a convenient alternative to passing the mean and covariance directly.
     nsamples : int
         Number of samples to use when estimating the transformation matrix used to account for
         feature correlations.
@@ -46,7 +51,7 @@ class Linear(Explainer):
 
     Examples
     --------
-    See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Linear.html>`_
+    See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/LinearExplainer.html>`_
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
@@ -68,7 +73,7 @@ class Linear(Explainer):
         # wrap the incoming masker object as a shap.Masker object before calling
         # parent class constructor, which does the same but without respecting
         # the user-provided feature_perturbation choice
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or ((safe_isinstance(masker, "numpy.ndarray") or sp.sparse.issparse(masker)) and len(masker.shape) == 2):
+        if isinstance(masker, pd.DataFrame) or ((isinstance(masker, np.ndarray) or issparse(masker)) and len(masker.shape) == 2):
             if self.feature_perturbation == "correlation_dependent":
                 masker = maskers.Impute(masker)
             else:
@@ -79,14 +84,14 @@ class Linear(Explainer):
             else:
                 masker = maskers.Independent({"mean": masker[0], "cov": masker[1]})
 
-        super(Linear, self).__init__(model, masker, link=link, **kwargs)
+        super().__init__(model, masker, link=link, **kwargs)
 
         self.nsamples = nsamples
-        
+
 
         # extract what we need from the given model object
-        self.coef, self.intercept = Linear._parse_model(model)
-        
+        self.coef, self.intercept = LinearExplainer._parse_model(model)
+
         # extract the data
         if issubclass(type(self.masker), (maskers.Independent, maskers.Partition)):
             self.feature_perturbation = "interventional"
@@ -97,33 +102,33 @@ class Linear(Explainer):
         data = getattr(self.masker, "data", None)
 
         # convert DataFrame's to numpy arrays
-        if safe_isinstance(type(data), 'pandas.core.frame.DataFrame'):
+        if isinstance(data, pd.DataFrame):
             data = data.values
 
         # get the mean and covariance of the model
         if getattr(self.masker, "mean", None) is not None:
             self.mean = self.masker.mean
             self.cov = self.masker.cov
-        elif type(data) is dict and len(data) == 2:
+        elif isinstance(data, dict) and len(data) == 2:
             self.mean = data["mean"]
-            if safe_isinstance(self.mean, "pandas.core.series.Series"):
+            if isinstance(self.mean, pd.Series):
                 self.mean = self.mean.values
 
             self.cov = data["cov"]
-            if safe_isinstance(self.cov, "pandas.core.frame.DataFrame"):
+            if isinstance(self.cov, pd.DataFrame):
                 self.cov = self.cov.values
-        elif type(data) is tuple and len(data) == 2:
+        elif isinstance(data, tuple) and len(data) == 2:
             self.mean = data[0]
-            if safe_isinstance(self.mean, "pandas.core.series.Series"):
+            if isinstance(self.mean, pd.Series):
                 self.mean = self.mean.values
 
             self.cov = data[1]
-            if safe_isinstance(self.cov, "pandas.core.frame.DataFrame"):
+            if isinstance(self.cov, pd.DataFrame):
                 self.cov = self.cov.values
         elif data is None:
             raise ValueError("A background data distribution must be provided!")
         else:
-            if sp.sparse.issparse(data):
+            if issparse(data):
                 self.mean = np.array(np.mean(data, 0))[0]
                 if self.feature_perturbation != "interventional":
                     raise NotImplementedError("Only feature_perturbation = 'interventional' is supported for sparse data")
@@ -133,9 +138,9 @@ class Linear(Explainer):
                     self.cov = np.cov(data, rowvar=False)
         #print(self.coef, self.mean.flatten(), self.intercept)
         # Note: mean can be numpy.matrixlib.defmatrix.matrix or numpy.matrix type depending on numpy version
-        if sp.sparse.issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
+        if issparse(self.mean) or str(type(self.mean)).endswith("matrix'>"):
             # accept both sparse and dense coef
-            # if not sp.sparse.issparse(self.coef):
+            # if not issparse(self.coef):
             #     self.coef = np.asmatrix(self.coef)
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
 
@@ -146,7 +151,7 @@ class Linear(Explainer):
                 self.expected_value = np.array(self.expected_value)[0]
         else:
             self.expected_value = np.dot(self.coef, self.mean) + self.intercept
-        
+
         self.M = len(self.mean)
 
         # if needed, estimate the transform matrices
@@ -162,7 +167,7 @@ class Linear(Explainer):
             self.mean = np.matmul(self.avg_proj, self.mean)
             self.coef = np.matmul(sum_proj, self.coef)
 
-            # if we still have some multi-colinearity present then we just add regularization...
+            # if we still have some multi-collinearity present then we just add regularization...
             e,_ = np.linalg.eig(self.cov)
             if e.min() < 1e-7:
                 self.cov = self.cov + np.eye(self.cov.shape[0]) * 1e-6
@@ -190,7 +195,7 @@ class Linear(Explainer):
 
         mean_transform = np.zeros((M,M))
         x_transform = np.zeros((M,M))
-        inds = np.arange(M, dtype=np.int)
+        inds = np.arange(M, dtype=int)
         for _ in tqdm(range(nsamples), "Estimating transforms"):
             np.random.shuffle(inds)
             cov_inv_SiSi = np.zeros((0,0))
@@ -244,7 +249,7 @@ class Linear(Explainer):
     def _parse_model(model):
         """ Attempt to pull out the coefficients and intercept from the given model object.
         """
-        # raw coefficents
+        # raw coefficients
         if type(model) == tuple and len(model) == 2:
             coef = model[0]
             intercept = model[1]
@@ -270,13 +275,13 @@ class Linear(Explainer):
     def supports_model_with_masker(model, masker):
         """ Determines if we can parse the given model.
         """
-        
+
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
 
         try:
-            Linear._parse_model(model)
-        except:
+            LinearExplainer._parse_model(model)
+        except Exception:
             return False
         return True
 
@@ -291,27 +296,24 @@ class Linear(Explainer):
             X = X.reshape(1, -1)
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
-        #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
         if len(X.shape) not in (1, 2):
             raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" %len(X.shape))
 
         if self.feature_perturbation == "correlation_dependent":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 raise InvalidFeaturePerturbationError("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
-            full_phi = np.zeros(((phi.shape[0], self.M)))
+            full_phi = np.zeros((phi.shape[0], self.M))
             full_phi[:,self.valid_inds] = phi
             phi = full_phi
 
         elif self.feature_perturbation == "interventional":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 phi = np.array(np.multiply(X - self.mean, self.coef))
 
                 # if len(self.coef.shape) == 1:
@@ -322,8 +324,6 @@ class Linear(Explainer):
                 phi = np.array(X - self.mean) * self.coef
                 # if len(self.coef.shape) == 1:
                 #     phi = np.array(X - self.mean) * self.coef
-                    
-
                 #     return np.array(X - self.mean) * self.coef
                 # else:
                 #     return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
@@ -355,27 +355,26 @@ class Linear(Explainer):
         """
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
-        #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
-        assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
+        # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
+        if len(X.shape) not in (1, 2):
+            raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" % len(X.shape))
 
         if self.feature_perturbation == "correlation_dependent":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 raise InvalidFeaturePerturbationError("Only feature_perturbation = 'interventional' is supported for sparse data")
             phi = np.matmul(np.matmul(X[:,self.valid_inds], self.avg_proj.T), self.x_transform.T) - self.mean_transformed
             phi = np.matmul(phi, self.avg_proj)
 
-            full_phi = np.zeros(((phi.shape[0], self.M)))
+            full_phi = np.zeros((phi.shape[0], self.M))
             full_phi[:,self.valid_inds] = phi
 
             return full_phi
 
         elif self.feature_perturbation == "interventional":
-            if sp.sparse.issparse(X):
+            if issparse(X):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
                 else:
@@ -389,7 +388,7 @@ class Linear(Explainer):
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))
     C = np.matmul(np.matmul(D, C), D)
-    components = -np.ones(C.shape[0], dtype=np.int)
+    components = -np.ones(C.shape[0], dtype=int)
     count = -1
     for i in range(C.shape[0]):
         found_group = False
@@ -399,7 +398,7 @@ def duplicate_components(C):
                     count += 1
                     found_group = True
                 components[j] = count
-                
+
     proj = np.zeros((len(np.unique(components)), C.shape[0]))
     proj[0, 0] = 1
     for i in range(1,C.shape[0]):

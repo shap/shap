@@ -1,10 +1,13 @@
-import numpy as np
 import warnings
-from .._explainer import Explainer
+
+import numpy as np
 from packaging import version
-from ..tf_utils import _get_session, _get_graph, _get_model_inputs, _get_model_output
+
 from ...utils._exceptions import DimensionError
-keras = None
+from .._explainer import Explainer
+from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
+from .deep_utils import _check_additivity
+
 tf = None
 tf_ops = None
 tf_backprop = None
@@ -28,7 +31,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
         out = tf_backprop._record_gradient("shap_"+op_name, inputs, attrs, results)
     except AttributeError:
         out = tf_backprop.record_gradient("shap_"+op_name, inputs, attrs, results)
-    
+
     if reset_input:
         inputs[1].__dict__["_dtype"] = tf.int32
 
@@ -36,8 +39,8 @@ def custom_record_gradient(op_name, inputs, attrs, results):
 
 class TFDeep(Explainer):
     """
-    Using tf.gradients to implement the backgropagation was
-    inspired by the gradient based implementation approach proposed by Ancona et al, ICLR 2018. Note
+    Using tf.gradients to implement the backpropagation was
+    inspired by the gradient-based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
 
@@ -46,7 +49,7 @@ class TFDeep(Explainer):
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
-        values, but be unreasonably expensive. The variance of the expectation estimates scale by
+        values, but will be computationally expensive. The variance of the expectation estimates scales by
         roughly 1/sqrt(N) for N background data samples. So 100 samples will give a good estimate,
         and 1000 samples a very good estimate of the expected values.
 
@@ -76,40 +79,37 @@ class TFDeep(Explainer):
             have a value of False during predictions (and hence explanations).
 
         """
-        # try and import keras and tensorflow
+        # try to import tensorflow
         global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
         if tf is None:
-            from tensorflow.python.framework import ops as tf_ops # pylint: disable=E0611
-            from tensorflow.python.ops import gradients_impl as tf_gradients_impl # pylint: disable=E0611
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
+            from tensorflow.python.framework import (
+                ops as tf_ops,
+            )
+            from tensorflow.python.ops import (
+                gradients_impl as tf_gradients_impl,
+            )
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl
             import tensorflow as tf
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
-        global keras
-        if keras is None:
-            try:
-                import keras
-                warnings.warn("keras is no longer supported, please use tf.keras instead.")
-            except:
-                pass
-        
+
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
 
         # determine the model inputs and outputs
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
-        assert type(self.model_output) != list, "The model output to be explained must be a single tensor!"
+        assert not isinstance(self.model_output, list), "The model output to be explained must be a single tensor!"
         assert len(self.model_output.shape) < 3, "The model output must be a vector or a single value!"
         self.multi_output = True
         if len(self.model_output.shape) == 1:
             self.multi_output = False
 
         if tf.executing_eagerly():
-            if type(model) is tuple or type(model) is list:
+            if isinstance(model, tuple) or isinstance(model, list):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
                 from tensorflow.keras import Model
                 self.model = Model(model[0], model[1])
@@ -118,11 +118,11 @@ class TFDeep(Explainer):
 
         # check if we have multiple inputs
         self.multi_input = True
-        if type(self.model_inputs) != list or len(self.model_inputs) == 1:
+        if not isinstance(self.model_inputs, list) or len(self.model_inputs) == 1:
             self.multi_input = False
-            if type(self.model_inputs) != list:
+            if not isinstance(self.model_inputs, list):
                 self.model_inputs = [self.model_inputs]
-        if type(data) != list and (hasattr(data, '__call__')==False):
+        if not isinstance(data, list) and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
 
@@ -219,7 +219,7 @@ class TFDeep(Explainer):
         """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
         """
         if op not in self._vinputs:
-            out = np.zeros(len(op.inputs), dtype=np.bool)
+            out = np.zeros(len(op.inputs), dtype=bool)
             for i,t in enumerate(op.inputs):
                 out[i] = t.name in self.between_tensors
             self._vinputs[op] = out
@@ -260,12 +260,12 @@ class TFDeep(Explainer):
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         # check if we have multiple inputs
         if not self.multi_input:
-            if type(X) == list and len(X) != 1:
-                assert False, "Expected a single tensor as model input!"
-            elif type(X) != list:
+            if isinstance(X, list) and len(X) != 1:
+                raise ValueError("Expected a single tensor as model input!")
+            elif not isinstance(X, list):
                 X = [X]
         else:
-            assert type(X) == list, "Expected a list of model inputs!"
+            assert isinstance(X, list), "Expected a list of model inputs!"
         assert len(self.model_inputs) == len(X), "Number of model inputs (%d) does not match the number given (%d)!" % (len(self.model_inputs), len(X))
 
         # rank and determine the model outputs that we will explain
@@ -282,7 +282,8 @@ class TFDeep(Explainer):
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.phi_symbolics)), (X[0].shape[0], 1))
@@ -295,25 +296,25 @@ class TFDeep(Explainer):
                 phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
                 if (hasattr(self.data, '__call__')):
-                    bg_data = self.data([X[l][j] for l in range(len(X))])
-                    if type(bg_data) != list:
+                    bg_data = self.data([X[t][j] for t in range(len(X))])
+                    if not isinstance(bg_data, list):
                         bg_data = [bg_data]
                 else:
                     bg_data = self.data
 
                 # tile the inputs to line up with the background data samples
-                tiled_X = [np.tile(X[l][j:j+1], (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
+                tiled_X = [np.tile(X[t][j:j+1], (bg_data[t].shape[0],) + tuple([1 for k in range(len(X[t].shape)-1)])) for t in range(len(X))]
 
                 # we use the first sample for the current sample and the rest for the references
-                joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
+                joint_input = [np.concatenate([tiled_X[t], bg_data[t]], 0) for t in range(len(X))]
 
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
-                    phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
+                for t in range(len(X)):
+                    phis[t][j] = (sample_phis[t][bg_data[t].shape[0]:] * (X[t][j] - bg_data[t])).mean(0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
@@ -323,17 +324,8 @@ class TFDeep(Explainer):
                 model_output = self.run(self.model_output, self.model_inputs, X)
             else:
                 model_output = self.model(X)
-            for l in range(len(self.expected_value)):
-                if not self.multi_input:
-                    diffs = model_output[:, l] - self.expected_value[l] - output_phis[l].sum(axis=tuple(range(1, output_phis[l].ndim)))
-                else:
-                    diffs = model_output[:, l] - self.expected_value[l]
-                    for i in range(len(output_phis[l])):
-                        diffs -= output_phis[l][i].sum(axis=tuple(range(1, output_phis[l][i].ndim)))
-                assert np.abs(diffs).max() < 1e-2, "The SHAP explanations do not sum up to the model's output! This is either because of a " \
-                                                   "rounding error or because an operator in your computation graph was not fully supported. If " \
-                                                   "the sum difference of %f is significant compared the scale of your model outputs please post " \
-                                                   "as a github issue, with a reproducable example if possible so we can debug it." % np.abs(diffs).max()
+
+            _check_additivity(self, model_output, output_phis)
 
         if not self.multi_output:
             return output_phis[0]
@@ -375,7 +367,7 @@ class TFDeep(Explainer):
         """ Passes a gradient op creation request to the correct handler.
         """
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
-        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefex before the lookup
+        out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
 
     def execute_with_overridden_gradients(self, f):
@@ -555,7 +547,8 @@ def gather(explainer, op, *grads):
             op.type = op.type[5:]
         return [explainer.orig_grads[op.type](op, grads[0]), None] # linear in this case
     else:
-        assert False, "Axis not yet supported to be varying for gather op!"
+        raise ValueError("Axis not yet supported to be varying for gather op!")
+
 
 def linearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
     def handler(explainer, op, *grads):
@@ -617,7 +610,9 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     return out
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
-    assert input_ind0 == 0 and input_ind1 == 1, "TODO: Can't yet handle double inputs that are not first!"
+    if not (input_ind0 == 0 and input_ind1 == 1):
+        emsg = "TODO: Can't yet handle double inputs that are not first!"
+        raise Exception(emsg)
     xout,rout = tf.split(op.outputs[0], 2)
     in0 = op.inputs[input_ind0]
     in1 = op.inputs[input_ind1]

@@ -1,5 +1,5 @@
+from .._serializable import Deserializer, Serializer
 from ._masker import Masker
-from .._serializable import Serializer, Deserializer
 
 
 class OutputComposite(Masker):
@@ -51,7 +51,7 @@ class OutputComposite(Masker):
         """
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.maskers.OutputComposite", version=0) as s:
             s.save("masker", self.masker)
             s.save("model", self.model)

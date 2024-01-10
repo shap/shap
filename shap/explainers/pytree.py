@@ -1,11 +1,12 @@
 """
 This module is a pure python implementation of Tree SHAP.
 It is primarily for illustration since it is slower than the 'tree'
-module which uses a compiled C++ implmentation.
+module which uses a compiled C++ implementation.
 """
 import numpy as np
+import pandas as pd
+
 #import numba
-from .explainer import Explainer
 from ..utils._exceptions import ExplainerError
 
 # class TreeExplainer(Explainer):
@@ -39,12 +40,10 @@ from ..utils._exceptions import ExplainerError
 #             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
 #         # convert dataframes
-#         if str(type(X)).endswith("pandas.core.series.Series'>"):
-#             X = X.values
-#         elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+#         if isinstance(X, (pd.Series, pd.DataFrame)):
 #             X = X.values
 
-#         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+#         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
 #         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
 #         n_outputs = self.trees[0].values.shape[1]
@@ -53,7 +52,7 @@ from ..utils._exceptions import ExplainerError
 #         if len(X.shape) == 1:
 
 #             phi = np.zeros((X.shape[0] + 1, n_outputs))
-#             x_missing = np.zeros(X.shape[0], dtype=np.bool)
+#             x_missing = np.zeros(X.shape[0], dtype=bool)
 #             for t in self.trees:
 #                 self.tree_shap(t, X, x_missing, phi)
 #             phi /= len(self.trees)
@@ -65,7 +64,7 @@ from ..utils._exceptions import ExplainerError
 
 #         elif len(X.shape) == 2:
 #             phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
-#             x_missing = np.zeros(X.shape[1], dtype=np.bool)
+#             x_missing = np.zeros(X.shape[1], dtype=bool)
 #             for i in range(X.shape[0]):
 #                 for t in self.trees:
 #                     self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
@@ -180,12 +179,10 @@ class TreeExplainer:
             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
-        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         n_outputs = self.trees[0].values.shape[1]
@@ -194,7 +191,7 @@ class TreeExplainer:
         if len(X.shape) == 1:
 
             phi = np.zeros(X.shape[0] + 1, n_outputs)
-            x_missing = np.zeros(X.shape[0], dtype=np.bool)
+            x_missing = np.zeros(X.shape[0], dtype=bool)
             for t in self.trees:
                 self.tree_shap(t, X, x_missing, phi)
             phi /= len(self.trees)
@@ -206,7 +203,7 @@ class TreeExplainer:
 
         elif len(X.shape) == 2:
             phi = np.zeros((X.shape[0], X.shape[1] + 1, n_outputs))
-            x_missing = np.zeros(X.shape[1], dtype=np.bool)
+            x_missing = np.zeros(X.shape[1], dtype=bool)
             for i in range(X.shape[0]):
                 for t in self.trees:
                     self.tree_shap(t, X[i,:], x_missing, phi[i,:,:])
@@ -283,7 +280,7 @@ def unwind_path(feature_indexes, zero_fractions, one_fractions, pweights,
         zero_fractions[i] = zero_fractions[i + 1]
         one_fractions[i] = one_fractions[i + 1]
 
-# determine what the total permuation weight would be if
+# determine what the total permutation weight would be if
 # we unwound a previous extension in the decision path
 #@numba.jit(nopython=True, nogil=True)
 def unwound_path_sum(feature_indexes, zero_fractions, one_fractions, pweights, unique_depth, path_index):

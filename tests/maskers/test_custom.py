@@ -2,6 +2,7 @@
 """
 
 import numpy as np
+
 import shap
 
 
@@ -9,7 +10,7 @@ def test_raw_function():
     """ Make sure passing a simple masking function works.
     """
 
-    X, _ = shap.datasets.boston()
+    X, _ = shap.datasets.california(n_points=500)
 
     def test(X):
         return np.sum(X, 1)

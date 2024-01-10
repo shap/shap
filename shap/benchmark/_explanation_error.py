@@ -1,13 +1,17 @@
 import time
+
 import numpy as np
-from tqdm import tqdm
-from shap.utils import safe_isinstance, MaskedModel, partition_tree_shuffle
+from tqdm.auto import tqdm
+
 from shap import Explanation, links
-from shap.maskers import Text, Image, FixedComposite
-from . import BenchmarkResult
+from shap.maskers import FixedComposite, Image, Text
+from shap.utils import MaskedModel, partition_tree_shuffle
+from shap.utils._exceptions import DimensionError
+
+from ._result import BenchmarkResult
 
 
-class ExplanationError():
+class ExplanationError:
     """ A measure of the explanation error relative to a model's actual output.
 
     This benchmark metric measures the discrepancy between the output of the model predicted by an
@@ -79,15 +83,19 @@ class ExplanationError():
         """ Run this benchmark on the given explanation.
         """
 
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
         else:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
-        assert len(attributions) == len(self.model_args[0]), "The explanation passed must have the same number of rows as " + \
-                                                             "the self.model_args that were passed!"
+        if len(attributions) != len(self.model_args[0]):
+            emsg = (
+                "The explanation passed must have the same number of rows as "
+                "the self.model_args that were passed!"
+            )
+            raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise
@@ -122,13 +130,13 @@ class ExplanationError():
             total_values = None
             for _ in range(self.num_permutations):
                 masks = []
-                mask = np.zeros(feature_size, dtype=np.bool)
+                mask = np.zeros(feature_size, dtype=bool)
                 masks.append(mask.copy())
                 ordered_inds = np.arange(feature_size)
 
                 # shuffle the indexes so we get a random permutation ordering
                 if row_clustering is not None:
-                    inds_mask = np.ones(feature_size, dtype=np.bool)
+                    inds_mask = np.ones(feature_size, dtype=bool)
                     partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
                 else:
                     np.random.shuffle(ordered_inds)
@@ -145,8 +153,8 @@ class ExplanationError():
                     values.append(masked_model(masks_arr[j:j + self.batch_size]))
                 values = np.concatenate(values)
                 base_value = values[0]
-                for l, v in enumerate(values):
-                    values[l] = (v - (base_value + np.sum(sample_attributions[masks_arr[l]])))**2
+                for j, v in enumerate(values):
+                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]])))**2
 
                 if total_values is None:
                     total_values = values
