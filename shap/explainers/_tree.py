@@ -16,6 +16,7 @@ from .. import maskers
 from .._explanation import Explanation
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._exceptions import (
+    DimensionError,
     ExplainerError,
     InvalidFeaturePerturbationError,
     InvalidMaskerError,
@@ -162,9 +163,12 @@ class TreeExplainer(Explainer):
         if self.data is None:
             feature_perturbation = "tree_path_dependent"
             #warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
-        elif feature_perturbation == "interventional" and self.data.shape[0] > 1000:
-                warnings.warn("Passing "+str(self.data.shape[0]) + " background samples may lead to slow runtimes. Consider "
-                    "using shap.sample(data, 100) to create a smaller background data set.")
+        elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
+            wmsg = (
+                f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
+                "using shap.sample(data, 100) to create a smaller background data set."
+            )
+            warnings.warn(wmsg)
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
@@ -186,8 +190,11 @@ class TreeExplainer(Explainer):
 
         if self.model.model_output != "raw":
             if self.model.objective is None and self.model.tree_output is None:
-                raise Exception("Model does not have a known objective or output type! When model_output is " \
-                                "not \"raw\" then we need to know the model's objective or link function.")
+                emsg = (
+                    "Model does not have a known objective or output type! When model_output is "
+                    "not \"raw\" then we need to know the model's objective or link function."
+                )
+                raise Exception(emsg)
 
         # A change in the signature of `xgboost.Booster.predict()` method has been introduced in XGBoost v1.4:
         # The introduced `iteration_range` parameter is used when obtaining SHAP (incl. interaction) values from XGBoost models.
@@ -257,7 +264,7 @@ class TreeExplainer(Explainer):
             # ev_tiled.shape == (N,)
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
-        # cf. GH issue dsgibbons#66, this conversion to numpy array should be done AFTER
+        # cf. GH dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
         if isinstance(X, pd.DataFrame):
             X = X.values
@@ -307,21 +314,31 @@ class TreeExplainer(Explainer):
         assert len(X.shape) == 2, "Passed input data matrix X must have 1 or 2 dimensions!"
 
         if self.model.model_output == "log_loss":
-            assert y is not None, "Both samples and labels must be provided when model_output = " \
-                                  "\"log_loss\" (i.e. `explainer.shap_values(X, y)`)!"
-            assert X.shape[0] == len(
-                y), "The number of labels (%d) does not match the number of samples to explain (" \
-                    "%d)!" % (
-                        len(y), X.shape[0])
+            if y is None:
+                emsg = (
+                    "Both samples and labels must be provided when model_output = \"log_loss\" "
+                    "(i.e. `explainer.shap_values(X, y)`)!"
+                )
+                raise ExplainerError(emsg)
+            if X.shape[0] != len(y):
+                emsg = (
+                    f"The number of labels ({len(y)}) does not match the number of samples "
+                    f"to explain ({X.shape[0]})!"
+                )
+                raise DimensionError(emsg)
 
         if self.feature_perturbation == "tree_path_dependent":
-            assert self.model.fully_defined_weighting, "The background dataset you provided does " \
-                                                       "not cover all the leaves in the model, " \
-                                                       "so TreeExplainer cannot run with the " \
-                                                       "feature_perturbation=\"tree_path_dependent\" option! " \
-                                                       "Try providing a larger background " \
-                                                       "dataset, no background dataset, or using " \
-                                                       "feature_perturbation=\"interventional\"."
+            if not self.model.fully_defined_weighting:
+                emsg = (
+                    "The background dataset you provided does "
+                    "not cover all the leaves in the model, "
+                    "so TreeExplainer cannot run with the "
+                    "feature_perturbation=\"tree_path_dependent\" option! "
+                    "Try providing a larger background "
+                    "dataset, no background dataset, or using "
+                    "feature_perturbation=\"interventional\"."
+                )
+                raise ExplainerError(emsg)
 
         if check_additivity and self.model.model_type == "pyspark":
             warnings.warn(
@@ -926,7 +943,7 @@ class TreeEnsemble:
                 self.base_offset = model.init_.prior
                 self.tree_output = "log_odds"
             elif safe_isinstance(model.init_, "sklearn.dummy.DummyClassifier"):
-                self.base_offset = scipy.special.logit(model.init_.class_prior_[1])  # with two classes the trees only model the second class. # pylint: disable=no-member
+                self.base_offset = scipy.special.logit(model.init_.class_prior_[1])  # with two classes the trees only model the second class.
                 self.tree_output = "log_odds"
             else:
                 emsg = f"Unsupported init model type: {type(model.init_)}"
@@ -1659,7 +1676,7 @@ class IsoTree(SingleTree):
         super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
             from sklearn.ensemble._iforest import (
-                _average_path_length,  # pylint: disable=no-name-in-module
+                _average_path_length,
             )
 
             def _recalculate_value(tree, i , level):
@@ -1731,7 +1748,7 @@ class XGBTreeModelLoader:
         # so we have to transform it depending on the objective
         if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
-                self.base_score = scipy.special.logit(self.base_score) # pylint: disable=no-member
+                self.base_score = scipy.special.logit(self.base_score)
 
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
@@ -1814,14 +1831,14 @@ class XGBTreeModelLoader:
                 else:
                     self.values[i,j] = self.node_info[i][j]
 
-            l = len(self.node_cleft[i])
+            k = len(self.node_cleft[i])
             trees.append(SingleTree({
                 "children_left": self.node_cleft[i],
                 "children_right": self.node_cright[i],
-                "children_default": self.children_default[i,:l],
-                "feature": self.features[i,:l],
-                "threshold": self.thresholds[i,:l],
-                "value": self.values[i,:l],
+                "children_default": self.children_default[i,:k],
+                "feature": self.features[i,:k],
+                "threshold": self.thresholds[i,:k],
+                "value": self.values[i,:k],
                 "node_sample_weight": self.sum_hess[i]
             }, data=data, data_missing=data_missing))
         return trees

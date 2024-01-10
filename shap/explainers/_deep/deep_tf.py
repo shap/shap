@@ -85,10 +85,10 @@ class TFDeep(Explainer):
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
             from tensorflow.python.framework import (
-                ops as tf_ops,  # pylint: disable=E0611
+                ops as tf_ops,
             )
             from tensorflow.python.ops import (
-                gradients_impl as tf_gradients_impl,  # pylint: disable=E0611
+                gradients_impl as tf_gradients_impl,
             )
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl
@@ -261,7 +261,7 @@ class TFDeep(Explainer):
         # check if we have multiple inputs
         if not self.multi_input:
             if isinstance(X, list) and len(X) != 1:
-                assert False, "Expected a single tensor as model input!"
+                raise ValueError("Expected a single tensor as model input!")
             elif not isinstance(X, list):
                 X = [X]
         else:
@@ -282,7 +282,8 @@ class TFDeep(Explainer):
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.phi_symbolics)), (X[0].shape[0], 1))
@@ -295,25 +296,25 @@ class TFDeep(Explainer):
                 phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
                 if (hasattr(self.data, '__call__')):
-                    bg_data = self.data([X[l][j] for l in range(len(X))])
+                    bg_data = self.data([X[t][j] for t in range(len(X))])
                     if not isinstance(bg_data, list):
                         bg_data = [bg_data]
                 else:
                     bg_data = self.data
 
                 # tile the inputs to line up with the background data samples
-                tiled_X = [np.tile(X[l][j:j+1], (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
+                tiled_X = [np.tile(X[t][j:j+1], (bg_data[t].shape[0],) + tuple([1 for k in range(len(X[t].shape)-1)])) for t in range(len(X))]
 
                 # we use the first sample for the current sample and the rest for the references
-                joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
+                joint_input = [np.concatenate([tiled_X[t], bg_data[t]], 0) for t in range(len(X))]
 
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
-                    phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
+                for t in range(len(X)):
+                    phis[t][j] = (sample_phis[t][bg_data[t].shape[0]:] * (X[t][j] - bg_data[t])).mean(0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
@@ -546,7 +547,8 @@ def gather(explainer, op, *grads):
             op.type = op.type[5:]
         return [explainer.orig_grads[op.type](op, grads[0]), None] # linear in this case
     else:
-        assert False, "Axis not yet supported to be varying for gather op!"
+        raise ValueError("Axis not yet supported to be varying for gather op!")
+
 
 def linearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
     def handler(explainer, op, *grads):
@@ -608,7 +610,9 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     return out
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
-    assert input_ind0 == 0 and input_ind1 == 1, "TODO: Can't yet handle double inputs that are not first!"
+    if not (input_ind0 == 0 and input_ind1 == 1):
+        emsg = "TODO: Can't yet handle double inputs that are not first!"
+        raise Exception(emsg)
     xout,rout = tf.split(op.outputs[0], 2)
     in0 = op.inputs[input_ind0]
     in1 = op.inputs[input_ind1]

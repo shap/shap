@@ -139,7 +139,7 @@ class SequentialPerturbation:
             ordered_inds = self.sort_order_map(sample_attributions)
             increment = max(1,int(feature_size*percent))
             for j in range(0, feature_size, increment):
-                oind_list = [ordered_inds[l] for l in range(j, min(feature_size, j+increment))]
+                oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j+increment))]
 
                 for oind in oind_list:
                     if not ((self.sort_order == "positive" and sample_attributions[oind] <= 0) or \
@@ -264,7 +264,7 @@ class SequentialPerturbation:
                 ordered_inds = self.sort_order_map(test_attributions)
                 increment = max(1,int(feature_size*percent))
                 for j in range(0, feature_size, increment):
-                    oind_list = [ordered_inds[l] for l in range(j, min(feature_size, j+increment))]
+                    oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j+increment))]
 
                     for oind in oind_list:
                         if not ((self.sort_order == "positive" and test_attributions[oind] <= 0) or \
@@ -280,8 +280,8 @@ class SequentialPerturbation:
                     masked = self.masker(mask, X[i])
                     curr_val = self.f(masked, data, k).mean(0)
 
-                    for l in range(j, min(feature_size, j+increment)):
-                        values[l+1] = curr_val
+                    for t in range(j, min(feature_size, j+increment)):
+                        values[t+1] = curr_val
 
                 svals.append(values)
                 mask_vals.append(masks)

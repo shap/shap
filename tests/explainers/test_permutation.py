@@ -1,7 +1,6 @@
 """ Unit tests for the Permutation explainer.
 """
 
-# pylint: disable=missing-function-docstring
 import pickle
 
 import numpy as np
