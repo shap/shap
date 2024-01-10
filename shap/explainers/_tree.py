@@ -4,6 +4,7 @@ import struct
 import tempfile
 import time
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -1718,15 +1719,7 @@ class XGBTreeModelLoader:
     """
     def __init__(self, xgb_model):
         import xgboost
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            if version.parse(xgboost.__version__) >= version.parse("1.6.0"):
-                tmp_file = os.path.join(tmp_dir, "model.ubj")
-                xgb_model.save_model(tmp_file)
-                xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
-            else:
-                tmp_file = os.path.join(tmp_dir, "model.json")
-                xgb_model.save_model(tmp_file)
-                xgb_params = json.load(open(tmp_file))
+        xgb_params = self.read_xgb_params(xgb_model)
 
         self.base_score = float(xgb_params["learner"]["learner_model_param"]["base_score"])
         self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
@@ -1782,6 +1775,23 @@ class XGBTreeModelLoader:
             self.sum_hess.append(np.array(tree_json["sum_hessian"], dtype=np.float64))
             self.base_weight.append(np.array(tree_json["base_weights"], dtype=np.float32))
             self.leaf_child_cnt.append(np.array(tree_json["default_left"], dtype=int))
+
+    @staticmethod
+    def read_xgb_params(xgb_model) -> dict[str, Any]:
+        import xgboost
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            if version.parse(xgboost.__version__) >= version.parse("1.6.0"):
+                tmp_file = os.path.join(tmp_dir, "model.ubj")
+                xgb_model.save_model(tmp_file)
+                xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
+            else:
+                warnings.warn("You are using an XGBoost version below 1.6.0 which is not fully supported by shap. "
+                              "Shap falls back to encoding the model as JSON which can lead to numerical precision issues. "
+                              "Please consider upgrading to XGBoost 1.6.0 or higher.")
+                tmp_file = os.path.join(tmp_dir, "model.json")
+                xgb_model.save_model(tmp_file)
+                xgb_params = json.load(open(tmp_file))
+        return xgb_params
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
