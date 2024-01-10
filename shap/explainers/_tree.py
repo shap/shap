@@ -1721,11 +1721,11 @@ class XGBTreeModelLoader:
         import xgboost
         xgb_params = self.read_xgb_params(xgb_model)
 
-        self.base_score = float(xgb_params["learner"]["learner_model_param"]["base_score"])
-        self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
-        self.num_class = int(xgb_params["learner"]["learner_model_param"]["num_class"])
-        self.name_obj = xgb_params["learner"]["objective"]["name"]
-        self.name_gbm = xgb_params["learner"]["gradient_booster"]["name"]
+        self.base_score = float(xgb_params["learner_model_param"]["base_score"])
+        self.num_feature = int(xgb_params["learner_model_param"]["num_feature"])
+        self.num_class = int(xgb_params["learner_model_param"]["num_class"])
+        self.name_obj = xgb_params["objective"]["name"]
+        self.name_gbm = xgb_params["gradient_booster"]["name"]
 
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
         # so we have to transform it depending on the objective
@@ -1736,8 +1736,8 @@ class XGBTreeModelLoader:
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
         # load the gbtree specific parameters
-        self.num_trees = int(xgb_params["learner"]["gradient_booster"]["model"]["gbtree_model_param"]["num_trees"])
-        self.num_feature = int(xgb_params["learner"]["learner_model_param"]["num_feature"])
+        self.num_trees = int(xgb_params["gradient_booster"]["model"]["gbtree_model_param"]["num_trees"])
+        self.num_feature = int(xgb_params["learner_model_param"]["num_feature"])
         # load each tree
         self.num_roots = np.zeros(self.num_trees, dtype=np.int32)
         self.num_nodes = np.zeros(self.num_trees, dtype=np.int32)
@@ -1755,7 +1755,7 @@ class XGBTreeModelLoader:
         self.base_weight = []
         self.leaf_child_cnt = []
         for i in range(self.num_trees):
-            tree_json = xgb_params["learner"]["gradient_booster"]["model"]["trees"][i]
+            tree_json = xgb_params["gradient_booster"]["model"]["trees"][i]
 
             # load the per-tree params
             self.num_nodes[i] = tree_json["tree_param"]["num_nodes"]
@@ -1791,7 +1791,7 @@ class XGBTreeModelLoader:
                 tmp_file = os.path.join(tmp_dir, "model.json")
                 xgb_model.save_model(tmp_file)
                 xgb_params = json.load(open(tmp_file))
-        return xgb_params
+        return xgb_params["learner"]
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
