@@ -454,8 +454,8 @@ class TreeExplainer(Explainer):
             # note we pull off the last column and keep it as our expected_value
             if phi is not None:
                 if len(phi.shape) == 3:
-                    self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
-                    out = [phi[:, i, :-1] for i in range(phi.shape[1])]
+                    self.expected_value = phi[0, :, -1]
+                    out = np.stack([phi[:, i, :-1] for i in range(phi.shape[1])], axis=-1)
                 else:
                     self.expected_value = phi[0, -1]
                     out = phi[:, :-1]
@@ -601,9 +601,9 @@ class TreeExplainer(Explainer):
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:
-                out = [phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)]
+                out = np.stack([phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
             else:
-                out = [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)]
+                out = np.stack([phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
         return out
 
     def assert_additivity(self, phi, model_output):
@@ -626,7 +626,13 @@ class TreeExplainer(Explainer):
             for i in range(len(phi)):
                 check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:,i])
         else:
-            check_sum(self.expected_value + phi.sum(-1), model_output)
+            # sum along all axis of phi except for the first (observations) and last (num_outputs)
+            import pdb; pdb.set_trace()
+            if model_output.ndim == 1:
+                dims_to_sum = phi.ndim
+            else:
+                dims_to_sum = phi.ndim - 1
+            check_sum(self.expected_value + phi.sum(axis=tuple(range(1, dims_to_sum))), model_output)
 
     @staticmethod
     def supports_model_with_masker(model, masker):
