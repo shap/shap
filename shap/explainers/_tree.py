@@ -454,14 +454,16 @@ class TreeExplainer(Explainer):
             # note we pull off the last column and keep it as our expected_value
             if phi is not None:
                 if len(phi.shape) == 3:
-                    self.expected_value = phi[0, :, -1]
-                    out = np.stack([phi[:, i, :-1] for i in range(phi.shape[1])], axis=-1)
+                    self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
+                    out = [phi[:, i, :-1] for i in range(phi.shape[1])]
                 else:
                     self.expected_value = phi[0, -1]
                     out = phi[:, :-1]
+
                 if check_additivity and model_output_vals is not None:
                     self.assert_additivity(out, model_output_vals)
-
+                if isinstance(out, list):
+                    out = np.stack(out, axis=-1)
                 return out
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
@@ -492,6 +494,8 @@ class TreeExplainer(Explainer):
         if check_additivity and self.model.model_output == "raw":
             self.assert_additivity(out, self.model.predict(X))
 
+        if isinstance(out, list):
+            out = np.stack(out, axis=-1)
         return out
 
     def _get_shap_output(self, phi, flat_output):
@@ -569,11 +573,9 @@ class TreeExplainer(Explainer):
             if len(phi.shape) == 4:
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
-            # binary model case
             else:
                 self.expected_value = phi[0, -1, -1]
-                phi = np.stack((-phi[:, :-1, :-1], phi[:, :-1, :-1]), axis=-1)
-                return phi
+                return phi[:, :-1, :-1]
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
         # run the core algorithm using the C extension
@@ -626,13 +628,7 @@ class TreeExplainer(Explainer):
             for i in range(len(phi)):
                 check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:,i])
         else:
-            # sum along all axis of phi except for the first (observations) and last (num_outputs)
-            import pdb; pdb.set_trace()
-            if model_output.ndim == 1:
-                dims_to_sum = phi.ndim
-            else:
-                dims_to_sum = phi.ndim - 1
-            check_sum(self.expected_value + phi.sum(axis=tuple(range(1, dims_to_sum))), model_output)
+            check_sum(self.expected_value + phi.sum(-1), model_output)
 
     @staticmethod
     def supports_model_with_masker(model, masker):

@@ -860,6 +860,7 @@ class TestExplainerSklearn:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
 
+        import pdb; pdb.set_trace()
         assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-3
         assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-3
 
@@ -1717,6 +1718,14 @@ def test_check_consistent_outputs_binary_classification():
 
 # FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - ValueError: operands could not be broadcast together with shapes (50,2) (50,)
 
-# FAILED tests/explainers/test_tree.py::TestExplainerSklearn::test_single_row_gradient_boosting_classifier - IndexError: index 10 is out of bounds for axis 0 with size 1
-# FAILED tests/explainers/test_tree.py::TestExplainerSklearn::test_single_row_gradient_boosting_regressor - IndexError: index 10 is out of bounds for axis 0 with size 1
+# FAILED tests/explainers/test_tree.py::test_pyspark_classifier_decision_tree - ValueError: operands could not be broadcast together with shapes (4,) (100,)
+# FAILED tests/explainers/test_tree.py::test_catboost - assert (569, 30) == (569, 30, 2)
+# FAILED tests/explainers/test_tree.py::TestExplainerSklearn::test_sklearn_random_forest_multiclass - AssertionError: assert 0.10264879510335215 < 0.001
+# FAILED tests/explainers/test_tree.py::TestExplainerXGBoost::test_xgboost_dmatrix_propagation - IndexError: invalid index to scalar variable.
 # FAILED tests/explainers/test_tree.py::TestExplainerLightGBM::test_lightgbm_binary - assert False
+# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - AssertionError: LightGBM: (50, 12, 2), XGBoost: (50, 12), CatBoost: (50, 12), RandomForest: (50, 12, 2)
+
+# FAILED tests/explainers/test_tree.py::test_pyspark_classifier_decision_tree - ValueError: operands could not be broadcast together with shapes (4,) (100,)
+# FAILED tests/explainers/test_tree.py::TestExplainerSklearn::test_sklearn_random_forest_multiclass - AssertionError: assert 0.10264879510335215 < 0.001
+# FAILED tests/explainers/test_tree.py::TestExplainerLightGBM::test_lightgbm_binary - assert False
+# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - AssertionError: Interactions LightGBM: (50, 12, 12, 2), XGBoost: (50, 12, 12), CatBoost: (50, 12, 12, 2), RandomForest: (50, 12, 12, 2)
