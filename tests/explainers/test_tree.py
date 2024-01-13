@@ -1717,7 +1717,7 @@ def test_check_consistent_outputs_binary_classification():
             < 1e-4
         )
 # todo: multi class classification + multi class regression tests
-        
+
 def test_check_consistent_outputs_for_regression():
     lightgbm = pytest.importorskip("lightgbm")
     catboost = pytest.importorskip("catboost")
@@ -1765,4 +1765,3 @@ def test_catboost_regression_interaction():
     cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
     ex_cat = shap.TreeExplainer(cat)
     e_cat = ex_cat(X, interactions=True)
-
