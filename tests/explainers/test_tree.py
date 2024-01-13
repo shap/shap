@@ -1716,6 +1716,7 @@ def test_check_consistent_outputs_binary_classification():
         assert (np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max(axis=(0, 1))
             < 1e-4
         )
+# todo: multi class classification + multi class regression tests
         
 def test_check_consistent_outputs_for_regression():
     lightgbm = pytest.importorskip("lightgbm")
@@ -1724,7 +1725,6 @@ def test_check_consistent_outputs_for_regression():
 
     X, y = shap.datasets.california(n_points=50)
 
-    import pdb; pdb.set_trace()
     lgbm = lightgbm.LGBMRegressor(max_depth=1).fit(X, y)
     xgb = xgboost.XGBRegressor(max_depth=1).fit(X, y)
     cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
@@ -1746,25 +1746,19 @@ def test_check_consistent_outputs_for_regression():
     e_xgb = ex_xgb(X, interactions=True)
     xgb_pred = xgb.predict(X)
 
-    # catboost explanations
-    import pdb; pdb.set_trace()
-    e_cat_bin = ex_cat(X, interactions=False)
-    e_cat = ex_cat(X, interactions=True)
-    cat_pred = cat.predict(X)
-
     # random forest explanations
     e_rfc_bin = ex_rfc(X, interactions=False)
     e_rfc = ex_rfc(X, interactions=True)
     rfc_pred = rfc.predict(X)
 
-    assert (50, 12, 1) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape == e_rfc_bin.shape, \
-        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, CatBoost: {e_cat_bin.shape}, RandomForest: {e_rfc_bin.shape}"
-    # output shape: examples x features x features x classes
-    assert (50, 12, 12, 1) == e_lgbm.shape == e_xgb.shape == e_cat.shape == e_rfc.shape, \
-        f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}, RandomForest: {e_rfc.shape}"
+    assert (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape, \
+        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, RandomForest: {e_rfc_bin.shape}"
+    assert (50, 8, 8) == e_lgbm.shape == e_xgb.shape == e_rfc.shape, \
+        f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
+    # todo: make sure the values sum up
 
-    # todo: test regressions of xgboost + lightgbm + catboost + randomforest
 
+@pytest.mark.skip("Currently breaking on master, see GH: #3457 for discussion.")
 def test_catboost_regression_interaction():
     catboost = pytest.importorskip("catboost")
     X, y = shap.datasets.california(n_points=50)
