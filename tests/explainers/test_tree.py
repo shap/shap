@@ -1764,3 +1764,11 @@ def test_check_consistent_outputs_for_regression():
         f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}, RandomForest: {e_rfc.shape}"
 
     # todo: test regressions of xgboost + lightgbm + catboost + randomforest
+
+def test_catboost_regression_interaction():
+    catboost = pytest.importorskip("catboost")
+    X, y = shap.datasets.california(n_points=50)
+    cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
+    ex_cat = shap.TreeExplainer(cat)
+    e_cat = ex_cat(X, interactions=True)
+
