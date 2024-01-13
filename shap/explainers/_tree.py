@@ -573,9 +573,11 @@ class TreeExplainer(Explainer):
             if len(phi.shape) == 4:
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+            # binary model case -> do not think that this is correct since it can be a regression
             else:
-                self.expected_value = phi[0, -1, -1]
-                return phi[:, :-1, :-1]
+                self.expected_value = np.array([-phi[0, -1, -1], phi[0, -1, -1]])
+                phi = np.stack((-phi[:, :-1, :-1], phi[:, :-1, :-1]), axis=-1)
+                return phi
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
         # run the core algorithm using the C extension
@@ -594,8 +596,9 @@ class TreeExplainer(Explainer):
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1 or getattr(getattr(self.model, 'original_model', {}), 'params', {}).get('objective') == 'binary':
+            # todo: how to distinguish here from regressor?
             phi = np.concatenate((-phi, phi), axis=-1)
-            self.expected_value = phi[0, -1, -1, -1]
+            self.expected_value = phi[0, -1, -1, :]
             if flat_output:
                 out = phi[0, :-1, :-1, :]
             else:

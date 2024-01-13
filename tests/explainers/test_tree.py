@@ -228,10 +228,10 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
             assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!"
         else:
             normalizedPredictions = (predictions.T / predictions.sum(1)).T
-            diffs = expected_values[0] + shap_values[0].sum(1) - normalizedPredictions.class0
+            diffs = expected_values[0] + shap_values[:, :, 0].sum(1) - normalizedPredictions.class0
             assert np.max(
                 np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!" + model
-            diffs = expected_values[1] + shap_values[1].sum(1) - normalizedPredictions.class1
+            diffs = expected_values[1] + shap_values[:, :, 1].sum(1) - normalizedPredictions.class1
             assert np.max(
                 np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class1!" + model
             assert (np.abs(
@@ -403,7 +403,7 @@ def test_catboost_interactions():
     # catboost explanations
     explanation = ex_cat(X, interactions=True)
     assert (
-        np.abs(explanation.values[:, :, :, -1].sum(axis=(1, 2)) + explanation.base_values - predicted).max()
+        np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - np.stack([-predicted, predicted], axis=-1)).max()
         < 1e-4
     )
 
@@ -860,9 +860,8 @@ class TestExplainerSklearn:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
 
-        import pdb; pdb.set_trace()
-        assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-3
-        assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-3
+        assert np.abs(shap_values[0, 0, 0] - 0.05) < 1e-3
+        assert np.abs(shap_values[0, 0, 1] + 0.05) < 1e-3
 
 
     def test_sklearn_interaction_values(self):
@@ -1079,9 +1078,7 @@ class TestExplainerSklearn:
         shap_interaction_values = explainer.shap_interaction_values(X_test.iloc[:10, :])
         assert (
             np.abs(
-                np.sum(shap_interaction_values[:, :, :, -1], axis=(1, 2))
-                + explainer.expected_value
-                - predicted[:10]
+                shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value - np.stack([-predicted[:10], predicted[:10]], axis=1)
             ).max()
             < 1e-4
         )
@@ -1534,8 +1531,8 @@ class TestExplainerLightGBM:
 
         shap_values = explainer.shap_values(X_test)
         # validate structure of shap values, must be a list of ndarray for both classes
-        assert isinstance(shap_values, list)
-        assert len(shap_values) == 2
+        assert isinstance(shap_values, np.ndarray)
+        assert shap_values.shape == (*X_test.shape, 2)
 
         explanation = explainer(X_test)
         # check the properties of Explanation object
@@ -1550,7 +1547,7 @@ class TestExplainerLightGBM:
         )
 
         # ensure plot works for first class
-        shap.dependence_plot(0, shap_values[0], X_test, show=False)
+        shap.dependence_plot(0, shap_values[:, :, 0], X_test, show=False)
 
     def test_lightgbm_constant_multiclass(self):
         # note: this test used to fail with lightgbm 2.2.1 with error:
@@ -1682,17 +1679,20 @@ def test_check_consistent_outputs_binary_classification():
     e_lgbm_bin = ex_lgbm(X, interactions=False)
     # todo: lgbm base values are not correct (they are just 1d)
     e_lgbm = ex_lgbm(X, interactions=True)
-    lgbm_pred = lgbm.predict_proba(X)
+    margin = lgbm.predict_proba(X, raw_score=True)
+    lgbm_pred = np.vstack([-margin, margin]).T
 
     # xgboost explanations
     e_xgb_bin = ex_xgb(X, interactions=False)
     e_xgb = ex_xgb(X, interactions=True)
-    xgb_pred = xgb.predict_proba(X)
+    margin = xgb.predict(X, output_margin=True)
+    xgb_pred = np.vstack([-margin, margin]).T
 
     # catboost explanations
     e_cat_bin = ex_cat(X, interactions=False)
     e_cat = ex_cat(X, interactions=True)
-    cat_pred = cat.predict_proba(X)
+    margin = cat.predict(X, prediction_type="RawFormulaVal")
+    cat_pred = np.vstack([-margin, margin]).T
 
     # random forest explanations
     e_rfc_bin = ex_rfc(X, interactions=False)
@@ -1705,27 +1705,62 @@ def test_check_consistent_outputs_binary_classification():
     # output shape: examples x features x features x classes
     assert (50, 12, 12, 2) == e_lgbm.shape == e_xgb.shape == e_cat.shape == e_rfc.shape, \
         f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}, RandomForest: {e_rfc.shape}"
-    # todo: make sure that the outputs add up
+    # Sum interaction values
     for explanation, predicted in [(e_xgb, xgb_pred), (e_cat, cat_pred), (e_rfc, rfc_pred), (e_lgbm, lgbm_pred)]:
-        assert (np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max(axis=(0, 1))
-        # assert (np.abs(explanation.values[:, :, :, -1].sum(axis=(1, 2)) + explanation.base_values - predicted).max()
-        < 1e-4
-    )
-    # todo: sum binary values
-    # todo: fix tests:
-       #  tests/explainers/test_tree.py::TestExplainerSklearn::test_sklearn_interaction_values -> done
-       #  tests/explainers/test_tree.py::TestExplainerXGBoost::test_xgboost_dmatrix_propagation
+            assert (np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max(axis=(0, 1))
+            # assert (np.abs(explanation.values[:, :, :, -1].sum(axis=(1, 2)) + explanation.base_values - predicted).max()
+            < 1e-4
+        )
+    # Sum binary values
+    for explanation, predicted in [(e_xgb_bin, xgb_pred), (e_cat_bin, cat_pred), (e_rfc_bin, rfc_pred), (e_lgbm_bin, lgbm_pred)]:
+        assert (np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max(axis=(0, 1))
+            < 1e-4
+        )
+        
+def test_check_consistent_outputs_for_regression():
+    lightgbm = pytest.importorskip("lightgbm")
+    catboost = pytest.importorskip("catboost")
+    xgboost = pytest.importorskip("xgboost")
 
-# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - ValueError: operands could not be broadcast together with shapes (50,2) (50,)
+    X, y = shap.datasets.california(n_points=50)
 
-# FAILED tests/explainers/test_tree.py::test_pyspark_classifier_decision_tree - ValueError: operands could not be broadcast together with shapes (4,) (100,)
-# FAILED tests/explainers/test_tree.py::test_catboost - assert (569, 30) == (569, 30, 2)
-# FAILED tests/explainers/test_tree.py::TestExplainerSklearn::test_sklearn_random_forest_multiclass - AssertionError: assert 0.10264879510335215 < 0.001
-# FAILED tests/explainers/test_tree.py::TestExplainerXGBoost::test_xgboost_dmatrix_propagation - IndexError: invalid index to scalar variable.
-# FAILED tests/explainers/test_tree.py::TestExplainerLightGBM::test_lightgbm_binary - assert False
-# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - AssertionError: LightGBM: (50, 12, 2), XGBoost: (50, 12), CatBoost: (50, 12), RandomForest: (50, 12, 2)
+    import pdb; pdb.set_trace()
+    lgbm = lightgbm.LGBMRegressor(max_depth=1).fit(X, y)
+    xgb = xgboost.XGBRegressor(max_depth=1).fit(X, y)
+    cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
+    rfc = sklearn.ensemble.RandomForestRegressor(n_estimators=10).fit(X, y)
 
-# FAILED tests/explainers/test_tree.py::test_pyspark_classifier_decision_tree - ValueError: operands could not be broadcast together with shapes (4,) (100,)
-# FAILED tests/explainers/test_tree.py::TestExplainerSklearn::test_sklearn_random_forest_multiclass - AssertionError: assert 0.10264879510335215 < 0.001
-# FAILED tests/explainers/test_tree.py::TestExplainerLightGBM::test_lightgbm_binary - assert False
-# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - AssertionError: Interactions LightGBM: (50, 12, 12, 2), XGBoost: (50, 12, 12), CatBoost: (50, 12, 12, 2), RandomForest: (50, 12, 12, 2)
+    ex_lgbm = shap.TreeExplainer(lgbm)
+    ex_xgb = shap.TreeExplainer(xgb)
+    ex_cat = shap.TreeExplainer(cat)
+    ex_rfc = shap.TreeExplainer(rfc)
+
+    # lightgbm explanations
+    e_lgbm_bin = ex_lgbm(X, interactions=False)
+    # todo: lgbm base values are not correct (they are just 1d)
+    e_lgbm = ex_lgbm(X, interactions=True)
+    lgbm_pred = lgbm.predict(X, raw_score=True)
+
+    # xgboost explanations
+    e_xgb_bin = ex_xgb(X, interactions=False)
+    e_xgb = ex_xgb(X, interactions=True)
+    xgb_pred = xgb.predict(X)
+
+    # catboost explanations
+    import pdb; pdb.set_trace()
+    e_cat_bin = ex_cat(X, interactions=False)
+    e_cat = ex_cat(X, interactions=True)
+    cat_pred = cat.predict(X)
+
+    # random forest explanations
+    e_rfc_bin = ex_rfc(X, interactions=False)
+    e_rfc = ex_rfc(X, interactions=True)
+    rfc_pred = rfc.predict(X)
+
+    assert (50, 12, 1) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape == e_rfc_bin.shape, \
+        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, CatBoost: {e_cat_bin.shape}, RandomForest: {e_rfc_bin.shape}"
+    # output shape: examples x features x features x classes
+    assert (50, 12, 12, 1) == e_lgbm.shape == e_xgb.shape == e_cat.shape == e_rfc.shape, \
+        f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}, RandomForest: {e_rfc.shape}"
+
+    # todo: test regressions of xgboost + lightgbm + catboost + randomforest
