@@ -1661,3 +1661,32 @@ class TestExplainerLightGBM:
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
+
+
+def test_catboost_regression_interactions():
+    catboost = pytest.importorskip("catboost")
+
+    X, y = shap.datasets.california(n_points=50)
+    model = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
+    ex_cat = shap.TreeExplainer(model)
+    predicted = model.predict(X, prediction_type="RawFormulaVal")
+    explanation = ex_cat(X, interactions=False)
+    assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted)
+
+    explanation = ex_cat(X, interactions=True)
+    assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted)
+
+
+def test_lightgbm_interactions():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X, y = sklearn.datasets.load_digits(return_X_y=True)
+
+    model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    predicted = model.predict(X, raw_score=True)
+    explanation = explainer(X, interactions=False)
+    assert np.allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
+
+    explanation = explainer(X, interactions=True)
+    assert np.allclose(np.stack(explanation.values, axis=-1).sum(axis=(1, 2)) + explanation.base_values, predicted)

@@ -583,7 +583,8 @@ class TreeExplainer(Explainer):
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
-            self.expected_value = phi[0, -1, -1, 0]
+            # for some reasons phi[0, -1, -1, 0] does not contain the expected value for catboost regressions, so only set it if needed
+            self.expected_value = self.expected_value or phi[0, -1, -1, 0]
             if flat_output:
                 out = phi[0, :-1, :-1, 0]
             else:
@@ -1134,6 +1135,11 @@ class TreeEnsemble:
             self.model_type = "catboost"
             self.original_model = model
             self.cat_feature_indices = model.get_cat_feature_indices()
+            try:
+                cb_loader = CatBoostTreeModelLoader(model)
+                self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
+            except Exception:
+                self.trees = None # we get here because the cext can't handle categorical splits yet
         elif safe_isinstance(model, "catboost.core.CatBoostClassifier"):
             assert_import("catboost")
             self.model_type = "catboost"
