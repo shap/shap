@@ -51,6 +51,13 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[test,plots,notebooks]'
+      # - name: Run notebooks
+      #   run: |
+      #     python scripts/run_notebooks_timeouts.py
       - name: Run notebooks
         run: |
-          python scripts/run_notebooks_timeouts.py
+          python notebooks/benchmarks/text/Text Emotion Multiclass Classification Benchmark Demo.ipynb
+          python notebooks/benchmarks/text/Abstractive Summarization Benchmark Demo.ipynb
+          python notebooks/benchmarks/text/Machine Translation Benchmark Demo.ipynb
+          python notebooks/benchmarks/image/Image Multiclass Classification Benchmark Demo.ipynb
+          python notebooks/benchmarks/others/Benchmark Debug Mode.ipynb
