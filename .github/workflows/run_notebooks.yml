@@ -54,3 +54,6 @@ jobs:
       - name: Run notebooks
         run: |
           python scripts/run_notebooks_timeouts.py
+      - name: run stuff
+        run: |
+          python notebooks/benchmarks/tabular/Tabular\ Prediction\ Benchmark\ Demo.py

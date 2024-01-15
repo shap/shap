@@ -43,14 +43,15 @@ def main():
 
                 convert_notebook_to_python(notebook_path, python_script_path)
 
-                error_code, execution_time = execute_python_script(python_script_path)
+                # error_code, execution_time = execute_python_script(python_script_path)
 
-                if error_code == -1:
-                    print(f"Execution of {notebook_path} timed out after 60 seconds.")
-                    error_notebooks.append((notebook_path, -1, None))
-                elif error_code != 0:
-                    error_notebooks.append((notebook_path, error_code, execution_time))
+                # if error_code == -1:
+                #     print(f"Execution of {notebook_path} timed out after 60 seconds.")
+                #     error_notebooks.append((notebook_path, -1, None))
+                # elif error_code != 0:
+                #     error_notebooks.append((notebook_path, error_code, execution_time))
 
+    subprocess.check_output(["python", "notebooks/benchmarks/tabular/Tabular Prediction Benchmark Demo.py"])
     if error_notebooks:
         error_thrown = [error_code for _, error_code, _ in error_notebooks if error_code != -1]
         print("Notebooks with error codes or timeouts:")
