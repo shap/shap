@@ -1,7 +1,9 @@
 import os
 import subprocess
-from nbconvert.exporters import ScriptExporter
 import time
+
+from nbconvert.exporters import ScriptExporter
+
 
 def convert_notebook_to_python(notebook_path, output_path):
     # Add Matplotlib configuration to use a non-interactive backend
