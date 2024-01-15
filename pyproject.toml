@@ -80,7 +80,6 @@ notebooks = [
   "nbconvert",
   "nlp",
   "transformers",
-  "simdna",
   "datasets",
   "keras",
 ]
