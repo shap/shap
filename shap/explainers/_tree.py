@@ -565,6 +565,19 @@ class TreeExplainer(Explainer):
             else:
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
+        elif (self.model.model_type == "catboost") and (self.feature_perturbation == "tree_path_dependent"): # thanks again to the CatBoost team for implementing this...
+            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+            import catboost
+            if type(X) != catboost.Pool:
+                X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
+            phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapInteractionValues')
+            # note we pull off the last column and keep it as our expected_value
+            if len(phi.shape) == 4:
+                self.expected_value = getattr(self, "expected_value", [phi[0, i, -1, -1] for i in range(phi.shape[1])])
+                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+            else:
+                self.expected_value = getattr(self, "expected_value", phi[0, -1, -1])
+                return phi[:, :-1, :-1]
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
         # run the core algorithm using the C extension
