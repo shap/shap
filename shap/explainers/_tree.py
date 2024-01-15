@@ -596,8 +596,8 @@ class TreeExplainer(Explainer):
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
-            # for some reasons phi[0, -1, -1, 0] does not contain the expected value for catboost regressions, so only set it if needed
-            self.expected_value = self.expected_value or phi[0, -1, -1, 0]
+            # get expected value only if not already set
+            self.expected_value = getattr(self, "expected_value", phi[0, -1, -1, 0])
             if flat_output:
                 out = phi[0, :-1, :-1, 0]
             else:
