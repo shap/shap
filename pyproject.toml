@@ -80,6 +80,9 @@ notebooks = [
   "nbconvert",
   "nlp",
   "transformers",
+  "simdna",
+  "datasets",
+  "keras",
 ]
 
 [project.urls]

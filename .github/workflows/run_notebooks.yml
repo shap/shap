@@ -54,10 +54,3 @@ jobs:
       - name: Run notebooks
         run: |
           python scripts/run_notebooks_timeouts.py
-      - name: Run notebooks
-        run: |
-          python notebooks/benchmarks/text/Text\ Emotion\ Multiclass\ Classification\ Benchmark\ Demo.py
-          python notebooks/benchmarks/text/Abstractive\ Summarization\ Benchmark\ Demo.py
-          python notebooks/benchmarks/text/Machine\ Translation\ Benchmark\ Demo.py
-          python notebooks/benchmarks/image/Image\ Multiclass\ Classification\ Benchmark\ Demo.py
-          python notebooks/benchmarks/others/Benchmark\ Debug\ Mode.py
