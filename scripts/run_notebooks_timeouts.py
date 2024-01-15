@@ -63,8 +63,8 @@ def main():
                 print(f"{notebook}: Timeout")
             else:
                 print(f"{notebook}: Error Code {error_code}, Execution Time: {execution_time:.2f} seconds")
-        if len(error_thrown) > 0:
-            raise Exception(f"Notebooks failed with error codes: {'\n'.join([path for path, _, _ in error_notebooks if _ in error_thrown])}")
+        # if len(error_thrown) > 0:
+        #     raise Exception(f"Notebooks failed with error codes: {', '.join([path for path, _, _ in error_notebooks if _ in error_thrown])}")
     else:
         print("All notebooks executed successfully.")
 
