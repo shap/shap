@@ -4,7 +4,6 @@ import time
 
 from nbconvert.exporters import ScriptExporter
 
-
 TIMEOUT = 60  # seconds
 
 
