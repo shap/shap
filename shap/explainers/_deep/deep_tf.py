@@ -169,8 +169,11 @@ class TFDeep(Explainer):
         else:
             # from tensorflow.python.framework.ops import disable_eager_execution
             # disable_eager_execution()
-            self._init_between_tensors_eager(model, self.model_inputs, orig_data)
-        #     # self._init_between_tensors(self.model_output.op, self.model_inputs)
+            # self._init_between_tensors_eager(model, self.model_inputs, orig_data)
+            self.between_ops = []
+            self.execute_to_record_ops(model, orig_data)
+            # self._init_between_tensors(self.model_output.op, self.model_inputs)
+        # import ipdb; ipdb.set_trace(context=20)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
@@ -200,6 +203,7 @@ class TFDeep(Explainer):
             [out_op], tensor_blacklist,
             dependence_breakers
         )
+        # # tf.print("These are the back_ops", back_ops)
         start_ops = []
         for minput in model_inputs:
             for op in minput.consumers():
@@ -209,6 +213,7 @@ class TFDeep(Explainer):
             tensor_blacklist, dependence_breakers,
             within_ops=back_ops
         )
+        # # tf.print("These are the between_ops", self.between_ops)
 
         # note all the tensors that are on the path between the inputs and the output
         self.between_tensors = {}
@@ -226,12 +231,15 @@ class TFDeep(Explainer):
     def _init_between_tensors_eager2(self, model, model_inputs, data):
         @tf.function
         def grad_graph(shap_rAnD):
+            # tf.print("in grad_graph")
             out = model(shap_rAnD, training=False)
             if self.multi_output:
                 # todo: this needs to be fixed
-                out = out[:,0]
+                out = out[:, 0]
             self._init_between_tensors(out.op, shap_rAnD)
+        # tf.print("before calling grad_graph")
         grad_graph(data)
+        # tf.print("after calling grad_graph")
 
     def _init_between_tensors_eager(self, model, model_inputs, data):
 
@@ -257,13 +265,32 @@ class TFDeep(Explainer):
                             _convert_numpy_or_python_types, inputs
                         )
                 if isinstance(self.model, tf.keras.models.Sequential):
+                    tf.print("This is a sequential model")
+                    start_ops = []
+                    for minput in model_inputs:
+                        for op in minput.consumers():
+                            start_ops.append(op)
+                    op_stack = start_ops
+                    found_ops = []
+                    while len(op_stack) > 0:
+                        op = op_stack.pop()
+                        if op not in found_ops:
+                            tf.print("Append op", op)
+                            self.ops.append(op)
+                            for out in op.outputs:
+                                for c in out.consumers():
+                                    op_stack.append(c)
+
                     layer_outputs = []
                     for layer in self._layers:
                         inputs = layer(inputs)
-                        self.ops.append(inputs.op)
+                        if inputs.op not in self.ops:
+                            tf.print("in forward walk, append op", inputs.op)
+                            self.ops.append(inputs.op)
                         layer_outputs.append(inputs)
                     return layer_outputs
                 elif isinstance(self.model, keras.src.models.Functional):
+                    tf.print("This is a functional model")
                     # This is basically a slight adaptation of
                     # tf.python.keras.engine.functional._run_internal_graph so that we can capture the ops
                     inputs = self.model._flatten_to_reference_inputs(inputs)
@@ -297,7 +324,9 @@ class TFDeep(Explainer):
 
                             args, kwargs = node.map_arguments(tensor_dict)
                             outputs = node.layer(*args, **kwargs)
+                            tf.print("These are outputs", outputs)
                             if hasattr(outputs, "op"):
+                                tf.print("output has op", outputs.op)
                                 self.ops.append(outputs.op)
 
                             # Update tensor_dict.
@@ -336,12 +365,21 @@ class TFDeep(Explainer):
         for op in self.between_ops:
             self.used_types[op.type] = True
 
+        # import ipdb; ipdb.set_trace(context=20)
+        # todo: remove
+        # set manually to resulting values of _init_between_tensors from shap 0.37.0
+        # expected_between_tensors = {'lstm/transpose:0': True, 'lstm/TensorArrayUnstack/TensorListFromTensor:0': True, 'lstm/while:0': True, 'lstm/while:1': True, 'lstm/while:2': True, 'lstm/while:3': True, 'lstm/while:4': True, 'lstm/while:5': True, 'lstm/while:6': True, 'lstm/while:7': True, 'lstm/while:8': True, 'lstm/while:9': True, 'lstm/while:10': True, 'lstm/while:11': True, 'lstm/while:12': True, 'lstm/while:13': True, 'lstm/while:14': True, 'lstm/while:15': True, 'lstm/while:16': True, 'lstm/while:17': True, 'lstm/while:18': True, 'lstm/while:19': True, 'lstm/while:20': True, 'lstm/while:21': True, 'lstm/while:22': True, 'lstm/while:23': True, 'lstm/while:24': True, 'lstm/while:25': True, 'lstm/while:26': True, 'lstm/while:27': True, 'lstm/while:28': True, 'lstm/while:29': True, 'lstm/while:30': True, 'lstm/while:31': True, 'lstm/while:32': True, 'lstm/while:33': True, 'lstm/while:34': True, 'lstm/while:35': True, 'lstm/while:36': True, 'lstm/while:37': True, 'lstm/while:38': True, 'lstm/while:39': True, 'lstm/while:40': True, 'lstm/while:41': True, 'lstm/while:42': True, 'lstm/while:43': True, 'lstm/while:44': True, 'lstm/while/Identity_3:0': True, 'lstm/TensorArrayV2Stack/TensorListStack:0': True, 'lstm/strided_slice_3:0': True, 'dense/MatMul:0': True, 'dense/BiasAdd:0': True, 'input_1:0': True}
+        # self.between_tensors = expected_between_tensors
+        # this should be self.between_ops
+        #[<tf.Operation 'lstm/transpose' type=Transpose>, <tf.Operation 'lstm/TensorArrayUnstack/TensorListFromTensor' type=TensorListFromTensor>, <tf.Operation 'lstm/while' type=While>, <tf.Operation 'lstm/while/Identity_3' type=Identity>, <tf.Operation 'lstm/TensorArrayV2Stack/TensorListStack' type=TensorListStack>, <tf.Operation 'lstm/strided_slice_3' type=StridedSlice>, <tf.Operation 'dense/MatMul' type=MatMul>, <tf.Operation 'dense/BiasAdd' type=BiasAdd>]
+
     def _variable_inputs(self, op):
         """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
         """
+        # import ipdb; ipdb.set_trace(context=20)
         if op not in self._vinputs:
             out = np.zeros(len(op.inputs), dtype=bool)
-            for i,t in enumerate(op.inputs):
+            for i, t in enumerate(op.inputs):
                 out[i] = t.name in self.between_tensors
             self._vinputs[op] = out
         return self._vinputs[op]
@@ -370,10 +408,10 @@ class TFDeep(Explainer):
                     x_grad = tape.gradient(out, shap_rAnD)
                     tf.print("shap_rAnD:")
                     tf.print(shap_rAnD)
-                    tf.print("out:")
-                    tf.print(out)
-                    tf.print("x_grad:")
-                    tf.print(x_grad)
+                    # tf.print("out:")
+                    # tf.print(out)
+                    # tf.print("x_grad:")
+                    # tf.print(x_grad)
                     return x_grad
 
                 self.phi_symbolics[i] = grad_graph
@@ -434,14 +472,15 @@ class TFDeep(Explainer):
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
                 # import ipdb; ipdb.set_trace()
+                print("before running phi_symbolic")
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
                 for t in range(len(X)):
                     phis[t][j] = (sample_phis[t][bg_data[t].shape[0]:] * (X[t][j] - bg_data[t])).mean(0)
-                print("result of sample phis: ", sample_phis)
-                print("These are the phis: ", phis)
-                print("\n\n\n")
+                # print("result of sample phis: ", sample_phis)
+                # print("These are the phis: ", phis)
+                # print("\n\n\n")
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
@@ -495,9 +534,40 @@ class TFDeep(Explainer):
         """ Passes a gradient op creation request to the correct handler.
         """
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
-        tf.print("type_name: ", type_name)
+        print("type_name: ", type_name)
+        import ipdb; ipdb.set_trace(context=20)
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
+
+    def operation_recording(self, op, *grads):
+        """ Passes a gradient op creation request to the correct handler.
+        """
+        self.between_ops.append(op)
+        # out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
+        # if len(grads) == 1:
+        #     return grads[0]
+        import ipdb; ipdb.set_trace(context=20)
+        return tuple([grads[0]] * len(op.inputs))
+
+    def execute_to_record_ops(self, model, data):
+        registry_ops = tf_ops._gradient_registry._registry
+        for n_op in registry_ops:
+            registry_ops[n_op]["type"] = self.operation_recording
+
+        if hasattr(tf_gradients_impl, "_IsBackpropagatable"):
+            orig_IsBackpropagatable = tf_gradients_impl._IsBackpropagatable
+            tf_gradients_impl._IsBackpropagatable = lambda tensor: True
+
+        @tf.function
+        def grad_graph(shap_rAnD):
+            # tf.print("in grad_graph")
+            out = model(shap_rAnD, training=False)
+            if self.multi_output:
+                # todo: this needs to be fixed
+                out = out[:, 0]
+            # self._init_between_tensors(out.op, shap_rAnD)
+        # tf.print("before calling grad_graph")
+        grad_graph(data)
 
     def execute_with_overridden_gradients(self, f):
         # replace the gradients for all the non-linear activations
@@ -509,14 +579,14 @@ class TFDeep(Explainer):
         # TODO: unclear why some ops are not in the registry with TF 2.0 like TensorListReserve
         for non_reg_ops in ops_not_in_registry:
             reg[non_reg_ops] = {'type': None, 'location': location_tag}
-        for n_op in op_handlers:
-            if n_op in reg:
-                self.orig_grads[n_op] = reg[n_op]["type"]
-                reg["shap_"+n_op] = {
+        for n in op_handlers:
+            if n in reg:
+                self.orig_grads[n] = reg[n]["type"]
+                reg["shap_"+n] = {
                     "type": self.custom_grad,
-                    "location": reg[n_op]["location"]
+                    "location": reg[n]["location"]
                 }
-                reg[n_op]["type"] = self.custom_grad
+                reg[n]["type"] = self.custom_grad
 
         # In TensorFlow 1.10 they started pruning out nodes that they think can't be backpropped
         # unfortunately that includes the index of embedding layers so we disable that check here
@@ -526,6 +596,7 @@ class TFDeep(Explainer):
 
         # define the computation graph for the attribution values using a custom gradient-like computation
         try:
+            print("calling f")
             out = f()
         finally:
             # reinstate the backpropagatable check
@@ -578,6 +649,7 @@ def backward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist):
 def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops):
     found_ops = []
     op_stack = [op for op in start_ops]
+    # tf.print("op_stack", op_stack)
     while len(op_stack) > 0:
         op = op_stack.pop()
         if op.type not in op_type_blacklist and op in within_ops and op not in found_ops:
@@ -623,7 +695,7 @@ def softmax(explainer, op, *grads):
     xin0,rin0 = tf.split(in0, 2)
     xin0_centered,rin0_centered = tf.split(in0_centered, 2)
     delta_in0 = xin0 - rin0
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    dup0 = [2] + [1 for _ in delta_in0.shape[1:]]
     return tf.where(
         tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
         out,
@@ -656,8 +728,8 @@ def gather(explainer, op, *grads):
 
         xin1,rin1 = tf.split(tf.cast(op.inputs[1], tf.float32), 2)
         xout,rout = tf.split(op.outputs[0], 2)
-        dup_in1 = [2] + [1 for i in xin1.shape[1:]]
-        dup_out = [2] + [1 for i in xout.shape[1:]]
+        dup_in1 = [2] + [1 for _ in xin1.shape[1:]]
+        dup_out = [2] + [1 for _ in xout.shape[1:]]
         delta_in1_t = tf.tile(xin1 - rin1, dup_in1)
         out_sum = tf.reduce_sum(grads[0] * tf.tile(xout - rout, dup_out), list(range(len(indices.shape), len(grads[0].shape))))
         if op.type == "ResourceGather":
@@ -695,6 +767,7 @@ def linearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
 def nonlinearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
     def handler(explainer, op, *grads):
         var = explainer._variable_inputs(op)
+        tf.pring("var: ", var)
         if var[input_ind0] and not var[input_ind1]:
             return nonlinearity_1d_handler(input_ind0, explainer, op, *grads)
         elif var[input_ind1] and not var[input_ind0]:
@@ -716,7 +789,8 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     op_inputs = op.inputs
     if op_inputs is None:
         op_inputs = op.outputs[0].op.inputs
-    tf.print("this is the op_inputs: ", op_inputs)
+    # tf.print("this is the op_inputs: ", op_inputs)
+    # tf.print("these are the grads: ", grads)
 
     for i in range(len(op_inputs)):
         if i != input_ind:
@@ -728,36 +802,37 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     if delta_in0.shape is None:
         dup0 = [2, 1]
     else:
-        dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+        dup0 = [2] + [1 for _ in delta_in0.shape[1:]]
     out = [None for _ in op_inputs]
     if op.type.startswith("shap_"):
         op.type = op.type[5:]
     orig_grad = explainer.orig_grads[op.type](op, grads[0])
+    # tf.print("orig_grad: ", orig_grad)
     out[input_ind] = tf.where(
         tf.tile(tf.abs(delta_in0), dup0) < 1e-6,
         orig_grad[input_ind] if len(op_inputs) > 1 else orig_grad,
         grads[0] * tf.tile((xout - rout) / delta_in0, dup0)
     )
-    tf.print("output for type: ", op.type)
-    tf.print(out)
-    tf.print("\n")
+    # tf.print("output for type: ", op.type)
+    # tf.print(out)
+    # tf.print("\n")
     return out
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
     if not (input_ind0 == 0 and input_ind1 == 1):
         emsg = "TODO: Can't yet handle double inputs that are not first!"
         raise Exception(emsg)
-    xout,rout = tf.split(op.outputs[0], 2)
+    xout, rout = tf.split(op.outputs[0], 2)
     in0 = op.inputs[input_ind0]
     in1 = op.inputs[input_ind1]
-    xin0,rin0 = tf.split(in0, 2)
-    xin1,rin1 = tf.split(in1, 2)
+    xin0, rin0 = tf.split(in0, 2)
+    xin1, rin1 = tf.split(in1, 2)
     delta_in0 = xin0 - rin0
     delta_in1 = xin1 - rin1
-    dup0 = [2] + [1 for i in delta_in0.shape[1:]]
+    dup0 = [2] + [1 for _ in delta_in0.shape[1:]]
     out10 = op_func(xin0, rin1)
     out01 = op_func(rin0, xin1)
-    out11,out00 = xout,rout
+    out11, out00 = xout, rout
     out0 = 0.5 * (out11 - out01 + out10 - out00)
     out0 = grads[0] * tf.tile(out0 / delta_in0, dup0)
     out1 = 0.5 * (out11 - out10 + out01 - out00)
@@ -807,8 +882,9 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
 def passthrough(explainer, op, *grads):
-    tf.print("In passthroug")
-    tf.print("This is the op: ", op.type)
+    # tf.print("In passthrough")
+    # tf.print("This is the op: ", op.type)
+    # tf.print("These are the grads", grads)
     if op.type.startswith("shap_"):
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
@@ -849,9 +925,9 @@ op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
 
 # todo: is this correct?
-op_handlers["TensorListStack"] = passthrough
-op_handlers["While"] = passthrough
-op_handlers["TensorListFromTensor"] = passthrough
+# op_handlers["TensorListStack"] = passthrough
+# op_handlers["While"] = passthrough
+# op_handlers["TensorListFromTensor"] = passthrough
 
 # ops that don't pass any attributions to their inputs
 op_handlers["Shape"] = break_dependence
