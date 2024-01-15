@@ -51,12 +51,6 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[test,plots,notebooks]'
-      - name: List dependencies
-        run: |
-          pip list
       - name: Run notebooks
         run: |
           python scripts/run_notebooks_timeouts.py
-      - name: run stuff
-        run: |
-          python notebooks/benchmarks/tabular/Tabular\ Prediction\ Benchmark\ Demo.py
