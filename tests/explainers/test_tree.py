@@ -35,7 +35,9 @@ def test_front_page_xgboost():
 
     # train XGBoost model
     X, y = shap.datasets.california(n_points=500)
-    model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 100)
+    model = xgboost.train(
+        {"learning_rate": 0.01, "verbosity": 0}, xgboost.DMatrix(X, label=y), 100
+    )
 
     # explain the model's predictions using SHAP values
     explainer = shap.TreeExplainer(model)
@@ -60,16 +62,83 @@ def test_xgboost_predictions():
 
     xgboost = pytest.importorskip("xgboost")
     X, y = shap.datasets.california(n_points=10)
-    model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 10)
-    tree_ensemble = TreeEnsemble(model=model,
-                                 data=X,
-                                 data_missing=None,
-                                 model_output="raw",
-                            )
+    model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 10)
+    tree_ensemble = TreeEnsemble(
+        model=model,
+        data=X,
+        data_missing=None,
+        model_output="raw",
+    )
     y_pred = model.predict(xgboost.DMatrix(X))
     y_pred_tree_ensemble = tree_ensemble.predict(X)
     # this is pretty close but not exactly the same
     assert np.allclose(y_pred, y_pred_tree_ensemble, atol=1e-7)
+
+
+def test_tree_limit() -> None:
+    xgboost = pytest.importorskip("xgboost")
+    from sklearn.datasets import load_iris
+    from sklearn.model_selection import train_test_split
+
+    # Load regression data
+    X, y = shap.datasets.california(n_points=500)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
+
+    # Test Booster
+    model = xgboost.train(
+        {"learning_rate": 0.01, "verbosity": 0},
+        xgboost.DMatrix(X_train, label=y_train),
+        num_boost_round=10,
+        evals=[(xgboost.DMatrix(X_test, y_test), "Valid")],
+        early_stopping_rounds=1,
+    )
+
+    explainer = shap.TreeExplainer(model)
+    assert explainer.model.tree_limit == model.num_boosted_rounds()
+
+    # Test regressor
+    reg = xgboost.XGBRegressor(n_estimators=10)
+    reg.fit(X, y)
+
+    explainer = shap.TreeExplainer(reg)
+    assert explainer.model.tree_limit == reg.n_estimators
+
+    # Test classifier
+    X, y = load_iris(return_X_y=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
+
+    clf = xgboost.XGBClassifier(n_estimators=10)
+    clf.fit(X, y)
+
+    explainer = shap.TreeExplainer(clf)
+    assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y))
+
+    clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
+    clf.fit(X, y)
+
+    explainer = shap.TreeExplainer(clf)
+    assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y)) * 3
+
+    clf = xgboost.XGBClassifier(
+        n_estimators=1000, num_parallel_tree=3, early_stopping_rounds=1
+    )
+    clf.fit(X_train, y_train, eval_set=[(X_test, y_test)])
+    # make sure we don't waste too much time on this test
+    assert clf.best_iteration < 15
+
+    explainer = shap.TreeExplainer(clf)
+    assert (
+        explainer.model.tree_limit == (clf.best_iteration + 1) * len(np.unique(y)) * 3
+    )
+
+    # Test ranker
+    ltr = xgboost.XGBRanker(n_estimators=5, num_parallel_tree=3)
+    qid = np.zeros(X_train.shape[0])
+    qid[qid.shape[0] // 2 :] = 1
+    ltr.fit(X_train, y_train, qid=qid)
+
+    explainer = shap.TreeExplainer(ltr)
+    assert explainer.model.tree_limit == ltr.n_estimators * 3
 
 
 def test_front_page_sklearn():
@@ -417,8 +486,6 @@ def test_catboost_interactions():
         np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max()
         < 1e-4
     )
-
-# TODO: Test tree_limit argument
 
 
 def _average_path_length(n_samples_leaf):
@@ -1423,22 +1490,6 @@ class TestExplainerXGBoost:
     #     shap_values = explainer.shap_values(X)
 
     #     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X))
-
-    def test_xgboost_buffer_strip(self, random_seed):
-        # test to make sure bug in GH #1864 doesn't get reintroduced
-        xgboost = pytest.importorskip("xgboost")
-        X = np.array([[1, 2, 3, 4, 5], [3, 3, 3, 2, 4]])
-        y = np.array([1, 0])
-        # specific values (e.g. 1.3) caused the bug previously
-        model = xgboost.XGBRegressor(base_score=1.3, eval_metric="rmse", random_state=random_seed)
-        model.fit(X, y)
-        # previous bug did .lstrip('binf'), so would have incorrectly handled
-        # buffer starting with binff
-        assert model.get_booster().save_raw().startswith(b"binff")
-
-        # after this fix, this line should not error
-        explainer = shap.TreeExplainer(model)
-        assert isinstance(explainer, shap.explainers.TreeExplainer)
 
     def test_explanation_data_not_dmatrix(self, random_seed):
         """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,

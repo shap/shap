@@ -97,10 +97,16 @@ class GPUTreeExplainer(TreeExplainer):
         assert not approximate, "approximate not supported"
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = \
-            self._validate_inputs(X, y,
-                                  tree_limit,
-                                  check_additivity)
-        transform = self.model.get_transform()
+            self._validate_inputs(X, y, tree_limit, check_additivity)
+
+        model = self.model
+        if model.model_type == "xgboost" and model.cat_feature_indices is not None:
+            raise ValueError(
+                "Categorical split is not yet supported. You can still use GPU"
+                " with TreeExplainer and `feature_perturbation=tree_path_dependent`"
+                " when the input XGBoost model is set to use GPU."
+            )
+        transform = model.get_transform()
 
         # run the core algorithm using the C extension
         assert_import("cext_gpu")
