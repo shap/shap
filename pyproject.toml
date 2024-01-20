@@ -78,6 +78,7 @@ test = [
 test_notebooks = [
   "jupyter",
   "nbconvert",
+  "nbformat",
   "nlp",
   "transformers",
   "datasets",
