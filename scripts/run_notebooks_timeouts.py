@@ -29,6 +29,8 @@ allow_to_fail = [
     Path("notebooks/benchmarks/others/Benchmark Debug Mode.ipynb"),
     Path("notebooks/tabular_examples/tree_based_models/NHANES I Survival Model.ipynb"),
     Path("notebooks/benchmarks/text/Abstractive Summarization Benchmark Demo.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Performance comparison copy.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Figures 8-11 NHANES I Survival Model-Copy1.ipynb"),
 ]
 
 allow_to_timeout = [
@@ -61,7 +63,9 @@ allow_to_timeout = [
     Path("notebooks/benchmarks/tabular/Benchmark XGBoost explanations.ipynb"),
     Path("notebooks/benchmarks/image/Image Multiclass Classification Benchmark Demo.ipynb"),
     Path("notebooks/api_examples/plots/scatter.ipynb"),
-    Path("notebooks/text_examples/text_entailment/Textual Entailment Explanation Demo.ipynb")
+    Path("notebooks/text_examples/text_entailment/Textual Entailment Explanation Demo.ipynb"),
+    Path("notebooks/image_examples/image_classification/Multi-input Gradient Explainer MNIST Example.ipynb"),
+    Path("notebooks/image_examples/image_classification/PyTorch Deep Explainer MNIST example.ipynb"),
 ]
 
 
