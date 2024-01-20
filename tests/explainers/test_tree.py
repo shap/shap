@@ -1661,3 +1661,17 @@ class TestExplainerLightGBM:
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
+
+def test_lightgbm_interactions():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X, y = sklearn.datasets.load_digits(return_X_y=True)
+
+    model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    predicted = model.predict(X, raw_score=True)
+    explanation = explainer(X, interactions=False)
+    assert np.allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
+
+    explanation = explainer(X, interactions=True)
+    assert np.allclose(np.stack(explanation.values, axis=-1).sum(axis=(1, 2)) + explanation.base_values, predicted)

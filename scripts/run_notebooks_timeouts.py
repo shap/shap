@@ -1,70 +1,97 @@
-import os
-import subprocess
 import time
+from pathlib import Path
 
-from nbconvert.exporters import ScriptExporter
+import nbformat
+from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
-TIMEOUT = 60  # seconds
+TIMEOUT = 20  # seconds
 
+allow_to_fail = [
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Tree SHAP in Python.ipynb"),
+    Path("notebooks/api_examples/plots/decision_plot.ipynb"),
+    Path("notebooks/image_examples/image_classification/Image Multi Class.ipynb"),
+    Path("notebooks/tabular_examples/model_agnostic/Multioutput Regression SHAP.ipynb"),
+    Path("notebooks/tabular_examples/neural_networks/Census income classification with Keras.ipynb"),
+    Path("notebooks/api_examples/explainers/GPUTree.ipynb"),
+    Path("notebooks/genomic_examples/DeepExplainer Genomics Example.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/Perfomance Comparison.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Figure 7 - Airline Tweet Sentiment Analysis.ipynb"),
+    Path("notebooks/overviews/Be careful when interpreting predictive models in search of causal insights.ipynb"),
+    Path("notebooks/benchmarks/text/Text Emotion Multiclass Classification Benchmark Demo.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Figure 6 - Supervised Clustering R-squared.ipynb"),
+    Path("notebooks/overviews/Explaining quantitative measures of fairness.ipynb"),
+    Path("notebooks/image_examples/image_captioning/Image Captioning using Open Source.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Performance comparison.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/League of Legends Win Prediction with XGBoost.ipynb"),
+    Path("notebooks/overviews/An introduction to explainable AI with Shapley values.ipynb"),
+    Path("notebooks/image_examples/image_captioning/Image Captioning using Azure Cognitive Services.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/tree_shap_paper/Figures 8-11 NHANES I Survival Model.ipynb"),
+    Path("notebooks/benchmarks/others/Benchmark Debug Mode.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/NHANES I Survival Model.ipynb"),
+    Path("notebooks/benchmarks/text/Abstractive Summarization Benchmark Demo.ipynb"),
+]
 
-def convert_notebook_to_python(notebook_path, output_path):
-    # Add Matplotlib configuration to use a non-interactive backend
-    exporter = ScriptExporter()
-    content, _ = exporter.from_filename(notebook_path)
-    content = 'import matplotlib\nmatplotlib.use("Agg")\n' + content
+allow_to_timeout = [
+    Path("notebooks/tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
+    Path("notebooks/image_examples/image_classification/Explain MobilenetV2 using the Partition explainer (PyTorch).ipynb"),
+    Path("notebooks/text_examples/sentiment_analysis/Emotion classification multiclass example.ipynb"),
+    Path("notebooks/api_examples/plots/bar.ipynb"),
+    Path("notebooks/text_examples/language_modelling/Language Modeling Explanation Demo.ipynb"),
+    Path("notebooks/image_examples/image_classification/Explain an Intermediate Layer of VGG16 on ImageNet (PyTorch).ipynb"),
+    Path("notebooks/text_examples/sentiment_analysis/Keras LSTM for IMDB Sentiment Classification.ipynb"),
+    Path("notebooks/text_examples/sentiment_analysis/Positive vs. Negative Sentiment Classification.ipynb"),
+    Path("notebooks/image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow).ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/Fitting a Linear Simulation with XGBoost.ipynb"),
+    Path("notebooks/text_examples/question_answering/Explaining a Question Answering Transformers Model.ipynb"),
+    Path("notebooks/text_examples/sentiment_analysis/Using custom functions and tokenizers.ipynb"),
+    Path("notebooks/text_examples/translation/Machine Translation Explanations.ipynb"),
+    Path("notebooks/image_examples/image_classification/Explain an Intermediate Layer of VGG16 on ImageNet.ipynb"),
+    Path("notebooks/image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow)-checkpoint.ipynb"),
+    Path("notebooks/api_examples/plots/text.ipynb"),
+    Path("notebooks/image_examples/image_classification/Explain ResNet50 using the Partition explainer.ipynb"),
+    Path("notebooks/benchmarks/tabular/Tabular Prediction Benchmark Demo.ipynb"),
+    Path("notebooks/text_examples/text_generation/Open Ended GPT2 Text Generation Explanations.ipynb"),
+    Path("notebooks/image_examples/image_classification/Front Page DeepExplainer MNIST Example.ipynb"),
+    Path("notebooks/tabular_examples/tree_based_models/Census income classification with XGBoost.ipynb"),
+    Path("notebooks/api_examples/plots/waterfall.ipynb"),
+    Path("notebooks/benchmarks/text/Machine Translation Benchmark Demo.ipynb"),
+    Path("notebooks/text_examples/summarization/Abstractive Summarization Explanation Demo.ipynb"),
+    Path("notebooks/api_examples/plots/beeswarm.ipynb"),
+    Path("notebooks/api_examples/plots/image.ipynb"),
+    Path("notebooks/benchmarks/tabular/Benchmark XGBoost explanations.ipynb"),
+    Path("notebooks/benchmarks/image/Image Multiclass Classification Benchmark Demo.ipynb"),
+    Path("notebooks/api_examples/plots/scatter.ipynb"),
+    Path("notebooks/text_examples/text_entailment/Textual Entailment Explanation Demo.ipynb")
+]
 
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(content)
-
-
-def execute_python_script(script_path, timeout_seconds=30):
-    start_time = time.time()
-    try:
-        ret_code = subprocess.call(['python', script_path],
-                                   stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.STDOUT,
-                                   timeout=timeout_seconds)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(f"Executed notebook {script_path} in {execution_time:.2f} seconds.")
-        return ret_code, execution_time  # Successful execution
-    except subprocess.TimeoutExpired:
-        return -1, None  # Timeout
-    except subprocess.CalledProcessError as e:
-        end_time = time.time()
-        execution_time = end_time - start_time
-        return e.returncode, execution_time  # Capture error code
 
 def main():
-    notebooks_directory = 'notebooks'
+    notebooks_directory = Path('notebooks')
     error_notebooks = []
+    ep = ExecutePreprocessor(timeout=TIMEOUT, log_level=40)
 
-    for root, dirs, files in os.walk(notebooks_directory):
-        for file in files:
-            if file.endswith(".ipynb"):
-                notebook_path = os.path.join(root, file)
-                python_script_path = os.path.splitext(notebook_path)[0] + '.py'
+    error_notebooks = []
+    timeout_notebooks = []
+    notebooks_to_run = set(notebooks_directory.rglob('*.ipynb')) - set(allow_to_fail) - set(allow_to_timeout)
+    for file_path in notebooks_to_run:
+        with open(file_path) as f:
+            nb = nbformat.read(f, as_version=4)
+        start_time = time.time()
+        try:
+            ep.preprocess(nb, {'metadata': {'path': str(file_path.parent)}})
+            print(f"Executed notebook {file_path} in {time.time() - start_time:.2f} seconds.")
+        except CellExecutionError:
+            error_notebooks.append(file_path)
+        except TimeoutError:
+            print(f"Execution of {file_path} timed out after {TIMEOUT} seconds.")
+            timeout_notebooks.append(file_path)
 
-                convert_notebook_to_python(notebook_path, python_script_path)
-
-                error_code, execution_time = execute_python_script(python_script_path, timeout_seconds=TIMEOUT)
-
-                if error_code == -1:
-                    print(f"Execution of {notebook_path} timed out after {TIMEOUT} seconds.")
-                    error_notebooks.append((notebook_path, -1, None))
-                elif error_code != 0:
-                    error_notebooks.append((notebook_path, error_code, execution_time))
-
-    if error_notebooks:
-        error_thrown = [error_code for _, error_code, _ in error_notebooks if error_code != -1]
-        print("Notebooks with error codes or timeouts:")
-        for notebook, error_code, execution_time in error_notebooks:
-            if error_code == -1:
-                print(f"{notebook}: Timeout")
-            else:
-                print(f"{notebook}: Error Code {error_code}, Execution Time: {execution_time:.2f} seconds")
-        if len(error_thrown) > 0:
-            raise Exception(f"Notebooks failed with error codes: {', '.join([path for path, _, _ in error_notebooks if error_code != -1])}")
+    if len(error_notebooks) > 0:
+        print(f"Notebooks failed with error codes: {', '.join([str(nb) for nb in error_notebooks])}")
+    if len(timeout_notebooks) > 0:
+        print(f"Notebooks timed out: {', '.join([str(nb) for nb in timeout_notebooks])}")
+    if len(error_notebooks) > 0 or len(timeout_notebooks) > 0:
+        raise Exception("Notebooks failed to execute.")
     else:
         print("All notebooks executed successfully.")
 

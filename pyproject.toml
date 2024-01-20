@@ -75,7 +75,7 @@ test = [
   "opencv-python",
 ]
 
-notebooks = [
+test_notebooks = [
   "jupyter",
   "nbconvert",
   "nlp",
