@@ -50,7 +50,7 @@ jobs:
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
-          pip install --upgrade --upgrade-strategy eager '.[test,plots,tests_notebooks]'
+          pip install --upgrade --upgrade-strategy eager '.[test,plots,test_notebooks]'
       - name: Run notebooks
         run: |
           python scripts/run_notebooks_timeouts.py
