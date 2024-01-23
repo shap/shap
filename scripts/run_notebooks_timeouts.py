@@ -77,8 +77,7 @@ def main():
     error_notebooks = []
     timeout_notebooks = []
     notebooks_to_run = set(notebooks_directory.rglob('*.ipynb')) - set(allow_to_fail) - set(allow_to_timeout)
-    for file_path in notebooks_to_run:
-        notebook_path = notebooks_directory / file_path
+    for notebook_path in notebooks_to_run:
         with open(notebook_path) as f:
             nb = nbformat.read(f, as_version=4)
         start_time = time.time()
