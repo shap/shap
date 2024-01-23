@@ -1807,7 +1807,8 @@ class XGBTreeModelLoader:
                               "Please consider upgrading to XGBoost 1.6.0 or higher.")
                 tmp_file = os.path.join(tmp_dir, "model.json")
                 xgb_model.save_model(tmp_file)
-                xgb_params = json.load(open(tmp_file))
+                with open(tmp_file) as fh:
+                    xgb_params = json.load(fh)
         return xgb_params["learner"]
 
     def get_trees(self, data=None, data_missing=None):
