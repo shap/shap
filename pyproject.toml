@@ -63,6 +63,7 @@ test = [
   "lightgbm",
   "catboost",
   "gpboost",
+  "causalml",
   "ngboost;python_version<'3.11'",  # FIXME: pending py3.11 support
   "pyspark",
   "pyod",

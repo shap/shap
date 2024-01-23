@@ -712,6 +712,7 @@ class TreeEnsemble:
                 "sklearn.ensemble.RandomForestRegressor",
                 "sklearn.ensemble.forest.RandomForestRegressor",
                 "econml.grf._base_grf.BaseGRF",
+                "causalml.inference.tree.CausalRandomForestRegressor",
             ],
         ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
@@ -773,6 +774,7 @@ class TreeEnsemble:
                 "sklearn.tree.DecisionTreeRegressor",
                 "sklearn.tree.tree.DecisionTreeRegressor",
                 "econml.grf._base_grftree.GRFTree",
+                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
             ],
         ):
             self.internal_dtype = model.tree_.value.dtype.type
@@ -1403,7 +1405,7 @@ class SingleTree:
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
 
-        if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree"]):
+        if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree", "causalml.inference.tree.causal._tree.BaseCausalDecisionTree"]):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
             self.children_default = self.children_left # missing values not supported in sklearn
