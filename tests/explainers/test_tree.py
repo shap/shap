@@ -55,6 +55,23 @@ def test_front_page_xgboost():
     shap.summary_plot(shap_values, X, show=False)
 
 
+def test_xgboost_predictions():
+    from shap.explainers._tree import TreeEnsemble
+
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.california(n_points=10)
+    model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 10)
+    tree_ensemble = TreeEnsemble(model=model,
+                                 data=X,
+                                 data_missing=None,
+                                 model_output="raw",
+                            )
+    y_pred = model.predict(xgboost.DMatrix(X))
+    y_pred_tree_ensemble = tree_ensemble.predict(X)
+    # this is pretty close but not exactly the same
+    assert np.allclose(y_pred, y_pred_tree_ensemble, atol=1e-7)
+
+
 def test_front_page_sklearn():
     # load JS visualization code to notebook
     shap.initjs()
