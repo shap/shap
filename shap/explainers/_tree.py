@@ -1,8 +1,10 @@
 import json
 import os
 import struct
+import tempfile
 import time
 import warnings
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -22,6 +24,7 @@ from ..utils._exceptions import (
 )
 from ..utils._legacy import DenseData
 from ._explainer import Explainer
+from .other._ubjson import decode_ubjson_buffer
 
 warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
 
@@ -1732,27 +1735,17 @@ class XGBTreeModelLoader:
     tree can actually be wrong when feature values land almost on a threshold.
     """
     def __init__(self, xgb_model):
-        # new in XGBoost 1.1, 'binf' is appended to the buffer
-        self.buf = xgb_model.save_raw()
-        if self.buf.startswith(b'binf'):
-            self.buf = self.buf[4:]
-        self.pos = 0
+        import xgboost
+        xgb_params = self.read_xgb_params(xgb_model)
 
-        # load the model parameters
-        self.base_score = self.read('f')
-        self.num_feature = self.read('I')
-        self.num_class = self.read('i')
-        self.contain_extra_attrs = self.read('i')
-        self.contain_eval_metrics = self.read('i')
-        self.read_arr('i', 29) # reserved
-        self.name_obj_len = self.read('Q')
-        self.name_obj = self.read_str(self.name_obj_len)
-        self.name_gbm_len = self.read('Q')
-        self.name_gbm = self.read_str(self.name_gbm_len)
+        self.base_score = float(xgb_params["learner_model_param"]["base_score"])
+        self.num_feature = int(xgb_params["learner_model_param"]["num_feature"])
+        self.num_class = int(xgb_params["learner_model_param"]["num_class"])
+        self.name_obj = xgb_params["objective"]["name"]
+        self.name_gbm = xgb_params["gradient_booster"]["name"]
 
         # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
         # so we have to transform it depending on the objective
-        import xgboost
         if version.parse(xgboost.__version__).major >= 1:
             if self.name_obj in ["binary:logistic", "reg:logistic"]:
                 self.base_score = scipy.special.logit(self.base_score)
@@ -1760,15 +1753,8 @@ class XGBTreeModelLoader:
         assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
 
         # load the gbtree specific parameters
-        self.num_trees = self.read('i')
-        self.num_roots = self.read('i')
-        self.num_feature = self.read('i')
-        self.pad_32bit = self.read('i')
-        self.num_pbuffer_deprecated = self.read('Q')
-        self.num_output_group = self.read('i')
-        self.size_leaf_vector = self.read('i')
-        self.read_arr('i', 32) # reserved
-
+        self.num_trees = int(xgb_params["gradient_booster"]["model"]["gbtree_model_param"]["num_trees"])
+        self.num_feature = int(xgb_params["learner_model_param"]["num_feature"])
         # load each tree
         self.num_roots = np.zeros(self.num_trees, dtype=np.int32)
         self.num_nodes = np.zeros(self.num_trees, dtype=np.int32)
@@ -1786,39 +1772,44 @@ class XGBTreeModelLoader:
         self.base_weight = []
         self.leaf_child_cnt = []
         for i in range(self.num_trees):
+            tree_json = xgb_params["gradient_booster"]["model"]["trees"][i]
 
             # load the per-tree params
-            self.num_roots[i] = self.read('i')
-            self.num_nodes[i] = self.read('i')
-            self.num_deleted[i] = self.read('i')
-            self.max_depth[i] = self.read('i')
-            self.num_feature[i] = self.read('i')
-            self.size_leaf_vector[i] = self.read('i')
+            self.num_nodes[i] = tree_json["tree_param"]["num_nodes"]
+            self.num_deleted[i] = tree_json["tree_param"]["num_deleted"]
+            self.num_feature[i] = tree_json["tree_param"]["num_feature"]
+            self.size_leaf_vector[i] = tree_json["tree_param"]["size_leaf_vector"]
 
             # load the nodes
-            self.read_arr('i', 31) # reserved
-            self.node_parents.append(np.zeros(self.num_nodes[i], dtype=np.int32))
-            self.node_cleft.append(np.zeros(self.num_nodes[i], dtype=np.int32))
-            self.node_cright.append(np.zeros(self.num_nodes[i], dtype=np.int32))
-            self.node_sindex.append(np.zeros(self.num_nodes[i], dtype=np.uint32))
-            self.node_info.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            for j in range(self.num_nodes[i]):
-                self.node_parents[-1][j] = self.read('i')
-                self.node_cleft[-1][j] = self.read('i')
-                self.node_cright[-1][j] = self.read('i')
-                self.node_sindex[-1][j] = self.read('I')
-                self.node_info[-1][j] = self.read('f')
+            self.node_parents.append(np.array(tree_json["parents"], dtype=np.int32))
+            self.node_cleft.append(np.array(tree_json["left_children"], dtype=np.int32))
+            self.node_cright.append(np.array(tree_json["right_children"], dtype=np.int32))
+            self.node_sindex.append(np.array(tree_json["split_indices"], dtype=np.uint32))
+            self.node_info.append(np.array(tree_json["split_conditions"], dtype=np.float32))
 
             # load the stat nodes
-            self.loss_chg.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            self.sum_hess.append(np.zeros(self.num_nodes[i], dtype=np.float64))
-            self.base_weight.append(np.zeros(self.num_nodes[i], dtype=np.float32))
-            self.leaf_child_cnt.append(np.zeros(self.num_nodes[i], dtype=int))
-            for j in range(self.num_nodes[i]):
-                self.loss_chg[-1][j] = self.read('f')
-                self.sum_hess[-1][j] = self.read('f')
-                self.base_weight[-1][j] = self.read('f')
-                self.leaf_child_cnt[-1][j] = self.read('i')
+            self.loss_chg.append(np.array(tree_json["loss_changes"], dtype=np.float32))
+            self.sum_hess.append(np.array(tree_json["sum_hessian"], dtype=np.float64))
+            self.base_weight.append(np.array(tree_json["base_weights"], dtype=np.float32))
+            self.leaf_child_cnt.append(np.array(tree_json["default_left"], dtype=int))
+
+    @staticmethod
+    def read_xgb_params(xgb_model) -> Dict[str, Any]:
+        import xgboost
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            if version.parse(xgboost.__version__) >= version.parse("1.6.0"):
+                tmp_file = os.path.join(tmp_dir, "model.ubj")
+                xgb_model.save_model(tmp_file)
+                xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
+            else:
+                warnings.warn("You are using an XGBoost version below 1.6.0 which is not fully supported by shap. "
+                              "Shap falls back to encoding the model as JSON which can lead to numerical precision issues. "
+                              "Please consider upgrading to XGBoost 1.6.0 or higher.")
+                tmp_file = os.path.join(tmp_dir, "model.json")
+                xgb_model.save_model(tmp_file)
+                with open(tmp_file) as fh:
+                    xgb_params = json.load(fh)
+        return xgb_params["learner"]
 
     def get_trees(self, data=None, data_missing=None):
         shape = (self.num_trees, self.num_nodes.max())
@@ -1877,20 +1868,13 @@ class XGBTreeModelLoader:
         print("base_score =", self.base_score)
         print("num_feature =", self.num_feature)
         print("num_class =", self.num_class)
-        print("contain_extra_attrs =", self.contain_extra_attrs)
-        print("contain_eval_metrics =", self.contain_eval_metrics)
-        print("name_obj_len =", self.name_obj_len)
         print("name_obj =", self.name_obj)
-        print("name_gbm_len =", self.name_gbm_len)
         print("name_gbm =", self.name_gbm)
         print()
         print("--- gbtree specific parameters ---")
         print("num_trees =", self.num_trees)
         print("num_roots =", self.num_roots)
         print("num_feature =", self.num_feature)
-        print("pad_32bit =", self.pad_32bit)
-        print("num_pbuffer_deprecated =", self.num_pbuffer_deprecated)
-        print("num_output_group =", self.num_output_group)
         print("size_leaf_vector =", self.size_leaf_vector)
 
 
