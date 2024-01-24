@@ -568,6 +568,19 @@ class TreeExplainer(Explainer):
             else:
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
+        elif (self.model.model_type == "catboost") and (self.feature_perturbation == "tree_path_dependent"): # thanks again to the CatBoost team for implementing this...
+            assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
+            import catboost
+            if type(X) != catboost.Pool:
+                X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
+            phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapInteractionValues')
+            # note we pull off the last column and keep it as our expected_value
+            if len(phi.shape) == 4:
+                self.expected_value = getattr(self, "expected_value", [phi[0, i, -1, -1] for i in range(phi.shape[1])])
+                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+            else:
+                self.expected_value = getattr(self, "expected_value", phi[0, -1, -1])
+                return phi[:, :-1, :-1]
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
         # run the core algorithm using the C extension
@@ -586,7 +599,8 @@ class TreeExplainer(Explainer):
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
-            self.expected_value = phi[0, -1, -1, 0]
+            # get expected value only if not already set
+            self.expected_value = getattr(self, "expected_value", phi[0, -1, -1, 0])
             if flat_output:
                 out = phi[0, :-1, :-1, 0]
             else:
@@ -1137,6 +1151,11 @@ class TreeEnsemble:
             self.model_type = "catboost"
             self.original_model = model
             self.cat_feature_indices = model.get_cat_feature_indices()
+            try:
+                cb_loader = CatBoostTreeModelLoader(model)
+                self.trees = cb_loader.get_trees(data=data, data_missing=data_missing)
+            except Exception:
+                self.trees = None # we get here because the cext can't handle categorical splits yet
         elif safe_isinstance(model, "catboost.core.CatBoostClassifier"):
             assert_import("catboost")
             self.model_type = "catboost"
