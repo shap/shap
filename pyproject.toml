@@ -75,6 +75,16 @@ test = [
   "opencv-python",
 ]
 
+test_notebooks = [
+  "jupyter",
+  "nbconvert",
+  "nbformat",
+  "nlp",
+  "transformers",
+  "datasets",
+  "keras",
+]
+
 [project.urls]
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
