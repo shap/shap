@@ -1837,7 +1837,7 @@ class XGBTreeModelLoader:
         else:
             self.cat_feature_indices = None
 
-        def to_integers(data: list[int]) -> np.ndarray:
+        def to_integers(data: List[int]) -> np.ndarray:
             "Handle u8 array from UBJSON."
             assert isinstance(data, list)
             return np.asanyarray(data, dtype=np.uint8)
