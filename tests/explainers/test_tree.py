@@ -77,7 +77,7 @@ def test_xgboost_predictions():
 
 def test_tree_limit() -> None:
     xgboost = pytest.importorskip("xgboost")
-    from sklearn.datasets import load_iris, load_digits
+    from sklearn.datasets import load_digits, load_iris
     from sklearn.model_selection import train_test_split
 
     # Load regression data
