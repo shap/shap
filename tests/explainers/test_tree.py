@@ -77,7 +77,7 @@ def test_xgboost_predictions():
 
 def test_tree_limit() -> None:
     xgboost = pytest.importorskip("xgboost")
-    from sklearn.datasets import load_iris
+    from sklearn.datasets import load_iris, load_digits
     from sklearn.model_selection import train_test_split
 
     # Load regression data
@@ -107,18 +107,21 @@ def test_tree_limit() -> None:
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
 
+    # - multiclass
     clf = xgboost.XGBClassifier(n_estimators=10)
     clf.fit(X, y)
 
     explainer = shap.TreeExplainer(clf)
     assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y))
 
+    # - multiclass, forest
     clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
     clf.fit(X, y)
 
     explainer = shap.TreeExplainer(clf)
     assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y)) * 3
 
+    # - multiclass, forest, early stop
     clf = xgboost.XGBClassifier(
         n_estimators=1000, num_parallel_tree=3, early_stopping_rounds=1
     )
@@ -130,6 +133,13 @@ def test_tree_limit() -> None:
     assert (
         explainer.model.tree_limit == (clf.best_iteration + 1) * len(np.unique(y)) * 3
     )
+
+    # - binary classification, forest
+    X, y = load_digits(return_X_y=True, n_class=2)
+    clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
+    clf.fit(X, y)
+    explainer = shap.TreeExplainer(clf)
+    assert explainer.model.tree_limit == clf.n_estimators * clf.num_parallel_tree
 
     # Test ranker
     ltr = xgboost.XGBRanker(n_estimators=5, num_parallel_tree=3)
