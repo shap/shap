@@ -456,12 +456,13 @@ class SimpleListVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        generated_id = id_generator()
         return f"""
-<div id='{id_generator()}'>{err_msg}</div>
+<div id='{generated_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.SimpleListVisualizer, {json.dumps(self.data)}),
-    document.getElementById('{id_generator()}')
+    document.getElementById('{generated_id}')
   );
 </script>"""
 
@@ -507,12 +508,13 @@ class AdditiveForceVisualizer(BaseVisualizer):
     def html(self, label_margin=20):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
+        generated_id = id_generator()
         return f"""
-<div id='{id_generator()}'>{err_msg}</div>
+<div id='{generated_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {json.dumps(self.data)}),
-    document.getElementById('{id_generator()}')
+    document.getElementById('{generated_id}')
   );
 </script>"""
 

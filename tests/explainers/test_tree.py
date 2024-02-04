@@ -55,6 +55,23 @@ def test_front_page_xgboost():
     shap.summary_plot(shap_values, X, show=False)
 
 
+def test_xgboost_predictions():
+    from shap.explainers._tree import TreeEnsemble
+
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.california(n_points=10)
+    model = xgboost.train({"learning_rate": 0.01, "silent": 1}, xgboost.DMatrix(X, label=y), 10)
+    tree_ensemble = TreeEnsemble(model=model,
+                                 data=X,
+                                 data_missing=None,
+                                 model_output="raw",
+                            )
+    y_pred = model.predict(xgboost.DMatrix(X))
+    y_pred_tree_ensemble = tree_ensemble.predict(X)
+    # this is pretty close but not exactly the same
+    assert np.allclose(y_pred, y_pred_tree_ensemble, atol=1e-7)
+
+
 def test_front_page_sklearn():
     # load JS visualization code to notebook
     shap.initjs()
@@ -1661,3 +1678,32 @@ class TestExplainerLightGBM:
         assert isinstance(explanation.values, np.ndarray)
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
+
+
+def test_catboost_regression_interactions():
+    catboost = pytest.importorskip("catboost")
+
+    X, y = shap.datasets.california(n_points=50)
+    model = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
+    ex_cat = shap.TreeExplainer(model)
+    predicted = model.predict(X, prediction_type="RawFormulaVal")
+    explanation = ex_cat(X, interactions=False)
+    assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted)
+
+    explanation = ex_cat(X, interactions=True)
+    assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted)
+
+
+def test_lightgbm_interactions():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    X, y = sklearn.datasets.load_digits(return_X_y=True)
+
+    model = lightgbm.LGBMClassifier(n_estimators=10, max_depth=3).fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    predicted = model.predict(X, raw_score=True)
+    explanation = explainer(X, interactions=False)
+    assert np.allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
+
+    explanation = explainer(X, interactions=True)
+    assert np.allclose(np.stack(explanation.values, axis=-1).sum(axis=(1, 2)) + explanation.base_values, predicted)
