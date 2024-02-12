@@ -75,8 +75,8 @@ def main():
     notebooks_directory = Path('notebooks')
     error_notebooks = []
     ep = ExecutePreprocessor(timeout=TIMEOUT, log_level=40)
-    km = KernelManager()
-    km.kernel_name = list(kernelspec.find_kernel_specs())[0]
+    kernel_name = list(kernelspec.find_kernel_specs())[0]
+    km = KernelManager(kernel_name=kernel_name)
 
     error_notebooks = []
     timeout_notebooks = []
