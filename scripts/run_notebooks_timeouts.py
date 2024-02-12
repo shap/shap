@@ -1,9 +1,9 @@
 import time
 from pathlib import Path
-from jupyter_client import kernelspec
-from jupyter_client.manager import KernelManager
 
 import nbformat
+from jupyter_client import kernelspec
+from jupyter_client.manager import KernelManager
 from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
 TIMEOUT = 20  # seconds
