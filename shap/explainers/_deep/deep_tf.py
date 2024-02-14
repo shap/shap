@@ -729,6 +729,7 @@ op_handlers["FusedBatchNorm"] = linearity_1d(0)
 
 # ops that are nonlinear and only allow a single input to vary
 op_handlers["Relu"] = nonlinearity_1d(0)
+op_handlers["Selu"] = nonlinearity_1d(0)
 op_handlers["Elu"] = nonlinearity_1d(0)
 op_handlers["Sigmoid"] = nonlinearity_1d(0)
 op_handlers["Tanh"] = nonlinearity_1d(0)
