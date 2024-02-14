@@ -1718,25 +1718,16 @@ def test_lightgbm_interactions():
 
 def test_catboost_column_names_with_special_characters():
     # GH #3475
-    # Seed
     catboost = pytest.importorskip("catboost")
+    # Seed
     np.random.seed(42)
 
     # Simulate a dataset
-    data = {
-            'x1': np.random.rand(1000),
-            'x2': np.random.choice([0, 1], size=1000),
-            'x3': np.random.choice([0, 1], size=1000),
-            'x4': np.random.choice([0, 1], size=1000),
-            'x5=ROMÁNIA': np.random.choice([0, 1], size=1000),
-            'label': np.random.choice([0, 1], size=1000)
-        }
+    x_train = pd.DataFrame({
+            'x5=ROMÁNIA': np.random.choice([0, 1], size=10),
+        })
 
-    df = pd.DataFrame(data)
-
-    # Separate features and labels
-    x_train = df.drop('label', axis=1)
-    y_train = df['label']
+    y_train =np.random.choice([0, 1], size=10)
     # Fit a CatBoostClassifier
     cb_best = catboost.CatBoostClassifier(random_state=42, allow_writing_files=False, iterations=3, depth=1)
     cb_best.fit(x_train, y_train)
