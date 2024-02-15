@@ -1714,3 +1714,30 @@ def test_lightgbm_interactions():
 
     explanation = explainer(X, interactions=True)
     assert np.allclose(np.stack(explanation.values, axis=-1).sum(axis=(1, 2)) + explanation.base_values, predicted)
+
+
+def test_catboost_column_names_with_special_characters():
+    # GH #3475
+    catboost = pytest.importorskip("catboost")
+    # Seed
+    np.random.seed(42)
+
+    # Simulate a dataset
+    x_train = pd.DataFrame({
+            'x5=ROMÁNIA': np.random.choice([0, 1], size=10),
+        })
+
+    y_train =np.random.choice([0, 1], size=10)
+    # Fit a CatBoostClassifier
+    cb_best = catboost.CatBoostClassifier(random_state=42, allow_writing_files=False, iterations=3, depth=1)
+    cb_best.fit(x_train, y_train)
+
+    # Create a SHAP TreeExplainer
+    explainer = shap.TreeExplainer(
+            cb_best,
+            data=x_train,
+            model_output='probability',
+            feature_perturbation='interventional'
+        )
+    shap_values = explainer.shap_values(x_train)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, cb_best.predict_proba(x_train)[:, 1])

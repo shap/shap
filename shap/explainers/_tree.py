@@ -1903,7 +1903,8 @@ class CatBoostTreeModelLoader:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_file = os.path.join(tmp_dir, "model.json")
             cb_model.save_model(tmp_file, format="json")
-            self.loaded_cb_model = json.load(open(tmp_file))
+            with open(tmp_file, encoding='utf-8') as fh:
+                self.loaded_cb_model = json.load(fh)
 
         # load the CatBoost oblivious trees specific parameters
         self.num_trees = len(self.loaded_cb_model['oblivious_trees'])
