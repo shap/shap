@@ -67,6 +67,14 @@ def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
     return n_iterations
 
 
+def _xgboost_cat_unsupported(model):
+    if model.model_type == "xgboost" and model.cat_feature_indices is not None:
+        raise NotImplementedError(
+            "Categorical split is not yet supported. You can still use"
+            " TreeExplainer with `feature_perturbation=tree_path_dependent`."
+        )
+
+
 class TreeExplainer(Explainer):
     """ Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
@@ -471,6 +479,7 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
+        _xgboost_cat_unsupported(self.model)
 
         # run the core algorithm using the C extension
         assert_import("cext")

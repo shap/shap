@@ -115,9 +115,14 @@ def test_xgboost_cat_unsupported():
     clf = xgboost.XGBClassifier(n_estimators=2, enable_categorical=True, device="cuda")
     clf.fit(X, y)
 
+    # Prefer an explict error over silent invalid values.
     gpu_ex = shap.GPUTreeExplainer(clf, X, feature_perturbation="interventional")
     with pytest.raises(NotImplementedError, match="Categorical"):
         gpu_ex.shap_values(X)
+
+    ex = shap.TreeExplainer(clf, X, feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="Categorical"):
+        ex.shap_values(X)
 
 
 def lightgbm_base():

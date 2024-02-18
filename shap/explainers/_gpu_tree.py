@@ -2,7 +2,12 @@
 import numpy as np
 
 from ..utils import assert_import, record_import_error
-from ._tree import TreeExplainer, feature_perturbation_codes, output_transform_codes
+from ._tree import (
+    TreeExplainer,
+    _xgboost_cat_unsupported,
+    feature_perturbation_codes,
+    output_transform_codes,
+)
 
 try:
     from .. import _cext_gpu
@@ -100,12 +105,7 @@ class GPUTreeExplainer(TreeExplainer):
             self._validate_inputs(X, y, tree_limit, check_additivity)
 
         model = self.model
-        if model.model_type == "xgboost" and model.cat_feature_indices is not None:
-            raise NotImplementedError(
-                "Categorical split is not yet supported. You can still use GPU"
-                " with TreeExplainer and `feature_perturbation=tree_path_dependent`"
-                " when the input XGBoost model is set to use GPU."
-            )
+        _xgboost_cat_unsupported(model)
         transform = model.get_transform()
 
         # run the core algorithm using the C extension
