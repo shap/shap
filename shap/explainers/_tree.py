@@ -59,6 +59,14 @@ def _check_xgboost_version(v: str):
         )
 
 
+def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
+    """Convert number of trees to number of iterations for XGBoost models."""
+    if tree_limit == -1:
+        tree_limit = 0
+    n_iterations = tree_limit // num_stacked_models
+    return n_iterations
+
+
 class TreeExplainer(Explainer):
     """ Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
@@ -401,28 +409,21 @@ class TreeExplainer(Explainer):
             phi = None
             if self.model.model_type == "xgboost":
                 import xgboost
+
+                n_iterations = _xgboost_n_iterations(
+                    tree_limit, self.model.num_stacked_models
+                )
                 if not isinstance(X, xgboost.core.DMatrix):
                     # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
                     dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
                     X = xgboost.DMatrix(X, **dmatrix_props)
-                if tree_limit == -1:
-                    tree_limit = 0
-                try:
-                    phi = self.model.original_model.predict(
-                        X, iteration_range=(0, tree_limit), pred_contribs=True,
-                        approx_contribs=approximate, validate_features=False
-                    )
-                except ValueError as e:
-                    emsg = (
-                        "This reshape error is often caused by passing a bad data matrix to SHAP. "
-                        "See https://github.com/shap/shap/issues/580."
-                    )
-                    raise ValueError(emsg) from e
-
+                phi = self.model.original_model.predict(
+                    X, iteration_range=(0, n_iterations), pred_contribs=True,
+                    approx_contribs=approximate, validate_features=False
+                )
                 if check_additivity and self.model.model_output == "raw":
-                    xgb_tree_limit = tree_limit // self.model.num_stacked_models
                     model_output_vals = self.model.original_model.predict(
-                        X, iteration_range=(0, xgb_tree_limit), output_margin=True,
+                        X, iteration_range=(0, n_iterations), output_margin=True,
                         validate_features=False
                     )
 
@@ -561,12 +562,19 @@ class TreeExplainer(Explainer):
             and self.feature_perturbation == "tree_path_dependent"
         ):
             import xgboost
+
             if not isinstance(X, xgboost.core.DMatrix):
                 X = xgboost.DMatrix(X)
-            if tree_limit == -1:
-                tree_limit = 0
-            xgb_tree_limit = tree_limit // self.model.num_stacked_models
-            phi = self.model.original_model.predict(X, iteration_range=(0, xgb_tree_limit), pred_interactions=True, validate_features=False)
+
+            n_iterations = _xgboost_n_iterations(
+                tree_limit, self.model.num_stacked_models
+            )
+            phi = self.model.original_model.predict(
+                X,
+                iteration_range=(0, n_iterations),
+                pred_interactions=True,
+                validate_features=False
+            )
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
@@ -1785,6 +1793,7 @@ class XGBTreeModelLoader:
             diff = np.repeat(n_classes * n_parallel_trees, model.num_boosted_rounds())
         if np.any(diff != diff[0]):
             raise ValueError("vector-leaf is not yet supported.:", diff)
+
         # used to convert the number of iteration to the number of trees.
         # Accounts for number of classes, targets, forest size.
         self.n_trees_per_iter = int(diff[0])
