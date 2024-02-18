@@ -115,6 +115,8 @@ def test_xgboost_cat_unsupported():
     clf = xgboost.XGBClassifier(n_estimators=2, enable_categorical=True, device="cuda")
     clf.fit(X, y)
 
+    # Tests for both CPU and GPU in one place
+
     # Prefer an explict error over silent invalid values.
     gpu_ex = shap.GPUTreeExplainer(clf, X, feature_perturbation="interventional")
     with pytest.raises(NotImplementedError, match="Categorical"):
