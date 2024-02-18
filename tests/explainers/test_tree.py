@@ -1214,15 +1214,21 @@ class TestExplainerXGBoost:
     Included models:
         * XGBRegressor
         * XGBClassifier
+        * XGBRFRegressor
+        * XGBRFClassifier
         * XGBRanker
     """
+    xgboost = pytest.importorskip("xgboost")
 
-    def test_xgboost_regression(self):
-        xgboost = pytest.importorskip("xgboost")
+    regressors =  [xgboost.XGBRegressor, xgboost.XGBRFRegressor]
+    classifiers = [xgboost.XGBClassifier, xgboost.XGBRFClassifier]
+
+    @pytest.mark.parametrize("Reg", regressors)
+    def test_xgboost_regression(self, Reg):
 
         # train xgboost model
         X, y = shap.datasets.california(n_points=500)
-        model = xgboost.XGBRegressor().fit(X, y)
+        model = Reg().fit(X, y)
         predicted = model.predict(X)
 
         # explain the model's predictions using SHAP values
@@ -1236,12 +1242,12 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    def test_xgboost_dmatrix_propagation(self):
+    @pytest.mark.parametrize("Clf", classifiers)
+    def test_xgboost_dmatrix_propagation(self, Clf):
         """
         Test that xgboost sklearn attributues are properly passed to the DMatrix
         initiated during shap value calculation. see GH #3313
         """
-        xgboost = pytest.importorskip("xgboost")
 
         X, y = shap.datasets.adult(n_points=100)
 
@@ -1252,7 +1258,7 @@ class TestExplainerXGBoost:
             X_nan.columns.to_series().sample(frac=0.5, random_state=42),
         ] = 1e-8
 
-        clf = xgboost.XGBClassifier(missing=1e-8, random_state=42)
+        clf = Clf(missing=1e-8, random_state=42)
         clf.fit(X_nan, y)
         margin = clf.predict(X_nan, output_margin=True)
         explainer = shap.TreeExplainer(clf)
@@ -1260,10 +1266,9 @@ class TestExplainerXGBoost:
         # check that SHAP values sum to model output
         assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
 
-    def test_xgboost_direct(self):
-        xgboost = pytest.importorskip("xgboost")
+    @pytest.mark.parametrize("Reg", regressors)
+    def test_xgboost_direct(self, Reg):
 
-        # FIXME: this test should ideally pass with any random seed. See #2960
         random_seed = 0
         rs = np.random.RandomState(random_seed)
         N = 100
@@ -1271,7 +1276,7 @@ class TestExplainerXGBoost:
         X = rs.standard_normal(size=(N, M))
         y = rs.standard_normal(size=N)
 
-        model = xgboost.XGBRegressor(random_state=rs)
+        model = Reg(random_state=rs)
         model.fit(X, y)
 
         explainer = shap.TreeExplainer(model)
@@ -1279,6 +1284,8 @@ class TestExplainerXGBoost:
 
         assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))
 
+    # TODO: test against multiclass XGBRFClassifier
+    # @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_multiclass(self):
         xgboost = pytest.importorskip("xgboost")
 
@@ -1335,11 +1342,11 @@ class TestExplainerXGBoost:
         shap_values = shap.TreeExplainer(bst).shap_values(X)
         shap.dependence_plot(0, shap_values, X, show=False)
 
-    def test_xgboost_classifier_independent_margin(self):
+    @pytest.mark.parametrize("Clf", classifiers)
+    def test_xgboost_classifier_independent_margin(self, Clf):
         # FIXME: this test should ideally pass with any random seed. See #2960
         random_seed = 0
 
-        xgboost = pytest.importorskip("xgboost")
         # train XGBoost model
         rs = np.random.RandomState(random_seed)
         n = 1000
@@ -1348,7 +1355,7 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = xgboost.XGBClassifier(
+        model = Clf(
             n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact"
         )
         model.fit(X, y)
@@ -1373,8 +1380,8 @@ class TestExplainerXGBoost:
             atol=1e-7,
         )
 
-    def test_xgboost_classifier_independent_probability(self, random_seed):
-        xgboost = pytest.importorskip("xgboost")
+    @pytest.mark.parametrize("Clf", classifiers)
+    def test_xgboost_classifier_independent_probability(self, Clf, random_seed):
 
         # train XGBoost model
         rs = np.random.RandomState(random_seed)
@@ -1385,7 +1392,7 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
+        model = Clf(n_estimators=10, max_depth=5, random_state=random_seed)
         model.fit(X, y)
         predicted = model.predict_proba(X)
 
@@ -1767,3 +1774,30 @@ def test_lightgbm_interactions():
 
     explanation = explainer(X, interactions=True)
     assert np.allclose(np.stack(explanation.values, axis=-1).sum(axis=(1, 2)) + explanation.base_values, predicted)
+
+
+def test_catboost_column_names_with_special_characters():
+    # GH #3475
+    catboost = pytest.importorskip("catboost")
+    # Seed
+    np.random.seed(42)
+
+    # Simulate a dataset
+    x_train = pd.DataFrame({
+            'x5=ROMÁNIA': np.random.choice([0, 1], size=10),
+        })
+
+    y_train =np.random.choice([0, 1], size=10)
+    # Fit a CatBoostClassifier
+    cb_best = catboost.CatBoostClassifier(random_state=42, allow_writing_files=False, iterations=3, depth=1)
+    cb_best.fit(x_train, y_train)
+
+    # Create a SHAP TreeExplainer
+    explainer = shap.TreeExplainer(
+            cb_best,
+            data=x_train,
+            model_output='probability',
+            feature_perturbation='interventional'
+        )
+    shap_values = explainer.shap_values(x_train)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, cb_best.predict_proba(x_train)[:, 1])

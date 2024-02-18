@@ -2,6 +2,8 @@ import time
 from pathlib import Path
 
 import nbformat
+from jupyter_client import kernelspec
+from jupyter_client.manager import KernelManager
 from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
 TIMEOUT = 20  # seconds
@@ -73,6 +75,8 @@ def main():
     notebooks_directory = Path('notebooks')
     error_notebooks = []
     ep = ExecutePreprocessor(timeout=TIMEOUT, log_level=40)
+    kernel_name = list(kernelspec.find_kernel_specs())[0]
+    km = KernelManager(kernel_name=kernel_name)
 
     error_notebooks = []
     timeout_notebooks = []
@@ -84,7 +88,7 @@ def main():
             nb = nbformat.read(f, as_version=4)
         start_time = time.time()
         try:
-            ep.preprocess(nb, {'metadata': {'path': str(notebook_path.parent)}})
+            ep.preprocess(nb, resources={'metadata': {'path': str(notebook_path.parent)}}, km=km)
             print(f"Executed notebook {notebook_path} in {time.time() - start_time:.2f} seconds.")
         except CellExecutionError:
             error_notebooks.append(notebook_path)
