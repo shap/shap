@@ -107,6 +107,19 @@ def xgboost_multiclass_classifier():
     return model, X, model.predict(X, output_margin=True)
 
 
+def test_xgboost_cat_unsupported():
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult()
+    X["Workclass"] = X["Workclass"].astype("category")
+
+    clf = xgboost.XGBClassifier(n_estimators=2, enable_categorical=True, device="cuda")
+    clf.fit(X, y)
+
+    gpu_ex = shap.GPUTreeExplainer(clf, X, feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="Categorical"):
+        gpu_ex.shap_values(X)
+
+
 def lightgbm_base():
     try:
         import lightgbm

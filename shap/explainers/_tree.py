@@ -1840,9 +1840,13 @@ class XGBTreeModelLoader:
 
         feature_types = model.feature_types
         if feature_types is not None:
-            self.cat_feature_indices: Optional[np.ndarray] = np.where(
+            cat_feature_indices: np.ndarray = np.where(
                 np.asarray(feature_types) == "c"
             )[0]
+            if len(cat_feature_indices) == 0:
+                self.cat_feature_indices: Optional[np.ndarray] = None
+            else:
+                self.cat_feature_indices = cat_feature_indices
         else:
             self.cat_feature_indices = None
 

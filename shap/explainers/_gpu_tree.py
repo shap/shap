@@ -101,7 +101,7 @@ class GPUTreeExplainer(TreeExplainer):
 
         model = self.model
         if model.model_type == "xgboost" and model.cat_feature_indices is not None:
-            raise ValueError(
+            raise NotImplementedError(
                 "Categorical split is not yet supported. You can still use GPU"
                 " with TreeExplainer and `feature_perturbation=tree_path_dependent`"
                 " when the input XGBoost model is set to use GPU."
