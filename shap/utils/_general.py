@@ -18,7 +18,6 @@ def assert_import(package_name):
         print(msg)
         raise e
 
-
 def record_import_error(package_name, msg, e):
     global import_errors
     import_errors[package_name] = (msg, e)
@@ -149,7 +148,6 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
         interactions.append(max(val_v, nan_v))
 
     return np.argsort(-np.abs(interactions))
-
 
 def encode_array_if_needed(arr, dtype=np.float64):
     try:

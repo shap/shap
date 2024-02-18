@@ -3,7 +3,7 @@ import json
 import os
 import time
 import warnings
-from typing import Any, List, Optional
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -1836,7 +1836,7 @@ class XGBTreeModelLoader:
         self.node_cleft = []
         self.node_cright = []
         self.node_sindex = []
-        self.children_default: List[np.ndarray] = []
+        self.children_default: list[np.ndarray] = []
         self.sum_hess = []
 
         self.values = []
@@ -1859,7 +1859,7 @@ class XGBTreeModelLoader:
         else:
             self.cat_feature_indices = None
 
-        def to_integers(data: List[int]) -> np.ndarray:
+        def to_integers(data: list[int]) -> np.ndarray:
             "Handle u8 array from UBJSON."
             assert isinstance(data, list)
             return np.asanyarray(data, dtype=np.uint8)
@@ -1908,10 +1908,10 @@ class XGBTreeModelLoader:
             self.split_types.append(split_types)
             # categories for each node is stored in a CSR style storage with segment as
             # the begin ptr and the `categories' as values.
-            cat_segments: List[int] = tree["categories_segments"]
-            cat_sizes: List[int] = tree["categories_sizes"]
+            cat_segments: list[int] = tree["categories_segments"]
+            cat_sizes: list[int] = tree["categories_sizes"]
             # node index for categorical nodes
-            cat_nodes: List[int] = tree["categories_nodes"]
+            cat_nodes: list[int] = tree["categories_nodes"]
             assert len(cat_segments) == len(cat_sizes) == len(cat_nodes)
             cats = tree["categories"]
 
@@ -1922,12 +1922,12 @@ class XGBTreeModelLoader:
 
     @staticmethod
     def parse_categories(
-        cat_nodes: List[int],
-        cat_segments: List[int],
-        cat_sizes: List[int],
-        cats: List[int],
+        cat_nodes: list[int],
+        cat_segments: list[int],
+        cat_sizes: list[int],
+        cats: list[int],
         left_children: np.ndarray,
-    ) -> List[List[int]]:
+    ) -> list[list[int]]:
         """Parse the JSON model to extract partitions of categories for each
         node. Returns a list, in which each element is a list of categories for tree
         split. For a numerical split, the list is empty.
@@ -1943,7 +1943,7 @@ class XGBTreeModelLoader:
             last_cat_node = cat_nodes[cat_cnt]
         else:
             last_cat_node = -1
-        node_categories: List[List[int]] = []
+        node_categories: list[list[int]] = []
         for node_id in range(len(left_children)):
             if node_id == last_cat_node:
                 beg = cat_segments[cat_cnt]
@@ -1965,7 +1965,7 @@ class XGBTreeModelLoader:
                 node_categories.append([])
         return node_categories
 
-    def get_trees(self, data=None, data_missing=None) -> List[SingleTree]:
+    def get_trees(self, data=None, data_missing=None) -> list[SingleTree]:
         trees = []
         for i in range(self.num_trees):
             info = {

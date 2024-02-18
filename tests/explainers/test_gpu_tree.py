@@ -107,7 +107,7 @@ def xgboost_multiclass_classifier():
     return model, X, model.predict(X, output_margin=True)
 
 
-def test_xgboost_cat_unsupported():
+def test_xgboost_cat_unsupported() -> None:
     xgboost = pytest.importorskip("xgboost")
     X, y = shap.datasets.adult()
     X["Workclass"] = X["Workclass"].astype("category")
