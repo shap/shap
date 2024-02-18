@@ -75,82 +75,6 @@ def test_xgboost_predictions():
     assert np.allclose(y_pred, y_pred_tree_ensemble, atol=1e-7)
 
 
-def test_tree_limit() -> None:
-    xgboost = pytest.importorskip("xgboost")
-    from sklearn.datasets import load_digits, load_iris
-    from sklearn.model_selection import train_test_split
-
-    # Load regression data
-    X, y = shap.datasets.california(n_points=500)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
-
-    # Test Booster
-    model = xgboost.train(
-        {"learning_rate": 0.01, "verbosity": 0},
-        xgboost.DMatrix(X_train, label=y_train),
-        num_boost_round=10,
-        evals=[(xgboost.DMatrix(X_test, y_test), "Valid")],
-        early_stopping_rounds=1,
-    )
-
-    explainer = shap.TreeExplainer(model)
-    assert explainer.model.tree_limit == model.num_boosted_rounds()
-
-    # Test regressor
-    reg = xgboost.XGBRegressor(n_estimators=10)
-    reg.fit(X, y)
-
-    explainer = shap.TreeExplainer(reg)
-    assert explainer.model.tree_limit == reg.n_estimators
-
-    # Test classifier
-    X, y = load_iris(return_X_y=True)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
-
-    # - multiclass
-    clf = xgboost.XGBClassifier(n_estimators=10)
-    clf.fit(X, y)
-
-    explainer = shap.TreeExplainer(clf)
-    assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y))
-
-    # - multiclass, forest
-    clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
-    clf.fit(X, y)
-
-    explainer = shap.TreeExplainer(clf)
-    assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y)) * 3
-
-    # - multiclass, forest, early stop
-    clf = xgboost.XGBClassifier(
-        n_estimators=1000, num_parallel_tree=3, early_stopping_rounds=1
-    )
-    clf.fit(X_train, y_train, eval_set=[(X_test, y_test)])
-    # make sure we don't waste too much time on this test
-    assert clf.best_iteration < 15
-
-    explainer = shap.TreeExplainer(clf)
-    assert (
-        explainer.model.tree_limit == (clf.best_iteration + 1) * len(np.unique(y)) * 3
-    )
-
-    # - binary classification, forest
-    X, y = load_digits(return_X_y=True, n_class=2)
-    clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
-    clf.fit(X, y)
-    explainer = shap.TreeExplainer(clf)
-    assert explainer.model.tree_limit == clf.n_estimators * clf.num_parallel_tree
-
-    # Test ranker
-    ltr = xgboost.XGBRanker(n_estimators=5, num_parallel_tree=3)
-    qid = np.zeros(X_train.shape[0])
-    qid[qid.shape[0] // 2 :] = 1
-    ltr.fit(X_train, y_train, qid=qid)
-
-    explainer = shap.TreeExplainer(ltr)
-    assert explainer.model.tree_limit == ltr.n_estimators * 3
-
-
 def test_front_page_sklearn():
     # load JS visualization code to notebook
     shap.initjs()
@@ -1521,6 +1445,81 @@ class TestExplainerXGBoost:
 
         assert not isinstance(explanation.data, xgboost.core.DMatrix)
         assert hasattr(explanation.data, "shape")
+
+    def test_tree_limit(self) -> None:
+        xgboost = pytest.importorskip("xgboost")
+        from sklearn.datasets import load_digits, load_iris
+        from sklearn.model_selection import train_test_split
+
+        # Load regression data
+        X, y = shap.datasets.california(n_points=500)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
+
+        # Test Booster
+        model = xgboost.train(
+            {"learning_rate": 0.01, "verbosity": 0},
+            xgboost.DMatrix(X_train, label=y_train),
+            num_boost_round=10,
+            evals=[(xgboost.DMatrix(X_test, y_test), "Valid")],
+            early_stopping_rounds=1,
+        )
+
+        explainer = shap.TreeExplainer(model)
+        assert explainer.model.tree_limit == model.num_boosted_rounds()
+
+        # Test regressor
+        reg = xgboost.XGBRegressor(n_estimators=10)
+        reg.fit(X, y)
+
+        explainer = shap.TreeExplainer(reg)
+        assert explainer.model.tree_limit == reg.n_estimators
+
+        # Test classifier
+        X, y = load_iris(return_X_y=True)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=3)
+
+        # - multiclass
+        clf = xgboost.XGBClassifier(n_estimators=10)
+        clf.fit(X, y)
+
+        explainer = shap.TreeExplainer(clf)
+        assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y))
+
+        # - multiclass, forest
+        clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
+        clf.fit(X, y)
+
+        explainer = shap.TreeExplainer(clf)
+        assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y)) * 3
+
+        # - multiclass, forest, early stop
+        clf = xgboost.XGBClassifier(
+            n_estimators=1000, num_parallel_tree=3, early_stopping_rounds=1
+        )
+        clf.fit(X_train, y_train, eval_set=[(X_test, y_test)])
+        # make sure we don't waste too much time on this test
+        assert clf.best_iteration < 15
+
+        explainer = shap.TreeExplainer(clf)
+        assert (
+            explainer.model.tree_limit == (clf.best_iteration + 1) * len(np.unique(y)) * 3
+        )
+
+        # - binary classification, forest
+        X, y = load_digits(return_X_y=True, n_class=2)
+        clf = xgboost.XGBClassifier(n_estimators=10, num_parallel_tree=3)
+        clf.fit(X, y)
+        explainer = shap.TreeExplainer(clf)
+        assert explainer.model.tree_limit == clf.n_estimators * clf.num_parallel_tree
+
+        # Test ranker
+        ltr = xgboost.XGBRanker(n_estimators=5, num_parallel_tree=3)
+        qid = np.zeros(X_train.shape[0])
+        qid[qid.shape[0] // 2 :] = 1
+        ltr.fit(X_train, y_train, qid=qid)
+
+        explainer = shap.TreeExplainer(ltr)
+        assert explainer.model.tree_limit == ltr.n_estimators * 3
 
 
 class TestExplainerLightGBM:
