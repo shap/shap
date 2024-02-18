@@ -1285,13 +1285,10 @@ class TestExplainerXGBoost:
         assert np.allclose(shap_values[0, :], _brute_force_tree_shap(explainer.model, X[0, :]))
 
     # TODO: test against multiclass XGBRFClassifier
-    # @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_multiclass(self):
-        xgboost = pytest.importorskip("xgboost")
-
         # train XGBoost model
         X, y = shap.datasets.iris()
-        model = xgboost.XGBClassifier(n_estimators=10, max_depth=4)
+        model = self.xgboost.XGBClassifier(n_estimators=10, max_depth=4)
         model.fit(X, y)
         predicted = model.predict(X, output_margin=True)
 
@@ -1314,6 +1311,16 @@ class TestExplainerXGBoost:
 
         # ensure plot works for first class
         shap.dependence_plot(0, explanation[..., 0].values, X, show=False)
+
+        with pytest.raises(NotImplementedError, match="random forest"):
+            clf = self.xgboost.XGBRFClassifier(n_estimators=2)
+            clf.fit(X, y)
+            shap.TreeExplainer(clf).model.predict(X)
+
+        with pytest.raises(NotImplementedError, match="random forest"):
+            clf = self.xgboost.XGBClassifier(n_estimators=2, num_parallel_tree=3)
+            clf.fit(X, y)
+            shap.TreeExplainer(clf).model.predict(X)
 
     def test_xgboost_ranking(self):
         xgboost = pytest.importorskip("xgboost")
@@ -1342,8 +1349,7 @@ class TestExplainerXGBoost:
         shap_values = shap.TreeExplainer(bst).shap_values(X)
         shap.dependence_plot(0, shap_values, X, show=False)
 
-    @pytest.mark.parametrize("Clf", classifiers)
-    def test_xgboost_classifier_independent_margin(self, Clf):
+    def test_xgboost_classifier_independent_margin(self):
         # FIXME: this test should ideally pass with any random seed. See #2960
         random_seed = 0
 
@@ -1355,7 +1361,7 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = Clf(
+        model = self.xgboost.XGBClassifier(
             n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact"
         )
         model.fit(X, y)
@@ -1380,9 +1386,7 @@ class TestExplainerXGBoost:
             atol=1e-7,
         )
 
-    @pytest.mark.parametrize("Clf", classifiers)
-    def test_xgboost_classifier_independent_probability(self, Clf, random_seed):
-
+    def test_xgboost_classifier_independent_probability(self, random_seed):
         # train XGBoost model
         rs = np.random.RandomState(random_seed)
         n = 1000
@@ -1392,7 +1396,9 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = Clf(n_estimators=10, max_depth=5, random_state=random_seed)
+        model = self.xgboost.XGBClassifier(
+            n_estimators=10, max_depth=5, random_state=random_seed
+        )
         model.fit(X, y)
         predicted = model.predict_proba(X)
 
