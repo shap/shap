@@ -17,7 +17,7 @@ jobs:
     outputs:
       include: ${{ steps.set-matrix.outputs.include }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install cibuildwheel
       # Nb. keep cibuildwheel version pin consistent with job below
         run: pipx install cibuildwheel==2.14.0
@@ -89,7 +89,7 @@ jobs:
         run: git fetch --tags
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
