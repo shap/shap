@@ -15,15 +15,17 @@ from ._explainer import Explainer
 
 
 class LinearExplainer(Explainer):
-    """ Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
+    """Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
 
-    This computes the SHAP values for a linear model and can account for the correlations among
-    the input features. Assuming features are independent leads to interventional SHAP values which
-    for a linear model are coef[i] * (x[i] - X.mean(0)[i]) for the ith feature. If instead we account
-    for correlations, then we prevent any problems arising from collinearity and share credit among
-    correlated features. Accounting for correlations can be computationally challenging, but
-    ``LinearExplainer`` uses sampling to estimate a transform that can then be applied to explain
-    any prediction of the model.
+    This computes the SHAP values for a linear model and can account for the
+    correlations among the input features. Assuming features are independent
+    leads to interventional SHAP values which for a linear model are ``coef[i] *
+    (x[i] - X.mean(0)[i])`` for the ith feature. If instead we account for
+    correlations, then we prevent any problems arising from collinearity and
+    share credit among correlated features. Accounting for correlations can be
+    computationally challenging, but ``LinearExplainer`` uses sampling to
+    estimate a transform that can then be applied to explain any prediction of
+    the model.
 
     Parameters
     ----------
@@ -32,37 +34,47 @@ class LinearExplainer(Explainer):
 
     masker : function, numpy.array, pandas.DataFrame, tuple of (mean, cov), shap.maskers.Masker
         A callable Python object used to "mask" out hidden features of the form
-        ``masker(binary_mask, x)``. It takes a single input sample and a binary mask and
-        returns a matrix of masked samples. These masked samples are evaluated using the
-        model function and the outputs are then averaged. As a shortcut for the standard
-        masking using by SHAP you can pass a background data matrix instead of a function
-        and that matrix will be used for masking.
-        You can also provide a tuple of ``(mean, covariance)``, or pass in a masker meant for
-        tabular data (i.e., :class:`.maskers.Independent`, :class:`.maskers.Impute`, or
-        :class:`.maskers.Partition`) directly.
+        ``masker(binary_mask, x)``. It takes a single input sample and a binary
+        mask and returns a matrix of masked samples. These masked samples are
+        evaluated using the model function and the outputs are then averaged.
+
+        As a shortcut for the standard masking using by SHAP you can pass a
+        background data matrix instead of a function and that matrix will be
+        used for masking.
+
+        You can also provide a tuple of ``(mean, covariance)``, or pass in a
+        masker meant for tabular data (i.e., :class:`.maskers.Independent`,
+        :class:`.maskers.Impute`, or :class:`.maskers.Partition`) directly.
 
     data : (mean, cov), numpy.array, pandas.DataFrame, iml.DenseData or scipy.csr_matrix
-        The background dataset to use for computing conditional expectations. Note that only the
-        mean and covariance of the dataset are used. This means passing a raw data matrix is just
-        a convenient alternative to passing the mean and covariance directly.
+        The background dataset to use for computing conditional expectations.
+        Note that only the mean and covariance of the dataset are used. This
+        means passing a raw data matrix is just a convenient alternative to
+        passing the mean and covariance directly.
 
     nsamples : int
-        Number of samples to use when estimating the transformation matrix used to account for
-        feature correlations.
+        Number of samples to use when estimating the transformation matrix used
+        to account for feature correlations.
 
     feature_perturbation : "interventional" (default) or "correlation_dependent"
-        There are two ways we might want to compute SHAP values, either the full conditional SHAP
-        values or the interventional SHAP values. For interventional SHAP values we break any
-        dependence structure between features in the model and so uncover how the model would behave if we
-        intervened and changed some of the inputs. For the full conditional SHAP values we respect
-        the correlations among the input features, so if the model depends on one input but that
-        input is correlated with another input, then both get some credit for the model's behavior. The
-        interventional option stays "true to the model" meaning it will only give credit to features that are
-        actually used by the model, while the correlation option stays "true to the data" in the sense that
-        it only considers how the model would behave when respecting the correlations in the input data.
-        For sparse case only interventional option is supported.
-        Note that the ``feature_perturbation`` option is deprecated and will be removed in a future release.
-        It is recommended to use the appropriate tabular ``masker`` instead.
+        There are two ways we might want to compute SHAP values, either the full
+        conditional SHAP values or the interventional SHAP values.
+
+        For interventional SHAP values we break any dependence structure between
+        features in the model and so uncover how the model would behave if we
+        intervened and changed some of the inputs. For the full conditional SHAP
+        values we respect the correlations among the input features, so if the
+        model depends on one input but that input is correlated with another
+        input, then both get some credit for the model's behavior. The
+        interventional option stays "true to the model" meaning it will only
+        give credit to features that are actually used by the model, while the
+        correlation option stays "true to the data" in the sense that it only
+        considers how the model would behave when respecting the correlations in
+        the input data. For sparse case only interventional option is supported.
+
+        Note that the ``feature_perturbation`` option is deprecated and will be
+        removed in a future release. It is recommended to use the appropriate
+        tabular ``masker`` instead.
 
     Examples
     --------
