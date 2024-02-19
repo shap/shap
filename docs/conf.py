@@ -54,7 +54,8 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx_rtd_theme",
     "numpydoc",
-    "nbsphinx",
+    "nbsphinx",     # Allows parsing Jupyter notebooks
+    "myst_parser",  # Allows parsing Markdown, such as CONTRIBUTING.md
     "sphinx_github_changelog",
 ]
 autodoc_default_options = {"members": True, "inherited-members": True}

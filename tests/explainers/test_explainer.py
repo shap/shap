@@ -32,7 +32,7 @@ def test_wrapping_for_text_to_text_teacher_forcing_model():
 
     transformers = pytest.importorskip("transformers")
 
-    def f(x): # pylint: disable=unused-argument
+    def f(x):
         pass
 
     name = "hf-internal-testing/tiny-random-BartForCausalLM"

@@ -262,7 +262,8 @@ class _TFGradient(Explainer):
             elif output_rank_order == "custom":
                 model_output_ranks = ranked_outputs
             else:
-                assert False, "output_rank_order must be max, min, max_abs or custom!"
+                emsg = "output_rank_order must be max, min, max_abs or custom!"
+                raise ValueError(emsg)
 
             if output_rank_order in ["max", "min", "max_abs"]:
                 model_output_ranks = model_output_ranks[:,:ranked_outputs]
@@ -272,8 +273,8 @@ class _TFGradient(Explainer):
         # compute the attributions
         output_phis = []
         output_phi_vars = []
-        samples_input = [np.zeros((nsamples,) + X[l].shape[1:], dtype=np.float32) for l in range(len(X))]
-        samples_delta = [np.zeros((nsamples,) + X[l].shape[1:], dtype=np.float32) for l in range(len(X))]
+        samples_input = [np.zeros((nsamples,) + X[t].shape[1:], dtype=np.float32) for t in range(len(X))]
+        samples_delta = [np.zeros((nsamples,) + X[t].shape[1:], dtype=np.float32) for t in range(len(X))]
         # use random seed if no argument given
         if rseed is None:
             rseed = np.random.randint(0, 1e6)
@@ -291,27 +292,27 @@ class _TFGradient(Explainer):
                 for k in range(nsamples):
                     rind = np.random.choice(self.data[0].shape[0])
                     t = np.random.uniform()
-                    for l in range(len(X)):
+                    for u in range(len(X)):
                         if self.local_smoothing > 0:
-                            x = X[l][j] + np.random.randn(*X[l][j].shape) * self.local_smoothing
+                            x = X[u][j] + np.random.randn(*X[u][j].shape) * self.local_smoothing
                         else:
-                            x = X[l][j]
-                        samples_input[l][k] = t * x + (1 - t) * self.data[l][rind]
-                        samples_delta[l][k] = x - self.data[l][rind]
+                            x = X[u][j]
+                        samples_input[u][k] = t * x + (1 - t) * self.data[u][rind]
+                        samples_delta[u][k] = x - self.data[u][rind]
 
                 # compute the gradients at all the sample points
                 find = model_output_ranks[j,i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [samples_input[l][b:min(b+self.batch_size,nsamples)] for l in range(len(X))]
+                    batch = [samples_input[a][b:min(b+self.batch_size,nsamples)] for a in range(len(X))]
                     grads.append(self.run(self.gradient(find), self.model_inputs, batch))
-                grad = [np.concatenate([g[l] for g in grads], 0) for l in range(len(X))]
+                grad = [np.concatenate([g[a] for g in grads], 0) for a in range(len(X))]
 
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
-                    samples = grad[l] * samples_delta[l]
-                    phis[l][j] = samples.mean(0)
-                    phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
+                for a in range(len(X)):
+                    samples = grad[a] * samples_delta[a]
+                    phis[a][j] = samples.mean(0)
+                    phi_vars[a][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
 
                 # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
@@ -489,7 +490,8 @@ class _PyTorchGradient(Explainer):
             elif output_rank_order == "max_abs":
                 _, model_output_ranks = torch.sort(torch.abs(model_output_values), descending=True)
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *
@@ -507,8 +509,8 @@ class _PyTorchGradient(Explainer):
         output_phi_vars = []
         # samples_input = input to the model
         # samples_delta = (x - x') for the input being explained - may be an interim input
-        samples_input = [torch.zeros((nsamples,) + X[l].shape[1:], device=X[l].device) for l in range(len(X))]
-        samples_delta = [np.zeros((nsamples, ) + self.data[l].shape[1:]) for l in range(len(self.data))]
+        samples_input = [torch.zeros((nsamples,) + X[t].shape[1:], device=X[t].device) for t in range(len(X))]
+        samples_delta = [np.zeros((nsamples, ) + self.data[t].shape[1:]) for t in range(len(self.data))]
 
         # use random seed if no argument given
         if rseed is None:
@@ -527,28 +529,28 @@ class _PyTorchGradient(Explainer):
                 for k in range(nsamples):
                     rind = np.random.choice(self.data[0].shape[0])
                     t = np.random.uniform()
-                    for l in range(len(X)):
+                    for a in range(len(X)):
                         if self.local_smoothing > 0:
                             # local smoothing is added to the base input, unlike in the TF gradient explainer
-                            x = X[l][j].clone().detach() + torch.empty(X[l][j].shape, device=X[l].device).normal_() \
+                            x = X[a][j].clone().detach() + torch.empty(X[a][j].shape, device=X[a].device).normal_() \
                                 * self.local_smoothing
                         else:
-                            x = X[l][j].clone().detach()
-                        samples_input[l][k] = (t * x + (1 - t) * (self.model_inputs[l][rind]).clone().detach()).\
+                            x = X[a][j].clone().detach()
+                        samples_input[a][k] = (t * x + (1 - t) * (self.model_inputs[a][rind]).clone().detach()).\
                             clone().detach()
                         if self.input_handle is None:
-                            samples_delta[l][k] = (x - (self.data[l][rind]).clone().detach()).cpu().numpy()
+                            samples_delta[a][k] = (x - (self.data[a][rind]).clone().detach()).cpu().numpy()
 
                     if self.interim is True:
                         with torch.no_grad():
-                            _ = self.model(*[samples_input[l][k].unsqueeze(0) for l in range(len(X))])
+                            _ = self.model(*[samples_input[a][k].unsqueeze(0) for a in range(len(X))])
                             interim_inputs = self.layer.target_input
                             del self.layer.target_input
                             if type(interim_inputs) is tuple:
                                 if type(interim_inputs) is tuple:
                                     # this should always be true, but just to be safe
-                                    for l in range(len(interim_inputs)):
-                                        samples_delta[l][k] = interim_inputs[l].cpu().numpy()
+                                    for a in range(len(interim_inputs)):
+                                        samples_delta[a][k] = interim_inputs[a].cpu().numpy()
                                 else:
                                     samples_delta[0][k] = interim_inputs.cpu().numpy()
 
@@ -556,14 +558,14 @@ class _PyTorchGradient(Explainer):
                 find = model_output_ranks[j, i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [samples_input[l][b:min(b+self.batch_size,nsamples)].clone().detach() for l in range(len(X))]
+                    batch = [samples_input[c][b:min(b+self.batch_size,nsamples)].clone().detach() for c in range(len(X))]
                     grads.append(self.gradient(find, batch))
-                grad = [np.concatenate([g[l] for g in grads], 0) for l in range(len(self.data))]
+                grad = [np.concatenate([g[z] for g in grads], 0) for z in range(len(self.data))]
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(self.data)):
-                    samples = grad[l] * samples_delta[l]
-                    phis[l][j] = samples.mean(0)
-                    phi_vars[l][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
+                for t in range(len(self.data)):
+                    samples = grad[t] * samples_delta[t]
+                    phis[t][j] = samples.mean(0)
+                    phi_vars[t][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
 
             output_phis.append(phis[0] if len(self.data) == 1 else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
