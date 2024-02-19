@@ -73,6 +73,9 @@ class TreeExplainer(Explainer):
         feature_perturbation="interventional",
         feature_names=None,
         approximate=False,
+        # FIXME: Do not allow unexpected arguments.
+        # `link` and `linearize_link` may be passed in by Explainer, but are unused.
+        **kwargs,
     ):
         """ Build a new Tree explainer for the passed model.
 
