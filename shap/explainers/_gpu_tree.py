@@ -42,16 +42,18 @@ class GPUTreeExplainer(TreeExplainer):
 
     model_output : "raw", "probability", "log_loss", or model method name
         What output of the model should be explained.
-        If "raw", then we explain the raw output of the trees, which varies by model. For regression models,
-        "raw" is the standard output. For binary classification in XGBoost, this is the log odds ratio.
-        If ``model_output`` is the name of a supported prediction method on the ``model`` object, then we
-        explain the output of that model method name. For example, ``model_output="predict_proba"``
-        explains the result of calling ``model.predict_proba``.
-        If "probability", then we explain the output of the model transformed into probability space
-        (note that this means the SHAP values now sum to the probability output of the model).
-        If "log_loss", then we explain the log base e of the model loss function, so that the SHAP values
-        sum up to the log loss of the model for each sample. This is helpful for breaking down model
-        performance by feature.
+
+        * If "raw", then we explain the raw output of the trees, which varies by model. For regression models,
+          "raw" is the standard output. For binary classification in XGBoost, this is the log odds ratio.
+        * If "probability", then we explain the output of the model transformed into probability space
+          (note that this means the SHAP values now sum to the probability output of the model).
+        * If "log_loss", then we explain the log base e of the model loss function, so that the SHAP values
+          sum up to the log loss of the model for each sample. This is helpful for breaking down model
+          performance by feature.
+        * If ``model_output`` is the name of a supported prediction method on the ``model`` object, then we
+          explain the output of that model method name. For example, ``model_output="predict_proba"``
+          explains the result of calling ``model.predict_proba``.
+
         Currently the "probability" and "log_loss" options are only supported when
         ``feature_perturbation="interventional"``.
 
