@@ -2,7 +2,12 @@
 import numpy as np
 
 from ..utils import assert_import, record_import_error
-from ._tree import TreeExplainer, feature_perturbation_codes, output_transform_codes
+from ._tree import (
+    TreeExplainer,
+    _xgboost_cat_unsupported,
+    feature_perturbation_codes,
+    output_transform_codes,
+)
 
 try:
     from .. import _cext_gpu
@@ -97,10 +102,11 @@ class GPUTreeExplainer(TreeExplainer):
         assert not approximate, "approximate not supported"
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = \
-            self._validate_inputs(X, y,
-                                  tree_limit,
-                                  check_additivity)
-        transform = self.model.get_transform()
+            self._validate_inputs(X, y, tree_limit, check_additivity)
+
+        model = self.model
+        _xgboost_cat_unsupported(model)
+        transform = model.get_transform()
 
         # run the core algorithm using the C extension
         assert_import("cext_gpu")
