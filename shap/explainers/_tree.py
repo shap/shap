@@ -1,10 +1,9 @@
+import io
 import json
 import os
-import struct
-import tempfile
 import time
 import warnings
-from typing import Any
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -25,8 +24,6 @@ from ..utils._exceptions import (
 from ..utils._legacy import DenseData
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
-
-warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
 
 try:
     from .. import _cext
@@ -50,6 +47,30 @@ feature_perturbation_codes = {
     "tree_path_dependent": 1,
     "global_path_dependent": 2,
 }
+
+
+def _check_xgboost_version(v: str):
+    if version.parse(v) < version.parse("1.6"):
+        raise RuntimeError(
+            f"SHAP requires XGBoost >= v1.6 , but found version {v}. Please upgrade"
+            " XGBoost."
+        )
+
+
+def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
+    """Convert number of trees to number of iterations for XGBoost models."""
+    if tree_limit == -1:
+        tree_limit = 0
+    n_iterations = tree_limit // num_stacked_models
+    return n_iterations
+
+
+def _xgboost_cat_unsupported(model):
+    if model.model_type == "xgboost" and model.cat_feature_indices is not None:
+        raise NotImplementedError(
+            "Categorical split is not yet supported. You can still use"
+            " TreeExplainer with `feature_perturbation=tree_path_dependent`."
+        )
 
 
 class TreeExplainer(Explainer):
@@ -198,8 +219,7 @@ class TreeExplainer(Explainer):
         # The introduced `iteration_range` parameter is used when obtaining SHAP (incl. interaction) values from XGBoost models.
         if self.model.model_type == 'xgboost':
             import xgboost
-            if version.parse(xgboost.__version__) < version.parse('1.4'):
-                raise RuntimeError(f"SHAP requires XGBoost >= v1.4 , but found version {xgboost.__version__}. Please upgrade XGBoost!")
+            _check_xgboost_version(xgboost.__version__)
 
         # compute the expected value if we have a parsed tree for the cext
         if self.model.model_output == "log_loss":
@@ -393,28 +413,21 @@ class TreeExplainer(Explainer):
             phi = None
             if self.model.model_type == "xgboost":
                 import xgboost
+
+                n_iterations = _xgboost_n_iterations(
+                    tree_limit, self.model.num_stacked_models
+                )
                 if not isinstance(X, xgboost.core.DMatrix):
                     # Retrieve any DMatrix properties if they have been set on the TreeEnsemble Class
                     dmatrix_props = getattr(self.model, "_xgb_dmatrix_props", {})
                     X = xgboost.DMatrix(X, **dmatrix_props)
-                if tree_limit == -1:
-                    tree_limit = 0
-                try:
-                    phi = self.model.original_model.predict(
-                        X, iteration_range=(0, tree_limit), pred_contribs=True,
-                        approx_contribs=approximate, validate_features=False
-                    )
-                except ValueError as e:
-                    emsg = (
-                        "This reshape error is often caused by passing a bad data matrix to SHAP. "
-                        "See https://github.com/shap/shap/issues/580."
-                    )
-                    raise ValueError(emsg) from e
-
+                phi = self.model.original_model.predict(
+                    X, iteration_range=(0, n_iterations), pred_contribs=True,
+                    approx_contribs=approximate, validate_features=False
+                )
                 if check_additivity and self.model.model_output == "raw":
-                    xgb_tree_limit = tree_limit // self.model.num_stacked_models
                     model_output_vals = self.model.original_model.predict(
-                        X, iteration_range=(0, xgb_tree_limit), output_margin=True,
+                        X, iteration_range=(0, n_iterations), output_margin=True,
                         validate_features=False
                     )
 
@@ -462,10 +475,12 @@ class TreeExplainer(Explainer):
             X, y, tree_limit, check_additivity
         )
         transform = self.model.get_transform()
+        _xgboost_cat_unsupported(self.model)
 
         # run the core algorithm using the C extension
         assert_import("cext")
         phi = np.zeros((X.shape[0], X.shape[1]+1, self.model.num_outputs))
+
         if not approximate:
             _cext.dense_tree_shap(
                 self.model.children_left, self.model.children_right, self.model.children_default,
@@ -552,12 +567,19 @@ class TreeExplainer(Explainer):
             and self.feature_perturbation == "tree_path_dependent"
         ):
             import xgboost
+
             if not isinstance(X, xgboost.core.DMatrix):
                 X = xgboost.DMatrix(X)
-            if tree_limit == -1:
-                tree_limit = 0
-            xgb_tree_limit = tree_limit // self.model.num_stacked_models
-            phi = self.model.original_model.predict(X, iteration_range=(0, xgb_tree_limit), pred_interactions=True, validate_features=False)
+
+            n_iterations = _xgboost_n_iterations(
+                tree_limit, self.model.num_stacked_models
+            )
+            phi = self.model.original_model.predict(
+                X,
+                iteration_range=(0, n_iterations),
+                pred_interactions=True,
+                validate_features=False
+            )
 
             # note we pull off the last column and keep it as our expected_value
             if len(phi.shape) == 4:
@@ -1015,67 +1037,52 @@ class TreeEnsemble:
                 raise NotImplementedError(emsg)
         elif safe_isinstance(model, "xgboost.core.Booster"):
             self.original_model = model
-            self.model_type = "xgboost"
-            xgb_loader = XGBTreeModelLoader(self.original_model)
-            self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
-            self.base_offset = xgb_loader.base_score
-            self.objective = objective_name_map.get(xgb_loader.name_obj, None)
-            self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
-            if xgb_loader.num_class > 0:
-                self.num_stacked_models = xgb_loader.num_class
+            self._set_xgboost_model_attributes(
+                data,
+                data_missing,
+                objective_name_map,
+                tree_output_name_map,
+            )
         elif safe_isinstance(model, "xgboost.sklearn.XGBClassifier"):
             self.input_dtype = np.float32
-            self.model_type = "xgboost"
             self.original_model = model.get_booster()
-            xgb_loader = XGBTreeModelLoader(self.original_model)
-            self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
-            self.base_offset = xgb_loader.base_score
-            self.objective = objective_name_map.get(xgb_loader.name_obj, None)
-            self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
-            # 'best_ntree_limit' is problematic
-            # https://github.com/dmlc/xgboost/issues/6615
-            if hasattr(model, 'best_iteration'):
-                trees_per_iteration = xgb_loader.num_class if xgb_loader.num_class > 0 else 1
-                self.tree_limit = (getattr(model, "best_iteration", None) + 1) * trees_per_iteration
-            else:
-                self.tree_limit = getattr(model, "best_ntree_limit", None)
-            if xgb_loader.num_class > 0:
-                self.num_stacked_models = xgb_loader.num_class
+            self._set_xgboost_model_attributes(
+                data,
+                data_missing,
+                objective_name_map,
+                tree_output_name_map,
+            )
+
             if self.model_output == "predict_proba":
                 if self.num_stacked_models == 1:
-                    self.model_output = "probability_doubled" # with predict_proba we need to double the outputs to match
+                    # with predict_proba we need to double the outputs to match
+                    self.model_output = "probability_doubled"
                 else:
                     self.model_output = "probability"
-            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
-            # We need to make sure we do the same here - GH #3313
+            # Some properties of the sklearn API are passed to a DMatrix object in
+            # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
             self.original_model = model.get_booster()
-            self.model_type = "xgboost"
-            xgb_loader = XGBTreeModelLoader(self.original_model)
-            self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
-            self.base_offset = xgb_loader.base_score
-            self.objective = objective_name_map.get(xgb_loader.name_obj, None)
-            self.tree_output = tree_output_name_map.get(xgb_loader.name_obj, None)
-            self.tree_limit = getattr(model, "best_ntree_limit", None)
-            if xgb_loader.num_class > 0:
-                self.num_stacked_models = xgb_loader.num_class
-            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
-            # We need to make sure we do the same here - GH #3313
+            self._set_xgboost_model_attributes(
+                data,
+                data_missing,
+                objective_name_map,
+                tree_output_name_map,
+            )
+            # Some properties of the sklearn API are passed to a DMatrix object in
+            # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
             self.original_model = model.get_booster()
-            self.model_type = "xgboost"
-            xgb_loader = XGBTreeModelLoader(self.original_model)
-            self.trees = xgb_loader.get_trees(data=data, data_missing=data_missing)
-            self.base_offset = xgb_loader.base_score
-            # Note: for ranker, leaving tree_output and objective as None as they
-            # are not implemented in native code yet
-            self.tree_limit = getattr(model, "best_ntree_limit", None)
-            if xgb_loader.num_class > 0:
-                self.num_stacked_models = xgb_loader.num_class
-            # Some properties of the sklearn API are passed to a DMatrix object in xgboost
-            # We need to make sure we do the same here - GH #3313
+            self._set_xgboost_model_attributes(
+                data,
+                data_missing,
+                objective_name_map,
+                tree_output_name_map,
+            )
+            # Some properties of the sklearn API are passed to a DMatrix object in
+            # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
         elif safe_isinstance(model, "lightgbm.basic.Booster"):
             assert_import("lightgbm")
@@ -1228,12 +1235,6 @@ class TreeEnsemble:
             max_nodes = np.max([len(t.values) for t in self.trees])
             assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, "All trees in the ensemble must have the same output dimension!"
             num_trees = len(self.trees)
-            if self.num_stacked_models > 1:
-                assert len(self.trees) % self.num_stacked_models == 0, "Only stacked models with equal numbers of trees are supported!"
-                assert self.trees[0].values.shape[1] == 1, "Only stacked models with single outputs per model are supported!"
-                self.num_outputs = self.num_stacked_models
-            else:
-                self.num_outputs = self.trees[0].values.shape[1]
 
             # important to be -1 in unused sections!! This way we can tell which entries are valid.
             self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
@@ -1242,7 +1243,9 @@ class TreeEnsemble:
             self.features = -np.ones((num_trees, max_nodes), dtype=np.int32)
 
             self.thresholds = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
-            self.values = np.zeros((num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype)
+            self.values = np.zeros(
+                (num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype
+            )
             self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
 
             for i in range(num_trees):
@@ -1251,10 +1254,18 @@ class TreeEnsemble:
                 self.children_default[i,:len(self.trees[i].children_default)] = self.trees[i].children_default
                 self.features[i,:len(self.trees[i].features)] = self.trees[i].features
                 self.thresholds[i,:len(self.trees[i].thresholds)] = self.trees[i].thresholds
-                if self.num_stacked_models > 1:
-                    # stack_pos = int(i // (num_trees / self.num_stacked_models))
-                    stack_pos = i % self.num_stacked_models
-                    self.values[i,:len(self.trees[i].values[:,0]),stack_pos] = self.trees[i].values[:,0]
+
+                # XGBoost supports boosting forest, which is not compatible with the
+                # current assumption here that the number of stacked models represents
+                # the number of outputs.
+                if self.model_type == "xgboost":
+                    n_stacks = self.num_outputs
+                else:
+                    n_stacks = self.num_stacked_models
+
+                if n_stacks > 1:
+                    stack_pos = i % n_stacks
+                    self.values[i, : len(self.trees[i].values[:, 0]), stack_pos] = self.trees[i].values[:,0]
                 else:
                     self.values[i,:len(self.trees[i].values)] = self.trees[i].values
                 self.node_sample_weight[i,:len(self.trees[i].node_sample_weight)] = self.trees[i].node_sample_weight
@@ -1271,6 +1282,51 @@ class TreeEnsemble:
                 self.base_offset = (np.ones(self.num_outputs) * self.base_offset).astype(self.internal_dtype)
             self.base_offset = self.base_offset.flatten()
             assert len(self.base_offset) == self.num_outputs
+
+    def _set_xgboost_model_attributes(
+        self,
+        data,
+        data_missing, objective_name_map,
+        tree_output_name_map,
+    ):
+        self.model_type = "xgboost"
+        loader = XGBTreeModelLoader(self.original_model)
+
+        self.trees = loader.get_trees(data=data, data_missing=data_missing)
+        self.base_offset = loader.base_score
+        self.objective = objective_name_map.get(loader.name_obj, None)
+        self.tree_output = tree_output_name_map.get(loader.name_obj, None)
+
+        self.num_stacked_models = loader.n_trees_per_iter
+        self.cat_feature_indices = loader.cat_feature_indices
+        best_iteration = getattr(
+            self.original_model,
+            "best_iteration",
+            self.original_model.num_boosted_rounds() - 1,
+        )
+        self.tree_limit = (best_iteration + 1) * self.num_stacked_models
+        self._xgboost_n_outputs = loader.n_targets
+
+    @property
+    def num_outputs(self) -> int:
+        # Currrently, XGBoost models derive the num_outputs attribute from the input
+        # models, which is set during model load.
+        if self.model_type == "xgboost":
+            assert hasattr(self, "_xgboost_n_outputs")
+            return self._xgboost_n_outputs
+
+        if self.num_stacked_models > 1:
+            if len(self.trees) % self.num_stacked_models != 0:
+                raise ValueError(
+                    "Only stacked models with equal numbers of trees are supported!"
+                )
+            if self.trees[0].values.shape[1] != 1:
+                raise ValueError(
+                    "Only stacked models with single outputs per model are supported!"
+                )
+            return self.num_stacked_models
+        else:
+            return self.trees[0].values.shape[1]
 
     def get_transform(self):
         """ A consistent interface to make predictions from this model.
@@ -1310,7 +1366,7 @@ class TreeEnsemble:
         return transform
 
     def predict(self, X, y=None, output=None, tree_limit=None):
-        """ A consistent interface to make predictions from this model.
+        """A consistent interface to make predictions from this model.
 
         Parameters
         ----------
@@ -1326,6 +1382,11 @@ class TreeEnsemble:
             #import pyspark
             # TODO: support predict for pyspark
             raise NotImplementedError("Predict with pyspark isn't implemented. Don't run 'interventional' as feature_perturbation.")
+        if self.model_type == "xgboost" and self.num_stacked_models != self.num_outputs:
+            # TODO: Support random forest in XGBoost.
+            raise NotImplementedError(
+                "XGBoost with boosted random forest is not yet supported."
+            )
 
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -1692,9 +1753,7 @@ class IsoTree(SingleTree):
     def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
         super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
-            from sklearn.ensemble._iforest import (
-                _average_path_length,
-            )
+            from sklearn.ensemble._iforest import _average_path_length
 
             def _recalculate_value(tree, i , level):
                 if tree.children_left[i] == -1 and tree.children_right[i] == -1:
@@ -1716,8 +1775,9 @@ class IsoTree(SingleTree):
 
 
 def get_xgboost_dmatrix_properties(model):
-    """
-    Retrieves properties from an xgboost.sklearn.XGBModel instance that should be passed to the xgboost.core.DMatrix object before calling predict on the model
+    """Retrieves properties from an xgboost.sklearn.XGBModel instance that should be
+    passed to the xgboost.core.DMatrix object before calling predict on the model.
+
     """
     properties_to_pass = ["missing", "n_jobs", "enable_categorical", "feature_types"]
     dmatrix_attributes = {}
@@ -1730,157 +1790,223 @@ def get_xgboost_dmatrix_properties(model):
         dmatrix_attributes["nthread"] = dmatrix_attributes.pop("n_jobs")
     return dmatrix_attributes
 
-def get_xgboost_json(model):
-    """ This gets a JSON dump of an XGBoost model while ensuring the features names are their indexes.
-    """
-    fnames = model.feature_names
-    model.feature_names = None
-    json_trees = model.get_dump(with_stats=True, dump_format="json")
-    model.feature_names = fnames
-
-    # this fixes a bug where XGBoost can return invalid JSON
-    json_trees = [t.replace(": inf,", ": 1000000000000.0,") for t in json_trees]
-    json_trees = [t.replace(": -inf,", ": -1000000000000.0,") for t in json_trees]
-
-    return json_trees
-
 
 class XGBTreeModelLoader:
-    """ This loads an XGBoost model directly from a raw memory dump.
+    """This loads an XGBoost model directly from a raw memory dump."""
 
-    We can't use the JSON dump because due to numerical precision issues those
-    tree can actually be wrong when feature values land almost on a threshold.
-    """
-    def __init__(self, xgb_model):
-        import xgboost
-        xgb_params = self.read_xgb_params(xgb_model)
+    def __init__(self, xgb_model) -> None:
+        import xgboost as xgb
 
-        self.base_score = float(xgb_params["learner_model_param"]["base_score"])
-        self.num_feature = int(xgb_params["learner_model_param"]["num_feature"])
-        self.num_class = int(xgb_params["learner_model_param"]["num_class"])
-        self.name_obj = xgb_params["objective"]["name"]
-        self.name_gbm = xgb_params["gradient_booster"]["name"]
+        _check_xgboost_version(xgb.__version__)
+        model: xgb.Booster = xgb_model
 
-        # new in XGBoost 1.0 is that the base_score is saved untransformed (https://github.com/dmlc/xgboost/pull/5101)
-        # so we have to transform it depending on the objective
-        if version.parse(xgboost.__version__).major >= 1:
-            if self.name_obj in ["binary:logistic", "reg:logistic"]:
-                self.base_score = scipy.special.logit(self.base_score)
+        raw = xgb_model.save_raw(raw_format="ubj")
+        with io.BytesIO(raw) as fd:
+            jmodel = decode_ubjson_buffer(fd)
 
-        assert self.name_gbm == "gbtree", "Only the 'gbtree' model type is supported, not '%s'!" % self.name_gbm
+        learner = jmodel["learner"]
+        learner_model_param = learner["learner_model_param"]
+        objective = learner["objective"]
 
-        # load the gbtree specific parameters
-        self.num_trees = int(xgb_params["gradient_booster"]["model"]["gbtree_model_param"]["num_trees"])
-        self.num_feature = int(xgb_params["learner_model_param"]["num_feature"])
-        # load each tree
-        self.num_roots = np.zeros(self.num_trees, dtype=np.int32)
-        self.num_nodes = np.zeros(self.num_trees, dtype=np.int32)
-        self.num_deleted = np.zeros(self.num_trees, dtype=np.int32)
-        self.max_depth = np.zeros(self.num_trees, dtype=np.int32)
-        self.num_feature = np.zeros(self.num_trees, dtype=np.int32)
-        self.size_leaf_vector = np.zeros(self.num_trees, dtype=np.int32)
+        booster = learner["gradient_booster"]
+        n_classes = max(int(learner_model_param["num_class"]), 1)
+        n_targets = max(int(learner_model_param["num_target"]), 1)
+        n_targets = max(n_targets, n_classes)
+
+        # Check the input model doesn't have vector-leaf
+        if booster["model"].get("iteration_indptr", None) is not None:
+            # iteration_indptr was introduced in 2.0.
+            iteration_indptr = np.asarray(
+                booster["model"]["iteration_indptr"], dtype=np.int32
+            )
+            diff = np.diff(iteration_indptr)
+        else:
+            n_parallel_trees = int(
+                booster["model"]["gbtree_model_param"]["num_parallel_tree"]
+            )
+            diff = np.repeat(n_targets * n_parallel_trees, model.num_boosted_rounds())
+        if np.any(diff != diff[0]):
+            raise ValueError("vector-leaf is not yet supported.:", diff)
+
+        # used to convert the number of iteration to the number of trees.
+        # Accounts for number of classes, targets, forest size.
+        self.n_trees_per_iter = int(diff[0])
+        self.n_targets = n_targets
+        assert self.n_trees_per_iter > 0
+
+        self.name_obj = objective["name"]
+        self.name_gbm = booster["name"]
+        # handle the link function.
+        base_score = float(learner_model_param["base_score"])
+        if self.name_obj in ("binary:logistic", "reg:logistic"):
+            self.base_score = scipy.special.logit(base_score)
+        elif self.name_obj in (
+            "reg:gamma",
+            "reg:tweedie",
+            "count:poisson",
+            "survival:cox",
+            "survival:aft",
+        ):
+            # exp family
+            self.base_score = np.log(self.base_score)
+        else:
+            self.base_score = base_score
+
+        self.num_feature = int(learner_model_param["num_feature"])
+        self.num_class = int(learner_model_param["num_class"])
+
+        trees = booster["model"]["trees"]
+        self.num_trees = len(trees)
+
         self.node_parents = []
         self.node_cleft = []
         self.node_cright = []
         self.node_sindex = []
-        self.node_info = []
-        self.loss_chg = []
+        self.children_default: list[np.ndarray] = []
         self.sum_hess = []
-        self.base_weight = []
-        self.leaf_child_cnt = []
+
+        self.values = []
+        self.thresholds = []
+        self.features = []
+
+        # Categorical features, not supported by the SHAP package yet.
+        self.split_types = []
+        self.categories = []
+
+        feature_types = model.feature_types
+        if feature_types is not None:
+            cat_feature_indices: np.ndarray = np.where(
+                np.asarray(feature_types) == "c"
+            )[0]
+            if len(cat_feature_indices) == 0:
+                self.cat_feature_indices: Optional[np.ndarray] = None
+            else:
+                self.cat_feature_indices = cat_feature_indices
+        else:
+            self.cat_feature_indices = None
+
+        def to_integers(data: list[int]) -> np.ndarray:
+            "Handle u8 array from UBJSON."
+            assert isinstance(data, list)
+            return np.asanyarray(data, dtype=np.uint8)
+
         for i in range(self.num_trees):
-            tree_json = xgb_params["gradient_booster"]["model"]["trees"][i]
+            tree = trees[i]
+            parents = np.asarray(tree["parents"])
+            self.node_parents.append(parents)
+            self.node_cleft.append(np.asarray(tree["left_children"], dtype=np.int32))
+            self.node_cright.append(np.asarray(tree["right_children"], dtype=np.int32))
+            self.node_sindex.append(np.asarray(tree["split_indices"], dtype=np.uint32))
 
-            # load the per-tree params
-            self.num_nodes[i] = tree_json["tree_param"]["num_nodes"]
-            self.num_deleted[i] = tree_json["tree_param"]["num_deleted"]
-            self.num_feature[i] = tree_json["tree_param"]["num_feature"]
-            self.size_leaf_vector[i] = tree_json["tree_param"]["size_leaf_vector"]
+            base_weight = np.asarray(tree["base_weights"], dtype=np.float32)
+            if base_weight.size != self.node_cleft[-1].size:
+                raise ValueError("vector-leaf is not yet supported.")
 
-            # load the nodes
-            self.node_parents.append(np.array(tree_json["parents"], dtype=np.int32))
-            self.node_cleft.append(np.array(tree_json["left_children"], dtype=np.int32))
-            self.node_cright.append(np.array(tree_json["right_children"], dtype=np.int32))
-            self.node_sindex.append(np.array(tree_json["split_indices"], dtype=np.uint32))
-            self.node_info.append(np.array(tree_json["split_conditions"], dtype=np.float32))
+            default_left = to_integers(tree["default_left"])
+            default_child = np.where(
+                default_left == 1, self.node_cleft[-1], self.node_cright[-1]
+            ).astype(np.int64)
+            self.children_default.append(default_child)
+            self.sum_hess.append(np.asarray(tree["sum_hessian"], dtype=np.float64))
 
-            # load the stat nodes
-            self.loss_chg.append(np.array(tree_json["loss_changes"], dtype=np.float32))
-            self.sum_hess.append(np.array(tree_json["sum_hessian"], dtype=np.float64))
-            self.base_weight.append(np.array(tree_json["base_weights"], dtype=np.float32))
-            self.leaf_child_cnt.append(np.array(tree_json["default_left"], dtype=int))
+            is_leaf = self.node_cleft[-1] == -1
+
+            # XGBoost stores split condition and leaf weight in the same field.
+            split_cond = np.asarray(tree["split_conditions"], dtype=np.float32)
+            leaf_weight = np.where(is_leaf, split_cond, 0.0)
+            thresholds = np.where(is_leaf, 0.0, split_cond)
+
+            # Xgboost uses < for thresholds where shap uses <= Move the threshold down
+            # by the smallest possible increment
+            thresholds = np.where(
+                is_leaf, 0.0, np.nextafter(thresholds, -np.float32(np.inf))
+            )
+
+            self.values.append(leaf_weight.reshape(leaf_weight.size, 1))
+            self.thresholds.append(thresholds)
+
+            split_idx = np.asarray(tree["split_indices"], dtype=np.int64)
+            self.features.append(split_idx)
+
+            # - categorical features
+            # when ubjson is used, this is a byte array with each element as uint8
+            split_types = to_integers(tree["split_type"])
+            self.split_types.append(split_types)
+            # categories for each node is stored in a CSR style storage with segment as
+            # the begin ptr and the `categories' as values.
+            cat_segments: list[int] = tree["categories_segments"]
+            cat_sizes: list[int] = tree["categories_sizes"]
+            # node index for categorical nodes
+            cat_nodes: list[int] = tree["categories_nodes"]
+            assert len(cat_segments) == len(cat_sizes) == len(cat_nodes)
+            cats = tree["categories"]
+
+            tree_categories = self.parse_categories(
+                cat_nodes, cat_segments, cat_sizes, cats, self.node_cleft[-1]
+            )
+            self.categories.append(tree_categories)
 
     @staticmethod
-    def read_xgb_params(xgb_model) -> dict[str, Any]:
-        import xgboost
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            if version.parse(xgboost.__version__) >= version.parse("1.6.0"):
-                tmp_file = os.path.join(tmp_dir, "model.ubj")
-                xgb_model.save_model(tmp_file)
-                xgb_params = decode_ubjson_buffer(open(tmp_file, 'rb'))
-            else:
-                warnings.warn("You are using an XGBoost version below 1.6.0 which is not fully supported by shap. "
-                              "Shap falls back to encoding the model as JSON which can lead to numerical precision issues. "
-                              "Please consider upgrading to XGBoost 1.6.0 or higher.")
-                tmp_file = os.path.join(tmp_dir, "model.json")
-                xgb_model.save_model(tmp_file)
-                with open(tmp_file) as fh:
-                    xgb_params = json.load(fh)
-        return xgb_params["learner"]
+    def parse_categories(
+        cat_nodes: list[int],
+        cat_segments: list[int],
+        cat_sizes: list[int],
+        cats: list[int],
+        left_children: np.ndarray,
+    ) -> list[list[int]]:
+        """Parse the JSON model to extract partitions of categories for each
+        node. Returns a list, in which each element is a list of categories for tree
+        split. For a numerical split, the list is empty.
 
-    def get_trees(self, data=None, data_missing=None):
-        shape = (self.num_trees, self.num_nodes.max())
-        self.children_default = np.zeros(shape, dtype=int)
-        self.features = np.zeros(shape, dtype=int)
-        self.thresholds = np.zeros(shape, dtype=np.float32)
-        self.values = np.zeros((shape[0], shape[1], 1), dtype=np.float32)
+        This is not used yet, only implemented for future reference.
+
+        """
+        # The storage for categories is only defined for categorical nodes to prevent
+        # unnecessary overhead for numerical splits, we track the categorical node that
+        # are processed using a counter.
+        cat_cnt = 0
+        if cat_nodes:
+            last_cat_node = cat_nodes[cat_cnt]
+        else:
+            last_cat_node = -1
+        node_categories: list[list[int]] = []
+        for node_id in range(len(left_children)):
+            if node_id == last_cat_node:
+                beg = cat_segments[cat_cnt]
+                size = cat_sizes[cat_cnt]
+                end = beg + size
+                # categories for this node
+                node_cats = cats[beg:end]
+                # categories are unique for each node
+                assert len(set(node_cats)) == len(node_cats)
+                cat_cnt += 1
+                if cat_cnt == len(cat_nodes):
+                    last_cat_node = -1  # continue to process the rest of the nodes
+                else:
+                    last_cat_node = cat_nodes[cat_cnt]
+                assert node_cats
+                node_categories.append(node_cats)
+            else:
+                # append an empty node, it's either a numerical node or a leaf.
+                node_categories.append([])
+        return node_categories
+
+    def get_trees(self, data=None, data_missing=None) -> list[SingleTree]:
         trees = []
         for i in range(self.num_trees):
-            for j in range(self.num_nodes[i]):
-                if np.right_shift(self.node_sindex[i][j], np.uint32(31)) != 0:
-                    self.children_default[i,j] = self.node_cleft[i][j]
-                else:
-                    self.children_default[i,j] = self.node_cright[i][j]
-                self.features[i,j] = self.node_sindex[i][j] & ((np.uint32(1) << np.uint32(31)) - np.uint32(1))
-                if self.node_cleft[i][j] >= 0:
-                    # Xgboost uses < for thresholds where shap uses <=
-                    # Move the threshold down by the smallest possible increment
-                    self.thresholds[i, j] = np.nextafter(self.node_info[i][j], - np.float32(np.inf))
-                else:
-                    self.values[i,j] = self.node_info[i][j]
-
-            k = len(self.node_cleft[i])
-            trees.append(SingleTree({
+            info = {
                 "children_left": self.node_cleft[i],
                 "children_right": self.node_cright[i],
-                "children_default": self.children_default[i,:k],
-                "feature": self.features[i,:k],
-                "threshold": self.thresholds[i,:k],
-                "value": self.values[i,:k],
-                "node_sample_weight": self.sum_hess[i]
-            }, data=data, data_missing=data_missing))
+                "children_default": self.children_default[i],
+                "feature": self.features[i],
+                "threshold": self.thresholds[i],
+                "value": self.values[i],
+                "node_sample_weight": self.sum_hess[i],
+            }
+            trees.append(SingleTree(info, data=data, data_missing=data_missing))
         return trees
 
-    def read(self, dtype):
-        size = struct.calcsize(dtype)
-        val = struct.unpack(dtype, self.buf[self.pos:self.pos+size])[0]
-        self.pos += size
-        return val
-
-    def read_arr(self, dtype, n_items):
-        format = "%d%s" % (n_items, dtype)
-        size = struct.calcsize(format)
-        val = struct.unpack(format, self.buf[self.pos:self.pos+size])[0]
-        self.pos += size
-        return val
-
-    def read_str(self, size):
-        val = self.buf[self.pos:self.pos+size].decode('utf-8')
-        self.pos += size
-        return val
-
-    def print_info(self):
-
+    def print_info(self) -> None:
         print("--- global parameters ---")
         print("base_score =", self.base_score)
         print("num_feature =", self.num_feature)
@@ -1889,10 +2015,7 @@ class XGBTreeModelLoader:
         print("name_gbm =", self.name_gbm)
         print()
         print("--- gbtree specific parameters ---")
-        print("num_trees =", self.num_trees)
-        print("num_roots =", self.num_roots)
         print("num_feature =", self.num_feature)
-        print("size_leaf_vector =", self.size_leaf_vector)
 
 
 class CatBoostTreeModelLoader:
