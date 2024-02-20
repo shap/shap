@@ -25,8 +25,6 @@ from ..utils._legacy import DenseData
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
 
-warnings.formatwarning = lambda msg, *args, **kwargs: str(msg) + '\n' # ignore everything except the message
-
 try:
     from .. import _cext
 except ImportError as e:
