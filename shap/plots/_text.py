@@ -1,6 +1,7 @@
 import json
 import random
 import string
+import warnings
 
 import numpy as np
 
@@ -709,6 +710,11 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
 
     # See if we got hierarchical input data. If we did then we need to reprocess the
     # shap_values and tokens to get the groups we want to display
+    warnings.warn(
+        "This function is not used within the shap library and will therefore be removed in an upcoming release. "
+        "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
+        DeprecationWarning
+    )
     M = len(tokens)
     if len(shap_values) != M:
 
