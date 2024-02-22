@@ -1,4 +1,3 @@
-# pylint: disable=missing-function-docstring
 """ Test gpu accelerated tree functions.
 """
 import numpy as np
@@ -42,7 +41,7 @@ def test_front_page_xgboost():
     shap.summary_plot(shap_values, X, show=False)
 
 
-rs = np.random.RandomState(15921)  # pylint: disable=no-member
+rs = np.random.RandomState(15921)
 n = 100
 m = 4
 datasets = {'regression': (rs.randn(n, m), rs.randn(n)),
@@ -58,7 +57,6 @@ def task_xfail(func):
 
 
 def xgboost_base():
-    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -71,7 +69,6 @@ def xgboost_base():
 
 
 def xgboost_regressor():
-    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -85,7 +82,6 @@ def xgboost_regressor():
 
 
 def xgboost_binary_classifier():
-    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -99,7 +95,6 @@ def xgboost_binary_classifier():
 
 
 def xgboost_multiclass_classifier():
-    # pylint: disable=import-outside-toplevel
     try:
         import xgboost
     except ImportError:
@@ -112,8 +107,27 @@ def xgboost_multiclass_classifier():
     return model, X, model.predict(X, output_margin=True)
 
 
+def test_xgboost_cat_unsupported() -> None:
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult()
+    X["Workclass"] = X["Workclass"].astype("category")
+
+    clf = xgboost.XGBClassifier(n_estimators=2, enable_categorical=True, device="cuda")
+    clf.fit(X, y)
+
+    # Tests for both CPU and GPU in one place
+
+    # Prefer an explict error over silent invalid values.
+    gpu_ex = shap.GPUTreeExplainer(clf, X, feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="Categorical"):
+        gpu_ex.shap_values(X)
+
+    ex = shap.TreeExplainer(clf, X, feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="Categorical"):
+        ex.shap_values(X)
+
+
 def lightgbm_base():
-    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -126,7 +140,6 @@ def lightgbm_base():
 
 
 def lightgbm_regression():
-    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -139,7 +152,6 @@ def lightgbm_regression():
 
 
 def lightgbm_binary_classifier():
-    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:
@@ -152,7 +164,6 @@ def lightgbm_binary_classifier():
 
 
 def lightgbm_multiclass_classifier():
-    # pylint: disable=import-outside-toplevel
     try:
         import lightgbm
     except ImportError:

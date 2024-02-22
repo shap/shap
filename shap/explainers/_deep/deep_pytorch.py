@@ -158,7 +158,8 @@ class PyTorchDeep(Explainer):
             elif output_rank_order == "max_abs":
                 _, model_output_ranks = torch.sort(torch.abs(model_output_values), descending=True)
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], self.num_outputs)).int() *
@@ -181,10 +182,10 @@ class PyTorchDeep(Explainer):
                     phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
                 # tile the inputs to line up with the background data samples
-                tiled_X = [X[l][j:j + 1].repeat(
-                                   (self.data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape) - 1)])) for l
+                tiled_X = [X[t][j:j + 1].repeat(
+                                   (self.data[t].shape[0],) + tuple([1 for k in range(len(X[t].shape) - 1)])) for t
                            in range(len(X))]
-                joint_x = [torch.cat((tiled_X[l], self.data[l]), dim=0) for l in range(len(X))]
+                joint_x = [torch.cat((tiled_X[t], self.data[t]), dim=0) for t in range(len(X))]
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j, i]
                 sample_phis = self.gradient(feature_ind, joint_x)
@@ -196,11 +197,11 @@ class PyTorchDeep(Explainer):
                         x_temp, data_temp = np.split(output[k], 2)
                         x.append(x_temp)
                         data.append(data_temp)
-                    for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
+                    for t in range(len(self.interim_inputs_shape)):
+                        phis[t][j] = (sample_phis[t][self.data[t].shape[0]:] * (x[t] - data[t])).mean(0)
                 else:
-                    for l in range(len(X)):
-                        phis[l][j] = (torch.from_numpy(sample_phis[l][self.data[l].shape[0]:]).to(self.device) * (X[l][j: j + 1] - self.data[l])).cpu().detach().numpy().mean(0)
+                    for t in range(len(X)):
+                        phis[t][j] = (torch.from_numpy(sample_phis[t][self.data[t].shape[0]:]).to(self.device) * (X[t][j: j + 1] - self.data[t])).cpu().detach().numpy().mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:

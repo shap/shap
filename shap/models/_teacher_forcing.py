@@ -255,7 +255,7 @@ class TeacherForcing(Model):
             Returns output logits from the model.
         """
         if self.similarity_model_type == "pt":
-            import torch  # pylint: disable=import-outside-toplevel
+            import torch
             # create torch tensors and move to device
             if self.device is not None:
                 inputs = inputs.to(self.device)
@@ -277,7 +277,7 @@ class TeacherForcing(Model):
                     outputs = self.similarity_model(**inputs, return_dict=True)
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')
         elif self.similarity_model_type == "tf":
-            import tensorflow as tf  # pylint: disable=import-outside-toplevel
+            import tensorflow as tf
             output_ids = tf.convert_to_tensor(output_ids, dtype=tf.int32)
             if self.similarity_model.config.is_encoder_decoder:
                 if self.device is None:
