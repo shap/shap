@@ -20,11 +20,7 @@ dependencies = [
   'packaging>20.9',
   'slicer==0.0.7',
   'numba',
-  'cloudpickle',
-  'future==0.18.3',
-  'grpcio==1.60.1',
-  ''
-
+  'cloudpickle'
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
