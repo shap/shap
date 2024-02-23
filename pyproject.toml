@@ -20,13 +20,7 @@ dependencies = [
   'packaging>20.9',
   'slicer==0.0.7',
   'numba',
-  'cloudpickle',
-  'future==0.18.3',
-  'google-auth==2.28.0',
-  'grpcio==1.60.1',
-  'ipython==8.21.0',
-  'ngboost==0.5.0',
-  'transformers==4.37.2',
+  'cloudpickle'
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
