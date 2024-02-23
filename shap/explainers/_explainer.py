@@ -1,5 +1,6 @@
 import copy
 import time
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -392,6 +393,11 @@ class Explainer(Serializable):
     def _compute_main_effects(fm, expected_value, inds):
         """ A utility method to compute the main effects from a MaskedModel.
         """
+        warnings.warn(
+            "This function is not used within the shap library and will therefore be removed in an upcoming release. "
+            "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
+            DeprecationWarning
+        )
 
         # mask each input on in isolation
         masks = np.zeros(2*len(inds)-1, dtype=int)
