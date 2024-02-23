@@ -33,8 +33,8 @@ jobs:
           - os: windows-latest
             python-version: "3.11"
             extras: "test"
-          - os: macos-latest
-            python-version: "3.11.7"
+          - os: macos-11
+            python-version: "3.11"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
