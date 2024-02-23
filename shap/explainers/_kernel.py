@@ -176,7 +176,7 @@ class KernelExplainer(Explainer):
 
         l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
             The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). The auto option currently uses "aic" when less that 20% of the possible sample
+            a debiased lasso). The auto option currently uses "aic" when less than 20% of the possible sample
             space is enumerated, otherwise it uses no regularization. THE BEHAVIOR OF "auto" WILL CHANGE
             in a future version to be based on num_features instead of AIC.
             The "aic" and "bic" options use the AIC and BIC rules for regularization.
@@ -195,7 +195,6 @@ class KernelExplainer(Explainer):
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
         """
-
         # convert dataframes
         if isinstance(X, pd.Series):
             X = X.values
@@ -599,11 +598,12 @@ class KernelExplainer(Explainer):
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
         log.debug(f"{fraction_evaluated = }")
-        # if self.l1_reg == "auto":
-        #     warnings.warn(
-        #         "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
-        #         "conditional use of AIC to simply \"num_features(10)\"!"
-        #     )
+        if self.l1_reg == "auto":
+            warnings.warn(
+                "l1_reg=\"auto\" is deprecated and in a future version the behavior will change from a " \
+                "conditional use of AIC to simply \"num_features(10)\"!",
+                DeprecationWarning
+            )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info(f"{np.sum(w_aug) = }")
