@@ -402,9 +402,10 @@ class TreeExplainer(Explainer):
                         X, iteration_range=(0, tree_limit), pred_contribs=True,
                         approx_contribs=approximate, validate_features=False
                     )
-                    if self.model.objective == "binary_crossentropy":
-                        phi = np.stack((-phi, phi), axis=-1)
-                        phi = np.swapaxes(phi, 1, 2)
+                    # if self.model.objective == "binary_crossentropy":
+                    #     import pdb; pdb.set_trace()
+                    #     phi = np.stack((-phi, phi), axis=-1)
+                    #     phi = np.swapaxes(phi, 1, 2)
                 except ValueError as e:
                     emsg = (
                         "This reshape error is often caused by passing a bad data matrix to SHAP. "
@@ -418,8 +419,13 @@ class TreeExplainer(Explainer):
                         X, iteration_range=(0, xgb_tree_limit), output_margin=True,
                         validate_features=False
                     )
-                    if self.model.objective == "binary_crossentropy":
-                        model_output_vals = np.stack((-model_output_vals, model_output_vals), axis=-1)
+                    if len(model_output_vals.shape) == 2:
+                        
+                    # todo: do we really need the duplication anymore?
+                    # import pdb; pdb.set_trace()
+                    # phi_shape = phi.shape
+                    # if (X_shape != (phi_shape[0], phi_shape[1] - 1)) and self.model.objective == "binary_crossentropy":
+                    #     model_output_vals = np.stack((-model_output_vals, model_output_vals), axis=-1)
 
             elif self.model.model_type == "lightgbm":
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
@@ -428,7 +434,10 @@ class TreeExplainer(Explainer):
                 if self.model.original_model.params['objective'] == 'binary':
                     if not from_call:
                         warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
-                    phi = np.concatenate((-phi, phi), axis=-1)
+                    # todo: do we really need this
+                    # phi_shape = phi.shape
+                    # if (X_shape != (phi_shape[0], phi_shape[1] - 1)):
+                    #     phi = np.concatenate((-phi, phi), axis=-1)
                 if phi.shape[1] != X.shape[1] + 1:
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
@@ -446,11 +455,13 @@ class TreeExplainer(Explainer):
                 if type(X) != catboost.Pool:
                     X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type='ShapValues')
-                if self.model.objective == "binary_crossentropy":
-                    phi = np.stack((-phi, phi), axis=-1)
-                    phi = np.swapaxes(phi, 1, 2)
+                # todo: do we need this?
+                # if self.model.objective == "binary_crossentropy":
+                #     phi = np.stack((-phi, phi), axis=-1)
+                #     phi = np.swapaxes(phi, 1, 2)
 
             # note we pull off the last column and keep it as our expected_value
+            # import pdb; pdb.set_trace()
             if phi is not None:
                 if len(phi.shape) == 3:
                     self.expected_value = [phi[0, i, -1] for i in range(phi.shape[1])]
@@ -574,10 +585,11 @@ class TreeExplainer(Explainer):
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
                 return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
             # binary model case -> do not think that this is correct since it can be a regression
-            elif self.model.objective in ["binary:logistic", "binary_crossentropy"]:
-                self.expected_value = np.array([-phi[0, -1, -1], phi[0, -1, -1]])
-                phi = np.stack((-phi[:, :-1, :-1], phi[:, :-1, :-1]), axis=-1)
-                return phi
+            # todo: do we need this?
+            # elif self.model.objective in ["binary:logistic", "binary_crossentropy"]:
+            #     # self.expected_value = np.array([-phi[0, -1, -1], phi[0, -1, -1]])
+            #     # phi = np.stack((-phi[:, :-1, :-1], phi[:, :-1, :-1]), axis=-1)
+            #     return phi
             # regression case
             else:
                 self.expected_value = phi[0, -1, -1]
@@ -599,7 +611,7 @@ class TreeExplainer(Explainer):
 
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
-        if (getattr(getattr(self.model, 'original_model', {}), 'params', {}).get('objective') == 'binary' or self.model.objective in ["binary:logistic", "binary_crossentropy"]) and phi.shape[-1] == 1:
+        if (self.model.num_outputs != phi.shape[-1]) and (getattr(getattr(self.model, 'original_model', {}), 'params', {}).get('objective') == 'binary' or self.model.objective in ["binary:logistic", "binary_crossentropy"]) and phi.shape[-1] == 1:
             # todo: how to distinguish here from regressor?
             phi = np.concatenate((-phi, phi), axis=-1)
             self.expected_value = phi[0, -1, -1, :]
@@ -821,6 +833,7 @@ class TreeEnsemble:
                 "sklearn.ensemble.forest.RandomForestClassifier",
             ],
         ):
+            # import pdb; pdb.set_trace()
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32

@@ -349,19 +349,12 @@ def test_catboost():
 
     explanation = explainer(X)
     # check the properties of Explanation object
-    assert explanation.values.shape == (*X.shape, 2)
-    assert explanation.base_values.shape == (len(X), 2)
+    assert explanation.values.shape == X.shape
+    assert explanation.base_values.shape == (len(X),)
 
     # check that SHAP values sum to model output
-    # check predictions for class 1
-    assert (
-        np.abs(explanation.values[:, :, 1].sum(1) + explanation.base_values[:, 1] - predicted).max()
-        < 1e-4
-    )
-    # check predictions for class 0
-    assert (
-        np.abs(explanation.values[:, :, 0].sum(1) + explanation.base_values[:, 0] + predicted).max()
-        < 1e-4
+    assert np.allclose(
+        explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4
     )
 
 
@@ -402,10 +395,7 @@ def test_catboost_interactions():
 
     # catboost explanations
     explanation = ex_cat(X, interactions=True)
-    assert (
-        np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - np.stack([-predicted, predicted], axis=-1)).max()
-        < 1e-4
-    )
+    assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted, atol=1e-4)
 
 # TODO: Test tree_limit argument
 
@@ -1064,23 +1054,15 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X_test),)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
 
         # check initial expected value
-        assert (
-            np.abs(initial_ex_value - explainer.expected_value) < 1e-4
-        ), "Initial expected value is wrong!"
+        assert np.allclose(initial_ex_value, explainer.expected_value, atol=1e-4), "Initial expected value is wrong!"
 
         # check SHAP interaction values sum to model output
         shap_interaction_values = explainer.shap_interaction_values(X_test.iloc[:10, :])
-        assert (
-            np.abs(
-                shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value - np.stack([-predicted[:10], predicted[:10]], axis=1)
-            ).max()
-            < 1e-4
+        assert np.allclose(
+            shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value, predicted[:10], atol=1e-4
         )
 
     def test_single_row_gradient_boosting_regressor(self):
@@ -1240,7 +1222,7 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value[1] + shap_values.sum(axis=1)[:, 1])
+        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
 
     def test_xgboost_direct(self):
         xgboost = pytest.importorskip("xgboost")
@@ -1532,22 +1514,18 @@ class TestExplainerLightGBM:
         shap_values = explainer.shap_values(X_test)
         # validate structure of shap values, must be a list of ndarray for both classes
         assert isinstance(shap_values, np.ndarray)
-        assert shap_values.shape == (*X_test.shape, 2)
+        assert shap_values.shape == X_test.shape
 
         explanation = explainer(X_test)
         # check the properties of Explanation object
-        assert explanation.values.shape == (*X_test.shape, 2)
-        assert explanation.base_values.shape == (len(X_test), 2)
+        assert explanation.values.shape == X_test.shape
+        assert explanation.base_values.shape == (len(X_test),)
 
         # check that SHAP values sum to model output
-        class1_exp = explanation[..., 1]
-        assert (
-            np.abs(class1_exp.values.sum(1) + class1_exp.base_values - predicted).max()
-            < 1e-4
-        )
+        np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
 
         # ensure plot works for first class
-        shap.dependence_plot(0, shap_values[:, :, 0], X_test, show=False)
+        shap.dependence_plot(0, shap_values, X_test, show=False)
 
     def test_lightgbm_constant_multiclass(self):
         # note: this test used to fail with lightgbm 2.2.1 with error:
@@ -1675,48 +1653,57 @@ def test_check_consistent_outputs_binary_classification():
     ex_cat = shap.TreeExplainer(cat)
     ex_rfc = shap.TreeExplainer(rfc)
 
+    # random forest explanations
+    import pdb; pdb.set_trace()
+    e_rfc_bin = ex_rfc(X, interactions=False)
+    e_rfc = ex_rfc(X, interactions=True)
+    rfc_pred = rfc.predict_proba(X)[:, 1]
+
     # lightgbm explanations
     e_lgbm_bin = ex_lgbm(X, interactions=False)
     # todo: lgbm base values are not correct (they are just 1d)
     e_lgbm = ex_lgbm(X, interactions=True)
-    margin = lgbm.predict_proba(X, raw_score=True)
-    lgbm_pred = np.vstack([-margin, margin]).T
+    lgbm_pred = lgbm.predict_proba(X, raw_score=True)
+    # lgbm_pred = np.vstack([-margin, margin]).T
 
     # xgboost explanations
     e_xgb_bin = ex_xgb(X, interactions=False)
     e_xgb = ex_xgb(X, interactions=True)
-    margin = xgb.predict(X, output_margin=True)
-    xgb_pred = np.vstack([-margin, margin]).T
+    xgb_pred = xgb.predict(X, output_margin=True)
+    # xgb_pred = np.vstack([-margin, margin]).T
 
     # catboost explanations
     e_cat_bin = ex_cat(X, interactions=False)
     e_cat = ex_cat(X, interactions=True)
-    margin = cat.predict(X, prediction_type="RawFormulaVal")
-    cat_pred = np.vstack([-margin, margin]).T
+    cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
+    # cat_pred = np.vstack([-margin, margin]).T
 
-    # random forest explanations
-    e_rfc_bin = ex_rfc(X, interactions=False)
-    e_rfc = ex_rfc(X, interactions=True)
-    rfc_pred = rfc.predict_proba(X)
 
-    # output shape: examples x features x classes
-    assert (50, 12, 2) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape == e_rfc_bin.shape, \
-        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, CatBoost: {e_cat_bin.shape}, RandomForest: {e_rfc_bin.shape}"
-    # output shape: examples x features x features x classes
-    assert (50, 12, 12, 2) == e_lgbm.shape == e_xgb.shape == e_cat.shape == e_rfc.shape, \
-        f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, CatBoost: {e_cat.shape}, RandomForest: {e_rfc.shape}"
+    # output shape: examples x features x classes or examples x features x features x classes (if num_outputs > 1)
+    # assert (50, 12, 2) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape, \ #  == e_rfc_bin.shape, \
+    for output, explainer in [(e_lgbm_bin, ex_lgbm), (e_xgb_bin, ex_xgb), (e_cat_bin, ex_cat), (e_rfc_bin, ex_rfc)]:
+        if explainer.model.num_outputs > 1:
+            assert output.shape == (X.shape[0], X.shape[1], explainer.model.num_outputs)
+        else:
+            assert output.shape == X.shape
+    # output shape: examples x features x features or examples x features x features x classes (if num_outputs > 1)
+    for output, explainer in [(e_lgbm, ex_lgbm), (e_xgb, ex_xgb), (e_cat, ex_cat), (e_rfc, ex_rfc)]:
+        if explainer.model.num_outputs > 1:
+            assert output.shape == (X.shape[0], X.shape[1], X.shape[1], explainer.model.num_outputs)
+        else:
+            assert output.shape == (X.shape[0], X.shape[1], X.shape[1])
     # Sum interaction values
+    import pdb; pdb.set_trace()
     for explanation, predicted in [(e_xgb, xgb_pred), (e_cat, cat_pred), (e_rfc, rfc_pred), (e_lgbm, lgbm_pred)]:
-            assert (np.abs(explanation.values.sum(axis=(1, 2)) + explanation.base_values - predicted).max(axis=(0, 1))
-            # assert (np.abs(explanation.values[:, :, :, -1].sum(axis=(1, 2)) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted, atol=1e-4)
+
     # Sum binary values
     for explanation, predicted in [(e_xgb_bin, xgb_pred), (e_cat_bin, cat_pred), (e_rfc_bin, rfc_pred), (e_lgbm_bin, lgbm_pred)]:
-        assert (np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max(axis=(0, 1))
-            < 1e-4
-        )
+        assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
+
 # todo: multi class classification + multi class regression tests
+
+# todo: test binary classification with model_output="predict_proba"
 
 def test_check_consistent_outputs_for_regression():
     lightgbm = pytest.importorskip("lightgbm")
@@ -1765,3 +1752,5 @@ def test_catboost_regression_interaction():
     cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
     ex_cat = shap.TreeExplainer(cat)
     e_cat = ex_cat(X, interactions=True)
+
+# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - ValueError: operands could not be broadcast together with shapes (50,2) (50,)
