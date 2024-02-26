@@ -35,7 +35,7 @@ jobs:
             extras: "test"
           - os: macos-11
             python-version: "3.11"
-            extras: "test-core"
+            extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
@@ -82,6 +82,10 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
+      - name: install pyombl
+        if: matrix.os == 'macos11'
+        run: |
+          brew install libomp
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
