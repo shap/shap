@@ -82,8 +82,8 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
-      - name: install pyombl
-        if: matrix.os == 'macos11'
+      - name: install lobomp on macos
+        if: matrix.os == 'macos-11'
         run: |
           brew install libomp
       - name: Test with pytest
