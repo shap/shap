@@ -20,20 +20,30 @@ from ._utils import (
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clustering_cutoff=0.5,
-        merge_cohorts=False, show_data="auto", ax=None, show=True):
+        show_data="auto", ax=None, show=True):
     """Create a bar plot of a set of SHAP values.
-
-    If a single sample is passed, then we plot the SHAP values as a bar chart. If an
-    :class:`.Explanation` with many samples is passed, then we plot the mean absolute
-    value for each feature column as a bar chart.
 
     Parameters
     ----------
     shap_values : shap.Explanation or shap.Cohorts or dictionary of shap.Explanation objects
-        A single row of a SHAP :class:`.Explanation` object (i.e. ``shap_values[0]``) or
-        a multi-row Explanation object that we want to summarize.
+        Passing a multi-row :class:`.Explanation` object creates a global
+        feature importance plot.
+
+        Passing a single row of an explanation (i.e. ``shap_values[0]``) creates
+        a local feature importance plot.
+
+        Passing a dictionary of Explanation objects will create a multiple-bar
+        plot with one bar type for each of the cohorts represented by the
+        explanation objects.
     max_display : int
         How many top features to include in the bar plot (default is 10).
+    clustering: Optional np.ndarray
+        A partition tree, as returned by ``shap.utils.hclust``
+    clustering_cutoff: float
+        Controls how much of the clustering structure is displayed.
+    show_data: bool or str
+        Controls if data values are shown as part of the y tick labels. If
+        "auto", we show the data only when there are no transforms.
     ax: matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
     show : bool
