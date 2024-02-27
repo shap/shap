@@ -617,11 +617,12 @@ class TreeExplainer(Explainer):
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
         if self.model.num_outputs == 1:
+            # get expected value only if not already set
             self.expected_value = getattr(self, "expected_value", phi[0, -1, -1, 0])
             if flat_output:
-                out = phi[0, :-1, :-1, -1]
+                out = phi[0, :-1, :-1, 0]
             else:
-                out = phi[:, :-1, :-1, -1]
+                out = phi[:, :-1, :-1, 0]
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:
@@ -1232,13 +1233,6 @@ class TreeEnsemble:
             max_nodes = np.max([len(t.values) for t in self.trees])
             assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, "All trees in the ensemble must have the same output dimension!"
             num_trees = len(self.trees)
-            # todo: do we really need this
-            # if self.num_stacked_models > 1:
-            #     assert len(self.trees) % self.num_stacked_models == 0, "Only stacked models with equal numbers of trees are supported!"
-            #     assert self.trees[0].values.shape[1] == 1, "Only stacked models with single outputs per model are supported!"
-            #     self.num_outputs = self.num_stacked_models
-            # else:
-            #     self.num_outputs = self.trees[0].values.shape[1]
             # important to be -1 in unused sections!! This way we can tell which entries are valid.
             self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
             self.children_right = -np.ones((num_trees, max_nodes), dtype=np.int32)
