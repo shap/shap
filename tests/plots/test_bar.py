@@ -80,3 +80,24 @@ def test_simple_bar_with_cohorts_dict():
     )
     plt.tight_layout()
     return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_simple_bar_local_feature_importance(explainer):
+    """Bar plot with single row of SHAP values"""
+    shap_values = explainer(explainer.data)
+    fig = plt.figure()
+    shap.plots.bar(shap_values[0], show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_simple_bar_with_clustering(explainer):
+    """Bar plot with clustering"""
+    shap_values = explainer(explainer.data)
+    clustering = shap.utils.hclust(explainer.data, metric="cosine")
+    fig = plt.figure()
+    shap.plots.bar(shap_values, clustering=clustering, show=False)
+    plt.tight_layout()
+    return fig
