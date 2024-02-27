@@ -146,6 +146,8 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
+        else:
+            metric = "cosine"
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
