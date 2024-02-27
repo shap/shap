@@ -1654,46 +1654,38 @@ def test_check_consistent_outputs_binary_classification():
     ex_rfc = shap.TreeExplainer(rfc)
 
     # random forest explanations
-    import pdb; pdb.set_trace()
     e_rfc_bin = ex_rfc(X, interactions=False)
     e_rfc = ex_rfc(X, interactions=True)
-    rfc_pred = rfc.predict_proba(X)[:, 1]
+    # we use here predict proba since it is the only way to get the probabilities
+    rfc_pred = rfc.predict_proba(X)
 
     # lightgbm explanations
     e_lgbm_bin = ex_lgbm(X, interactions=False)
-    # todo: lgbm base values are not correct (they are just 1d)
     e_lgbm = ex_lgbm(X, interactions=True)
     lgbm_pred = lgbm.predict_proba(X, raw_score=True)
-    # lgbm_pred = np.vstack([-margin, margin]).T
 
     # xgboost explanations
     e_xgb_bin = ex_xgb(X, interactions=False)
     e_xgb = ex_xgb(X, interactions=True)
     xgb_pred = xgb.predict(X, output_margin=True)
-    # xgb_pred = np.vstack([-margin, margin]).T
 
     # catboost explanations
     e_cat_bin = ex_cat(X, interactions=False)
     e_cat = ex_cat(X, interactions=True)
     cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
-    # cat_pred = np.vstack([-margin, margin]).T
 
 
-    # output shape: examples x features x classes or examples x features x features x classes (if num_outputs > 1)
-    # assert (50, 12, 2) == e_lgbm_bin.shape == e_xgb_bin.shape == e_cat_bin.shape, \ #  == e_rfc_bin.shape, \
-    for output, explainer in [(e_lgbm_bin, ex_lgbm), (e_xgb_bin, ex_xgb), (e_cat_bin, ex_cat), (e_rfc_bin, ex_rfc)]:
-        if explainer.model.num_outputs > 1:
-            assert output.shape == (X.shape[0], X.shape[1], explainer.model.num_outputs)
-        else:
-            assert output.shape == X.shape
-    # output shape: examples x features x features or examples x features x features x classes (if num_outputs > 1)
-    for output, explainer in [(e_lgbm, ex_lgbm), (e_xgb, ex_xgb), (e_cat, ex_cat), (e_rfc, ex_rfc)]:
-        if explainer.model.num_outputs > 1:
-            assert output.shape == (X.shape[0], X.shape[1], X.shape[1], explainer.model.num_outputs)
-        else:
+    for output in [(e_lgbm_bin, ex_lgbm), (e_xgb_bin, ex_xgb), (e_cat_bin, ex_cat)]:
+        assert output.shape == X.shape
+    # Since random forest classifiers have one dimension for each class, we have one output dimension per class
+    assert e_rfc_bin.shape == (X.shape[0], X.shape[1], ex_rfc.model.num_outputs)  # shape: examples x features x classes
+
+    for output in [e_lgbm, e_xgb, e_cat]:
             assert output.shape == (X.shape[0], X.shape[1], X.shape[1])
+
+    assert e_rfc.shape == (X.shape[0], X.shape[1], X.shape[1], ex_rfc.model.num_outputs)
+
     # Sum interaction values
-    import pdb; pdb.set_trace()
     for explanation, predicted in [(e_xgb, xgb_pred), (e_cat, cat_pred), (e_rfc, rfc_pred), (e_lgbm, lgbm_pred)]:
         assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted, atol=1e-4)
 
@@ -1702,7 +1694,6 @@ def test_check_consistent_outputs_binary_classification():
         assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
 
 # todo: multi class classification + multi class regression tests
-
 # todo: test binary classification with model_output="predict_proba"
 
 def test_check_consistent_outputs_for_regression():
@@ -1724,7 +1715,6 @@ def test_check_consistent_outputs_for_regression():
 
     # lightgbm explanations
     e_lgbm_bin = ex_lgbm(X, interactions=False)
-    # todo: lgbm base values are not correct (they are just 1d)
     e_lgbm = ex_lgbm(X, interactions=True)
     lgbm_pred = lgbm.predict(X, raw_score=True)
 
@@ -1738,11 +1728,21 @@ def test_check_consistent_outputs_for_regression():
     e_rfc = ex_rfc(X, interactions=True)
     rfc_pred = rfc.predict(X)
 
+    # catboost
+    e_cat_bin = ex_cat(X, interactions=False)
+    # todo: this is still a bug #1438
+    # e_cat = ex_cat(X, interactions=True)
+    cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
+
     assert (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape, \
         f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, RandomForest: {e_rfc_bin.shape}"
     assert (50, 8, 8) == e_lgbm.shape == e_xgb.shape == e_rfc.shape, \
         f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
-    # todo: make sure the values sum up
+    for outputs, pred in [(e_lgbm_bin, lgbm_pred), (e_xgb_bin, xgb_pred), (e_rfc_bin, rfc_pred), (e_cat_bin, cat_pred)]:
+        assert np.allclose(outputs.values.sum(1) + outputs.base_values, pred, atol=1e-4)
+    # todo: add catboost here once #1438 is fixed
+    for outputs, pred in [(e_lgbm, lgbm_pred), (e_xgb, xgb_pred), (e_rfc, rfc_pred)]:
+        assert np.allclose(outputs.values.sum((1, 2)) + outputs.base_values, pred, atol=1e-4)
 
 
 @pytest.mark.skip("Currently breaking on master, see GH: #3457 for discussion.")
@@ -1752,5 +1752,7 @@ def test_catboost_regression_interaction():
     cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
     ex_cat = shap.TreeExplainer(cat)
     e_cat = ex_cat(X, interactions=True)
+    cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
+    assert np.allclose(e_cat.values.sum((1, 2)) + e_cat.base_values, cat_pred, atol=1e-4)
 
 # FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - ValueError: operands could not be broadcast together with shapes (50,2) (50,)
