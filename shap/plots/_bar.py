@@ -121,9 +121,10 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if len(values[0]) == 0:
         raise ValueError("The passed Explanation is empty! (so there is nothing to plot)")
 
-    # we show the data on auto only when there are no transforms
+    # we show the data on auto only when there are no transforms (excluding getitem calls)
     if show_data == "auto":
-        show_data = len(op_history) == 0
+        transforms = [t for t in op_history if t.get("name") != "__getitem__"]
+        show_data = len(transforms) == 0
 
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
     if issubclass(type(feature_names), str):
