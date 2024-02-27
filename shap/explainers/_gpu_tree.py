@@ -2,7 +2,12 @@
 import numpy as np
 
 from ..utils import assert_import, record_import_error
-from ._tree import TreeExplainer, feature_perturbation_codes, output_transform_codes
+from ._tree import (
+    TreeExplainer,
+    _xgboost_cat_unsupported,
+    feature_perturbation_codes,
+    output_transform_codes,
+)
 
 try:
     from .. import _cext_gpu
@@ -14,43 +19,6 @@ class GPUTreeExplainer(TreeExplainer):
     """
     Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
     cuda available and 'CUDA_PATH' environment variable defined.
-
-    Parameters
-    ----------
-    model : model object
-        The tree based machine learning model that we want to explain. XGBoost, LightGBM,
-        CatBoost, Pyspark and most tree-based scikit-learn models are supported.
-
-    data : numpy.array or pandas.DataFrame
-        The background dataset to use for integrating out features. This argument is optional when
-        feature_perturbation="tree_path_dependent", since in that case we can use the number of
-        training samples that went down each tree path as our background dataset (this is recorded
-        in the model object).
-
-    feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
-        Since SHAP values rely on conditional expectations we need to decide how to handle correlated
-        (or otherwise dependent) input features. The "interventional" approach breaks the dependencies
-        between features according to the rules dictated by casual inference (Janzing et al. 2019). Note
-        that the "interventional" option requires a background dataset and its runtime scales linearly
-        with the size of the background dataset you use. Anywhere from 100 to 1000 random background samples
-        are good sizes to use. The "tree_path_dependent" approach is to just follow the trees and use the
-        number of training examples that went down each leaf to represent the background distribution.
-        This approach does not require a background dataset and so is used by default when no background
-        dataset is provided.
-
-    model_output : "raw", "probability", "log_loss", or model method name
-        What output of the model should be explained. If "raw" then we explain the raw output of the
-        trees, which varies by model. For regression models "raw" is the standard output, for binary
-        classification in XGBoost this is the log odds ratio. If model_output is the name of a
-        supported prediction method on the model object then we explain the output of that model
-        method name. For example model_output="predict_proba" explains the result of calling
-        model.predict_proba. If "probability" then we explain the output of the model transformed into
-        probability space (note that this means the SHAP values now sum to the probability output of the
-        model). If "logloss" then we explain the log base e of the model loss function, so that the SHAP
-        values sum up to the log loss of the model for each sample. This is helpful for breaking
-        down model performance by feature. Currently the probability and logloss options are only
-        supported when
-        feature_dependence="independent".
 
     Examples
     --------
@@ -97,10 +65,11 @@ class GPUTreeExplainer(TreeExplainer):
         assert not approximate, "approximate not supported"
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = \
-            self._validate_inputs(X, y,
-                                  tree_limit,
-                                  check_additivity)
-        transform = self.model.get_transform()
+            self._validate_inputs(X, y, tree_limit, check_additivity)
+
+        model = self.model
+        _xgboost_cat_unsupported(model)
+        transform = model.get_transform()
 
         # run the core algorithm using the C extension
         assert_import("cext_gpu")

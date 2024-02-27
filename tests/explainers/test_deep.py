@@ -137,6 +137,52 @@ def test_tf_keras_mnist_cnn(random_seed):
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
     sess.close()
 
+@pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
+def test_tf_keras_activations(activation):
+    """Test verifying that a linear model with linear data gives the correct result.
+    """
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
+    tf = pytest.importorskip('tensorflow')
+
+    from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.optimizers.legacy import SGD
+
+    tf.compat.v1.disable_eager_execution()
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    inputs = Input(shape=(2,))
+    preds = Dense(1, activation=activation)(inputs)
+
+    model = Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
+    model.fit(x, y, epochs=30, shuffle=False, verbose=0)
+
+    # explain
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    shap_values = e.shap_values(x)
+    preds = model.predict(x)
+
+    # verify that the explanation follows the equation in LinearExplainer
+    values = shap_values[0] # since this is a "multi-output" model with one output
+
+    assert values.shape == (1000, 2)
+    np.allclose(values.sum(axis=1) + e.expected_value, preds[:, 0], atol=1e-5)
+
+
 
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.

@@ -12,10 +12,14 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """
 
     transformers = pytest.importorskip("transformers")
+    requests = pytest.importorskip("requests")
 
     name = "hf-internal-testing/tiny-random-BartModel"
-    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(name)
+    try:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(name)
+    except requests.exceptions.RequestException:
+        pytest.xfail(reason="Connection error to transformers model")
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device='cpu')
 
@@ -32,10 +36,15 @@ def test_method_get_teacher_forced_logits_for_decoder_model():
     """
 
     transformers = pytest.importorskip("transformers")
+    requests = pytest.importorskip("requests")
 
     name = "hf-internal-testing/tiny-random-gpt2"
-    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
-    model = transformers.AutoModelForCausalLM.from_pretrained(name)
+    try:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+        model = transformers.AutoModelForCausalLM.from_pretrained(name)
+    except requests.exceptions.RequestException:
+        pytest.xfail(reason="Connection error to transformers model")
+
     model.config.is_decoder = True
 
     wrapped_model = shap.models.TeacherForcing(model, tokenizer, device='cpu')
