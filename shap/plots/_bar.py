@@ -286,13 +286,14 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         ax.spines['left'].set_visible(False)
     ax.tick_params('x', labelsize=11)
 
-    xmin,xmax = ax.get_xlim()
-    ymin,ymax = ax.get_ylim()
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    x_buffer = (xmax-xmin)*0.05
 
     if negative_values_present:
-        ax.set_xlim(xmin - (xmax-xmin)*0.05, xmax + (xmax-xmin)*0.05)
+        ax.set_xlim(xmin - x_buffer, xmax + x_buffer)
     else:
-        ax.set_xlim(xmin, xmax + (xmax-xmin)*0.05)
+        ax.set_xlim(xmin, xmax + x_buffer)
 
     # if features is None:
     #     pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
