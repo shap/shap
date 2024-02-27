@@ -27,19 +27,15 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     :class:`.Explanation` with many samples is passed, then we plot the mean absolute
     value for each feature column as a bar chart.
 
-
     Parameters
     ----------
     shap_values : shap.Explanation or shap.Cohorts or dictionary of shap.Explanation objects
         A single row of a SHAP :class:`.Explanation` object (i.e. ``shap_values[0]``) or
         a multi-row Explanation object that we want to summarize.
-
     max_display : int
         How many top features to include in the bar plot (default is 10).
-
     ax: matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
-
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot
@@ -52,7 +48,6 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
 
     Examples
     --------
-
     See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
@@ -217,9 +212,10 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         yticklabels[-1] = "Sum of %d other features" % num_cut
 
     if ax is None:
-        # Create figure explicitly
-        fig, ax = pl.subplots()
+        ax = pl.gca()
+        # Only modify the figure size if ax was not passed in
         # compute our figure size based on how many features we are showing
+        fig = pl.gcf()
         row_height = 0.5
         fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
 
