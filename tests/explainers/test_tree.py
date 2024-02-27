@@ -1754,5 +1754,3 @@ def test_catboost_regression_interaction():
     e_cat = ex_cat(X, interactions=True)
     cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
     assert np.allclose(e_cat.values.sum((1, 2)) + e_cat.base_values, cat_pred, atol=1e-4)
-
-# FAILED tests/explainers/test_tree.py::test_check_consistent_outputs_binary_classification - ValueError: operands could not be broadcast together with shapes (50,2) (50,)
