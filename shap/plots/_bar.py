@@ -39,10 +39,10 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         How many top features to include in the bar plot (default is 10).
     order : OpChain or numpy.ndarray
         A function that returns a sort ordering given a matrix of SHAP values
-        and an axis, or a direct sample ordering given as an ``numpy.ndarray``.
+        and an axis, or a direct sample ordering given as a ``numpy.ndarray``.
 
         By default, take the absolute value.
-    clustering: Optional np.ndarray
+    clustering: np.ndarray or None
         A partition tree, as returned by ``shap.utils.hclust``
     clustering_cutoff: float
         Controls how much of the clustering structure is displayed.
