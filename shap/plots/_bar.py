@@ -115,7 +115,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     else:
         partition_tree = clustering
     if partition_tree is not None:
-        if partition_tree.shape[1] != 4:
+        if len(partition_tree.shape) != 2 or partition_tree.shape[1] != 4:
             raise TypeError(
                 "The clustering provided by the Explanation object does not seem to be a "
                 "partition tree, which is all shap.plots.bar supports."
@@ -124,7 +124,7 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     values = np.array([cohort_exps[i].values for i in range(len(cohort_exps))])
 
     if len(values[0]) == 0:
-        raise ValueError("The passed Explanation is empty! (so there is nothing to plot)")
+        raise ValueError("The passed Explanation is empty, so there is nothing to plot.")
 
     # we show the data on auto only when there are no transforms (excluding getitem calls)
     if show_data == "auto":
