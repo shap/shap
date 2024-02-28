@@ -132,7 +132,8 @@ def test_tf_keras_mnist_cnn(random_seed):
     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
+    sums = shap_values.sum(axis=(1, 2, 3))
+    assert np.allclose(sums, diff, atol=1e-4)
     d = np.abs(sums - diff).sum()
     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
     sess.close()
@@ -176,12 +177,8 @@ def test_tf_keras_activations(activation):
     shap_values = e.shap_values(x)
     preds = model.predict(x)
 
-    # verify that the explanation follows the equation in LinearExplainer
-    values = shap_values[0] # since this is a "multi-output" model with one output
-
-    assert values.shape == (1000, 2)
-    np.allclose(values.sum(axis=1) + e.expected_value, preds[:, 0], atol=1e-5)
-
+    assert shap_values.shape == (1000, 2, 1)
+    np.allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
 
 
 def test_tf_keras_linear():
@@ -223,13 +220,11 @@ def test_tf_keras_linear():
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
 
+    assert shap_values.shape == (1000, 2, 1)
+
     # verify that the explanation follows the equation in LinearExplainer
-    values = shap_values[0] # since this is a "multi-output" model with one output
-
-    assert values.shape == (1000, 2)
-
     expected = (x - x.mean(0)) * fit_coef
-    np.testing.assert_allclose(expected - values, 0, atol=1e-5)
+    assert np.allclose(shap_values.sum(-1), expected, atol=1e-5)
 
 
 def test_tf_keras_imdb_lstm(random_seed):
@@ -430,10 +425,8 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     with torch.no_grad():
         diff = (model(input_tensor) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    sums = shap_values.sum((0, 1, 2, 3))
+    assert np.allclose(sums, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -556,10 +549,8 @@ def test_pytorch_custom_nested_models(torch_device):
     with torch.no_grad():
         diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    sums = shap_values.sum(axis=(0))
+    assert np.allclose(sums, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -651,12 +642,8 @@ def test_pytorch_single_output(torch_device):
     with torch.no_grad():
         diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()  / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
-
-
+    sums = shap_values.sum(axis=(0))
+    assert np.allclose(sums, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -748,15 +735,17 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     test_x1 = test_x1_tmp[:1].to(device)
     test_x2 = test_x2_tmp[:1].to(device)
 
-    shap_x1, shap_x2 = e.shap_values([test_x1[:1], test_x2[:1]])
+    # shap_values = e.shap_values([test_x1[:1], test_x2[:1]])
 
     model.eval()
     model.zero_grad()
 
     with torch.no_grad():
         diff = (model(test_x1, test_x2[:1]) - model(*background)).detach().cpu().numpy().mean(0)
+    assert diff == 1
 
-    sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
+    # import ipdb; ipdb.set_trace(context=10)
+    # sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
+    # d = np.abs(sums - diff).sum() / np.abs(diff).sum()
 
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    # assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"

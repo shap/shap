@@ -327,6 +327,8 @@ class TFDeep(Explainer):
 
             _check_additivity(self, model_output, output_phis)
 
+        if isinstance(output_phis, list):
+            output_phis = np.stack(output_phis, axis=-1)
         if not self.multi_output:
             return output_phis[0]
         elif ranked_outputs is not None:
