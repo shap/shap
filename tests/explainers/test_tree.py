@@ -1820,8 +1820,7 @@ def test_check_consistent_outputs_for_regression():
 
     # catboost
     e_cat_bin = ex_cat(X, interactions=False)
-    # todo: this is still a bug #1438
-    # e_cat = ex_cat(X, interactions=True)
+    e_cat = ex_cat(X, interactions=True)
     cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
 
     assert (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape, \
@@ -1830,20 +1829,9 @@ def test_check_consistent_outputs_for_regression():
         f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
     for outputs, pred in [(e_lgbm_bin, lgbm_pred), (e_xgb_bin, xgb_pred), (e_rfc_bin, rfc_pred), (e_cat_bin, cat_pred)]:
         assert np.allclose(outputs.values.sum(1) + outputs.base_values, pred, atol=1e-4)
-    # todo: add catboost here once #1438 is fixed
-    for outputs, pred in [(e_lgbm, lgbm_pred), (e_xgb, xgb_pred), (e_rfc, rfc_pred)]:
+    for outputs, pred in [(e_lgbm, lgbm_pred), (e_xgb, xgb_pred), (e_rfc, rfc_pred), (e_cat, cat_pred)]:
         assert np.allclose(outputs.values.sum((1, 2)) + outputs.base_values, pred, atol=1e-4)
 
-
-@pytest.mark.skip("Currently breaking on master, see GH: #3457 for discussion.")
-def test_catboost_regression_interaction():
-    catboost = pytest.importorskip("catboost")
-    X, y = shap.datasets.california(n_points=50)
-    cat = catboost.CatBoostRegressor(depth=1, iterations=10).fit(X, y)
-    ex_cat = shap.TreeExplainer(cat)
-    e_cat = ex_cat(X, interactions=True)
-    cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
-    assert np.allclose(e_cat.values.sum((1, 2)) + e_cat.base_values, cat_pred, atol=1e-4)
 
 def test_catboost_regression_interactions():
     catboost = pytest.importorskip("catboost")

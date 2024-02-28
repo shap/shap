@@ -395,12 +395,13 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array or list
+        array
             For models with a single output, this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
+            (# samples x # features).
+            For models with vector outputs, the matrix shape is (# samples x # features x # outputs).
+            Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored in the ``expected_value``
-            attribute of the explainer when it is constant). For models with vector outputs, this returns
-            a list of such matrices, one for each output.
+            attribute of the explainer when it is constant).
         """
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -495,6 +496,9 @@ class TreeExplainer(Explainer):
         if check_additivity and self.model.model_output == "raw":
             self.assert_additivity(out, self.model.predict(X))
 
+        # This statements handles the case of multiple outputs
+        # e.g. a multi-class classification problem, multi-target regression problem
+        # in this case the output shape corresponds to [num_samples, num_features, num_outputs]
         if isinstance(out, list):
             out = np.stack(out, axis=-1)
         return out
