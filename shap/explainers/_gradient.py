@@ -342,12 +342,21 @@ class _TFGradient(Explainer):
 
             output_phis.append(phis[0] if not self.multi_input else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
-        if not self.multi_output:
-            if return_variances:
-                return output_phis[0], output_phi_vars[0]
+
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = np.stack([np.stack(phis, axis=-1) for phis in output_phis], axis=-1)
+            # multiple outputs case
             else:
-                return output_phis[0]
-        elif ranked_outputs is not None:
+                output_phis = np.stack(output_phis, axis=-1)
+        # if not self.multi_output:
+        #     if return_variances:
+        #         return output_phis[0], output_phi_vars[0]
+        #     else:
+        #         return output_phis[0]
+        # elif ranked_outputs is not None:
+        if ranked_outputs is not None:
             if return_variances:
                 return output_phis, output_phi_vars, model_output_ranks
             else:
@@ -575,12 +584,21 @@ class _PyTorchGradient(Explainer):
             self.input_handle = None
             # note: the target input attribute is deleted in the loop
 
-        if not self.multi_output:
-            if return_variances:
-                return output_phis[0], output_phi_vars[0]
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = np.stack([np.stack(phis, axis=-1) for phis in output_phis], axis=-1)
+            # multiple outputs case
             else:
-                return output_phis[0]
-        elif ranked_outputs is not None:
+                output_phis = np.stack(output_phis, axis=-1)
+
+        # if not self.multi_output:
+        #     if return_variances:
+        #         return output_phis[0], output_phi_vars[0]
+        #     else:
+        #         return output_phis[0]
+        # elif ranked_outputs is not None:
+        if ranked_outputs is not None:
             if return_variances:
                 return output_phis, output_phi_vars, model_output_ranks
             else:

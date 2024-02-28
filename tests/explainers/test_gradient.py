@@ -97,13 +97,10 @@ def test_tf_keras_mnist_cnn(random_seed):
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
-    diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
+    outputs = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()
-    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
-    sess.close()
+    sums = shap_values.sum((1, 2, 3))
+    assert np.allclose(sums + e.expected_value, outputs, atol=1e-5)
 
 
 def test_pytorch_mnist_cnn():
