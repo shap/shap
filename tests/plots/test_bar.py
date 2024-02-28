@@ -80,3 +80,37 @@ def test_simple_bar_with_cohorts_dict():
     )
     plt.tight_layout()
     return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_simple_bar_local_feature_importance(explainer):
+    """Bar plot with single row of SHAP values"""
+    shap_values = explainer(explainer.data)
+    fig = plt.figure()
+    shap.plots.bar(shap_values[0], show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_simple_bar_with_clustering(explainer):
+    """Bar plot with clustering"""
+    shap_values = explainer(explainer.data)
+    clustering = shap.utils.hclust(explainer.data, metric="cosine")
+    fig = plt.figure()
+    shap.plots.bar(shap_values, clustering=clustering, show=False)
+    plt.tight_layout()
+    return fig
+
+
+def test_bar_raises_error_for_invalid_clustering(explainer):
+    shap_values = explainer(explainer.data)
+    clustering = np.array([1,2,3])
+    with pytest.raises(TypeError, match="does not seem to be a partition tree"):
+        shap.plots.bar(shap_values, clustering=clustering, show=False)
+
+
+def test_bar_raises_error_for_empty_explanation(explainer):
+    shap_values = explainer(explainer.data)
+    with pytest.raises(ValueError, match="The passed Explanation is empty"):
+        shap.plots.bar(shap_values[0:0], show=False)
