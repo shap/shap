@@ -423,10 +423,10 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(input_tensor) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        outputs = model(input_tensor).detach().cpu().numpy()
 
-    sums = shap_values.sum((0, 1, 2, 3))
-    assert np.allclose(sums, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
+    sums = shap_values.sum((1, 2, 3))
+    assert np.allclose(sums + e.expected_value, outputs, atol=1e-5), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -547,10 +547,10 @@ def test_pytorch_custom_nested_models(torch_device):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        diff = model(test_x).detach().cpu().numpy()
 
-    sums = shap_values.sum(axis=(0))
-    assert np.allclose(sums, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
+    sums = shap_values.sum(axis=(1))
+    assert np.allclose(sums + e.expected_value, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -640,10 +640,10 @@ def test_pytorch_single_output(torch_device):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        outputs = model(test_x).detach().cpu().numpy()
 
-    sums = shap_values.sum(axis=(0))
-    assert np.allclose(sums, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
+    sums = shap_values.sum(axis=(1))
+    assert np.allclose(sums + e.expected_value, outputs, atol=1e-5), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -735,17 +735,15 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     test_x1 = test_x1_tmp[:1].to(device)
     test_x2 = test_x2_tmp[:1].to(device)
 
-    # shap_values = e.shap_values([test_x1[:1], test_x2[:1]])
+    shap_values = e.shap_values([test_x1[:1], test_x2[:1]])
 
     model.eval()
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x1, test_x2[:1]) - model(*background)).detach().cpu().numpy().mean(0)
-    assert diff == 1
+        outputs = model(test_x1, test_x2[:1]).detach().cpu().numpy()
 
-    # import ipdb; ipdb.set_trace(context=10)
-    # sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
-    # d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    # assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    # the shap values have the shape (num_samples, num_features, num_inputs, num_outputs)
+    # so since we have just one output, we slice it out
+    sums = shap_values[:, :, :, 0].sum((1, 2))
+    assert np.allclose(sums + e.expected_value, outputs, atol=1e-4), "Sum of SHAP values does not match difference!"

@@ -219,10 +219,13 @@ class PyTorchDeep(Explainer):
             _check_additivity(self, model_output_values.cpu(), output_phis)
 
         if isinstance(output_phis, list):
-            output_phis = np.stack(output_phis, axis=-1)
-        if not self.multi_output:
-            return output_phis[0]
-        elif ranked_outputs is not None:
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = np.stack([np.stack(phis, axis=-1) for phis in output_phis], axis=-1)
+            # multiple outputs case
+            else:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             return output_phis, model_output_ranks
         else:
             return output_phis
