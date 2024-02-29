@@ -50,7 +50,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     color_bar : bool
         Whether to draw the color bar (legend).
 
-    s : int
+    s : float
         What size to make the markers. For further information see `s` in ``matplotlib.pyplot.scatter``.
 
     plot_size : "auto" (default), float, (float, float), or None
