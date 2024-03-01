@@ -15,7 +15,6 @@ from ..explainers.tf_utils import (
 
 keras = None
 tf = None
-torch = None
 
 
 class GradientExplainer(Explainer):
@@ -381,12 +380,9 @@ class _PyTorchGradient(Explainer):
 
     def __init__(self, model, data, batch_size=50, local_smoothing=0):
 
-        # try and import pytorch
-        global torch
-        if torch is None:
-            import torch
-            if version.parse(torch.__version__) < version.parse("0.4"):
-                warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
+        import torch
+        if version.parse(torch.__version__) < version.parse("0.4"):
+            warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
         # check if we have multiple inputs
         self.multi_input = False
@@ -439,6 +435,7 @@ class _PyTorchGradient(Explainer):
             self.gradients = [None for i in range(outputs.shape[1])]
 
     def gradient(self, idx, inputs):
+        import torch
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
@@ -469,6 +466,7 @@ class _PyTorchGradient(Explainer):
 
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
 
+        import torch
         # X ~ self.model_input
         # X_data ~ self.data
 
