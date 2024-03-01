@@ -35,7 +35,6 @@ allow_to_fail = [
 ]
 
 allow_to_timeout = [
-    Path("api_examples/plots/bar.ipynb"),
     Path("api_examples/plots/beeswarm.ipynb"),
     Path("api_examples/plots/image.ipynb"),
     Path("api_examples/plots/scatter.ipynb"),
