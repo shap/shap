@@ -68,7 +68,7 @@ test = [
   "pyod",
   "transformers",
   "protobuf==3.20.3",  # See GH #3046
-  "torch",
+  "torch==2.2.0",
   "torchvision",
   "tensorflow;python_version<'3.12'",  # FIXME: pending py3.12 support
   "sentencepiece",
