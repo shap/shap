@@ -407,12 +407,12 @@ class LinearExplainer(Explainer):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
                 else:
-                    return [np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])], axis=-1)
             else:
                 if len(self.coef.shape) == 1:
                     return np.array(X - self.mean) * self.coef
                 else:
-                    return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])], axis=-1)
 
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))
