@@ -33,7 +33,7 @@ jobs:
           - os: windows-latest
             python-version: "3.11"
             extras: "test"
-          - os: macos-11
+          - os: macos-latest
             python-version: "3.11"
             extras: "test-core"  # FIXME: the full set of tests should pass
           # Run tests with only the core dependencies, to ensure we
