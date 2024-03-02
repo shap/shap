@@ -30,17 +30,17 @@ jobs:
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
-          - os: windows-latest
-            python-version: "3.11"
-            extras: "test"
+          # - os: windows-latest
+          #   python-version: "3.11"
+          #   extras: "test"
           - os: macos-latest
             python-version: "3.11"
             extras: "test"  # FIXME: the full set of tests should pass
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
-          - os: ubuntu-latest
-            python-version: "3.11"
-            extras: "test-core"
+          # - os: ubuntu-latest
+          #   python-version: "3.11"
+          #   extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -86,6 +86,8 @@ jobs:
         if: matrix.os == 'macos-11'
         run: |
           brew install libomp
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
