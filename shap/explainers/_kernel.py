@@ -223,15 +223,17 @@ class KernelExplainer(Explainer):
             # vector-output
             s = explanation.shape
             if len(s) == 2:
-                outs = [np.zeros(s[0]) for j in range(s[1])]
+                outs = [np.zeros(s[0]) for _ in range(s[1])]
                 for j in range(s[1]):
                     outs[j] = explanation[:, j]
+                outs = np.stack(outs, axis=-1)
                 return outs
 
             # single-output
             else:
                 out = np.zeros(s[0])
                 out[:] = explanation
+                out = np.stack(out, axis=-1)
                 return out
 
         # explain the whole dataset

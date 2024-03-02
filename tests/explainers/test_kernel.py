@@ -75,7 +75,15 @@ def test_kernel_shap_with_call_method():
     shap_values = explainer(X_test)
 
     # plot the SHAP values for the Versicolour output of the first instance
-    shap.force_plot(shap_values[0][:,1])
+    shap.force_plot(shap_values[0, :, 1])
+
+    outputs = svm.predict_proba(X_test)
+    sigm = lambda x: np.exp(x) / (1 + np.exp(x))  # noqa: E731
+    # Call sigm since we use logit link
+    assert np.allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
+
+    shap_values = explainer.shap_values(X_test)
+    assert np.allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
 def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
