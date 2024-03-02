@@ -196,8 +196,8 @@ class _TFGradient(Explainer):
                 if 'keras_learning_phase' in op.name:
                     self.keras_phase_placeholder = op.outputs[0]
 
-        # save the expected output of the model (commented out because self.data could be huge for GradientExpliner)
-        #self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+        # save the expected output of the model (commented out because self.data could be huge for GradientExplainer)
+        # self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         if not self.multi_output:
             self.gradients = [None]
@@ -269,6 +269,7 @@ class _TFGradient(Explainer):
                 model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
+        # self.expected_value = model_output_values.mean(axis=tuple(range(len(model_output_values.shape) - 1)))
 
         # compute the attributions
         output_phis = []
@@ -342,12 +343,16 @@ class _TFGradient(Explainer):
 
             output_phis.append(phis[0] if not self.multi_input else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
-        if not self.multi_output:
-            if return_variances:
-                return output_phis[0], output_phi_vars[0]
+
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
             else:
-                return output_phis[0]
-        elif ranked_outputs is not None:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             if return_variances:
                 return output_phis, output_phi_vars, model_output_ranks
             else:
@@ -436,7 +441,7 @@ class _PyTorchGradient(Explainer):
         if not self.multi_output:
             self.gradients = [None]
         else:
-            self.gradients = [None for i in range(outputs.shape[1])]
+            self.gradients = [None for _ in range(outputs.shape[1])]
 
     def gradient(self, idx, inputs):
         self.model.zero_grad()
@@ -496,6 +501,7 @@ class _PyTorchGradient(Explainer):
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *
                                   torch.arange(0, len(self.gradients)).int())
+        # self.expected_value = model_output_values.mean(axis=(i for i in range(len(model_output_values.shape) - 1)))
 
         # if a cleanup happened, we need to add the handles back
         # this allows shap_values to be called multiple times, but the model to be
@@ -575,12 +581,16 @@ class _PyTorchGradient(Explainer):
             self.input_handle = None
             # note: the target input attribute is deleted in the loop
 
-        if not self.multi_output:
-            if return_variances:
-                return output_phis[0], output_phi_vars[0]
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
             else:
-                return output_phis[0]
-        elif ranked_outputs is not None:
+                output_phis = np.stack(output_phis, axis=-1)
+
+        if ranked_outputs is not None:
             if return_variances:
                 return output_phis, output_phi_vars, model_output_ranks
             else:

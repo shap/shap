@@ -210,3 +210,17 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
 
     explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation=feature_pertubation)
     assert isinstance(explainer.masker, masker)
+
+
+def test_interventional_multi_regression():
+    ridge = pytest.importorskip('sklearn.linear_model').Ridge
+
+    # train linear model
+    X, y = shap.datasets.linnerud(n_points=100)
+    model = ridge(0.1)
+    model.fit(X, y)
+    outputs = model.predict(X)
+
+    explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation="interventional")
+    shap_values = explainer.shap_values(X)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, outputs, atol=1e-6)
