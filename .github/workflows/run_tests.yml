@@ -35,7 +35,7 @@ jobs:
             extras: "test"
           - os: macos-latest
             python-version: "3.11"
-            extras: "test-core"  # FIXME: the full set of tests should pass
+            extras: "test"  # FIXME: the full set of tests should pass
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
