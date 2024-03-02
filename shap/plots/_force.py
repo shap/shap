@@ -120,12 +120,12 @@ def force(
             base_value = base_value[0]
 
     if isinstance(base_value, (np.ndarray, list)):
-        if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
+        if not isinstance(shap_values, (list, np.ndarray)) or len(shap_values) != len(base_value):
             emsg = (
                 "In v0.20, force plot now requires the base value as the first parameter! "
                 "Try shap.plots.force(explainer.expected_value, shap_values) or "
                 "for multi-output models try "
-                "shap.plots.force(explainer.expected_value[0], shap_values[0])."
+                "shap.plots.force(explainer.expected_value[0], shap_values[..., 0])."
             )
             raise TypeError(emsg)
 

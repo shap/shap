@@ -236,7 +236,6 @@ class KernelExplainer(Explainer):
             else:
                 out = np.zeros(s[0])
                 out[:] = explanation
-                out = np.stack(out, axis=-1)
                 return out
 
         # explain the whole dataset
@@ -265,7 +264,7 @@ class KernelExplainer(Explainer):
                 out = np.zeros((X.shape[0], s[0]))
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
-                return np.stack(out, axis=-1)
+                return out
 
         else:
             emsg = "Instance must have 1 or 2 dimensions!"

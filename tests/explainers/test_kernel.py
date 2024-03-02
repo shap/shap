@@ -37,7 +37,8 @@ def test_front_page_model_agnostic():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
+    # this is a multi output model so we index to get the zero-th output (Setosa)
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
 
 def test_front_page_model_agnostic_rank():
     """ Test the rank regularized explanation of the ReadMe example.
@@ -56,7 +57,7 @@ def test_front_page_model_agnostic_rank():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
 
 def test_kernel_shap_with_call_method():
     """ Test the __call__ method of the Kernel class
@@ -84,7 +85,7 @@ def test_kernel_shap_with_call_method():
     assert np.allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
     shap_values = explainer.shap_values(X_test)
-    assert np.allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
+    assert np.allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
 
 def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
