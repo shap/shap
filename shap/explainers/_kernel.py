@@ -189,8 +189,11 @@ class KernelExplainer(Explainer):
         Returns
         -------
         array or list
-            For models with a single output this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
+            The return type and shape depend on the number of model inputs and outputs:
+              - one input one output: matrix of shape (#num_samples, *X.shape[1:]).
+              - one input multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs)
+              - multiple inputs one or more outputs: list of matrices, with shapes of one of the above.
+            Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
@@ -254,6 +257,7 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
+                outs = np.stack(outs, axis=-1)
                 return outs
 
             # single-output
@@ -261,7 +265,7 @@ class KernelExplainer(Explainer):
                 out = np.zeros((X.shape[0], s[0]))
                 for i in range(X.shape[0]):
                     out[i] = explanations[i]
-                return out
+                return np.stack(out, axis=-1)
 
         else:
             emsg = "Instance must have 1 or 2 dimensions!"

@@ -113,11 +113,11 @@ class DeepExplainer(Explainer):
 
         Returns
         -------
-        array
-            For a models with a single output this returns a tensor of SHAP values with the same shape
-            as X. For a model with multiple outputs this returns a tensor where the last dimension
-            corresponds to the number of outputs and all previous dimensions have the same shape as X:
-            (*X.shape, #num_outputs).
+        array or list
+            The return type and shape depend on the number of model inputs and outputs:
+              - one input one output: matrix of shape (#num_samples, *X.shape[1:]).
+              - one input multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs)
+              - multiple inputs one or more outputs: list of matrices, with shapes of one of the above.
             If ranked_outputs is None then this list of tensors matches
             the number of model outputs. If ranked_outputs is a positive integer a pair is returned
             (shap_values, indexes), where shap_values is a list of tensors with a length of

@@ -396,9 +396,9 @@ class TreeExplainer(Explainer):
         Returns
         -------
         array
-            For models with a single output, this returns a matrix of SHAP values
-            (# samples x # features).
-            For models with vector outputs, the matrix shape is (# samples x # features x # outputs).
+            Returns a matrix. The shape depends on the number of model outputs:
+              - one output: matrix of shape (#num_samples, *X.shape[1:]).
+              - multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs).
             Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored in the ``expected_value``
             attribute of the explainer when it is constant).

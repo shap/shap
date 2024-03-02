@@ -69,6 +69,7 @@ def test_kernel_shap_with_call_method():
     X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     svm = sklearn.svm.SVC(kernel='rbf', probability=True)
     svm.fit(X_train, Y_train)
+    # outputs = svm.predict_proba(X_test)
 
     # use Kernel SHAP to explain test set predictions
     explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
@@ -238,7 +239,7 @@ def test_linear(random_seed):
     # corollary 1
     expected = (x - x.mean(0)) * np.array([1.0, 2.0, 0.0])
 
-    np.testing.assert_allclose(expected, phi, rtol=1e-3)
+    assert np.allclose(expected, phi, rtol=1e-3)
 
 
 def test_non_numeric():
