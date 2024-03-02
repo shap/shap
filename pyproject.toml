@@ -68,7 +68,7 @@ test = [
   "pyod",
   "transformers",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin'",
+  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
   "torch; sys_platform != 'darwin'",
   "torchvision",
   "tensorflow;python_version<'3.12'",  # FIXME: pending py3.12 support
