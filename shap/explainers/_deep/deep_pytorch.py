@@ -218,7 +218,8 @@ class PyTorchDeep(Explainer):
         if isinstance(output_phis, list):
             # in this case we have multiple inputs and potentially multiple outputs
             if isinstance(output_phis[0], list):
-                output_phis = np.stack([np.stack(phis, axis=-1) for phis in output_phis], axis=-1)
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
             # multiple outputs case
             else:
                 output_phis = np.stack(output_phis, axis=-1)

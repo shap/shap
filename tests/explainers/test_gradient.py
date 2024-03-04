@@ -127,7 +127,7 @@ def test_tf_multi_inputs_multi_outputs():
     # Generate random input data for input2 with shape (batch_size, 4)
     input2_data = np.random.rand(batch_size, 4)
 
-    predicted = model([input1_data, input2_data]).numpy()
+    predicted = model.predict([input1_data, input2_data])
     explainer = shap.GradientExplainer(model, [input1_data, input2_data])
     shap_values = explainer.shap_values([input1_data, input2_data])
     np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
