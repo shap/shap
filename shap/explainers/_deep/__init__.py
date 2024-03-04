@@ -115,9 +115,11 @@ class DeepExplainer(Explainer):
         -------
         array or list
             The return type and shape depend on the number of model inputs and outputs:
-              - one input one output: matrix of shape (#num_samples, *X.shape[1:]).
-              - one input multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs)
-              - multiple inputs one or more outputs: list of matrices, with shapes of one of the above.
+
+            * one input, one output: matrix of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: matrix of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs, one or more outputs: list of matrices, with shapes of one of the above.
+
             If ranked_outputs is None then this list of tensors matches
             the number of model outputs. If ranked_outputs is a positive integer a pair is returned
             (shap_values, indexes), where shap_values is a list of tensors with a length of
