@@ -23,10 +23,8 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
     ----------
     indexes: np.array
         The output location of the indexes we want shuffled. Note that len(indexes) should equal index_mask.sum().
-
     index_mask: np.array
         A bool mask of which indexes we want to include in the shuffled list.
-
     partition_tree: np.array
         The partition tree we should follow.
     """
@@ -140,12 +138,46 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     return dist
 
 def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
+    """Fit a hierarcical clustering model for features X relative to target variable y.
+
+    For more information on clutering methods see:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+
+    Parameters
+    ----------
+    X: np.array
+        Features to cluster
+    y: np.array | None
+        Target variable
+    linkage: str
+        Defines the method to calculate the distance between clusters. Must be
+        one of "single", "complete" or "average".
+    metric: str
+        Scipy distance metric or "xgboost_distances_r2".
+
+        * If "xgboost_distances_r2", estimate redundancy distances between
+          features X with respect to target variable y using
+          :func:`shap.utils.xgboost_distances_r2`.
+        * Otherwise, calculate distances between features using the given
+          distance metric.
+        * If ``auto`` (default), use ``xgboost_distances_r2`` if target variable
+          is provided, or else ``cosine`` distance metric.
+    random_state: int
+        Numpy random state
+
+    Returns
+    -------
+    clustering: np.array
+        The hierarchical clustering encoded as a linkage matrix.
+    """
     if isinstance(X, pd.DataFrame):
         X = X.values
 
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
+        else:
+            metric = "cosine"
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
