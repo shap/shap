@@ -281,15 +281,29 @@ def test_non_numeric():
     assert not shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('4Q2005'))
 
 
-def test_kernel_multiple_inputs():
+def test_kernel_multiclass_single_row():
     """ Check a multi-input scenario.
     """
     X, y = shap.datasets.iris()
 
     lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
     lr.fit(X, y)
-    pred = lr.predict_proba(X)
+    pred = lr.predict_proba(X.iloc[[0], :])
 
     explainer = shap.KernelExplainer(lr.predict_proba, X)
-    shap_values = explainer(X)
+    shap_values = explainer(X.iloc[0, :])
+    np.testing.assert_allclose(shap_values.values.sum(0) + explainer.expected_value, pred.squeeze(), atol=1e-04)
+
+
+def test_kernel_multiclass_multiple_rows():
+    """ Check a multi-input scenario.
+    """
+    X, y = shap.datasets.iris()
+
+    lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
+    lr.fit(X, y)
+    pred = lr.predict_proba(X.iloc[[0, 1], :])
+
+    explainer = shap.KernelExplainer(lr.predict_proba, X)
+    shap_values = explainer(X.iloc[[0, 1], :])
     np.testing.assert_allclose(shap_values.values.sum(1) + explainer.expected_value, pred, atol=1e-04)
