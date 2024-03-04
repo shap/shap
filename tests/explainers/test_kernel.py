@@ -279,3 +279,17 @@ def test_non_numeric():
     assert shap.KernelExplainer.not_equal(pd.Timestamp('2017-01-01T12'), pd.Timestamp('2017-01-01T13'))
     assert shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('3Q2005'))
     assert not shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('4Q2005'))
+
+
+def test_kernel_multiple_inputs():
+    """ Check a multi-input scenario.
+    """
+    X, y = shap.datasets.iris()
+
+    lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
+    lr.fit(X, y)
+    pred = lr.predict_proba(X)
+
+    explainer = shap.KernelExplainer(lr.predict_proba, X)
+    shap_values = explainer(X)
+    np.testing.assert_allclose(shap_values.values.sum(1) + explainer.expected_value, pred, atol=1e-04)
