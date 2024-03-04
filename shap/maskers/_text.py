@@ -112,9 +112,11 @@ class Text(Masker):
         self._update_s_cache(s)
 
         # if we have a fixed prefix or suffix then we need to grow the mask to account for that
-        if self.keep_prefix > 0 or self.keep_suffix > 0:
+        if self.keep_prefix > 0:
             mask = mask.copy()
             mask[:self.keep_prefix] = True
+        if self.keep_suffix > 0:
+            mask = mask.copy()
             mask[-self.keep_suffix:] = True
 
         if self.output_type == "string":
