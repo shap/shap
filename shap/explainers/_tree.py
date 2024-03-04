@@ -74,11 +74,16 @@ def _xgboost_cat_unsupported(model):
 
 
 class TreeExplainer(Explainer):
-    """ Uses Tree SHAP algorithms to explain the output of ensemble tree models.
+    """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
-    Tree SHAP is a fast and exact method to estimate SHAP values for tree models and ensembles of trees,
-    under several different possible assumptions about feature dependence. It depends on fast C++
-    implementations either inside an external model package or in the local compiled C extension.
+    Tree SHAP is a fast and exact method to estimate SHAP values for tree models
+    and ensembles of trees, under several different possible assumptions about
+    feature dependence. It depends on fast C++ implementations either inside an
+    external model package or in the local compiled C extension.
+
+    Examples
+    --------
+    See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
     """
 
     def __init__(
@@ -89,53 +94,68 @@ class TreeExplainer(Explainer):
         feature_perturbation="interventional",
         feature_names=None,
         approximate=False,
-        **deprecated_options,
+        # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
+        link=None,
+        linearize_link=None,
     ):
         """ Build a new Tree explainer for the passed model.
 
         Parameters
         ----------
         model : model object
-            The tree based machine learning model that we want to explain. XGBoost, LightGBM, CatBoost, Pyspark
-            and most tree-based scikit-learn models are supported.
+            The tree based machine learning model that we want to explain.
+            XGBoost, LightGBM, CatBoost, Pyspark and most tree-based
+            scikit-learn models are supported.
 
         data : numpy.array or pandas.DataFrame
-            The background dataset to use for integrating out features. This argument is optional when
-            ``feature_perturbation="tree_path_dependent"``, since in that case we can use the number of training
-            samples that went down each tree path as our background dataset (this is recorded in the ``model``
+            The background dataset to use for integrating out features.
+
+            This argument is optional when
+            ``feature_perturbation="tree_path_dependent"``, since in that case
+            we can use the number of training samples that went down each tree
+            path as our background dataset (this is recorded in the ``model``
             object).
 
         feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
-            Since SHAP values rely on conditional expectations, we need to decide how to handle correlated
-            (or otherwise dependent) input features.
-            The "interventional" approach breaks the dependencies between features according to the rules
-            dictated by causal inference (Janzing et al. 2019). Note that the "interventional" option
-            requires a background dataset ``data``, and its runtime scales linearly with the size of the
-            background dataset you use. Anywhere from 100 to 1000 random background samples are good
-            sizes to use.
-            The "tree_path_dependent" approach is to just follow the trees and use the number of training
-            examples that went down each leaf to represent the background distribution. This approach
-            does not require a background dataset, and so is used by default when no background dataset
-            is provided.
+            Since SHAP values rely on conditional expectations, we need to
+            decide how to handle correlated (or otherwise dependent) input
+            features.
+
+            The "interventional" approach breaks the dependencies between
+            features according to the rules dictated by causal inference
+            (Janzing et al. 2019). Note that the "interventional" option
+            requires a background dataset ``data``, and its runtime scales
+            linearly with the size of the background dataset you use. Anywhere
+            from 100 to 1000 random background samples are good sizes to use.
+
+            The "tree_path_dependent" approach is to just follow the trees and
+            use the number of training examples that went down each leaf to
+            represent the background distribution. This approach does not
+            require a background dataset, and so is used by default when no
+            background dataset is provided.
 
         model_output : "raw", "probability", "log_loss", or model method name
             What output of the model should be explained.
-            If "raw", then we explain the raw output of the trees, which varies by model. For regression models,
-            "raw" is the standard output. For binary classification in XGBoost, this is the log odds ratio.
-            If ``model_output`` is the name of a supported prediction method on the ``model`` object, then we
-            explain the output of that model method name. For example, ``model_output="predict_proba"``
-            explains the result of calling ``model.predict_proba``.
-            If "probability", then we explain the output of the model transformed into probability space
-            (note that this means the SHAP values now sum to the probability output of the model).
-            If "log_loss", then we explain the log base e of the model loss function, so that the SHAP values
-            sum up to the log loss of the model for each sample. This is helpful for breaking down model
-            performance by feature.
-            Currently the "probability" and "log_loss" options are only supported when
-            ``feature_perturbation="interventional"``.
 
-        Examples
-        --------
-        See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
+            * If "raw", then we explain the raw output of the trees, which
+              varies by model. For regression models, "raw" is the standard
+              output. For binary classification in XGBoost, this is the log odds
+              ratio.
+            * If "probability", then we explain the output of the model
+              transformed into probability space (note that this means the SHAP
+              values now sum to the probability output of the model).
+            * If "log_loss", then we explain the natural logarithm of the model
+              loss function, so that the SHAP values sum up to the log loss of
+              the model for each sample. This is helpful for breaking down model
+              performance by feature.
+            * If ``model_output`` is the name of a supported prediction method
+              on the ``model`` object, then we explain the output of that model
+              method name. For example, ``model_output="predict_proba"``
+              explains the result of calling ``model.predict_proba``.
+
+            Currently the "probability" and "log_loss" options are only
+            supported when ``feature_perturbation="interventional"``.
+
         """
         if feature_names is not None:
             self.data_feature_names = feature_names
@@ -152,28 +172,6 @@ class TreeExplainer(Explainer):
 
         if getattr(self.masker, "clustering", None) is not None:
             raise ExplainerError("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
-
-        # check for deprecated options
-        if model_output == "margin":
-            warnings.warn("model_output = \"margin\" has been renamed to model_output = \"raw\"")
-            model_output = "raw"
-        if model_output == "logloss":
-            warnings.warn("model_output = \"logloss\" has been renamed to model_output = \"log_loss\"")
-            model_output = "log_loss"
-        if "feature_dependence" in deprecated_options:
-            dep_val = deprecated_options["feature_dependence"]
-            if dep_val == "independent" and feature_perturbation == "interventional":
-                warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
-                    " = \"interventional\"! See GitHub issue #882.")
-            elif feature_perturbation != "interventional":
-                warnings.warn("feature_dependence = \"independent\" has been renamed to feature_perturbation" \
-                    " = \"interventional\", you can't supply both options! See GitHub issue #882.")
-            if dep_val == "tree_path_dependent" and feature_perturbation == "interventional":
-                raise ValueError("The feature_dependence option has been renamed to feature_perturbation! " \
-                    "Please update the option name before calling TreeExplainer. See GitHub issue #882.")
-        if feature_perturbation == "independent":
-            raise InvalidFeaturePerturbationError("feature_perturbation = \"independent\" is not a valid option value, please use " \
-                "feature_perturbation = \"interventional\" instead. See GitHub issue #882.")
 
         if isinstance(data, pd.DataFrame):
             self.data = data.values

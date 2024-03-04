@@ -60,3 +60,18 @@ def test_wrapping_for_topk_lm_model():
     explainer = shap.Explainer(wrapped_model, masker, seed=1)
 
     assert shap.utils.safe_isinstance(explainer.masker, "shap.maskers.FixedComposite")
+
+def test_explainer_xgboost():
+    """Check the explainer class wraps a TreeExplainer as expected"""
+    # train an XGBoost model
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.california(n_points=500)
+    model = xgboost.XGBRegressor().fit(X, y)
+
+    # explain the model's predictions
+    explainer = shap.Explainer(model)
+    explanation = explainer(X)
+
+    # check the properties of Explanation object
+    assert explanation.values.shape == (*X.shape,)
+    assert explanation.base_values.shape == (len(X),)
