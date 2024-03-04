@@ -585,7 +585,9 @@ class TreeExplainer(Explainer):
             # multi-outputs
             if len(phi.shape) == 4:
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
-                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+                # phi is given as [#num_observations, #num_classes, #features, #features]
+                # slice out the expected values, then move the classes to the last dimension
+                return np.swapaxes(phi[:, :, :-1, :-1], axis1=1, axis2=3)
             # regression and binary classification case
             else:
                 self.expected_value = phi[0, -1, -1]

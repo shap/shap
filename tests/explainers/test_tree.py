@@ -1286,9 +1286,15 @@ class TestExplainerXGBoost:
         assert explanation.base_values.shape == (len(X), num_classes)
 
         # check that SHAP values sum to model output
-        assert np.allclose(
+        np.testing.assert_allclose(
             explanation.values.sum(1) + explanation.base_values,
-            predicted,
+            predicted, atol=1e-4
+        )
+
+        int_explanation = explainer(X, interactions=True)
+        np.testing.assert_allclose(
+            int_explanation.values.sum((1, 2)) + explanation.base_values,
+            predicted, atol=1e-4
         )
 
         # ensure plot works for first class
