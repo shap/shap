@@ -6,18 +6,13 @@ from packaging import version
 from .._explainer import Explainer
 from .deep_utils import _check_additivity
 
-torch = None
-
 
 class PyTorchDeep(Explainer):
 
     def __init__(self, model, data):
-        # try and import pytorch
-        global torch
-        if torch is None:
-            import torch
-            if version.parse(torch.__version__) < version.parse("0.4"):
-                warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
+        import torch
+        if version.parse(torch.__version__) < version.parse("0.4"):
+            warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
         # check if we have multiple inputs
         self.multi_input = False
@@ -102,6 +97,7 @@ class PyTorchDeep(Explainer):
                     pass
 
     def gradient(self, idx, inputs):
+        import torch
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
@@ -133,6 +129,7 @@ class PyTorchDeep(Explainer):
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
+        import torch
         # X ~ self.model_input
         # X_data ~ self.data
 
@@ -247,6 +244,7 @@ def add_interim_values(module, input, output):
     """The forward hook used to save interim tensors, detached
     from the graph. Used to calculate the multipliers
     """
+    import torch
     try:
         del module.x
     except AttributeError:
@@ -297,6 +295,7 @@ def passthrough(module, grad_input, grad_output):
 
 
 def maxpool(module, grad_input, grad_output):
+    import torch
     pool_to_unpool = {
         'MaxPool1d': torch.nn.functional.max_unpool1d,
         'MaxPool2d': torch.nn.functional.max_unpool2d,
@@ -336,6 +335,7 @@ def linear_1d(module, grad_input, grad_output):
 
 
 def nonlinear_1d(module, grad_input, grad_output):
+    import torch
     delta_out = module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2):]
 
     delta_in = module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2):]

@@ -1,12 +1,7 @@
 import numpy as np
 
 from .._serializable import Deserializer, Serializable, Serializer
-from ..utils import record_import_error, safe_isinstance
-
-try:
-    import torch  # noqa: F401
-except ImportError as e:
-    record_import_error("torch", "torch could not be imported!", e)
+from ..utils import safe_isinstance
 
 
 class Model(Serializable):

@@ -11,11 +11,6 @@ from ..utils._exceptions import DimensionError
 from ._masker import Masker
 
 try:
-    import torch  # noqa: F401
-except ImportError as e:
-    record_import_error("torch", "torch could not be imported!", e)
-
-try:
     import cv2
 except ImportError as e:
     record_import_error("cv2", "cv2 could not be imported!", e)
