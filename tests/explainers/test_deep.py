@@ -282,6 +282,32 @@ def test_tf_keras_imdb_lstm(random_seed):
     assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
+def test_tf_multi_inputs_multi_outputs():
+    tf = pytest.importorskip('tensorflow')
+    input1 = tf.keras.layers.Input(shape=(3,))
+    input2 = tf.keras.layers.Input(shape=(4,))
+
+    # Concatenate input layers
+    concatenated = tf.keras.layers.concatenate([input1, input2])
+
+    # Dense layers
+    x = tf.keras.layers.Dense(16, activation='relu')(concatenated)
+
+    # Output layer
+    output = tf.keras.layers.Dense(3, activation='softmax')(x)
+    model = tf.keras.models.Model(inputs=[input1, input2], outputs=output)
+    batch_size = 32
+    # Generate random input data for input1 with shape (batch_size, 3)
+    input1_data = np.random.rand(batch_size, 3)
+
+    # Generate random input data for input2 with shape (batch_size, 4)
+    input2_data = np.random.rand(batch_size, 4)
+
+    predicted = model([input1_data, input2_data]).numpy()
+    explainer = shap.DeepExplainer(model, [input1_data, input2_data])
+    shap_values = explainer.shap_values([input1_data, input2_data])
+    np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-5)
+
 #######################
 # Torch related tests #
 #######################
