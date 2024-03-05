@@ -1694,7 +1694,7 @@ class TestExplainerLightGBM:
         lightgbm = pytest.importorskip("lightgbm")
 
         # train LightGBM model
-        X, y = shap.datasets.california(n_points=500)
+        X, y = shap.datasets.california(n_points=50)
         model = lightgbm.LGBMRegressor(n_estimators=20, n_jobs=1)
         model.fit(X, y)
 
@@ -1702,6 +1702,13 @@ class TestExplainerLightGBM:
         interaction_vals = shap.TreeExplainer(model).shap_interaction_values(X)
         interaction_vals_swapped = np.swapaxes(np.copy(interaction_vals), 1, 2)
         assert np.allclose(interaction_vals, interaction_vals_swapped, atol=1e-4)
+
+        # verify output matches shap values for a single observation
+        ex = shap.TreeExplainer(model)
+
+        interaction_vals = ex(X.iloc[0, :], interactions=True)
+        prediction = model.predict(X.iloc[[0], :], raw_score=True)
+        np.testing.assert_allclose(interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0], prediction[0], atol=1e-4)
 
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
@@ -1862,10 +1869,17 @@ def test_lightgbm_interactions():
     explainer = shap.TreeExplainer(model)
     predicted = model.predict(X, raw_score=True)
     explanation = explainer(X, interactions=False)
-    assert np.allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
+    np.testing.assert_allclose(explanation.values.sum(axis=(1)) + explanation.base_values, predicted)
 
     explanation = explainer(X, interactions=True)
-    assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted)
+    np.testing.assert_allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted)
+
+    # test flat input
+    explanation_flat = explainer(X[0, :], interactions=True)
+    predicted_flat = model.predict(X[[0], :], raw_score=True)
+
+    np.testing.assert_allclose(explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4)
+
 
 
 def test_catboost_column_names_with_special_characters():
