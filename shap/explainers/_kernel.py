@@ -600,16 +600,7 @@ class KernelExplainer(Explainer):
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
         elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):
-            import tensorflow as tf
-            if tf.__version__ >= "2.0.0":
-                with tf.compat.v1.Session() as sess:
-                    sess.run(tf.compat.v1.global_variables_initializer())
-                    modelOut = sess.run(modelOut)
-            else:
-                # this is untested
-                with tf.Session() as sess:
-                    sess.run(tf.global_variables_initializer())
-                    modelOut = sess.run(modelOut)
+            modelOut = self._convert_symbolic_tensor(modelOut)
 
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
