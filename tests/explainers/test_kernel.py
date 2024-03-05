@@ -274,6 +274,7 @@ def test_non_numeric():
 def test_kernel_explainer_with_tensors():
     # GH 3492
     tf = pytest.importorskip('tensorflow')
+    tf.compat.v1.disable_eager_execution()
 
     X, _ = sklearn.datasets.make_classification(100, 6)
     model = tf.keras.Sequential([

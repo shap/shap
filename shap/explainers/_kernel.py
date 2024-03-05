@@ -121,6 +121,8 @@ class KernelExplainer(Explainer):
             model_null = np.squeeze(model_null.values)
         if safe_isinstance(model_null, "tensorflow.python.framework.ops.EagerTensor"):
             model_null = model_null.numpy()
+        elif safe_isinstance(model_null, "tensorflow.python.framework.ops.SymbolicTensor"):
+            model_null = self._convert_symbolic_tensor(model_null)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
 
@@ -133,6 +135,20 @@ class KernelExplainer(Explainer):
             self.expected_value = float(self.expected_value)
         else:
             self.D = self.fnull.shape[0]
+
+    @staticmethod
+    def _convert_symbolic_tensor(symbolic_tensor) -> np.ndarray:
+        import tensorflow as tf
+        if tf.__version__ >= "2.0.0":
+            with tf.compat.v1.Session() as sess:
+                sess.run(tf.compat.v1.global_variables_initializer())
+                tensor_as_np_array = sess.run(symbolic_tensor)
+        else:
+            # this is untested
+            with tf.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                tensor_as_np_array = sess.run(symbolic_tensor)
+        return tensor_as_np_array
 
     def __call__(self, X):
 
@@ -294,6 +310,8 @@ class KernelExplainer(Explainer):
             model_out = self.model.f(instance.x)
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values
+        elif safe_isinstance(model_out, "tensorflow.python.framework.ops.SymbolicTensor"):
+            model_out = self._convert_symbolic_tensor(model_out)
         self.fx = model_out[0]
 
         if not self.vector_out:
@@ -581,6 +599,18 @@ class KernelExplainer(Explainer):
         modelOut = self.model.f(data)
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
+        elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):
+            import tensorflow as tf
+            if tf.__version__ >= "2.0.0":
+                with tf.compat.v1.Session() as sess:
+                    sess.run(tf.compat.v1.global_variables_initializer())
+                    modelOut = sess.run(modelOut)
+            else:
+                # this is untested
+                with tf.Session() as sess:
+                    sess.run(tf.global_variables_initializer())
+                    modelOut = sess.run(modelOut)
+
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
