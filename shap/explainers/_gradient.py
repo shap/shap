@@ -142,7 +142,7 @@ class GradientExplainer(Explainer):
             ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
             were chosen as "top".
 
-           .. versionchanged:: 0.45.0.
+           .. versionchanged:: 0.45.0
            Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
         return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)

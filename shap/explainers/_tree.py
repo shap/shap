@@ -403,7 +403,7 @@ class TreeExplainer(Explainer):
             sample and the expected value of the model output (which is stored in the ``expected_value``
             attribute of the explainer when it is constant).
 
-           .. versionchanged:: 0.45.0.
+           .. versionchanged:: 0.45.0
            Return type for models with multiple outputs changed from list to np.ndarray.
         """
         # see if we have a default tree_limit in place.
@@ -550,15 +550,20 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For models with a single output, this returns a tensor of SHAP values
-            (# samples x # features x # features). The matrix (# features x # features) for each sample sums
+        array
+            Returns a matrix. The shape depends on the number of model outputs:
+                - one output: matrix of shape (#num_samples, #features, #features).
+                - multiple outputs: matrix of shape (#num_samples, #features, #features, #num_outputs).
+            The matrix (#num_samples, # features, # features) for each sample sums
             to the difference between the model output for that sample and the expected value of the model output
             (which is stored in the ``expected_value`` attribute of the explainer). Each row of this matrix sums to the
             SHAP value for that feature for that sample. The diagonal entries of the matrix represent the
             "main effect" of that feature on the prediction. The symmetric off-diagonal entries represent the
             interaction effects between all pairs of features for that sample.
             For models with vector outputs, this returns a list of tensors, one for each output.
+
+           .. versionchanged:: 0.45.0
+           Return type for models with multiple outputs changed from list to np.ndarray.
         """
 
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"

@@ -385,7 +385,7 @@ class LinearExplainer(Explainer):
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer).
 
-           .. versionchanged:: 0.45.0.
+           .. versionchanged:: 0.45.0
            Return type for models with multiple outputs changed from list to np.ndarray.
         """
 
