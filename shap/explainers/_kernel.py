@@ -659,7 +659,7 @@ class KernelExplainer(Explainer):
         #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
         # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
         # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
-        y = eyAdj2
+        y = np.asarray(eyAdj2)
         X = etmp
         WX = self.kernelWeights[:, None] * X
         try:

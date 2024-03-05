@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 import scipy.sparse
 import sklearn
 
@@ -269,3 +270,16 @@ def test_non_numeric():
     assert shap.KernelExplainer.not_equal(pd.Timestamp('2017-01-01T12'), pd.Timestamp('2017-01-01T13'))
     assert shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('3Q2005'))
     assert not shap.KernelExplainer.not_equal(pd.Period('4Q2005'), pd.Period('4Q2005'))
+
+def test_kernel_explainer_with_tensors():
+    # GH 3492
+    tf = pytest.importorskip('tensorflow')
+
+    X, _ = sklearn.datasets.make_classification(100, 6)
+    model = tf.keras.Sequential([
+            tf.keras.layers.Dense(10, input_shape=(6,), activation="relu"),
+            tf.keras.layers.Dense(1, activation="sigmoid"),
+        ])
+    model.compile(optimizer="adam", loss="binary_crossentropy")
+    explainer = shap.KernelExplainer(model, X)
+    explainer.shap_values(X[:1])
