@@ -384,6 +384,9 @@ class LinearExplainer(Explainer):
             (# samples x # features). Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer).
+
+           .. versionchanged:: 0.45.0.
+           Return type for models with multiple outputs changed from list to np.ndarray.
         """
 
         # convert dataframes

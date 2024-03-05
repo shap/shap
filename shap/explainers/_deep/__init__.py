@@ -125,5 +125,8 @@ class DeepExplainer(Explainer):
             (shap_values, indexes), where shap_values is a list of tensors with a length of
             ranked_outputs, and indexes is a matrix that indicates for each sample which output indexes
             were chosen as "top".
+
+           .. versionchanged:: 0.45.0.
+           Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
         return self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)

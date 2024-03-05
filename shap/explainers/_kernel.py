@@ -197,6 +197,9 @@ class KernelExplainer(Explainer):
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
+
+           .. versionchanged:: 0.45.0.
+           Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
 
         # convert dataframes

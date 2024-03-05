@@ -70,7 +70,6 @@ def test_kernel_shap_with_call_method():
     X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     svm = sklearn.svm.SVC(kernel='rbf', probability=True)
     svm.fit(X_train, Y_train)
-    # outputs = svm.predict_proba(X_test)
 
     # use Kernel SHAP to explain test set predictions
     explainer = shap.KernelExplainer(svm.predict_proba, X_train, nsamples=100, link="logit")
@@ -82,10 +81,10 @@ def test_kernel_shap_with_call_method():
     outputs = svm.predict_proba(X_test)
     sigm = lambda x: np.exp(x) / (1 + np.exp(x))  # noqa: E731
     # Call sigm since we use logit link
-    assert np.allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
+    assert np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
     shap_values = explainer.shap_values(X_test)
-    assert np.allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
+    assert np.testing.assert_allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
 
 def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
@@ -240,7 +239,7 @@ def test_linear(random_seed):
     # corollary 1
     expected = (x - x.mean(0)) * np.array([1.0, 2.0, 0.0])
 
-    assert np.allclose(expected, phi, rtol=1e-3)
+    assert np.testing.assert_allclose(expected, phi, rtol=1e-3)
 
 
 def test_non_numeric():

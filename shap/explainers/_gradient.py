@@ -141,6 +141,9 @@ class GradientExplainer(Explainer):
             (shap_values, indexes), where shap_values is a list of tensors with a length of
             ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
             were chosen as "top".
+
+           .. versionchanged:: 0.45.0.
+           Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
         return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)
 
@@ -270,7 +273,6 @@ class _TFGradient(Explainer):
                 model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
-        # self.expected_value = model_output_values.mean(axis=tuple(range(len(model_output_values.shape) - 1)))
 
         # compute the attributions
         output_phis = []

@@ -102,7 +102,7 @@ def test_tf_keras_mnist_cnn(random_seed):
     expected_value = background.mean(0)
 
     sums = shap_values.sum((1, 2, 3))
-    assert np.allclose(sums + expected_value, outputs, atol=1e-4)
+    np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-4)
     sess.close()
 
 
@@ -252,7 +252,7 @@ def test_pytorch_mnist_cnn():
                 outputs = model(test_x[:1]).detach().numpy()
                 expected_value = model(next_x[inds, :, :, :]).detach().numpy().mean(0)
             sums = shap_values.sum(axis=(1, 2, 3))
-            assert np.allclose(sums + expected_value, outputs, atol=1e-2)
+            assert np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
     print('Running test from interim layer')
     run_test(train_loader, test_loader, True)
@@ -295,12 +295,9 @@ def test_pytorch_multiple_inputs(random_seed):
     with torch.no_grad():
         outputs = model(x1, x2).detach().numpy()
         expected_value = model(*background).detach().numpy().mean(0)
-    # I guess we need to concat t[0][0] and t[0][1]
-    # can we somehow change the order of the stuff
-    # t = [[np.array([1, 2]), np.array([3, 4, 2])], [np.array([10, 20]), np.array([30, 40, 20])]]
 
     sums = np.sum([shap_values[i].sum(axis=1) for i in range(len(shap_values))], axis=0)
-    assert np.allclose(sums + expected_value, outputs, atol=1e-2)
+    assert np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
 
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
@@ -340,7 +337,7 @@ def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
         expected_value = model(*background).detach().numpy().mean(0)
 
     sums = np.sum([shap_values[i].sum(axis=1) for i in range(len(shap_values))], axis=0)
-    assert np.allclose(sums + expected_value, outputs, atol=1e-5)
+    assert np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-5)
 
 
 @pytest.mark.parametrize("input_type", ["numpy", "dataframe"])

@@ -402,6 +402,9 @@ class TreeExplainer(Explainer):
             Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored in the ``expected_value``
             attribute of the explainer when it is constant).
+
+           .. versionchanged:: 0.45.0.
+           Return type for models with multiple outputs changed from list to np.ndarray.
         """
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -425,6 +428,11 @@ class TreeExplainer(Explainer):
                     X, iteration_range=(0, n_iterations), pred_contribs=True,
                     approx_contribs=approximate, validate_features=False
                 )
+                if check_additivity and self.model.model_output == "raw":
+                    model_output_vals = self.model.original_model.predict(
+                        X, iteration_range=(0, n_iterations), output_margin=True,
+                        validate_features=False
+                    )
 
             elif self.model.model_type == "lightgbm":
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
