@@ -252,7 +252,7 @@ def test_pytorch_mnist_cnn():
                 outputs = model(test_x[:1]).detach().numpy()
                 expected_value = model(next_x[inds, :, :, :]).detach().numpy().mean(0)
             sums = shap_values.sum(axis=(1, 2, 3))
-            assert np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
+            np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
     print('Running test from interim layer')
     run_test(train_loader, test_loader, True)
@@ -297,7 +297,7 @@ def test_pytorch_multiple_inputs(random_seed):
         expected_value = model(*background).detach().numpy().mean(0)
 
     sums = np.sum([shap_values[i].sum(axis=1) for i in range(len(shap_values))], axis=0)
-    assert np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
+    np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
 
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
@@ -337,7 +337,7 @@ def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
         expected_value = model(*background).detach().numpy().mean(0)
 
     sums = np.sum([shap_values[i].sum(axis=1) for i in range(len(shap_values))], axis=0)
-    assert np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-5)
+    np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-5)
 
 
 @pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
