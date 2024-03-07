@@ -4,7 +4,7 @@ from .deep_tf import TFDeep
 
 
 class DeepExplainer(Explainer):
-    """ Meant to approximate SHAP values for deep learning models.
+    """Meant to approximate SHAP values for deep learning models.
 
     This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we
     approximate the conditional expectations of SHAP values using a selection of background samples.
@@ -17,6 +17,7 @@ class DeepExplainer(Explainer):
     Examples
     --------
     See :ref:`Deep Explainer Examples <deep_explainer_examples>`
+
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
@@ -51,8 +52,6 @@ class DeepExplainer(Explainer):
             should only something like 100 or 1000 random background samples, not the whole training
             dataset.
 
-        if framework == 'tensorflow':
-
         session : None or tensorflow.Session
             The TensorFlow session that has the model we are explaining. If None is passed then
             we do our best to find the right session, first looking for a keras session, then
@@ -64,6 +63,7 @@ class DeepExplainer(Explainer):
             batch norm or dropout. If None is passed then we look for tensors in the graph that look like
             learning phase flags (this works for Keras models). Note that we assume all the flags should
             have a value of False during predictions (and hence explanations).
+
         """
         # first, we need to find the framework
         if type(model) is tuple:
