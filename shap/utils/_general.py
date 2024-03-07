@@ -209,7 +209,7 @@ def safe_isinstance(obj, class_path_str):
         Example: `sklearn.ensemble.RandomForestRegressor`
 
     Returns
-    --------
+    -------
     bool: True if isinstance is true and the package exists, False otherwise
 
     """
