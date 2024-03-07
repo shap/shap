@@ -150,7 +150,7 @@ class KernelExplainer(Explainer):
                 tensor_as_np_array = sess.run(symbolic_tensor)
         return tensor_as_np_array
 
-    def __call__(self, X):
+    def __call__(self, X, l1_reg="auto"):
 
         start_time = time.time()
 
@@ -159,7 +159,7 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
-        v = self.shap_values(X)
+        v = self.shap_values(X, l1_reg=l1_reg)
         if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
 
@@ -191,13 +191,19 @@ class KernelExplainer(Explainer):
             `nsamples = 2 * X.shape[1] + 2048`.
 
         l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
-            The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). The auto option currently uses "aic" when less than 20% of the possible sample
-            space is enumerated, otherwise it uses no regularization. THE BEHAVIOR OF "auto" WILL CHANGE
-            in a future version to be based on num_features instead of AIC.
-            The "aic" and "bic" options use the AIC and BIC rules for regularization.
-            Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
-            "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
+            The l1 regularization to use for feature selection. The estimation
+            procedure is based on a debiased lasso.
+
+            * "num_features(int)" selects a fixed number of top features.
+            * "aic" and "bic" options use the AIC and BIC rules for regularization.
+            * Passing a float directly sets the "alpha" parameter of the
+              ``sklearn.linear_model.Lasso`` model used for feature selection.
+            * "auto" (default for now but deprecated): uses "aic" when less than
+              20% of the possible sample space is enumerated, otherwise it uses
+              no regularization.
+
+            Note: The default behaviour will change in a future version to be ``"num_features(10)"``.
+            Pass this value explicitly to silence the DeprecationWarning.
 
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
@@ -624,8 +630,9 @@ class KernelExplainer(Explainer):
         log.debug(f"{fraction_evaluated = }")
         if self.l1_reg == "auto":
             warnings.warn(
-                "l1_reg=\"auto\" is deprecated and in a future version the behavior will change from a " \
-                "conditional use of AIC to simply \"num_features(10)\"!",
+                "l1_reg='auto' is deprecated and in a future version the behavior will change from a "
+                "conditional use of AIC to simply a fixed number of top features. "
+                "Pass l1_reg='num_features(10)' to opt-in to the new default behaviour.",
                 DeprecationWarning
             )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
