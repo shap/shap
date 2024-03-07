@@ -137,6 +137,7 @@ select = [
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
+  # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
   # Recommended rules to disable when using ruff formatter:
