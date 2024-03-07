@@ -114,19 +114,21 @@ class DeepExplainer(Explainer):
         Returns
         -------
         array or list
-            The return type and shape depend on the number of model inputs and outputs:
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
+
+            The shape of the returned array depends on the number of model outputs:
 
             * one input, one output: matrix of shape ``(#num_samples, *X.shape[1:])``.
             * one input, multiple outputs: matrix of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
             * multiple inputs, one or more outputs: list of matrices, with shapes of one of the above.
 
-            If ranked_outputs is None then this list of tensors matches
+            If ranked_outputs is ``None`` then this list of tensors matches
             the number of model outputs. If ranked_outputs is a positive integer a pair is returned
             (shap_values, indexes), where shap_values is a list of tensors with a length of
             ranked_outputs, and indexes is a matrix that indicates for each sample which output indexes
             were chosen as "top".
 
-           .. versionchanged:: 0.45.0
-              Return type for models with multiple outputs and one input changed from list to np.ndarray.
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
         return self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)
