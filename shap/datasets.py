@@ -21,7 +21,6 @@ def imagenet50(display=False, resolution=224, n_points=None):
 
     Note that because the images are only rough replacements the labels might no longer be correct.
     """
-
     prefix = github_data_url + "imagenet50_"
     X = np.load(cache(f"{prefix}{resolution}x{resolution}.npy")).astype(np.float32)
     y = np.loadtxt(cache(f"{prefix}labels.csv"))
@@ -35,7 +34,6 @@ def imagenet50(display=False, resolution=224, n_points=None):
 
 def california(display=False, n_points=None):
     """ Return the california housing data in a nice package. """
-
     d = sklearn.datasets.fetch_california_housing()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
     target = d.target
@@ -49,7 +47,6 @@ def california(display=False, n_points=None):
 
 def linnerud(display=False, n_points=None):
     """ Return the linnerud data in a nice package (multi-target regression). """
-
     d = sklearn.datasets.load_linnerud()
     X = pd.DataFrame(d.data, columns=d.feature_names)
     y = pd.DataFrame(d.target, columns=d.target_names)
@@ -67,7 +64,6 @@ def imdb(display=False, n_points=None):
     Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
     Paper to cite when using the data is: http://www.aclweb.org/anthology/P11-1015
     """
-
     with open(cache(github_data_url + "imdb_train.txt"), encoding="utf-8") as f:
         data = f.readlines()
     y = np.ones(25000, dtype=bool)
@@ -86,7 +82,6 @@ def communitiesandcrime(display=False, n_points=None):
     This dataset is from the classic UCI Machine Learning repository:
     https://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
     """
-
     raw_data = pd.read_csv(
         cache(github_data_url + "CommViolPredUnnormalizedData.txt"),
         na_values="?"
@@ -110,7 +105,6 @@ def communitiesandcrime(display=False, n_points=None):
 
 def diabetes(display=False, n_points=None):
     """ Return the diabetes data in a nice package. """
-
     d = sklearn.datasets.load_diabetes()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
     target = d.target
@@ -124,7 +118,6 @@ def diabetes(display=False, n_points=None):
 
 def iris(display=False, n_points=None):
     """ Return the classic iris data in a nice package. """
-
     d = sklearn.datasets.load_iris()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
     target = d.target
@@ -201,7 +194,6 @@ def corrgroups60(display=False, n_points=1_000):
 
     A simulated dataset with tight correlations among distinct groups of features.
     """
-
     # set a constant seed
     old_seed = np.random.seed()
     np.random.seed(0)
@@ -243,7 +235,6 @@ def corrgroups60(display=False, n_points=1_000):
 
 def independentlinear60(display=False, n_points=1_000):
     """A simulated dataset with tight correlations among distinct groups of features."""
-
     # set a constant seed
     old_seed = np.random.seed()
     np.random.seed(0)

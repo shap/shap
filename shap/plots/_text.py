@@ -706,7 +706,6 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
     """
-
     # See if we got hierarchical input data. If we did then we need to reprocess the
     # shap_values and tokens to get the groups we want to display
     warnings.warn(

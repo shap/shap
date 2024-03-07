@@ -125,7 +125,6 @@ class Image(Masker):
 
     def build_partition_tree(self):
         """This partitions an image into a herarchical clustering based on axis-aligned splits."""
-
         xmin = 0
         xmax = self.input_shape[0]
         ymin = 0
@@ -165,7 +164,6 @@ class Image(Masker):
 @njit
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
     """This partitions an image into a herarchical clustering based on axis-aligned splits."""
-
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
 
     # q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))

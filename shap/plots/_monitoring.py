@@ -36,7 +36,6 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     feature_names : list
         Names of the features (length # features)
     """
-
     if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns

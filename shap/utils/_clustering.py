@@ -80,7 +80,6 @@ def _mask_delta_score(m1, m2):
 
 def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     """A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar."""
-
     # compute a hierarchical clustering and return the optimal leaf ordering
     D = scipy.spatial.distance.pdist(X, metric)
     cluster_matrix = scipy.cluster.hierarchy.complete(D)
@@ -96,7 +95,6 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
     proportion of variance explained). Note these distances are not symmetric.
     """
-
     import xgboost
 
     # pick our train/text split

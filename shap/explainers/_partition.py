@@ -63,7 +63,6 @@ class PartitionExplainer(Explainer):
         --------
         See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/PartitionExplainer.html>`_
         """
-
         super().__init__(model, masker, link=link, linearize_link=linearize_link, algorithm="partition", \
                          output_names = output_names, feature_names=feature_names)
 
@@ -132,7 +131,6 @@ class PartitionExplainer(Explainer):
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
-
         if fixed_context == "auto":
             # if isinstance(self.masker, maskers.Text):
             #     fixed_context = 1 # we err on the side of speed for text models
@@ -201,7 +199,6 @@ class PartitionExplainer(Explainer):
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """Compute a nested set of recursive Owen values based on an ordering recursion."""
-
         #f = self._reshaped_model
         #r = self.masker
         #masks = np.zeros(2*len(inds)+1, dtype=int)
@@ -339,7 +336,6 @@ class PartitionExplainer(Explainer):
 
     def owen3(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
         """Compute a nested set of recursive Owen values based on an ordering recursion."""
-
         #f = self._reshaped_model
         #r = self.masker
         #masks = np.zeros(2*len(inds)+1, dtype=int)

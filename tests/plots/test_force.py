@@ -53,7 +53,6 @@ def test_verify_valid_cmap(cmap, exp_ctx):
 
 def test_random_force_plot_mpl_with_data():
     """Test if force plot with matplotlib works."""
-
     RandomForestRegressor = pytest.importorskip('sklearn.ensemble').RandomForestRegressor
 
     # train model
@@ -72,7 +71,6 @@ def test_random_force_plot_mpl_with_data():
 
 def test_random_force_plot_mpl_text_rotation_with_data():
     """Test if force plot with matplotlib works when supplied with text_rotation."""
-
     RandomForestRegressor = pytest.importorskip('sklearn.ensemble').RandomForestRegressor
 
     # train model

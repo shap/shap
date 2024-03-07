@@ -67,7 +67,6 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
-
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values

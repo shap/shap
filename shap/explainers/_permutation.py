@@ -42,7 +42,6 @@ class PermutationExplainer(Explainer):
         **call_args : valid argument to the __call__ method
             These arguments are saved and passed to the __call__ method as the new default values for these arguments.
         """
-
         # setting seed for random generation: if seed is not None, then shap values computation should be reproducible
         np.random.seed(seed)
 
@@ -81,7 +80,6 @@ class PermutationExplainer(Explainer):
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
-
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
@@ -205,7 +203,6 @@ class PermutationExplainer(Explainer):
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
         """
-
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
         return explanation.values
 

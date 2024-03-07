@@ -8,7 +8,6 @@ import shap
 
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """Tests if get_teacher_forced_logits() works for encoder-decoder models."""
-
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
 
@@ -31,7 +30,6 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
 
 def test_method_get_teacher_forced_logits_for_decoder_model():
     """Tests if get_teacher_forced_logits() works for decoder only models."""
-
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
 

@@ -59,7 +59,6 @@ class ExplanationError:
             Non-linear links can destroy additive separation in generalized linear models, so by linearizing the link we can
             retain additive separation. See upcoming paper/doc for details.
         """
-
         self.masker = masker
         self.model = model
         self.model_args = model_args
@@ -81,7 +80,6 @@ class ExplanationError:
 
     def __call__(self, explanation, name, step_fraction=0.01, indices=[], silent=False):
         """Run this benchmark on the given explanation."""
-
         if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):

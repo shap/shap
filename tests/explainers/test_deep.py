@@ -178,7 +178,6 @@ def test_tf_keras_activations(activation):
 
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result."""
-
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
 

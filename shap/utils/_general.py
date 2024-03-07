@@ -55,7 +55,6 @@ def potential_interactions(shap_values_column, shap_values_matrix):
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
     """
-
     # ignore inds that are identical to the column
     ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)
 
@@ -104,7 +103,6 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
     """
-
     # convert from DataFrames if we got any
     if isinstance(X, pd.DataFrame):
         if feature_names is None:
@@ -252,7 +250,6 @@ def safe_isinstance(obj, class_path_str):
 
 def format_value(s, format_str):
     """Strips trailing zeros and uses a unicode minus sign."""
-
     if not issubclass(type(s), str):
         s = format_str % s
     s = re.sub(r'\.?0+$', '', s)

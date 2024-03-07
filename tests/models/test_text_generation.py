@@ -12,7 +12,6 @@ def test_call_function_text_generation():
     """ Tests if target sentence from model and model wrapped in a function (mimics model agnostic scenario)
         produces the same ids.
     """
-
     torch = pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
 

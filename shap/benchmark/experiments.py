@@ -334,7 +334,6 @@ def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
     rate_limit : int
         How many ssh connections we make per minute to each host (to avoid throttling issues).
     """
-
     global ssh_conn_per_min_limit
     ssh_conn_per_min_limit = rate_limit
 

@@ -18,7 +18,6 @@ def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_gen
     to get the change in model performance when a specified fraction of the most important features
     are withheld.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     # see if we match the last cached call
@@ -71,7 +70,6 @@ def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_gen
 
 def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """Each test sample is masked by setting the important features to a constant."""
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -97,7 +95,6 @@ def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_gene
     being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
     be significantly bigger than X_train.shape[1].
     """
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -129,7 +126,6 @@ def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_gene
 
 def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """The model is reevaluated for each test sample with the important features set to resample background values."""
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -161,7 +157,6 @@ def batch_remove_retrain(nmask_train, nmask_test, X_train, y_train, X_test, y_te
     and then retrains the model once, instead of retraining the model for every test sample like
     the holdout metric.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     X_train, X_test = to_array(X_train, X_test)
@@ -203,7 +198,6 @@ def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gener
     to get the change in model performance when a specified fraction of the most important features
     are retained.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     # see if we match the last cached call
@@ -257,7 +251,6 @@ def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gener
 
 def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """The model is reevaluated for each test sample with the non-important features set to their mean."""
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -284,7 +277,6 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
     being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
     be significantly bigger than X_train.shape[1].
     """
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -316,7 +308,6 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
 
 def keep_resample(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
     """The model is reevaluated for each test sample with the non-important features set to resample background values.""" # why broken? overwriting?
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -348,7 +339,6 @@ def batch_keep_retrain(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test
     and then retrains the model once, instead of retraining the model for every test sample like
     the keep metric.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     X_train, X_test = to_array(X_train, X_test)
@@ -379,7 +369,6 @@ def batch_keep_retrain(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test
 
 def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
     """The how well do the features plus a constant base rate sum up to the model output."""
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask

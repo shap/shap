@@ -33,7 +33,6 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
         The transparency of the data points (between 0 and 1). This can be useful to the
         show density of the data points when using a large dataset.
     """
-
     if feature_names is None:
         feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
 

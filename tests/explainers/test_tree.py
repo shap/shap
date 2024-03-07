@@ -757,7 +757,6 @@ class TestSingleTree:
         """A basic test for checking that a LightGBM `dump_model()["tree_info"]`
         dictionary is parsed properly into a `SingleTree` object.
         """
-
         # Stump (only root node) tree
         sample_tree = {
             "tree_index": 256,
@@ -1228,7 +1227,6 @@ class TestExplainerXGBoost:
         Test that xgboost sklearn attributues are properly passed to the DMatrix
         initiated during shap value calculation. see GH #3313
         """
-
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8

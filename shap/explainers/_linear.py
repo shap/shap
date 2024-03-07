@@ -302,7 +302,6 @@ class LinearExplainer(Explainer):
     @staticmethod
     def supports_model_with_masker(model, masker):
         """Determines if we can parse the given model."""
-
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
 
@@ -314,7 +313,6 @@ class LinearExplainer(Explainer):
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
-
         assert len(row_args) == 1, "Only single-argument functions are supported by the Linear explainer!"
 
         X = row_args[0]
@@ -389,7 +387,6 @@ class LinearExplainer(Explainer):
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
         """
-
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values

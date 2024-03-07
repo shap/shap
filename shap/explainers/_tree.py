@@ -246,7 +246,6 @@ class TreeExplainer(Explainer):
 
     def __dynamic_expected_value(self, y):
         """This computes the expected value conditioned on the given label value."""
-
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
     def __call__(self, X, y=None, interactions=False, check_additivity=True):
@@ -571,7 +570,6 @@ class TreeExplainer(Explainer):
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
         """
-
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"
         #assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
@@ -684,7 +682,6 @@ class TreeExplainer(Explainer):
 
         This is an abstract static method meant to be implemented by each subclass.
         """
-
         if not isinstance(masker, (maskers.Independent)) and masker is not None:
             return False
 
@@ -1395,7 +1392,6 @@ class TreeEnsemble:
             Limit the number of trees used by the model. By default None means no use the limit of the
             original model, and -1 means no limit.
         """
-
         if output is None:
             output = self.model_output
 

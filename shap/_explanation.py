@@ -264,7 +264,6 @@ class Explanation(metaclass=MetaExplanation):
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
         """
-
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         if isinstance(cohorts, (list, tuple, np.ndarray)):
@@ -822,7 +821,6 @@ class Cohorts:
 
 def _auto_cohorts(shap_values, max_cohorts):
     """This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values."""
-
     # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)

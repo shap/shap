@@ -15,7 +15,6 @@ except ImportError:
 
 def test_serialization_image_masker_inpaint_telea():
     """Make sure image serialization works with inpaint telea mask."""
-
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -43,7 +42,6 @@ def test_serialization_image_masker_inpaint_telea():
 
 def test_serialization_image_masker_inpaint_ns():
     """Make sure image serialization works with inpaint ns mask."""
-
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -71,7 +69,6 @@ def test_serialization_image_masker_inpaint_ns():
 
 def test_serialization_image_masker_blur():
     """Make sure image serialization works with blur mask."""
-
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -99,7 +96,6 @@ def test_serialization_image_masker_blur():
 
 def test_serialization_image_masker_mask():
     """Make sure image serialization works."""
-
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50

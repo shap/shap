@@ -41,7 +41,6 @@ def corrgroups60__ridge():
 
 def corrgroups60__decision_tree():
     """Decision Tree"""
-
     # max_depth was chosen to minimise test error
     return sklearn.tree.DecisionTreeRegressor(random_state=0, max_depth=6)
 
@@ -84,7 +83,6 @@ def independentlinear60__ridge():
 
 def independentlinear60__decision_tree():
     """Decision Tree"""
-
     # max_depth was chosen to minimise test error
     return sklearn.tree.DecisionTreeRegressor(random_state=0, max_depth=4)
 
@@ -189,7 +187,6 @@ def cric__ffnn():
 
 def human__decision_tree():
     """Decision Tree"""
-
     # build data
     N = 1000000
     M = 3

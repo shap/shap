@@ -53,7 +53,6 @@ def __decision_plot_matplotlib(
     legend_location,
 ):
     """matplotlib rendering for decision_plot()"""
-
     # image size
     row_height = 0.4
     if auto_size_plot:
@@ -352,7 +351,6 @@ def decision(
     See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
-
     # code taken from force_plot. auto unwrap the base_value
     if type(base_value) == np.ndarray and len(base_value) == 1:
         base_value = base_value[0]
@@ -585,7 +583,6 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
     DecisionPlotResult or None
         Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
     """
-
     if not (isinstance(base_values, list) and isinstance(shap_values, list)):
         raise ValueError("The base_values and shap_values args expect lists.")
 

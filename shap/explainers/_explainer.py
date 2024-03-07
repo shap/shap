@@ -74,7 +74,6 @@ class Explainer(Serializable):
             seed for reproducibility
 
         """
-
         self.model = model
         self.output_names = output_names
         self.feature_names = feature_names
@@ -208,7 +207,6 @@ class Explainer(Serializable):
         subclass of Explainer. Descriptions of each subclasses' __call__ arguments
         are available in their respective doc-strings.
         """
-
         # if max_evals == "auto":
         #     self._brute_force_fallback
 
@@ -378,7 +376,6 @@ class Explainer(Serializable):
             are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
             of all the input shapes (since the row_values is always flattened),
         """
-
         return {}
 
     @staticmethod
@@ -445,7 +442,6 @@ class Explainer(Serializable):
 
 def pack_values(values):
     """Used the clean up arrays before putting them into an Explanation object."""
-
     if not hasattr(values, "__len__"):
         return values
 

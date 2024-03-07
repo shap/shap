@@ -31,7 +31,6 @@ def convert_ordering(ordering, shap_values):
 
 def get_sort_order(dist, clust_order, cluster_threshold, feature_order):
     """Returns a sorted order of the values where we respect the clustering order when dist[i,j] < cluster_threshold"""
-
     #feature_imp = np.abs(values)
 
     # if partition_tree is not None:
@@ -133,7 +132,6 @@ def dendrogram_coords(leaf_positions, partition_tree):
     Note that scipy can compute these coords as well, but it does not allow you to easily specify
     a specific leaf order, hence this reimplementation.
     """
-
     xout = []
     yout = []
     _dendrogram_coords_rec(partition_tree.shape[0]-1, leaf_positions, partition_tree, xout, yout)

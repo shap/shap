@@ -41,7 +41,6 @@ class Tabular(Masker):
             `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
         """
-
         self.output_dataframe = False
         if isinstance(data, pd.DataFrame):
             self.feature_names = data.columns
@@ -140,7 +139,6 @@ class Tabular(Masker):
         This optional masking method allows explainers to avoid re-evaluating the model when
         the features that would have been masked are all invariant.
         """
-
         # make sure we got valid data
         if x.shape != self.data.shape[1:]:
             raise DimensionError(
@@ -199,7 +197,6 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
 
     Note that we attempt to avoid doing any allocation inside this function for speed reasons.
     """
-
     dpos = 0
     i = -1
     masks_pos = 0

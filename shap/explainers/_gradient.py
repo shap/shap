@@ -57,7 +57,6 @@ class GradientExplainer(Explainer):
             over these samples. The data passed here must match the input tensors given in the
             first argument. Single element lists can be passed unwrapped.
         """
-
         # first, we need to find the framework
         if type(model) is tuple:
             a, b = model

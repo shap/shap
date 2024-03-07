@@ -41,7 +41,6 @@ class Text(Masker):
             If True, when several consecutive tokens are masked only one mask token is used to replace the entire
             series of original tokens.
         """
-
         if tokenizer is None:
             self.tokenizer = SimpleTokenizer()
         elif callable(tokenizer):
@@ -171,7 +170,6 @@ class Text(Masker):
 
     def token_segments(self, s):
         """Returns the substrings associated with each token in the given string."""
-
         try:
             token_data = self.tokenizer(s, return_offsets_mapping=True)
             offsets = token_data["offset_mapping"]

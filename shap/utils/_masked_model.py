@@ -240,7 +240,6 @@ class MaskedModel:
 
     def main_effects(self, inds=None, batch_size=None):
         """Compute the main effects for this model."""
-
         # if no indexes are given then we assume all indexes could be non-zero
         if inds is None:
             inds = np.arange(len(self))
@@ -272,7 +271,6 @@ def _assert_output_input_match(inputs, outputs):
 
 def _convert_delta_mask_to_full(masks, full_masks):
     """This converts a delta masking array to a full bool masking array."""
-
     i = -1
     masks_pos = 0
     while masks_pos < len(masks):
@@ -414,7 +412,6 @@ def make_masks(cluster_matrix):
 
     This function is optimized since trees for images can be very large.
     """
-
     M = cluster_matrix.shape[0] + 1
     indices_row_pos = np.zeros(2 * M - 1, dtype=int)
     indptr = np.zeros(2 * M, dtype=int)
@@ -471,7 +468,6 @@ def link_reweighting(p, link):
     expected value. Note that there are many possible reweightings that can satisfy the above
     property. This function returns the one that has the lowest L2 norm.
     """
-
     # the linearized link function is a first order Taylor expansion of the link function
     # centered at the expected value
     expected_value = np.mean(p, axis=0)

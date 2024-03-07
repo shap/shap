@@ -81,7 +81,6 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
     """
-
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # see if we are plotting multiple columns
@@ -538,7 +537,6 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         Represents the upper bound of the plot's y-axis.
 
     """
-
     if cmap is None:
         cmap = colors.red_blue
 

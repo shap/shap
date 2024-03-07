@@ -76,7 +76,6 @@ def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
 
 def test_serialization(explainer_type, model, masker, data, rtol=1e-05, atol=1e-8, **kwargs):
     """Test serialization with a given explainer algorithm."""
-
     explainer_kwargs = {k: v for k,v in kwargs.items() if k in ["algorithm"]}
     explainer_original = explainer_type(model, masker, **explainer_kwargs)
     shap_values_original = explainer_original(data[:1])

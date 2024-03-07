@@ -27,7 +27,6 @@ def kmeans(X, k, round_values=True):
     -------
     DenseData object.
     """
-
     group_names = [str(i) for i in range(X.shape[1])]
     if isinstance(X, pd.DataFrame):
         group_names = X.columns

@@ -93,7 +93,6 @@ def force(
         Only features that the magnitude of their shap value is larger than min_perc * (sum of all abs shap values)
         will be displayed.
     """
-
     # support passing an explanation object
     if str(type(base_value)).endswith("Explanation'>"):
         shap_exp = base_value
@@ -322,7 +321,6 @@ def save_html(out_file, plot, full_html=True):
         with an ``<html>`` tag. If ``False``, only script and div
         tags are included.
     """
-
     if not isinstance(plot, BaseVisualizer):
         raise TypeError("`save_html` requires a Visualizer returned by `shap.plots.force()`.")
 

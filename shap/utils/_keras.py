@@ -3,7 +3,6 @@
 
 def clone_keras_layers(model, start_layer, stop_layer):
         """Clones the keras layers between the start and stop layer as a new model."""
-
         import tensorflow as tf
 
         if isinstance(start_layer, int):
@@ -49,7 +48,6 @@ def split_keras_model(model, layer):
     This is done such that model2(model1(X)) = model(X)
     and mode11(X) == layer(X)
     """
-
     if isinstance(layer, str):
         layer = model.get_layer(layer)
     elif isinstance(layer, int):

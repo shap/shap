@@ -11,7 +11,6 @@ import shap
 @pytest.mark.skip(reason="fails on travis and I don't know why yet...Ryan might need to take a look since this API will change soon anyway")
 def test_fixed_composite_masker_call():
     """Test to make sure the FixedComposite masker works when masking everything."""
-
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     args = ("This is a test statement for fixed composite masker",)
@@ -29,7 +28,6 @@ def test_fixed_composite_masker_call():
 
 def test_serialization_fixedcomposite_masker():
     """Make sure fixedcomposite serialization works."""
-
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-cased", use_fast=False)

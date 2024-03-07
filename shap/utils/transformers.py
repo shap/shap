@@ -136,7 +136,6 @@ def getattr_silent(obj, attr):
     This is motivated by huggingface transformers objects that print error warnings
     when we access unset properties.
     """
-
     reset_verbose = False
     if getattr(obj, 'verbose', False):
         reset_verbose = True

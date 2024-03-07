@@ -21,7 +21,6 @@ def test_null_model():
 
 def test_front_page_model_agnostic():
     """Test the ReadMe kernel expainer example."""
-
     # print the JS visualization code to the notebook
     shap.initjs()
 
@@ -40,7 +39,6 @@ def test_front_page_model_agnostic():
 
 def test_front_page_model_agnostic_rank():
     """Test the rank regularized explanation of the ReadMe example."""
-
     # print the JS visualization code to the notebook
     shap.initjs()
 
@@ -58,7 +56,6 @@ def test_front_page_model_agnostic_rank():
 
 def test_kernel_shap_with_call_method():
     """Test the __call__ method of the Kernel class"""
-
     # print the JS visualization code to the notebook
     shap.initjs()
 
@@ -123,7 +120,6 @@ def test_kernel_shap_with_dataframe_explanation(random_seed):
 
 def test_kernel_shap_with_a1a_sparse_zero_background():
     """Test with a sparse matrix for the background."""
-
     X, y = shap.datasets.a1a()
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(X, y, test_size=0.01, random_state=0)
     linear_model = sklearn.linear_model.LinearRegression()
@@ -161,7 +157,6 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
 
 def test_kernel_shap_with_high_dim_sparse():
     """Verifies we can run on very sparse data produced from feature hashing."""
-
     remove = ('headers', 'footers', 'quotes')
     categories = [
         'alt.atheism',
@@ -185,7 +180,6 @@ def test_kernel_shap_with_high_dim_sparse():
 
 def test_kernel_sparse_vs_dense_multirow_background():
     """Mix sparse and dense matrix values."""
-
     # train a logistic regression classifier
     X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
     lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
@@ -237,7 +231,6 @@ def test_linear(random_seed):
 
 def test_non_numeric():
     """Test using non-numeric data."""
-
     # create dummy data
     X = np.array([['A', '0', '0'], ['A', '1', '0'], ['B', '0', '0'], ['B', '1', '0'], ['A', '1', '0']])
     y = np.array([0, 1, 2, 3, 4])

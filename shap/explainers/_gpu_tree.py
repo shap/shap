@@ -124,7 +124,6 @@ class GPUTreeExplainer(TreeExplainer):
             vector outputs
             this returns a list of tensors, one for each output.
         """
-
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for " \
                                                  "SHAP interaction values right now!"
         assert self.feature_perturbation != "interventional", 'feature_perturbation="interventional" is not yet supported for ' + \

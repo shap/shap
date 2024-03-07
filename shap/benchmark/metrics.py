@@ -24,7 +24,6 @@ def runtime(X, y, model_generator, method_name):
     transform = "negate_log"
     sort_order = 2
     """
-
     old_seed = np.random.seed()
     np.random.seed(3293)
 
@@ -75,7 +74,6 @@ def consistency_guarantees(X, y, model_generator, method_name):
     transform = "identity"
     sort_order = 1
     """
-
     # 1.0 - perfect consistency
     # 0.8 - guarantees depend on sampling
     # 0.6 - guarantees depend on approximation
@@ -428,7 +426,6 @@ def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num
 _attribution_cache = {}
 def __score_method(X, y, fcounts, model_generator, score_function, method_name, nreps=10, test_size=100, cache_dir="/tmp"):
     """Test an explanation method."""
-
     try:
         pickle
     except NameError:

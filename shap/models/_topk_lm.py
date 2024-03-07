@@ -118,7 +118,6 @@ class TopKLM(Model):
         list
             A list of output tokens.
         """
-
         # see if the user gave a custom token generator
         if self._custom_generate_topk_token_ids is not None:
             return self._custom_generate_topk_token_ids(X)

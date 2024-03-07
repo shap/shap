@@ -115,7 +115,6 @@ def resize_image(path_to_image, reshaped_dir):
 
 def display_grid_plot(list_of_captions, list_of_images, max_columns=4, figsize=(20,20)):
     """Function to display grid of images and their titles/captions."""
-
     # load list of images
     masked_images = []
     for filename in  list_of_images:

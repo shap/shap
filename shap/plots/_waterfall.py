@@ -44,7 +44,6 @@ def waterfall(shap_values, max_display=10, show=True):
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
 
     """
-
     # Turn off interactive plot
     if show is False:
         plt.ioff()
@@ -352,7 +351,6 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
     """
-
     # Turn off interactive plot when not calling plt.show
     if show is False:
         plt.ioff()

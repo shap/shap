@@ -9,7 +9,6 @@ import shap
 
 def test_tf_keras_mnist_cnn(random_seed):
     """This is the basic mnist cnn example from keras."""
-
     tf = pytest.importorskip('tensorflow')
 
     rs = np.random.RandomState(random_seed)
@@ -257,7 +256,6 @@ def test_pytorch_mnist_cnn():
 
 def test_pytorch_multiple_inputs(random_seed):
     """ Test multi-input scenarios."""
-
     torch = pytest.importorskip('torch')
     from torch import nn
 
@@ -295,7 +293,6 @@ def test_pytorch_multiple_inputs(random_seed):
 
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
     """ Test multi-input scenarios."""
-
     torch = pytest.importorskip('torch')
     from torch import nn
 
