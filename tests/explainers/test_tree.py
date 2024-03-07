@@ -1425,7 +1425,8 @@ class TestExplainerXGBoost:
         """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,
         since it is not supported by our plotting functions.
 
-        See GH #3357 for more information."""
+        See GH #3357 for more information.
+        """
         xgboost = pytest.importorskip("xgboost")
 
         rs = np.random.RandomState(random_seed)
