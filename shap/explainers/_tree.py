@@ -552,8 +552,10 @@ class TreeExplainer(Explainer):
         -------
         array
             Returns a matrix. The shape depends on the number of model outputs:
-                - one output: matrix of shape (#num_samples, #features, #features).
-                - multiple outputs: matrix of shape (#num_samples, #features, #features, #num_outputs).
+
+            * one output: matrix of shape (#num_samples, #features, #features).
+            * multiple outputs: matrix of shape (#num_samples, #features, #features, #num_outputs).
+
             The matrix (#num_samples, # features, # features) for each sample sums
             to the difference between the model output for that sample and the expected value of the model output
             (which is stored in the ``expected_value`` attribute of the explainer). Each row of this matrix sums to the
