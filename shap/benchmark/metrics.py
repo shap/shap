@@ -60,8 +60,7 @@ def local_accuracy(X, y, model_generator, method_name):
     """
 
     def score_map(true, pred):
-        """ Computes local accuracy as the normalized standard deviation of numerical scores.
-        """
+        """Computes local accuracy as the normalized standard deviation of numerical scores."""
         return np.std(pred - true) / (np.std(true) + 1e-6)
 
     def score_function(X_train, X_test, y_train, y_test, attr_function, trained_model, random_state):
@@ -104,8 +103,7 @@ def consistency_guarantees(X, y, model_generator, method_name):
     return None, guarantees[method_name]
 
 def __mean_pred(true, pred):
-    """ A trivial metric that is just is the output of the model.
-    """
+    """A trivial metric that is just is the output of the model."""
     return np.mean(pred)
 
 def keep_positive_mask(X, y, model_generator, method_name, num_fcounts=11):
@@ -429,8 +427,7 @@ def __run_batch_abs_metric(metric, X, y, model_generator, method_name, loss, num
 
 _attribution_cache = {}
 def __score_method(X, y, fcounts, model_generator, score_function, method_name, nreps=10, test_size=100, cache_dir="/tmp"):
-    """ Test an explanation method.
-    """
+    """Test an explanation method."""
 
     try:
         pickle
@@ -512,15 +509,13 @@ def __intlogspace(start, end, count):
     return np.unique(np.round(start + (end-start) * (np.logspace(0, 1, count, endpoint=True) - 1) / 9).astype(int))
 
 def __toarray(X):
-    """ Converts DataFrames to numpy arrays.
-    """
+    """Converts DataFrames to numpy arrays."""
     if hasattr(X, "values"):
         X = X.values
     return X
 
 def __strip_list(attrs):
-    """ This assumes that if you have a list of outputs you just want the second one (the second class).
-    """
+    """This assumes that if you have a list of outputs you just want the second one (the second class)."""
     if isinstance(attrs, list):
         return attrs[1]
     else:

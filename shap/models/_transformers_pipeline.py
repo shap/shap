@@ -13,8 +13,7 @@ class TransformersPipeline(Model):
     """
 
     def __init__(self, pipeline, rescale_to_logits=False):
-        """ Build a new model by wrapping the given pipeline object.
-        """
+        """Build a new model by wrapping the given pipeline object."""
         super().__init__(pipeline) # the pipeline becomes our inner_model
         self.rescale_to_logits = rescale_to_logits
 

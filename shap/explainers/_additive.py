@@ -64,8 +64,7 @@ class AdditiveExplainer(Explainer):
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
     def __call__(self, *args, max_evals=None, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iterable args.
-        """
+        """Explains the output of model(*args), where args represents one or more parallel iterable args."""
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
@@ -85,8 +84,7 @@ class AdditiveExplainer(Explainer):
         return False
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
 
         x = row_args[0]
         inputs = np.zeros((len(x), len(x)))

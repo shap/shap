@@ -1,5 +1,4 @@
-""" This file contains tests for the Image masker.
-"""
+"""This file contains tests for the Image masker."""
 
 import tempfile
 
@@ -15,8 +14,7 @@ except ImportError:
     pytestmark = pytest.mark.skip("opencv not installed")
 
 def test_serialization_image_masker_inpaint_telea():
-    """ Make sure image serialization works with inpaint telea mask.
-    """
+    """Make sure image serialization works with inpaint telea mask."""
 
     test_image_height = 500
     test_image_width = 500
@@ -44,8 +42,7 @@ def test_serialization_image_masker_inpaint_telea():
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
 def test_serialization_image_masker_inpaint_ns():
-    """ Make sure image serialization works with inpaint ns mask.
-    """
+    """Make sure image serialization works with inpaint ns mask."""
 
     test_image_height = 500
     test_image_width = 500
@@ -73,8 +70,7 @@ def test_serialization_image_masker_inpaint_ns():
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
 def test_serialization_image_masker_blur():
-    """ Make sure image serialization works with blur mask.
-    """
+    """Make sure image serialization works with blur mask."""
 
     test_image_height = 500
     test_image_width = 500
@@ -102,8 +98,7 @@ def test_serialization_image_masker_blur():
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
 def test_serialization_image_masker_mask():
-    """ Make sure image serialization works.
-    """
+    """Make sure image serialization works."""
 
     test_image_height = 500
     test_image_width = 500

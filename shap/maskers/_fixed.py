@@ -21,6 +21,5 @@ class Fixed(Masker):
         return ([x],)
 
     def mask_shapes(self, x):
-        """ The shape of the masks we expect.
-        """
+        """The shape of the masks we expect."""
         return [(0,)]

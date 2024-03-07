@@ -276,8 +276,7 @@ class LinearExplainer(Explainer):
 
     @staticmethod
     def _parse_model(model):
-        """ Attempt to pull out the coefficients and intercept from the given model object.
-        """
+        """Attempt to pull out the coefficients and intercept from the given model object."""
         # raw coefficients
         if type(model) == tuple and len(model) == 2:
             coef = model[0]
@@ -302,8 +301,7 @@ class LinearExplainer(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if we can parse the given model.
-        """
+        """Determines if we can parse the given model."""
 
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
@@ -315,8 +313,7 @@ class LinearExplainer(Explainer):
         return True
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
 
         assert len(row_args) == 1, "Only single-argument functions are supported by the Linear explainer!"
 

@@ -68,8 +68,7 @@ class ExactExplainer(Explainer):
         self._gray_code_cache = {} # used to avoid regenerating the same gray code patterns
 
     def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, batch_size="auto", interactions=1, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iterators.
-        """
+        """Explains the output of model(*args), where args represents one or more parallel iterators."""
 
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
@@ -84,8 +83,7 @@ class ExactExplainer(Explainer):
         return self._gray_code_cache[n]
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, interactions, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
@@ -238,8 +236,7 @@ def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_co
                 row_values[k,j] += delta
 
 def partition_delta_indexes(partition_tree, all_masks):
-    """ Return an delta index encoded array of all the masks possible while following the given partition tree.
-    """
+    """Return an delta index encoded array of all the masks possible while following the given partition tree."""
 
     # convert the masks to delta index format
     mask = np.zeros(all_masks.shape[1], dtype=bool)
@@ -258,8 +255,7 @@ def partition_delta_indexes(partition_tree, all_masks):
     return np.array(delta_inds)
 
 def partition_masks(partition_tree):
-    """ Return an array of all the masks possible while following the given partition tree.
-    """
+    """Return an array of all the masks possible while following the given partition tree."""
 
     M = partition_tree.shape[0] + 1
     mask_matrix = make_masks(partition_tree)

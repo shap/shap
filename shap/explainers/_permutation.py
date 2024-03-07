@@ -73,16 +73,14 @@ class PermutationExplainer(Explainer):
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False):
-        """ Explain the output of the model on the given arguments.
-        """
+        """Explain the output of the model on the given arguments."""
         return super().__call__(
             *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
             outputs=outputs, silent=silent
         )
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
 
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)

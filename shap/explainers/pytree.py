@@ -136,8 +136,7 @@ from ..utils._exceptions import ExplainerError
 
 
 class TreeExplainer:
-    """ A pure Python (slow) implementation of Tree SHAP.
-    """
+    """A pure Python (slow) implementation of Tree SHAP."""
 
     def __init__(self, model, **kwargs):
         self.model_type = "internal"

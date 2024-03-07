@@ -8,8 +8,7 @@ import shap
 
 
 def test_tf_keras_mnist_cnn(random_seed):
-    """ This is the basic mnist cnn example from keras.
-    """
+    """This is the basic mnist cnn example from keras."""
 
     tf = pytest.importorskip('tensorflow')
 
@@ -135,8 +134,7 @@ def test_tf_multi_inputs_multi_outputs():
 
 
 def test_pytorch_mnist_cnn():
-    """The same test as above, but for pytorch
-    """
+    """The same test as above, but for pytorch"""
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
 
@@ -151,8 +149,7 @@ def test_pytorch_mnist_cnn():
     batch_size = 128
 
     class RandData:
-        """ Ranomd data for testing.
-        """
+        """Ranomd data for testing."""
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -189,8 +186,7 @@ def test_pytorch_mnist_cnn():
     def run_test(train_loader, test_loader, interim):
 
         class Net(nn.Module):
-            """ A test model.
-            """
+            """A test model."""
             def __init__(self):
                 super().__init__()
                 self.conv1 = nn.Conv2d(1, 5, kernel_size=5)
@@ -200,8 +196,7 @@ def test_pytorch_mnist_cnn():
                 self.fc2 = nn.Linear(20, 10)
 
             def forward(self, x):
-                """ Run the model.
-                """
+                """Run the model."""
                 x = F.relu(F.max_pool2d(self.conv1(x), 2))
                 x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
                 x = x.view(-1, 160)
@@ -274,15 +269,13 @@ def test_pytorch_multiple_inputs(random_seed):
     background = [torch.zeros(batch_size, 3), torch.zeros(batch_size, 4)]
 
     class Net(nn.Module):
-        """ A test model.
-        """
+        """A test model."""
         def __init__(self):
             super().__init__()
             self.linear = nn.Linear(7, 1)
 
         def forward(self, x1, x2):
-            """ Run the model.
-            """
+            """Run the model."""
             return self.linear(torch.cat((x1, x2), dim=-1))
 
     model = Net()

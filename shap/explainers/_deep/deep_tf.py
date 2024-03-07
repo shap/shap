@@ -216,8 +216,7 @@ class TFDeep(Explainer):
             self.used_types[op.type] = True
 
     def _variable_inputs(self, op):
-        """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
-        """
+        """Return which inputs of this operation are variable (i.e. depend on the model inputs)."""
         if op not in self._vinputs:
             out = np.zeros(len(op.inputs), dtype=bool)
             for i,t in enumerate(op.inputs):
@@ -226,8 +225,7 @@ class TFDeep(Explainer):
         return self._vinputs[op]
 
     def phi_symbolic(self, i):
-        """ Get the SHAP value computation graph for a given model output.
-        """
+        """Get the SHAP value computation graph for a given model output."""
         if self.phi_symbolics[i] is None:
 
             if not tf.executing_eagerly():
@@ -341,8 +339,7 @@ class TFDeep(Explainer):
             return output_phis
 
     def run(self, out, model_inputs, X):
-        """ Runs the model while also setting the learning phase flags to False.
-        """
+        """Runs the model while also setting the learning phase flags to False."""
         if not tf.executing_eagerly():
             feed_dict = dict(zip(model_inputs, X))
             for t in self.learning_phase_flags:
@@ -370,8 +367,7 @@ class TFDeep(Explainer):
             return self.execute_with_overridden_gradients(anon)
 
     def custom_grad(self, op, *grads):
-        """ Passes a gradient op creation request to the correct handler.
-        """
+        """Passes a gradient op creation request to the correct handler."""
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out

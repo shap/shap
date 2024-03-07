@@ -239,8 +239,7 @@ class MaskedModel:
             return np.where(np.any(self._variants, axis=0))[0]
 
     def main_effects(self, inds=None, batch_size=None):
-        """ Compute the main effects for this model.
-        """
+        """Compute the main effects for this model."""
 
         # if no indexes are given then we assume all indexes could be non-zero
         if inds is None:
@@ -272,8 +271,7 @@ def _assert_output_input_match(inputs, outputs):
         f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
 
 def _convert_delta_mask_to_full(masks, full_masks):
-    """ This converts a delta masking array to a full bool masking array.
-    """
+    """This converts a delta masking array to a full bool masking array."""
 
     i = -1
     masks_pos = 0

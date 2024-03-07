@@ -245,8 +245,7 @@ class TreeExplainer(Explainer):
             self.expected_value = [1 - self.expected_value, self.expected_value]
 
     def __dynamic_expected_value(self, y):
-        """ This computes the expected value conditioned on the given label value.
-        """
+        """This computes the expected value conditioned on the given label value."""
 
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
@@ -1352,8 +1351,7 @@ class TreeEnsemble:
             return self.trees[0].values.shape[1]
 
     def get_transform(self):
-        """ A consistent interface to make predictions from this model.
-        """
+        """A consistent interface to make predictions from this model."""
         if self.model_output == "raw":
             transform = "identity"
         elif self.model_output in ("probability", "probability_doubled"):
@@ -1770,9 +1768,7 @@ class SingleTree:
 
 
 class IsoTree(SingleTree):
-    """
-    In sklearn the tree of the Isolation Forest does not calculated in a good way.
-    """
+    """In sklearn the tree of the Isolation Forest does not calculated in a good way."""
     def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
         super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):

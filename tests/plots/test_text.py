@@ -4,8 +4,7 @@ import shap
 
 
 def test_single_text_to_text():
-    """ Just make sure the test_plot function doesn't crash.
-    """
+    """Just make sure the test_plot function doesn't crash."""
 
     test_values = np.array([
         [10.61284012, 3.28389317],

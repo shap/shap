@@ -31,8 +31,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
                        feature_expected_value=False, shap_values=None,
                        ylabel=None, ice=True, ace_opacity=1, pd_opacity=1, pd_linewidth=2,
                        ace_linewidth='auto', ax=None, show=True):
-    """ A basic partial dependence plot function.
-    """
+    """A basic partial dependence plot function."""
 
     if isinstance(data, Explanation):
         features = data.data

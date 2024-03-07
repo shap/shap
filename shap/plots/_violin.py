@@ -1,5 +1,4 @@
-""" Summary plots of SHAP values (violin plot) across a whole dataset.
-"""
+"""Summary plots of SHAP values (violin plot) across a whole dataset."""
 
 import warnings
 

@@ -1,5 +1,4 @@
-""" Tests for the Deep explainer.
-"""
+"""Tests for the Deep explainer."""
 
 
 import numpy as np
@@ -178,8 +177,7 @@ def test_tf_keras_activations(activation):
 
 
 def test_tf_keras_linear():
-    """Test verifying that a linear model with linear data gives the correct result.
-    """
+    """Test verifying that a linear model with linear data gives the correct result."""
 
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
@@ -224,8 +222,7 @@ def test_tf_keras_linear():
 
 
 def test_tf_keras_imdb_lstm(random_seed):
-    """ Basic LSTM example using the keras API defined in tensorflow
-    """
+    """Basic LSTM example using the keras API defined in tensorflow"""
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -310,8 +307,7 @@ def test_tf_deep_multi_inputs_multi_outputs():
 #######################
 
 def _torch_cuda_available():
-    """ Checks whether cuda is available. If so, torch-related tests are also tested on gpu.
-    """
+    """Checks whether cuda is available. If so, torch-related tests are also tested on gpu."""
     try:
         import torch
 
@@ -334,16 +330,14 @@ TORCH_DEVICES = [
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
 def test_pytorch_mnist_cnn(torch_device, interim):
-    """The same test as above, but for pytorch
-    """
+    """The same test as above, but for pytorch"""
     torch = pytest.importorskip('torch')
 
     from torch import nn
     from torch.nn import functional as F
 
     class RandData:
-        """ Random test data.
-        """
+        """Random test data."""
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -359,8 +353,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
 
 
     class Net(nn.Module):
-        """ Basic conv net.
-        """
+        """Basic conv net."""
 
         def __init__(self):
             super().__init__()
@@ -384,8 +377,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
             )
 
         def forward(self, x):
-            """ Run the model.
-            """
+            """Run the model."""
             x = self.conv_layers(x)
             x = x.view(-1, 320)
             x = self.fc_layers(x)
@@ -454,8 +446,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
-    """Testing single outputs
-    """
+    """Testing single outputs"""
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
@@ -464,8 +455,7 @@ def test_pytorch_custom_nested_models(torch_device):
     from torch.utils.data import DataLoader, TensorDataset
 
     class CustomNet1(nn.Module):
-        """ Model 1.
-        """
+        """Model 1."""
         def __init__(self, num_features):
             super().__init__()
             self.net = nn.Sequential(
@@ -477,13 +467,11 @@ def test_pytorch_custom_nested_models(torch_device):
             )
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             return self.net(X.unsqueeze(1)).squeeze(1)
 
     class CustomNet2(nn.Module):
-        """ Model 2.
-        """
+        """Model 2."""
         def __init__(self, num_features):
             super().__init__()
             self.net = nn.Sequential(
@@ -492,13 +480,11 @@ def test_pytorch_custom_nested_models(torch_device):
             )
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             return self.net(X).unsqueeze(1)
 
     class CustomNet(nn.Module):
-        """ Model 3.
-        """
+        """Model 3."""
         def __init__(self, num_features):
             super().__init__()
             self.net1 = CustomNet1(num_features)
@@ -506,8 +492,7 @@ def test_pytorch_custom_nested_models(torch_device):
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             x = self.net1(X)
             return self.maxpool2(self.net2(x)).squeeze(1)
 
@@ -580,8 +565,7 @@ def test_pytorch_custom_nested_models(torch_device):
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
-    """Testing single outputs
-    """
+    """Testing single outputs"""
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
@@ -590,8 +574,7 @@ def test_pytorch_single_output(torch_device):
     from torch.utils.data import DataLoader, TensorDataset
 
     class Net(nn.Module):
-        """ Test model.
-        """
+        """Test model."""
         def __init__(self, num_features):
             super().__init__()
             self.linear = nn.Linear(num_features // 2, 2)
@@ -602,8 +585,7 @@ def test_pytorch_single_output(torch_device):
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             x = self.aapool1d(self.convt1d(self.conv1d(X.unsqueeze(1)))).squeeze(1)
             return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
 
@@ -676,8 +658,7 @@ def test_pytorch_single_output(torch_device):
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
 def test_pytorch_multiple_inputs(torch_device, disconnected):
-    """ Check a multi-input scenario.
-    """
+    """Check a multi-input scenario."""
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
@@ -687,8 +668,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
 
 
     class Net(nn.Module):
-        """ Testing model.
-        """
+        """Testing model."""
         def __init__(self, num_features, disconnected):
             super().__init__()
             self.disconnected = disconnected
@@ -701,8 +681,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             )
 
         def forward(self, x1, x2):
-            """ Run the model.
-            """
+            """Run the model."""
             if self.disconnected:
                 x = self.linear(x1).unsqueeze(1)
             else:

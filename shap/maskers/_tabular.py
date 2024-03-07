@@ -14,8 +14,7 @@ log = logging.getLogger('shap')
 
 
 class Tabular(Masker):
-    """ A common base class for Independent and Partition.
-    """
+    """A common base class for Independent and Partition."""
 
     def __init__(self, data, max_samples=100, clustering=None):
         """ This masks out tabular features by integrating over the given background dataset.
@@ -152,8 +151,7 @@ class Tabular(Masker):
         return np.isclose(x, self.data)
 
     def save(self, out_file):
-        """ Write a Tabular masker to a file stream.
-        """
+        """Write a Tabular masker to a file stream."""
         super().save(out_file)
 
         # Increment the version number when the encoding changes!
@@ -172,8 +170,7 @@ class Tabular(Masker):
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ Load a Tabular masker from a file stream.
-        """
+        """Load a Tabular masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
 
@@ -243,8 +240,7 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
 
 
 class Independent(Tabular):
-    """ This masks out tabular features by integrating over the given background dataset.
-    """
+    """This masks out tabular features by integrating over the given background dataset."""
 
     def __init__(self, data, max_samples=100):
         """ Build a Independent masker with the given background data.

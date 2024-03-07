@@ -251,8 +251,7 @@ def safe_isinstance(obj, class_path_str):
 
 
 def format_value(s, format_str):
-    """ Strips trailing zeros and uses a unicode minus sign.
-    """
+    """Strips trailing zeros and uses a unicode minus sign."""
 
     if not issubclass(type(s), str):
         s = format_str % s
@@ -263,21 +262,18 @@ def format_value(s, format_str):
 
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
 def ordinal_str(n):
-    """ Converts a number to and ordinal string.
-    """
+    """Converts a number to and ordinal string."""
     return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
 class OpChain:
-    """ A way to represent a set of dot chained operations on an object without actually running them.
-    """
+    """A way to represent a set of dot chained operations on an object without actually running them."""
 
     def __init__(self, root_name=""):
         self._ops = []
         self._root_name = root_name
 
     def apply(self, obj):
-        """ Applies all our ops to the given object.
-        """
+        """Applies all our ops to the given object."""
         for o in self._ops:
             op,args,kwargs = o
             if args is not None:
@@ -287,8 +283,7 @@ class OpChain:
         return obj
 
     def __call__(self, *args, **kwargs):
-        """ Update the args for the previous operation.
-        """
+        """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops[-1][1] = args

@@ -1,5 +1,4 @@
-""" Tests for Explainer class.
-"""
+"""Tests for Explainer class."""
 
 import pytest
 import sklearn
@@ -27,8 +26,7 @@ def test_explainer_to_permutationexplainer():
 
 
 def test_wrapping_for_text_to_text_teacher_forcing_model():
-    """ This tests using the Explainer class to auto wrap a masker in a text to text scenario.
-    """
+    """This tests using the Explainer class to auto wrap a masker in a text to text scenario."""
 
     transformers = pytest.importorskip("transformers")
 
@@ -46,8 +44,7 @@ def test_wrapping_for_text_to_text_teacher_forcing_model():
     assert shap.utils.safe_isinstance(explainer.masker, "shap.maskers.OutputComposite")
 
 def test_wrapping_for_topk_lm_model():
-    """ This tests using the Explainer class to auto wrap a masker in a language modelling scenario.
-    """
+    """This tests using the Explainer class to auto wrap a masker in a language modelling scenario."""
 
     transformers = pytest.importorskip("transformers")
 

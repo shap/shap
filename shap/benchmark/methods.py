@@ -15,18 +15,15 @@ from .models import KerasWrap
 
 
 def linear_shap_corr(model, data):
-    """ Linear SHAP (corr 1000)
-    """
+    """Linear SHAP (corr 1000)"""
     return LinearExplainer(model, data, feature_perturbation="correlation_dependent", nsamples=1000).shap_values
 
 def linear_shap_ind(model, data):
-    """ Linear SHAP (ind)
-    """
+    """Linear SHAP (ind)"""
     return LinearExplainer(model, data, feature_perturbation="interventional").shap_values
 
 def coef(model, data):
-    """ Coefficients
-    """
+    """Coefficients"""
     return other.CoefficentExplainer(model).attributions
 
 def random(model, data):
@@ -118,8 +115,7 @@ def tree_maple(model, data):
     return lambda X: other.TreeMapleExplainer(model, data).attributions(X, multiply_by_input=False)
 
 def deep_shap(model, data):
-    """ Deep SHAP (DeepLIFT)
-    """
+    """Deep SHAP (DeepLIFT)"""
     if isinstance(model, KerasWrap):
         model = model.model
     explainer = DeepExplainer(model, kmeans(data, 1).data)
@@ -133,8 +129,7 @@ def deep_shap(model, data):
     return f
 
 def expected_gradients(model, data):
-    """ Expected Gradients
-    """
+    """Expected Gradients"""
     if isinstance(model, KerasWrap):
         model = model.model
     explainer = GradientExplainer(model, data)

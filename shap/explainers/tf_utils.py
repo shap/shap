@@ -4,8 +4,7 @@ tf = None
 
 
 def _import_tf():
-    """ Tries to import tensorflow.
-    """
+    """Tries to import tensorflow."""
     global tf
     if tf is None:
         import tensorflow as tf

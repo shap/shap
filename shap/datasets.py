@@ -181,8 +181,7 @@ def adult(display=False, n_points=None):
 
 
 def nhanesi(display=False, n_points=None):
-    """ A nicely packaged version of NHANES I data with surivival times as labels.
-    """
+    """A nicely packaged version of NHANES I data with surivival times as labels."""
     X = pd.read_csv(cache(github_data_url + "NHANESI_X.csv"), index_col=0)
     y = pd.read_csv(cache(github_data_url + "NHANESI_y.csv"), index_col=0)["y"]
 
@@ -243,8 +242,7 @@ def corrgroups60(display=False, n_points=1_000):
 
 
 def independentlinear60(display=False, n_points=1_000):
-    """ A simulated dataset with tight correlations among distinct groups of features.
-    """
+    """A simulated dataset with tight correlations among distinct groups of features."""
 
     # set a constant seed
     old_seed = np.random.seed()
@@ -271,8 +269,7 @@ def independentlinear60(display=False, n_points=1_000):
 
 
 def a1a(n_points=None):
-    """ A sparse dataset in scipy csr matrix format.
-    """
+    """A sparse dataset in scipy csr matrix format."""
     data, target = sklearn.datasets.load_svmlight_file(cache(github_data_url + 'a1a.svmlight'))
 
     if n_points is not None:
@@ -283,8 +280,7 @@ def a1a(n_points=None):
 
 
 def rank():
-    """ Ranking datasets from lightgbm repository.
-    """
+    """Ranking datasets from lightgbm repository."""
     rank_data_url = 'https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/'
     x_train, y_train = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.train'))
     x_test, y_test = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.test'))
@@ -295,8 +291,7 @@ def rank():
 
 
 def cache(url, file_name=None):
-    """ Loads a file from the URL and caches it locally.
-    """
+    """Loads a file from the URL and caches it locally."""
     if file_name is None:
         file_name = os.path.basename(url)
     data_dir = os.path.join(os.path.dirname(__file__), "cached_data")

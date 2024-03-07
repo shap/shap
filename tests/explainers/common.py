@@ -7,8 +7,7 @@ import shap
 
 
 def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
-    """ Create a basic XGBoost model on a data set.
-    """
+    """Create a basic XGBoost model on a data set."""
     xgboost = pytest.importorskip('xgboost')
 
     # get a dataset on income prediction
@@ -27,8 +26,7 @@ def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
 
 
 def test_additivity(explainer_type, model, masker, data, **kwargs):
-    """ Test explainer and masker for additivity on a single output prediction problem.
-    """
+    """Test explainer and masker for additivity on a single output prediction problem."""
     explainer = explainer_type(model, masker, **kwargs)
     shap_values = explainer(data)
 
@@ -50,8 +48,7 @@ def test_additivity(explainer_type, model, masker, data, **kwargs):
         assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model(data)) < 1e6)
 
 def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
-    """ Test explainer and masker for additivity on a single output prediction problem.
-    """
+    """Test explainer and masker for additivity on a single output prediction problem."""
     explainer = explainer_type(model, masker, **kwargs)
     shap_values = explainer(data, interactions=True)
 
@@ -78,8 +75,7 @@ def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
 #     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model.predict(X[:100])) < 1e6)
 
 def test_serialization(explainer_type, model, masker, data, rtol=1e-05, atol=1e-8, **kwargs):
-    """ Test serialization with a given explainer algorithm.
-    """
+    """Test serialization with a given explainer algorithm."""
 
     explainer_kwargs = {k: v for k,v in kwargs.items() if k in ["algorithm"]}
     explainer_original = explainer_type(model, masker, **explainer_kwargs)

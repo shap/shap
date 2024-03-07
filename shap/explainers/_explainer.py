@@ -391,8 +391,7 @@ class Explainer(Serializable):
 
     @staticmethod
     def _compute_main_effects(fm, expected_value, inds):
-        """ A utility method to compute the main effects from a MaskedModel.
-        """
+        """A utility method to compute the main effects from a MaskedModel."""
         warnings.warn(
             "This function is not used within the shap library and will therefore be removed in an upcoming release. "
             "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
@@ -419,8 +418,7 @@ class Explainer(Serializable):
         return expanded_main_effects
 
     def save(self, out_file, model_saver=".save", masker_saver=".save"):
-        """ Write the explainer to the given file stream.
-        """
+        """Write the explainer to the given file stream."""
         super().save(out_file)
         with Serializer(out_file, "shap.Explainer", version=0) as s:
             s.save("model", self.model, model_saver)
@@ -446,8 +444,7 @@ class Explainer(Serializable):
         return kwargs
 
 def pack_values(values):
-    """ Used the clean up arrays before putting them into an Explanation object.
-    """
+    """Used the clean up arrays before putting them into an Explanation object."""
 
     if not hasattr(values, "__len__"):
         return values

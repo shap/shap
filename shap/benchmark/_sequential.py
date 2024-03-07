@@ -198,9 +198,7 @@ class SequentialPerturbation:
             return mask_vals, curves, aucs
 
     def score(self, explanation, X, percent=0.01, y=None, label=None, silent=False, debug_mode=False):
-        '''
-        Will be deprecated once MaskedModel is in complete support
-        '''
+        '''Will be deprecated once MaskedModel is in complete support'''
         # if explainer is already the attributions
         if isinstance(explanation, np.ndarray):
             attributions = explanation

@@ -79,8 +79,7 @@ def _mask_delta_score(m1, m2):
 
 
 def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
-    """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
-    """
+    """A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar."""
 
     # compute a hierarchical clustering and return the optimal leaf ordering
     D = scipy.spatial.distance.pdist(X, metric)

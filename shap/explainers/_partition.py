@@ -124,16 +124,14 @@ class PartitionExplainer(Explainer):
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False):
-        """ Explain the output of the model on the given arguments.
-        """
+        """Explain the output of the model on the given arguments."""
         return super().__call__(
             *args, max_evals=max_evals, fixed_context=fixed_context, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
             outputs=outputs, silent=silent
         )
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
 
         if fixed_context == "auto":
             # if isinstance(self.masker, maskers.Text):
@@ -202,8 +200,7 @@ class PartitionExplainer(Explainer):
         return "shap.explainers.PartitionExplainer()"
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
-        """ Compute a nested set of recursive Owen values based on an ordering recursion.
-        """
+        """Compute a nested set of recursive Owen values based on an ordering recursion."""
 
         #f = self._reshaped_model
         #r = self.masker
@@ -341,8 +338,7 @@ class PartitionExplainer(Explainer):
         return output_indexes, base_value
 
     def owen3(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
-        """ Compute a nested set of recursive Owen values based on an ordering recursion.
-        """
+        """Compute a nested set of recursive Owen values based on an ordering recursion."""
 
         #f = self._reshaped_model
         #r = self.masker

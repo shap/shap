@@ -1,10 +1,8 @@
-""" This file contains various utility functions that are useful but not core to SHAP.
-"""
+"""This file contains various utility functions that are useful but not core to SHAP."""
 
 
 def clone_keras_layers(model, start_layer, stop_layer):
-        """ Clones the keras layers between the start and stop layer as a new model.
-        """
+        """Clones the keras layers between the start and stop layer as a new model."""
 
         import tensorflow as tf
 

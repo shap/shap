@@ -8,22 +8,19 @@ import shap
 
 
 def test_null_model_small():
-    """ Test a small null model.
-    """
+    """Test a small null model."""
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 4)), nsamples=100)
     e = explainer.explain(np.ones((1, 4)))
     assert np.sum(np.abs(e)) < 1e-8
 
 def test_null_model():
-    """ Test a larger null model.
-    """
+    """Test a larger null model."""
     explainer = shap.KernelExplainer(lambda x: np.zeros(x.shape[0]), np.ones((2, 10)), nsamples=100)
     e = explainer.explain(np.ones((1, 10)))
     assert np.sum(np.abs(e)) < 1e-8
 
 def test_front_page_model_agnostic():
-    """ Test the ReadMe kernel expainer example.
-    """
+    """Test the ReadMe kernel expainer example."""
 
     # print the JS visualization code to the notebook
     shap.initjs()
@@ -42,8 +39,7 @@ def test_front_page_model_agnostic():
     shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
 
 def test_front_page_model_agnostic_rank():
-    """ Test the rank regularized explanation of the ReadMe example.
-    """
+    """Test the rank regularized explanation of the ReadMe example."""
 
     # print the JS visualization code to the notebook
     shap.initjs()
@@ -61,8 +57,7 @@ def test_front_page_model_agnostic_rank():
     shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
 
 def test_kernel_shap_with_call_method():
-    """ Test the __call__ method of the Kernel class
-    """
+    """Test the __call__ method of the Kernel class"""
 
     # print the JS visualization code to the notebook
     shap.initjs()
@@ -88,8 +83,7 @@ def test_kernel_shap_with_call_method():
     np.testing.assert_allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
 
 def test_kernel_shap_with_dataframe(random_seed):
-    """ Test with a Pandas DataFrame.
-    """
+    """Test with a Pandas DataFrame."""
     rs = np.random.RandomState(random_seed)
 
     df_X = pd.DataFrame(rs.random((10, 3)), columns=list('abc'))
@@ -128,8 +122,7 @@ def test_kernel_shap_with_dataframe_explanation(random_seed):
     shap.plots.scatter(explanation[:, "a"], show=False)
 
 def test_kernel_shap_with_a1a_sparse_zero_background():
-    """ Test with a sparse matrix for the background.
-    """
+    """Test with a sparse matrix for the background."""
 
     X, y = shap.datasets.a1a()
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(X, y, test_size=0.01, random_state=0)
@@ -143,8 +136,7 @@ def test_kernel_shap_with_a1a_sparse_zero_background():
     explainer.shap_values(x_test)
 
 def test_kernel_shap_with_a1a_sparse_nonzero_background():
-    """ Check with a sparse non zero background matrix.
-    """
+    """Check with a sparse non zero background matrix."""
     np.set_printoptions(threshold=100000)
 
     X, y = shap.datasets.a1a()
@@ -168,8 +160,7 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
     assert np.allclose(shap_values, shap_values_dense, rtol=1e-02, atol=1e-01)
 
 def test_kernel_shap_with_high_dim_sparse():
-    """ Verifies we can run on very sparse data produced from feature hashing.
-    """
+    """Verifies we can run on very sparse data produced from feature hashing."""
 
     remove = ('headers', 'footers', 'quotes')
     categories = [
@@ -193,8 +184,7 @@ def test_kernel_shap_with_high_dim_sparse():
     _ = explainer.shap_values(x_test)
 
 def test_kernel_sparse_vs_dense_multirow_background():
-    """ Mix sparse and dense matrix values.
-    """
+    """Mix sparse and dense matrix values."""
 
     # train a logistic regression classifier
     X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.iris(), test_size=0.1, random_state=0)
@@ -246,8 +236,7 @@ def test_linear(random_seed):
 
 
 def test_non_numeric():
-    """ Test using non-numeric data.
-    """
+    """Test using non-numeric data."""
 
     # create dummy data
     X = np.array([['A', '0', '0'], ['A', '1', '0'], ['B', '0', '0'], ['B', '1', '0'], ['A', '1', '0']])
@@ -297,8 +286,7 @@ def test_kernel_explainer_with_tensors():
     explainer.shap_values(X[:1])
 
 def test_kernel_multiclass_single_row():
-    """ Check a multi-input scenario.
-    """
+    """Check a multi-input scenario."""
     X, y = shap.datasets.iris()
 
     lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
@@ -311,8 +299,7 @@ def test_kernel_multiclass_single_row():
 
 
 def test_kernel_multiclass_multiple_rows():
-    """ Check a multi-input scenario.
-    """
+    """Check a multi-input scenario."""
     X, y = shap.datasets.iris()
 
     lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')

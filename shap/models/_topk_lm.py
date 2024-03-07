@@ -8,8 +8,7 @@ from ._model import Model
 
 
 class TopKLM(Model):
-    """ Generates scores (log odds) for the top-k tokens for Causal/Masked LM.
-    """
+    """Generates scores (log odds) for the top-k tokens for Causal/Masked LM."""
 
     def __init__(self, model, tokenizer, k=10, generate_topk_token_ids=None, batch_size=128, device=None):
         """ Take Causal/Masked LM model and tokenizer and build a log odds output model for the top-k tokens.

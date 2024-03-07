@@ -1,5 +1,4 @@
-""" This file contains tests for the TextGeneration class.
-"""
+"""This file contains tests for the TextGeneration class."""
 
 import sys
 

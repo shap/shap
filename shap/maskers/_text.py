@@ -166,13 +166,11 @@ class Text(Masker):
         return (np.array([out]),)
 
     def data_transform(self, s):
-        """ Called by explainers to allow us to convert data to better match masking (here this means tokenizing).
-        """
+        """Called by explainers to allow us to convert data to better match masking (here this means tokenizing)."""
         return (self.token_segments(s)[0],)
 
     def token_segments(self, s):
-        """ Returns the substrings associated with each token in the given string.
-        """
+        """Returns the substrings associated with each token in the given string."""
 
         try:
             token_data = self.tokenizer(s, return_offsets_mapping=True)
@@ -210,8 +208,7 @@ class Text(Masker):
             return tokens, token_ids
 
     def clustering(self, s):
-        """ Compute the clustering of tokens for the given string.
-        """
+        """Compute the clustering of tokens for the given string."""
         self._update_s_cache(s)
         special_tokens = []
         sep_token = getattr_silent(self.tokenizer, "sep_token")
@@ -292,14 +289,12 @@ class Text(Masker):
         return (1, len(self._tokenized_s))
 
     def mask_shapes(self, s):
-        """ The shape of the masks we expect.
-        """
+        """The shape of the masks we expect."""
         self._update_s_cache(s)
         return [(len(self._tokenized_s),)]
 
     def invariants(self, s):
-        """ The names of the features for each mask position for the given input string.
-        """
+        """The names of the features for each mask position for the given input string."""
         self._update_s_cache(s)
 
         invariants = np.zeros(len(self._tokenized_s), dtype=bool)
@@ -314,14 +309,12 @@ class Text(Masker):
         return invariants.reshape(1, -1)
 
     def feature_names(self, s):
-        """ The names of the features for each mask position for the given input string.
-        """
+        """The names of the features for each mask position for the given input string."""
         self._update_s_cache(s)
         return [[v.strip() for v in self._segments_s]]
 
     def save(self, out_file):
-        """ Save a Text masker to a file stream.
-        """
+        """Save a Text masker to a file stream."""
         super().save(out_file)
         with Serializer(out_file, "shap.maskers.Text", version=0) as s:
             s.save("tokenizer", self.tokenizer)
@@ -331,8 +324,7 @@ class Text(Masker):
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ Load a Text masker from a file stream.
-        """
+        """Load a Text masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
 
@@ -346,16 +338,13 @@ class Text(Masker):
 
 
 class SimpleTokenizer:
-    """ A basic model agnostic tokenizer.
-    """
+    """A basic model agnostic tokenizer."""
     def __init__(self, split_pattern=r"\W+"):
-        """ Create a tokenizer based on a simple splitting pattern.
-        """
+        """Create a tokenizer based on a simple splitting pattern."""
         self.split_pattern = re.compile(split_pattern)
 
     def __call__(self, s, return_offsets_mapping=True):
-        """ Tokenize the passed string, optionally returning the offsets of each token in the original string.
-        """
+        """Tokenize the passed string, optionally returning the offsets of each token in the original string."""
         pos = 0
         offset_ranges = []
         input_ids = []
@@ -376,8 +365,7 @@ class SimpleTokenizer:
 
 
 def post_process_sentencepiece_tokenizer_output(s):
-    """ replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers.
-    """
+    """replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers."""
     s = s.replace('▁', ' ')
     return s
 
@@ -391,8 +379,7 @@ enders = [".", ","]
 connectors = ["but", "and", "or"]
 
 class Token:
-    """ A token representation used for token clustering.
-    """
+    """A token representation used for token clustering."""
     def __init__(self, value):
         self.s = value
         if value in openers or value in closers:
@@ -409,8 +396,7 @@ class Token:
         return self.s
 
 class TokenGroup:
-    """ A token group (substring) representation used for token clustering.
-    """
+    """A token group (substring) representation used for token clustering."""
     def __init__(self, group, index=None):
         self.g = group
         self.index = index
@@ -489,8 +475,7 @@ def merge_score(group1, group2, special_tokens):
     return score
 
 def merge_closest_groups(groups, special_tokens):
-    """ Finds the two token groups with the best merge score and merges them.
-    """
+    """Finds the two token groups with the best merge score and merges them."""
     scores = [merge_score(groups[i], groups[i+1], special_tokens) for i in range(len(groups)-1)]
     #print(scores)
     ind = np.argmax(scores)

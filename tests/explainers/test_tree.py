@@ -922,9 +922,7 @@ class TestExplainerSklearn:
         )
 
     def test_sklearn_random_forest_newsgroups(self):
-        """
-        note: this test used to fail in native TreeExplainer code due to memory corruption
-        """
+        """note: this test used to fail in native TreeExplainer code due to memory corruption"""
         newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
         pipeline = self._create_vectorizer_for_randomforestclassifier()
         pipeline.fit(newsgroups_train.data, newsgroups_train.target)

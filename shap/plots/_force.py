@@ -1,5 +1,4 @@
-""" Visualize the SHAP values with additive force style layouts.
-"""
+"""Visualize the SHAP values with additive force style layouts."""
 
 import base64
 import json

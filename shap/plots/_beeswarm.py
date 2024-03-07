@@ -1,5 +1,4 @@
-""" Summary plots of SHAP values across a whole dataset.
-"""
+"""Summary plots of SHAP values across a whole dataset."""
 
 import warnings
 
