@@ -84,6 +84,7 @@ class TreeExplainer(Explainer):
     Examples
     --------
     See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
+
     """
 
     def __init__(
@@ -408,6 +409,7 @@ class TreeExplainer(Explainer):
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
+
         """
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -569,6 +571,7 @@ class TreeExplainer(Explainer):
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
+
         """
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"
         #assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
@@ -1391,6 +1394,7 @@ class TreeEnsemble:
         tree_limit : None (default) or int
             Limit the number of trees used by the model. By default None means no use the limit of the
             original model, and -1 means no limit.
+
         """
         if output is None:
             output = self.model_output
@@ -1494,6 +1498,7 @@ class SingleTree:
 
     max_depth : int
         The max depth of the tree.
+
     """
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")

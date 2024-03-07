@@ -22,6 +22,7 @@ class OutputComposite(Masker):
         -------
         tuple
             A tuple consisting of the masked input using the underlying masker appended with the model output for passed args.
+
         """
         self.masker = masker
         self.model = model

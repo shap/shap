@@ -34,6 +34,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Array of target sentence/ids.
+
         """
         super().__init__(model)
 
@@ -71,6 +72,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Array of target sentence/ids.
+
         """
         if (self.X is None) or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X)) or \
                 (isinstance(self.X, str) and (self.X != X)):
@@ -102,6 +104,7 @@ class TextGeneration(Model):
         -------
         dict
             Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on model_type).
+
         """
         # set tokenizer padding to prepare inputs for batch inferencing
         # padding_side="left" for only decoder models text generation eg. GPT2
@@ -123,6 +126,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Returns target sentence ids.
+
         """
         if (hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder) \
                 and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
@@ -200,6 +204,7 @@ class TextGeneration(Model):
         -------
         dict
             Dictionary of prefix and suffix lengths concerning special tokens in output ids.
+
         """
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():

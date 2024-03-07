@@ -79,6 +79,7 @@ class LinearExplainer(Explainer):
     Examples
     --------
     See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/LinearExplainer.html>`_
+
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
@@ -386,6 +387,7 @@ class LinearExplainer(Explainer):
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
+
         """
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):

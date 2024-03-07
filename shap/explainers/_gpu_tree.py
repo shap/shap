@@ -23,6 +23,7 @@ class GPUTreeExplainer(TreeExplainer):
     Examples
     --------
     See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/GPUTreeExplainer.html>`_
+
     """
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True,
@@ -61,6 +62,7 @@ class GPUTreeExplainer(TreeExplainer):
             attribute of the explainer when it is constant). For models with vector outputs this
             returns
             a list of such matrices, one for each output.
+
         """
         assert not approximate, "approximate not supported"
 
@@ -123,6 +125,7 @@ class GPUTreeExplainer(TreeExplainer):
             interaction effects between all pairs of features for that sample. For models with
             vector outputs
             this returns a list of tensors, one for each output.
+
         """
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for " \
                                                  "SHAP interaction values right now!"

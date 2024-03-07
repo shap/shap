@@ -22,6 +22,7 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
 
     feature_names : list
         A list of feature names.
+
     """
     # Compute confidence bounds for the group difference value
     vs = []

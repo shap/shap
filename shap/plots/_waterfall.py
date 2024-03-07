@@ -350,6 +350,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
+
     """
     # Turn off interactive plot when not calling plt.show
     if show is False:

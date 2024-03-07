@@ -78,6 +78,7 @@ class KernelExplainer(Explainer):
     Examples
     --------
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
+
     """
 
     def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
@@ -228,6 +229,7 @@ class KernelExplainer(Explainer):
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs and one input changed from list to np.ndarray.
+
         """
         # convert dataframes
         if isinstance(X, pd.Series):

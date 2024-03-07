@@ -182,6 +182,7 @@ def sample(X, nsamples=100, random_state=0):
     random_state :
         Determines random number generation for shuffling the data. Use this to
         ensure reproducibility across multiple function calls.
+
     """
     if hasattr(X, "shape"):
         over_count = nsamples >= X.shape[0]
@@ -211,6 +212,7 @@ def safe_isinstance(obj, class_path_str):
     Returns
     --------
     bool: True if isinstance is true and the package exists, False otherwise
+
     """
     if isinstance(class_path_str, str):
         class_path_strs = [class_path_str]

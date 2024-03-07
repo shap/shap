@@ -32,6 +32,7 @@ class GradientExplainer(Explainer):
     Examples
     --------
     See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
+
     """
 
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
@@ -56,6 +57,7 @@ class GradientExplainer(Explainer):
             The background dataset to use for integrating out features. Gradient explainer integrates
             over these samples. The data passed here must match the input tensors given in the
             first argument. Single element lists can be passed unwrapped.
+
         """
         # first, we need to find the framework
         if type(model) is tuple:
@@ -98,6 +100,7 @@ class GradientExplainer(Explainer):
         Returns
         -------
         shap.Explanation:
+
         """
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)

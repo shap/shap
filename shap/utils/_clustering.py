@@ -27,6 +27,7 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
         A bool mask of which indexes we want to include in the shuffled list.
     partition_tree: np.array
         The partition tree we should follow.
+
     """
     M = len(index_mask)
     #switch = np.random.randn(M) < 0
@@ -166,6 +167,7 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     -------
     clustering: np.array
         The hierarchical clustering encoded as a linkage matrix.
+
     """
     if isinstance(X, pd.DataFrame):
         X = X.values

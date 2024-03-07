@@ -56,6 +56,7 @@ class ExactExplainer(Explainer):
             many samples. This for example means that a linear logistic regression model would have interaction effects
             that arise from the non-linear changes in expectation averaging. To retain the additively of the model with
             still respecting the link function we linearize the link function by default.
+
         """ # TODO link to the link linearization paper when done
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 

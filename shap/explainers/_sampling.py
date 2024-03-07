@@ -37,6 +37,7 @@ class SamplingExplainer(KernelExplainer):
         we would approximate a feature being missing by setting it to zero. Unlike the
         KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
+
     """
 
     def __init__(self, model, data, **kwargs):

@@ -40,6 +40,7 @@ class Text(Masker):
         collapse_mask_token : True, False, or "auto"
             If True, when several consecutive tokens are masked only one mask token is used to replace the entire
             series of original tokens.
+
         """
         if tokenizer is None:
             self.tokenizer = SimpleTokenizer()

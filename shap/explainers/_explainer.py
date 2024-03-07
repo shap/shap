@@ -375,6 +375,7 @@ class Explainer(Serializable):
             the expected value of the model for each sample (which is the same for all samples unless there
             are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
             of all the input shapes (since the row_values is always flattened),
+
         """
         return {}
 
@@ -429,6 +430,7 @@ class Explainer(Serializable):
         Parameters
         ----------
         in_file : The file stream to load objects from.
+
         """
         if instantiate:
             return cls._instantiated_load(in_file, model_loader=model_loader, masker_loader=masker_loader)

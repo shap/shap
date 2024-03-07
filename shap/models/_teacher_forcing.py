@@ -43,6 +43,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             The scores (log odds) of generating target sentence ids using the model.
+
         """
         super().__init__(model)
 
@@ -103,6 +104,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             A numpy array of log odds scores for every input pair (masked_X, X)
+
         """
         output_batch = None
         # caching updates output names and target sentence ids
@@ -130,6 +132,7 @@ class TeacherForcing(Model):
         ----------
         output: numpy.ndarray
             Output(sentence/sentence ids) for an explanation row.
+
         """
         # check if the target sentence has been updated (occurs when explaining a new row)
         if (self.output is None) or (not np.array_equal(self.output, output)):
@@ -148,6 +151,7 @@ class TeacherForcing(Model):
         -------
         list
             A list of output tokens.
+
         """
         output_ids = self.get_outputs(output)
         output_names = [self.similarity_tokenizer.decode([x]).strip() for x in output_ids[0, :]]
@@ -165,6 +169,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             An array of output(target sentence) ids.
+
         """
         # check if output is a sentence or already parsed target ids
         if X.dtype.type is np.str_:
@@ -193,6 +198,7 @@ class TeacherForcing(Model):
         -------
         dict
             Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on similarity_model_type).
+
         """
         if self.model_agnostic:
             # In model agnostic case, we first pass the input through the model and then tokenize output sentence
@@ -221,6 +227,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             Computes log odds for corresponding output ids.
+
         """
         # set output ids for which scores are to be extracted
         if self.output.dtype.type is np.str_:
@@ -253,6 +260,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             Returns output logits from the model.
+
         """
         if self.similarity_model_type == "pt":
             import torch
@@ -323,6 +331,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             Decoder output logits for output(target sentence) ids.
+
         """
         # check if type of model architecture assigned in model config
         if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \

@@ -488,6 +488,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
+
     """
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):

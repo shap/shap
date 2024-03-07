@@ -26,6 +26,7 @@ def kmeans(X, k, round_values=True):
     Returns
     -------
     DenseData object.
+
     """
     group_names = [str(i) for i in range(X.shape[1])]
     if isinstance(X, pd.DataFrame):
@@ -108,6 +109,7 @@ def convert_to_model(val, keep_index=False):
     keep_index : bool
         If True then the index values will be passed to the model function as the first argument.
         When this is False the feature names will be removed from the model object to avoid unnecessary warnings.
+
     """
     if isinstance(val, Model):
         out = val

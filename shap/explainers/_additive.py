@@ -28,6 +28,7 @@ class AdditiveExplainer(Explainer):
             instead of a function and that matrix will be used for masking. To use a clustering
             game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
             note that this structure information has no effect on the explanations of additive models.
+
         """
         super().__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 

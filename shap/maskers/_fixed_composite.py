@@ -19,6 +19,7 @@ class FixedComposite(Masker):
         -------
         tuple
             A tuple consisting of the masked input using the underlying masker appended with the original args in a list.
+
         """
         self.masker = masker
 

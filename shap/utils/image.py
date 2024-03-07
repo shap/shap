@@ -82,6 +82,7 @@ def resize_image(path_to_image, reshaped_dir):
     If image (pixel_size, pixel_size) is greater than 500 for either of the dimensions:
     1 - image is resized to have max. 500 pixel size for the dimension > 500
     2 - other dimension is resized retaining the original aspect ratio
+
     """
     image = load_image(path_to_image)
 

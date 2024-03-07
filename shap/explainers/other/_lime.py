@@ -24,6 +24,7 @@ class LimeTabular(Explainer):
 
     mode : "classification" or "regression"
         Control the mode of LIME tabular.
+
     """
 
     def __init__(self, model, data, mode="classification"):

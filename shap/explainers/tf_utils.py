@@ -21,6 +21,7 @@ def _get_session(session):
     session : tf.compat.v1.Session
 
         An optional existing session.
+
     """
     _import_tf()
     # if we are not given a session find a default session
@@ -39,6 +40,7 @@ def _get_graph(explainer):
     explainer : Explainer
 
         One of the tensorflow-based explainers.
+
     """
     _import_tf()
     if not tf.executing_eagerly():
@@ -56,6 +58,7 @@ def _get_model_inputs(model):
     model : Tensorflow Keras model or tuple
 
         The tensorflow model or tuple.
+
     """
     _import_tf()
     if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \
@@ -78,6 +81,7 @@ def _get_model_output(model):
     model : Tensorflow Keras model or tuple
 
         The tensorflow model or tuple.
+
     """
     _import_tf()
     if str(type(model)).endswith("keras.engine.sequential.Sequential'>") or \

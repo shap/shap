@@ -40,6 +40,7 @@ class Tabular(Masker):
             `matching`, `minkowski`, `rogerstanimoto`, `russellrao`, `seuclidean`,
             `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
+
         """
         self.output_dataframe = False
         if isinstance(data, pd.DataFrame):
@@ -253,6 +254,7 @@ class Independent(Tabular):
             samples coming out of the masker (to be integrated over) matches the number of samples in
             the background dataset. This means larger background dataset cause longer runtimes. Normally
             about 1, 10, 100, or 1000 background samples are reasonable choices.
+
         """
         super().__init__(data, max_samples=max_samples, clustering=None)
 
@@ -288,6 +290,7 @@ class Partition(Tabular):
             `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
             If an array, then this is assumed to be the clustering of the features.
+
         """
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
@@ -305,6 +308,7 @@ class Impute(Masker): # we should inherit from Tabular once we add support for a
         ----------
         data : numpy.ndarray, pandas.DataFrame or {"mean: numpy.ndarray, "cov": numpy.ndarray} dictionary
             The background dataset that is used for masking.
+
         """
         if data is dict and "mean" in data:
             self.mean = data.get("mean", None)

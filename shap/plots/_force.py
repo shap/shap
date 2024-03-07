@@ -92,6 +92,7 @@ def force(
         Controls the feature names/values that are displayed on force plot.
         Only features that the magnitude of their shap value is larger than min_perc * (sum of all abs shap values)
         will be displayed.
+
     """
     # support passing an explanation object
     if str(type(base_value)).endswith("Explanation'>"):
@@ -257,6 +258,7 @@ class AdditiveExplanation(Explanation):
         out_value : float
             The model prediction value, taken as the sum of the SHAP values across all
             features and the ``base_value``.
+
         """
         self.base_value = base_value
         self.out_value = out_value
@@ -320,6 +322,7 @@ def save_html(out_file, plot, full_html=True):
         If ``True``, writes a complete HTML document starting
         with an ``<html>`` tag. If ``False``, only script and div
         tags are included.
+
     """
     if not isinstance(plot, BaseVisualizer):
         raise TypeError("`save_html` requires a Visualizer returned by `shap.plots.force()`.")
@@ -396,6 +399,7 @@ def visualize(
     ----------
     e : AdditiveExplanation
         Contains the data necessary for additive force plots.
+
     """
     plot_cmap = verify_valid_cmap(plot_cmap)
 
@@ -480,6 +484,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
 
         plot_cmap : str or list[str]
             Color map to use. It can be a string (defaults to ``RdBu``) or a list of hex color strings.
+
         """
         if not isinstance(e, AdditiveExplanation):
             emsg = "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"

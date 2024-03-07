@@ -58,6 +58,7 @@ class ExplanationError:
         linearize_link : bool
             Non-linear links can destroy additive separation in generalized linear models, so by linearizing the link we can
             retain additive separation. See upcoming paper/doc for details.
+
         """
         self.masker = masker
         self.model = model

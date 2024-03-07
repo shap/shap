@@ -34,6 +34,7 @@ class TopKLM(Model):
         -------
         numpy.ndarray
             The scores (log odds) of generating top-k token ids using the model.
+
         """
         super().__init__(model)
 
@@ -75,6 +76,7 @@ class TopKLM(Model):
         -------
         numpy.ndarray
             A numpy array of log odds scores for top-k tokens for every input pair (masked_X, X)
+
         """
         output_batch = None
         self.update_cache_X(X[:1])
@@ -99,6 +101,7 @@ class TopKLM(Model):
         ----------
         X: np.ndarray
             Input(Text) for an explanation row.
+
         """
         # check if the source sentence has been updated (occurs when explaining a new row)
         if (self.X is None) or (not np.array_equal(self.X, X)):
@@ -117,6 +120,7 @@ class TopKLM(Model):
         -------
         list
             A list of output tokens.
+
         """
         # see if the user gave a custom token generator
         if self._custom_generate_topk_token_ids is not None:
@@ -141,6 +145,7 @@ class TopKLM(Model):
         -------
         numpy.ndarray
             Computes log odds for corresponding top-k token ids.
+
         """
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
@@ -165,6 +170,7 @@ class TopKLM(Model):
         -------
         dict
             Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on similarity_model_type).
+
         """
         self.tokenizer.padding_side = padding_side
         inputs = self.tokenizer(X.tolist(), return_tensors=self.model_type, padding=True)
@@ -184,6 +190,7 @@ class TopKLM(Model):
         -------
         np.ndarray
             An array of top-k token ids.
+
         """
         logits = self.get_lm_logits(X)
         topk_tokens_ids = (-logits).argsort()[0, :self.k]
@@ -201,6 +208,7 @@ class TopKLM(Model):
         -------
         numpy.ndarray
             Logits corresponding to next word/masked word.
+
         """
         if safe_isinstance(self.inner_model, MODELS_FOR_CAUSAL_LM):
             inputs = self.get_inputs(X, padding_side="left")

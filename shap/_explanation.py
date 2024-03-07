@@ -263,6 +263,7 @@ class Explanation(metaclass=MetaExplanation):
         cohorts : int or array
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
+
         """
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
@@ -596,6 +597,7 @@ class Explanation(metaclass=MetaExplanation):
 
         axis : int
             The axis to cluster along.
+
         """
         values = self.values
 
@@ -622,6 +624,7 @@ class Explanation(metaclass=MetaExplanation):
 
         replace : bool
             Sample with or without replacement.
+
         """
         prev_seed = np.random.seed(random_state)
         inds = np.random.choice(self.shape[0], min(max_samples, self.shape[0]), replace=replace)
