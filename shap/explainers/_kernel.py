@@ -189,11 +189,17 @@ class KernelExplainer(Explainer):
         Returns
         -------
         array or list
-            For models with a single output this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
+            The return type and shape depend on the number of model inputs and outputs:
+              - one input one output: matrix of shape (#num_samples, *X.shape[1:]).
+              - one input multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs)
+              - multiple inputs one or more outputs: list of matrices, with shapes of one of the above.
+            Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
+
+           .. versionchanged:: 0.45.0
+           Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
 
         # convert dataframes
@@ -222,17 +228,9 @@ class KernelExplainer(Explainer):
 
             # vector-output
             s = explanation.shape
-            if len(s) == 2:
-                outs = [np.zeros(s[0]) for j in range(s[1])]
-                for j in range(s[1]):
-                    outs[j] = explanation[:, j]
-                return outs
-
-            # single-output
-            else:
-                out = np.zeros(s[0])
-                out[:] = explanation
-                return out
+            out = np.zeros(s)
+            out[:] = explanation
+            return out
 
         # explain the whole dataset
         elif len(X.shape) == 2:
@@ -252,6 +250,7 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
+                outs = np.stack(outs, axis=-1)
                 return outs
 
             # single-output

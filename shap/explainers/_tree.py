@@ -196,7 +196,6 @@ class TreeExplainer(Explainer):
         #self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
         self.approximate = approximate
-
         if feature_perturbation not in feature_perturbation_codes:
             raise InvalidFeaturePerturbationError("Invalid feature_perturbation option!")
 
@@ -396,12 +395,16 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For models with a single output, this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
+        array
+            Returns a matrix. The shape depends on the number of model outputs:
+              - one output: matrix of shape (#num_samples, *X.shape[1:]).
+              - multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs).
+            Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored in the ``expected_value``
-            attribute of the explainer when it is constant). For models with vector outputs, this returns
-            a list of such matrices, one for each output.
+            attribute of the explainer when it is constant).
+
+           .. versionchanged:: 0.45.0
+           Return type for models with multiple outputs changed from list to np.ndarray.
         """
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -438,7 +441,6 @@ class TreeExplainer(Explainer):
                 if self.model.original_model.params['objective'] == 'binary':
                     if not from_call:
                         warnings.warn('LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray')
-                    phi = np.concatenate((0-phi, phi), axis=-1)
                 if phi.shape[1] != X.shape[1] + 1:
                     try:
                         phi = phi.reshape(X.shape[0], phi.shape[1]//(X.shape[1]+1), X.shape[1]+1)
@@ -468,7 +470,8 @@ class TreeExplainer(Explainer):
 
                 if check_additivity and model_output_vals is not None:
                     self.assert_additivity(out, model_output_vals)
-
+                if isinstance(out, list):
+                    out = np.stack(out, axis=-1)
                 return out
 
         X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
@@ -501,6 +504,11 @@ class TreeExplainer(Explainer):
         if check_additivity and self.model.model_output == "raw":
             self.assert_additivity(out, self.model.predict(X))
 
+        # This statements handles the case of multiple outputs
+        # e.g. a multi-class classification problem, multi-target regression problem
+        # in this case the output shape corresponds to [num_samples, num_features, num_outputs]
+        if isinstance(out, list):
+            out = np.stack(out, axis=-1)
         return out
 
     def _get_shap_output(self, phi, flat_output):
@@ -542,15 +550,22 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For models with a single output, this returns a tensor of SHAP values
-            (# samples x # features x # features). The matrix (# features x # features) for each sample sums
+        array
+            Returns a matrix. The shape depends on the number of model outputs:
+
+            * one output: matrix of shape (#num_samples, #features, #features).
+            * multiple outputs: matrix of shape (#num_samples, #features, #features, #num_outputs).
+
+            The matrix (#num_samples, # features, # features) for each sample sums
             to the difference between the model output for that sample and the expected value of the model output
             (which is stored in the ``expected_value`` attribute of the explainer). Each row of this matrix sums to the
             SHAP value for that feature for that sample. The diagonal entries of the matrix represent the
             "main effect" of that feature on the prediction. The symmetric off-diagonal entries represent the
             interaction effects between all pairs of features for that sample.
             For models with vector outputs, this returns a list of tensors, one for each output.
+
+           .. versionchanged:: 0.45.0
+           Return type for models with multiple outputs changed from list to np.ndarray.
         """
 
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"
@@ -582,9 +597,13 @@ class TreeExplainer(Explainer):
             )
 
             # note we pull off the last column and keep it as our expected_value
+            # multi-outputs
             if len(phi.shape) == 4:
                 self.expected_value = [phi[0, i, -1, -1] for i in range(phi.shape[1])]
-                return [phi[:, i, :-1, :-1] for i in range(phi.shape[1])]
+                # phi is given as [#num_observations, #num_classes, #features, #features]
+                # slice out the expected values, then move the classes to the last dimension
+                return np.swapaxes(phi[:, :, :-1, :-1], axis1=1, axis2=3)
+            # regression and binary classification case
             else:
                 self.expected_value = phi[0, -1, -1]
                 return phi[:, :-1, :-1]
@@ -614,7 +633,7 @@ class TreeExplainer(Explainer):
             output_transform_codes[transform], True
         )
 
-        return self._get_shap_interactions_output(phi,flat_output)
+        return self._get_shap_interactions_output(phi, flat_output)
 
     def _get_shap_interactions_output(self, phi, flat_output):
         """Pull off the last column and keep it as our expected_value"""
@@ -628,9 +647,9 @@ class TreeExplainer(Explainer):
         else:
             self.expected_value = [phi[0, -1, -1, i] for i in range(phi.shape[3])]
             if flat_output:
-                out = [phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)]
+                out = np.stack([phi[0, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
             else:
-                out = [phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)]
+                out = np.stack([phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
         return out
 
     def assert_additivity(self, phi, model_output):
@@ -1235,7 +1254,6 @@ class TreeEnsemble:
             max_nodes = np.max([len(t.values) for t in self.trees])
             assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, "All trees in the ensemble must have the same output dimension!"
             num_trees = len(self.trees)
-
             # important to be -1 in unused sections!! This way we can tell which entries are valid.
             self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
             self.children_right = -np.ones((num_trees, max_nodes), dtype=np.int32)
