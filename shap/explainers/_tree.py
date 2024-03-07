@@ -397,15 +397,16 @@ class TreeExplainer(Explainer):
         -------
         array
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
+
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored
+            as the ``expected_value`` attribute of the explainer).
+
             The shape of the returned array depends on the number of model outputs:
 
             * one output: array of shape ``(#num_samples, *X.shape[1:])``.
             * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
               #num_outputs)``.
-
-            Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored
-            as the ``expected_value`` attribute of the explainer).
 
             .. versionchanged:: 0.45.0
                 Return type for models with multiple outputs changed from list to np.ndarray.
