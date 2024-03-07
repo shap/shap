@@ -127,6 +127,6 @@ class DeepExplainer(Explainer):
             were chosen as "top".
 
            .. versionchanged:: 0.45.0
-           Return type for models with multiple outputs and one input changed from list to np.ndarray.
+              Return type for models with multiple outputs and one input changed from list to np.ndarray.
         """
         return self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)
