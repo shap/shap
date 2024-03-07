@@ -8,7 +8,7 @@ class FixedComposite(Masker):
     """A masker that outputs both the masked data and the original data as a pair."""
 
     def __init__(self, masker):
-        """ Creates a Composite masker from an underlying masker and returns the original args along with the masked output.
+        """Creates a Composite masker from an underlying masker and returns the original args along with the masked output.
 
         Parameters
         ----------

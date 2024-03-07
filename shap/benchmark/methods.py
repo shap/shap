@@ -27,35 +27,35 @@ def coef(model, data):
     return other.CoefficentExplainer(model).attributions
 
 def random(model, data):
-    """ Random
+    """Random
     color = #777777
     linestyle = solid
     """
     return other.RandomExplainer().attributions
 
 def kernel_shap_1000_meanref(model, data):
-    """ Kernel SHAP 1000 mean ref.
+    """Kernel SHAP 1000 mean ref.
     color = red_blue_circle(0.5)
     linestyle = solid
     """
     return lambda X: KernelExplainer(model.predict, kmeans(data, 1)).shap_values(X, nsamples=1000, l1_reg=0)
 
 def sampling_shap_1000(model, data):
-    """ IME 1000
+    """IME 1000
     color = red_blue_circle(0.5)
     linestyle = dashed
     """
     return lambda X: SamplingExplainer(model.predict, data).shap_values(X, nsamples=1000)
 
 def tree_shap_tree_path_dependent(model, data):
-    """ TreeExplainer
+    """TreeExplainer
     color = red_blue_circle(0)
     linestyle = solid
     """
     return TreeExplainer(model, feature_perturbation="tree_path_dependent").shap_values
 
 def tree_shap_independent_200(model, data):
-    """ TreeExplainer (independent)
+    """TreeExplainer (independent)
     color = red_blue_circle(0)
     linestyle = dashed
     """
@@ -63,7 +63,7 @@ def tree_shap_independent_200(model, data):
     return TreeExplainer(model, data_subsample, feature_perturbation="interventional").shap_values
 
 def mean_abs_tree_shap(model, data):
-    """ mean(|TreeExplainer|)
+    """mean(|TreeExplainer|)
     color = red_blue_circle(0.25)
     linestyle = solid
     """
@@ -76,39 +76,39 @@ def mean_abs_tree_shap(model, data):
     return f
 
 def saabas(model, data):
-    """ Saabas
+    """Saabas
     color = red_blue_circle(0)
     linestyle = dotted
     """
     return lambda X: TreeExplainer(model).shap_values(X, approximate=True)
 
 def tree_gain(model, data):
-    """ Gain/Gini Importance
+    """Gain/Gini Importance
     color = red_blue_circle(0.25)
     linestyle = dotted
     """
     return other.TreeGainExplainer(model).attributions
 
 def lime_tabular_regression_1000(model, data):
-    """ LIME Tabular 1000
+    """LIME Tabular 1000
     color = red_blue_circle(0.75)
     """
     return lambda X: other.LimeTabularExplainer(model.predict, data, mode="regression").attributions(X, nsamples=1000)
 
 def lime_tabular_classification_1000(model, data):
-    """ LIME Tabular 1000
+    """LIME Tabular 1000
     color = red_blue_circle(0.75)
     """
     return lambda X: other.LimeTabularExplainer(model.predict_proba, data, mode="classification").attributions(X, nsamples=1000)[1]
 
 def maple(model, data):
-    """ MAPLE
+    """MAPLE
     color = red_blue_circle(0.6)
     """
     return lambda X: other.MapleExplainer(model.predict, data).attributions(X, multiply_by_input=False)
 
 def tree_maple(model, data):
-    """ Tree MAPLE
+    """Tree MAPLE
     color = red_blue_circle(0.6)
     linestyle = dashed
     """

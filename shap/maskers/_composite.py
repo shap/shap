@@ -5,7 +5,7 @@ from ._masker import Masker
 
 
 class Composite(Masker):
-    """ This merges several maskers for different inputs together into a single composite masker.
+    """This merges several maskers for different inputs together into a single composite masker.
 
     This is not yet implemented.
     """

@@ -6,7 +6,7 @@ class OutputComposite(Masker):
     """A masker that is a combination of a masker and a model and outputs both masked args and the model's output."""
 
     def __init__(self, masker, model):
-        """ Creates a masker from an underlying masker and and model.
+        """Creates a masker from an underlying masker and and model.
 
         This masker returns the masked input along with the model output for the passed args.
 

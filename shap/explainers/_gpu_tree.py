@@ -27,7 +27,7 @@ class GPUTreeExplainer(TreeExplainer):
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True,
                     from_call=False):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -91,7 +91,7 @@ class GPUTreeExplainer(TreeExplainer):
         return out
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
-        """ Estimate the SHAP interaction values for a set of samples.
+        """Estimate the SHAP interaction values for a set of samples.
 
         Parameters
         ----------

@@ -17,7 +17,7 @@ from ..utils.transformers import is_transformers_lm
 
 
 class Explainer(Serializable):
-    """ Uses Shapley values to explain any machine learning model or python function.
+    """Uses Shapley values to explain any machine learning model or python function.
 
     This is the primary explainer interface for the SHAP library. It takes any combination
     of a model and masker and returns a callable subclass object that implements
@@ -26,7 +26,7 @@ class Explainer(Serializable):
 
     def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True,
                  seed=None, **kwargs):
-        """ Build a new explainer for the passed model.
+        """Build a new explainer for the passed model.
 
         Parameters
         ----------
@@ -201,7 +201,7 @@ class Explainer(Serializable):
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False, **kwargs):
-        """ Explains the output of model(*args), where args is a list of parallel iterable datasets.
+        """Explains the output of model(*args), where args is a list of parallel iterable datasets.
 
         Note this default version could be an abstract method that is implemented by each algorithm-specific
         subclass of Explainer. Descriptions of each subclasses' __call__ arguments
@@ -363,7 +363,7 @@ class Explainer(Serializable):
         return out[0] if len(out) == 1 else out
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, outputs, silent, **kwargs):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
 
         This is an abstract method meant to be implemented by each subclass.
 
@@ -381,7 +381,7 @@ class Explainer(Serializable):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
@@ -425,7 +425,7 @@ class Explainer(Serializable):
 
     @classmethod
     def load(cls, in_file, model_loader=Model.load, masker_loader=Masker.load, instantiate=True):
-        """ Load an Explainer from the given file stream.
+        """Load an Explainer from the given file stream.
 
         Parameters
         ----------

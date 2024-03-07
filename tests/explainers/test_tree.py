@@ -573,7 +573,7 @@ def test_provided_background_independent_prob_output():
 
 
 def test_single_tree_compare_with_kernel_shap():
-    """ Compare with Kernel SHAP, which makes the same independence assumptions
+    """Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the
     set being conditioned on, and the remainder set.
     """
@@ -615,7 +615,7 @@ def test_single_tree_compare_with_kernel_shap():
 
 
 def test_several_trees():
-    """ Make sure Independent Tree SHAP sums up to the correct value for
+    """Make sure Independent Tree SHAP sums up to the correct value for
     larger models (20 trees).
     """
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -649,7 +649,7 @@ def test_several_trees():
 
 
 def test_single_tree_nonlinear_transformations():
-    """ Make sure Independent Tree SHAP single trees with non-linear
+    """Make sure Independent Tree SHAP single trees with non-linear
     transformations.
     """
     # Supported non-linear transforms

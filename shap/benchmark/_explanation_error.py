@@ -12,7 +12,7 @@ from ._result import BenchmarkResult
 
 
 class ExplanationError:
-    """ A measure of the explanation error relative to a model's actual output.
+    """A measure of the explanation error relative to a model's actual output.
 
     This benchmark metric measures the discrepancy between the output of the model predicted by an
     attribution explanation vs. the actual output of the model. This discrepancy is measured over
@@ -27,7 +27,7 @@ class ExplanationError:
     """
 
     def __init__(self, masker, model, *model_args, batch_size=500, num_permutations=10, link=links.identity, linearize_link=True, seed=38923):
-        """ Build a new explanation error benchmarker with the given masker, model, and model args.
+        """Build a new explanation error benchmarker with the given masker, model, and model args.
 
         Parameters
         ----------

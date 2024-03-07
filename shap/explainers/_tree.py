@@ -99,7 +99,7 @@ class TreeExplainer(Explainer):
         link=None,
         linearize_link=None,
     ):
-        """ Build a new Tree explainer for the passed model.
+        """Build a new Tree explainer for the passed model.
 
         Parameters
         ----------
@@ -367,7 +367,7 @@ class TreeExplainer(Explainer):
         return X, y, X_missing, flat_output, tree_limit, check_additivity
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -539,7 +539,7 @@ class TreeExplainer(Explainer):
         return out
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
-        """ Estimate the SHAP interaction values for a set of samples.
+        """Estimate the SHAP interaction values for a set of samples.
 
         Parameters
         ----------
@@ -681,7 +681,7 @@ class TreeExplainer(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
@@ -696,7 +696,7 @@ class TreeExplainer(Explainer):
 
 
 class TreeEnsemble:
-    """ An ensemble of decision trees.
+    """An ensemble of decision trees.
 
     This object provides a common interface to many different types of models.
     """

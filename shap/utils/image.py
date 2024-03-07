@@ -9,7 +9,7 @@ import shap
 
 
 def is_empty(path):
-    """ Function to check if folder at given path exists and is not empty.
+    """Function to check if folder at given path exists and is not empty.
 
     Returns True if folder is empty or does not exist.
     """

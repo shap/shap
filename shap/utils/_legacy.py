@@ -8,7 +8,7 @@ from sklearn.impute import SimpleImputer
 
 
 def kmeans(X, k, round_values=True):
-    """ Summarize a dataset with k mean samples weighted by the number of data points they
+    """Summarize a dataset with k mean samples weighted by the number of data points they
     each represent.
 
     Parameters
@@ -99,7 +99,7 @@ class Model:
 
 
 def convert_to_model(val, keep_index=False):
-    """ Convert a model to a Model object.
+    """Convert a model to a Model object.
 
     Parameters
     ----------

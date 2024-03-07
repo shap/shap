@@ -207,7 +207,7 @@ def test_kernel_sparse_vs_dense_multirow_background():
 
 
 def test_linear(random_seed):
-    """ Tests that KernelExplainer returns the correct result when the model is linear.
+    """Tests that KernelExplainer returns the correct result when the model is linear.
 
     (as per corollary 1 of https://arxiv.org/abs/1705.07874)
     """

@@ -700,7 +700,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
 
 def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, grouping_threshold=1, separator=''):
-    """ Plots an explanation of a string of text using coloring and interactive labels.
+    """Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.

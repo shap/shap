@@ -4,7 +4,7 @@ from ._masker import Masker
 
 
 class Fixed(Masker):
-    """ This leaves the input unchanged during masking, and is used for things like scoring labels.
+    """This leaves the input unchanged during masking, and is used for things like scoring labels.
 
     Sometimes there are inputs to the model that we do not want to explain, but rather we want to
     consider them fixed. The primary example of this is when we explain the loss of the model using

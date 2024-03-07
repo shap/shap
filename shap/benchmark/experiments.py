@@ -320,7 +320,7 @@ def __print_status():
 
 
 def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
-    """ Use ssh to run the experiments on remote machines in parallel.
+    """Use ssh to run the experiments on remote machines in parallel.
 
     Parameters
     ----------

@@ -50,7 +50,7 @@ def convert_name(ind, shap_values, input_names):
         return ind
 
 def potential_interactions(shap_values_column, shap_values_matrix):
-    """ Order other features by how much interaction they seem to have with the feature at the given index.
+    """Order other features by how much interaction they seem to have with the feature at the given index.
 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
@@ -98,7 +98,7 @@ def potential_interactions(shap_values_column, shap_values_matrix):
 
 
 def approximate_interactions(index, shap_values, X, feature_names=None):
-    """ Order other features by how much interaction they seem to have with the feature at the given index.
+    """Order other features by how much interaction they seem to have with the feature at the given index.
 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.

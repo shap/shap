@@ -5,7 +5,7 @@ from ._explainer import Explainer
 
 
 class AdditiveExplainer(Explainer):
-    """ Computes SHAP values for generalized additive models.
+    """Computes SHAP values for generalized additive models.
 
     This assumes that the model only has first-order effects. Extending this to
     second- and third-order effects is future work (if you apply this to those models right now
@@ -13,7 +13,7 @@ class AdditiveExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=None, feature_names=None, linearize_link=True):
-        """ Build an Additive explainer for the given model using the given masker object.
+        """Build an Additive explainer for the given model using the given masker object.
 
         Parameters
         ----------
@@ -72,7 +72,7 @@ class AdditiveExplainer(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """

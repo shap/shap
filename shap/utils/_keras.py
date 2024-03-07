@@ -43,7 +43,7 @@ def clone_keras_layers(model, start_layer, stop_layer):
         return tf.keras.Model(layer_input, new_layers[stop_layer.output.name])
 
 def split_keras_model(model, layer):
-    """ Splits the keras model around layer into two models.
+    """Splits the keras model around layer into two models.
 
     This is done such that model2(model1(X)) = model(X)
     and mode11(X) == layer(X)

@@ -17,7 +17,7 @@ class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
     def __init__(self, data, max_samples=100, clustering=None):
-        """ This masks out tabular features by integrating over the given background dataset.
+        """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
         ----------
@@ -135,7 +135,7 @@ class Tabular(Masker):
 
 
     def invariants(self, x):
-        """ This returns a mask of which features change when we mask them.
+        """This returns a mask of which features change when we mask them.
 
         This optional masking method allows explainers to avoid re-evaluating the model when
         the features that would have been masked are all invariant.
@@ -194,7 +194,7 @@ def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
 @njit
 def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
                    masked_inputs_tmp, last_mask, data, variants, masked_inputs_out, noop_code):
-    """ Implements the special (high speed) delta masking API that only flips the positions we need to.
+    """Implements the special (high speed) delta masking API that only flips the positions we need to.
 
     Note that we attempt to avoid doing any allocation inside this function for speed reasons.
     """
@@ -241,7 +241,7 @@ class Independent(Tabular):
     """This masks out tabular features by integrating over the given background dataset."""
 
     def __init__(self, data, max_samples=100):
-        """ Build a Independent masker with the given background data.
+        """Build a Independent masker with the given background data.
 
         Parameters
         ----------
@@ -260,13 +260,13 @@ class Independent(Tabular):
 
 
 class Partition(Tabular):
-    """ This masks out tabular features by integrating over the given background dataset.
+    """This masks out tabular features by integrating over the given background dataset.
 
     Unlike Independent, Partition respects a hierarchical structure of the data.
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):
-        """ Build a Partition masker with the given background data and clustering.
+        """Build a Partition masker with the given background data and clustering.
 
         Parameters
         ----------
@@ -296,13 +296,13 @@ class Partition(Tabular):
 
 
 class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking
-    """ This imputes the values of missing features using the values of the observed features.
+    """This imputes the values of missing features using the values of the observed features.
 
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
     """
 
     def __init__(self, data, method="linear"):
-        """ Build a Partition masker with the given background data and clustering.
+        """Build a Partition masker with the given background data and clustering.
 
         Parameters
         ----------

@@ -257,7 +257,7 @@ def test_pytorch_mnist_cnn():
 
 
 def test_pytorch_multiple_inputs(random_seed):
-    """ Test multi-input scenarios."""
+    """Test multi-input scenarios."""
     torch = pytest.importorskip('torch')
     from torch import nn
 
@@ -295,7 +295,7 @@ def test_pytorch_multiple_inputs(random_seed):
 
 
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
-    """ Test multi-input scenarios."""
+    """Test multi-input scenarios."""
     torch = pytest.importorskip('torch')
     from torch import nn
 
@@ -335,7 +335,7 @@ def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
 
 @pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
 def test_tf_input(random_seed, input_type):
-    """ Test tabular (batch_size, features) pd.DataFrame and numpy input. """
+    """Test tabular (batch_size, features) pd.DataFrame and numpy input."""
     tf = pytest.importorskip('tensorflow')
     tf.random.set_seed(random_seed)
 

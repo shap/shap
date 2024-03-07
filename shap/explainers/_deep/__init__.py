@@ -21,7 +21,7 @@ class DeepExplainer(Explainer):
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
-        """ An explainer object for a differentiable model using a given background dataset.
+        """An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
@@ -89,7 +89,7 @@ class DeepExplainer(Explainer):
         self.explainer.framework = framework
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
-        """ Return approximate SHAP values for the model applied to the data given by X.
+        """Return approximate SHAP values for the model applied to the data given by X.
 
         Parameters
         ----------

@@ -8,7 +8,7 @@ from ..utils import convert_name
 
 
 def compute_bounds(xmin, xmax, xv):
-    """ Handles any setting of xmax and xmin.
+    """Handles any setting of xmax and xmin.
 
     Note that we handle None, float, or "percentile(float)" formats.
     """

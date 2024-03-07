@@ -4,7 +4,7 @@ from .._explainer import Explainer
 
 
 class Coefficient(Explainer):
-    """ Simply returns the model coefficients as the feature attributions.
+    """Simply returns the model coefficients as the feature attributions.
 
     This is only for benchmark comparisons and does not approximate SHAP values in a
     meaningful way.

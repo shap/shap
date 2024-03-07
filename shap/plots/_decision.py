@@ -1,4 +1,4 @@
-""" Visualize cumulative SHAP values."""
+"""Visualize cumulative SHAP values."""
 
 from typing import Union
 

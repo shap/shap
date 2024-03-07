@@ -127,7 +127,7 @@ def merge_nodes(values, partition_tree):
     return partition_tree_new, ind1, ind2
 
 def dendrogram_coords(leaf_positions, partition_tree):
-    """ Returns the x and y coords of the lines of a dendrogram where the leaf order is given.
+    """Returns the x and y coords of the lines of a dendrogram where the leaf order is given.
 
     Note that scipy can compute these coords as well, but it does not allow you to easily specify
     a specific leaf order, hence this reimplementation.

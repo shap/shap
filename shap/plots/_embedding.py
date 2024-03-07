@@ -7,7 +7,7 @@ from ._labels import labels
 
 
 def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):
-    """ Use the SHAP values as an embedding which we project to 2D for visualization.
+    """Use the SHAP values as an embedding which we project to 2D for visualization.
 
     Parameters
     ----------

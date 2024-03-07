@@ -18,7 +18,7 @@ tf = None
 
 
 class GradientExplainer(Explainer):
-    """ Explains a model using expected gradients (an extension of integrated gradients).
+    """Explains a model using expected gradients (an extension of integrated gradients).
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
     feature attribution method designed for differentiable models based on an extension of Shapley
@@ -36,7 +36,7 @@ class GradientExplainer(Explainer):
     """
 
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
-        """ An explainer object for a differentiable model using a given background dataset.
+        """An explainer object for a differentiable model using a given background dataset.
 
         Parameters
         ----------
@@ -85,7 +85,7 @@ class GradientExplainer(Explainer):
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
-        """ Return an explanation object for the model applied to X.
+        """Return an explanation object for the model applied to X.
 
         Parameters
         ----------
@@ -106,7 +106,7 @@ class GradientExplainer(Explainer):
         return Explanation(values=shap_values, data=X, feature_names=self.features)
 
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
-        """ Return the values for the model applied to X.
+        """Return the values for the model applied to X.
 
         Parameters
         ----------

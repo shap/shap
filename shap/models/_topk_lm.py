@@ -11,7 +11,7 @@ class TopKLM(Model):
     """Generates scores (log odds) for the top-k tokens for Causal/Masked LM."""
 
     def __init__(self, model, tokenizer, k=10, generate_topk_token_ids=None, batch_size=128, device=None):
-        """ Take Causal/Masked LM model and tokenizer and build a log odds output model for the top-k tokens.
+        """Take Causal/Masked LM model and tokenizer and build a log odds output model for the top-k tokens.
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ class TopKLM(Model):
 
 
     def __call__(self, masked_X, X):
-        """ Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
+        """Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
 
         Parameters
         ----------
@@ -92,7 +92,7 @@ class TopKLM(Model):
         return output_batch
 
     def update_cache_X(self, X):
-        """ The function updates original input(X) and top-k token ids for the Causal/Masked LM.
+        """The function updates original input(X) and top-k token ids for the Causal/Masked LM.
 
         It mimics the caching mechanism to update the original input and topk token ids
         that are to be explained and which updates for every new row of explanation.
@@ -109,7 +109,7 @@ class TopKLM(Model):
             self.output_names = self.get_output_names_and_update_topk_token_ids(self.X)
 
     def get_output_names_and_update_topk_token_ids(self, X):
-        """ Gets the token names for top-k token ids for Causal/Masked LM.
+        """Gets the token names for top-k token ids for Causal/Masked LM.
 
         Parameters
         ----------
@@ -132,7 +132,7 @@ class TopKLM(Model):
         return output_names
 
     def get_logodds(self, logits):
-        """ Calculates log odds from logits.
+        """Calculates log odds from logits.
 
         This function passes the logits through softmax and then computes log odds for the top-k token ids.
 
@@ -159,7 +159,7 @@ class TopKLM(Model):
         return logodds_for_topk_token_ids
 
     def get_inputs(self, X, padding_side='right'):
-        """ The function tokenizes source sentence.
+        """The function tokenizes source sentence.
 
         Parameters
         ----------
@@ -179,7 +179,7 @@ class TopKLM(Model):
         return inputs
 
     def generate_topk_token_ids(self, X):
-        """ Generates top-k token ids for Causal/Masked LM.
+        """Generates top-k token ids for Causal/Masked LM.
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ class TopKLM(Model):
         return topk_tokens_ids
 
     def get_lm_logits(self, X):
-        """ Evaluates a Causal/Masked LM model and returns logits corresponding to next word/masked word.
+        """Evaluates a Causal/Masked LM model and returns logits corresponding to next word/masked word.
 
         Parameters
         ----------

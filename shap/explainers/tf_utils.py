@@ -10,7 +10,7 @@ def _import_tf():
         import tensorflow as tf
 
 def _get_session(session):
-    """ Common utility to get the session for the tensorflow-based explainer.
+    """Common utility to get the session for the tensorflow-based explainer.
 
     Parameters
     ----------
@@ -33,7 +33,7 @@ def _get_session(session):
     return tf.get_default_session() if session is None else session
 
 def _get_graph(explainer):
-    """ Common utility to get the graph for the tensorflow-based explainer.
+    """Common utility to get the graph for the tensorflow-based explainer.
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ def _get_graph(explainer):
         return graph
 
 def _get_model_inputs(model):
-    """ Common utility to determine the model inputs.
+    """Common utility to determine the model inputs.
 
     Parameters
     ----------
@@ -74,7 +74,7 @@ def _get_model_inputs(model):
 
 
 def _get_model_output(model):
-    """ Common utility to determine the model output.
+    """Common utility to determine the model output.
 
     Parameters
     ----------

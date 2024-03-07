@@ -17,7 +17,7 @@ def partition_tree(X, metric="correlation"):
 
 
 def partition_tree_shuffle(indexes, index_mask, partition_tree):
-    """ Randomly shuffle the indexes in a way that is consistent with the given partition tree.
+    """Randomly shuffle the indexes in a way that is consistent with the given partition tree.
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     return scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
 
 def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
-    """ Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
+    """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
     predicting the output of these models using univariate XGBoost models of other features. If one

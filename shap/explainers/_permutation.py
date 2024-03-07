@@ -8,7 +8,7 @@ from ._explainer import Explainer
 
 
 class PermutationExplainer(Explainer):
-    """ This method approximates the Shapley values by iterating through permutations of the inputs.
+    """This method approximates the Shapley values by iterating through permutations of the inputs.
 
     This is a model agnostic explainer that guarantees local accuracy (additivity) by iterating completely
     through an entire permutation of the features in both forward and reverse directions (antithetic sampling).
@@ -21,7 +21,7 @@ class PermutationExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, feature_names=None, linearize_link=True, seed=None, **call_args):
-        """ Build an explainers.Permutation object for the given model using the given masker object.
+        """Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
         ----------
@@ -181,7 +181,7 @@ class PermutationExplainer(Explainer):
 
 
     def shap_values(self, X, npermutations=10, main_effects=False, error_bounds=False, batch_evals=True, silent=False):
-        """ Legacy interface to estimate the SHAP values for a set of samples.
+        """Legacy interface to estimate the SHAP values for a set of samples.
 
         Parameters
         ----------

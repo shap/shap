@@ -15,7 +15,7 @@ tf_execute = None
 tf_gradients_impl = None
 
 def custom_record_gradient(op_name, inputs, attrs, results):
-    """ This overrides tensorflow.python.eager.backprop._record_gradient.
+    """This overrides tensorflow.python.eager.backprop._record_gradient.
 
     We need to override _record_gradient in order to get gradient backprop to
     get called for ResourceGather operations. In order to make this work we
@@ -44,7 +44,7 @@ class TFDeep(Explainer):
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
-        """ An explainer object for a deep model using a given background dataset.
+        """An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
@@ -417,7 +417,7 @@ class TFDeep(Explainer):
             return [v.numpy() for v in out]
 
 def tensors_blocked_by_false(ops):
-    """ Follows a set of ops assuming their value is False and find blocked Switch paths.
+    """Follows a set of ops assuming their value is False and find blocked Switch paths.
 
     This is used to prune away parts of the model graph that are only used during the training
     phase (like dropout, batch norm, etc.).
@@ -462,7 +462,7 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
 
 
 def softmax(explainer, op, *grads):
-    """ Just decompose softmax into its components and recurse, we can handle all of them :)
+    """Just decompose softmax into its components and recurse, we can handle all of them :)
 
     We assume the 'axis' is the last dimension because the TF codebase swaps the 'axis' to
     the last dimension before the softmax op if 'axis' is not already the last dimension.
@@ -678,7 +678,7 @@ def passthrough(explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
 def break_dependence(explainer, op, *grads):
-    """ This function name is used to break attribution dependence in the graph traversal.
+    """This function name is used to break attribution dependence in the graph traversal.
 
     These operation types may be connected above input data values in the graph but their outputs
     don't depend on the input values (for example they just depend on the shape).

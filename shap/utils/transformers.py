@@ -88,7 +88,7 @@ def is_transformers_lm(model):
         safe_isinstance(model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM)
 
 def parse_prefix_suffix_for_tokenizer(tokenizer):
-    """ Set prefix and suffix tokens based on null tokens.
+    """Set prefix and suffix tokens based on null tokens.
 
     Example for distillgpt2: null_tokens=[], for BART: null_tokens = [0,2] and for MarianMT: null_tokens=[0]
     used to slice tokens belonging to sentence after passing through tokenizer.encode().
@@ -131,7 +131,7 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
     }
 
 def getattr_silent(obj, attr):
-    """ This turns of verbose logging of missing attributes for huggingface transformers.
+    """This turns of verbose logging of missing attributes for huggingface transformers.
 
     This is motivated by huggingface transformers objects that print error warnings
     when we access unset properties.

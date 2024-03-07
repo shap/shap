@@ -14,7 +14,7 @@ from ._masker import Masker
 
 
 class Text(Masker):
-    """ This masks out tokens according to the given tokenizer.
+    """This masks out tokens according to the given tokenizer.
 
     The masked variables are
 
@@ -23,7 +23,7 @@ class Text(Masker):
     """
 
     def __init__(self, tokenizer=None, mask_token=None, collapse_mask_token="auto", output_type="string"):
-        """ Build a new Text masker given an optional passed tokenizer.
+        """Build a new Text masker given an optional passed tokenizer.
 
         Parameters
         ----------
@@ -281,7 +281,7 @@ class Text(Masker):
             self._segments_s = np.array(tokens)
 
     def shape(self, s):
-        """ The shape of what we return as a masker.
+        """The shape of what we return as a masker.
 
         Note we only return a single sample, so there is no expectation averaging.
         """
@@ -417,7 +417,7 @@ class TokenGroup:
         return len(self.g)
 
 def merge_score(group1, group2, special_tokens):
-    """ Compute the score of merging two token groups.
+    """Compute the score of merging two token groups.
 
     special_tokens: tokens (such as separator tokens) that should be grouped last
     """
@@ -492,7 +492,7 @@ def merge_closest_groups(groups, special_tokens):
     groups.pop(ind+1)
 
 def partition_tree(decoded_tokens, special_tokens):
-    """ Build a heriarchial clustering of tokens that align with sentence structure.
+    """Build a heriarchial clustering of tokens that align with sentence structure.
 
     Note that this is fast and heuristic right now.
     TODO: Build this using a real constituency parser.

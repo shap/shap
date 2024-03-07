@@ -257,7 +257,7 @@ class Explanation(metaclass=MetaExplanation):
         self._s.clustering = new_clustering
 
     def cohorts(self, cohorts):
-        """ Split this explanation into several cohorts.
+        """Split this explanation into several cohorts.
 
         Parameters
         ----------
@@ -587,7 +587,7 @@ class Explanation(metaclass=MetaExplanation):
 
 
     def hclust(self, metric="sqeuclidean", axis=0):
-        """ Computes an optimal leaf ordering sort order using hclustering.
+        """Computes an optimal leaf ordering sort order using hclustering.
 
         hclust(metric="sqeuclidean")
 
@@ -615,7 +615,7 @@ class Explanation(metaclass=MetaExplanation):
         return inds
 
     def sample(self, max_samples, replace=False, random_state=0):
-        """ Randomly samples the instances (rows) of the Explanation object.
+        """Randomly samples the instances (rows) of the Explanation object.
 
         Parameters
         ----------

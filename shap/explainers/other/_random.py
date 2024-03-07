@@ -8,7 +8,7 @@ from .._explainer import Explainer
 
 
 class Random(Explainer):
-    """ Simply returns random (normally distributed) feature attributions.
+    """Simply returns random (normally distributed) feature attributions.
 
     This is only for benchmark comparisons. It supports both fully random attributions and random
     attributions that are constant across all explanations.

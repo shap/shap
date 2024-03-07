@@ -6,7 +6,7 @@ from . import colors
 
 def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, xmin=None, xmax=None,
                      max_display=None, sort=True, show=True, ax=None):
-    """ This plots the difference in mean SHAP values between two groups.
+    """This plots the difference in mean SHAP values between two groups.
 
     It is useful to decompose many group level metrics about the model output among the
     input features. Quantitative fairness metrics for machine learning models are

@@ -179,7 +179,7 @@ class KernelExplainer(Explainer):
         )
 
     def shap_values(self, X, **kwargs):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------

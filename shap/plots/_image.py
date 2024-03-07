@@ -176,7 +176,7 @@ def image(shap_values: Explanation or np.ndarray,
 
 
 def image_to_text(shap_values):
-    """ Plots SHAP values for image inputs with test outputs.
+    """Plots SHAP values for image inputs with test outputs.
 
     Parameters
     ----------

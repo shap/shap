@@ -306,7 +306,7 @@ def initjs():
 
 
 def save_html(out_file, plot, full_html=True):
-    """ Save html plots to an output file.
+    """Save html plots to an output file.
 
     Parameters
     ----------

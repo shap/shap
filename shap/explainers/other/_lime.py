@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 class LimeTabular(Explainer):
-    """ Simply wrap of lime.lime_tabular.LimeTabularExplainer into the common shap interface.
+    """Simply wrap of lime.lime_tabular.LimeTabularExplainer into the common shap interface.
 
     Parameters
     ----------

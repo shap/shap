@@ -5,7 +5,7 @@ from ._model import Model
 
 
 class TransformersPipeline(Model):
-    """ This wraps a transformers pipeline object for easy explanations.
+    """This wraps a transformers pipeline object for easy explanations.
 
     By default transformers pipeline object output lists of dictionaries, not standard
     tensors as expected by SHAP. This class wraps pipelines to make them output nice

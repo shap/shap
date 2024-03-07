@@ -17,7 +17,7 @@ log = logging.getLogger('shap')
 
 
 class ExactExplainer(Explainer):
-    """ Computes SHAP values via an optimized exact enumeration.
+    """Computes SHAP values via an optimized exact enumeration.
 
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
     from the background per sample. It also works well for Owen values from hclustering structured
@@ -28,7 +28,7 @@ class ExactExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, linearize_link=True, feature_names=None):
-        """ Build an explainers.Exact object for the given model using the given masker object.
+        """Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
         ----------
@@ -319,7 +319,7 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
 
 
 def gray_code_masks(nbits):
-    """ Produces an array of all binary patterns of size nbits in gray code order.
+    """Produces an array of all binary patterns of size nbits in gray code order.
 
     This is based on code from: http://code.activestate.com/recipes/576592-gray-code-generatoriterator/
     """
@@ -339,7 +339,7 @@ def gray_code_masks(nbits):
     return out
 
 def gray_code_indexes(nbits):
-    """ Produces an array of which bits flip at which position.
+    """Produces an array of which bits flip at which position.
 
     We assume the masks start at all zero and -1 means don't do a flip.
     This is a more efficient representation of the gray_code_masks version.

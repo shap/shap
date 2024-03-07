@@ -475,7 +475,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
                       color="#1E88E5", axis_color="#333333", cmap=None,
                       dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True,
                       ymin=None, ymax=None):
-    """ Create a SHAP dependence plot, colored by an interaction feature.
+    """Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a

@@ -212,7 +212,7 @@ class LinearExplainer(Explainer):
             raise InvalidFeaturePerturbationError("Unknown type of feature_perturbation provided: " + self.feature_perturbation)
 
     def _estimate_transforms(self, nsamples):
-        """ Uses block matrix inversion identities to quickly estimate transforms.
+        """Uses block matrix inversion identities to quickly estimate transforms.
 
         After a bit of matrix math we can isolate a transform matrix (# features x # features)
         that is independent of any sample we are explaining. It is the result of averaging over
@@ -363,7 +363,7 @@ class LinearExplainer(Explainer):
 
 
     def shap_values(self, X):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
