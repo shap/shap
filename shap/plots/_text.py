@@ -59,7 +59,6 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 
     Examples
     --------
-
     See `text plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/text.html>`_.
 
     """

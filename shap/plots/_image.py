@@ -64,7 +64,6 @@ def image(shap_values: Explanation or np.ndarray,
 
     Examples
     --------
-
     See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
 
     """

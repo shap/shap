@@ -61,7 +61,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     Examples
     --------
-
     See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
 
     """

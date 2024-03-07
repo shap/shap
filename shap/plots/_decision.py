@@ -340,7 +340,6 @@ def decision(
 
     Examples
     --------
-
     Plot two decision plots using the same feature order and x-axis.
 
         >>> range1, range2 = range(20), range(20, 40)

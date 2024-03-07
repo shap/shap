@@ -40,7 +40,6 @@ def waterfall(shap_values, max_display=10, show=True):
 
     Examples
     --------
-
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
 
     """

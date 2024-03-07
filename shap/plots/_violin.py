@@ -63,7 +63,6 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
     Examples
     --------
-
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
