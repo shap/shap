@@ -38,8 +38,7 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     return out
 
 class TFDeep(Explainer):
-    """
-    Using tf.gradients to implement the backpropagation was
+    """Using tf.gradients to implement the backpropagation was
     inspired by the gradient-based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """

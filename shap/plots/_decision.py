@@ -169,8 +169,7 @@ class DecisionPlotResult:
     """
 
     def __init__(self, base_value, shap_values, feature_names, feature_idx, xlim):
-        """
-        Example
+        """Example
         -------
         Plot two decision plots using the same feature order and x-axis.
         >>> range1, range2 = range(20), range(20, 40)

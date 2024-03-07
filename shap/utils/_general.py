@@ -195,8 +195,7 @@ def sample(X, nsamples=100, random_state=0):
 
 
 def safe_isinstance(obj, class_path_str):
-    """
-    Acts as a safe version of isinstance without having to explicitly
+    """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
     Checks if obj is an instance of type specified by class_path_str.

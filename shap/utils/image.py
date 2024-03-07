@@ -57,8 +57,7 @@ def load_image(path_to_image):
     return np.array(image).astype('float')
 
 def check_valid_image(path_to_image):
-    """
-    Function to check if a file has valid image extensions and return True if it does.
+    """Function to check if a file has valid image extensions and return True if it does.
     Note: Azure Cognitive Services only accepts below file formats.
     """
     valid_extensions = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".jfif")
@@ -73,8 +72,7 @@ def save_image(array, path_to_image):
 
 
 def resize_image(path_to_image, reshaped_dir):
-    """
-    Function to resize given image retaining original aspect ratio and save in given directory 'reshaped_dir'.
+    """Function to resize given image retaining original aspect ratio and save in given directory 'reshaped_dir'.
     Returns numpy array of resized image and path where resized file is saved.
     Note:
     Azure COGS CV has size limit of < 4MB and min size of 50x50 for images.

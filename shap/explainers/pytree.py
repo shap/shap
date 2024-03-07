@@ -1,5 +1,4 @@
-"""
-This module is a pure python implementation of Tree SHAP.
+"""This module is a pure python implementation of Tree SHAP.
 It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implementation.
 """

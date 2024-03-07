@@ -247,9 +247,7 @@ class AdditiveExplanation(Explanation):
     """Data structure for AdditiveForceVisualizer / AdditiveForceArrayVisualizer."""
 
     def __init__(self, base_value, out_value, effects, effects_var, instance, link, model, data):
-        """
-
-        Parameters
+        """Parameters
         ----------
         base_value : float
             This is the reference value that the feature contributions start from.
@@ -475,9 +473,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
     """Visualizer for a single Additive Force plot."""
 
     def __init__(self, e, plot_cmap="RdBu"):
-        """
-
-        Parameters
+        """Parameters
         ----------
         e : AdditiveExplanation
             Contains the data necessary for additive force plots.

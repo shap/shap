@@ -419,8 +419,7 @@ def test_catboost_interactions():
 
 
 def _average_path_length(n_samples_leaf):
-    """
-    Vendored from: https://github.com/scikit-learn/scikit-learn/blob/399131c8545cd525724e4bacf553416c512ac82c/sklearn/ensemble/_iforest.py#L531
+    """Vendored from: https://github.com/scikit-learn/scikit-learn/blob/399131c8545cd525724e4bacf553416c512ac82c/sklearn/ensemble/_iforest.py#L531
 
     For use in isolation forest tests.
     """
@@ -1223,8 +1222,7 @@ class TestExplainerXGBoost:
 
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
-        """
-        Test that xgboost sklearn attributues are properly passed to the DMatrix
+        """Test that xgboost sklearn attributues are properly passed to the DMatrix
         initiated during shap value calculation. see GH #3313
         """
         X, y = shap.datasets.adult(n_points=100)

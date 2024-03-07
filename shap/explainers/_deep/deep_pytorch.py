@@ -64,8 +64,7 @@ class PyTorchDeep(Explainer):
         self.target_handle = input_handle
 
     def add_handles(self, model, forward_handle, backward_handle):
-        """
-        Add handles to all non-container layers in the model.
+        """Add handles to all non-container layers in the model.
         Recursively for non-container layers
         """
         handles_list = []
@@ -79,8 +78,7 @@ class PyTorchDeep(Explainer):
         return handles_list
 
     def remove_attributes(self, model):
-        """
-        Removes the x and y attributes which were added by the forward handles
+        """Removes the x and y attributes which were added by the forward handles
         Recursively searches for non-container layers
         """
         for child in model.children():

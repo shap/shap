@@ -16,8 +16,7 @@ except ImportError as e:
 
 
 class GPUTreeExplainer(TreeExplainer):
-    """
-    Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
+    """Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
     cuda available and 'CUDA_PATH' environment variable defined.
 
     Examples
