@@ -95,6 +95,7 @@ class GradientExplainer(Explainer):
             explain the model's output.
         nsamples : int
             number of background samples
+
         Returns
         -------
         shap.Explanation:
