@@ -9,6 +9,7 @@ class Coefficient(Explainer):
     This is only for benchmark comparisons and does not approximate SHAP values in a
     meaningful way.
     """
+
     def __init__(self, model):
         assert hasattr(model, "coef_"), "The passed model does not have a coef_ attribute!"
         self.model = model

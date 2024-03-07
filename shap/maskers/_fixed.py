@@ -13,6 +13,7 @@ class Fixed(Masker):
     the model's input features. This is where the Fixed masker can help, since we can apply it to the
     label inputs.
     """
+
     def __init__(self):
         self.shape = (None, 0)
         self.clustering = np.zeros((0, 4))

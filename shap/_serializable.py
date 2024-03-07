@@ -47,6 +47,7 @@ class Serializable:
 
 class Serializer:
     """Save data items to an input stream."""
+
     def __init__(self, out_stream, block_name, version):
         self.out_stream = out_stream
         self.block_name = block_name

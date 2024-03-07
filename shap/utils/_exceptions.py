@@ -17,6 +17,7 @@ class InvalidMaskerError(ValueError):
 
 class ExplainerError(Exception):
     """Generic errors related to Explainers"""
+
     pass
 
 class InvalidAlgorithmError(ValueError):

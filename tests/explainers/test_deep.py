@@ -337,6 +337,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
 
     class RandData:
         """Random test data."""
+
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -455,6 +456,7 @@ def test_pytorch_custom_nested_models(torch_device):
 
     class CustomNet1(nn.Module):
         """Model 1."""
+
         def __init__(self, num_features):
             super().__init__()
             self.net = nn.Sequential(
@@ -471,6 +473,7 @@ def test_pytorch_custom_nested_models(torch_device):
 
     class CustomNet2(nn.Module):
         """Model 2."""
+
         def __init__(self, num_features):
             super().__init__()
             self.net = nn.Sequential(
@@ -484,6 +487,7 @@ def test_pytorch_custom_nested_models(torch_device):
 
     class CustomNet(nn.Module):
         """Model 3."""
+
         def __init__(self, num_features):
             super().__init__()
             self.net1 = CustomNet1(num_features)
@@ -574,6 +578,7 @@ def test_pytorch_single_output(torch_device):
 
     class Net(nn.Module):
         """Test model."""
+
         def __init__(self, num_features):
             super().__init__()
             self.linear = nn.Linear(num_features // 2, 2)
@@ -668,6 +673,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
 
     class Net(nn.Module):
         """Testing model."""
+
         def __init__(self, num_features, disconnected):
             super().__init__()
             self.disconnected = disconnected

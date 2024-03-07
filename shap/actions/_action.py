@@ -1,5 +1,6 @@
 class Action:
     """Abstract action class."""
+
     def __lt__(self, other_action):
         return self.cost < other_action.cost
 

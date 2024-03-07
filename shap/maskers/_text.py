@@ -21,6 +21,7 @@ class Text(Masker):
     output_type : "string" (default) or "token_ids"
 
     """
+
     def __init__(self, tokenizer=None, mask_token=None, collapse_mask_token="auto", output_type="string"):
         """ Build a new Text masker given an optional passed tokenizer.
 
@@ -338,6 +339,7 @@ class Text(Masker):
 
 class SimpleTokenizer:
     """A basic model agnostic tokenizer."""
+
     def __init__(self, split_pattern=r"\W+"):
         """Create a tokenizer based on a simple splitting pattern."""
         self.split_pattern = re.compile(split_pattern)
@@ -379,6 +381,7 @@ connectors = ["but", "and", "or"]
 
 class Token:
     """A token representation used for token clustering."""
+
     def __init__(self, value):
         self.s = value
         if value in openers or value in closers:
@@ -396,6 +399,7 @@ class Token:
 
 class TokenGroup:
     """A token group (substring) representation used for token clustering."""
+
     def __init__(self, group, index=None):
         self.g = group
         self.index = index

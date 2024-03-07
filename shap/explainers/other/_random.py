@@ -13,6 +13,7 @@ class Random(Explainer):
     This is only for benchmark comparisons. It supports both fully random attributions and random
     attributions that are constant across all explanations.
     """
+
     def __init__(self, model, masker, link=links.identity, feature_names=None, linearize_link=True, constant=False, **call_args):
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 

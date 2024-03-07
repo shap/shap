@@ -1196,6 +1196,7 @@ class TestExplainerXGBoost:
         * XGBRFClassifier
         * XGBRanker
     """
+
     xgboost = pytest.importorskip("xgboost")
 
     regressors =  [xgboost.XGBRegressor, xgboost.XGBRFRegressor]

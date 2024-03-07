@@ -68,6 +68,7 @@ class MetaExplanation(type):
 
 class Explanation(metaclass=MetaExplanation):
     """A sliceable set of parallel arrays representing a SHAP explanation."""
+
     def __init__(
         self,
         values,

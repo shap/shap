@@ -19,6 +19,7 @@ def test_image_to_text_single():
 
     class MockImageExplanation:
         """Fake explanation object."""
+
         def __init__(self, data, values, output_names):
             self.data = data
             self.values = values

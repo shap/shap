@@ -149,6 +149,7 @@ def test_pytorch_mnist_cnn():
 
     class RandData:
         """Ranomd data for testing."""
+
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -186,6 +187,7 @@ def test_pytorch_mnist_cnn():
 
         class Net(nn.Module):
             """A test model."""
+
             def __init__(self):
                 super().__init__()
                 self.conv1 = nn.Conv2d(1, 5, kernel_size=5)
@@ -268,6 +270,7 @@ def test_pytorch_multiple_inputs(random_seed):
 
     class Net(nn.Module):
         """A test model."""
+
         def __init__(self):
             super().__init__()
             self.linear = nn.Linear(7, 1)

@@ -1500,6 +1500,7 @@ class SingleTree:
         The max depth of the tree.
 
     """
+
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
 
@@ -1770,6 +1771,7 @@ class SingleTree:
 
 class IsoTree(SingleTree):
     """In sklearn the tree of the Isolation Forest does not calculated in a good way."""
+
     def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
         super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
