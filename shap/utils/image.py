@@ -75,7 +75,8 @@ def resize_image(path_to_image, reshaped_dir):
     """Function to resize given image retaining original aspect ratio and save in given directory 'reshaped_dir'.
     Returns numpy array of resized image and path where resized file is saved.
 
-    Note:
+    Note
+    ----
     Azure COGS CV has size limit of < 4MB and min size of 50x50 for images.
     Hence, large image files are being reshaped in code below to increase speed of SHAP explanations and run Azure COGS for image captions.
     If image (pixel_size, pixel_size) is greater than 500 for either of the dimensions:
