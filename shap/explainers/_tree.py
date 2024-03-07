@@ -664,8 +664,8 @@ class TreeExplainer(Explainer):
                 if self.feature_perturbation != "interventional":
                     err_msg += " Consider retrying with the feature_perturbation='interventional' option."
                 err_msg += " This check failed because for one of the samples the sum of the SHAP values" \
-                           " was {:f}, while the model output was {:f}. If this difference is acceptable" \
-                           " you can set check_additivity=False to disable this check.".format(sum_val[ind], model_output[ind])
+                           f" was {sum_val[ind]:f}, while the model output was {model_output[ind]:f}. If this" \
+                            " difference is acceptable you can set check_additivity=False to disable this check."
                 raise ExplainerError(err_msg)
 
         if isinstance(phi, list):

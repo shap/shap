@@ -374,10 +374,14 @@ class KernelExplainer(Explainer):
                     nsubsets *= 2
                 log.debug(f"{subset_size = }")
                 log.debug(f"{nsubsets = }")
-                log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
-                    num_samples_left * remaining_weight_vector[subset_size - 1]))
-                log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {}".format(
-                    num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
+                log.debug(
+                    "self.nsamples*weight_vector[subset_size-1] = "
+                    f"{num_samples_left * remaining_weight_vector[subset_size - 1]}"
+                )
+                log.debug(
+                    "self.nsamples*weight_vector[subset_size-1]/nsubsets = "
+                    f"{num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets}"
+                )
 
                 # see if we have enough samples to enumerate all subsets of this size
                 if num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets >= 1.0 - 1e-8:
@@ -697,8 +701,7 @@ class KernelExplainer(Explainer):
             sqrt_W = np.sqrt(self.kernelWeights)
             w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
         log.debug(f"{np.sum(w) = }")
-        log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
-            self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
+        log.debug(f"self.link(self.fx) - self.link(self.fnull) = {self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])}")
         log.debug(f"self.fx = {self.fx[dim]}")
         log.debug(f"self.link(self.fx) = {self.link.f(self.fx[dim])}")
         log.debug(f"self.fnull = {self.fnull[dim]}")

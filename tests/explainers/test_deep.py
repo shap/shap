@@ -526,9 +526,11 @@ def test_pytorch_custom_nested_models(torch_device):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
 
     random_seed = 777  # TODO: #2960
@@ -620,9 +622,11 @@ def test_pytorch_single_output(torch_device):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
 
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -720,9 +724,11 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
     random_seed = 42  # TODO: 2960
     torch.manual_seed(random_seed)
