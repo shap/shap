@@ -38,7 +38,8 @@ def test_front_page_model_agnostic():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
+    # this is a multi output model so we index to get the zero-th output (Setosa)
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
 
 def test_front_page_model_agnostic_rank():
     """ Test the rank regularized explanation of the ReadMe example.
@@ -57,7 +58,7 @@ def test_front_page_model_agnostic_rank():
     shap_values = explainer.shap_values(X_test)
 
     # plot the SHAP values for the Setosa output of the first instance
-    shap.force_plot(explainer.expected_value[0], shap_values[0][0, :], X_test.iloc[0, :], link="logit")
+    shap.force_plot(explainer.expected_value[0], shap_values[0, :, 0], X_test.iloc[0, :], link="logit")
 
 def test_kernel_shap_with_call_method():
     """ Test the __call__ method of the Kernel class
@@ -76,7 +77,15 @@ def test_kernel_shap_with_call_method():
     shap_values = explainer(X_test)
 
     # plot the SHAP values for the Versicolour output of the first instance
-    shap.force_plot(shap_values[0][:,1])
+    shap.force_plot(shap_values[0, :, 1])
+
+    outputs = svm.predict_proba(X_test)
+    sigm = lambda x: np.exp(x) / (1 + np.exp(x))  # noqa: E731
+    # Call sigm since we use logit link
+    np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
+
+    shap_values = explainer.shap_values(X_test)
+    np.testing.assert_allclose(sigm(shap_values.sum(1) + explainer.expected_value), outputs)
 
 def test_kernel_shap_with_dataframe(random_seed):
     """ Test with a Pandas DataFrame.
@@ -284,3 +293,30 @@ def test_kernel_explainer_with_tensors():
     model.compile(optimizer="adam", loss="binary_crossentropy")
     explainer = shap.KernelExplainer(model, X)
     explainer.shap_values(X[:1])
+
+def test_kernel_multiclass_single_row():
+    """ Check a multi-input scenario.
+    """
+    X, y = shap.datasets.iris()
+
+    lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
+    lr.fit(X, y)
+    pred = lr.predict_proba(X.iloc[[0], :])
+
+    explainer = shap.KernelExplainer(lr.predict_proba, X)
+    shap_values = explainer(X.iloc[0, :])
+    np.testing.assert_allclose(shap_values.values.sum(0) + explainer.expected_value, pred.squeeze(), atol=1e-04)
+
+
+def test_kernel_multiclass_multiple_rows():
+    """ Check a multi-input scenario.
+    """
+    X, y = shap.datasets.iris()
+
+    lr = sklearn.linear_model.LogisticRegression(solver='lbfgs')
+    lr.fit(X, y)
+    pred = lr.predict_proba(X.iloc[[0, 1], :])
+
+    explainer = shap.KernelExplainer(lr.predict_proba, X)
+    shap_values = explainer(X.iloc[[0, 1], :])
+    np.testing.assert_allclose(shap_values.values.sum(1) + explainer.expected_value, pred, atol=1e-04)

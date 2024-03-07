@@ -376,11 +376,17 @@ class LinearExplainer(Explainer):
 
         Returns
         -------
-        array or list
+        array
+            Returns a matrix. The shape depends on the number of model outputs:
+              - one output: matrix of shape (#num_samples, *X.shape[1:]).
+              - multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs).
             For models with a single output this returns a matrix of SHAP values
             (# samples x # features). Each row sums to the difference between the model output for that
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer).
+
+           .. versionchanged:: 0.45.0
+           Return type for models with multiple outputs changed from list to np.ndarray.
         """
 
         # convert dataframes
@@ -407,12 +413,12 @@ class LinearExplainer(Explainer):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
                 else:
-                    return [np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])], axis=-1)
             else:
                 if len(self.coef.shape) == 1:
                     return np.array(X - self.mean) * self.coef
                 else:
-                    return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])], axis=-1)
 
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))

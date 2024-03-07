@@ -1,6 +1,5 @@
 """ Unit tests for the Linear explainer.
 """
-
 import numpy as np
 import pytest
 import scipy.special
@@ -186,6 +185,28 @@ def test_sparse():
     assert np.max(np.abs(scipy.special.expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
 
 
+@pytest.mark.xfail(reason="This should pass but it doesn't.")
+def test_sparse_multi_class():
+    """ Validate running LinearExplainer on scipy sparse data
+    """
+    make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
+    LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
+
+    n_features = 4
+    X, y = make_multilabel_classification(n_samples=100, sparse=False, n_features=n_features, n_classes=3, n_labels=2)
+    y = np.argmax(y, axis=1)
+
+    # train linear model
+    model = LogisticRegression()
+    model.fit(X, y)
+    pred = model.predict_proba(X)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X)
+    shap_values = explainer(X)
+    np.testing.assert_allclose(scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values), pred, atol=1e-6)
+
+
 def test_invalid_feature_perturbation_raises():
     # train linear model
     X, y = shap.datasets.california(n_points=100)
@@ -210,3 +231,17 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
 
     explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation=feature_pertubation)
     assert isinstance(explainer.masker, masker)
+
+
+def test_interventional_multi_regression():
+    ridge = pytest.importorskip('sklearn.linear_model').Ridge
+
+    # train linear model
+    X, y = shap.datasets.linnerud(n_points=100)
+    model = ridge(0.1)
+    model.fit(X, y)
+    outputs = model.predict(X)
+
+    explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation="interventional")
+    shap_values = explainer.shap_values(X)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, outputs, atol=1e-6)
