@@ -579,14 +579,15 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return """
-<div id='{id}'>{err_msg}</div>
+        _id = id_generator()
+        return f"""
+<div id='{_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{_id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def _repr_html_(self):
         return self.html()
