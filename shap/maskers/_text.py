@@ -366,7 +366,7 @@ class SimpleTokenizer:
 
 
 def post_process_sentencepiece_tokenizer_output(s):
-    """replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers."""
+    """Replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers."""
     s = s.replace('▁', ' ')
     return s
 

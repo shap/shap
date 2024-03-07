@@ -52,7 +52,7 @@ def __decision_plot_matplotlib(
     legend_labels,
     legend_location,
 ):
-    """matplotlib rendering for decision_plot()"""
+    """Matplotlib rendering for decision_plot()"""
     # image size
     row_height = 0.4
     if auto_size_plot:
