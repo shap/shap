@@ -505,7 +505,9 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     # deprecation warnings
     if auto_size_plot is not None:
-        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
+        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead. "
+                      "The parameter auto_size_plot will be removed in the next release 0.46.0.",
+                      DeprecationWarning)
 
     multi_class = False
     if isinstance(shap_values, list):
