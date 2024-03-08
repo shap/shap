@@ -3,6 +3,7 @@
 
 
 import numpy as np
+import pandas as pd
 import pytest
 from packaging import version
 
@@ -14,171 +15,171 @@ import shap
 # Tensorflow related tests #
 ############################
 
-# def test_tf_eager(random_seed):
-#     """ This is a basic eager example from keras.
-#     """
-#     tf = pytest.importorskip('tensorflow')
-#
-#     tf.compat.v1.random.set_random_seed(random_seed)
-#     rs = np.random.RandomState(random_seed)
-#
-#     if version.parse(tf.__version__) >= version.parse("2.4.0"):
-#         pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
-#
-#     x = pd.DataFrame({"B": rs.random(size=(100,))})
-#     y = x.B
-#     y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
-#
-#     model = tf.keras.models.Sequential()
-#     model.add(tf.keras.layers.Dense(10, input_shape=(x.shape[1],), activation="relu"))
-#     model.add(tf.keras.layers.Dense(y.shape[1], input_shape=(10,), activation="softmax"))
-#     model.summary()
-#     model.compile(loss="categorical_crossentropy", optimizer="Adam")
-#     model.fit(x.values, y.values, epochs=2)
-#
-#     e = DeepExplainer(model, x.values[:1])
-#     sv = e.shap_values(x.values)
-#     assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
-#
-#
-# def test_tf_keras_mnist_cnn(random_seed):
-#     """ This is the basic mnist cnn example from keras.
-#     """
-#     tf = pytest.importorskip('tensorflow')
-#     rs = np.random.RandomState(random_seed)
-#     tf.compat.v1.random.set_random_seed(random_seed)
-#
-#     from tensorflow import keras
-#     from tensorflow.compat.v1 import ConfigProto, InteractiveSession
-#     from tensorflow.keras import backend as K
-#     from tensorflow.keras.layers import (
-#         Activation,
-#         Conv2D,
-#         Dense,
-#         Dropout,
-#         Flatten,
-#         MaxPooling2D,
-#     )
-#     from tensorflow.keras.models import Sequential
-#
-#     config = ConfigProto()
-#     config.gpu_options.allow_growth = True
-#     sess = InteractiveSession(config=config)
-#
-#     tf.compat.v1.disable_eager_execution()
-#
-#     batch_size = 64
-#     num_classes = 10
-#     epochs = 1
-#
-#     # input image dimensions
-#     img_rows, img_cols = 28, 28
-#
-#     # the data, split between train and test sets
-#     # (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-#     x_train = rs.randn(200, 28, 28)
-#     y_train = rs.randint(0, 9, 200)
-#     x_test = rs.randn(200, 28, 28)
-#     y_test = rs.randint(0, 9, 200)
-#
-#     if K.image_data_format() == 'channels_first':
-#         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
-#         x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
-#         input_shape = (1, img_rows, img_cols)
-#     else:
-#         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
-#         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
-#         input_shape = (img_rows, img_cols, 1)
-#
-#     x_train = x_train.astype('float32')
-#     x_test = x_test.astype('float32')
-#     x_train /= 255
-#     x_test /= 255
-#
-#     # convert class vectors to binary class matrices
-#     y_train = keras.utils.to_categorical(y_train, num_classes)
-#     y_test = keras.utils.to_categorical(y_test, num_classes)
-#
-#     model = Sequential()
-#     model.add(Conv2D(2, kernel_size=(3, 3),
-#                      activation='relu',
-#                      input_shape=input_shape))
-#     model.add(Conv2D(4, (3, 3), activation='relu'))
-#     model.add(MaxPooling2D(pool_size=(2, 2)))
-#     model.add(Dropout(0.25))
-#     model.add(Flatten())
-#     model.add(Dense(16, activation='relu')) # 128
-#     model.add(Dropout(0.5))
-#     model.add(Dense(num_classes))
-#     model.add(Activation('softmax'))
-#
-#     model.compile(loss=keras.losses.categorical_crossentropy,
-#                   optimizer=keras.optimizers.legacy.Adadelta(),
-#                   metrics=['accuracy'])
-#
-#     model.fit(x_train[:10, :], y_train[:10, :],
-#               batch_size=batch_size,
-#               epochs=epochs,
-#               verbose=1,
-#               validation_data=(x_test[:10, :], y_test[:10, :]))
-#
-#     # explain by passing the tensorflow inputs and outputs
-#     inds = rs.choice(x_train.shape[0], 3, replace=False)
-#     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
-#     shap_values = e.shap_values(x_test[:1])
-#
-#     diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-#     sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
-#
-#     sums = shap_values.sum(axis=(1, 2, 3))
-#     assert np.allclose(sums, diff, atol=1e-4)
-#     d = np.abs(sums - diff).sum()
-#     assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
-#     sess.close()
-#
-# @pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
-# def test_tf_keras_activations(activation):
-#     """Test verifying that a linear model with linear data gives the correct result.
-#     """
-#
-#     # FIXME: this test should ideally pass with any random seed. See #2960
-#     random_seed = 0
-#
-#     tf = pytest.importorskip('tensorflow')
-#
-#     from tensorflow.keras.layers import Dense, Input
-#     from tensorflow.keras.models import Model
-#     from tensorflow.keras.optimizers.legacy import SGD
-#
-#     tf.compat.v1.disable_eager_execution()
-#
-#     tf.compat.v1.random.set_random_seed(random_seed)
-#     rs = np.random.RandomState(random_seed)
-#
-#     # coefficients relating y with x1 and x2.
-#     coef = np.array([1, 2]).T
-#
-#     # generate data following a linear relationship
-#     x = rs.normal(1, 10, size=(1000, len(coef)))
-#     y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
-#
-#     # create a linear model
-#     inputs = Input(shape=(2,))
-#     preds = Dense(1, activation=activation)(inputs)
-#
-#     model = Model(inputs=inputs, outputs=preds)
-#     model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
-#     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
-#
-#     # explain
-#     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
-#     shap_values = e.shap_values(x)
-#     preds = model.predict(x)
-#
-#     assert shap_values.shape == (1000, 2, 1)
-#     np.allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
-#
-#
+def test_tf_eager(random_seed):
+    """ This is a basic eager example from keras.
+    """
+    tf = pytest.importorskip('tensorflow')
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    if version.parse(tf.__version__) >= version.parse("2.4.0"):
+        pytest.skip("Deep explainer does not work for TF 2.4 in eager mode.")
+
+    x = pd.DataFrame({"B": rs.random(size=(100,))})
+    y = x.B
+    y = y.map(lambda zz: chr(int(zz * 2 + 65))).str.get_dummies()
+
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(10, input_shape=(x.shape[1],), activation="relu"))
+    model.add(tf.keras.layers.Dense(y.shape[1], input_shape=(10,), activation="softmax"))
+    model.summary()
+    model.compile(loss="categorical_crossentropy", optimizer="Adam")
+    model.fit(x.values, y.values, epochs=2)
+
+    e = shap.DeepExplainer(model, x.values[:1])
+    sv = e.shap_values(x.values)
+    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
+
+
+def test_tf_keras_mnist_cnn(random_seed):
+    """ This is the basic mnist cnn example from keras.
+    """
+    tf = pytest.importorskip('tensorflow')
+    rs = np.random.RandomState(random_seed)
+    tf.compat.v1.random.set_random_seed(random_seed)
+
+    from tensorflow import keras
+    from tensorflow.compat.v1 import ConfigProto, InteractiveSession
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.layers import (
+        Activation,
+        Conv2D,
+        Dense,
+        Dropout,
+        Flatten,
+        MaxPooling2D,
+    )
+    from tensorflow.keras.models import Sequential
+
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+    sess = InteractiveSession(config=config)
+
+    tf.compat.v1.disable_eager_execution()
+
+    batch_size = 64
+    num_classes = 10
+    epochs = 1
+
+    # input image dimensions
+    img_rows, img_cols = 28, 28
+
+    # the data, split between train and test sets
+    # (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+    x_train = rs.randn(200, 28, 28)
+    y_train = rs.randint(0, 9, 200)
+    x_test = rs.randn(200, 28, 28)
+    y_test = rs.randint(0, 9, 200)
+
+    if K.image_data_format() == 'channels_first':
+        x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
+        x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
+        input_shape = (1, img_rows, img_cols)
+    else:
+        x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
+        x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
+        input_shape = (img_rows, img_cols, 1)
+
+    x_train = x_train.astype('float32')
+    x_test = x_test.astype('float32')
+    x_train /= 255
+    x_test /= 255
+
+    # convert class vectors to binary class matrices
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_test = keras.utils.to_categorical(y_test, num_classes)
+
+    model = Sequential()
+    model.add(Conv2D(2, kernel_size=(3, 3),
+                     activation='relu',
+                     input_shape=input_shape))
+    model.add(Conv2D(4, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+    model.add(Flatten())
+    model.add(Dense(16, activation='relu')) # 128
+    model.add(Dropout(0.5))
+    model.add(Dense(num_classes))
+    model.add(Activation('softmax'))
+
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=keras.optimizers.legacy.Adadelta(),
+                  metrics=['accuracy'])
+
+    model.fit(x_train[:10, :], y_train[:10, :],
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1,
+              validation_data=(x_test[:10, :], y_test[:10, :]))
+
+    # explain by passing the tensorflow inputs and outputs
+    inds = rs.choice(x_train.shape[0], 3, replace=False)
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
+    shap_values = e.shap_values(x_test[:1])
+
+    diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
+    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
+
+    sums = shap_values.sum(axis=(1, 2, 3))
+    assert np.allclose(sums, diff, atol=1e-4)
+    d = np.abs(sums - diff).sum()
+    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    sess.close()
+
+@pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
+def test_tf_keras_activations(activation):
+    """Test verifying that a linear model with linear data gives the correct result.
+    """
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
+    tf = pytest.importorskip('tensorflow')
+
+    from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.optimizers.legacy import SGD
+
+    tf.compat.v1.disable_eager_execution()
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    inputs = Input(shape=(2,))
+    preds = Dense(1, activation=activation)(inputs)
+
+    model = Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
+    model.fit(x, y, epochs=30, shuffle=False, verbose=0)
+
+    # explain
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    shap_values = e.shap_values(x)
+    preds = model.predict(x)
+
+    assert shap_values.shape == (1000, 2, 1)
+    np.allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
+
+
 def test_tf_keras_linear():
     """Test verifying that a linear model with linear data gives the correct result.
     """
