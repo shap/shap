@@ -17,11 +17,11 @@ except ImportError as e:
 
 
 class Image(Masker):
-    """ This masks out image regions with blurring or inpainting.
-    """
+    """Masks out image regions with blurring or inpainting."""
 
     def __init__(self, mask_value, shape=None):
-        """ Build a new Image masker with the given masking value.
+        """Build a new Image masker with the given masking value.
+
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
@@ -29,6 +29,7 @@ class Image(Masker):
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
+
         """
         if shape is None:
             if isinstance(mask_value, str):
