@@ -104,8 +104,6 @@ class DeepExplainer(Explainer):
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
-        nsamples : int
-            number of background samples
         Returns
         -------
         shap.Explanation:
