@@ -234,7 +234,9 @@ def test_linear(random_seed):
     def f(x):
         return x[:, 0] + 2.0*x[:, 1]
 
-    phi = shap.KernelExplainer(f, x).shap_values(x, l1_reg="num_features(2)", silent=True)
+    explainer = shap.KernelExplainer(f, x)
+    explanation = explainer(x, l1_reg="num_features(2)", silent=True)
+    phi = explanation.values
     assert phi.shape == x.shape
 
     # corollary 1

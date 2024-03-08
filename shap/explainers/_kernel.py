@@ -150,7 +150,7 @@ class KernelExplainer(Explainer):
                 tensor_as_np_array = sess.run(symbolic_tensor)
         return tensor_as_np_array
 
-    def __call__(self, X, l1_reg="auto"):
+    def __call__(self, X, l1_reg="auto", silent=False):
 
         start_time = time.time()
 
@@ -159,7 +159,7 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
-        v = self.shap_values(X, l1_reg=l1_reg)
+        v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
 
@@ -204,6 +204,9 @@ class KernelExplainer(Explainer):
 
             Note: The default behaviour will change in a future version to be ``"num_features(10)"``.
             Pass this value explicitly to silence the DeprecationWarning.
+
+        silent: bool
+            If True, hide tqdm progress bar. Default False.
 
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
