@@ -8,7 +8,7 @@ from sklearn.impute import SimpleImputer
 
 
 def kmeans(X, k, round_values=True):
-    """ Summarize a dataset with k mean samples weighted by the number of data points they
+    """Summarize a dataset with k mean samples weighted by the number of data points they
     each represent.
 
     Parameters
@@ -26,8 +26,8 @@ def kmeans(X, k, round_values=True):
     Returns
     -------
     DenseData object.
-    """
 
+    """
     group_names = [str(i) for i in range(X.shape[1])]
     if isinstance(X, pd.DataFrame):
         group_names = X.columns
@@ -99,7 +99,7 @@ class Model:
 
 
 def convert_to_model(val, keep_index=False):
-    """ Convert a model to a Model object.
+    """Convert a model to a Model object.
 
     Parameters
     ----------
@@ -109,6 +109,7 @@ def convert_to_model(val, keep_index=False):
     keep_index : bool
         If True then the index values will be passed to the model function as the first argument.
         When this is False the feature names will be removed from the model object to avoid unnecessary warnings.
+
     """
     if isinstance(val, Model):
         out = val

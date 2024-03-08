@@ -5,8 +5,8 @@ from sklearn.preprocessing import StandardScaler
 
 
 class KerasWrap:
-    """ A wrapper that allows us to set parameters in the constructor and do a reset before fitting.
-    """
+    """A wrapper that allows us to set parameters in the constructor and do a reset before fitting."""
+
     def __init__(self, model, epochs, flatten_output=False):
         self.model = model
         self.epochs = epochs
@@ -33,38 +33,31 @@ class KerasWrap:
 # This models are all tuned for the corrgroups60 dataset
 
 def corrgroups60__lasso():
-    """ Lasso Regression
-    """
+    """Lasso Regression"""
     return sklearn.linear_model.Lasso(alpha=0.1)
 
 def corrgroups60__ridge():
-    """ Ridge Regression
-    """
+    """Ridge Regression"""
     return sklearn.linear_model.Ridge(alpha=1.0)
 
 def corrgroups60__decision_tree():
-    """ Decision Tree
-    """
-
+    """Decision Tree"""
     # max_depth was chosen to minimise test error
     return sklearn.tree.DecisionTreeRegressor(random_state=0, max_depth=6)
 
 def corrgroups60__random_forest():
-    """ Random Forest
-    """
+    """Random Forest"""
     return sklearn.ensemble.RandomForestRegressor(100, random_state=0)
 
 def corrgroups60__gbm():
-    """ Gradient Boosted Trees
-    """
+    """Gradient Boosted Trees"""
     import xgboost
 
     # max_depth and learning_rate were fixed then n_estimators was chosen using a train/test split
     return xgboost.XGBRegressor(max_depth=6, n_estimators=50, learning_rate=0.1, n_jobs=8, random_state=0)
 
 def corrgroups60__ffnn():
-    """ 4-Layer Neural Network
-    """
+    """4-Layer Neural Network"""
     from tensorflow.keras.layers import Dense
     from tensorflow.keras.models import Sequential
 
@@ -82,38 +75,31 @@ def corrgroups60__ffnn():
 
 
 def independentlinear60__lasso():
-    """ Lasso Regression
-    """
+    """Lasso Regression"""
     return sklearn.linear_model.Lasso(alpha=0.1)
 
 def independentlinear60__ridge():
-    """ Ridge Regression
-    """
+    """Ridge Regression"""
     return sklearn.linear_model.Ridge(alpha=1.0)
 
 def independentlinear60__decision_tree():
-    """ Decision Tree
-    """
-
+    """Decision Tree"""
     # max_depth was chosen to minimise test error
     return sklearn.tree.DecisionTreeRegressor(random_state=0, max_depth=4)
 
 def independentlinear60__random_forest():
-    """ Random Forest
-    """
+    """Random Forest"""
     return sklearn.ensemble.RandomForestRegressor(100, random_state=0)
 
 def independentlinear60__gbm():
-    """ Gradient Boosted Trees
-    """
+    """Gradient Boosted Trees"""
     import xgboost
 
      # max_depth and learning_rate were fixed then n_estimators was chosen using a train/test split
     return xgboost.XGBRegressor(max_depth=6, n_estimators=100, learning_rate=0.1, n_jobs=8, random_state=0)
 
 def independentlinear60__ffnn():
-    """ 4-Layer Neural Network
-    """
+    """4-Layer Neural Network"""
     from tensorflow.keras.layers import Dense
     from tensorflow.keras.models import Sequential
 
@@ -131,8 +117,7 @@ def independentlinear60__ffnn():
 
 
 def cric__lasso():
-    """ Lasso Regression
-    """
+    """Lasso Regression"""
     model = sklearn.linear_model.LogisticRegression(penalty="l1", C=0.002)
 
     # we want to explain the raw probability outputs of the trees
@@ -141,8 +126,7 @@ def cric__lasso():
     return model
 
 def cric__ridge():
-    """ Ridge Regression
-    """
+    """Ridge Regression"""
     model = sklearn.linear_model.LogisticRegression(penalty="l2")
 
     # we want to explain the raw probability outputs of the trees
@@ -151,8 +135,7 @@ def cric__ridge():
     return model
 
 def cric__decision_tree():
-    """ Decision Tree
-    """
+    """Decision Tree"""
     model = sklearn.tree.DecisionTreeClassifier(random_state=0, max_depth=4)
 
     # we want to explain the raw probability outputs of the trees
@@ -161,8 +144,7 @@ def cric__decision_tree():
     return model
 
 def cric__random_forest():
-    """ Random Forest
-    """
+    """Random Forest"""
     model = sklearn.ensemble.RandomForestClassifier(100, random_state=0)
 
     # we want to explain the raw probability outputs of the trees
@@ -171,8 +153,7 @@ def cric__random_forest():
     return model
 
 def cric__gbm():
-    """ Gradient Boosted Trees
-    """
+    """Gradient Boosted Trees"""
     import xgboost
 
     # max_depth and subsample match the params used for the full cric data in the paper
@@ -187,8 +168,7 @@ def cric__gbm():
     return model
 
 def cric__ffnn():
-    """ 4-Layer Neural Network
-    """
+    """4-Layer Neural Network"""
     from tensorflow.keras.layers import Dense, Dropout
     from tensorflow.keras.models import Sequential
 
@@ -207,9 +187,7 @@ def cric__ffnn():
 
 
 def human__decision_tree():
-    """ Decision Tree
-    """
-
+    """Decision Tree"""
     # build data
     N = 1000000
     M = 3

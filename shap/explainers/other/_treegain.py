@@ -4,10 +4,11 @@ from .._explainer import Explainer
 
 
 class TreeGain(Explainer):
-    """ Simply returns the global gain/gini feature importances for tree models.
+    """Simply returns the global gain/gini feature importances for tree models.
 
     This is only for benchmark comparisons and is not meant to approximate SHAP values.
     """
+
     def __init__(self, model):
         if str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
             pass

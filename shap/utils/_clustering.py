@@ -17,7 +17,7 @@ def partition_tree(X, metric="correlation"):
 
 
 def partition_tree_shuffle(indexes, index_mask, partition_tree):
-    """ Randomly shuffle the indexes in a way that is consistent with the given partition tree.
+    """Randomly shuffle the indexes in a way that is consistent with the given partition tree.
 
     Parameters
     ----------
@@ -27,6 +27,7 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
         A bool mask of which indexes we want to include in the shuffled list.
     partition_tree: np.array
         The partition tree we should follow.
+
     """
     M = len(index_mask)
     #switch = np.random.randn(M) < 0
@@ -79,16 +80,14 @@ def _mask_delta_score(m1, m2):
 
 
 def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
-    """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
-    """
-
+    """A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar."""
     # compute a hierarchical clustering and return the optimal leaf ordering
     D = scipy.spatial.distance.pdist(X, metric)
     cluster_matrix = scipy.cluster.hierarchy.complete(D)
     return scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
 
 def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
-    """ Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
+    """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
     predicting the output of these models using univariate XGBoost models of other features. If one
@@ -97,7 +96,6 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
     proportion of variance explained). Note these distances are not symmetric.
     """
-
     import xgboost
 
     # pick our train/text split
@@ -169,6 +167,7 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     -------
     clustering: np.array
         The hierarchical clustering encoded as a linkage matrix.
+
     """
     if isinstance(X, pd.DataFrame):
         X = X.values

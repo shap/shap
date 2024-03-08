@@ -1,5 +1,4 @@
-""" Unit tests for the Linear explainer.
-"""
+"""Unit tests for the Linear explainer."""
 import numpy as np
 import pytest
 import scipy.special
@@ -143,8 +142,7 @@ def test_shape_values_linear_many_features():
     np.testing.assert_allclose(expected - values, 0, atol=0.01)
 
 def test_single_feature(random_seed):
-    """ Make sure things work with a univariate linear regression.
-    """
+    """Make sure things work with a univariate linear regression."""
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
 
     # generate linear data
@@ -163,8 +161,7 @@ def test_single_feature(random_seed):
     assert np.max(np.abs(explainer.expected_value + shap_values.sum(1) - model.predict(X))) < 1e-6
 
 def test_sparse():
-    """ Validate running LinearExplainer on scipy sparse data
-    """
+    """Validate running LinearExplainer on scipy sparse data"""
     make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
     LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
 
@@ -187,8 +184,7 @@ def test_sparse():
 
 @pytest.mark.xfail(reason="This should pass but it doesn't.")
 def test_sparse_multi_class():
-    """ Validate running LinearExplainer on scipy sparse data
-    """
+    """Validate running LinearExplainer on scipy sparse data"""
     make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
     LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
 

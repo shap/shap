@@ -1,5 +1,4 @@
-""" This file contains tests for the TeacherForcingLogits class.
-"""
+"""This file contains tests for the TeacherForcingLogits class."""
 
 import numpy as np
 import pytest
@@ -8,9 +7,7 @@ import shap
 
 
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
-    """ Tests if get_teacher_forced_logits() works for encoder-decoder models.
-    """
-
+    """Tests if get_teacher_forced_logits() works for encoder-decoder models."""
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
 
@@ -32,9 +29,7 @@ def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     assert not np.isnan(np.sum(logits))
 
 def test_method_get_teacher_forced_logits_for_decoder_model():
-    """ Tests if get_teacher_forced_logits() works for decoder only models.
-    """
-
+    """Tests if get_teacher_forced_logits() works for decoder only models."""
     transformers = pytest.importorskip("transformers")
     requests = pytest.importorskip("requests")
 

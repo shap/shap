@@ -1,5 +1,4 @@
-""" Unit tests for the Sampling explainer.
-"""
+"""Unit tests for the Sampling explainer."""
 
 import numpy as np
 import pytest
