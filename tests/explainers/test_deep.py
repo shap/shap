@@ -15,7 +15,7 @@ import shap
 ############################
 
 def test_tf_eager(random_seed):
-    """ This is a basic eager example from keras.
+    """This is a basic eager example from keras.
     """
     tf = pytest.importorskip('tensorflow')
 
@@ -42,7 +42,7 @@ def test_tf_eager(random_seed):
 
 
 def test_tf_keras_mnist_cnn(random_seed):
-    """ This is the basic mnist cnn example from keras.
+    """This is the basic mnist cnn example from keras.
     """
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
@@ -137,7 +137,6 @@ def test_tf_keras_mnist_cnn(random_seed):
 def test_tf_keras_activations(activation):
     """Test verifying that a linear model with linear data gives the correct result.
     """
-
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
 
