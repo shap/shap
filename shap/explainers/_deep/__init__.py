@@ -1,3 +1,6 @@
+from typing import Union
+
+from ..._explanation import Explanation
 from .._explainer import Explainer
 from .deep_pytorch import PyTorchDeep
 from .deep_tf import TFDeep
@@ -80,6 +83,9 @@ class DeepExplainer(Explainer):
             except Exception:
                 framework = 'tensorflow'
 
+        masker = data
+        super().__init__(model, masker)
+
         if framework == 'tensorflow':
             self.explainer = TFDeep(model, data, session, learning_phase_flags)
         elif framework == 'pytorch':
@@ -87,6 +93,25 @@ class DeepExplainer(Explainer):
 
         self.expected_value = self.explainer.expected_value
         self.explainer.framework = framework
+
+    def __call__(self, X: Union[list, 'np.ndarray', 'pd.DataFrame', 'torch.tensor']):  # noqa: F821
+        """ Return an explanation object for the model applied to X.
+
+        Parameters
+        ----------
+        X : list,
+            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'pytorch': torch.tensor
+            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
+            explain the model's output.
+        nsamples : int
+            number of background samples
+        Returns
+        -------
+        shap.Explanation:
+        """
+        shap_values = self.shap_values(X)
+        return Explanation(values=shap_values, data=X)
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
         """ Return approximate SHAP values for the model applied to the data given by X.
