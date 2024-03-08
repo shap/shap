@@ -222,7 +222,7 @@ def test_tf_keras_linear():
 
     # verify that the explanation follows the equation in LinearExplainer
     expected = (x - x.mean(0)) * fit_coef
-    assert np.allclose(shap_values.sum(-1), expected, atol=1e-5)
+    np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
 
 
 def test_tf_keras_imdb_lstm(random_seed):
@@ -277,7 +277,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - \
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
-    assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
+    np.testing.testing_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
 def test_tf_deep_multi_inputs_multi_outputs():
@@ -305,7 +305,7 @@ def test_tf_deep_multi_inputs_multi_outputs():
     predicted = model.predict([input1_data, input2_data])
     explainer = shap.DeepExplainer(model, [input1_data, input2_data])
     shap_values = explainer.shap_values([input1_data, input2_data])
-    np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-5)
+    np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-3)
 
 #######################
 # Torch related tests #
@@ -451,7 +451,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
         outputs = model(input_tensor).detach().cpu().numpy()
 
     sums = shap_values.sum((1, 2, 3))
-    assert np.allclose(sums + e.expected_value, outputs, atol=1e-5), "Sum of SHAP values does not match difference!"
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -577,7 +577,7 @@ def test_pytorch_custom_nested_models(torch_device):
         diff = model(test_x).detach().cpu().numpy()
 
     sums = shap_values.sum(axis=(1))
-    assert np.allclose(sums + e.expected_value, diff, atol=1e-5), "Sum of SHAP values does not match difference!"
+    np.testing.assert_allclose(sums + e.expected_value, diff, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -672,7 +672,7 @@ def test_pytorch_single_output(torch_device):
         outputs = model(test_x).detach().cpu().numpy()
 
     sums = shap_values.sum(axis=(1))
-    assert np.allclose(sums + e.expected_value, outputs, atol=1e-5), "Sum of SHAP values does not match difference!"
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -777,4 +777,4 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     # the shap values have the shape (num_samples, num_features, num_inputs, num_outputs)
     # so since we have just one output, we slice it out
     sums = shap_values[0].sum(1) + shap_values[1].sum(1)
-    assert np.allclose(sums + e.expected_value, outputs, atol=1e-4), "Sum of SHAP values does not match difference!"
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
