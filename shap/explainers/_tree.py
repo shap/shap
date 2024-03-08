@@ -395,7 +395,7 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array
+        np.array
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
             Each row sums to the difference between the model output for that
@@ -555,7 +555,7 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array
+        np.array
             Returns a matrix. The shape depends on the number of model outputs:
 
             * one output: matrix of shape (#num_samples, #features, #features).

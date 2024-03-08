@@ -44,7 +44,7 @@ class DeepExplainer(Explainer):
             layer argument. layer must be a layer in the model, i.e. model.conv2
 
         data :
-            if framework == 'tensorflow': [numpy.array] or [pandas.DataFrame]
+            if framework == 'tensorflow': [np.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
             The background dataset to use for integrating out features. Deep integrates
             over these samples. The data passed here must match the input tensors given in the
@@ -94,7 +94,7 @@ class DeepExplainer(Explainer):
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
@@ -113,7 +113,7 @@ class DeepExplainer(Explainer):
 
         Returns
         -------
-        array or list
+        np.array or list
             Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
             The shape of the returned array depends on the number of model outputs:

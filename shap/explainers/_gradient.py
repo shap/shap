@@ -52,7 +52,7 @@ class GradientExplainer(Explainer):
             is a tuple, the returned shap values will be for the input of the layer argument. layer must
             be a layer in the model, i.e. model.conv2.
 
-        data : [numpy.array] or [pandas.DataFrame] or [torch.tensor]
+        data : [np.array] or [pandas.DataFrame] or [torch.tensor]
             The background dataset to use for integrating out features. Gradient explainer integrates
             over these samples. The data passed here must match the input tensors given in the
             first argument. Single element lists can be passed unwrapped.
@@ -89,7 +89,7 @@ class GradientExplainer(Explainer):
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
@@ -108,7 +108,7 @@ class GradientExplainer(Explainer):
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
