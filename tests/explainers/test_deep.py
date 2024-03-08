@@ -14,7 +14,7 @@ import shap
 # Tensorflow related tests #
 ############################
 
-def test_tf_eager(random_seed):
+def test_tf_eager_call(random_seed):
     """This is a basic eager example from keras."""
     tf = pytest.importorskip('tensorflow')
 
@@ -37,10 +37,12 @@ def test_tf_eager(random_seed):
 
     e = shap.DeepExplainer(model, x.values[:1])
     sv = e.shap_values(x.values)
+    sv_call = e(x.values)
+    np.testing.assert_array_almost_equal(sv, sv_call.values, decimal=8)
     assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
 
 
-def test_tf_keras_mnist_cnn(random_seed):
+def test_tf_keras_mnist_cnn_call(random_seed):
     """This is the basic mnist cnn example from keras."""
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
@@ -124,6 +126,9 @@ def test_tf_keras_mnist_cnn(random_seed):
     inds = rs.choice(x_train.shape[0], 3, replace=False)
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
+    shap_values_call = e(x_test[:1])
+
+    np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
     predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
 
@@ -324,7 +329,7 @@ TORCH_DEVICES = [
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
-def test_pytorch_mnist_cnn(torch_device, interim):
+def test_pytorch_mnist_cnn_call(torch_device, interim):
     """The same test as above, but for pytorch"""
     torch = pytest.importorskip('torch')
 
@@ -429,6 +434,9 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     test_x, _ = next(iter(test_loader))
     input_tensor = test_x[:1].to(device)
     shap_values = e.shap_values(input_tensor)
+    shap_values_call = e(input_tensor)
+
+    np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
     model.eval()
     model.zero_grad()
