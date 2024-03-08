@@ -59,14 +59,12 @@ def text(shap_values, num_starting_labels=0, grouping_threshold=0.01, separator=
 
     Examples
     --------
-
     See `text plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/text.html>`_.
 
     """
 
     def values_min_max(values, base_values):
-        """ Used to pick our axis limits.
-        """
+        """Used to pick our axis limits."""
         fx = base_values + values.sum()
         xmin = fx - values[values > 0].sum()
         xmax = fx - values[values < 0].sum()
@@ -702,12 +700,11 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
 
 def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, grouping_threshold=1, separator=''):
-    """ Plots an explanation of a string of text using coloring and interactive labels.
+    """Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
     SHAP value assigned to that token.
     """
-
     # See if we got hierarchical input data. If we did then we need to reprocess the
     # shap_values and tokens to get the groups we want to display
     warnings.warn(

@@ -1,5 +1,4 @@
-"""
-This module is a pure python implementation of Tree SHAP.
+"""This module is a pure python implementation of Tree SHAP.
 It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implementation.
 """
@@ -136,8 +135,7 @@ from ..utils._exceptions import ExplainerError
 
 
 class TreeExplainer:
-    """ A pure Python (slow) implementation of Tree SHAP.
-    """
+    """A pure Python (slow) implementation of Tree SHAP."""
 
     def __init__(self, model, **kwargs):
         self.model_type = "internal"

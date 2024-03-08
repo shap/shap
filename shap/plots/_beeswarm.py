@@ -1,5 +1,4 @@
-""" Summary plots of SHAP values across a whole dataset.
-"""
+"""Summary plots of SHAP values across a whole dataset."""
 
 import warnings
 
@@ -62,11 +61,9 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     Examples
     --------
-
     See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
 
     """
-
     if not isinstance(shap_values, Explanation):
         emsg = (
             "The beeswarm plot requires an `Explanation` object as the "
@@ -490,8 +487,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
-    """
 
+    """
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values

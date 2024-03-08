@@ -84,6 +84,7 @@ class TreeExplainer(Explainer):
     Examples
     --------
     See `Tree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/Tree.html>`_
+
     """
 
     def __init__(
@@ -98,7 +99,7 @@ class TreeExplainer(Explainer):
         link=None,
         linearize_link=None,
     ):
-        """ Build a new Tree explainer for the passed model.
+        """Build a new Tree explainer for the passed model.
 
         Parameters
         ----------
@@ -245,9 +246,7 @@ class TreeExplainer(Explainer):
             self.expected_value = [1 - self.expected_value, self.expected_value]
 
     def __dynamic_expected_value(self, y):
-        """ This computes the expected value conditioned on the given label value.
-        """
-
+        """This computes the expected value conditioned on the given label value."""
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
     def __call__(self, X, y=None, interactions=False, check_additivity=True):
@@ -368,7 +367,7 @@ class TreeExplainer(Explainer):
         return X, y, X_missing, flat_output, tree_limit, check_additivity
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -395,16 +394,22 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array
-            Returns a matrix. The shape depends on the number of model outputs:
-              - one output: matrix of shape (#num_samples, *X.shape[1:]).
-              - multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs).
-            Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored in the ``expected_value``
-            attribute of the explainer when it is constant).
+        np.array
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-           .. versionchanged:: 0.45.0
-           Return type for models with multiple outputs changed from list to np.ndarray.
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored
+            as the ``expected_value`` attribute of the explainer).
+
+            The shape of the returned array depends on the number of model outputs:
+
+            * one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
+              #num_outputs)``.
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs changed from list to np.ndarray.
+
         """
         # see if we have a default tree_limit in place.
         if tree_limit is None:
@@ -534,7 +539,7 @@ class TreeExplainer(Explainer):
         return out
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
-        """ Estimate the SHAP interaction values for a set of samples.
+        """Estimate the SHAP interaction values for a set of samples.
 
         Parameters
         ----------
@@ -550,7 +555,7 @@ class TreeExplainer(Explainer):
 
         Returns
         -------
-        array
+        np.array
             Returns a matrix. The shape depends on the number of model outputs:
 
             * one output: matrix of shape (#num_samples, #features, #features).
@@ -564,10 +569,10 @@ class TreeExplainer(Explainer):
             interaction effects between all pairs of features for that sample.
             For models with vector outputs, this returns a list of tensors, one for each output.
 
-           .. versionchanged:: 0.45.0
-           Return type for models with multiple outputs changed from list to np.ndarray.
-        """
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs changed from list to np.ndarray.
 
+        """
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for SHAP interaction values right now!"
         #assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
@@ -676,11 +681,10 @@ class TreeExplainer(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
-
         if not isinstance(masker, (maskers.Independent)) and masker is not None:
             return False
 
@@ -692,7 +696,7 @@ class TreeExplainer(Explainer):
 
 
 class TreeEnsemble:
-    """ An ensemble of decision trees.
+    """An ensemble of decision trees.
 
     This object provides a common interface to many different types of models.
     """
@@ -1347,8 +1351,7 @@ class TreeEnsemble:
             return self.trees[0].values.shape[1]
 
     def get_transform(self):
-        """ A consistent interface to make predictions from this model.
-        """
+        """A consistent interface to make predictions from this model."""
         if self.model_output == "raw":
             transform = "identity"
         elif self.model_output in ("probability", "probability_doubled"):
@@ -1391,8 +1394,8 @@ class TreeEnsemble:
         tree_limit : None (default) or int
             Limit the number of trees used by the model. By default None means no use the limit of the
             original model, and -1 means no limit.
-        """
 
+        """
         if output is None:
             output = self.model_output
 
@@ -1495,7 +1498,9 @@ class SingleTree:
 
     max_depth : int
         The max depth of the tree.
+
     """
+
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
 
@@ -1765,9 +1770,8 @@ class SingleTree:
 
 
 class IsoTree(SingleTree):
-    """
-    In sklearn the tree of the Isolation Forest does not calculated in a good way.
-    """
+    """In sklearn the tree of the Isolation Forest does not calculated in a good way."""
+
     def __init__(self, tree, tree_features, normalize=False, scaling=1.0, data=None, data_missing=None):
         super().__init__(tree, normalize, scaling, data, data_missing)
         if safe_isinstance(tree, "sklearn.tree._tree.Tree"):
@@ -1904,7 +1908,7 @@ class XGBTreeModelLoader:
             self.cat_feature_indices = None
 
         def to_integers(data: list[int]) -> np.ndarray:
-            "Handle u8 array from UBJSON."
+            """Handle u8 array from UBJSON."""
             assert isinstance(data, list)
             return np.asanyarray(data, dtype=np.uint8)
 

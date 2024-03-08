@@ -78,6 +78,7 @@ class KernelExplainer(Explainer):
     Examples
     --------
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
+
     """
 
     def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
@@ -178,7 +179,7 @@ class KernelExplainer(Explainer):
         )
 
     def shap_values(self, X, **kwargs):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -213,18 +214,22 @@ class KernelExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            The return type and shape depend on the number of model inputs and outputs:
-              - one input one output: matrix of shape (#num_samples, *X.shape[1:]).
-              - one input multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs)
-              - multiple inputs one or more outputs: list of matrices, with shapes of one of the above.
-            Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored as expected_value
-            attribute of the explainer). For models with vector outputs this returns a list
-            of such matrices, one for each output.
+        np.array or list
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-           .. versionchanged:: 0.45.0
-           Return type for models with multiple outputs and one input changed from list to np.ndarray.
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored as the ``expected_value``
+            attribute of the explainer).
+
+            The type and shape of the return value depends on the number of model inputs and outputs:
+
+            * one input, one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: array of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs: list of arrays of corresponding shape above.
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed from list to np.ndarray.
+
         """
         # convert dataframes
         if isinstance(X, pd.Series):

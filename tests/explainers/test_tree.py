@@ -419,8 +419,7 @@ def test_catboost_interactions():
 
 
 def _average_path_length(n_samples_leaf):
-    """
-    Vendored from: https://github.com/scikit-learn/scikit-learn/blob/399131c8545cd525724e4bacf553416c512ac82c/sklearn/ensemble/_iforest.py#L531
+    """Vendored from: https://github.com/scikit-learn/scikit-learn/blob/399131c8545cd525724e4bacf553416c512ac82c/sklearn/ensemble/_iforest.py#L531
 
     For use in isolation forest tests.
     """
@@ -574,7 +573,7 @@ def test_provided_background_independent_prob_output():
 
 
 def test_single_tree_compare_with_kernel_shap():
-    """ Compare with Kernel SHAP, which makes the same independence assumptions
+    """Compare with Kernel SHAP, which makes the same independence assumptions
     as Independent Tree SHAP.  Namely, they both assume independence between the
     set being conditioned on, and the remainder set.
     """
@@ -616,7 +615,7 @@ def test_single_tree_compare_with_kernel_shap():
 
 
 def test_several_trees():
-    """ Make sure Independent Tree SHAP sums up to the correct value for
+    """Make sure Independent Tree SHAP sums up to the correct value for
     larger models (20 trees).
     """
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -650,7 +649,7 @@ def test_several_trees():
 
 
 def test_single_tree_nonlinear_transformations():
-    """ Make sure Independent Tree SHAP single trees with non-linear
+    """Make sure Independent Tree SHAP single trees with non-linear
     transformations.
     """
     # Supported non-linear transforms
@@ -757,7 +756,6 @@ class TestSingleTree:
         """A basic test for checking that a LightGBM `dump_model()["tree_info"]`
         dictionary is parsed properly into a `SingleTree` object.
         """
-
         # Stump (only root node) tree
         sample_tree = {
             "tree_index": 256,
@@ -922,9 +920,7 @@ class TestExplainerSklearn:
         )
 
     def test_sklearn_random_forest_newsgroups(self):
-        """
-        note: this test used to fail in native TreeExplainer code due to memory corruption
-        """
+        """note: this test used to fail in native TreeExplainer code due to memory corruption"""
         newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
         pipeline = self._create_vectorizer_for_randomforestclassifier()
         pipeline.fit(newsgroups_train.data, newsgroups_train.target)
@@ -1200,6 +1196,7 @@ class TestExplainerXGBoost:
         * XGBRFClassifier
         * XGBRanker
     """
+
     xgboost = pytest.importorskip("xgboost")
 
     regressors =  [xgboost.XGBRegressor, xgboost.XGBRFRegressor]
@@ -1226,11 +1223,9 @@ class TestExplainerXGBoost:
 
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
-        """
-        Test that xgboost sklearn attributues are properly passed to the DMatrix
+        """Test that xgboost sklearn attributues are properly passed to the DMatrix
         initiated during shap value calculation. see GH #3313
         """
-
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8
@@ -1430,7 +1425,8 @@ class TestExplainerXGBoost:
         """Checks that DMatrix is not stored in Explanation.data after TreeExplainer.__call__,
         since it is not supported by our plotting functions.
 
-        See GH #3357 for more information."""
+        See GH #3357 for more information.
+        """
         xgboost = pytest.importorskip("xgboost")
 
         rs = np.random.RandomState(random_seed)

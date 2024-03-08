@@ -8,7 +8,7 @@ from ._explainer import Explainer
 
 
 class PermutationExplainer(Explainer):
-    """ This method approximates the Shapley values by iterating through permutations of the inputs.
+    """This method approximates the Shapley values by iterating through permutations of the inputs.
 
     This is a model agnostic explainer that guarantees local accuracy (additivity) by iterating completely
     through an entire permutation of the features in both forward and reverse directions (antithetic sampling).
@@ -21,7 +21,7 @@ class PermutationExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, feature_names=None, linearize_link=True, seed=None, **call_args):
-        """ Build an explainers.Permutation object for the given model using the given masker object.
+        """Build an explainers.Permutation object for the given model using the given masker object.
 
         Parameters
         ----------
@@ -29,20 +29,20 @@ class PermutationExplainer(Explainer):
             A callable python object that executes the model given a set of input data samples.
 
         masker : function or numpy.array or pandas.DataFrame
-            A callable python object used to "mask" out hidden features of the form `masker(binary_mask, x)`.
+            A callable python object used to "mask" out hidden features of the form ``masker(binary_mask, x)``.
             It takes a single input sample and a binary mask and returns a matrix of masked samples. These
             masked samples are evaluated using the model function and the outputs are then averaged.
             As a shortcut for the standard masking using by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. To use a clustering
-            game structure you can pass a shap.maskers.Tabular(data, clustering=\"correlation\") object.
+            game structure you can pass a ``shap.maskers.Tabular(data, clustering="correlation")`` object.
 
         seed: None or int
             Seed for reproducibility
 
         **call_args : valid argument to the __call__ method
             These arguments are saved and passed to the __call__ method as the new default values for these arguments.
-        """
 
+        """
         # setting seed for random generation: if seed is not None, then shap values computation should be reproducible
         np.random.seed(seed)
 
@@ -73,17 +73,14 @@ class PermutationExplainer(Explainer):
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False):
-        """ Explain the output of the model on the given arguments.
-        """
+        """Explain the output of the model on the given arguments."""
         return super().__call__(
             *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
             outputs=outputs, silent=silent
         )
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
@@ -184,7 +181,7 @@ class PermutationExplainer(Explainer):
 
 
     def shap_values(self, X, npermutations=10, main_effects=False, error_bounds=False, batch_evals=True, silent=False):
-        """ Legacy interface to estimate the SHAP values for a set of samples.
+        """Legacy interface to estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -206,8 +203,8 @@ class PermutationExplainer(Explainer):
             sample and the expected value of the model output (which is stored as expected_value
             attribute of the explainer). For models with vector outputs this returns a list
             of such matrices, one for each output.
-        """
 
+        """
         explanation = self(X, max_evals=npermutations * X.shape[1], main_effects=main_effects)
         return explanation.values
 

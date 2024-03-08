@@ -18,7 +18,7 @@ tf = None
 
 
 class GradientExplainer(Explainer):
-    """ Explains a model using expected gradients (an extension of integrated gradients).
+    """Explains a model using expected gradients (an extension of integrated gradients).
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
     feature attribution method designed for differentiable models based on an extension of Shapley
@@ -32,10 +32,11 @@ class GradientExplainer(Explainer):
     Examples
     --------
     See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
+
     """
 
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
-        """ An explainer object for a differentiable model using a given background dataset.
+        """An explainer object for a differentiable model using a given background dataset.
 
         Parameters
         ----------
@@ -52,12 +53,12 @@ class GradientExplainer(Explainer):
             is a tuple, the returned shap values will be for the input of the layer argument. layer must
             be a layer in the model, i.e. model.conv2.
 
-        data : [numpy.array] or [pandas.DataFrame] or [torch.tensor]
+        data : [np.array] or [pandas.DataFrame] or [torch.tensor]
             The background dataset to use for integrating out features. Gradient explainer integrates
             over these samples. The data passed here must match the input tensors given in the
             first argument. Single element lists can be passed unwrapped.
-        """
 
+        """
         # first, we need to find the framework
         if type(model) is tuple:
             a, b = model
@@ -84,31 +85,33 @@ class GradientExplainer(Explainer):
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
-        """ Return an explanation object for the model applied to X.
+        """Return an explanation object for the model applied to X.
 
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
         nsamples : int
             number of background samples
+
         Returns
         -------
         shap.Explanation:
+
         """
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)
 
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
-        """ Return the values for the model applied to X.
+        """Return the values for the model applied to X.
 
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
@@ -131,19 +134,26 @@ class GradientExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            The return type and shape depend on the number of model inputs and outputs:
-              - one input one output: matrix of shape (#num_samples, *X.shape[1:]).
-              - one input multiple outputs: matrix of shape (#num_samples, *X.shape[1:], #num_outputs)
-              - multiple inputs one or more outputs: list of matrices, with shapes of one of the above.
-            If ranked_outputs is None then this list of tensors matches
-            the number of model outputs. If ranked_outputs is a positive integer a pair is returned
-            (shap_values, indexes), where shap_values is a list of tensors with a length of
-            ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
-            were chosen as "top".
+        np.array or list
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
-           .. versionchanged:: 0.45.0
-           Return type for models with multiple outputs and one input changed from list to np.ndarray.
+            The shape of the returned array depends on the number of model outputs:
+
+            * one input, one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: array of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs: list of arrays with corresponding shape above.
+
+            If ranked_outputs is ``None`` then this list of tensors matches the
+            number of model outputs. If ranked_outputs is a positive integer a
+            pair is returned ``(shap_values, indexes)``, where shap_values is a
+            list of tensors with a length of ranked_outputs, and indexes is a
+            matrix that tells for each sample which output indexes were chosen
+            as "top".
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed
+                from list to np.ndarray.
+
         """
         return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)
 

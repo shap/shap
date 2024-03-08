@@ -17,11 +17,11 @@ except ImportError as e:
 
 
 class Image(Masker):
-    """ This masks out image regions with blurring or inpainting.
-    """
+    """Masks out image regions with blurring or inpainting."""
 
     def __init__(self, mask_value, shape=None):
-        """ Build a new Image masker with the given masking value.
+        """Build a new Image masker with the given masking value.
+
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
@@ -29,6 +29,7 @@ class Image(Masker):
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
+
         """
         if shape is None:
             if isinstance(mask_value, str):
@@ -108,8 +109,7 @@ class Image(Masker):
         return (out.reshape(1, *in_shape),)
 
     def inpaint(self, x, mask, method):
-        """ Fill in the masked parts of the image through inpainting.
-        """
+        """Fill in the masked parts of the image through inpainting."""
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(2)
         if reshaped_mask.sum() == np.prod(self.input_shape[:-1]):
             out = x.reshape(self.input_shape).copy()
@@ -124,9 +124,7 @@ class Image(Masker):
         ).astype(x.dtype).ravel()
 
     def build_partition_tree(self):
-        """ This partitions an image into a herarchical clustering based on axis-aligned splits.
-        """
-
+        """This partitions an image into a herarchical clustering based on axis-aligned splits."""
         xmin = 0
         xmax = self.input_shape[0]
         ymin = 0
@@ -143,8 +141,7 @@ class Image(Masker):
         self.clustering = clustering
 
     def save(self, out_file):
-        """ Write a Image masker to a file stream.
-        """
+        """Write a Image masker to a file stream."""
         super().save(out_file)
 
         # Increment the version number when the encoding changes!
@@ -154,8 +151,7 @@ class Image(Masker):
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ Load a Image masker from a file stream.
-        """
+        """Load a Image masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
 
@@ -167,9 +163,7 @@ class Image(Masker):
 
 @njit
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
-    """ This partitions an image into a herarchical clustering based on axis-aligned splits.
-    """
-
+    """This partitions an image into a herarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
 
     # q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
