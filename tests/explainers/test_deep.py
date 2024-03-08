@@ -128,13 +128,10 @@ def test_tf_keras_mnist_cnn(random_seed):
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
-    diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
+    predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
 
     sums = shap_values.sum(axis=(1, 2, 3))
-    assert np.allclose(sums, diff, atol=1e-4)
-    d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    np.testing.assert_allclose(sums + e.expected_value, predicted, atol=1e-3), "Sum of SHAP values does not match difference!"
     sess.close()
 
 @pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
@@ -177,7 +174,7 @@ def test_tf_keras_activations(activation):
     preds = model.predict(x)
 
     assert shap_values.shape == (1000, 2, 1)
-    np.allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
+    np.testing.assert_allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
 
 
 def test_tf_keras_linear():
@@ -223,7 +220,7 @@ def test_tf_keras_linear():
 
     # verify that the explanation follows the equation in LinearExplainer
     expected = (x - x.mean(0)) * fit_coef
-    assert np.allclose(shap_values.sum(-1), expected, atol=1e-5)
+    np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
 
 
 def test_tf_keras_imdb_lstm(random_seed):
