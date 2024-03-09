@@ -16,9 +16,7 @@ xlabel_names = {
 }
 
 def benchmark(benchmark, show=True):
-    """ Plot a BenchmarkResult or list of such results.
-    """
-
+    """Plot a BenchmarkResult or list of such results."""
     if hasattr(benchmark, "__iter__"):
         benchmark = list(benchmark)
 

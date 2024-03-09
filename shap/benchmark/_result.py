@@ -13,8 +13,7 @@ sign_defaults = {
 }
 
 class BenchmarkResult:
-    """ The result of a benchmark run.
-    """
+    """The result of a benchmark run."""
 
     def __init__(self, metric, method, value=None, curve_x=None, curve_y=None, curve_y_std=None, value_sign=None):
         self.metric = metric

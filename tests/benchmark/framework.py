@@ -12,8 +12,7 @@ explainer = np.array([[-1, 2], [-4, 2], [1, 2]])
 masker = X
 
 def test_update():
-    """ This is to test the update function within benchmark/framework
-    """
+    """This is to test the update function within benchmark/framework"""
     sort_order = 'positive'
     def score_function(true, pred):
         return np.mean(pred)
@@ -28,8 +27,7 @@ def test_update():
     assert len(scores['values'][metric]) == 3
 
 def test_get_benchmark():
-    """ This is to test the get benchmark function within benchmark/framework
-    """
+    """This is to test the get benchmark function within benchmark/framework"""
     metrics = {'sort_order': ['positive', 'negative'], 'perturbation': ['keep']}
     scores = shap.benchmark.get_benchmark(model, X, y, explainer, masker, metrics)
 
@@ -39,8 +37,7 @@ def test_get_benchmark():
     assert len(scores['values']) == 2
 
 def test_get_metrics():
-    """ This is to test the get metrics function with respect to different selection method
-    """
+    """This is to test the get metrics function with respect to different selection method"""
     scores1 = {'name': 'test1', 'metrics': ['keep positive', 'keep absolute'], 'values': dict()}
     scores2 = {'name': 'test2', 'metrics': ['keep positive', 'keep negative'], 'values': dict()}
     benchmarks = {'test1': scores1, 'test2': scores2}

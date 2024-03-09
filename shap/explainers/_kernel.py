@@ -78,6 +78,7 @@ class KernelExplainer(Explainer):
     Examples
     --------
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
+
     """
 
     def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
@@ -121,6 +122,8 @@ class KernelExplainer(Explainer):
             model_null = np.squeeze(model_null.values)
         if safe_isinstance(model_null, "tensorflow.python.framework.ops.EagerTensor"):
             model_null = model_null.numpy()
+        elif safe_isinstance(model_null, "tensorflow.python.framework.ops.SymbolicTensor"):
+            model_null = self._convert_symbolic_tensor(model_null)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
 
@@ -134,7 +137,21 @@ class KernelExplainer(Explainer):
         else:
             self.D = self.fnull.shape[0]
 
-    def __call__(self, X):
+    @staticmethod
+    def _convert_symbolic_tensor(symbolic_tensor) -> np.ndarray:
+        import tensorflow as tf
+        if tf.__version__ >= "2.0.0":
+            with tf.compat.v1.Session() as sess:
+                sess.run(tf.compat.v1.global_variables_initializer())
+                tensor_as_np_array = sess.run(symbolic_tensor)
+        else:
+            # this is untested
+            with tf.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                tensor_as_np_array = sess.run(symbolic_tensor)
+        return tensor_as_np_array
+
+    def __call__(self, X, l1_reg="auto", silent=False):
 
         start_time = time.time()
 
@@ -143,7 +160,7 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
-        v = self.shap_values(X)
+        v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
             v = np.stack(v, axis=-1) # put outputs at the end
 
@@ -162,7 +179,7 @@ class KernelExplainer(Explainer):
         )
 
     def shap_values(self, X, **kwargs):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -175,27 +192,45 @@ class KernelExplainer(Explainer):
             `nsamples = 2 * X.shape[1] + 2048`.
 
         l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
-            The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). The auto option currently uses "aic" when less that 20% of the possible sample
-            space is enumerated, otherwise it uses no regularization. THE BEHAVIOR OF "auto" WILL CHANGE
-            in a future version to be based on num_features instead of AIC.
-            The "aic" and "bic" options use the AIC and BIC rules for regularization.
-            Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
-            "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
+            The l1 regularization to use for feature selection. The estimation
+            procedure is based on a debiased lasso.
+
+            * "num_features(int)" selects a fixed number of top features.
+            * "aic" and "bic" options use the AIC and BIC rules for regularization.
+            * Passing a float directly sets the "alpha" parameter of the
+              ``sklearn.linear_model.Lasso`` model used for feature selection.
+            * "auto" (default for now but deprecated): uses "aic" when less than
+              20% of the possible sample space is enumerated, otherwise it uses
+              no regularization.
+
+            Note: The default behaviour will change in a future version to be ``"num_features(10)"``.
+            Pass this value explicitly to silence the DeprecationWarning.
+
+        silent: bool
+            If True, hide tqdm progress bar. Default False.
 
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
 
         Returns
         -------
-        array or list
-            For models with a single output this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored as expected_value
-            attribute of the explainer). For models with vector outputs this returns a list
-            of such matrices, one for each output.
-        """
+        np.array or list
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored as the ``expected_value``
+            attribute of the explainer).
+
+            The type and shape of the return value depends on the number of model inputs and outputs:
+
+            * one input, one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: array of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs: list of arrays of corresponding shape above.
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed from list to np.ndarray.
+
+        """
         # convert dataframes
         if isinstance(X, pd.Series):
             X = X.values
@@ -222,17 +257,9 @@ class KernelExplainer(Explainer):
 
             # vector-output
             s = explanation.shape
-            if len(s) == 2:
-                outs = [np.zeros(s[0]) for j in range(s[1])]
-                for j in range(s[1]):
-                    outs[j] = explanation[:, j]
-                return outs
-
-            # single-output
-            else:
-                out = np.zeros(s[0])
-                out[:] = explanation
-                return out
+            out = np.zeros(s)
+            out[:] = explanation
+            return out
 
         # explain the whole dataset
         elif len(X.shape) == 2:
@@ -252,6 +279,7 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
+                outs = np.stack(outs, axis=-1)
                 return outs
 
             # single-output
@@ -294,6 +322,8 @@ class KernelExplainer(Explainer):
             model_out = self.model.f(instance.x)
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values
+        elif safe_isinstance(model_out, "tensorflow.python.framework.ops.SymbolicTensor"):
+            model_out = self._convert_symbolic_tensor(model_out)
         self.fx = model_out[0]
 
         if not self.vector_out:
@@ -357,10 +387,14 @@ class KernelExplainer(Explainer):
                     nsubsets *= 2
                 log.debug(f"{subset_size = }")
                 log.debug(f"{nsubsets = }")
-                log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
-                    num_samples_left * remaining_weight_vector[subset_size - 1]))
-                log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {}".format(
-                    num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
+                log.debug(
+                    "self.nsamples*weight_vector[subset_size-1] = "
+                    f"{num_samples_left * remaining_weight_vector[subset_size - 1]}"
+                )
+                log.debug(
+                    "self.nsamples*weight_vector[subset_size-1]/nsubsets = "
+                    f"{num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets}"
+                )
 
                 # see if we have enough samples to enumerate all subsets of this size
                 if num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets >= 1.0 - 1e-8:
@@ -581,6 +615,9 @@ class KernelExplainer(Explainer):
         modelOut = self.model.f(data)
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
+        elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):
+            modelOut = self._convert_symbolic_tensor(modelOut)
+
         self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
@@ -599,11 +636,13 @@ class KernelExplainer(Explainer):
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
         log.debug(f"{fraction_evaluated = }")
-        # if self.l1_reg == "auto":
-        #     warnings.warn(
-        #         "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
-        #         "conditional use of AIC to simply \"num_features(10)\"!"
-        #     )
+        if self.l1_reg == "auto":
+            warnings.warn(
+                "l1_reg='auto' is deprecated and in a future version the behavior will change from a "
+                "conditional use of AIC to simply a fixed number of top features. "
+                "Pass l1_reg='num_features(10)' to opt-in to the new default behaviour.",
+                DeprecationWarning
+            )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info(f"{np.sum(w_aug) = }")
@@ -659,7 +698,7 @@ class KernelExplainer(Explainer):
         #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
         # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
         # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
-        y = eyAdj2
+        y = np.asarray(eyAdj2)
         X = etmp
         WX = self.kernelWeights[:, None] * X
         try:
@@ -677,8 +716,7 @@ class KernelExplainer(Explainer):
             sqrt_W = np.sqrt(self.kernelWeights)
             w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
         log.debug(f"{np.sum(w) = }")
-        log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
-            self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
+        log.debug(f"self.link(self.fx) - self.link(self.fnull) = {self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])}")
         log.debug(f"self.fx = {self.fx[dim]}")
         log.debug(f"self.link(self.fx) = {self.link.f(self.fx[dim])}")
         log.debug(f"self.fnull = {self.fnull[dim]}")

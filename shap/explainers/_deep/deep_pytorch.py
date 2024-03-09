@@ -64,8 +64,7 @@ class PyTorchDeep(Explainer):
         self.target_handle = input_handle
 
     def add_handles(self, model, forward_handle, backward_handle):
-        """
-        Add handles to all non-container layers in the model.
+        """Add handles to all non-container layers in the model.
         Recursively for non-container layers
         """
         handles_list = []
@@ -79,8 +78,7 @@ class PyTorchDeep(Explainer):
         return handles_list
 
     def remove_attributes(self, model):
-        """
-        Removes the x and y attributes which were added by the forward handles
+        """Removes the x and y attributes which were added by the forward handles
         Recursively searches for non-container layers
         """
         for child in model.children():
@@ -215,9 +213,15 @@ class PyTorchDeep(Explainer):
 
             _check_additivity(self, model_output_values.cpu(), output_phis)
 
-        if not self.multi_output:
-            return output_phis[0]
-        elif ranked_outputs is not None:
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
+            else:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             return output_phis, model_output_ranks
         else:
             return output_phis

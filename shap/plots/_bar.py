@@ -66,7 +66,6 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
-
     # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # convert Explanation objects to dictionaries

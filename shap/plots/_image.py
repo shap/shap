@@ -64,11 +64,9 @@ def image(shap_values: Explanation or np.ndarray,
 
     Examples
     --------
-
     See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
 
     """
-
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -178,7 +176,7 @@ def image(shap_values: Explanation or np.ndarray,
 
 
 def image_to_text(shap_values):
-    """ Plots SHAP values for image inputs with test outputs.
+    """Plots SHAP values for image inputs with test outputs.
 
     Parameters
     ----------

@@ -18,7 +18,7 @@ tf = None
 
 
 class GradientExplainer(Explainer):
-    """ Explains a model using expected gradients (an extension of integrated gradients).
+    """Explains a model using expected gradients (an extension of integrated gradients).
 
     Expected gradients an extension of the integrated gradients method (Sundararajan et al. 2017), a
     feature attribution method designed for differentiable models based on an extension of Shapley
@@ -32,10 +32,11 @@ class GradientExplainer(Explainer):
     Examples
     --------
     See :ref:`Gradient Explainer Examples <gradient_explainer_examples>`
+
     """
 
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
-        """ An explainer object for a differentiable model using a given background dataset.
+        """An explainer object for a differentiable model using a given background dataset.
 
         Parameters
         ----------
@@ -52,12 +53,12 @@ class GradientExplainer(Explainer):
             is a tuple, the returned shap values will be for the input of the layer argument. layer must
             be a layer in the model, i.e. model.conv2.
 
-        data : [numpy.array] or [pandas.DataFrame] or [torch.tensor]
+        data : [np.array] or [pandas.DataFrame] or [torch.tensor]
             The background dataset to use for integrating out features. Gradient explainer integrates
             over these samples. The data passed here must match the input tensors given in the
             first argument. Single element lists can be passed unwrapped.
-        """
 
+        """
         # first, we need to find the framework
         if type(model) is tuple:
             a, b = model
@@ -84,31 +85,33 @@ class GradientExplainer(Explainer):
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
-        """ Return an explanation object for the model applied to X.
+        """Return an explanation object for the model applied to X.
 
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
         nsamples : int
             number of background samples
+
         Returns
         -------
         shap.Explanation:
+
         """
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)
 
     def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
-        """ Return the values for the model applied to X.
+        """Return the values for the model applied to X.
 
         Parameters
         ----------
         X : list,
-            if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
@@ -131,14 +134,26 @@ class GradientExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For a models with a single output this returns a tensor of SHAP values with the same shape
-            as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
-            which are the same shape as X. If ranked_outputs is None then this list of tensors matches
-            the number of model outputs. If ranked_outputs is a positive integer a pair is returned
-            (shap_values, indexes), where shap_values is a list of tensors with a length of
-            ranked_outputs, and indexes is a matrix that tells for each sample which output indexes
-            were chosen as "top".
+        np.array or list
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
+
+            The shape of the returned array depends on the number of model outputs:
+
+            * one input, one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: array of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs: list of arrays with corresponding shape above.
+
+            If ranked_outputs is ``None`` then this list of tensors matches the
+            number of model outputs. If ranked_outputs is a positive integer a
+            pair is returned ``(shap_values, indexes)``, where shap_values is a
+            list of tensors with a length of ranked_outputs, and indexes is a
+            matrix that tells for each sample which output indexes were chosen
+            as "top".
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed
+                from list to np.ndarray.
+
         """
         return self.explainer.shap_values(X, nsamples, ranked_outputs, output_rank_order, rseed, return_variances)
 
@@ -195,8 +210,8 @@ class _TFGradient(Explainer):
                 if 'keras_learning_phase' in op.name:
                     self.keras_phase_placeholder = op.outputs[0]
 
-        # save the expected output of the model (commented out because self.data could be huge for GradientExpliner)
-        #self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
+        # save the expected output of the model (commented out because self.data could be huge for GradientExplainer)
+        # self.expected_value = self.run(self.model_output, self.model_inputs, self.data).mean(0)
 
         if not self.multi_output:
             self.gradients = [None]
@@ -341,12 +356,16 @@ class _TFGradient(Explainer):
 
             output_phis.append(phis[0] if not self.multi_input else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
-        if not self.multi_output:
-            if return_variances:
-                return output_phis[0], output_phi_vars[0]
+
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
             else:
-                return output_phis[0]
-        elif ranked_outputs is not None:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             if return_variances:
                 return output_phis, output_phi_vars, model_output_ranks
             else:
@@ -432,7 +451,7 @@ class _PyTorchGradient(Explainer):
         if not self.multi_output:
             self.gradients = [None]
         else:
-            self.gradients = [None for i in range(outputs.shape[1])]
+            self.gradients = [None for _ in range(outputs.shape[1])]
 
     def gradient(self, idx, inputs):
         import torch
@@ -494,6 +513,7 @@ class _PyTorchGradient(Explainer):
         else:
             model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *
                                   torch.arange(0, len(self.gradients)).int())
+        # self.expected_value = model_output_values.mean(axis=(i for i in range(len(model_output_values.shape) - 1)))
 
         # if a cleanup happened, we need to add the handles back
         # this allows shap_values to be called multiple times, but the model to be
@@ -573,12 +593,16 @@ class _PyTorchGradient(Explainer):
             self.input_handle = None
             # note: the target input attribute is deleted in the loop
 
-        if not self.multi_output:
-            if return_variances:
-                return output_phis[0], output_phi_vars[0]
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
             else:
-                return output_phis[0]
-        elif ranked_outputs is not None:
+                output_phis = np.stack(output_phis, axis=-1)
+
+        if ranked_outputs is not None:
             if return_variances:
                 return output_phis, output_phi_vars, model_output_ranks
             else:

@@ -27,6 +27,7 @@ def imagenet50(resolution=224, n_points=None):
     images, labels = shap.datasets.imagenet50()
     ```
 
+
     Note:
     This dataset was collected by randomly finding a working ImageNet link and then pasting the
     original ImageNet image into Google image search restricted to images licensed for reuse. A
@@ -36,7 +37,6 @@ def imagenet50(resolution=224, n_points=None):
 
     Note that because the images are only rough replacements the labels might no longer be correct.
     """
-
     prefix = github_data_url + "imagenet50_"
     X = np.load(cache(f"{prefix}{resolution}x{resolution}.npy")).astype(np.float32)
     y = np.loadtxt(cache(f"{prefix}labels.csv"))
@@ -46,7 +46,6 @@ def imagenet50(resolution=224, n_points=None):
         y = shap.utils.sample(y, n_points, random_state=0)
 
     return X, y
-
 
 def california(n_points=None):
     """
@@ -90,6 +89,7 @@ def california(n_points=None):
         target = shap.utils.sample(target, n_points, random_state=0)
 
     return df, target
+
 
 
 def linnerud(n_points=None):
@@ -146,10 +146,10 @@ def imdb(n_points=None):
     text_data, labels = shap.datasets.imdb()
     ```
 
+
     Full data is at: http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
     Paper to cite when using the data is: http://www.aclweb.org/anthology/P11-1015
     """
-
     with open(cache(github_data_url + "imdb_train.txt"), encoding="utf-8") as f:
         data = f.readlines()
     y = np.ones(25000, dtype=bool)
@@ -181,7 +181,6 @@ def communitiesandcrime(n_points=None):
     data, target = shap.datasets.communitiesandcrime()
     ```
     """
-
     raw_data = pd.read_csv(
         cache(github_data_url + "CommViolPredUnnormalizedData.txt"),
         na_values="?"
@@ -336,6 +335,7 @@ def adult(display=False, n_points=None):
     raw_data, target = shap.datasets.adult(display=True)
     ```
     """
+
     dtypes = [
         ("Age", "float32"), ("Workclass", "category"), ("fnlwgt", "float32"),
         ("Education", "category"), ("Education-Num", "float32"), ("Marital Status", "category"),
@@ -427,7 +427,6 @@ def corrgroups60(n_points=1_000):
     data, target = shap.datasets.corrgroups60()
     ```
     """
-
     # set a constant seed
     old_seed = np.random.seed()
     np.random.seed(0)
@@ -571,8 +570,7 @@ def rank():
 
 
 def cache(url, file_name=None):
-    """ Loads a file from the URL and caches it locally.
-    """
+    """Loads a file from the URL and caches it locally."""
     if file_name is None:
         file_name = os.path.basename(url)
     data_dir = os.path.join(os.path.dirname(__file__), "cached_data")

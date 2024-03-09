@@ -1,5 +1,4 @@
-""" This file contains tests for custom (user supplied) maskers.
-"""
+"""This file contains tests for custom (user supplied) maskers."""
 
 import numpy as np
 
@@ -7,9 +6,7 @@ import shap
 
 
 def test_raw_function():
-    """ Make sure passing a simple masking function works.
-    """
-
+    """Make sure passing a simple masking function works."""
     X, _ = shap.datasets.california(n_points=500)
 
     def test(X):

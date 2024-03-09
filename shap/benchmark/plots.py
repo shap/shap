@@ -371,9 +371,7 @@ def plot_human(dataset, model, metric, cmap=benchmark_color_map):
     return pl.gcf()
 
 def _human_score_map(human_consensus, methods_attrs):
-    """ Converts human agreement differences to numerical scores for coloring.
-    """
-
+    """Converts human agreement differences to numerical scores for coloring."""
     v = 1 - min(np.sum(np.abs(methods_attrs - human_consensus)) / (np.abs(human_consensus).sum() + 1), 1.0)
     return v
 

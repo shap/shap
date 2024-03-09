@@ -1,5 +1,4 @@
-""" Test gpu accelerated tree functions.
-"""
+"""Test gpu accelerated tree functions."""
 import numpy as np
 import pytest
 import sklearn

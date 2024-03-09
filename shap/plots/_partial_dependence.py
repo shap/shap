@@ -8,11 +8,10 @@ from ..utils import convert_name
 
 
 def compute_bounds(xmin, xmax, xv):
-    """ Handles any setting of xmax and xmin.
+    """Handles any setting of xmax and xmin.
 
     Note that we handle None, float, or "percentile(float)" formats.
     """
-
     if xmin is not None or xmax is not None:
         if isinstance(xmin, str) and xmin.startswith("percentile"):
             xmin = np.nanpercentile(xv, float(xmin[11:-1]))
@@ -31,9 +30,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
                        feature_expected_value=False, shap_values=None,
                        ylabel=None, ice=True, ace_opacity=1, pd_opacity=1, pd_linewidth=2,
                        ace_linewidth='auto', ax=None, show=True):
-    """ A basic partial dependence plot function.
-    """
-
+    """A basic partial dependence plot function."""
     if isinstance(data, Explanation):
         features = data.data
         shap_values = data

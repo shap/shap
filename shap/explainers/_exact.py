@@ -17,7 +17,7 @@ log = logging.getLogger('shap')
 
 
 class ExactExplainer(Explainer):
-    """ Computes SHAP values via an optimized exact enumeration.
+    """Computes SHAP values via an optimized exact enumeration.
 
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
     from the background per sample. It also works well for Owen values from hclustering structured
@@ -28,7 +28,7 @@ class ExactExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, linearize_link=True, feature_names=None):
-        """ Build an explainers.Exact object for the given model using the given masker object.
+        """Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
         ----------
@@ -56,6 +56,7 @@ class ExactExplainer(Explainer):
             many samples. This for example means that a linear logistic regression model would have interaction effects
             that arise from the non-linear changes in expectation averaging. To retain the additively of the model with
             still respecting the link function we linearize the link function by default.
+
         """ # TODO link to the link linearization paper when done
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
@@ -68,9 +69,7 @@ class ExactExplainer(Explainer):
         self._gray_code_cache = {} # used to avoid regenerating the same gray code patterns
 
     def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, batch_size="auto", interactions=1, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iterators.
-        """
-
+        """Explains the output of model(*args), where args represents one or more parallel iterators."""
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
         return super().__call__(
@@ -84,9 +83,7 @@ class ExactExplainer(Explainer):
         return self._gray_code_cache[n]
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, interactions, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
@@ -238,9 +235,7 @@ def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_co
                 row_values[k,j] += delta
 
 def partition_delta_indexes(partition_tree, all_masks):
-    """ Return an delta index encoded array of all the masks possible while following the given partition tree.
-    """
-
+    """Return an delta index encoded array of all the masks possible while following the given partition tree."""
     # convert the masks to delta index format
     mask = np.zeros(all_masks.shape[1], dtype=bool)
     delta_inds = []
@@ -258,9 +253,7 @@ def partition_delta_indexes(partition_tree, all_masks):
     return np.array(delta_inds)
 
 def partition_masks(partition_tree):
-    """ Return an array of all the masks possible while following the given partition tree.
-    """
-
+    """Return an array of all the masks possible while following the given partition tree."""
     M = partition_tree.shape[0] + 1
     mask_matrix = make_masks(partition_tree)
     all_masks = []
@@ -326,7 +319,7 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
 
 
 def gray_code_masks(nbits):
-    """ Produces an array of all binary patterns of size nbits in gray code order.
+    """Produces an array of all binary patterns of size nbits in gray code order.
 
     This is based on code from: http://code.activestate.com/recipes/576592-gray-code-generatoriterator/
     """
@@ -346,7 +339,7 @@ def gray_code_masks(nbits):
     return out
 
 def gray_code_indexes(nbits):
-    """ Produces an array of which bits flip at which position.
+    """Produces an array of which bits flip at which position.
 
     We assume the masks start at all zero and -1 means don't do a flip.
     This is a more efficient representation of the gray_code_masks version.

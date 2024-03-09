@@ -135,8 +135,7 @@ def run_setup(*, with_binary, with_cuda):
 
 
 def try_run_setup(*, with_binary, with_cuda):
-    """ Fails gracefully when various install steps don't work.
-    """
+    """Fails gracefully when various install steps don't work."""
     global _BUILD_ATTEMPTS
     _BUILD_ATTEMPTS += 1
 

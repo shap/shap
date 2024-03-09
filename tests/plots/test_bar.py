@@ -1,5 +1,4 @@
-"""This file contains tests for the bar plot.
-"""
+"""This file contains tests for the bar plot."""
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest

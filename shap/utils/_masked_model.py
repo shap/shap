@@ -9,7 +9,7 @@ from .. import links
 
 
 class MaskedModel:
-    """ This is a utility class that combines a model, a masker object, and a current input.
+    """This is a utility class that combines a model, a masker object, and a current input.
 
     The combination of a model, a masker object, and a current input produces a binary set
     function that can be called to mask out any set of inputs. This class attempts to be smart
@@ -225,7 +225,7 @@ class MaskedModel:
             return [a.shape for a in self.args] # TODO: this will need to get more flexible
 
     def __len__(self):
-        """ How many binary inputs there are to toggle.
+        """How many binary inputs there are to toggle.
 
         By default we just match what the masker tells us. But if the masker doesn't help us
         out by giving a length then we assume is the number of data inputs.
@@ -239,9 +239,7 @@ class MaskedModel:
             return np.where(np.any(self._variants, axis=0))[0]
 
     def main_effects(self, inds=None, batch_size=None):
-        """ Compute the main effects for this model.
-        """
-
+        """Compute the main effects for this model."""
         # if no indexes are given then we assume all indexes could be non-zero
         if inds is None:
             inds = np.arange(len(self))
@@ -272,9 +270,7 @@ def _assert_output_input_match(inputs, outputs):
         f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
 
 def _convert_delta_mask_to_full(masks, full_masks):
-    """ This converts a delta masking array to a full bool masking array.
-    """
-
+    """This converts a delta masking array to a full bool masking array."""
     i = -1
     masks_pos = 0
     while masks_pos < len(masks):
@@ -412,11 +408,10 @@ def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions
 
 
 def make_masks(cluster_matrix):
-    """ Builds a sparse CSR mask matrix from the given clustering.
+    """Builds a sparse CSR mask matrix from the given clustering.
 
     This function is optimized since trees for images can be very large.
     """
-
     M = cluster_matrix.shape[0] + 1
     indices_row_pos = np.zeros(2 * M - 1, dtype=int)
     indptr = np.zeros(2 * M, dtype=int)
@@ -466,14 +461,13 @@ def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
     indices[pos + lind_size:pos + lind_size + rind_size] = indices[rpos:rpos + rind_size]
 
 def link_reweighting(p, link):
-    """ Returns a weighting that makes mean(weights*link(p)) == link(mean(p)).
+    """Returns a weighting that makes mean(weights*link(p)) == link(mean(p)).
 
     This is based on a linearization of the link function. When the link function is monotonic then we
     can find a set of positive weights that adjust for the non-linear influence changes on the
     expected value. Note that there are many possible reweightings that can satisfy the above
     property. This function returns the one that has the lowest L2 norm.
     """
-
     # the linearized link function is a first order Taylor expansion of the link function
     # centered at the expected value
     expected_value = np.mean(p, axis=0)
