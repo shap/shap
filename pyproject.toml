@@ -56,7 +56,6 @@ docs = [
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
-  "datasets",
   "pytest",
   "pytest-mpl",
   "pytest-cov",
