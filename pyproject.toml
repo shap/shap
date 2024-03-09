@@ -18,7 +18,7 @@ dependencies = [
   'pandas',
   'tqdm>=4.27.0',
   'packaging>20.9',
-  'slicer==0.0.7',
+  'slicer @ git+https://github.com/interpretml/slicer.git@12964ec458c5169efe19df3c296fc5e3e3f6a84f',
   'numba',
   'cloudpickle'
 ]
@@ -56,6 +56,7 @@ docs = [
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
+  "datasets",
   "pytest",
   "pytest-mpl",
   "pytest-cov",

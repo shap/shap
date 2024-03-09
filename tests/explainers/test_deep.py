@@ -275,6 +275,26 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.testing_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
+def test_tf_deep_imbdb_transformers():
+    # GH 3522
+    transformers = pytest.importorskip('transformers')
+    datasets = pytest.importorskip('datasets')
+
+    from shap import models
+
+    dataset = datasets.load_dataset("imdb", split="test")
+
+    # shorten the strings to fit into the pipeline model
+    short_data = [v[:5] for v in dataset["text"][:10]]
+    classifier = transformers.pipeline("sentiment-analysis", return_all_scores=True)
+    classifier(short_data[:2])
+    pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
+    explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
+    shap_values3 = explainer3(short_data[:10])
+    shap.plots.text(shap_values3[:, :, 1])
+    shap.plots.bar(shap_values3[:, :, 1].mean(0))
+
+
 def test_tf_deep_multi_inputs_multi_outputs():
     tf = pytest.importorskip('tensorflow')
 
