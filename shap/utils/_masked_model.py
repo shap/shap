@@ -372,7 +372,7 @@ def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_position
     #     averaged_outs[0] = np.mean(linearizing_weights * link(last_outs))
     # else:
     #     averaged_outs[0] = link(np.mean(last_outs))
-    for i in range(0, len(averaged_outs)):
+    for i in range(len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
@@ -390,7 +390,7 @@ def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
     sample_count = last_outs.shape[0]
-    for i in range(0, len(averaged_outs)):
+    for i in range(len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]

@@ -1715,7 +1715,7 @@ class SingleTree:
             node_sample_weight = np.zeros(m,dtype="float64")
             values_lst = list(nodes_dict.values())
             keys_lst = list(nodes_dict.keys())
-            for i in range(0,len(keys_lst)):
+            for i in range(len(keys_lst)):
                 value = values_lst[i]
                 key = keys_lst[i]
                 if "leaf" in value:
