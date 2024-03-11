@@ -838,14 +838,10 @@ class TreeEnsemble:
         elif safe_isinstance(
             model,
             [
-                "sklearn.ensemble.RandomForestClassifier",
-                "sklearn.ensemble.forest.RandomForestClassifier",
-            ],
-        ) or safe_isinstance(
-            model,
-            [
                 "sklearn.ensemble.ExtraTreesClassifier",
                 "sklearn.ensemble.forest.ExtraTreesClassifier",
+                "sklearn.ensemble.RandomForestClassifier",
+                "sklearn.ensemble.forest.RandomForestClassifier",
             ],
         ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
