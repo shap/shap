@@ -61,7 +61,7 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  "catboost;python_version<'3.12'",  # FIXME: pending py3.12 support
+  "catboost",
   "gpboost",
   "ngboost",
   "pyspark",
