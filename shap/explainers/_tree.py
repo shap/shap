@@ -794,29 +794,15 @@ class TreeEnsemble:
             scaling = 1.0 / len(model.estimators_) # output is average of trees
             self.trees = [IsoTree(e.tree_, f, scaling=scaling, data=data, data_missing=data_missing) for e, f in zip(model.detector_.estimators_, model.detector_.estimators_features_)]
             self.tree_output = "raw_value"
-        elif safe_isinstance(model, "skopt.learning.forest.RandomForestRegressor"):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_) # output is average of trees
-            self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "raw_value"
         elif safe_isinstance(
             model,
             [
                 "sklearn.ensemble.ExtraTreesRegressor",
                 "sklearn.ensemble.forest.ExtraTreesRegressor",
+                "skopt.learning.forest.RandomForestRegressor",
+                "skopt.learning.forest.ExtraTreesRegressor",
             ],
         ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_) # output is average of trees
-            self.trees = [SingleTree(e.tree_, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "raw_value"
-        elif safe_isinstance(model, "skopt.learning.forest.ExtraTreesRegressor"):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -852,24 +838,12 @@ class TreeEnsemble:
         elif safe_isinstance(
             model,
             [
+                "sklearn.ensemble.ExtraTreesClassifier",
+                "sklearn.ensemble.forest.ExtraTreesClassifier",
                 "sklearn.ensemble.RandomForestClassifier",
                 "sklearn.ensemble.forest.RandomForestClassifier",
             ],
         ):
-            assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
-            self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
-            self.input_dtype = np.float32
-            scaling = 1.0 / len(model.estimators_) # output is average of trees
-            self.trees = [SingleTree(e.tree_, normalize=True, scaling=scaling, data=data, data_missing=data_missing) for e in model.estimators_]
-            self.objective = objective_name_map.get(model.criterion, None)
-            self.tree_output = "probability"
-        elif safe_isinstance(
-            model,
-            [
-                "sklearn.ensemble.ExtraTreesClassifier",
-                "sklearn.ensemble.forest.ExtraTreesClassifier",
-            ],
-        ): # TODO: add unit test for this case
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
             self.internal_dtype = model.estimators_[0].tree_.value.dtype.type
             self.input_dtype = np.float32
@@ -1085,18 +1059,7 @@ class TreeEnsemble:
             # Some properties of the sklearn API are passed to a DMatrix object in
             # xgboost We need to make sure we do the same here - GH #3313
             self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
-        elif safe_isinstance(model, "xgboost.sklearn.XGBRegressor"):
-            self.original_model = model.get_booster()
-            self._set_xgboost_model_attributes(
-                data,
-                data_missing,
-                objective_name_map,
-                tree_output_name_map,
-            )
-            # Some properties of the sklearn API are passed to a DMatrix object in
-            # xgboost We need to make sure we do the same here - GH #3313
-            self._xgb_dmatrix_props = get_xgboost_dmatrix_properties(model)
-        elif safe_isinstance(model, "xgboost.sklearn.XGBRanker"):
+        elif safe_isinstance(model, ["xgboost.sklearn.XGBRegressor", "xgboost.sklearn.XGBRanker"]):
             self.original_model = model.get_booster()
             self._set_xgboost_model_attributes(
                 data,
@@ -1715,7 +1678,7 @@ class SingleTree:
             node_sample_weight = np.zeros(m,dtype="float64")
             values_lst = list(nodes_dict.values())
             keys_lst = list(nodes_dict.keys())
-            for i in range(0,len(keys_lst)):
+            for i in range(len(keys_lst)):
                 value = values_lst[i]
                 key = keys_lst[i]
                 if "leaf" in value:
