@@ -57,22 +57,22 @@ docs = [
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
   "pytest",
-  "pytest-mpl",
-  "pytest-cov",
-  "xgboost",
-  "lightgbm",
-  "catboost",
-  "gpboost",
-  "ngboost",
-  "pyspark",
-  "pyod",
-  "transformers",
-  "protobuf==3.20.3",  # See GH #3046
+  # "pytest-mpl",
+  # "pytest-cov",
+  # "xgboost",
+  # "lightgbm",
+  # "catboost",
+  # "gpboost",
+  # "ngboost",
+  # "pyspark",
+  # "pyod",
+  # "transformers",
+  # "protobuf==3.20.3",  # See GH #3046
   "torch",
-  "torchvision",
-  "tensorflow<2.16;python_version<'3.12'",  # FIXME: pending keras 3.0 support, pending tf py3.12 support
-  "sentencepiece",
-  "opencv-python",
+  # "torchvision",
+  # "tensorflow<2.16;python_version<'3.12'",  # FIXME: pending keras 3.0 support, pending tf py3.12 support
+  # "sentencepiece",
+  # "opencv-python",
 ]
 
 test_notebooks = [
