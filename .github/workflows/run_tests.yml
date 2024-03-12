@@ -34,7 +34,7 @@ jobs:
           python -m pip install --upgrade pip
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
-          pip install --upgrade --upgrade-strategy eager pytest lightgbm torch scikit-learn
+          pip install --upgrade --upgrade-strategy eager pytest torch scikit-learn
       - name: pip list
         run: pip list
       - name: Test with pytest
