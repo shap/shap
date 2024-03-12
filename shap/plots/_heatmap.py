@@ -136,7 +136,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     # plot the f(x) line chart above the heat map
     ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
-    fx = values.T.mean(0)
+    fx = values.T.sum(0)
     ax.plot(
         -fx / np.abs(fx).max() - 1.5,
         color="#000000",
