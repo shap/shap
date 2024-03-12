@@ -60,7 +60,7 @@ test = [
   "pytest-mpl",
   "pytest-cov",
   "xgboost",
-  "lightgbm",
+  # "lightgbm",
   # "catboost",
   # "gpboost",
   # "ngboost",
