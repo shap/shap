@@ -57,10 +57,10 @@ docs = [
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
   "pytest",
-  "pytest-mpl",
-  "pytest-cov",
-  "xgboost",
-  # "lightgbm",
+  # "pytest-mpl",
+  # "pytest-cov",
+  # "xgboost",
+  "lightgbm",
   # "catboost",
   # "gpboost",
   # "ngboost",
