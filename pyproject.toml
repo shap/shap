@@ -57,14 +57,14 @@ docs = [
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
 test = [
   "pytest",
-  # "pytest-mpl",
-  # "pytest-cov",
-  # "xgboost",
-  # "lightgbm",
-  # "catboost",
-  # "gpboost",
-  # "ngboost",
-  # "pyspark",
+  "pytest-mpl",
+  "pytest-cov",
+  "xgboost",
+  "lightgbm",
+  "catboost",
+  "gpboost",
+  "ngboost",
+  "pyspark",
   # "pyod",
   # "transformers",
   # "protobuf==3.20.3",  # See GH #3046
