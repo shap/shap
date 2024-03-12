@@ -4,16 +4,16 @@ on:
   push:
     branches:
       - master
-  # pull_request:
-  #   branches:
-  #     - master
-  #   paths:
-  #     - "shap/**"
-  #     - "notebooks/**"
-  #     - ".github/workflows/run_notebooks.yml"
-  #     - "scripts/**"
-  #     - "pyproject.toml"
-  #     - "setup.py"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "shap/**"
+      - "notebooks/**"
+      - ".github/workflows/run_notebooks.yml"
+      - "scripts/**"
+      - "pyproject.toml"
+      - "setup.py"
   workflow_dispatch:
 
 concurrency:

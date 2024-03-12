@@ -20,6 +20,7 @@ concurrency:
   # Cancel only PR intermediate builds
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
+# Temporary simpler job for debugging purposes
 jobs:
   run_tests:
     runs-on: macos-latest
@@ -32,14 +33,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Use "eager" update strategy in case cached dependencies are outdated
-          # Using regular install NOT editable install: see GH #3020
-          pip install --upgrade --upgrade-strategy eager pytest torch==2.2.0 scikit-learn lightgbm
+          pip install eager pytest torch scikit-learn lightgbm
       - name: pip list
         run: pip list
       - name: Test with pytest
-        # Ensure we avoid adding current working directory to sys.path:
-        # - Use "pytest" over "python -m pytest"
-        # - Use "append" import mode rather than default "prepend"
         run: >
           pytest tests/test_bug121101.py
