@@ -10,17 +10,9 @@
 #define WAVEFRONT_SIZE __AMDGCN_WAVEFRONT_SIZE
 #endif
 
-/* this header file provides _*_sync functions, which is a hack only,
- * not ROCm official implementation.
- *
- * Old version hipcc does not handle "if-then-else" correctly.
- * A few builtin functions may get wrong results if they are used
- * in both "if" part and "else" part.
- *
- * The following 2 patches have fixed the issues.
- * https://reviews.llvm.org/D144756
- * https://reviews.llvm.org/D145072
- *
+/* this header file provides _*_sync functions, which is not 
+ * ROCm official implementation.
+ * These functions work with ROCm 5.5+.
  */
 
 namespace hip_warp_primitives {
