@@ -10,7 +10,7 @@ license = {text = "MIT License"}
 authors = [
   {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
   'numpy',
   'scipy',
@@ -27,10 +27,10 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
@@ -63,16 +63,27 @@ test = [
   "lightgbm",
   "catboost",
   "gpboost",
-  "ngboost;python_version<'3.11'",  # FIXME: pending py3.11 support
+  "ngboost",
   "pyspark",
   "pyod",
   "transformers",
   "protobuf==3.20.3",  # See GH #3046
-  "torch",
+  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
+  "torch; sys_platform != 'darwin'",
   "torchvision",
-  "tensorflow",
+  "tensorflow<2.16;python_version<'3.12'",  # FIXME: pending keras 3.0 support, pending tf py3.12 support
   "sentencepiece",
   "opencv-python",
+]
+
+test_notebooks = [
+  "jupyter",
+  "nbconvert",
+  "nbformat",
+  "nlp",
+  "transformers",
+  "datasets",
+  "keras",
 ]
 
 [project.urls]
@@ -125,16 +136,29 @@ select = [
   "UP",  # pyupgrade
   "E",  # pycodestyle
   "W",  # warning
+  "D",  # pydocstyle
+  # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
   # Recommended rules to disable when using ruff formatter:
   "E117",  # Over-indented
   "E501",  # Line too long
+
+  # pydocstyle issues not yet fixed
+  "D100",  # Missing docstring in public module
+  "D101",  # Missing docstring in public class
+  "D102",  # Missing docstring in public method
+  "D103",  # Missing docstring in public function
+  "D104",  # Missing docstring in public package
+  "D105",  # Missing docstring in magic method
+  "D205",  # 1 blank line required between summary line and description
+  "D400",  # First line should end with a period
+  "D401",  # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
+  "D404",  # First word of the docstring should not be "This"
 ]
 
-[tool.ruff.format]
-# For now, only Jupyter notebooks are autoformatted.
-exclude = ["**.py"]
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
@@ -148,7 +172,14 @@ exclude = ["**.py"]
 "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*"  = ["ALL"]
 
 # Disable some unwanted rules on Jupyter notebooks
-"*.ipynb" = ["E703", "E402"]  # Allow trailing semicolons, allow imports not at top
+"*.ipynb" = ["D", "E703", "E402"]  # Allow trailing semicolons, allow imports not at top
+
+# Ignore pycodestyle in tests
+"tests/*py" = ["D"]
+
+[tool.ruff.format]
+# For now, only Jupyter notebooks are autoformatted.
+exclude = ["**.py"]
 
 [tool.coverage.run]
 source_pkgs = ["shap"]

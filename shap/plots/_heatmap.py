@@ -51,11 +51,9 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     Examples
     --------
-
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
 
     """
-
     # sort the SHAP values matrix by rows and columns
     values = shap_values.values
     if issubclass(type(feature_values), OpChain):

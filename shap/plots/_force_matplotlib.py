@@ -134,12 +134,6 @@ def draw_labels(fig, ax, out_value, features, feature_type, offset_text, total_e
         else:
             box_end_ = box_size.get_points()[1][0]
 
-        # If the feature goes over the side of the plot, we remove that label
-        # and stop drawing labels
-        if box_end_ > ax.get_xlim()[1]:
-            text_out_val.remove()
-            break
-
         # Create end line
         if (sign * box_end_) > (sign * val):
             x, y = np.array([[val, val], [0, -0.18]])

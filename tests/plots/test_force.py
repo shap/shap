@@ -52,9 +52,7 @@ def test_verify_valid_cmap(cmap, exp_ctx):
 
 
 def test_random_force_plot_mpl_with_data():
-    """ Test if force plot with matplotlib works.
-    """
-
+    """Test if force plot with matplotlib works."""
     RandomForestRegressor = pytest.importorskip('sklearn.ensemble').RandomForestRegressor
 
     # train model
@@ -68,11 +66,11 @@ def test_random_force_plot_mpl_with_data():
 
     # visualize the first prediction's explanation
     shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, show=False)
+    with pytest.raises(TypeError, match="force plot now requires the base value as the first parameter"):
+        shap.force_plot([1, 1], shap_values, X.iloc[0, :], show=False)
 
 def test_random_force_plot_mpl_text_rotation_with_data():
-    """ Test if force plot with matplotlib works when supplied with text_rotation.
-    """
-
+    """Test if force plot with matplotlib works when supplied with text_rotation."""
     RandomForestRegressor = pytest.importorskip('sklearn.ensemble').RandomForestRegressor
 
     # train model

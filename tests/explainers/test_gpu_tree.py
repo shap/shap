@@ -1,5 +1,4 @@
-""" Test gpu accelerated tree functions.
-"""
+"""Test gpu accelerated tree functions."""
 import numpy as np
 import pytest
 import sklearn
@@ -105,6 +104,26 @@ def xgboost_multiclass_classifier():
     model = xgboost.XGBClassifier()
     model.fit(X, y)
     return model, X, model.predict(X, output_margin=True)
+
+
+def test_xgboost_cat_unsupported() -> None:
+    xgboost = pytest.importorskip("xgboost")
+    X, y = shap.datasets.adult()
+    X["Workclass"] = X["Workclass"].astype("category")
+
+    clf = xgboost.XGBClassifier(n_estimators=2, enable_categorical=True, device="cuda")
+    clf.fit(X, y)
+
+    # Tests for both CPU and GPU in one place
+
+    # Prefer an explict error over silent invalid values.
+    gpu_ex = shap.GPUTreeExplainer(clf, X, feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="Categorical"):
+        gpu_ex.shap_values(X)
+
+    ex = shap.TreeExplainer(clf, X, feature_perturbation="interventional")
+    with pytest.raises(NotImplementedError, match="Categorical"):
+        ex.shap_values(X)
 
 
 def lightgbm_base():
