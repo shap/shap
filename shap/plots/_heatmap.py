@@ -52,6 +52,11 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     ax : matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
 
+    Returns
+    -------
+    ax: matplotlib Axes
+        Returns the Axes object with the plot drawn onto it.
+
     Examples
     --------
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
