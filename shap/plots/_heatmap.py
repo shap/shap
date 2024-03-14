@@ -10,7 +10,7 @@ from ._utils import convert_ordering
 
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0),
             feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
-            plot_width=8):
+            plot_width=8, ax=None):
     """Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
@@ -46,8 +46,11 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
-    plot_width: int, default 8
+    plot_width : int, default 8
         The width of the heatmap plot.
+
+    ax : matplotlib Axes
+        Axes object to draw the plot onto, otherwise uses the current Axes.
 
     Examples
     --------
@@ -98,8 +101,9 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     # define the plot size based on how many features we are plotting
     row_height = 0.5
-    pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
-    ax = pl.gca()
+    if ax is None:
+        pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
+        ax = pl.gca()
 
     # plot the matrix of SHAP values as a heat map
     vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
@@ -178,3 +182,5 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     if show:
         pl.show()
+
+    return ax
