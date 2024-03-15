@@ -489,6 +489,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         by default.
 
     """
+    fig = pl.figure()
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -575,13 +576,14 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     else:
                         new_feature_names.append(c1 + "* - " + c2)
 
-            return summary_legacy(
+            fig = summary_legacy(
                 new_shap_values, new_features, new_feature_names,
                 max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
                 title=title, alpha=alpha, show=show, sort=sort,
                 color_bar=color_bar, plot_size=plot_size, class_names=class_names,
                 color_bar_label="*" + color_bar_label
             )
+            return fig
 
         if max_display is None:
             max_display = 7
@@ -637,7 +639,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         pl.subplots_adjust(hspace=0, wspace=0.1)
         if show:
             pl.show()
-        return
+        return fig
 
     if max_display is None:
         max_display = 20
@@ -962,3 +964,5 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     pl.tight_layout()
     if show:
         pl.show()
+    else:
+        return fig
