@@ -5,7 +5,7 @@ from ._model import Model
 
 
 class TransformersPipeline(Model):
-    """ This wraps a transformers pipeline object for easy explanations.
+    """This wraps a transformers pipeline object for easy explanations.
 
     By default transformers pipeline object output lists of dictionaries, not standard
     tensors as expected by SHAP. This class wraps pipelines to make them output nice
@@ -13,8 +13,7 @@ class TransformersPipeline(Model):
     """
 
     def __init__(self, pipeline, rescale_to_logits=False):
-        """ Build a new model by wrapping the given pipeline object.
-        """
+        """Build a new model by wrapping the given pipeline object."""
         super().__init__(pipeline) # the pipeline becomes our inner_model
         self.rescale_to_logits = rescale_to_logits
 

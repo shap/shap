@@ -50,12 +50,11 @@ def convert_name(ind, shap_values, input_names):
         return ind
 
 def potential_interactions(shap_values_column, shap_values_matrix):
-    """ Order other features by how much interaction they seem to have with the feature at the given index.
+    """Order other features by how much interaction they seem to have with the feature at the given index.
 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
     """
-
     # ignore inds that are identical to the column
     ignore_inds = np.where((shap_values_matrix.values.T - shap_values_column.values).T.std(0) < 1e-8)
 
@@ -99,12 +98,11 @@ def potential_interactions(shap_values_column, shap_values_matrix):
 
 
 def approximate_interactions(index, shap_values, X, feature_names=None):
-    """ Order other features by how much interaction they seem to have with the feature at the given index.
+    """Order other features by how much interaction they seem to have with the feature at the given index.
 
     This just bins the SHAP values for a feature along that feature's value. For true Shapley interaction
     index values for SHAP see the interaction_contribs option implemented in XGBoost.
     """
-
     # convert from DataFrames if we got any
     if isinstance(X, pd.DataFrame):
         if feature_names is None:
@@ -184,6 +182,7 @@ def sample(X, nsamples=100, random_state=0):
     random_state :
         Determines random number generation for shuffling the data. Use this to
         ensure reproducibility across multiple function calls.
+
     """
     if hasattr(X, "shape"):
         over_count = nsamples >= X.shape[0]
@@ -196,8 +195,7 @@ def sample(X, nsamples=100, random_state=0):
 
 
 def safe_isinstance(obj, class_path_str):
-    """
-    Acts as a safe version of isinstance without having to explicitly
+    """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
     Checks if obj is an instance of type specified by class_path_str.
@@ -211,8 +209,9 @@ def safe_isinstance(obj, class_path_str):
         Example: `sklearn.ensemble.RandomForestRegressor`
 
     Returns
-    --------
+    -------
     bool: True if isinstance is true and the package exists, False otherwise
+
     """
     if isinstance(class_path_str, str):
         class_path_strs = [class_path_str]
@@ -251,9 +250,7 @@ def safe_isinstance(obj, class_path_str):
 
 
 def format_value(s, format_str):
-    """ Strips trailing zeros and uses a unicode minus sign.
-    """
-
+    """Strips trailing zeros and uses a unicode minus sign."""
     if not issubclass(type(s), str):
         s = format_str % s
     s = re.sub(r'\.?0+$', '', s)
@@ -263,21 +260,18 @@ def format_value(s, format_str):
 
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
 def ordinal_str(n):
-    """ Converts a number to and ordinal string.
-    """
+    """Converts a number to and ordinal string."""
     return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
 class OpChain:
-    """ A way to represent a set of dot chained operations on an object without actually running them.
-    """
+    """A way to represent a set of dot chained operations on an object without actually running them."""
 
     def __init__(self, root_name=""):
         self._ops = []
         self._root_name = root_name
 
     def apply(self, obj):
-        """ Applies all our ops to the given object.
-        """
+        """Applies all our ops to the given object."""
         for o in self._ops:
             op,args,kwargs = o
             if args is not None:
@@ -287,8 +281,7 @@ class OpChain:
         return obj
 
     def __call__(self, *args, **kwargs):
-        """ Update the args for the previous operation.
-        """
+        """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops[-1][1] = args

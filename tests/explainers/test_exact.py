@@ -1,5 +1,4 @@
-""" Unit tests for the Exact explainer.
-"""
+"""Unit tests for the Exact explainer."""
 
 import pickle
 

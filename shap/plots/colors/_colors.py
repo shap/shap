@@ -1,5 +1,4 @@
-""" This defines some common colors.
-"""
+"""This defines some common colors."""
 
 
 import numpy as np

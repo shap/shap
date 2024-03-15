@@ -6,18 +6,13 @@ from packaging import version
 from .._explainer import Explainer
 from .deep_utils import _check_additivity
 
-torch = None
-
 
 class PyTorchDeep(Explainer):
 
     def __init__(self, model, data):
-        # try and import pytorch
-        global torch
-        if torch is None:
-            import torch
-            if version.parse(torch.__version__) < version.parse("0.4"):
-                warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
+        import torch
+        if version.parse(torch.__version__) < version.parse("0.4"):
+            warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
         # check if we have multiple inputs
         self.multi_input = False
@@ -69,8 +64,7 @@ class PyTorchDeep(Explainer):
         self.target_handle = input_handle
 
     def add_handles(self, model, forward_handle, backward_handle):
-        """
-        Add handles to all non-container layers in the model.
+        """Add handles to all non-container layers in the model.
         Recursively for non-container layers
         """
         handles_list = []
@@ -84,8 +78,7 @@ class PyTorchDeep(Explainer):
         return handles_list
 
     def remove_attributes(self, model):
-        """
-        Removes the x and y attributes which were added by the forward handles
+        """Removes the x and y attributes which were added by the forward handles
         Recursively searches for non-container layers
         """
         for child in model.children():
@@ -102,6 +95,7 @@ class PyTorchDeep(Explainer):
                     pass
 
     def gradient(self, idx, inputs):
+        import torch
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
@@ -133,6 +127,7 @@ class PyTorchDeep(Explainer):
             return grads
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
+        import torch
         # X ~ self.model_input
         # X_data ~ self.data
 
@@ -218,9 +213,15 @@ class PyTorchDeep(Explainer):
 
             _check_additivity(self, model_output_values.cpu(), output_phis)
 
-        if not self.multi_output:
-            return output_phis[0]
-        elif ranked_outputs is not None:
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
+            else:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             return output_phis, model_output_ranks
         else:
             return output_phis
@@ -247,6 +248,7 @@ def add_interim_values(module, input, output):
     """The forward hook used to save interim tensors, detached
     from the graph. Used to calculate the multipliers
     """
+    import torch
     try:
         del module.x
     except AttributeError:
@@ -297,6 +299,7 @@ def passthrough(module, grad_input, grad_output):
 
 
 def maxpool(module, grad_input, grad_output):
+    import torch
     pool_to_unpool = {
         'MaxPool1d': torch.nn.functional.max_unpool1d,
         'MaxPool2d': torch.nn.functional.max_unpool2d,
@@ -336,6 +339,7 @@ def linear_1d(module, grad_input, grad_output):
 
 
 def nonlinear_1d(module, grad_input, grad_output):
+    import torch
     delta_out = module.y[: int(module.y.shape[0] / 2)] - module.y[int(module.y.shape[0] / 2):]
 
     delta_in = module.x[: int(module.x.shape[0] / 2)] - module.x[int(module.x.shape[0] / 2):]

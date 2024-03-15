@@ -79,6 +79,7 @@ class LinearExplainer(Explainer):
     Examples
     --------
     See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/LinearExplainer.html>`_
+
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
@@ -211,7 +212,7 @@ class LinearExplainer(Explainer):
             raise InvalidFeaturePerturbationError("Unknown type of feature_perturbation provided: " + self.feature_perturbation)
 
     def _estimate_transforms(self, nsamples):
-        """ Uses block matrix inversion identities to quickly estimate transforms.
+        """Uses block matrix inversion identities to quickly estimate transforms.
 
         After a bit of matrix math we can isolate a transform matrix (# features x # features)
         that is independent of any sample we are explaining. It is the result of averaging over
@@ -276,8 +277,7 @@ class LinearExplainer(Explainer):
 
     @staticmethod
     def _parse_model(model):
-        """ Attempt to pull out the coefficients and intercept from the given model object.
-        """
+        """Attempt to pull out the coefficients and intercept from the given model object."""
         # raw coefficients
         if type(model) == tuple and len(model) == 2:
             coef = model[0]
@@ -302,9 +302,7 @@ class LinearExplainer(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if we can parse the given model.
-        """
-
+        """Determines if we can parse the given model."""
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
 
@@ -315,9 +313,7 @@ class LinearExplainer(Explainer):
         return True
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         assert len(row_args) == 1, "Only single-argument functions are supported by the Linear explainer!"
 
         X = row_args[0]
@@ -367,7 +363,7 @@ class LinearExplainer(Explainer):
 
 
     def shap_values(self, X):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -376,13 +372,23 @@ class LinearExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For models with a single output this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored as expected_value
-            attribute of the explainer).
-        """
+        np.array
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored
+            as the ``expected_value`` attribute of the explainer).
+
+            The shape of the returned array depends on the number of model outputs:
+
+            * one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
+              #num_outputs)``.
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs changed from list to np.ndarray.
+
+        """
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
@@ -407,12 +413,12 @@ class LinearExplainer(Explainer):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
                 else:
-                    return [np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])], axis=-1)
             else:
                 if len(self.coef.shape) == 1:
                     return np.array(X - self.mean) * self.coef
                 else:
-                    return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])], axis=-1)
 
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))

@@ -1,5 +1,4 @@
-""" This file contains tests for partition explainer.
-"""
+"""This file contains tests for partition explainer."""
 
 import pickle
 

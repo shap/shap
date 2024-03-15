@@ -16,18 +16,18 @@ except ImportError as e:
 
 
 class GPUTreeExplainer(TreeExplainer):
-    """
-    Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
+    """Experimental GPU accelerated version of TreeExplainer. Currently requires source build with
     cuda available and 'CUDA_PATH' environment variable defined.
 
     Examples
     --------
     See `GPUTree explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/GPUTreeExplainer.html>`_
+
     """
 
     def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True,
                     from_call=False):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -61,6 +61,7 @@ class GPUTreeExplainer(TreeExplainer):
             attribute of the explainer when it is constant). For models with vector outputs this
             returns
             a list of such matrices, one for each output.
+
         """
         assert not approximate, "approximate not supported"
 
@@ -90,7 +91,7 @@ class GPUTreeExplainer(TreeExplainer):
         return out
 
     def shap_interaction_values(self, X, y=None, tree_limit=None):
-        """ Estimate the SHAP interaction values for a set of samples.
+        """Estimate the SHAP interaction values for a set of samples.
 
         Parameters
         ----------
@@ -123,8 +124,8 @@ class GPUTreeExplainer(TreeExplainer):
             interaction effects between all pairs of features for that sample. For models with
             vector outputs
             this returns a list of tensors, one for each output.
-        """
 
+        """
         assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for " \
                                                  "SHAP interaction values right now!"
         assert self.feature_perturbation != "interventional", 'feature_perturbation="interventional" is not yet supported for ' + \

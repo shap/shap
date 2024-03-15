@@ -9,7 +9,7 @@ from ._model import Model
 
 
 class TeacherForcing(Model):
-    """ Generates scores (log odds) for output text explanation algorithms using Teacher Forcing technique.
+    """Generates scores (log odds) for output text explanation algorithms using Teacher Forcing technique.
 
     This class supports generation of log odds for transformer models as well as functions. In model agnostic
     cases (model is function) it expects a similarity_model and similarity_tokenizer to approximate log odd scores
@@ -17,7 +17,7 @@ class TeacherForcing(Model):
     """
 
     def __init__(self, model, tokenizer=None, similarity_model=None, similarity_tokenizer=None, batch_size=128, device=None):
-        """ Build a teacher forcing model from the given text generation model.
+        """Build a teacher forcing model from the given text generation model.
 
         Parameters
         ----------
@@ -43,6 +43,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             The scores (log odds) of generating target sentence ids using the model.
+
         """
         super().__init__(model)
 
@@ -89,7 +90,7 @@ class TeacherForcing(Model):
             self.similarity_model_type = "tf"
 
     def __call__(self, X, Y):
-        """ Computes log odds scores of generating output(text) for a given batch of input(text/image) .
+        """Computes log odds scores of generating output(text) for a given batch of input(text/image) .
 
         Parameters
         ----------
@@ -103,6 +104,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             A numpy array of log odds scores for every input pair (masked_X, X)
+
         """
         output_batch = None
         # caching updates output names and target sentence ids
@@ -121,7 +123,7 @@ class TeacherForcing(Model):
         return output_batch
 
     def update_output_names(self, output):
-        """ The function updates output tokens.
+        """The function updates output tokens.
 
         It mimics the caching mechanism to update the output tokens for every
         new row of explanation that are to be explained.
@@ -130,6 +132,7 @@ class TeacherForcing(Model):
         ----------
         output: numpy.ndarray
             Output(sentence/sentence ids) for an explanation row.
+
         """
         # check if the target sentence has been updated (occurs when explaining a new row)
         if (self.output is None) or (not np.array_equal(self.output, output)):
@@ -137,7 +140,7 @@ class TeacherForcing(Model):
             self.output_names = self.get_output_names(output)
 
     def get_output_names(self, output):
-        """ Gets the output tokens by computing the output sentence ids and output names using the similarity_tokenizer.
+        """Gets the output tokens by computing the output sentence ids and output names using the similarity_tokenizer.
 
         Parameters
         ----------
@@ -148,13 +151,14 @@ class TeacherForcing(Model):
         -------
         list
             A list of output tokens.
+
         """
         output_ids = self.get_outputs(output)
         output_names = [self.similarity_tokenizer.decode([x]).strip() for x in output_ids[0, :]]
         return output_names
 
     def get_outputs(self, X):
-        """ The function tokenizes output sentences and returns ids.
+        """The function tokenizes output sentences and returns ids.
 
         Parameters
         ----------
@@ -165,6 +169,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             An array of output(target sentence) ids.
+
         """
         # check if output is a sentence or already parsed target ids
         if X.dtype.type is np.str_:
@@ -179,7 +184,7 @@ class TeacherForcing(Model):
         return output_ids
 
     def get_inputs(self, X, padding_side='right'):
-        """ The function tokenizes source sentences.
+        """The function tokenizes source sentences.
 
         In model agnostic case, the function calls model(X) which is expected to
         return a batch of output sentences which is tokenized to compute inputs.
@@ -193,6 +198,7 @@ class TeacherForcing(Model):
         -------
         dict
             Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on similarity_model_type).
+
         """
         if self.model_agnostic:
             # In model agnostic case, we first pass the input through the model and then tokenize output sentence
@@ -208,7 +214,7 @@ class TeacherForcing(Model):
         return inputs
 
     def get_logodds(self, logits):
-        """ Calculates log odds from logits.
+        """Calculates log odds from logits.
 
         This function passes the logits through softmax and then computes log odds for the output(target sentence) ids.
 
@@ -221,6 +227,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             Computes log odds for corresponding output ids.
+
         """
         # set output ids for which scores are to be extracted
         if self.output.dtype.type is np.str_:
@@ -239,7 +246,7 @@ class TeacherForcing(Model):
         return logodds_for_output_ids
 
     def model_inference(self, inputs, output_ids):
-        """ This function performs model inference for tensorflow and pytorch models.
+        """This function performs model inference for tensorflow and pytorch models.
 
         Parameters
         ----------
@@ -253,6 +260,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             Returns output logits from the model.
+
         """
         if self.similarity_model_type == "pt":
             import torch
@@ -307,7 +315,7 @@ class TeacherForcing(Model):
         return logits
 
     def get_teacher_forced_logits(self, X, Y):
-        """ The function generates logits for transformer models.
+        """The function generates logits for transformer models.
 
         It generates logits for encoder-decoder models as well as decoder only models by using the teacher forcing technique.
 
@@ -323,6 +331,7 @@ class TeacherForcing(Model):
         -------
         numpy.ndarray
             Decoder output logits for output(target sentence) ids.
+
         """
         # check if type of model architecture assigned in model config
         if (hasattr(self.similarity_model.config, "is_encoder_decoder") and not self.similarity_model.config.is_encoder_decoder) \
