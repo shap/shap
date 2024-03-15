@@ -489,7 +489,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         by default.
 
     """
-
     fig = pl.figure()
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
