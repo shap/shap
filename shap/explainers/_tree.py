@@ -1295,7 +1295,6 @@ class TreeEnsemble:
 
                 # ensure that the passed background dataset lands in every leaf
                 if np.min(self.trees[i].node_sample_weight) <= 0:
-                    # import pdb; pdb.set_trace()
                     self.fully_defined_weighting = False
 
             self.num_nodes = np.array([len(t.values) for t in self.trees], dtype=np.int32)
