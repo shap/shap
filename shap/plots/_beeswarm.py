@@ -60,8 +60,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         number of features that are being displayed. Passing a single float will cause
         each row to be that many inches high. Passing a pair of floats will scale the
         plot by that number of inches. If ``None`` is passed, then the size of the
-        current figure will be left unchanged. If ax is not ``None``, then plot_size has
-        no effect.
+        current figure will be left unchanged. If ax is not ``None``, then passing
+        plot_size will raise a Value Error.
 
     Returns
     -------
@@ -93,6 +93,14 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             "than one dimension!"
         )
         raise ValueError(emsg)
+
+    if ax and plot_size:
+        emsg = (
+            "The beeswarm plot does not support passing an axis and adjusting the plot size. "
+            "To adjust the size of the plot, set plot_size to None and adjust the size on the original figure the axes was part of"
+        )
+        raise ValueError(emsg)
+
 
     shap_exp = shap_values
     # we make a copy here, because later there are places that might modify this array
@@ -165,10 +173,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
 
     fig = pl.gcf()
-    ax_is_None = False
     if ax is None:
         ax = pl.gca()
-        ax_is_None = True
 
     if log_scale:
         ax.set_xscale('symlog')
@@ -333,13 +339,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         yticklabels[-1] = "Sum of %d other features" % num_cut
 
     row_height = 0.4
-    if ax_is_None:
-        if plot_size == "auto":
-            fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
-        elif type(plot_size) in (list, tuple):
-            fig.set_size_inches(plot_size[0], plot_size[1])
-        elif plot_size is not None:
-            fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
+    if plot_size == "auto":
+        fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
+    elif type(plot_size) in (list, tuple):
+        fig.set_size_inches(plot_size[0], plot_size[1])
+    elif plot_size is not None:
+        fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
     ax.axvline(x=0, color="#999999", zorder=-1)
 
     # make the beeswarm dots
