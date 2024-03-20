@@ -276,6 +276,168 @@ __device__ inline lane_mask __match_all_sync(lane_mask mask, T value, int *pred)
         return 0;
     }
 }
+
+/* binary OPs */
+template <typename T>
+struct binop_multiply {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs * rhs;
+    }
+};
+
+template <typename T>
+struct binop_add {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs + rhs;
+    }
+};
+
+template <typename T>
+struct binop_min {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs < rhs ? lhs : rhs;
+    }
+};
+
+template <typename T>
+struct binop_max {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs > rhs ? lhs : rhs;
+    }
+};
+
+template <typename T>
+struct binop_and {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs & rhs;
+    }
+};
+
+template <typename T>
+struct binop_or {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs | rhs;
+    }
+};
+
+template <typename T>
+struct binop_xor {
+    __device__ T operator()(const T &lhs, const T &rhs) {
+        return lhs ^ rhs;
+    }
+};
+
+template <class T, class BinaryOP>
+__device__ inline T __reduce_impl_sync(lane_mask mask, T var, BinaryOP op)
+{
+    /* calling thread must be set in the mask */
+#ifndef WARP_NO_MASK_CHECK
+    assert(__is_thread_in_mask(mask));
+#else
+    /* to make compiler happy */
+    (void) mask;
+#endif
+
+    int src;
+    int size = __mask_size(mask);
+    int lane;
+    int tid = __thread_rank(mask);
+
+    if (size == 1) return var;
+
+    /* binary tree alg */
+    if (size == WAVEFRONT_SIZE) {
+        for (int mask = size / 2; mask > 0; mask /= 2)
+            var = op(var, __shfl_xor(var, mask));
+        return var;
+    }
+    else {
+        while (size > 1 && tid < size) {
+            /* check src lane */
+            src = tid + size / 2;
+
+            lane = (size == WAVEFRONT_SIZE) ? src
+                : (WAVEFRONT_SIZE == 64) ? __fns64(mask, 0, (src + 1))
+                : __fns32(mask, 0, (src + 1));
+
+            T tp = __shfl(var, lane);
+
+            if (size & 1) {
+               if (tid > 0)  var = op(var, tp);
+            }
+            else {
+               var = op(var, tp);
+            }
+
+            size = (size + 1) / 2;
+        }
+
+        lane = (size == WAVEFRONT_SIZE) ? 0
+            : (WAVEFRONT_SIZE == 64) ? __fns64(mask, 0, 1)
+            : __fns32(mask, 0, 1);
+
+        return __shfl(var, lane);
+    }
+}
+
+/* add min and max support int, unsigned, long, unsigned long,
+ * long long, unsigned long long, float and double */
+template <typename T>
+__device__ T __reduce_mul_sync(lane_mask mask, T var)
+{
+    binop_multiply<T> op;
+
+    return __reduce_impl_sync<T, binop_multiply<T>>(mask, var, op);
+}
+
+template <typename T>
+__device__ T __reduce_add_sync(lane_mask mask, T var)
+{
+    binop_add<T> op;
+
+    return __reduce_impl_sync<T, binop_add<T>>(mask, var, op);
+}
+
+template <typename T>
+__device__ T __reduce_min_sync(lane_mask mask, T var)
+{
+    binop_min<T> op;
+
+    return __reduce_impl_sync<T, binop_min<T>>(mask, var, op);
+}
+
+template <typename T>
+__device__ T __reduce_max_sync(lane_mask mask, T var)
+{
+    binop_max<T> op;
+
+    return __reduce_impl_sync<T, binop_max<T>>(mask, var, op);
+}
+
+template <typename T>
+__device__ T __reduce_and_sync(lane_mask mask, T var)
+{
+    binop_and<T> op;
+
+    return __reduce_impl_sync<T, binop_and<T>>(mask, var, op);
+}
+
+template <typename T>
+__device__ T __reduce_or_sync(lane_mask mask, T var)
+{
+    binop_or<T> op;
+
+    return __reduce_impl_sync<T, binop_or<T>>(mask, var, op);
+}
+
+template <typename T>
+__device__ T __reduce_xor_sync(lane_mask mask, T var)
+{
+    binop_xor<T> op;
+
+    return __reduce_impl_sync<T, binop_xor<T>>(mask, var, op);
+}
+
 }
 
 #endif
