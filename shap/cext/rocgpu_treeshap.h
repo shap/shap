@@ -49,11 +49,7 @@
 
 #include "amd_warp_primitives.h"
 
-#if WAVEFRONT_SIZE == 64
-#define WARP_SIZE 64
-#elif WAVEFRONT_SIZE == 32
-#define WARP_SIZE 32
-#endif
+#define WARP_SIZE WAVEFRONT_SIZE
 
 namespace gpu_treeshap {
 
@@ -152,16 +148,16 @@ struct PathElement {
   int init_flag;
 
   /*! Unique path index. */
-  size_t path_idx;
+  size_t path_idx{};
   /*! Feature of this split, -1 indicates bias term. */
-  int64_t feature_idx;
+  int64_t feature_idx{};
   /*! Indicates class for multiclass problems. */
-  int group;
-  SplitConditionT split_condition;
+  int group{};
+  SplitConditionT split_condition{};
   /*! Probability of following this path when feature_idx is not in the active
    * set. */
-  double zero_fraction;
-  float v;  // Leaf weight at the end of the path
+  double zero_fraction{};
+  float v{};  // Leaf weight at the end of the path
 };
 
 // Helper function that accepts an index into a flat contiguous array and the
