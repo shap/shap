@@ -6,6 +6,7 @@ from ._masker import Masker
 from ._output_composite import OutputComposite
 from ._tabular import Impute, Independent, Partition
 from ._text import Text
+from ._video import Video
 
 __all__ = [
     "Composite",
@@ -18,4 +19,5 @@ __all__ = [
     "Independent",
     "Partition",
     "Text",
+    "Video",
 ]
