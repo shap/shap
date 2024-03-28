@@ -6,6 +6,39 @@ import pytest
 import shap
 
 
+def test_falcon():
+    transformers = pytest.importorskip("transformers")
+    requests = pytest.importorskip("requests")
+    name = "fxmarty/really-tiny-falcon-testing"
+    try:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            name, trust_remote_code=True, load_in_8bit=True, device_map="auto"
+        )
+    except requests.exceptions.RequestException:
+        pytest.xfail(reason="Connection error to transformers model")
+
+    model = model.eval()
+
+
+    s = ["I enjoy walking with my cute dog"]
+    gen_dict = dict(
+        max_new_tokens=100,
+        num_beams=5,
+        renormalize_logits=True,
+        no_repeat_ngram_size=8,
+    )
+
+
+    model.config.task_specific_params = dict()
+    model.config.task_specific_params["text-generation"] = gen_dict
+    shap_model = shap.models.TeacherForcing(model, tokenizer)
+
+    explainer = shap.Explainer(shap_model, tokenizer)
+    shap_values = explainer(s)
+    assert not np.isnan(np.sum(shap_values.values))
+
+
 def test_method_get_teacher_forced_logits_for_encoder_decoder_model():
     """Tests if get_teacher_forced_logits() works for encoder-decoder models."""
     transformers = pytest.importorskip("transformers")
