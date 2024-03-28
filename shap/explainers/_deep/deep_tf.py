@@ -13,6 +13,7 @@ tf_ops = None
 tf_backprop = None
 tf_execute = None
 tf_gradients_impl = None
+keras = None
 
 def custom_record_gradient(op_name, inputs, attrs, results):
     """This overrides tensorflow.python.eager.backprop._record_gradient.
@@ -79,7 +80,7 @@ class TFDeep(Explainer):
 
         """
         # try to import tensorflow
-        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
+        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl, keras
         if tf is None:
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
@@ -94,6 +95,7 @@ class TFDeep(Explainer):
             import tensorflow as tf
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
+            import keras
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")
@@ -121,6 +123,7 @@ class TFDeep(Explainer):
             self.multi_input = False
             if not isinstance(self.model_inputs, list):
                 self.model_inputs = [self.model_inputs]
+        orig_data = data
         if not isinstance(data, list) and (hasattr(data, "__call__") is False):
             data = [data]
         self.data = data
@@ -162,6 +165,11 @@ class TFDeep(Explainer):
 
         if not tf.executing_eagerly():
             self._init_between_tensors(self.model_output.op, self.model_inputs)
+        else:
+            # from tensorflow.python.framework.ops import disable_eager_execution
+            # disable_eager_execution()
+            self._init_between_tensors_eager(model, self.model_inputs, orig_data)
+            # self._init_between_tensors(self.model_output.op, self.model_inputs)
 
         # make a blank array that will get lazily filled in with the SHAP value computation
         # graphs for each output. Lazy is important since if there are 1000 outputs and we
@@ -202,6 +210,109 @@ class TFDeep(Explainer):
         )
 
         # note all the tensors that are on the path between the inputs and the output
+        self.between_tensors = {}
+        for op in self.between_ops:
+            for t in op.outputs:
+                self.between_tensors[t.name] = True
+        for t in model_inputs:
+            self.between_tensors[t.name] = True
+
+        # save what types are being used
+        self.used_types = {}
+        for op in self.between_ops:
+            self.used_types[op.type] = True
+
+    def _init_between_tensors_eager(self, model, model_inputs, data):
+
+        def _convert_numpy_or_python_types(x):
+            if isinstance(x, (tf.Tensor, np.ndarray, float, int)):
+                return tf.convert_to_tensor(x)
+            return x
+        class OperationCaptureModel(tf.keras.Model):
+            """This class is used to capture the operations between the model inputs and outputs.
+            """
+            def __init__(self, layers, model=None):
+                super().__init__()
+                self._layers = layers
+                self.ops = []
+                self.model = model
+                if model is not None:
+                    print(f"This is the model type {type(self.model)}")
+
+            # unfortunately this cannot be a simple function since tf.function must return tensors or None
+            @tf.function
+            def __call__(self, inputs):
+                inputs = tf.nest.map_structure(
+                            _convert_numpy_or_python_types, inputs
+                        )
+                if isinstance(self.model, tf.keras.models.Sequential):
+                    layer_outputs = []
+                    for layer in self._layers:
+                        inputs = layer(inputs)
+                        self.ops.append(inputs.op)
+                        layer_outputs.append(inputs)
+                    return layer_outputs
+                elif isinstance(self.model, keras.src.models.Functional):
+                    # This is basically a slight adaptation of
+                    # tf.python.keras.engine.functional._run_internal_graph so that we can capture the ops
+                    inputs = self.model._flatten_to_reference_inputs(inputs)
+                    # if mask is None:
+                    masks = [None] * len(inputs)
+                    # else:
+                    #     masks = self.model._flatten_to_reference_inputs(mask)
+                    for input_t, mask in zip(inputs, masks):
+                        input_t._keras_mask = mask
+
+                    # Dictionary mapping reference tensors to computed tensors.
+                    tensor_dict = {}
+                    tensor_usage_count = self.model._tensor_usage_count
+                    for x, y in zip(self.model.inputs, inputs):
+                        y = self.model._conform_to_reference_input(y, ref_input=x)
+                        x_id = str(id(x))
+                        tensor_dict[x_id] = [y] * tensor_usage_count[x_id]
+
+                    nodes_by_depth = self.model._nodes_by_depth
+                    depth_keys = list(nodes_by_depth.keys())
+                    depth_keys.sort(reverse=True)
+
+                    for depth in depth_keys:
+                        nodes = nodes_by_depth[depth]
+                        for node in nodes:
+                            if node.is_input:
+                                continue  # Input tensors already exist.
+
+                            if any(t_id not in tensor_dict for t_id in node.flat_input_ids):
+                                continue  # Node is not computable, try skipping.
+
+                            args, kwargs = node.map_arguments(tensor_dict)
+                            outputs = node.layer(*args, **kwargs)
+                            if hasattr(outputs, "op"):
+                                self.ops.append(outputs.op)
+
+                            # Update tensor_dict.
+                            for x_id, y in zip(
+                                node.flat_output_ids, tf.nest.flatten(outputs)
+                            ):
+                                tensor_dict[x_id] = [y] * tensor_usage_count[x_id]
+
+                    output_tensors = []
+                    for x in self.model.outputs:
+                        x_id = str(id(x))
+                        assert x_id in tensor_dict, 'Could not compute output ' + str(x)
+                        output_tensors.append(tensor_dict[x_id].pop())
+                        if hasattr(outputs, "op"):
+                            self.ops.append(outputs.op)
+                else:
+                    raise TypeError(f'Not a valid model type: {type(self.model)}')
+
+        capture_model = OperationCaptureModel(model.layers, model=model)
+
+        # model_input = tf.convert_to_tensor(data, dtype=tf.float32)
+        model_input = data
+        capture_model(model_input)
+
+        self.between_ops = capture_model.ops
+
         self.between_tensors = {}
         for op in self.between_ops:
             for t in op.outputs:
@@ -381,14 +492,14 @@ class TFDeep(Explainer):
         # TODO: unclear why some ops are not in the registry with TF 2.0 like TensorListReserve
         for non_reg_ops in ops_not_in_registry:
             reg[non_reg_ops] = {'type': None, 'location': location_tag}
-        for n in op_handlers:
-            if n in reg:
-                self.orig_grads[n] = reg[n]["type"]
-                reg["shap_"+n] = {
+        for n_op in op_handlers:
+            if n_op in reg:
+                self.orig_grads[n_op] = reg[n_op]["type"]
+                reg["shap_"+n_op] = {
                     "type": self.custom_grad,
-                    "location": reg[n]["location"]
+                    "location": reg[n_op]["location"]
                 }
-                reg[n]["type"] = self.custom_grad
+                reg[n_op]["type"] = self.custom_grad
 
         # In TensorFlow 1.10 they started pruning out nodes that they think can't be backpropped
         # unfortunately that includes the index of embedding layers so we disable that check here
@@ -668,6 +779,7 @@ def linearity_with_excluded_handler(input_inds, explainer, op, *grads):
     for i in range(len(op.inputs)):
         if i in input_inds or i - len(op.inputs) in input_inds:
             assert not explainer._variable_inputs(op)[i], str(i) + "th input to " + op.name + " cannot vary!"
+            # pass
     if op.type.startswith("shap_"):
         op.type = op.type[5:]
     return explainer.orig_grads[op.type](op, *grads)
@@ -697,6 +809,7 @@ op_handlers["Pack"] = passthrough
 op_handlers["BiasAdd"] = passthrough
 op_handlers["Unpack"] = passthrough
 op_handlers["Add"] = passthrough
+op_handlers["AddV2"] = passthrough
 op_handlers["Sub"] = passthrough
 op_handlers["Merge"] = passthrough
 op_handlers["Sum"] = passthrough
@@ -711,6 +824,10 @@ op_handlers["TensorArrayScatterV3"] = passthrough
 op_handlers["TensorArrayReadV3"] = passthrough
 op_handlers["TensorArrayWriteV3"] = passthrough
 
+# todo: is this correct?
+op_handlers["TensorListStack"] = passthrough
+op_handlers["While"] = passthrough
+op_handlers["TensorListFromTensor"] = passthrough
 
 # ops that don't pass any attributions to their inputs
 op_handlers["Shape"] = break_dependence

@@ -13,6 +13,345 @@ import shap
 ############################
 # Tensorflow related tests #
 ############################
+@pytest.mark.xfail(reason="This test is currently failing due to failed additivity of the shap values. "
+                  "Seems like some of the used operations are not supported correctly.")
+def test_tf_eager_rnn():
+    tf = pytest.importorskip('tensorflow')
+
+    def generate_time_series(num_data_points):
+        time = np.arange(0, num_data_points)
+        values = np.sin(0.1 * time) + 0.2 * np.random.randn(num_data_points)
+        return values
+
+    # Create a time series dataset
+    num_data_points = 1000
+    time_series = generate_time_series(num_data_points)
+
+    # Function to create input sequences and corresponding targets
+    def create_sequences(data, seq_length):
+        sequences = []
+        targets = []
+        for i in range(len(data) - seq_length):
+            seq = data[i:i+seq_length]
+            target = data[i+seq_length]
+            sequences.append(seq)
+            targets.append(target)
+        return np.array(sequences), np.array(targets)
+
+    # Define sequence length and split data into sequences and targets
+    sequence_length = 10
+    X, y = create_sequences(time_series, sequence_length)
+
+    # Reshape data for RNN input (samples, time steps, features)
+    X = X.reshape((X.shape[0], X.shape[1], 1))
+
+    # Build the RNN model using SimpleRNN layer
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.SimpleRNN(50, input_shape=(sequence_length, 1)))
+    model.add(tf.keras.layers.Dense(1))  # Output layer with one neuron for regression task
+
+    # Compile the model
+    model.compile(optimizer='adam', loss='mse')
+
+    # Train the model
+    model.fit(X, y, epochs=2, batch_size=32, validation_split=0.1)
+
+    # Generate predictions on new data
+    new_data = generate_time_series(20)
+    new_sequences, _ = create_sequences(new_data, sequence_length)
+    new_sequences = new_sequences.reshape((new_sequences.shape[0], new_sequences.shape[1], 1))
+
+    # Calculate SHAP values for the data
+    e = DeepExplainer(model, new_sequences)
+
+    sv = e.shap_values(new_sequences[:10])
+    model_output_values = model(new_sequences[:10])
+
+    assert np.abs(e.expected_value[0] + sv[0].sum((1, 2)) - model_output_values[:, 0]).max() < 1e-2
+
+
+def test_tf_eager_gru():
+    tf = pytest.importorskip('tensorflow')
+    # Generate some sample time series data
+    def generate_time_series(num_data_points):
+        time = np.arange(0, num_data_points)
+        values = np.sin(0.1 * time) + 0.2 * np.random.randn(num_data_points)
+        return values
+
+    # Create a time series dataset
+    num_data_points = 1000
+    time_series = generate_time_series(num_data_points)
+
+    # Function to create input sequences and corresponding targets
+    def create_sequences(data, seq_length):
+        sequences = []
+        targets = []
+        for i in range(len(data) - seq_length):
+            seq = data[i:i+seq_length]
+            target = data[i+seq_length]
+            sequences.append(seq)
+            targets.append(target)
+        return np.array(sequences), np.array(targets)
+
+    # Define sequence length and split data into sequences and targets
+    sequence_length = 10
+    X, y = create_sequences(time_series, sequence_length)
+
+    # Reshape data for RNN input (samples, time steps, features)
+    X = X.reshape((X.shape[0], X.shape[1], 1))
+
+    # Build the RNN model using SimpleRNN layer
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.GRU(50, input_shape=(sequence_length, 1)))
+    model.add(tf.keras.layers.Dense(1))  # Output layer with one neuron for regression task
+
+    # Compile the model
+    model.compile(optimizer='adam', loss='mse')
+
+    # Train the model
+    model.fit(X, y, epochs=2, batch_size=32, validation_split=0.1)
+
+    # Generate predictions on new data
+    new_data = generate_time_series(20)
+    new_sequences, _ = create_sequences(new_data, sequence_length)
+    new_sequences = new_sequences.reshape((new_sequences.shape[0], new_sequences.shape[1], 1))
+
+    e = DeepExplainer(model, new_sequences)
+
+    sv = e.shap_values(new_sequences[:10])
+    model_output_values = model(new_sequences[:10])
+
+    assert np.abs(e.expected_value[0] + sv[0].sum((1, 2)) - model_output_values[:, 0]).max() < 1e-2
+
+
+@pytest.mark.xfail(reason="This test is currently failing due to a lack of support for embeddings.")
+def test_embedding():
+    tf = pytest.importorskip('tensorflow')
+
+    input1 = tf.keras.layers.Input((10,))
+    emb = tf.keras.layers.Embedding(1000, 64)(input1)
+    output = tf.keras.layers.Dense(1)(tf.reshape(emb, (-1, 640)))
+
+    model = tf.keras.models.Model(input1, output)
+
+    input_array = np.random.randint(1000, size=(1000, 10))
+    model.compile('rmsprop', 'mse')
+
+    input_array = np.random.randint(1000, size=(32, 10))
+
+    input_array_ex = input_array.reshape((input_array.shape[0], input_array.shape[1], 1))
+    explainer = DeepExplainer(model, input_array_ex[:20])
+
+    # this fails since the embedding is not supported
+    # their output always result in None if the NN is applied with overwritten gradients
+    _shap_values = explainer.shap_values(input_array_ex[-20:])
+
+
+@pytest.mark.xfail(reason="This test is currently failing due to failed additivity of the shap values. "
+                  "Seems like some of the used operations are not supported correctly.")
+def test_functional_model():
+    tf = pytest.importorskip('tensorflow')
+
+    SEQUENCE_LENGTH = 4
+
+    # Generate some sample time series data
+    def generate_time_series(num_data_points):
+        time = np.random.randint(low=0, high=2, size=(num_data_points, SEQUENCE_LENGTH))
+        return np.array(time, dtype=np.float32)
+
+    # Create a time series dataset
+    num_data_points = 10000
+    time_series = generate_time_series(num_data_points)
+    y = np.sum(time_series, axis=1)
+
+    input1 = tf.keras.layers.Input((SEQUENCE_LENGTH, 1))
+    input2 = tf.keras.layers.Input((50,))
+    concat = tf.keras.layers.Concatenate(axis=1)([input1, tf.reshape(input2, shape=(-1, 50, 1))])
+    batchnorm = tf.keras.layers.BatchNormalization(axis=1)(concat)
+    lstm_output = tf.keras.layers.LSTM(50)(batchnorm)
+    output = tf.keras.layers.Dense(1)(lstm_output)
+
+    model = tf.keras.models.Model([input1, input2], output)
+
+    model.compile(optimizer='adam', loss='mse')
+
+    reshaped = time_series.reshape((time_series.shape[0], time_series.shape[1], 1))
+
+    dummy_input2 = np.random.randn(num_data_points, 50)
+    model.fit([time_series, dummy_input2], y, epochs=2, batch_size=32, validation_split=0.1)
+
+    TEST_SAMPLES = 10
+    test_series = generate_time_series(TEST_SAMPLES)
+
+    dummy_input2 = np.random.randn(TEST_SAMPLES, 50)
+
+    reshaped = test_series.reshape((test_series.shape[0], test_series.shape[1], 1))
+    explainer = DeepExplainer(model, [reshaped, dummy_input2])
+
+    # todo: check additivity is false here, so investigate what is going wrong!
+    _shap_values = explainer.shap_values([reshaped, dummy_input2])
+
+
+def test_tf_eager_lstm():
+    # This test should pass with tf 2.x
+    tf = pytest.importorskip('tensorflow')
+    # split a univariate sequence into samples
+    def split_sequence(sequence, n_steps):
+        X, y = list(), list()
+        for i in range(len(sequence)):
+            # find the end of this pattern
+            end_ix = i + n_steps
+            # check if we are beyond the sequence
+            if end_ix > len(sequence)-1:
+                break
+            # gather input and output parts of the pattern
+            seq_x, seq_y = sequence[i:end_ix], sequence[end_ix]
+            X.append(seq_x)
+            y.append(seq_y)
+            return np.array(X), np.array(y)
+
+    # define input sequence
+    raw_seq = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+    # choose a number of time steps
+    n_steps = 3
+    # split into samples
+    X, y = split_sequence(raw_seq, n_steps)
+    # reshape from [samples, timesteps] into [samples, timesteps, features]
+    n_features = 1
+    X = X.reshape((X.shape[0], X.shape[1], n_features))
+    # define model
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.LSTM(50, activation='relu', input_shape=(n_steps, n_features)))
+    model.add(tf.keras.layers.Dense(1))
+    model.compile(optimizer='adam', loss='mse')
+    # fit model
+    model.fit(X, y, epochs=200, verbose=0)
+    # demonstrate prediction
+    x_input = np.array([70, 80, 90], dtype=np.float32)
+    x_input = x_input.reshape((1, n_steps, n_features))
+
+    e = DeepExplainer(model, x_input)
+    sv = e.shap_values(x_input)
+
+    assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x_input)[:, 0]).max() < 1e-4
+
+def test_tf_eager_stacked_lstms():
+    # this test should pass with tf 2.x
+    tf = pytest.importorskip('tensorflow')
+
+    # Define the start and end datetime
+    start_datetime = pd.to_datetime('2020-01-01 00:00:00')
+    end_datetime = pd.to_datetime('2023-03-31 23:00:00')
+
+    # Generate a DatetimeIndex with hourly frequency
+    date_rng = pd.date_range(start=start_datetime, end=end_datetime, freq='H')
+
+    # Create a DataFrame with random data for 7 features
+    num_samples = len(date_rng)
+    num_features = 7
+
+    # Generate random data for the DataFrame
+    data = np.random.rand(num_samples, num_features)
+
+    # Create the DataFrame with a DatetimeIndex
+    df = pd.DataFrame(data, index=date_rng, columns=[f'X{i}' for i in range(1, num_features+1)])
+
+
+    def windowed_dataset(series=None, in_horizon=None, out_horizon=None, delay=None, batch_size=None):
+        '''
+        Convert multivariate data into input and output sequences.
+        Convert NumPy arrays to TensorFlow tensors.
+        Arguments:
+        ===========
+        series: a list or array of time-series data.
+        total_horizon: an integer representing the size of the input window.
+        out_horizon: an integer representing the size of the output window.
+        delay: an integer representing the number of steps between each input window.
+        batch_size: an integer representing the batch size.
+        '''
+        total_horizon = in_horizon + out_horizon
+        dataset = tf.data.Dataset.from_tensor_slices(series)
+        dataset = dataset.window(total_horizon, shift=delay, drop_remainder=True)
+        dataset = dataset.flat_map(lambda window: window.batch(total_horizon))
+        dataset = dataset.map(lambda window: (window[:-out_horizon,:], window[-out_horizon:,0]))
+        dataset = dataset.batch(batch_size).prefetch(1)
+        return dataset
+
+    # Define the proportions for the splits (70:20:10)%
+    train_size = 0.4
+    valid_size = 0.5
+
+    # Calculate the split points
+    train_split = int(len(df)*train_size)
+    valid_split = int(len(df)*(train_size + valid_size))
+
+    # Split the DataFrame
+    df_train = df.iloc[:train_split]
+    df_valid = df.iloc[train_split:valid_split]
+    df_test = df.iloc[valid_split:]
+
+    # number of input features and output targets
+    n_features = df.shape[1]
+
+    # split the data into sliding sequential windows
+    train_dataset = windowed_dataset(series=df_train.values,
+                                    in_horizon=100,
+                                    out_horizon=3,
+                                    delay=1,
+                                    batch_size=32)
+
+    windowed_dataset(series=df_valid.values,
+                                    in_horizon=100,
+                                    out_horizon=3,
+                                    delay=1,
+                                    batch_size=32)
+
+    windowed_dataset(series=df_test.values,
+                                in_horizon=100,
+                                out_horizon=3,
+                                delay=1,
+                                batch_size=32)
+
+    input_layer = tf.keras.layers.Input(shape=(100, n_features))
+    lstm_layer1 = tf.keras.layers.LSTM(5, return_sequences=True)(input_layer)
+    lstm_layer2 = tf.keras.layers.LSTM(5, return_sequences=True)(lstm_layer1)
+    lstm_layer3 = tf.keras.layers.LSTM(5)(lstm_layer2)
+    output_layer = tf.keras.layers.Dense(3)(lstm_layer3)
+    model = tf.keras.models.Model(inputs=input_layer, outputs=output_layer)
+
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss='mse', metrics=['mae'])
+
+    def tensor_to_arrays(input_obj=None):
+        '''
+        Convert a "tensorflow.python.data.ops.dataset_ops.PrefetchDataset" object into a numpy arrays.
+        This function can be used to slice the tensor objects out of the `windowing` function.
+        '''
+        x = list(map(lambda x: x[0], input_obj))
+        y = list(map(lambda x: x[1], input_obj))
+
+        x_ = [xtmp.numpy() for xtmp in x]
+        y_ = [ytmp.numpy() for ytmp in y]
+
+        # Stack the arrays vertically
+        x = np.vstack(x_)
+        y = np.vstack(y_)
+
+        return x, y
+
+
+    xarr, yarr = tensor_to_arrays(input_obj=train_dataset)
+
+    # Create an explainer object
+    e = shap.DeepExplainer(model, xarr[:100, :, :])
+
+    # Calculate SHAP values for the data
+    sv = e.shap_values(xarr[:100, :, :], check_additivity=False)
+    model_output_values = model(xarr[:100, :, :])
+
+    # todo: this might indicate an error in how the gradients are overwritten
+    for dim in range(3):
+        assert (model_output_values[:, dim].numpy() - e.expected_value[dim].numpy() - sv[dim].sum(axis=tuple(range(1, sv[dim].ndim)))).max() < 0.02
+
 
 def test_tf_eager_call(random_seed):
     """This is a basic eager example from keras."""
