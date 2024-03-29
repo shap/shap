@@ -3,10 +3,10 @@ import random
 import string
 from typing import Optional
 
+import matplotlib.animation as animation
 import matplotlib.pyplot as pl
 import numpy as np
 from matplotlib.colors import Colormap
-import matplotlib.animation as animation
 
 try:
     from IPython.display import HTML, display
@@ -117,10 +117,10 @@ def video(shap_values: Explanation or np.ndarray,
         fig_size *= width / fig_size[0]
     super_fig = pl.figure(layout='constrained', figsize=fig_size)
     figs = super_fig.subfigures(2,1)
-    
+
     video_fig, fig = figs
     # axes = fig.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, projection="3d")#, figsize=fig_size)
-    
+
     # nothing video specific till here
     # if len(axes.shape) == 1:
     #     axes = axes.reshape(1, axes.size)
@@ -140,7 +140,7 @@ def video(shap_values: Explanation or np.ndarray,
                     0.2989 * x_curr[0, ...] + 0.5870 * x_curr[1, ...] + 0.1140 * x_curr[2, ...])  # rgb to gray
             x_curr_disp = x_curr # THW
         elif len(x_curr.shape) == 4:
-            x_curr_gray = x_curr.mean(0)# THW  <- C T H W 
+            x_curr_gray = x_curr.mean(0)# THW  <- C T H W
             # for non-RGB multi-channel data we show an RGB image where each of the three channels is a scaled k-mean center
             x_curr_move = np.moveaxis(x_curr, 0, -1) # T H W C
             flat_vals = x_curr_move.reshape([x_curr.shape[1]*x_curr.shape[2]*x_curr.shape[3] , x_curr.shape[0]]).T
@@ -149,7 +149,7 @@ def video(shap_values: Explanation or np.ndarray,
             # flat_vals = (flat_vals.T - flat_vals.mean(1)).T
             means = kmeans(flat_vals, 3, round_values=False).data.T.reshape([x_curr.shape[1], x_curr.shape[2], x_curr.shape[3], 3])
             # means = kmeans(flat_vals, 3, round_values=False).data.T.reshape([x_curr.shape[0], x_curr.shape[1], 3])
-            
+
             x_curr_disp = (means - np.percentile(means, 0.5, (0, 1, 2))) / (
                     np.percentile(means, 99.5, (0, 1, 2)) - np.percentile(means, 1, (0, 1, 2)))
             x_curr_disp[x_curr_disp > 1] = 1 # THW
@@ -162,14 +162,14 @@ def video(shap_values: Explanation or np.ndarray,
         frames = []
         for i in range(len(np.moveaxis(x_curr_disp, 0, -1))):
             frames.append([pl.imshow(np.moveaxis(x_curr_disp, 0, -1)[i])])
-        
+
         ani = animation.ArtistAnimation(video_fig, frames, interval=1000/10, blit=False, repeat_delay=1000)
         pl.show()
         # if true_labels:
         #     axes[row, 0].set_title(true_labels[row], **label_kwargs)
-            
+
         # axes[row, 0].axis('off')
-        
+
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:

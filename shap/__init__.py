@@ -53,7 +53,6 @@ if have_matplotlib:
     from .plots._group_difference import group_difference as group_difference_plot
     from .plots._heatmap import heatmap as heatmap_plot
     from .plots._image import image as image_plot
-    from .plots._video import video as video_plot
     from .plots._monitoring import monitoring as monitoring_plot
     from .plots._partial_dependence import partial_dependence as partial_dependence_plot
     from .plots._scatter import dependence_legacy as dependence_plot

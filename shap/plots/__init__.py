@@ -12,11 +12,11 @@ from ._force import force, initjs
 from ._group_difference import group_difference
 from ._heatmap import heatmap
 from ._image import image, image_to_text
-from ._video import video
 from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
 from ._scatter import scatter
 from ._text import text
+from ._video import video
 from ._violin import violin
 from ._waterfall import waterfall
 

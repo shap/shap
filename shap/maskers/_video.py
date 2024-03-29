@@ -17,9 +17,11 @@ except ImportError as e:
 
 import math
 import numbers
+
 import torch
 from torch import nn
 from torch.nn import functional as F
+
 
 class GaussianSmoothing(nn.Module):
     """
@@ -34,8 +36,9 @@ class GaussianSmoothing(nn.Module):
         dim (int, optional): The number of dimensions of the data.
             Default value is 2 (spatial).
     """
+
     def __init__(self, kernel_size, channels=3, sigma=1, dim=3, numpy=False):
-        self.is_numpy = numpy 
+        self.is_numpy = numpy
         super(GaussianSmoothing, self).__init__()
         self.dummy_param = nn.Parameter(torch.empty(0))
         if isinstance(kernel_size, numbers.Number):
@@ -66,9 +69,9 @@ class GaussianSmoothing(nn.Module):
 
         self.register_buffer('weight', kernel)
         self.groups = channels
-        
+
         self.padding = "same"
-        
+
         if dim == 1:
             self.conv = F.conv1d
         elif dim == 2:
@@ -77,7 +80,7 @@ class GaussianSmoothing(nn.Module):
             self.conv = F.conv3d
         else:
             raise RuntimeError(
-                'Only 1, 2 and 3 dimensions are supported. Received {}.'.format(dim)
+                f'Only 1, 2 and 3 dimensions are supported. Received {dim}.'
             )
 
     def forward(self, input):
@@ -85,7 +88,9 @@ class GaussianSmoothing(nn.Module):
         Apply gaussian filter to input.
         Arguments:
             input (torch.Tensor): Input to apply gaussian filter on.
-        Returns:
+
+        Returns
+        -------
             filtered (torch.Tensor): Filtered output.
         """
         if isinstance(input, np.ndarray):
@@ -97,8 +102,8 @@ class GaussianSmoothing(nn.Module):
         if self.is_numpy:
             return out.cpu().numpy()
         else:
-            return out 
-    
+            return out
+
 
 class Video(Masker):
     """Masks out image regions with blurring or inpainting."""
@@ -110,7 +115,7 @@ class Video(Masker):
         ----------
         mask_value : np.array, "blur(kernel_tsize, kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
             The value used to mask hidden regions of the image.
-        shape : None or tuple 
+        shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
             (c, t, h, w)
@@ -195,14 +200,14 @@ class Video(Masker):
             out[~mask] = self.mask_value[~mask]
 
         return (out.reshape(1, *in_shape),)
-    
+
     def inpaint(self, x, mask, method):
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(0)
         if reshaped_mask.sum() == np.prod(self.input_shape[1:]):
             out = x.reshape(self.input_shape).copy()
             out[:] = out.mean((1,2,3))
             return out.ravel()
-        
+
         ## Note: input shape is H W C previously now its C T H W make sure things good
         back = x.reshape(self.input_shape).copy()
         imgs = []
@@ -212,11 +217,11 @@ class Video(Masker):
                     np.moveaxis(back[:, i, :, :], 0, -1).astype(np.uint8),
                     reshaped_mask[i, :, :],
                     inpaintRadius=  3,
-                    flags = getattr(cv2, method)        
+                    flags = getattr(cv2, method)
                 ).astype(x.dtype).ravel()
             )
         return np.stack(imgs).ravel()
-        
+
     def inpaint_img(self, x, mask, method):
         """Fill in the masked parts of the image through inpainting."""
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(2)
@@ -242,7 +247,7 @@ class Video(Masker):
         ymax = self.input_shape[3]
         zmin = 0
         zmax = self.input_shape[0]
-        
+
         total_twidth = tmax - tmin
         total_xwidth = xmax - xmin
         total_ywidth = ymax - ymin
@@ -312,10 +317,10 @@ def _jit_build_partition_tree(tmin, tmax, xmin, xmax, ymin, ymax, zmin, zmax, to
             lzmax = rzmax = zmax
 
             # split the xaxis if it is the largest dimension
-            
+
             ## The preference order changes the cluster
             ## For Video It was very difficult to understand if
-            ## X,y should be done before t or 
+            ## X,y should be done before t or
             ## The whole T before x,y as one would be mean preference towards
             ## Individual frame content and other would mean temporal undertanding
             ## Coming to a middle ground if T is pretty large lets say
@@ -326,7 +331,7 @@ def _jit_build_partition_tree(tmin, tmax, xmin, xmax, ymin, ymax, zmin, zmax, to
             #     'y': {'width': ywidth, 'min': ymin},
             #     'z': {'width': zwidth, 'min': zmin}
             # }
-            
+
             dimensions = (
                 ('t', twidth, tmin),
                 ('x', xwidth, xmin),
@@ -338,7 +343,7 @@ def _jit_build_partition_tree(tmin, tmax, xmin, xmax, ymin, ymax, zmin, zmax, to
             dim_select = 'z'
             z_mid = zmin + zwidth//2
             lmax = z_mid
-            rmin = z_mid 
+            rmin = z_mid
             for dim in dimensions:
                 if max_width==dim[1]:
                     if dim[1] > 1:
@@ -361,7 +366,7 @@ def _jit_build_partition_tree(tmin, tmax, xmin, xmax, ymin, ymax, zmin, zmax, to
             #         lmax = mid
             #         rmin = mid
             #         dim_select = dim[0]
-                    
+
             # for dim in sorted(list(dimensions.keys())[:-1], key=lambda d: dimensions[d]['width'], reverse=True) + ['z']:
             #     if dimensions[dim]['width'] > 1:
             #         mid = dimensions[dim]['min'] + dimensions[dim]['width'] // 2
@@ -371,7 +376,7 @@ def _jit_build_partition_tree(tmin, tmax, xmin, xmax, ymin, ymax, zmin, zmax, to
             #         # exec(f"l{dim}max = mid")
             #         # exec(f"r{dim}min = mid")
             #         break
-            
+
             if dim_select == "t":
                 ltmax = lmax
                 rtmin = rmin
@@ -384,13 +389,13 @@ def _jit_build_partition_tree(tmin, tmax, xmin, xmax, ymin, ymax, zmin, zmax, to
             else:
                 lzmax = lmax
                 rzmin = rmin
-                    
-            
+
+
             # if twidth >= xwidth and twidth>=ywidth and twidth > 1:
             #     tmid = tmin + twidth // 2
             #     ltmax = tmid
             #     rtmin = tmid
-            
+
             # if xwidth >= ywidth and xwidth > 1:
             #     xmid = xmin + xwidth // 2
             #     lxmax = xmid
