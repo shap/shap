@@ -34,8 +34,10 @@ class GaussianSmoothing(nn.Module):
         dim (int, optional): The number of dimensions of the data.
             Default value is 2 (spatial).
     """
-    def __init__(self, kernel_size, channels=3, sigma=1, dim=3):
+    def __init__(self, kernel_size, channels=3, sigma=1, dim=3, numpy=False):
+        self.is_numpy = numpy 
         super(GaussianSmoothing, self).__init__()
+        self.dummy_param = nn.Parameter(torch.empty(0))
         if isinstance(kernel_size, numbers.Number):
             kernel_size = [kernel_size] * dim
         if isinstance(sigma, numbers.Number):
@@ -86,7 +88,16 @@ class GaussianSmoothing(nn.Module):
         Returns:
             filtered (torch.Tensor): Filtered output.
         """
-        return self.conv(input, weight=self.weight, groups=self.groups, padding = self.padding)
+        if isinstance(input, np.ndarray):
+            input = torch.from_numpy(input).to(device=self.dummy_param.device)
+            self.is_numpy = True
+        else:
+            self.is_numpy = False
+        out = self.conv(input, weight=self.weight, groups=self.groups, padding = self.padding)
+        if self.is_numpy:
+            return out.cpu().numpy()
+        else:
+            return out 
     
 
 class Video(Masker):
@@ -127,7 +138,7 @@ class Video(Masker):
             self.mask_value = mask_value
             if mask_value.startswith("blur("):
                 self.blur_kernel = tuple(map(int, mask_value[5:-1].split(",")))
-                self.gsblur = GaussianSmoothing(self.blur_kernel)
+                self.gsblur = GaussianSmoothing(self.blur_kernel).to(device="cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.mask_value = np.ones(self.input_shape).flatten() * mask_value
         self.build_partition_tree()
@@ -167,7 +178,8 @@ class Video(Masker):
         if isinstance(self.mask_value, str):
             if self.blur_kernel is not None:
                 if self.last_xid != id(x):
-                    self._blur_value_cache = self.gsblur(x.reshape(self.input_shape)).ravel()
+                    with torch.no_grad():
+                        self._blur_value_cache = self.gsblur(x.reshape(self.input_shape)).ravel()
                     # self._blur_value_cache = cv2.blur(x.reshape(self.input_shape), self.blur_kernel).ravel()
                     #ToDo: Change to Conv3d using https://discuss.pytorch.org/t/use-conv2d-and-conv3d-as-blur-fillter-on-matrix/170026/4
                     self.last_xid = id(x)

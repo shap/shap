@@ -12,6 +12,7 @@ from ._force import force, initjs
 from ._group_difference import group_difference
 from ._heatmap import heatmap
 from ._image import image, image_to_text
+from ._video import video
 from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
 from ._scatter import scatter
@@ -30,6 +31,7 @@ __all__ = [
     "group_difference",
     "heatmap",
     "image",
+    "video",
     "image_to_text",
     "monitoring",
     "partial_dependence",
