@@ -204,8 +204,9 @@ class Video(Masker):
     def inpaint(self, x, mask, method):
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(0)
         if reshaped_mask.sum() == np.prod(self.input_shape[1:]):
-            out = x.reshape(self.input_shape).copy()
-            out[:] = out.mean((1,2,3))
+            out = np.moveaxis(x.reshape(self.input_shape).copy(), 0,-1)
+            out[:] = out.mean((0, 1,2))
+            out = np.moveaxis(out,-1,0)
             return out.ravel()
 
         ## Note: input shape is H W C previously now its C T H W make sure things good
