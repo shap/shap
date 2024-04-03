@@ -183,7 +183,7 @@ class SamplingExplainer(KernelExplainer):
         X_masked = self.X_masked[:nsamples * 2,:]
         inds = np.arange(X.shape[1])
 
-        for i in range(0, nsamples):
+        for i in range(nsamples):
             np.random.shuffle(inds)
             pos = np.where(inds == j)[0][0]
             rind = np.random.randint(X.shape[0])

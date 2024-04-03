@@ -791,7 +791,7 @@ def _compute_shape(x):
                 for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
                     assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
-                    for j in range(0, len(shape)):
+                    for j in range(len(shape)):
                         matches[j] &= shape[j] == first_shape[j]
                 return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
 
