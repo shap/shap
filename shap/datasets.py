@@ -11,14 +11,13 @@ github_data_url = "https://github.com/shap/shap/raw/master/data/"
 
 
 def imagenet50(resolution=224, n_points=None):
-    """
-    This is a set of 50 images representative of ImageNet images.
+    """Return a set of 50 images representative of ImageNet images.
 
     Parameters
     ----------
-    - resolution : int
-        The resolution of the images. Default is 224. Note that 224 is the only supported resolution at present.
-    - n_points : int, optional
+    resolution : int
+        The resolution of the images. At present the only supported value is 224.
+    n_points : int, optional
         Number of data points to sample. If None, the entire dataset is used.
 
     Returns
@@ -37,9 +36,8 @@ def imagenet50(resolution=224, n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    To get the processed images and labels::
 
-        # To get the processed images and labels
         images, labels = shap.datasets.imagenet50()
     """
     prefix = github_data_url + "imagenet50_"
@@ -53,39 +51,37 @@ def imagenet50(resolution=224, n_points=None):
     return X, y
 
 def california(n_points=None):
-    """
-    Return the California housing data in a structured format.
+    """Return the California housing data in a structured format.
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
 
     Returns
     -------
     Tuple of pandas DataFrame containing the data and a numpy array representing the target.
+        The data include the following features:
 
-    - The data includes the following features:
-        - MedInc: Median income in block
-        - HouseAge: Median house age in block
-        - AveRooms: Average rooms in dwelling
-        - AveBedrms: Average bedrooms in dwelling
-        - Population: Block population
-        - AveOccup: Average house occupancy
-        - Latitude: House block latitude
-        - Longitude: House block longitude
+        * ``MedInc`` : Median income in block
+        * ``HouseAge`` : Median house age in block
+        * ``AveRooms`` : Average rooms in dwelling
+        * ``AveBedrms`` : Average bedrooms in dwelling
+        * ``Population`` : Block population
+        * ``AveOccup`` : Average house occupancy
+        * ``Latitude`` : House block latitude
+        * ``Longitude`` : House block longitude
 
-    - The target column represents the median house value for California districts.
+        The target column represents the median house value for California districts.
 
     References
     ----------
-    California housing dataset: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html#sklearn.datasets.fetch_california_housing
+    California housing dataset: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html
 
     Examples
     --------
-    .. code-block:: python
+    To get the processed data and target labels::
 
-        # To get the processed data and target labels
         data, target = shap.datasets.california()
     """
     d = sklearn.datasets.fetch_california_housing()
@@ -101,12 +97,11 @@ def california(n_points=None):
 
 
 def linnerud(n_points=None):
-    """
-    Return the Linnerud dataset in a convenient package for multi-target regression.
+    """Return the Linnerud dataset in a convenient package for multi-target regression.
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to include. Default is None, including all data points.
 
     Returns
@@ -115,20 +110,20 @@ def linnerud(n_points=None):
 
     Notes
     -----
-    - The Linnerud dataset contains physiological and exercise data for 20 individuals.
+    - The Linnerud dataset contains physiological and exercise data for 20 individuals.0
     - The feature matrix includes three exercise variables: Chins, Situps, Jumps.
     - The target variables include three physiological measurements: Weight, Waist, Pulse.
 
-    More details: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_linnerud.html#sklearn.datasets.load_linnerud
+    More details: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_linnerud.html
 
     Examples
     --------
-    .. code-block:: python
+    To get the feature matrix and target variables::
 
-        # To get the feature matrix and target variables
         features, targets = shap.datasets.linnerud()
 
-        # To get a subset of the data
+    To get a subset of the data::
+
         subset_features, subset_targets = shap.datasets.linnerud(n_points=100)
 
     """
@@ -144,12 +139,11 @@ def linnerud(n_points=None):
 
 
 def imdb(n_points=None):
-    """
-    Return the classic IMDB sentiment analysis training data in a nice package.
+    """Return the classic IMDB sentiment analysis training data in a nice package.
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to sample. If None, the entire dataset is used.
 
     Returns
@@ -164,9 +158,8 @@ def imdb(n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    To get the processed text data and labels::
 
-        # To get the processed text data and labels
         text_data, labels = shap.datasets.imdb()
 
     """
@@ -183,15 +176,14 @@ def imdb(n_points=None):
 
 
 def communitiesandcrime(n_points=None):
-    """
-    Predict the total number of non-violent crimes per 100K population.
+    """Predict the total number of non-violent crimes per 100K population.
 
     This dataset is from the classic UCI Machine Learning repository:
     https://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
 
     Returns
@@ -200,9 +192,8 @@ def communitiesandcrime(n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    To get the processed data and target labels::
 
-        # To get the processed data and target labels
         data, target = shap.datasets.communitiesandcrime()
 
     """
@@ -228,42 +219,32 @@ def communitiesandcrime(n_points=None):
 
 
 def diabetes(n_points=None):
-    """
-    Return the diabetes data in a nice package.
+    """Return the diabetes data in a nice package.
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to sample. If None, the entire dataset is used.
 
     Returns
     -------
     Tuple of pandas DataFrame containing the features and a numpy array representing the target.
 
-    Feature Columns:
-    - age : float
-        Age in years
-    - sex : float
-        Sex
-    - bmi : float
-        Body mass index
-    - bp : float
-        Average blood pressure
-    - s1 : float
-        Total serum cholesterol
-    - s2 : float
-        Low-density lipoproteins (LDL cholesterol)
-    - s3 : float
-        High-density lipoproteins (HDL cholesterol)
-    - s4 : float
-        Total cholesterol / HDL cholesterol ratio
-    - s5 : float
-        Log of serum triglycerides level
-    - s6 : float
-        Blood sugar level
+        Feature Columns:
 
-    Target:
-    - Progression of diabetes one year after baseline (float)
+        - ``age`` (float): Age in years
+        - ``sex`` (float): Sex
+        - ``bmi`` (float): Body mass index
+        - ``bp`` (float): Average blood pressure
+        - ``s1`` (float): Total serum cholesterol
+        - ``s2`` (float): Low-density lipoproteins (LDL cholesterol)
+        - ``s3`` (float): High-density lipoproteins (HDL cholesterol)
+        - ``s4`` (float): Total cholesterol / HDL cholesterol ratio
+        - ``s5`` (float): Log of serum triglycerides level
+        - ``s6`` (float): Blood sugar level
+
+        Target:
+        - Progression of diabetes one year after baseline (float)
 
     Notes
     -----
@@ -272,9 +253,8 @@ def diabetes(n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    To get the processed data and target labels::
 
-        # To get the processed data and target labels
         data, target = shap.datasets.diabetes()
 
 
@@ -291,12 +271,11 @@ def diabetes(n_points=None):
 
 
 def iris(display=False, n_points=None):
-    """
-    Return the classic Iris dataset in a convenient package.
+    """Return the classic Iris dataset in a convenient package.
 
     Parameters
     ----------
-    - display : bool, optional
+    display : bool
         If True, return the original feature matrix along with class labels (as strings). Default is False.
     - n_points : int, optional
         Number of data points to include. Default is None, including all data points.
@@ -313,14 +292,13 @@ def iris(display=False, n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    To get the feature matrix and class labels::
 
-        # To get the feature matrix and class labels
         features, labels = shap.datasets.iris()
 
-        # To get the feature matrix and class labels as strings
-        features, class_labels = shap.datasets.iris(display=True)
+    To get the feature matrix and class labels as strings::
 
+        features, class_labels = shap.datasets.iris(display=True)
 
     """
     d = sklearn.datasets.load_iris()
@@ -337,14 +315,13 @@ def iris(display=False, n_points=None):
 
 
 def adult(display=False, n_points=None):
-    """
-    Return the Adult census data in a structured format.
+    """Return the Adult census data in a structured format.
 
     Parameters
     ----------
-    - display : bool, optional
+    display : bool, optional
         If True, return the raw data without target and redundant columns.
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to sample. If provided, randomly samples the specified number of points.
 
     Returns
@@ -357,36 +334,21 @@ def adult(display=False, n_points=None):
         and a numpy array representing the 'Target' column.
 
     The data includes the following columns:
-    - Age : float
-        Age in years.
-    - Workclass : category
-        Type of employment.
-    - fnlwgt : float
-        Final weight; the number of units in the target population that the record represents.
-    - Education : category
-        Highest level of education achieved.
-    - Education-Num : float
-        Numeric representation of education level.
-    - Marital Status : category
-        Marital status of the individual.
-    - Occupation : category
-        Type of occupation.
-    - Relationship : category
-        Relationship status.
-    - Race : category
-        Ethnicity of the individual.
-    - Sex : category
-        Gender of the individual.
-    - Capital Gain : float
-        Capital gains recorded.
-    - Capital Loss : float
-        Capital losses recorded.
-    - Hours per week : float
-        Number of hours worked per week.
-    - Country : category
-        Country of origin.
-    - Target : category
-        Binary target variable indicating whether the individual earns more than 50K.
+    - ``Age`` (float) : Age in years.
+    - ``Workclass`` (category) : Type of employment.
+    - ``fnlwgt`` (float) : Final weight; the number of units in the target population that the record represents.
+    - ``Education`` (category) : Highest level of education achieved.
+    - ``Education-Num`` (float) : Numeric representation of education level.
+    - ``Marital Status`` (category) : Marital status of the individual.
+    - ``Occupation`` (category) : Type of occupation.
+    - ``Relationship`` (category) : Relationship status.
+    - ``Race`` (category) : Ethnicity of the individual.
+    - ``Sex`` (category) : Gender of the individual.
+    - ``Capital Gain`` (float) : Capital gains recorded.
+    - ``Capital Loss`` (float) : Capital losses recorded.
+    - ``Hours per week`` (float) : Number of hours worked per week.
+    - ``Country`` (category) : Country of origin.
+    - ``Target`` (category) : Binary target variable indicating whether the individual earns more than 50K.
 
     Notes
     -----
@@ -396,12 +358,12 @@ def adult(display=False, n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    To get the processed data and target labels::
 
-        # To get the processed data and target labels
         data, target = shap.datasets.adult()
 
-        # To get the raw data for display
+    To get the raw data for display::
+
         raw_data, target = shap.datasets.adult(display=True)
 
     """
@@ -446,14 +408,13 @@ def adult(display=False, n_points=None):
 
 
 def nhanesi(display=False, n_points=None):
-    """
-    Return a nicely packaged version of NHANES I data with survival times as labels.
+    """Return a nicely packaged version of NHANES I data with survival times as labels.
 
     Parameters
     ----------
-    - display : bool, optional
+    display : bool, optional
         If True, returns the features with a modified display. Default is False.
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to sample. Default is None (returns the entire dataset).
 
     Returns
@@ -463,9 +424,8 @@ def nhanesi(display=False, n_points=None):
 
     Examples
     --------
-    .. code-block:: python
+    Usage example::
 
-        # Usage example
         features, survival_times = shap.datasets.nhanesi(display=True, n_points=100)
 
     """
@@ -484,14 +444,13 @@ def nhanesi(display=False, n_points=None):
 
 
 def corrgroups60(n_points=1_000):
-    """
-    Correlated Groups 60
+    """Correlated Groups 60
 
     A simulated dataset with tight correlations among distinct groups of features.
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to generate. Default is 1,000.
 
     Returns
@@ -545,12 +504,11 @@ def corrgroups60(n_points=1_000):
 
 
 def independentlinear60(n_points=1_000):
-    """
-    A simulated dataset with tight correlations among distinct groups of features.
+    """A simulated dataset with tight correlations among distinct groups of features.
 
     Parameters
     ----------
-    - n_points : int, optional
+    n_points : int, optional
         Number of data points to generate. Default is 1,000.
 
     Returns
@@ -599,7 +557,7 @@ def a1a(n_points=None):
 
     Parameters
     ----------
-    - n_points : int or None, optional
+    n_points : int or None, optional
         Number of data points to sample. If None, returns the entire dataset. Default is None.
 
 
@@ -627,8 +585,7 @@ def a1a(n_points=None):
     return data, target
 
 def rank():
-    """
-    Return ranking datasets from the LightGBM repository.
+    """Return ranking datasets from the LightGBM repository.
 
     Returns
     -------

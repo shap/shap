@@ -500,7 +500,7 @@ class KernelExplainer(Explainer):
     def varying_groups(self, x):
         if not scipy.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
-            for i in range(0, self.data.groups_size):
+            for i in range(self.data.groups_size):
                 inds = self.data.groups[i]
                 x_group = x[0, inds]
                 if scipy.sparse.issparse(x_group):
@@ -518,7 +518,7 @@ class KernelExplainer(Explainer):
             # if both background and evaluation are zero, the column does not vary
             varying_indices = np.unique(np.union1d(self.data.data.nonzero()[1], x.nonzero()[1]))
             remove_unvarying_indices = []
-            for i in range(0, len(varying_indices)):
+            for i in range(len(varying_indices)):
                 varying_index = varying_indices[i]
                 # now verify the nonzero values do vary
                 data_rows = self.data.data[:, [varying_index]]
@@ -556,7 +556,7 @@ class KernelExplainer(Explainer):
                 last_indptr_idx = indptr[len(indptr) - 1]
                 indptr_wo_last = indptr[:-1]
                 new_indptrs = []
-                for i in range(0, self.nsamples - 1):
+                for i in range(self.nsamples - 1):
                     new_indptrs.append(indptr_wo_last + (i * last_indptr_idx))
                 new_indptrs.append(indptr + ((self.nsamples - 1) * last_indptr_idx))
                 new_indptr = np.concatenate(new_indptrs)
@@ -623,7 +623,7 @@ class KernelExplainer(Explainer):
         # find the expected value of each output
         for i in range(self.nsamplesRun, self.nsamplesAdded):
             eyVal = np.zeros(self.D)
-            for j in range(0, self.N):
+            for j in range(self.N):
                 eyVal += self.y[i * self.N + j, :] * self.data.weights[j]
 
             self.ey[i, :] = eyVal
