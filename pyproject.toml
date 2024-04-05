@@ -18,7 +18,7 @@ dependencies = [
   'pandas',
   'tqdm>=4.27.0',
   'packaging>20.9',
-  'slicer @ git+https://github.com/interpretml/slicer.git@12964ec458c5169efe19df3c296fc5e3e3f6a84f',  # waiting for next release
+  'slicer==0.08',
   'numba',
   'cloudpickle'
 ]
