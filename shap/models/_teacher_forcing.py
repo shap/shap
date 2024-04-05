@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 import scipy.special
 
@@ -282,6 +284,8 @@ class TeacherForcing(Model):
                     inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
                     inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
                     # model inference
+                    expected_parameters = list(inspect.signature(self.similarity_model.forward).parameters)
+                    inputs = {k: v for k, v in inputs.items() if k in expected_parameters}
                     outputs = self.similarity_model(**inputs, return_dict=True)
                 logits = outputs.logits.detach().cpu().numpy().astype('float64')
         elif self.similarity_model_type == "tf":
