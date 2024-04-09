@@ -468,6 +468,7 @@ def test_pyod_isolation_forest():
     from pyod.models.iforest import IForest
 
     X, _ = shap.datasets.california(n_points=500)
+    X = sklearn.utils.check_array(X)
     for max_features in [1.0, 0.75]:
         iso = IForest(max_features=max_features)
         iso.fit(X)
