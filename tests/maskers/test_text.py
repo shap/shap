@@ -114,12 +114,9 @@ def test_keep_prefix_suffix_tokenizer_parsing_mistralai():
 
     assert masker_mistral.keep_prefix == masker_mistral_expected_keep_prefix and masker_mistral.keep_suffix == masker_mistral_expected_keep_suffix
 
-def test_text_infill_with_collapse_mask_token():
-    """Tests for different text infilling output combinations with collapsing mask token."""
+@pytest.mark.xfail(reason="gated repository. Find alternative.")
+def test_text_infill_with_collapse_mask_token_mistralai():
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    masker = shap.maskers.Text(tokenizer, mask_token='...', collapse_mask_token=True)
 
     tokenizer_mistral = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
     masker_mistral = shap.maskers.Text(tokenizer_mistral, mask_token='...', collapse_mask_token=True)
@@ -135,26 +132,53 @@ def test_text_infill_with_collapse_mask_token():
     # s_masked_with_infill_ex4 = "... ... ... ... ... ... ... ..."
     mask_ex4 = np.array([False, False, False, False, False, False, False, False, False])
 
-    text_infilled_ex1 = masker(mask_ex1, s)[0][0]
     text_infilled_ex1_mist = masker_mistral(np.append(True, mask_ex1), s)[0][0]
     expected_text_infilled_ex1 = "This is a test string ..."
 
-    text_infilled_ex2 = masker(mask_ex2, s)[0][0]
     text_infilled_ex2_mist = masker_mistral(np.append(True, mask_ex2), s)[0][0]
     expected_text_infilled_ex2 = "This is a ... to be infilled"
 
-    text_infilled_ex3 = masker(mask_ex3, s)[0][0]
     text_infilled_ex3_mist = masker_mistral(np.append(True, mask_ex3), s)[0][0]
     expected_text_infilled_ex3 = "... test string to be infilled"
 
-    text_infilled_ex4 = masker(mask_ex4, s)[0][0]
     text_infilled_ex4_mist = masker_mistral(np.append(True, mask_ex4), s)[0][0]
     expected_text_infilled_ex4 = "..."
 
-    assert  text_infilled_ex1 == expected_text_infilled_ex1 and text_infilled_ex2 == expected_text_infilled_ex2 and \
-            text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4 and \
-            text_infilled_ex1_mist == expected_text_infilled_ex1 and text_infilled_ex2_mist == expected_text_infilled_ex2 and \
+    assert  text_infilled_ex1_mist == expected_text_infilled_ex1 and text_infilled_ex2_mist == expected_text_infilled_ex2 and \
             text_infilled_ex3_mist== expected_text_infilled_ex3 and text_infilled_ex4_mist == expected_text_infilled_ex4
+
+def test_text_infill_with_collapse_mask_token():
+    """Tests for different text infilling output combinations with collapsing mask token."""
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    masker = shap.maskers.Text(tokenizer, mask_token='...', collapse_mask_token=True)
+
+    s = "This is a test string to be infilled"
+
+    # s_masked_with_infill_ex1 = "This is a test string ... ... ..."
+    mask_ex1 = np.array([True, True, True, True, True, False, False, False, False])
+    # s_masked_with_infill_ex2 = "This is a ... ... to be infilled"
+    mask_ex2 = np.array([True, True, True, False, False, True, True, True, True])
+    # s_masked_with_infill_ex3 = "... ... ... test string to be infilled"
+    mask_ex3 = np.array([False, False, False, True, True, True, True, True, True])
+    # s_masked_with_infill_ex4 = "... ... ... ... ... ... ... ..."
+    mask_ex4 = np.array([False, False, False, False, False, False, False, False, False])
+
+    text_infilled_ex1 = masker(mask_ex1, s)[0][0]
+    expected_text_infilled_ex1 = "This is a test string ..."
+
+    text_infilled_ex2 = masker(mask_ex2, s)[0][0]
+    expected_text_infilled_ex2 = "This is a ... to be infilled"
+
+    text_infilled_ex3 = masker(mask_ex3, s)[0][0]
+    expected_text_infilled_ex3 = "... test string to be infilled"
+
+    text_infilled_ex4 = masker(mask_ex4, s)[0][0]
+    expected_text_infilled_ex4 = "..."
+
+    assert  text_infilled_ex1 == expected_text_infilled_ex1 and text_infilled_ex2 == expected_text_infilled_ex2 and \
+            text_infilled_ex3 == expected_text_infilled_ex3 and text_infilled_ex4 == expected_text_infilled_ex4
 
 def test_serialization_text_masker():
     """Make sure text serialization works."""
