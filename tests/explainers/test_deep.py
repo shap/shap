@@ -679,9 +679,10 @@ def test_pytorch_single_output(torch_device):
     np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
+@pytest.mark.parametrize("activation", ["relu", "selu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
-def test_pytorch_multiple_inputs(torch_device, disconnected):
+def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
     """Check a multi-input scenario."""
     torch = pytest.importorskip('torch')
 
@@ -690,6 +691,12 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
 
+    if activation == "relu":
+        activation_func = nn.ReLU()
+    elif activation == "selu":
+        activation_func = nn.SELU()
+    else:
+        raise ValueError(f"Unknown activation function: {activation}")
 
     class Net(nn.Module):
         """Testing model."""
@@ -702,7 +709,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             self.linear = nn.Linear(num_features, 2)
             self.output = nn.Sequential(
                 nn.MaxPool1d(2),
-                nn.ReLU()
+                activation_func
             )
 
         def forward(self, x1, x2):
