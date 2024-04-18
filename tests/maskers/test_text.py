@@ -104,7 +104,7 @@ def test_keep_prefix_suffix_tokenizer_parsing():
            masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix and \
            masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
 
-@pytest.mark.xfail("gated repository. Find alternative.")
+@pytest.mark.xfail(reason="gated repository. Find alternative.")
 def test_keep_prefix_suffix_tokenizer_parsing_mistralai():
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
 
