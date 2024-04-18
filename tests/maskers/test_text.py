@@ -91,23 +91,28 @@ def test_keep_prefix_suffix_tokenizer_parsing():
     tokenizer_mt = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
     tokenizer_gpt = AutoTokenizer.from_pretrained("gpt2")
     tokenizer_bart = AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
-    tokenizer_mistral = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
 
     masker_mt = shap.maskers.Text(tokenizer_mt)
     masker_gpt = shap.maskers.Text(tokenizer_gpt)
     masker_bart = shap.maskers.Text(tokenizer_bart)
-    masker_mistral = shap.maskers.Text(tokenizer_mistral)
 
     masker_mt_expected_keep_prefix, masker_mt_expected_keep_suffix = 0, 1
     masker_gpt_expected_keep_prefix, masker_gpt_expected_keep_suffix = 0, 0
     masker_bart_expected_keep_prefix, masker_bart_expected_keep_suffix = 1, 1
-    masker_mistral_expected_keep_prefix, masker_mistral_expected_keep_suffix = 1, 0
 
     assert masker_mt.keep_prefix == masker_mt_expected_keep_prefix and masker_mt.keep_suffix == masker_mt_expected_keep_suffix and \
            masker_gpt.keep_prefix == masker_gpt_expected_keep_prefix and masker_gpt.keep_suffix == masker_gpt_expected_keep_suffix and \
-           masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix and \
-           masker_mistral.keep_prefix == masker_mistral_expected_keep_prefix and masker_mistral.keep_suffix == masker_mistral_expected_keep_suffix
+           masker_bart.keep_prefix == masker_bart_expected_keep_prefix and masker_bart.keep_suffix == masker_bart_expected_keep_suffix
 
+@pytest.mark.xfail("gated repository. Find alternative.")
+def test_keep_prefix_suffix_tokenizer_parsing_mistralai():
+    AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
+
+    tokenizer_mistral = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
+    masker_mistral = shap.maskers.Text(tokenizer_mistral)
+    masker_mistral_expected_keep_prefix, masker_mistral_expected_keep_suffix = 1, 0
+
+    assert masker_mistral.keep_prefix == masker_mistral_expected_keep_prefix and masker_mistral.keep_suffix == masker_mistral_expected_keep_suffix
 
 def test_text_infill_with_collapse_mask_token():
     """Tests for different text infilling output combinations with collapsing mask token."""
