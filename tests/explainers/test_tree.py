@@ -1443,7 +1443,7 @@ class TestExplainerXGBoost:
         assert not isinstance(explanation.data, xgboost.core.DMatrix)
         assert hasattr(explanation.data, "shape")
 
-    def test_tree_limit(self, objective) -> None:
+    def test_tree_limit(self) -> None:
         xgboost = pytest.importorskip("xgboost")
         from sklearn.datasets import load_digits, load_iris
         from sklearn.model_selection import train_test_split
