@@ -5,7 +5,7 @@ from ._masker import Masker
 
 
 class Composite(Masker):
-    """ This merges several maskers for different inputs together into a single composite masker.
+    """This merges several maskers for different inputs together into a single composite masker.
 
     This is not yet implemented.
     """
@@ -40,8 +40,7 @@ class Composite(Masker):
             self.clustering = types.MethodType(joint_clustering, self)
 
     def shape(self, *args):
-        """ Compute the shape of this masker as the sum of all the sub masker shapes.
-        """
+        """Compute the shape of this masker as the sum of all the sub masker shapes."""
         assert len(args) == self.total_args, "The number of passed args is incorrect!"
 
         rows = None
@@ -61,8 +60,7 @@ class Composite(Masker):
         return rows, cols
 
     def mask_shapes(self, *args):
-        """ The shape of the masks we expect.
-        """
+        """The shape of the masks we expect."""
         out = []
         pos = 0
         for i, masker in enumerate(self.maskers):
@@ -70,8 +68,7 @@ class Composite(Masker):
         return out
 
     def data_transform(self, *args):
-        """ Transform the argument
-        """
+        """Transform the argument"""
         arg_pos = 0
         out = []
         for i, masker in enumerate(self.maskers):
@@ -125,9 +122,7 @@ class Composite(Masker):
         return tuple(masked)
 
 def joint_clustering(self, *args):
-    """ Return a joint clustering that merges the clusterings of all the submaskers.
-    """
-
+    """Return a joint clustering that merges the clusterings of all the submaskers."""
     single_clustering = []
     arg_pos = 0
     for i, masker in enumerate(self.maskers):

@@ -30,9 +30,7 @@ def convert_ordering(ordering, shap_values):
 
 
 def get_sort_order(dist, clust_order, cluster_threshold, feature_order):
-    """ Returns a sorted order of the values where we respect the clustering order when dist[i,j] < cluster_threshold
-    """
-
+    """Returns a sorted order of the values where we respect the clustering order when dist[i,j] < cluster_threshold"""
     #feature_imp = np.abs(values)
 
     # if partition_tree is not None:
@@ -77,8 +75,7 @@ def get_sort_order(dist, clust_order, cluster_threshold, feature_order):
     return feature_order
 
 def merge_nodes(values, partition_tree):
-    """ This merges the two clustered leaf nodes with the smallest total value.
-    """
+    """This merges the two clustered leaf nodes with the smallest total value."""
     M = partition_tree.shape[0] + 1
 
     ptind = 0
@@ -130,12 +127,11 @@ def merge_nodes(values, partition_tree):
     return partition_tree_new, ind1, ind2
 
 def dendrogram_coords(leaf_positions, partition_tree):
-    """ Returns the x and y coords of the lines of a dendrogram where the leaf order is given.
+    """Returns the x and y coords of the lines of a dendrogram where the leaf order is given.
 
     Note that scipy can compute these coords as well, but it does not allow you to easily specify
     a specific leaf order, hence this reimplementation.
     """
-
     xout = []
     yout = []
     _dendrogram_coords_rec(partition_tree.shape[0]-1, leaf_positions, partition_tree, xout, yout)
@@ -161,8 +157,7 @@ def _dendrogram_coords_rec(pos, leaf_positions, partition_tree, xout, yout):
     return (x_left + x_right) / 2, y_curr
 
 def fill_internal_max_values(partition_tree, leaf_values):
-    """ This fills the forth column of the partition tree matrix with the max leaf value in that cluster.
-    """
+    """This fills the forth column of the partition tree matrix with the max leaf value in that cluster."""
     M = partition_tree.shape[0] + 1
     new_tree = partition_tree.copy()
     for i in range(new_tree.shape[0]):
@@ -183,8 +178,7 @@ def fill_internal_max_values(partition_tree, leaf_values):
     return new_tree
 
 def fill_counts(partition_tree):
-    """ This updates the
-    """
+    """This updates the"""
     M = partition_tree.shape[0] + 1
     for i in range(partition_tree.shape[0]):
         val = 0

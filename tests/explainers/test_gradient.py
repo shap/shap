@@ -8,9 +8,7 @@ import shap
 
 
 def test_tf_keras_mnist_cnn(random_seed):
-    """ This is the basic mnist cnn example from keras.
-    """
-
+    """This is the basic mnist cnn example from keras."""
     tf = pytest.importorskip('tensorflow')
 
     rs = np.random.RandomState(random_seed)
@@ -97,18 +95,45 @@ def test_tf_keras_mnist_cnn(random_seed):
     e = shap.GradientExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1], nsamples=2000)
 
-    diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
+    outputs = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
+    background = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]})
+    expected_value = background.mean(0)
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()
-    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+    sums = shap_values.sum((1, 2, 3))
+    np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-4)
     sess.close()
 
 
+def test_tf_multi_inputs_multi_outputs():
+    tf = pytest.importorskip('tensorflow')
+    input1 = tf.keras.layers.Input(shape=(3,))
+    input2 = tf.keras.layers.Input(shape=(4,))
+
+    # Concatenate input layers
+    concatenated = tf.keras.layers.concatenate([input1, input2])
+
+    # Dense layers
+    x = tf.keras.layers.Dense(16, activation='relu')(concatenated)
+
+    # Output layer
+    output = tf.keras.layers.Dense(3, activation='softmax')(x)
+    model = tf.keras.models.Model(inputs=[input1, input2], outputs=output)
+    batch_size = 32
+    # Generate random input data for input1 with shape (batch_size, 3)
+    input1_data = np.random.rand(batch_size, 3)
+
+    # Generate random input data for input2 with shape (batch_size, 4)
+    input2_data = np.random.rand(batch_size, 4)
+
+    predicted = model.predict([input1_data, input2_data])
+    explainer = shap.GradientExplainer(model, [input1_data, input2_data])
+    shap_values = explainer.shap_values([input1_data, input2_data])
+    np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
+
+
+
 def test_pytorch_mnist_cnn():
-    """The same test as above, but for pytorch
-    """
+    """The same test as above, but for pytorch"""
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
 
@@ -123,8 +148,8 @@ def test_pytorch_mnist_cnn():
     batch_size = 128
 
     class RandData:
-        """ Ranomd data for testing.
-        """
+        """Ranomd data for testing."""
+
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -161,8 +186,8 @@ def test_pytorch_mnist_cnn():
     def run_test(train_loader, test_loader, interim):
 
         class Net(nn.Module):
-            """ A test model.
-            """
+            """A test model."""
+
             def __init__(self):
                 super().__init__()
                 self.conv1 = nn.Conv2d(1, 5, kernel_size=5)
@@ -172,8 +197,7 @@ def test_pytorch_mnist_cnn():
                 self.fc2 = nn.Linear(20, 10)
 
             def forward(self, x):
-                """ Run the model.
-                """
+                """Run the model."""
                 x = F.relu(F.max_pool2d(self.conv1(x), 2))
                 x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
                 x = x.view(-1, 160)
@@ -221,11 +245,10 @@ def test_pytorch_mnist_cnn():
             model.eval()
             model.zero_grad()
             with torch.no_grad():
-                diff = (model(test_x[:1]) - model(next_x[inds, :, :, :])).detach().numpy().mean(0)
-            sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-            d = np.abs(sums - diff).sum()
-            assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values " \
-                                                 "does not match difference! %f" % (d / np.abs(diff).sum())
+                outputs = model(test_x[:1]).detach().numpy()
+                expected_value = model(next_x[inds, :, :, :]).detach().numpy().mean(0)
+            sums = shap_values.sum(axis=(1, 2, 3))
+            np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
     print('Running test from interim layer')
     run_test(train_loader, test_loader, True)
@@ -234,8 +257,7 @@ def test_pytorch_mnist_cnn():
 
 
 def test_pytorch_multiple_inputs(random_seed):
-    """ Test multi-input scenarios."""
-
+    """Test multi-input scenarios."""
     torch = pytest.importorskip('torch')
     from torch import nn
 
@@ -247,34 +269,73 @@ def test_pytorch_multiple_inputs(random_seed):
     background = [torch.zeros(batch_size, 3), torch.zeros(batch_size, 4)]
 
     class Net(nn.Module):
-        """ A test model.
-        """
+        """A test model."""
+
         def __init__(self):
             super().__init__()
             self.linear = nn.Linear(7, 1)
 
         def forward(self, x1, x2):
-            """ Run the model.
-            """
+            """Run the model."""
             return self.linear(torch.cat((x1, x2), dim=-1))
 
     model = Net()
 
     e = shap.GradientExplainer(model, background)
-    shap_x1, shap_x2 = e.shap_values([x1, x2])
+    shap_values = e.shap_values([x1, x2])
 
     model.eval()
     model.zero_grad()
     with torch.no_grad():
-        diff = (model(x1, x2) - model(*background)).detach().numpy().mean(0)
+        outputs = model(x1, x2).detach().numpy()
+        expected_value = model(*background).detach().numpy().mean(0)
 
-    sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
-    d = np.abs(sums - diff).sum()
-    assert d / (np.abs(diff).sum()+0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+    sums = np.sum([shap_values[i].sum(axis=1) for i in range(len(shap_values))], axis=0)
+    np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
+
+
+def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
+    """Test multi-input scenarios."""
+    torch = pytest.importorskip('torch')
+    from torch import nn
+
+    torch.manual_seed(random_seed)
+    batch_size = 10
+
+    background = [torch.zeros(batch_size, 3), torch.zeros(batch_size, 4)]
+
+    class Net(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.fc = nn.Linear(7, 6)  # Combined fully connected layer for both inputs
+
+        def forward(self, input1, input2):
+            x = torch.cat((input1, input2), dim=1)  # Concatenate both inputs
+            x1 = self.fc(x)  # Final processing
+            return x1
+
+    model = Net()
+    batch_size = 10
+    input1 = torch.randn(batch_size, 3)
+    input2 = torch.randn(batch_size, 4)
+    model = Net()
+
+    e = shap.GradientExplainer(model, background)
+    shap_values = e.shap_values([input1, input2])
+
+    model.eval()
+    model.zero_grad()
+    with torch.no_grad():
+        outputs = model(input1, input2).detach().numpy()
+        expected_value = model(*background).detach().numpy().mean(0)
+
+    sums = np.sum([shap_values[i].sum(axis=1) for i in range(len(shap_values))], axis=0)
+    np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-5)
+
 
 @pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
 def test_tf_input(random_seed, input_type):
-    """ Test tabular (batch_size, features) pd.DataFrame and numpy input. """
+    """Test tabular (batch_size, features) pd.DataFrame and numpy input."""
     tf = pytest.importorskip('tensorflow')
     tf.random.set_seed(random_seed)
 

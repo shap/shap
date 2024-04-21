@@ -40,11 +40,9 @@ def waterfall(shap_values, max_display=10, show=True):
 
     Examples
     --------
-
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
 
     """
-
     # Turn off interactive plot
     if show is False:
         plt.ioff()
@@ -320,7 +318,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
 
 def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
-    """ Plots an explanation of a single prediction as a waterfall plot.
+    """Plots an explanation of a single prediction as a waterfall plot.
 
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
     output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature
@@ -351,8 +349,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
-    """
 
+    """
     # Turn off interactive plot when not calling plt.show
     if show is False:
         plt.ioff()

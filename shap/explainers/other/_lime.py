@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 class LimeTabular(Explainer):
-    """ Simply wrap of lime.lime_tabular.LimeTabularExplainer into the common shap interface.
+    """Simply wrap of lime.lime_tabular.LimeTabularExplainer into the common shap interface.
 
     Parameters
     ----------
@@ -24,6 +24,7 @@ class LimeTabular(Explainer):
 
     mode : "classification" or "regression"
         Control the mode of LIME tabular.
+
     """
 
     def __init__(self, model, data, mode="classification"):

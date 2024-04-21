@@ -16,9 +16,7 @@ xlabel_names = {
 }
 
 def benchmark(benchmark, show=True):
-    """ Plot a BenchmarkResult or list of such results.
-    """
-
+    """Plot a BenchmarkResult or list of such results."""
     if hasattr(benchmark, "__iter__"):
         benchmark = list(benchmark)
 
@@ -177,7 +175,7 @@ def benchmark(benchmark, show=True):
                     txt.set_path_effects([PathEffects.withStroke(linewidth=5, foreground='w')])
 
             ax = plt.gca()
-            ax.set_yticks([1 - i / (len(methods) - 1) for i in range(0, len(methods))])
+            ax.set_yticks([1 - i / (len(methods) - 1) for i in range(len(methods))])
             ax.set_yticklabels(methods, rotation=0, fontsize=11)
 
             ax.set_xticks(np.arange(len(metrics) + 1))

@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 
 _remove_cache = {}
 def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is retrained for each test sample with the important features set to a constant.
+    """The model is retrained for each test sample with the important features set to a constant.
 
     If you want to know how important a set of features is you can ask how the model would be
     different if those features had never existed. To determine this we can mask those features
@@ -18,7 +18,6 @@ def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_gen
     to get the change in model performance when a specified fraction of the most important features
     are withheld.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     # see if we match the last cached call
@@ -70,9 +69,7 @@ def remove_retrain(nmask, X_train, y_train, X_test, y_test, attr_test, model_gen
     return metric(y_test, yp_masked_test)
 
 def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ Each test sample is masked by setting the important features to a constant.
-    """
-
+    """Each test sample is masked by setting the important features to a constant."""
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -92,13 +89,12 @@ def remove_mask(nmask, X_train, y_train, X_test, y_test, attr_test, model_genera
     return metric(y_test, yp_masked_test)
 
 def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is reevaluated for each test sample with the important features set to an imputed value.
+    """The model is reevaluated for each test sample with the important features set to an imputed value.
 
     Note that the imputation is done using a multivariate normality assumption on the dataset. This depends on
     being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
     be significantly bigger than X_train.shape[1].
     """
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -129,9 +125,7 @@ def remove_impute(nmask, X_train, y_train, X_test, y_test, attr_test, model_gene
     return metric(y_test, yp_masked_test)
 
 def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is reevaluated for each test sample with the important features set to resample background values.
-    """
-
+    """The model is reevaluated for each test sample with the important features set to resample background values."""
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -156,14 +150,13 @@ def remove_resample(nmask, X_train, y_train, X_test, y_test, attr_test, model_ge
     return metric(y_test, yp_masked_test)
 
 def batch_remove_retrain(nmask_train, nmask_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
-    """ An approximation of holdout that only retraines the model once.
+    """An approximation of holdout that only retraines the model once.
 
     This is also called ROAR (RemOve And Retrain) in work by Google. It is much more computationally
     efficient that the holdout method because it masks the most important features in every sample
     and then retrains the model once, instead of retraining the model for every test sample like
     the holdout metric.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     X_train, X_test = to_array(X_train, X_test)
@@ -194,7 +187,7 @@ def batch_remove_retrain(nmask_train, nmask_test, X_train, y_train, X_test, y_te
 
 _keep_cache = {}
 def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is retrained for each test sample with the non-important features set to a constant.
+    """The model is retrained for each test sample with the non-important features set to a constant.
 
     If you want to know how important a set of features is you can ask how the model would be
     different if only those features had existed. To determine this we can mask the other features
@@ -205,7 +198,6 @@ def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gener
     to get the change in model performance when a specified fraction of the most important features
     are retained.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     # see if we match the last cached call
@@ -258,9 +250,7 @@ def keep_retrain(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gener
     return metric(y_test, yp_masked_test)
 
 def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is reevaluated for each test sample with the non-important features set to their mean.
-    """
-
+    """The model is reevaluated for each test sample with the non-important features set to their mean."""
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -281,13 +271,12 @@ def keep_mask(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generato
     return metric(y_test, yp_masked_test)
 
 def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is reevaluated for each test sample with the non-important features set to an imputed value.
+    """The model is reevaluated for each test sample with the non-important features set to an imputed value.
 
     Note that the imputation is done using a multivariate normality assumption on the dataset. This depends on
     being able to estimate the full data covariance matrix (and inverse) accuractly. So X_train.shape[0] should
     be significantly bigger than X_train.shape[1].
     """
-
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -318,9 +307,7 @@ def keep_impute(nkeep, X_train, y_train, X_test, y_test, attr_test, model_genera
     return metric(y_test, yp_masked_test)
 
 def keep_resample(nkeep, X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model, random_state):
-    """ The model is reevaluated for each test sample with the non-important features set to resample background values.
-    """ # why broken? overwriting?
-
+    """The model is reevaluated for each test sample with the non-important features set to resample background values.""" # why broken? overwriting?
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -345,14 +332,13 @@ def keep_resample(nkeep, X_train, y_train, X_test, y_test, attr_test, model_gene
     return metric(y_test, yp_masked_test)
 
 def batch_keep_retrain(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test, attr_train, attr_test, model_generator, metric):
-    """ An approximation of keep that only retraines the model once.
+    """An approximation of keep that only retraines the model once.
 
     This is also called KAR (Keep And Retrain) in work by Google. It is much more computationally
     efficient that the keep method because it masks the unimportant features in every sample
     and then retrains the model once, instead of retraining the model for every test sample like
     the keep metric.
     """
-
     warnings.warn("The retrain based measures can incorrectly evaluate models in some cases!")
 
     X_train, X_test = to_array(X_train, X_test)
@@ -382,9 +368,7 @@ def batch_keep_retrain(nkeep_train, nkeep_test, X_train, y_train, X_test, y_test
     return metric(y_test, yp_test_masked)
 
 def local_accuracy(X_train, y_train, X_test, y_test, attr_test, model_generator, metric, trained_model):
-    """ The how well do the features plus a constant base rate sum up to the model output.
-    """
-
+    """The how well do the features plus a constant base rate sum up to the model output."""
     X_train, X_test = to_array(X_train, X_test)
 
     # how many features to mask
@@ -399,8 +383,7 @@ def to_array(*args):
     return [a.values if isinstance(a, pd.DataFrame) else a for a in args]
 
 def const_rand(size, seed=23980):
-    """ Generate a random array with a fixed seed.
-    """
+    """Generate a random array with a fixed seed."""
     old_seed = np.random.seed()
     np.random.seed(seed)
     out = np.random.rand(size)
@@ -408,16 +391,14 @@ def const_rand(size, seed=23980):
     return out
 
 def const_shuffle(arr, seed=23980):
-    """ Shuffle an array in-place with a fixed seed.
-    """
+    """Shuffle an array in-place with a fixed seed."""
     old_seed = np.random.seed()
     np.random.seed(seed)
     np.random.shuffle(arr)
     np.random.seed(old_seed)
 
 def strip_list(attrs):
-    """ This assumes that if you have a list of outputs you just want the second one (the second class is the '1' class).
-    """
+    """This assumes that if you have a list of outputs you just want the second one (the second class is the '1' class)."""
     if isinstance(attrs, list):
         return attrs[1]
     else:

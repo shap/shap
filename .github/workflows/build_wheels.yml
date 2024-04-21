@@ -17,10 +17,12 @@ jobs:
     outputs:
       include: ${{ steps.set-matrix.outputs.include }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install cibuildwheel
       # Nb. keep cibuildwheel version pin consistent with job below
-        run: pipx install cibuildwheel==2.14.0
+        run: pipx install cibuildwheel==2.16.5
+      - name: Print all build identifiers
+        run: cibuildwheel --print-build-identifiers
       - id: set-matrix
         run: |
           MATRIX=$(
@@ -63,7 +65,7 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.0
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           only: ${{ matrix.only }}
 
@@ -89,7 +91,7 @@ jobs:
         run: git fetch --tags
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 

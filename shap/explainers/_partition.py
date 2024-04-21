@@ -12,25 +12,29 @@ from ._explainer import Explainer
 
 
 class PartitionExplainer(Explainer):
+    """Uses the Partition SHAP method to explain the output of any function.
+
+    Partition SHAP computes Shapley values recursively through a hierarchy of features, this
+    hierarchy defines feature coalitions and results in the Owen values from game theory.
+
+    The PartitionExplainer has two particularly nice properties:
+
+    1) PartitionExplainer is model-agnostic but when using a balanced partition tree only has
+       quadratic exact runtime (in term of the number of input features). This is in contrast to the
+       exponential exact runtime of KernelExplainer or SamplingExplainer.
+    2) PartitionExplainer always assigns to groups of correlated features the credit that set of features
+       would have had if treated as a group. This means if the hierarchical clustering given to
+       PartitionExplainer groups correlated features together, then feature correlations are
+       "accounted for" in the sense that the total credit assigned to a group of tightly dependent features
+       does not depend on how they behave if their correlation structure was broken during the explanation's
+       perturbation process.
+    Note that for linear models the Owen values that PartitionExplainer returns are the same as the standard
+    non-hierarchical Shapley values.
+    """
 
     def __init__(self, model, masker, *, output_names=None, link=links.identity, linearize_link=True,
                  feature_names=None, **call_args):
-        """ Uses the Partition SHAP method to explain the output of any function.
-
-        Partition SHAP computes Shapley values recursively through a hierarchy of features, this
-        hierarchy defines feature coalitions and results in the Owen values from game theory. The
-        PartitionExplainer has two particularly nice properties: 1) PartitionExplainer is
-        model-agnostic but when using a balanced partition tree only has quadradic exact runtime
-        (in term of the number of input features). This is in contrast to the exponential exact
-        runtime of KernelExplainer or SamplingExplainer. 2) PartitionExplainer always assigns to groups of
-        correlated features the credit that set of features would have had if treated as a group. This
-        means if the hierarchical clustering given to PartitionExplainer groups correlated features
-        together, then feature correlations are "accounted for" ... in the sense that the total credit assigned
-        to a group of tightly dependent features does net depend on how they behave if their correlation
-        structure was broken during the explanation's perterbation process. Note that for linear models
-        the Owen values that PartitionExplainer returns are the same as the standard non-hierarchical
-        Shapley values.
-
+        """Build a PartitionExplainer for the given model with the given masker.
 
         Parameters
         ----------
@@ -58,8 +62,8 @@ class PartitionExplainer(Explainer):
         Examples
         --------
         See `Partition explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/PartitionExplainer.html>`_
-        """
 
+        """
         super().__init__(model, masker, link=link, linearize_link=linearize_link, algorithm="partition", \
                          output_names = output_names, feature_names=feature_names)
 
@@ -120,17 +124,14 @@ class PartitionExplainer(Explainer):
     # note that changes to this function signature should be copied to the default call argument wrapper above
     def __call__(self, *args, max_evals=500, fixed_context=None, main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False):
-        """ Explain the output of the model on the given arguments.
-        """
+        """Explain the output of the model on the given arguments."""
         return super().__call__(
             *args, max_evals=max_evals, fixed_context=fixed_context, main_effects=main_effects, error_bounds=error_bounds, batch_size=batch_size,
             outputs=outputs, silent=silent
         )
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         if fixed_context == "auto":
             # if isinstance(self.masker, maskers.Text):
             #     fixed_context = 1 # we err on the side of speed for text models
@@ -198,9 +199,7 @@ class PartitionExplainer(Explainer):
         return "shap.explainers.PartitionExplainer()"
 
     def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
-        """ Compute a nested set of recursive Owen values based on an ordering recursion.
-        """
-
+        """Compute a nested set of recursive Owen values based on an ordering recursion."""
         #f = self._reshaped_model
         #r = self.masker
         #masks = np.zeros(2*len(inds)+1, dtype=int)
@@ -337,9 +336,7 @@ class PartitionExplainer(Explainer):
         return output_indexes, base_value
 
     def owen3(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
-        """ Compute a nested set of recursive Owen values based on an ordering recursion.
-        """
-
+        """Compute a nested set of recursive Owen values based on an ordering recursion."""
         #f = self._reshaped_model
         #r = self.masker
         #masks = np.zeros(2*len(inds)+1, dtype=int)

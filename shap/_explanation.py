@@ -15,70 +15,60 @@ from .utils._general import OpChain
 
 op_chain_root = OpChain("shap.Explanation")
 class MetaExplanation(type):
-    """ This metaclass exposes the Explanation object's methods for creating template op chains.
-    """
+    """This metaclass exposes the Explanation object's methods for creating template op chains."""
 
     def __getitem__(cls, item):
         return op_chain_root.__getitem__(item)
 
     @property
     def abs(cls):
-        """ Element-wise absolute value op.
-        """
+        """Element-wise absolute value op."""
         return op_chain_root.abs
 
     @property
     def identity(cls):
-        """ A no-op.
-        """
+        """A no-op."""
         return op_chain_root.identity
 
     @property
     def argsort(cls):
-        """ Numpy style argsort.
-        """
+        """Numpy style argsort."""
         return op_chain_root.argsort
 
     @property
     def sum(cls):
-        """ Numpy style sum.
-        """
+        """Numpy style sum."""
         return op_chain_root.sum
 
     @property
     def max(cls):
-        """ Numpy style max.
-        """
+        """Numpy style max."""
         return op_chain_root.max
 
     @property
     def min(cls):
-        """ Numpy style min.
-        """
+        """Numpy style min."""
         return op_chain_root.min
 
     @property
     def mean(cls):
-        """ Numpy style mean.
-        """
+        """Numpy style mean."""
         return op_chain_root.mean
 
     @property
     def sample(cls):
-        """ Numpy style sample.
-        """
+        """Numpy style sample."""
         return op_chain_root.sample
 
     @property
     def hclust(cls):
-        """ Hierarchical clustering op.
-        """
+        """Hierarchical clustering op."""
         return op_chain_root.hclust
 
 
 class Explanation(metaclass=MetaExplanation):
-    """ A sliceable set of parallel arrays representing a SHAP explanation.
-    """
+    """A sliceable set of parallel arrays representing a SHAP explanation."""
+
     def __init__(
         self,
         values,
@@ -164,14 +154,12 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def shape(self):
-        """ Compute the shape over potentially complex data nesting.
-        """
+        """Compute the shape over potentially complex data nesting."""
         return _compute_shape(self._s.values)
 
     @property
     def values(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.values
     @values.setter
     def values(self, new_values):
@@ -179,8 +167,7 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def base_values(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.base_values
     @base_values.setter
     def base_values(self, new_base_values):
@@ -188,8 +175,7 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def data(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.data
     @data.setter
     def data(self, new_data):
@@ -197,8 +183,7 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def display_data(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.display_data
     @display_data.setter
     def display_data(self, new_display_data):
@@ -208,14 +193,12 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def instance_names(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.instance_names
 
     @property
     def output_names(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.output_names
     @output_names.setter
     def output_names(self, new_output_names):
@@ -223,14 +206,12 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def output_indexes(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.output_indexes
 
     @property
     def feature_names(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.feature_names
     @feature_names.setter
     def feature_names(self, new_feature_names):
@@ -238,26 +219,22 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def lower_bounds(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.lower_bounds
 
     @property
     def upper_bounds(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.upper_bounds
 
     @property
     def error_std(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.error_std
 
     @property
     def main_effects(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.main_effects
     @main_effects.setter
     def main_effects(self, new_main_effects):
@@ -265,8 +242,7 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def hierarchical_values(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.hierarchical_values
     @hierarchical_values.setter
     def hierarchical_values(self, new_hierarchical_values):
@@ -274,23 +250,22 @@ class Explanation(metaclass=MetaExplanation):
 
     @property
     def clustering(self):
-        """ Pass-through from the underlying slicer object.
-        """
+        """Pass-through from the underlying slicer object."""
         return self._s.clustering
     @clustering.setter
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
 
     def cohorts(self, cohorts):
-        """ Split this explanation into several cohorts.
+        """Split this explanation into several cohorts.
 
         Parameters
         ----------
         cohorts : int or array
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
-        """
 
+        """
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         if isinstance(cohorts, (list, tuple, np.ndarray)):
@@ -299,8 +274,7 @@ class Explanation(metaclass=MetaExplanation):
         raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
 
     def __repr__(self):
-        """ Display some basic printable info, but not everything.
-        """
+        """Display some basic printable info, but not everything."""
         out = ".values =\n"+self.values.__repr__()
         if self.base_values is not None:
             out += "\n\n.base_values =\n"+self.base_values.__repr__()
@@ -309,8 +283,7 @@ class Explanation(metaclass=MetaExplanation):
         return out
 
     def __getitem__(self, item):
-        """ This adds support for OpChain indexing.
-        """
+        """This adds support for OpChain indexing."""
         new_self = None
         if not isinstance(item, tuple):
             item = (item,)
@@ -503,8 +476,7 @@ class Explanation(metaclass=MetaExplanation):
     #     return new_self
 
     def _numpy_func(self, fname, **kwargs):
-        """ Apply a numpy-style function to this Explanation.
-        """
+        """Apply a numpy-style function to this Explanation."""
         new_self = copy.copy(self)
         axis = kwargs.get("axis", None)
 
@@ -551,23 +523,19 @@ class Explanation(metaclass=MetaExplanation):
         return new_self
 
     def mean(self, axis):
-        """ Numpy-style mean function.
-        """
+        """Numpy-style mean function."""
         return self._numpy_func("mean", axis=axis)
 
     def max(self, axis):
-        """ Numpy-style mean function.
-        """
+        """Numpy-style mean function."""
         return self._numpy_func("max", axis=axis)
 
     def min(self, axis):
-        """ Numpy-style mean function.
-        """
+        """Numpy-style mean function."""
         return self._numpy_func("min", axis=axis)
 
     def sum(self, axis=None, grouping=None):
-        """ Numpy-style mean function.
-        """
+        """Numpy-style mean function."""
         if grouping is None:
             return self._numpy_func("sum", axis=axis)
         elif axis == 1 or len(self.shape) == 1:
@@ -576,8 +544,7 @@ class Explanation(metaclass=MetaExplanation):
             raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
     def hstack(self, other):
-        """ Stack two explanations column-wise.
-        """
+        """Stack two explanations column-wise."""
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
         assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
 
@@ -620,7 +587,7 @@ class Explanation(metaclass=MetaExplanation):
 
 
     def hclust(self, metric="sqeuclidean", axis=0):
-        """ Computes an optimal leaf ordering sort order using hclustering.
+        """Computes an optimal leaf ordering sort order using hclustering.
 
         hclust(metric="sqeuclidean")
 
@@ -631,6 +598,7 @@ class Explanation(metaclass=MetaExplanation):
 
         axis : int
             The axis to cluster along.
+
         """
         values = self.values
 
@@ -647,7 +615,7 @@ class Explanation(metaclass=MetaExplanation):
         return inds
 
     def sample(self, max_samples, replace=False, random_state=0):
-        """ Randomly samples the instances (rows) of the Explanation object.
+        """Randomly samples the instances (rows) of the Explanation object.
 
         Parameters
         ----------
@@ -657,6 +625,7 @@ class Explanation(metaclass=MetaExplanation):
 
         replace : bool
             Sample with or without replacement.
+
         """
         prev_seed = np.random.seed(random_state)
         inds = np.random.choice(self.shape[0], min(max_samples, self.shape[0]), replace=replace)
@@ -748,8 +717,7 @@ def group_features(shap_values, feature_map):
     )
 
 def compute_output_dims(values, base_values, data, output_names):
-    """ Uses the passed data to infer which dimensions correspond to the model's output.
-    """
+    """Uses the passed data to infer which dimensions correspond to the model's output."""
     values_shape = _compute_shape(values)
 
     # input shape matches the data shape
@@ -823,7 +791,7 @@ def _compute_shape(x):
                 for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
                     assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
-                    for j in range(0, len(shape)):
+                    for j in range(len(shape)):
                         matches[j] &= shape[j] == first_shape[j]
                 return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
 
@@ -856,9 +824,7 @@ class Cohorts:
 
 
 def _auto_cohorts(shap_values, max_cohorts):
-    """ This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values.
-    """
-
+    """This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values."""
     # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
     m.fit(shap_values.data, shap_values.values)
@@ -893,8 +859,7 @@ def _auto_cohorts(shap_values, max_cohorts):
     return Cohorts(**cohorts)
 
 def list_wrap(x):
-    """ A helper to patch things since slicer doesn't handle arrays of arrays (it does handle lists of arrays)
-    """
+    """A helper to patch things since slicer doesn't handle arrays of arrays (it does handle lists of arrays)"""
     if isinstance(x, np.ndarray) and len(x.shape) == 1 and isinstance(x[0], np.ndarray):
         return [v for v in x]
     else:

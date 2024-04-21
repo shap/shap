@@ -1,5 +1,4 @@
-""" This modules tests all the explainer types.
-"""
+"""This modules tests all the explainer types."""
 
 import matplotlib
 

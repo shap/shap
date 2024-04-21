@@ -1,5 +1,4 @@
-""" Tests for the Deep explainer.
-"""
+"""Tests for the Deep explainer."""
 
 
 import numpy as np
@@ -8,7 +7,6 @@ import pytest
 from packaging import version
 
 import shap
-from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -16,9 +14,8 @@ from shap import DeepExplainer
 # Tensorflow related tests #
 ############################
 
-def test_tf_eager(random_seed):
-    """ This is a basic eager example from keras.
-    """
+def test_tf_eager_call(random_seed):
+    """This is a basic eager example from keras."""
     tf = pytest.importorskip('tensorflow')
 
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -38,14 +35,15 @@ def test_tf_eager(random_seed):
     model.compile(loss="categorical_crossentropy", optimizer="Adam")
     model.fit(x.values, y.values, epochs=2)
 
-    e = DeepExplainer(model, x.values[:1])
+    e = shap.DeepExplainer(model, x.values[:1])
     sv = e.shap_values(x.values)
+    sv_call = e(x.values)
+    np.testing.assert_array_almost_equal(sv, sv_call.values, decimal=8)
     assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
 
 
-def test_tf_keras_mnist_cnn(random_seed):
-    """ This is the basic mnist cnn example from keras.
-    """
+def test_tf_keras_mnist_cnn_call(random_seed):
+    """This is the basic mnist cnn example from keras."""
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -128,20 +126,59 @@ def test_tf_keras_mnist_cnn(random_seed):
     inds = rs.choice(x_train.shape[0], 3, replace=False)
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
+    shap_values_call = e(x_test[:1])
 
-    diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
+    np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
+
+    sums = shap_values.sum(axis=(1, 2, 3))
+    np.testing.assert_allclose(sums + e.expected_value, predicted, atol=1e-3), "Sum of SHAP values does not match difference!"
     sess.close()
+
+@pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
+def test_tf_keras_activations(activation):
+    """Test verifying that a linear model with linear data gives the correct result."""
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
+    tf = pytest.importorskip('tensorflow')
+
+    from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.optimizers.legacy import SGD
+
+    tf.compat.v1.disable_eager_execution()
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    inputs = Input(shape=(2,))
+    preds = Dense(1, activation=activation)(inputs)
+
+    model = Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
+    model.fit(x, y, epochs=30, shuffle=False, verbose=0)
+
+    # explain
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    shap_values = e.shap_values(x)
+    preds = model.predict(x)
+
+    assert shap_values.shape == (1000, 2, 1)
+    np.testing.assert_allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
 
 
 def test_tf_keras_linear():
-    """Test verifying that a linear model with linear data gives the correct result.
-    """
-
+    """Test verifying that a linear model with linear data gives the correct result."""
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
 
@@ -177,18 +214,15 @@ def test_tf_keras_linear():
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
 
+    assert shap_values.shape == (1000, 2, 1)
+
     # verify that the explanation follows the equation in LinearExplainer
-    values = shap_values[0] # since this is a "multi-output" model with one output
-
-    assert values.shape == (1000, 2)
-
     expected = (x - x.mean(0)) * fit_coef
-    np.testing.assert_allclose(expected - values, 0, atol=1e-5)
+    np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
 
 
 def test_tf_keras_imdb_lstm(random_seed):
-    """ Basic LSTM example using the keras API defined in tensorflow
-    """
+    """Basic LSTM example using the keras API defined in tensorflow"""
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -238,16 +272,58 @@ def test_tf_keras_imdb_lstm(random_seed):
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - \
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
-    assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
+    np.testing.testing_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
+
+def test_tf_deep_imbdb_transformers():
+    # GH 3522
+    transformers = pytest.importorskip('transformers')
+
+    from shap import models
+
+    # data from datasets imdb dataset
+    short_data = ['I lov', 'Worth', 'its a', 'STAR ', 'First', 'I had', 'Isaac', 'It ac', 'Techn', 'Hones']
+    classifier = transformers.pipeline("sentiment-analysis", return_all_scores=True)
+    pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
+    explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
+    shap_values3 = explainer3(short_data[:10])
+    shap.plots.text(shap_values3[:, :, 1])
+    shap.plots.bar(shap_values3[:, :, 1].mean(0))
+
+
+def test_tf_deep_multi_inputs_multi_outputs():
+    tf = pytest.importorskip('tensorflow')
+
+    input1 = tf.keras.layers.Input(shape=(3,))
+    input2 = tf.keras.layers.Input(shape=(4,))
+
+    # Concatenate input layers
+    concatenated = tf.keras.layers.concatenate([input1, input2])
+
+    # Dense layers
+    x = tf.keras.layers.Dense(16, activation='relu')(concatenated)
+
+    # Output layer
+    output = tf.keras.layers.Dense(3, activation='softmax')(x)
+    model = tf.keras.models.Model(inputs=[input1, input2], outputs=output)
+    batch_size = 32
+    # Generate random input data for input1 with shape (batch_size, 3)
+    input1_data = np.random.rand(batch_size, 3)
+
+    # Generate random input data for input2 with shape (batch_size, 4)
+    input2_data = np.random.rand(batch_size, 4)
+
+    predicted = model.predict([input1_data, input2_data])
+    explainer = shap.DeepExplainer(model, [input1_data, input2_data])
+    shap_values = explainer.shap_values([input1_data, input2_data])
+    np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-3)
 
 #######################
 # Torch related tests #
 #######################
 
 def _torch_cuda_available():
-    """ Checks whether cuda is available. If so, torch-related tests are also tested on gpu.
-    """
+    """Checks whether cuda is available. If so, torch-related tests are also tested on gpu."""
     try:
         import torch
 
@@ -269,17 +345,16 @@ TORCH_DEVICES = [
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
-def test_pytorch_mnist_cnn(torch_device, interim):
-    """The same test as above, but for pytorch
-    """
+def test_pytorch_mnist_cnn_call(torch_device, interim):
+    """The same test as above, but for pytorch"""
     torch = pytest.importorskip('torch')
 
     from torch import nn
     from torch.nn import functional as F
 
     class RandData:
-        """ Random test data.
-        """
+        """Random test data."""
+
         def __init__(self, batch_size):
             self.current = 0
             self.batch_size = batch_size
@@ -295,8 +370,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
 
 
     class Net(nn.Module):
-        """ Basic conv net.
-        """
+        """Basic conv net."""
 
         def __init__(self):
             super().__init__()
@@ -320,8 +394,7 @@ def test_pytorch_mnist_cnn(torch_device, interim):
             )
 
         def forward(self, x):
-            """ Run the model.
-            """
+            """Run the model."""
             x = self.conv_layers(x)
             x = x.view(-1, 320)
             x = self.fc_layers(x)
@@ -377,23 +450,23 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     test_x, _ = next(iter(test_loader))
     input_tensor = test_x[:1].to(device)
     shap_values = e.shap_values(input_tensor)
+    shap_values_call = e(input_tensor)
+
+    np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
     model.eval()
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(input_tensor) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        outputs = model(input_tensor).detach().cpu().numpy()
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    sums = shap_values.sum((1, 2, 3))
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
-    """Testing single outputs
-    """
+    """Testing single outputs"""
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
@@ -402,8 +475,8 @@ def test_pytorch_custom_nested_models(torch_device):
     from torch.utils.data import DataLoader, TensorDataset
 
     class CustomNet1(nn.Module):
-        """ Model 1.
-        """
+        """Model 1."""
+
         def __init__(self, num_features):
             super().__init__()
             self.net = nn.Sequential(
@@ -415,13 +488,12 @@ def test_pytorch_custom_nested_models(torch_device):
             )
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             return self.net(X.unsqueeze(1)).squeeze(1)
 
     class CustomNet2(nn.Module):
-        """ Model 2.
-        """
+        """Model 2."""
+
         def __init__(self, num_features):
             super().__init__()
             self.net = nn.Sequential(
@@ -430,13 +502,12 @@ def test_pytorch_custom_nested_models(torch_device):
             )
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             return self.net(X).unsqueeze(1)
 
     class CustomNet(nn.Module):
-        """ Model 3.
-        """
+        """Model 3."""
+
         def __init__(self, num_features):
             super().__init__()
             self.net1 = CustomNet1(num_features)
@@ -444,8 +515,7 @@ def test_pytorch_custom_nested_models(torch_device):
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             x = self.net1(X)
             return self.maxpool2(self.net2(x)).squeeze(1)
 
@@ -462,9 +532,11 @@ def test_pytorch_custom_nested_models(torch_device):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
 
     random_seed = 777  # TODO: #2960
@@ -508,18 +580,15 @@ def test_pytorch_custom_nested_models(torch_device):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        diff = model(test_x).detach().cpu().numpy()
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    sums = shap_values.sum(axis=(1))
+    np.testing.assert_allclose(sums + e.expected_value, diff, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
-    """Testing single outputs
-    """
+    """Testing single outputs"""
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
@@ -528,8 +597,8 @@ def test_pytorch_single_output(torch_device):
     from torch.utils.data import DataLoader, TensorDataset
 
     class Net(nn.Module):
-        """ Test model.
-        """
+        """Test model."""
+
         def __init__(self, num_features):
             super().__init__()
             self.linear = nn.Linear(num_features // 2, 2)
@@ -540,8 +609,7 @@ def test_pytorch_single_output(torch_device):
             self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
         def forward(self, X):
-            """ Run the model.
-            """
+            """Run the model."""
             x = self.aapool1d(self.convt1d(self.conv1d(X.unsqueeze(1)))).squeeze(1)
             return self.maxpool2(self.linear(self.leaky_relu(x)).unsqueeze(1)).squeeze(1)
 
@@ -558,9 +626,11 @@ def test_pytorch_single_output(torch_device):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
 
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -603,21 +673,16 @@ def test_pytorch_single_output(torch_device):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        outputs = model(test_x).detach().cpu().numpy()
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()  / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
-
-
+    sums = shap_values.sum(axis=(1))
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
 def test_pytorch_multiple_inputs(torch_device, disconnected):
-    """ Check a multi-input scenario.
-    """
+    """Check a multi-input scenario."""
     torch = pytest.importorskip('torch')
 
     from sklearn.datasets import fetch_california_housing
@@ -627,8 +692,8 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
 
 
     class Net(nn.Module):
-        """ Testing model.
-        """
+        """Testing model."""
+
         def __init__(self, num_features, disconnected):
             super().__init__()
             self.disconnected = disconnected
@@ -641,8 +706,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             )
 
         def forward(self, x1, x2):
-            """ Run the model.
-            """
+            """Run the model."""
             if self.disconnected:
                 x = self.linear(x1).unsqueeze(1)
             else:
@@ -662,9 +726,11 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
     random_seed = 42  # TODO: 2960
     torch.manual_seed(random_seed)
@@ -702,15 +768,15 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     test_x1 = test_x1_tmp[:1].to(device)
     test_x2 = test_x2_tmp[:1].to(device)
 
-    shap_x1, shap_x2 = e.shap_values([test_x1[:1], test_x2[:1]])
+    shap_values = e.shap_values([test_x1[:1], test_x2[:1]])
 
     model.eval()
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x1, test_x2[:1]) - model(*background)).detach().cpu().numpy().mean(0)
+        outputs = model(test_x1, test_x2[:1]).detach().cpu().numpy()
 
-    sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    # the shap values have the shape (num_samples, num_features, num_inputs, num_outputs)
+    # so since we have just one output, we slice it out
+    sums = shap_values[0].sum(1) + shap_values[1].sum(1)
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"

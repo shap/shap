@@ -1,5 +1,4 @@
-"""This file contains tests for the `shap._explanation` module.
-"""
+"""This file contains tests for the `shap._explanation` module."""
 
 import numpy as np
 import pytest
@@ -29,8 +28,7 @@ def test_explanation_hstack(random_seed):
 
 
 def test_explanation_hstack_errors(random_seed):
-    """Checks that `hstack` throws errors on invalid input.
-    """
+    """Checks that `hstack` throws errors on invalid input."""
     # generate 2 Explanation objects for stacking
     rs = np.random.RandomState(random_seed)
     base_vals = np.ones(20) * 0.123

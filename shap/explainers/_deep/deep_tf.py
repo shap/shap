@@ -15,7 +15,7 @@ tf_execute = None
 tf_gradients_impl = None
 
 def custom_record_gradient(op_name, inputs, attrs, results):
-    """ This overrides tensorflow.python.eager.backprop._record_gradient.
+    """This overrides tensorflow.python.eager.backprop._record_gradient.
 
     We need to override _record_gradient in order to get gradient backprop to
     get called for ResourceGather operations. In order to make this work we
@@ -38,14 +38,13 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     return out
 
 class TFDeep(Explainer):
-    """
-    Using tf.gradients to implement the backpropagation was
+    """Using tf.gradients to implement the backpropagation was
     inspired by the gradient-based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
-        """ An explainer object for a deep model using a given background dataset.
+        """An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
@@ -216,8 +215,7 @@ class TFDeep(Explainer):
             self.used_types[op.type] = True
 
     def _variable_inputs(self, op):
-        """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
-        """
+        """Return which inputs of this operation are variable (i.e. depend on the model inputs)."""
         if op not in self._vinputs:
             out = np.zeros(len(op.inputs), dtype=bool)
             for i,t in enumerate(op.inputs):
@@ -226,8 +224,7 @@ class TFDeep(Explainer):
         return self._vinputs[op]
 
     def phi_symbolic(self, i):
-        """ Get the SHAP value computation graph for a given model output.
-        """
+        """Get the SHAP value computation graph for a given model output."""
         if self.phi_symbolics[i] is None:
 
             if not tf.executing_eagerly():
@@ -327,16 +324,21 @@ class TFDeep(Explainer):
 
             _check_additivity(self, model_output, output_phis)
 
-        if not self.multi_output:
-            return output_phis[0]
-        elif ranked_outputs is not None:
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
+            else:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             return output_phis, model_output_ranks
         else:
             return output_phis
 
     def run(self, out, model_inputs, X):
-        """ Runs the model while also setting the learning phase flags to False.
-        """
+        """Runs the model while also setting the learning phase flags to False."""
         if not tf.executing_eagerly():
             feed_dict = dict(zip(model_inputs, X))
             for t in self.learning_phase_flags:
@@ -364,8 +366,7 @@ class TFDeep(Explainer):
             return self.execute_with_overridden_gradients(anon)
 
     def custom_grad(self, op, *grads):
-        """ Passes a gradient op creation request to the correct handler.
-        """
+        """Passes a gradient op creation request to the correct handler."""
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
@@ -416,7 +417,7 @@ class TFDeep(Explainer):
             return [v.numpy() for v in out]
 
 def tensors_blocked_by_false(ops):
-    """ Follows a set of ops assuming their value is False and find blocked Switch paths.
+    """Follows a set of ops assuming their value is False and find blocked Switch paths.
 
     This is used to prune away parts of the model graph that are only used during the training
     phase (like dropout, batch norm, etc.).
@@ -461,7 +462,7 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
 
 
 def softmax(explainer, op, *grads):
-    """ Just decompose softmax into its components and recurse, we can handle all of them :)
+    """Just decompose softmax into its components and recurse, we can handle all of them :)
 
     We assume the 'axis' is the last dimension because the TF codebase swaps the 'axis' to
     the last dimension before the softmax op if 'axis' is not already the last dimension.
@@ -677,7 +678,7 @@ def passthrough(explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
 def break_dependence(explainer, op, *grads):
-    """ This function name is used to break attribution dependence in the graph traversal.
+    """This function name is used to break attribution dependence in the graph traversal.
 
     These operation types may be connected above input data values in the graph but their outputs
     don't depend on the input values (for example they just depend on the shape).
@@ -729,6 +730,7 @@ op_handlers["FusedBatchNorm"] = linearity_1d(0)
 
 # ops that are nonlinear and only allow a single input to vary
 op_handlers["Relu"] = nonlinearity_1d(0)
+op_handlers["Selu"] = nonlinearity_1d(0)
 op_handlers["Elu"] = nonlinearity_1d(0)
 op_handlers["Sigmoid"] = nonlinearity_1d(0)
 op_handlers["Tanh"] = nonlinearity_1d(0)

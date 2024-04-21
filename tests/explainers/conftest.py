@@ -6,8 +6,7 @@ import pytest
 @pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
 @pytest.fixture(scope="session")
 def basic_translation_scenario():
-    """ Create a basic transformers translation model and tokenizer.
-    """
+    """Create a basic transformers translation model and tokenizer."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 

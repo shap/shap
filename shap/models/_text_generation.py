@@ -6,13 +6,13 @@ from ._model import Model
 
 
 class TextGeneration(Model):
-    """ Generates target sentence/ids using a base model.
+    """Generates target sentence/ids using a base model.
 
     It generates target sentence/ids for a model (a pretrained transformer model or a function).
     """
 
     def __init__(self, model=None, tokenizer=None, target_sentences=None, device=None):
-        """ Create a text generator model from a pretrained transformer model or a function.
+        """Create a text generator model from a pretrained transformer model or a function.
 
         For a pretrained transformer model, a tokenizer should be passed.
 
@@ -34,6 +34,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Array of target sentence/ids.
+
         """
         super().__init__(model)
 
@@ -60,7 +61,7 @@ class TextGeneration(Model):
         self.target_X = None
 
     def __call__(self, X):
-        """ Generates target sentence/ids from X.
+        """Generates target sentence/ids from X.
 
         Parameters
         ----------
@@ -71,6 +72,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Array of target sentence/ids.
+
         """
         if (self.X is None) or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X)) or \
                 (isinstance(self.X, str) and (self.X != X)):
@@ -88,7 +90,7 @@ class TextGeneration(Model):
         return np.array(self.target_X)
 
     def get_inputs(self, X, padding_side='right'):
-        """ The function tokenizes source sentences.
+        """The function tokenizes source sentences.
 
         In model agnostic case, the function calls model(X) which is expected to
         return a batch of output sentences which is tokenized to compute inputs.
@@ -102,6 +104,7 @@ class TextGeneration(Model):
         -------
         dict
             Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on model_type).
+
         """
         # set tokenizer padding to prepare inputs for batch inferencing
         # padding_side="left" for only decoder models text generation eg. GPT2
@@ -112,7 +115,7 @@ class TextGeneration(Model):
         return inputs
 
     def model_generate(self, X):
-        """ This function performs text generation for tensorflow and pytorch models.
+        """This function performs text generation for tensorflow and pytorch models.
 
         Parameters
         ----------
@@ -123,6 +126,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Returns target sentence ids.
+
         """
         if (hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder) \
                 and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
@@ -189,7 +193,7 @@ class TextGeneration(Model):
         return target_X
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
-        """ Calculates if special tokens are present in the beginning/end of the model generated output.
+        """Calculates if special tokens are present in the beginning/end of the model generated output.
 
         Parameters
         ----------
@@ -200,6 +204,7 @@ class TextGeneration(Model):
         -------
         dict
             Dictionary of prefix and suffix lengths concerning special tokens in output ids.
+
         """
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():

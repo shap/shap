@@ -9,7 +9,7 @@ import shap
 
 
 def is_empty(path):
-    """ Function to check if folder at given path exists and is not empty.
+    """Function to check if folder at given path exists and is not empty.
 
     Returns True if folder is empty or does not exist.
     """
@@ -25,9 +25,7 @@ def is_empty(path):
     return empty
 
 def make_dir(path):
-    """
-    Function to create a new directory with given path or empty if it already exists.
-    """
+    """Function to create a new directory with given path or empty if it already exists."""
     if not os.path.exists(path):
         if not os.path.isfile(path):
             # make directory if it does not exist
@@ -42,9 +40,7 @@ def make_dir(path):
                 os.remove(path+file)
 
 def add_sample_images(path):
-    """
-    Function to add sample images from imagenet50 SHAP data in the given folder.
-    """
+    """Function to add sample images from imagenet50 SHAP data in the given folder."""
     X, _ = shap.datasets.imagenet50()
     counter = 1
     indexes_list = [25, 26, 30, 44]
@@ -55,16 +51,13 @@ def add_sample_images(path):
             counter += 1
 
 def load_image(path_to_image):
-    """
-    Function to load image at given path and return numpy array of RGB float values.
-    """
+    """Function to load image at given path and return numpy array of RGB float values."""
     image = cv2.imread(path_to_image)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return np.array(image).astype('float')
 
 def check_valid_image(path_to_image):
-    """
-    Function to check if a file has valid image extensions and return True if it does.
+    """Function to check if a file has valid image extensions and return True if it does.
     Note: Azure Cognitive Services only accepts below file formats.
     """
     valid_extensions = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".jfif")
@@ -72,24 +65,24 @@ def check_valid_image(path_to_image):
         return True
 
 def save_image(array, path_to_image):
-    """
-    Function to save image(RGB values array) at given path (filename and location).
-    """
+    """Function to save image(RGB values array) at given path (filename and location)."""
     # saving array of RGB values as an image
     image = np.array(array)/255.0
     plt.imsave(path_to_image, image)
 
 
 def resize_image(path_to_image, reshaped_dir):
-    """
-    Function to resize given image retaining original aspect ratio and save in given directory 'reshaped_dir'.
+    """Function to resize given image retaining original aspect ratio and save in given directory 'reshaped_dir'.
     Returns numpy array of resized image and path where resized file is saved.
-    Note:
+
+    Note
+    ----
     Azure COGS CV has size limit of < 4MB and min size of 50x50 for images.
     Hence, large image files are being reshaped in code below to increase speed of SHAP explanations and run Azure COGS for image captions.
     If image (pixel_size, pixel_size) is greater than 500 for either of the dimensions:
     1 - image is resized to have max. 500 pixel size for the dimension > 500
     2 - other dimension is resized retaining the original aspect ratio
+
     """
     image = load_image(path_to_image)
 
@@ -122,10 +115,7 @@ def resize_image(path_to_image, reshaped_dir):
 
 
 def display_grid_plot(list_of_captions, list_of_images, max_columns=4, figsize=(20,20)):
-    """
-    Function to display grid of images and their titles/captions.
-    """
-
+    """Function to display grid of images and their titles/captions."""
     # load list of images
     masked_images = []
     for filename in  list_of_images:

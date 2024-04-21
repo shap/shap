@@ -15,59 +15,89 @@ from ._explainer import Explainer
 
 
 class LinearExplainer(Explainer):
-    """ Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
+    """Computes SHAP values for a linear model, optionally accounting for inter-feature correlations.
 
-    This computes the SHAP values for a linear model and can account for the correlations among
-    the input features. Assuming features are independent leads to interventional SHAP values which
-    for a linear model are coef[i] * (x[i] - X.mean(0)[i]) for the ith feature. If instead we account
-    for correlations then we prevent any problems arising from collinearity and share credit among
-    correlated features. Accounting for correlations can be computationally challenging, but
-    LinearExplainer uses sampling to estimate a transform that can then be applied to explain
-    any prediction of the model.
+    This computes the SHAP values for a linear model and can account for the
+    correlations among the input features. Assuming features are independent
+    leads to interventional SHAP values which for a linear model are ``coef[i] *
+    (x[i] - X.mean(0)[i])`` for the ith feature. If instead we account for
+    correlations, then we prevent any problems arising from collinearity and
+    share credit among correlated features. Accounting for correlations can be
+    computationally challenging, but ``LinearExplainer`` uses sampling to
+    estimate a transform that can then be applied to explain any prediction of
+    the model.
 
     Parameters
     ----------
     model : (coef, intercept) or sklearn.linear_model.*
         User supplied linear model either as either a parameter pair or sklearn object.
 
+    masker : function, numpy.array, pandas.DataFrame, tuple of (mean, cov), shap.maskers.Masker
+        A callable Python object used to "mask" out hidden features of the form
+        ``masker(binary_mask, x)``. It takes a single input sample and a binary
+        mask and returns a matrix of masked samples. These masked samples are
+        evaluated using the model function and the outputs are then averaged.
+
+        As a shortcut for the standard masking using by SHAP you can pass a
+        background data matrix instead of a function and that matrix will be
+        used for masking.
+
+        You can also provide a tuple of ``(mean, covariance)``, or pass in a
+        masker meant for tabular data (i.e., :class:`.maskers.Independent`,
+        :class:`.maskers.Impute`, or :class:`.maskers.Partition`) directly.
+
     data : (mean, cov), numpy.array, pandas.DataFrame, iml.DenseData or scipy.csr_matrix
-        The background dataset to use for computing conditional expectations. Note that only the
-        mean and covariance of the dataset are used. This means passing a raw data matrix is just
-        a convenient alternative to passing the mean and covariance directly.
+        The background dataset to use for computing conditional expectations.
+        Note that only the mean and covariance of the dataset are used. This
+        means passing a raw data matrix is just a convenient alternative to
+        passing the mean and covariance directly.
+
     nsamples : int
-        Number of samples to use when estimating the transformation matrix used to account for
-        feature correlations.
+        Number of samples to use when estimating the transformation matrix used
+        to account for feature correlations.
+
     feature_perturbation : "interventional" (default) or "correlation_dependent"
-        There are two ways we might want to compute SHAP values, either the full conditional SHAP
-        values or the interventional SHAP values. For interventional SHAP values we break any
-        dependence structure between features in the model and so uncover how the model would behave if we
-        intervened and changed some of the inputs. For the full conditional SHAP values we respect
-        the correlations among the input features, so if the model depends on one input but that
-        input is correlated with another input, then both get some credit for the model's behavior. The
-        interventional option stays "true to the model" meaning it will only give credit to features that are
-        actually used by the model, while the correlation option stays "true to the data" in the sense that
-        it only considers how the model would behave when respecting the correlations in the input data.
-        For sparse case only interventional option is supported.
+        There are two ways we might want to compute SHAP values, either the full
+        conditional SHAP values or the interventional SHAP values.
+
+        For interventional SHAP values we break any dependence structure between
+        features in the model and so uncover how the model would behave if we
+        intervened and changed some of the inputs. For the full conditional SHAP
+        values we respect the correlations among the input features, so if the
+        model depends on one input but that input is correlated with another
+        input, then both get some credit for the model's behavior. The
+        interventional option stays "true to the model" meaning it will only
+        give credit to features that are actually used by the model, while the
+        correlation option stays "true to the data" in the sense that it only
+        considers how the model would behave when respecting the correlations in
+        the input data. For sparse case only interventional option is supported.
+
+        Note that the ``feature_perturbation`` option is deprecated and will be
+        removed in a future release. It is recommended to use the appropriate
+        tabular ``masker`` instead.
 
     Examples
     --------
     See `Linear explainer examples <https://shap.readthedocs.io/en/latest/api_examples/explainers/LinearExplainer.html>`_
+
     """
 
     def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
-        if 'feature_dependence' in kwargs:
-            warnings.warn('The option feature_dependence has been renamed to feature_perturbation!')
-            feature_perturbation = kwargs["feature_dependence"]
-        if feature_perturbation == "independent":
-            warnings.warn('The option feature_perturbation="independent" is has been renamed to feature_perturbation="interventional"!')
-            feature_perturbation = "interventional"
-        elif feature_perturbation == "correlation":
-            warnings.warn('The option feature_perturbation="correlation" is has been renamed to feature_perturbation="correlation_dependent"!')
-            feature_perturbation = "correlation_dependent"
-        if feature_perturbation is not None:
-            warnings.warn("The feature_perturbation option is now deprecated in favor of using the appropriate masker (maskers.Independent, or maskers.Impute)")
+        if "feature_dependence" in kwargs:
+            emsg = "The option feature_dependence has been renamed to feature_perturbation!"
+            raise ValueError(emsg)
+
+        if feature_perturbation is not None:  # pragma: no cover
+            wmsg = (
+                "The feature_perturbation option is now deprecated in favor of using the appropriate "
+                "masker (maskers.Independent, maskers.Partition or maskers.Impute)."
+            )
+            warnings.warn(wmsg, FutureWarning)
         else:
             feature_perturbation = "interventional"
+        if feature_perturbation not in ("interventional", "correlation_dependent"):
+            emsg = "feature_perturbation must be one of 'interventional' or 'correlation_dependent'"
+            raise InvalidFeaturePerturbationError(emsg)
         self.feature_perturbation = feature_perturbation
 
         # wrap the incoming masker object as a shap.Masker object before calling
@@ -182,7 +212,7 @@ class LinearExplainer(Explainer):
             raise InvalidFeaturePerturbationError("Unknown type of feature_perturbation provided: " + self.feature_perturbation)
 
     def _estimate_transforms(self, nsamples):
-        """ Uses block matrix inversion identities to quickly estimate transforms.
+        """Uses block matrix inversion identities to quickly estimate transforms.
 
         After a bit of matrix math we can isolate a transform matrix (# features x # features)
         that is independent of any sample we are explaining. It is the result of averaging over
@@ -247,8 +277,7 @@ class LinearExplainer(Explainer):
 
     @staticmethod
     def _parse_model(model):
-        """ Attempt to pull out the coefficients and intercept from the given model object.
-        """
+        """Attempt to pull out the coefficients and intercept from the given model object."""
         # raw coefficients
         if type(model) == tuple and len(model) == 2:
             coef = model[0]
@@ -273,9 +302,7 @@ class LinearExplainer(Explainer):
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if we can parse the given model.
-        """
-
+        """Determines if we can parse the given model."""
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
 
@@ -286,9 +313,7 @@ class LinearExplainer(Explainer):
         return True
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         assert len(row_args) == 1, "Only single-argument functions are supported by the Linear explainer!"
 
         X = row_args[0]
@@ -338,7 +363,7 @@ class LinearExplainer(Explainer):
 
 
     def shap_values(self, X):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -347,13 +372,23 @@ class LinearExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For models with a single output this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored as expected_value
-            attribute of the explainer).
-        """
+        np.array
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored
+            as the ``expected_value`` attribute of the explainer).
+
+            The shape of the returned array depends on the number of model outputs:
+
+            * one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * multiple outputs: array of shape ``(#num_samples, *X.shape[1:],
+              #num_outputs)``.
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs changed from list to np.ndarray.
+
+        """
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
@@ -378,12 +413,12 @@ class LinearExplainer(Explainer):
                 if len(self.coef.shape) == 1:
                     return np.array(np.multiply(X - self.mean, self.coef))
                 else:
-                    return [np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(np.multiply(X - self.mean, self.coef[i])) for i in range(self.coef.shape[0])], axis=-1)
             else:
                 if len(self.coef.shape) == 1:
                     return np.array(X - self.mean) * self.coef
                 else:
-                    return [np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])]
+                    return np.stack([np.array(X - self.mean) * self.coef[i] for i in range(self.coef.shape[0])], axis=-1)
 
 def duplicate_components(C):
     D = np.diag(1/np.sqrt(np.diag(C)))

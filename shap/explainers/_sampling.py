@@ -37,6 +37,7 @@ class SamplingExplainer(KernelExplainer):
         we would approximate a feature being missing by setting it to zero. Unlike the
         KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
+
     """
 
     def __init__(self, model, data, **kwargs):
@@ -182,7 +183,7 @@ class SamplingExplainer(KernelExplainer):
         X_masked = self.X_masked[:nsamples * 2,:]
         inds = np.arange(X.shape[1])
 
-        for i in range(0, nsamples):
+        for i in range(nsamples):
             np.random.shuffle(inds)
             pos = np.where(inds == j)[0][0]
             rind = np.random.randint(X.shape[0])
