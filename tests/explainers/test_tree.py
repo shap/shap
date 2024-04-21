@@ -1903,3 +1903,63 @@ def test_catboost_column_names_with_special_characters():
         )
     shap_values = explainer.shap_values(x_train)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, cb_best.predict_proba(x_train)[:, 1])
+
+
+class TestCausalmlCausalTrees:
+    """Tests for the TreeExplainer when the model passed in is a causalml causal tree instance.
+
+    Included models:
+        * CausalTreeRegressor
+        * CausalRandomForestRegressor
+    """
+
+    data_mode = 1
+    n_features = 8
+    sigma = 0.1
+    data_size = 100
+    n_outcomes = 2
+    random_seed = 42
+    n_estimators = 5
+
+    def prepare_data(self, generate_data: callable) -> tuple:
+        data = generate_data(mode=self.data_mode, n=self.data_size, p=self.n_features, sigma=self.sigma)
+        y, X, treatment, tau, b, e = data
+        return X, y, treatment
+
+    def test_causal_tree_explanation(self):
+
+        from causalml.dataset import synthetic_data
+        from causalml.inference.tree import CausalTreeRegressor
+
+        X, y, treatment = self.prepare_data(synthetic_data)
+        ctree = CausalTreeRegressor(random_state=self.random_seed)
+        ctree.fit(X=X, treatment=treatment, y=y)
+        ctree_explainer = shap.TreeExplainer(ctree)
+        explanation = ctree_explainer(X)
+
+        shap_values_raw: list[np.ndarray] = ctree_explainer.shap_values(X)
+        shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+        assert shap_values.shape == (self.n_features, self.n_outcomes, self.data_size)
+        assert len(explanation.base_values) == len(y)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+
+    def test_causal_random_forest_explanation(self):
+
+        from causalml.dataset import synthetic_data
+        from causalml.inference.tree import CausalRandomForestRegressor
+
+        X, y, treatment = self.prepare_data(synthetic_data)
+        cforest = CausalRandomForestRegressor(n_estimators=self.n_estimators, random_state=self.random_seed)
+        cforest.fit(X=X, treatment=treatment, y=y)
+        cforest_explainer = shap.TreeExplainer(cforest)
+        explanation = cforest_explainer(X)
+
+        shap_values_raw: list[np.ndarray] = cforest_explainer.shap_values(X)
+        shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+        assert shap_values.shape == (self.n_features, self.n_outcomes, self.data_size)
+        assert len(explanation.base_values) == len(y)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
