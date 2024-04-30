@@ -30,8 +30,8 @@ def waterfall(shap_values, max_display=10, show=True):
     shap_values : Explanation
         A one-dimensional :class:`.Explanation` object that contains the feature values and SHAP values to plot.
 
-    max_display : str
-        The maximum number of features to plot (default is 10).
+    max_display : int
+        The maximum number of features to display (default is 10).
 
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
@@ -343,8 +343,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     feature_names : list
         List of feature names (# features).
 
-    max_display : str
-        The maximum number of features to plot.
+    max_display : int
+        The maximum number of features to display (default is 10).
 
     show : bool
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
