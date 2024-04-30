@@ -1817,6 +1817,7 @@ class XGBTreeModelLoader:
         # Accounts for number of classes, targets, forest size.
         self.n_trees_per_iter = int(diff[0])
         self.n_targets = n_targets
+        self.base_score = float(learner_model_param["base_score"])
         assert self.n_trees_per_iter > 0
 
         self.name_obj = objective["name"]

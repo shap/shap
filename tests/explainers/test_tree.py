@@ -1904,3 +1904,17 @@ def test_catboost_column_names_with_special_characters():
         )
     shap_values = explainer.shap_values(x_train)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, cb_best.predict_proba(x_train)[:, 1])
+
+
+def test_xgboost_tweedie_regression():
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = np.random.randn(100, 5), np.random.exponential(size=100)
+    model = xgboost.XGBRegressor(
+        objective="reg:tweedie",
+    )
+    model.fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, np.log(model.predict(X)), atol=1e-4)
