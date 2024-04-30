@@ -76,6 +76,9 @@ jobs:
             ${{ env.pythonLocation }}/**/site-packages/torch*
             ${{ env.pythonLocation }}/**/site-packages/functorch*
           key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
+      - name: Install libomp (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install libomp
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
