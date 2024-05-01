@@ -86,7 +86,7 @@ def image(shap_values: Explanation or np.ndarray,
     # multi_output = True
     if not isinstance(shap_values, list):
         # multi_output = False
-        shap_values = [shap_values]
+        shap_values = list(shap_values)
 
     if len(shap_values[0].shape) == 3:
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
@@ -158,7 +158,8 @@ def image(shap_values: Explanation or np.ndarray,
         max_val = np.nanpercentile(abs_vals, 99.9)
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
+                if if row==0:
+                    axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
                                     extent=(-1, sv.shape[1], sv.shape[0], -1))
