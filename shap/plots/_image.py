@@ -28,7 +28,9 @@ def image(shap_values: Explanation or np.ndarray,
           hspace: Optional[float] = 0.2,
           labelpad: Optional[float] = None,
           cmap: Optional[str or Colormap] = colors.red_transparent_blue,
-          show: Optional[bool] = True):
+          show: Optional[bool] = True,
+          max_val: Optiona[float] = None
+         ):
     """Plots SHAP values for image inputs.
 
     Parameters
@@ -155,7 +157,10 @@ def image(shap_values: Explanation or np.ndarray,
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
             abs_vals = np.stack([np.abs(shap_values[i].sum(-1)) for i in range(len(shap_values))], 0).flatten()
-        max_val = np.nanpercentile(abs_vals, 99.9)
+
+        if max_val is None:
+            max_val = np.nanpercentile(abs_vals, 99.9)
+
         for i in range(len(shap_values)):
             if labels is not None:
                 axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
