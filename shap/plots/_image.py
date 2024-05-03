@@ -86,7 +86,7 @@ def image(shap_values: Explanation or np.ndarray,
     # multi_output = True
     if not isinstance(shap_values, list):
         # multi_output = False
-        shap_values = list(shap_values)
+        shap_values = [shap_values]
 
     if len(shap_values[0].shape) == 3:
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
