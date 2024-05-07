@@ -154,7 +154,7 @@ class PartitionExplainer(Explainer):
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             self._curr_base_value = fm(m00.reshape(1, -1), zero_index=0)[0] # the zero index param tells the masked model what the baseline is
-        f11 = fm(~m00.reshape(1, -1))[0] #compute the complement of m00
+        f11 = fm(~m00.reshape(1, -1))[0] #compute the complement value of the baseline
 
         if callable(self.masker.clustering):
             self._clustering = self.masker.clustering(*row_args)
@@ -203,7 +203,7 @@ class PartitionExplainer(Explainer):
     def __str__(self):
         return "shap.explainers.PartitionExplainer()"
 
-    def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_context, batch_size, silent):
+    def owen(self, fm, f00, f11, max_evals, output_indexes, fixed_conte t, batch_size, silent):
         """Compute a nested set of recursive Owen values based on an ordering recursion."""
         #f = self._reshaped_model
         #r = self.masker
