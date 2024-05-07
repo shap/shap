@@ -1,11 +1,11 @@
-import queue
-import time
+import queue #multi-producer, multi-consumer queues
+import time # time execution
 
-import numpy as np
-from numba import njit
-from tqdm.auto import tqdm
+import numpy as np # numpy base
+from numba import njit # just in time compiler
+from tqdm.auto import tqdm # progress bar
 
-from .. import Explanation, links
+from .. import Explanation, links # shap modules
 from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
 from ._explainer import Explainer
@@ -15,7 +15,7 @@ class PartitionExplainer(Explainer):
     """Uses the Partition SHAP method to explain the output of any function.
 
     Partition SHAP computes Shapley values recursively through a hierarchy of features, this
-    hierarchy defines feature coalitions and results in the Owen values from game theory.
+    hierarchy defines feature coalitions and results in the Owen  values from game theory.
 
     The PartitionExplainer has two particularly nice properties:
 
@@ -51,7 +51,7 @@ class PartitionExplainer(Explainer):
             functions are available in shap such as shap.maksers.Image for images and shap.maskers.Text
             for text.
 
-        partition_tree : None or function or numpy.array
+        partition_tree : None or function or numpy.array ################################ NOT CURRENTLY IMPLEMENTED #####################################
             A hierarchical clustering of the input features represented by a matrix that follows the format
             used by scipy.cluster.hierarchy (see the notebooks_html/partition_explainer directory an example).
             If this is a function then the function produces a clustering matrix when given a single input
@@ -86,6 +86,11 @@ class PartitionExplainer(Explainer):
         self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
             raise ValueError("The passed masker must have a .clustering attribute defined! Try shap.maskers.Partition(data) for example.")
+        
+        ###########################
+        # the rest of the partition tree use is not done
+        ###########################
+        
         # if partition_tree is None:
         #     if not hasattr(masker, "partition_tree"):
         #         raise ValueError("The passed masker does not have masker.clustering, so the partition_tree must be passed!")
@@ -138,22 +143,22 @@ class PartitionExplainer(Explainer):
             # else:
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
-            raise ValueError("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context)
+            raise ValueError("Unknown fixed_context value passed (must be 0, 1 or None): %s" %fixed_context) # fixes fixed context
 
-        # build a masked version of the model for the current input sample
+        # build a masked versio  of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
         # make sure we have the base value and current value outputs
         M = len(fm)
-        m00 = np.zeros(M, dtype=bool)
+        m00 = np.zeros(M, dtype=bool) # all zeros the size of the masked model
         # if not fixed background or no base value assigned then compute base value for a row
         if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
             self._curr_base_value = fm(m00.reshape(1, -1), zero_index=0)[0] # the zero index param tells the masked model what the baseline is
-        f11 = fm(~m00.reshape(1, -1))[0]
+        f11 = fm(~m00.reshape(1, -1))[0] #compute the complement of m00
 
         if callable(self.masker.clustering):
             self._clustering = self.masker.clustering(*row_args)
-            self._mask_matrix = make_masks(self._clustering)
+            self._mask_matrix = make_masks(self._clustering) #  mask matrix using the clustering information
 
         if hasattr(self._curr_base_value, 'shape') and len(self._curr_base_value.shape) > 0:
             if outputs is None:
@@ -171,7 +176,7 @@ class PartitionExplainer(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)
+        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent) #call the function to get the values
 
         # if False:
         #     if self.multi_output:
