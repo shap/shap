@@ -665,15 +665,17 @@ def output_indexes_len(output_indexes):
 
 @njit
 def lower_credit(i, value, M, values, clustering):
-    if i < M:
-        values[i] += value
+    if i < M: # if node is a leaf
+        values[i] += value # add the values
         return
-    li = int(clustering[i-M,0])
-    ri = int(clustering[i-M,1])
-    group_size = int(clustering[i-M,3])
+    li = int(clustering[i-M,0]) # get the left index of the top node
+    ri = int(clustering[i-M,1]) # get the right index of the top node
+    group_size = int(clustering[i- ,3]) # get the number of features same as M? 
+    # get the size of the cluster for the nodes in the tree else for the leafs one
     lsize = int(clustering[li-M,3]) if li >= M else 1
     rsize = int(clustering[ri-M,3]) if ri >= M else 1
-    assert lsize+rsize == group_size
-    values[i] += value
-    lower_credit(li, values[i] * lsize / group_size, M, values, clustering)
+    assert lsize+rsize == group_size # verify that every group is valid
+    values[i] += value # add value to the values with index i 
+    # loop, i is the left node index, next value is the value i weighted by size of the cluster divided by the group size, 
+    lower_credit(li, values[i] * lsize / group_size, M, values, clustering) 
     lower_credit(ri, values[i] * rsize / group_size, M, values, clustering)
