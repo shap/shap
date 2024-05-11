@@ -1,4 +1,5 @@
 import copy
+import logging
 import time
 import warnings
 
@@ -78,6 +79,11 @@ class Explainer(Serializable):
         self.output_names = output_names
         self.feature_names = feature_names
 
+        masker_length = None
+        if hasattr(masker, '__len__'):
+            masker_length = len(masker)
+
+
         # wrap the incoming masker object as a shap.Masker object
         if (
             isinstance(masker, pd.DataFrame)
@@ -117,6 +123,10 @@ class Explainer(Serializable):
                     models.TransformersPipeline(self.model), self.masker,
                     link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
                 )
+        if masker_length is not None and hasattr(self.masker, 'max_samples') and masker_length > self.masker.max_samples:
+            logging.warn(f"Your background dataset is larger than the max_samples {self.masker.max_samples}. You can hand over max_samples by explicitly "
+                         "defining the masker to use: "
+                         "`shap.Explainer(model, masker=maskers.Independent(X, max_samples=1000))`")
 
         # wrap self.masker and self.model for output text explanation algorithm
         if is_transformers_lm(self.model):
