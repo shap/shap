@@ -217,7 +217,6 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, R, R_missing, num_X, M, num_R);
 
-    printf("cext_dense_tree_shap\n");
     dense_tree_shap(trees, data, out_contribs, feature_dependence, model_output, interactions);
 
     // retrieve return value before python cleanup of objects
