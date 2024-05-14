@@ -275,6 +275,22 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.testing_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
+def test_tf_deep_imbdb_transformers():
+    # GH 3522
+    transformers = pytest.importorskip('transformers')
+
+    from shap import models
+
+    # data from datasets imdb dataset
+    short_data = ['I lov', 'Worth', 'its a', 'STAR ', 'First', 'I had', 'Isaac', 'It ac', 'Techn', 'Hones']
+    classifier = transformers.pipeline("sentiment-analysis", return_all_scores=True)
+    pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
+    explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
+    shap_values3 = explainer3(short_data[:10])
+    shap.plots.text(shap_values3[:, :, 1])
+    shap.plots.bar(shap_values3[:, :, 1].mean(0))
+
+
 def test_tf_deep_multi_inputs_multi_outputs():
     tf = pytest.importorskip('tensorflow')
 
@@ -663,9 +679,10 @@ def test_pytorch_single_output(torch_device):
     np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
+@pytest.mark.parametrize("activation", ["relu", "selu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
-def test_pytorch_multiple_inputs(torch_device, disconnected):
+def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
     """Check a multi-input scenario."""
     torch = pytest.importorskip('torch')
 
@@ -674,6 +691,12 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
 
+    if activation == "relu":
+        activation_func = nn.ReLU()
+    elif activation == "selu":
+        activation_func = nn.SELU()
+    else:
+        raise ValueError(f"Unknown activation function: {activation}")
 
     class Net(nn.Module):
         """Testing model."""
@@ -686,7 +709,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             self.linear = nn.Linear(num_features, 2)
             self.output = nn.Sequential(
                 nn.MaxPool1d(2),
-                nn.ReLU()
+                activation_func
             )
 
         def forward(self, x1, x2):

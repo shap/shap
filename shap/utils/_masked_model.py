@@ -356,12 +356,40 @@ def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_var
 
     return all_masked_inputs, i + 1 # i + 1 is the number of output rows after averaging
 
+def _upcast_array(arr: np.ndarray) -> np.ndarray:
+    """Since njit doesn't support float16, we need to upcast it to float32.
+
+    Args:
+        arr (np.ndarray): array to upcast
+
+    Returns
+    -------
+        np.ndarray: upcasted array
+    """
+    if arr.dtype == np.float16:
+        return arr.astype(np.float32)
+    else:
+        return arr
 
 def _build_fixed_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
     if len(last_outs.shape) == 1:
-        _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights)
+        _build_fixed_single_output(_upcast_array(averaged_outs),
+                                   _upcast_array(last_outs),
+                                   _upcast_array(outputs),
+                                   batch_positions,
+                                   varying_rows,
+                                   num_varying_rows,
+                                   link,
+                                   linearizing_weights)
     else:
-        _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights)
+        _build_fixed_multi_output(_upcast_array(averaged_outs),
+                                  _upcast_array(last_outs),
+                                  _upcast_array(outputs),
+                                  batch_positions,
+                                  varying_rows,
+                                  num_varying_rows,
+                                  link,
+                                  linearizing_weights)
 
 @njit # we can't use this when using a custom link function...
 def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
@@ -372,7 +400,7 @@ def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_position
     #     averaged_outs[0] = np.mean(linearizing_weights * link(last_outs))
     # else:
     #     averaged_outs[0] = link(np.mean(last_outs))
-    for i in range(0, len(averaged_outs)):
+    for i in range(len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
@@ -389,8 +417,9 @@ def _build_fixed_single_output(averaged_outs, last_outs, outputs, batch_position
 def _build_fixed_multi_output(averaged_outs, last_outs, outputs, batch_positions, varying_rows, num_varying_rows, link, linearizing_weights):
     # here we can assume that the outputs will always be the same size, and we need
     # to carry over evaluation outputs
+
     sample_count = last_outs.shape[0]
-    for i in range(0, len(averaged_outs)):
+    for i in range(len(averaged_outs)):
         if batch_positions[i] < batch_positions[i+1]:
             if num_varying_rows[i] == sample_count:
                 last_outs[:] = outputs[batch_positions[i]:batch_positions[i+1]]
