@@ -59,7 +59,7 @@ def get_cuda_path():
 
     nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
     if not os.path.exists(nvcc):
-        print("Failed to find nvcc compiler in %s, trying /usr/local/cuda" % nvcc)
+        print(f"Failed to find nvcc compiler in {nvcc}, trying /usr/local/cuda")
         cuda_home = "/usr/local/cuda"
         nvcc = os.path.join(cuda_home, "bin", nvcc_bin)
 

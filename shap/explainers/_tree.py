@@ -169,7 +169,7 @@ class TreeExplainer(Explainer):
         if type(self.masker) is maskers.Independent:
             data = self.masker.data
         elif masker is not None:
-            raise InvalidMaskerError("Unsupported masker type: %s!" % str(type(self.masker)))
+            raise InvalidMaskerError(f"Unsupported masker type: {str(type(self.masker))}!")
 
         if getattr(self.masker, "clustering", None) is not None:
             raise ExplainerError("TreeExplainer does not support clustered data inputs! Please use shap.Explainer or pass an unclustered masker!")
