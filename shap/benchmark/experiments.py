@@ -392,7 +392,7 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
     try:
         subprocess.check_output(["ssh", remote, cmd])
     except subprocess.CalledProcessError as e:
-        print("The following command failed on %s:" % remote, file=sys.stderr)
+        print(f"The following command failed on {remote}:", file=sys.stderr)
         print(cmd, file=sys.stderr)
         total_failed += 1
         print(e)
