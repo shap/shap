@@ -74,6 +74,8 @@ def _xgboost_cat_unsupported(model):
         )
 
 
+logger = logging.getLogger(__name__)
+
 class TreeExplainer(Explainer):
     """Uses Tree SHAP algorithms to explain the output of ensemble tree models.
 
@@ -183,7 +185,7 @@ class TreeExplainer(Explainer):
             self.data = data
         if self.data is None:
             feature_perturbation = "tree_path_dependent"
-            logging.warning("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
+            logger.warning("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
             wmsg = (
                 f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
