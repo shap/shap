@@ -322,7 +322,7 @@ class SequentialPerturbation:
             return xs, ys, auc
 
     def plot(self, xs, ys, auc):
-        pl.plot(xs, ys, label="AUC %0.4f" % auc)
+        pl.plot(xs, ys, label=f"AUC {auc:0.4f}")
         pl.legend()
         xlabel = "Percent Unmasked" if self.perturbation == "keep" else "Percent Masked"
         pl.xlabel(xlabel)

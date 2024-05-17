@@ -325,7 +325,7 @@ class LinearExplainer(Explainer):
             X = X.values
 
         if len(X.shape) not in (1, 2):
-            raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" %len(X.shape))
+            raise DimensionError(f"Instance must have 1 or 2 dimensions! Not: {len(X.shape)}")
 
         if self.feature_perturbation == "correlation_dependent":
             if issparse(X):
@@ -395,7 +395,7 @@ class LinearExplainer(Explainer):
 
         # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         if len(X.shape) not in (1, 2):
-            raise DimensionError("Instance must have 1 or 2 dimensions! Not: %s" % len(X.shape))
+            raise DimensionError(f"Instance must have 1 or 2 dimensions! Not: {len(X.shape)}")
 
         if self.feature_perturbation == "correlation_dependent":
             if issparse(X):

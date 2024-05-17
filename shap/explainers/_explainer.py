@@ -196,7 +196,7 @@ class Explainer(Serializable):
                 self.__class__ = explainers.DeepExplainer
                 explainers.DeepExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
-                raise InvalidAlgorithmError("Unknown algorithm type passed: %s!" % algorithm)
+                raise InvalidAlgorithmError(f"Unknown algorithm type passed: {algorithm}!")
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
