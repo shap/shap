@@ -135,6 +135,8 @@ class PartitionExplainer(Explainer):
             outputs=outputs, silent=silent
         )
 
+    
+    ## changes
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         if fixed_context == "auto":

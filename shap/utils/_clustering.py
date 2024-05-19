@@ -11,7 +11,7 @@ from ._show_progress import show_progress
 
 
 def partition_tree(X, metric="correlation"):
-    X_full_rank = X + np.random.randn(*X.shape) * 1e-8
+    X_full_rank = X + np.random.randn(*X.shape) * 1e-8 
     D = scipy.spatial.distance.pdist(X_full_rank.fillna(X_full_rank.mean()).T, metric=metric)
     return scipy.cluster.hierarchy.complete(D)
 
@@ -32,6 +32,7 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
     M = len(index_mask)
     #switch = np.random.randn(M) < 0
     _pt_shuffle_rec(partition_tree.shape[0]-1, indexes, index_mask, partition_tree, M, 0)
+    
 @njit
 def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     if i < 0:
