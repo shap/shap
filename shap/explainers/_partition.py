@@ -1,11 +1,11 @@
-import queue #multi-producer, multi-consumer queues
-import time # time execution
+import queue  #multi-producer, multi-consumer queues
+import time  # time execution
 
-import numpy as np # numpy base
-from numba import njit # just in time compiler
-from tqdm.auto import tqdm # progress bar
+import numpy as np  # numpy base
+from numba import njit  # just in time compiler
+from tqdm.auto import tqdm  # progress bar
 
-from .. import Explanation, links # shap modules
+from .. import Explanation, links  # shap modules
 from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
 from ._explainer import Explainer
@@ -86,11 +86,11 @@ class PartitionExplainer(Explainer):
         self._curr_base_value = None
         if getattr(self.masker, "clustering", None) is None:
             raise ValueError("The passed masker must have a .clustering attribute defined! Try shap.maskers.Partition(data) for example.")
-        
+
         ###########################
         # the rest of the partition tree use is not done
         ###########################
-        
+
         # if partition_tree is None:
         #     if not hasattr(masker, "partition_tree"):
         #         raise ValueError("The passed masker does not have masker.clustering, so the partition_tree must be passed!")
@@ -135,7 +135,7 @@ class PartitionExplainer(Explainer):
             outputs=outputs, silent=silent
         )
 
-    
+
     ## changes
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent, fixed_context = "auto"):
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
@@ -672,12 +672,12 @@ def lower_credit(i, value, M, values, clustering):
         return
     li = int(clustering[i-M,0]) # get the left index of the top node
     ri = int(clustering[i-M,1]) # get the right index of the top node
-    group_size = int(clustering[i-M,3]) # get the number of features same as M? 
+    group_size = int(clustering[i-M,3]) # get the number of features same as M?
     # get the size of the cluster for the nodes in the tree else for the leafs one
     lsize = int(clustering[li-M,3]) if li >= M else 1
     rsize = int(clustering[ri-M,3]) if ri >= M else 1
     assert lsize+rsize == group_size # verify that every group is valid
-    values[i] += value # add value to the values with index i 
-    # loop, i is the left node index, next value is the value i weighted by size of the cluster divided by the group size, 
-    lower_credit(li, values[i] * lsize / group_size, M, values, clustering) 
+    values[i] += value # add value to the values with index i
+    # loop, i is the left node index, next value is the value i weighted by size of the cluster divided by the group size,
+    lower_credit(li, values[i] * lsize / group_size, M, values, clustering)
     lower_credit(ri, values[i] * rsize / group_size, M, values, clustering)
