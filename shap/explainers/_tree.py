@@ -1799,6 +1799,8 @@ class XGBTreeModelLoader:
         n_targets = max(n_targets, n_classes)
 
         # Check the input model doesn't have vector-leaf
+        if "gbtree" in booster and "model" not in booster:
+            booster = booster["gbtree"]
         if booster["model"].get("iteration_indptr", None) is not None:
             # iteration_indptr was introduced in 2.0.
             iteration_indptr = np.asarray(
