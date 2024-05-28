@@ -1918,3 +1918,16 @@ def test_xgboost_tweedie_regression():
     shap_values = explainer.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, np.log(model.predict(X)), atol=1e-4)
+
+def test_xgboost_dart_regression():
+    """GH 3665"""
+    xgboost = pytest.importorskip("xgboost")
+
+    model = xgboost.XGBRegressor(booster="dart")
+    X = np.random.rand(10, 5)
+    label = np.array([0]*5 + [1]*5)
+    model.fit(X, label)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X), atol=1e-4)
