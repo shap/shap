@@ -113,14 +113,14 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     model.add(Activation('softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.legacy.Adadelta(),
+                  optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    model.fit(x_train[:10, :], y_train[:10, :],
+    model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test[:10, :], y_test[:10, :]))
+              validation_data=(x_test, y_test))
 
     # explain by passing the tensorflow inputs and outputs
     inds = rs.choice(x_train.shape[0], 3, replace=False)
@@ -186,6 +186,8 @@ def test_tf_keras_linear():
 
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.models import Model
+
+    # from tensorflow.keras.optimizers.legacy import SGD
     from tensorflow.keras.optimizers.legacy import SGD
 
     tf.compat.v1.disable_eager_execution()
