@@ -46,7 +46,7 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     """This is the basic mnist cnn example from keras."""
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
-    tf.compat.v1.random.set_random_seed(random_seed)
+    # tf.compat.v1.random.set_random_seed(random_seed)
 
     from tensorflow import keras
     from tensorflow.compat.v1 import ConfigProto, InteractiveSession
@@ -65,7 +65,7 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     config.gpu_options.allow_growth = True
     sess = InteractiveSession(config=config)
 
-    tf.compat.v1.disable_eager_execution()
+    # tf.compat.v1.disable_eager_execution()
 
     batch_size = 64
     num_classes = 10
