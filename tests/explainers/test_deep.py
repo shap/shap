@@ -124,7 +124,9 @@ def test_tf_keras_mnist_cnn_call(random_seed):
 
     # explain by passing the tensorflow inputs and outputs
     inds = rs.choice(x_train.shape[0], 3, replace=False)
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
+    import ipdb; ipdb.set_trace(context=10)
+    e = shap.DeepExplainer((model.inputs, model.layers[-1].input), x_train[inds, :, :])
+    # e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     # e = shap.DeepExplainer((model.inputs, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
     shap_values_call = e(x_test[:1])
@@ -132,7 +134,9 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
     import ipdb; ipdb.set_trace(context=10)
-    predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
+    predicted = sess.run(model.layers[-1].output, feed_dict={model.layers[0].input: x_test[:1]})
+    # diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - \
+    #     sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
     # predicted = sess.run(model.inputs, feed_dict={model.inputs: x_test[:1]})
     # predicted = model.predict(x_test[:1])
     # array([[0.10011727, 0.10002215, 0.09978864, 0.09991801, 0.09990694,

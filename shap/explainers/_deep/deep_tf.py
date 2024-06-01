@@ -151,6 +151,7 @@ class TFDeep(Explainer):
         if (hasattr(self.data, '__call__')):
             self.expected_value = None
         else:
+            import ipdb; ipdb.set_trace(context=15)
             if self.data[0].shape[0] > 5000:
                 warnings.warn("You have provided over 5k background samples! For better performance consider using smaller random sample.")
             if not tf.executing_eagerly():
