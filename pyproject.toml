@@ -67,6 +67,7 @@ test = [
   "pyspark",
   "pyod",
   "transformers",
+  "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
   "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
   "torch; sys_platform != 'darwin'",
