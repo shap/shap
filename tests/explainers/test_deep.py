@@ -125,13 +125,21 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     # explain by passing the tensorflow inputs and outputs
     inds = rs.choice(x_train.shape[0], 3, replace=False)
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
+    # e = shap.DeepExplainer((model.inputs, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
     shap_values_call = e(x_test[:1])
 
     np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
+    import ipdb; ipdb.set_trace(context=10)
     predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
+    # predicted = sess.run(model.inputs, feed_dict={model.inputs: x_test[:1]})
+    # predicted = model.predict(x_test[:1])
+    # array([[0.10011727, 0.10002215, 0.09978864, 0.09991801, 0.09990694,
+    #     0.10018334, 0.10003075, 0.10010703, 0.09993459, 0.09999125]],
+    #   dtype=float32)
 
+    import ipdb; ipdb.set_trace(context=10)
     sums = shap_values.sum(axis=(1, 2, 3))
     np.testing.assert_allclose(sums + e.expected_value, predicted, atol=1e-3), "Sum of SHAP values does not match difference!"
     sess.close()
@@ -146,9 +154,7 @@ def test_tf_keras_activations(activation):
 
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.models import Model
-    from tensorflow.keras.optimizers.legacy import SGD
-
-    tf.compat.v1.disable_eager_execution()
+    from tensorflow.keras.optimizers import SGD
 
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
@@ -169,7 +175,7 @@ def test_tf_keras_activations(activation):
     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     # explain
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    e = shap.DeepExplainer((model.inputs[0], model.layers[-1].output), x)
     shap_values = e.shap_values(x)
     preds = model.predict(x)
 
@@ -188,9 +194,9 @@ def test_tf_keras_linear():
     from tensorflow.keras.models import Model
 
     # from tensorflow.keras.optimizers.legacy import SGD
-    from tensorflow.keras.optimizers.legacy import SGD
+    from tensorflow.keras.optimizers import SGD
 
-    tf.compat.v1.disable_eager_execution()
+    # tf.compat.v1.disable_eager_execution()
 
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
@@ -213,7 +219,7 @@ def test_tf_keras_linear():
     fit_coef = model.layers[1].get_weights()[0].T[0]
 
     # explain
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
 
     assert shap_values.shape == (1000, 2, 1)
