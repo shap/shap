@@ -238,21 +238,36 @@ class TFDeep(Explainer):
 
                 self.phi_symbolics[i] = self.execute_with_overridden_gradients(anon)
             else:
-                @tf.function
-                def grad_graph(shap_rAnD):
-                    # phase = tf.keras.backend.learning_phase()
-                    # tf.keras.backend.set_learning_phase(0)
+                if version.parse(tf.__version__) < version.parse("2.16.0"):
+                    # TODO: set a deprecation warning for this
+                    @tf.function
+                    def grad_graph(shap_rAnD):
+                        phase = tf.keras.backend.learning_phase()
+                        tf.keras.backend.set_learning_phase(0)
 
-                    with tf.GradientTape(watch_accessed_variables=False) as tape:
-                        tape.watch(shap_rAnD)
-                        out = self.model(shap_rAnD, training=False)
-                        if self.multi_output:
-                            out = out[:,i]
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(shap_rAnD)
+                            out = self.model(shap_rAnD)
+                            if self.multi_output:
+                                out = out[:,i]
 
-                    self._init_between_tensors(out.op, shap_rAnD)
-                    x_grad = tape.gradient(out, shap_rAnD)
-                    # tf.keras.backend.set_learning_phase(phase)
-                    return x_grad
+                        self._init_between_tensors(out.op, shap_rAnD)
+                        x_grad = tape.gradient(out, shap_rAnD)
+                        tf.keras.backend.set_learning_phase(phase)
+                        return x_grad
+
+                else:
+                    @tf.function
+                    def grad_graph(shap_rAnD):
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(shap_rAnD)
+                            out = self.model(shap_rAnD, training=False)
+                            if self.multi_output:
+                                out = out[:,i]
+
+                        self._init_between_tensors(out.op, shap_rAnD)
+                        x_grad = tape.gradient(out, shap_rAnD)
+                        return x_grad
 
                 self.phi_symbolics[i] = grad_graph
 

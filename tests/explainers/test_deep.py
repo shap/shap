@@ -44,23 +44,10 @@ def test_tf_eager_call(random_seed):
 
 def test_tf_keras_mnist_cnn_call(random_seed):
     """This is the basic mnist cnn example from keras."""
+    tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
-    # tf.compat.v1.random.set_random_seed(random_seed)
 
-    from tensorflow import keras
-    from tensorflow.compat.v1 import ConfigProto
-    from tensorflow.keras import backend as K
-    from tensorflow.keras.layers import (
-        Activation,
-        Conv2D,
-        Dense,
-        Dropout,
-        Flatten,
-        MaxPooling2D,
-    )
-    from tensorflow.keras.models import Sequential
-
-    config = ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
 
     batch_size = 64
@@ -77,7 +64,7 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     x_test = rs.randn(200, 28, 28)
     y_test = rs.randint(0, 9, 200)
 
-    if K.image_data_format() == 'channels_first':
+    if tf.keras.backend.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
         x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
         input_shape = (1, img_rows, img_cols)
@@ -92,24 +79,24 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     x_test /= 255
 
     # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_train = tf.keras.utils.to_categorical(y_train, num_classes)
+    y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
-    model = Sequential()
-    model.add(Conv2D(2, kernel_size=(3, 3),
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Conv2D(2, kernel_size=(3, 3),
                      activation='relu',
                      input_shape=input_shape))
-    model.add(Conv2D(4, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(16, activation='relu')) # 128
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes))
-    model.add(Activation('softmax'))
+    model.add(tf.keras.layers.Conv2D(4, (3, 3), activation='relu'))
+    model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(tf.keras.layers.Dropout(0.25))
+    model.add(tf.keras.layers.Flatten())
+    model.add(tf.keras.layers.Dense(16, activation='relu')) # 128
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(num_classes))
+    model.add(tf.keras.layers.Activation('softmax'))
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
+    model.compile(loss=tf.keras.losses.categorical_crossentropy,
+                  optimizer=tf.keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
     model.fit(x_train, y_train,
