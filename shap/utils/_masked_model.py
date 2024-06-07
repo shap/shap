@@ -472,7 +472,7 @@ def _rec_fill_masks(cluster_matrix, indices_row_pos, indptr, indices, M, ind):
     pos = indices_row_pos[ind]
 
     if ind < M:
-        indices[pos] = ind 
+        indices[pos] = ind
         return
 
     lind = int(cluster_matrix[ind-M,0])
