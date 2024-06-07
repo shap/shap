@@ -175,9 +175,14 @@ class _TFGradient(Explainer):
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
             except Exception:
                 pass
+        if tf.executing_eagerly():
+            if isinstance(model, tuple) or isinstance(model, list):
+                assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
+                from tensorflow.keras import Model
+                self.model = Model(model[0], model[1])
+            else:
+                self.model = model
 
-        # determine the model inputs and outputs
-        self.model = model
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
         assert not isinstance(self.model_output, list), "The model output to be explained must be a single tensor!"
@@ -275,7 +280,6 @@ class _TFGradient(Explainer):
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         # rank and determine the model outputs that we will explain
-        import pdb; pdb.set_trace()
         if not tf.executing_eagerly():
             model_output_values = self.run(self.model_output, self.model_inputs, X)
         else:
