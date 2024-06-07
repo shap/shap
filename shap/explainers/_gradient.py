@@ -226,22 +226,35 @@ class _TFGradient(Explainer):
                 out = self.model_output[:,i] if self.multi_output else self.model_output
                 self.gradients[i] = tf.gradients(out, self.model_inputs)
             else:
-                @tf.function
-                def grad_graph(x):
-                    phase = tf.keras.backend.learning_phase()
-                    tf.keras.backend.set_learning_phase(0)
+                if version.parse(tf.__version__) < version.parse("2.16.0"):
+                    # todo: add legacy warning here.
+                    @tf.function
+                    def grad_graph(x):
+                        phase = tf.keras.backend.learning_phase()
+                        tf.keras.backend.set_learning_phase(0)
 
-                    with tf.GradientTape(watch_accessed_variables=False) as tape:
-                        tape.watch(x)
-                        out = self.model(x)
-                        if self.multi_output:
-                            out = out[:,i]
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(x)
+                            out = self.model(x)
+                            if self.multi_output:
+                                out = out[:,i]
 
-                    x_grad = tape.gradient(out, x)
+                        x_grad = tape.gradient(out, x)
 
-                    tf.keras.backend.set_learning_phase(phase)
+                        tf.keras.backend.set_learning_phase(phase)
 
-                    return x_grad
+                        return x_grad
+                else:
+                    @tf.function
+                    def grad_graph(x):
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(x)
+                            out = self.model(x, training=False)
+                            if self.multi_output:
+                                out = out[:,i]
+
+                        x_grad = tape.gradient(out, x)
+                        return x_grad
 
                 self.gradients[i] = grad_graph
 
@@ -262,6 +275,7 @@ class _TFGradient(Explainer):
         assert len(self.model_inputs) == len(X), "Number of model inputs does not match the number given!"
 
         # rank and determine the model outputs that we will explain
+        import pdb; pdb.set_trace()
         if not tf.executing_eagerly():
             model_output_values = self.run(self.model_output, self.model_inputs, X)
         else:
