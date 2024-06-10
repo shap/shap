@@ -193,7 +193,7 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+# addopts = "--mpl"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
