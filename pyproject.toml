@@ -72,7 +72,7 @@ test = [
   "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
   "torch; sys_platform != 'darwin'",
   "torchvision",
-  "tensorflow",  # pending tf py3.12 support
+  "tensorflow",
   "sentencepiece",
   "opencv-python",
 ]
