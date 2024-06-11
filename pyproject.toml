@@ -67,11 +67,12 @@ test = [
   "pyspark",
   "pyod",
   "transformers",
+  "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
   "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
   "torch; sys_platform != 'darwin'",
   "torchvision",
-  "tensorflow<2.16;python_version<'3.12'",  # FIXME: pending keras 3.0 support, pending tf py3.12 support
+  "tensorflow",
   "sentencepiece",
   "opencv-python",
 ]
