@@ -6,7 +6,7 @@ from numba import njit
 
 from .. import utils
 from .._serializable import Deserializer, Serializer
-from ..utils import MaskedModel, safe_isinstance
+from ..utils import MaskedModel
 from ..utils._exceptions import DimensionError, InvalidClusteringError
 from ._masker import Masker
 
@@ -14,11 +14,10 @@ log = logging.getLogger('shap')
 
 
 class Tabular(Masker):
-    """ A common base class for Independent and Partition.
-    """
+    """A common base class for Independent and Partition."""
 
     def __init__(self, data, max_samples=100, clustering=None):
-        """ This masks out tabular features by integrating over the given background dataset.
+        """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
         ----------
@@ -41,10 +40,10 @@ class Tabular(Masker):
             `matching`, `minkowski`, `rogerstanimoto`, `russellrao`, `seuclidean`,
             `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
-        """
 
+        """
         self.output_dataframe = False
-        if safe_isinstance(data, "pandas.core.frame.DataFrame"):
+        if isinstance(data, pd.DataFrame):
             self.feature_names = data.columns
             data = data.values
             self.output_dataframe = True
@@ -70,7 +69,7 @@ class Tabular(Masker):
         if clustering is not None:
             if isinstance(clustering, str):
                 self.clustering = utils.hclust(data, metric=clustering)
-            elif safe_isinstance(clustering, "numpy.ndarray"):
+            elif isinstance(clustering, np.ndarray):
                 self.clustering = clustering
             else:
                 raise InvalidClusteringError(
@@ -136,12 +135,11 @@ class Tabular(Masker):
 
 
     def invariants(self, x):
-        """ This returns a mask of which features change when we mask them.
+        """This returns a mask of which features change when we mask them.
 
         This optional masking method allows explainers to avoid re-evaluating the model when
         the features that would have been masked are all invariant.
         """
-
         # make sure we got valid data
         if x.shape != self.data.shape[1:]:
             raise DimensionError(
@@ -152,8 +150,7 @@ class Tabular(Masker):
         return np.isclose(x, self.data)
 
     def save(self, out_file):
-        """ Write a Tabular masker to a file stream.
-        """
+        """Write a Tabular masker to a file stream."""
         super().save(out_file)
 
         # Increment the version number when the encoding changes!
@@ -172,8 +169,7 @@ class Tabular(Masker):
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ Load a Tabular masker from a file stream.
-        """
+        """Load a Tabular masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
 
@@ -198,11 +194,10 @@ def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
 @njit
 def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
                    masked_inputs_tmp, last_mask, data, variants, masked_inputs_out, noop_code):
-    """ Implements the special (high speed) delta masking API that only flips the positions we need to.
+    """Implements the special (high speed) delta masking API that only flips the positions we need to.
 
     Note that we attempt to avoid doing any allocation inside this function for speed reasons.
     """
-
     dpos = 0
     i = -1
     masks_pos = 0
@@ -243,11 +238,10 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
 
 
 class Independent(Tabular):
-    """ This masks out tabular features by integrating over the given background dataset.
-    """
+    """This masks out tabular features by integrating over the given background dataset."""
 
     def __init__(self, data, max_samples=100):
-        """ Build a Independent masker with the given background data.
+        """Build a Independent masker with the given background data.
 
         Parameters
         ----------
@@ -260,18 +254,19 @@ class Independent(Tabular):
             samples coming out of the masker (to be integrated over) matches the number of samples in
             the background dataset. This means larger background dataset cause longer runtimes. Normally
             about 1, 10, 100, or 1000 background samples are reasonable choices.
+
         """
         super().__init__(data, max_samples=max_samples, clustering=None)
 
 
 class Partition(Tabular):
-    """ This masks out tabular features by integrating over the given background dataset.
+    """This masks out tabular features by integrating over the given background dataset.
 
     Unlike Independent, Partition respects a hierarchical structure of the data.
     """
 
     def __init__(self, data, max_samples=100, clustering="correlation"):
-        """ Build a Partition masker with the given background data and clustering.
+        """Build a Partition masker with the given background data and clustering.
 
         Parameters
         ----------
@@ -295,23 +290,25 @@ class Partition(Tabular):
             `sokalmichener`, `sokalsneath`, `sqeuclidean`, `yule`. These are all
             the options from scipy.spatial.distance.pdist's metric argument.
             If an array, then this is assumed to be the clustering of the features.
+
         """
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
 
 class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking
-    """ This imputes the values of missing features using the values of the observed features.
+    """This imputes the values of missing features using the values of the observed features.
 
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.
     """
 
     def __init__(self, data, method="linear"):
-        """ Build a Partition masker with the given background data and clustering.
+        """Build a Partition masker with the given background data and clustering.
 
         Parameters
         ----------
         data : numpy.ndarray, pandas.DataFrame or {"mean: numpy.ndarray, "cov": numpy.ndarray} dictionary
             The background dataset that is used for masking.
+
         """
         if data is dict and "mean" in data:
             self.mean = data.get("mean", None)

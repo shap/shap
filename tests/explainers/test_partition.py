@@ -1,7 +1,5 @@
-""" This file contains tests for partition explainer.
-"""
+"""This file contains tests for partition explainer."""
 
-# pylint: disable=missing-function-docstring
 import pickle
 
 import shap

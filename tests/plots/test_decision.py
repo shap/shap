@@ -2,13 +2,12 @@ import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
 
-matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
+import shap
 
+matplotlib.use('Agg')
 
 def test_random_decision(random_seed):
-    """ Make sure the decision plot does not crash on random data.
-    """
+    """Make sure the decision plot does not crash on random data."""
     rs = np.random.RandomState(random_seed)
     shap.decision_plot(
         0,

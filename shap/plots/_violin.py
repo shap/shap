@@ -1,10 +1,10 @@
-""" Summary plots of SHAP values (violin plot) across a whole dataset.
-"""
+"""Summary plots of SHAP values (violin plot) across a whole dataset."""
 
 import warnings
 
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 from scipy.stats import gaussian_kde
 
 from ..utils._exceptions import DimensionError
@@ -63,11 +63,9 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
 
     Examples
     --------
-
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
-
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -111,7 +109,7 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
             color = colors.blue_rgb
 
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values

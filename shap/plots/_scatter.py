@@ -3,6 +3,7 @@ import warnings
 import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 
 from .._explanation import Explanation
 from ..utils import approximate_interactions, convert_name
@@ -76,11 +77,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     Examples
     --------
-
     See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
 
     """
-
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # see if we are plotting multiple columns
@@ -172,7 +171,7 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
                         "passing shap_values_arr[0] instead to explain the first output class of a multi-output model.")
 
     # convert from DataFrames if we got any
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
@@ -182,9 +181,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     # allow vectors to be passed
     if len(shap_values_arr.shape) == 1:
-        shap_values_arr = np.reshape(shap_values_arr, len(shap_values_arr), 1)
+        shap_values_arr = np.reshape(shap_values_arr, (len(shap_values_arr), 1))
     if len(features.shape) == 1:
-        features = np.reshape(features, len(features), 1)
+        features = np.reshape(features, (len(features), 1))
 
     ind = convert_name(ind, shap_values_arr, feature_names)
 
@@ -476,7 +475,7 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
                       color="#1E88E5", axis_color="#333333", cmap=None,
                       dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True,
                       ymin=None, ymax=None):
-    """ Create a SHAP dependence plot, colored by an interaction feature.
+    """Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
@@ -537,7 +536,6 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         Represents the upper bound of the plot's y-axis.
 
     """
-
     if cmap is None:
         cmap = colors.red_blue
 
@@ -546,11 +544,11 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
                         "passing shap_values[0] instead to explain the first output class of a multi-output model.")
 
     # convert from DataFrames if we got any
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values
-    if str(type(display_features)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(display_features, pd.DataFrame):
         if feature_names is None:
             feature_names = display_features.columns
         display_features = display_features.values
@@ -562,9 +560,9 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
 
     # allow vectors to be passed
     if len(shap_values.shape) == 1:
-        shap_values = np.reshape(shap_values, len(shap_values), 1)
+        shap_values = np.reshape(shap_values, (len(shap_values), 1))
     if len(features.shape) == 1:
-        features = np.reshape(features, len(features), 1)
+        features = np.reshape(features, (len(features), 1))
 
     ind = convert_name(ind, shap_values, feature_names)
 

@@ -1,18 +1,16 @@
-""" Visualize cumulative SHAP values."""
+"""Visualize cumulative SHAP values."""
 
 from typing import Union
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 
 from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
-
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
@@ -54,8 +52,7 @@ def __decision_plot_matplotlib(
     legend_labels,
     legend_location,
 ):
-    """matplotlib rendering for decision_plot()"""
-
+    """Matplotlib rendering for decision_plot()"""
     # image size
     row_height = 0.4
     if auto_size_plot:
@@ -172,8 +169,7 @@ class DecisionPlotResult:
     """
 
     def __init__(self, base_value, shap_values, feature_names, feature_idx, xlim):
-        """
-        Example
+        """Example
         -------
         Plot two decision plots using the same feature order and x-axis.
         >>> range1, range2 = range(20), range(20, 40)
@@ -344,7 +340,6 @@ def decision(
 
     Examples
     --------
-
     Plot two decision plots using the same feature order and x-axis.
 
         >>> range1, range2 = range(20), range(20, 40)
@@ -354,7 +349,6 @@ def decision(
     See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
-
     # code taken from force_plot. auto unwrap the base_value
     if type(base_value) == np.ndarray and len(base_value) == 1:
         base_value = base_value[0]
@@ -374,11 +368,11 @@ def decision(
     feature_count = shap_values.shape[1]
 
     # code taken from force_plot. convert features from other types.
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns.to_list()
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = features.index.to_list()
         features = features.values
@@ -493,16 +487,16 @@ def decision(
     # throw large data errors
     if not ignore_warnings:
         if observation_count > 2000:
-            raise RuntimeError("Plotting {} observations may be slow. Consider subsampling or set "
-                               "ignore_warnings=True to ignore this message.".format(observation_count))
+            raise RuntimeError(f"Plotting {observation_count} observations may be slow. Consider subsampling or set "
+                               "ignore_warnings=True to ignore this message.")
         if feature_display_count > 200:
-            raise RuntimeError("Plotting {} features may create a very large plot. Set "
+            raise RuntimeError(f"Plotting {feature_display_count} features may create a very large plot. Set "
                                "ignore_warnings=True to ignore this "
-                               "message.".format(feature_display_count))
+                               "message.")
         if feature_count * observation_count > 100000000:
-            raise RuntimeError("Processing SHAP values for {} features over {} observations may be slow. Set "
+            raise RuntimeError(f"Processing SHAP values for {feature_count} features over {observation_count} observations may be slow. Set "
                                "ignore_warnings=True to ignore this "
-                               "message.".format(feature_count, observation_count))
+                               "message.")
 
     # convert values based on link and update x-axis extents
     create_xlim = xlim is None
@@ -586,8 +580,8 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
     -------
     DecisionPlotResult or None
         Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
-    """
 
+    """
     if not (isinstance(base_values, list) and isinstance(shap_values, list)):
         raise ValueError("The base_values and shap_values args expect lists.")
 
@@ -611,7 +605,7 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
         features = kwargs["features"]
         if isinstance(features, np.ndarray) and (features.ndim == 2):
             kwargs["features"] = features[[row_index]]
-        elif str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+        elif isinstance(features, pd.DataFrame):
             kwargs["features"] = features.iloc[row_index]
 
     return decision(base_values_mean, shap_values[:, row_index, :], **kwargs)

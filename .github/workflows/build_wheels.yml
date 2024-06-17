@@ -17,10 +17,12 @@ jobs:
     outputs:
       include: ${{ steps.set-matrix.outputs.include }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install cibuildwheel
       # Nb. keep cibuildwheel version pin consistent with job below
-        run: pipx install cibuildwheel==2.14.0
+        run: pipx install cibuildwheel==2.16.5
+      - name: Print all build identifiers
+        run: cibuildwheel --print-build-identifiers
       - id: set-matrix
         run: |
           MATRIX=$(
@@ -44,8 +46,17 @@ jobs:
         include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
     runs-on: ${{ matrix.os }}
     steps:
+      # Ensure all git tags are present so version number is extracted.
+      # https://github.com/actions/checkout/issues/1471
+      # Careful: the "fetch-tags" option to the checkout action is broken
+      # when the workflow is triggered by a tag!
+      # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
@@ -54,7 +65,7 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.0
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           only: ${{ matrix.only }}
 
@@ -67,11 +78,20 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-20.04
     steps:
+      # Ensure all git tags are present so version number is extracted.
+      # https://github.com/actions/checkout/issues/1471
+      # Careful: the "fetch-tags" option to the checkout action is broken
+      # when the workflow is triggered by a tag!
+      # https://github.com/actions/checkout/issues/1467
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -85,11 +105,10 @@ jobs:
           name: sdist_files
           path: dist/*.tar.gz
 
-  publish_wheels:
-    name: Publish wheels on pypi
+  publish_test_pypi:
+    name: Publish wheels to TestPyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags')
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -106,6 +125,23 @@ jobs:
         with:
           password: ${{ secrets.TEST_PYPI_TOKEN  }}
           repository-url: https://test.pypi.org/legacy/
+
+  publish_pypi:
+    name: Publish wheels to PyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    # Only publish tagged releases to PyPI
+    if: startsWith(github.ref, 'refs/tags')
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: bdist_files
+          path: dist
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: sdist_files
+          path: dist
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

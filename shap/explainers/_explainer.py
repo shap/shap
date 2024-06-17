@@ -1,7 +1,9 @@
 import copy
 import time
+import warnings
 
 import numpy as np
+import pandas as pd
 import scipy.sparse
 
 from .. import explainers, links, maskers, models
@@ -15,7 +17,7 @@ from ..utils.transformers import is_transformers_lm
 
 
 class Explainer(Serializable):
-    """ Uses Shapley values to explain any machine learning model or python function.
+    """Uses Shapley values to explain any machine learning model or python function.
 
     This is the primary explainer interface for the SHAP library. It takes any combination
     of a model and masker and returns a callable subclass object that implements
@@ -24,7 +26,7 @@ class Explainer(Serializable):
 
     def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True,
                  seed=None, **kwargs):
-        """ Build a new explainer for the passed model.
+        """Build a new explainer for the passed model.
 
         Parameters
         ----------
@@ -72,14 +74,15 @@ class Explainer(Serializable):
             seed for reproducibility
 
         """
-
         self.model = model
         self.output_names = output_names
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
-        if safe_isinstance(masker, "pandas.core.frame.DataFrame") or \
-                ((safe_isinstance(masker, "numpy.ndarray") or scipy.sparse.issparse(masker)) and len(masker.shape) == 2):
+        if (
+            isinstance(masker, pd.DataFrame)
+            or ((isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2)
+        ):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
@@ -95,7 +98,7 @@ class Explainer(Serializable):
         elif (masker is dict) and ("mean" in masker):
             self.masker = maskers.Independent(masker)
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
-            return self.__init__( # pylint: disable=non-parent-init-called
+            return self.__init__(
                 self.model, self.model.inner_model.tokenizer,
                 link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
             )
@@ -105,12 +108,12 @@ class Explainer(Serializable):
         # Check for transformer pipeline objects and wrap them
         if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
             if is_transformers_lm(self.model.model):
-                return self.__init__( # pylint: disable=non-parent-init-called
+                return self.__init__(
                     self.model.model, self.model.tokenizer if self.masker is None else self.masker,
                     link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
                 )
             else:
-                return self.__init__( # pylint: disable=non-parent-init-called
+                return self.__init__(
                     models.TransformersPipeline(self.model), self.masker,
                     link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
                 )
@@ -193,18 +196,17 @@ class Explainer(Serializable):
                 self.__class__ = explainers.DeepExplainer
                 explainers.DeepExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
             else:
-                raise InvalidAlgorithmError("Unknown algorithm type passed: %s!" % algorithm)
+                raise InvalidAlgorithmError(f"Unknown algorithm type passed: {algorithm}!")
 
 
     def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
                  outputs=None, silent=False, **kwargs):
-        """ Explains the output of model(*args), where args is a list of parallel iterable datasets.
+        """Explains the output of model(*args), where args is a list of parallel iterable datasets.
 
         Note this default version could be an abstract method that is implemented by each algorithm-specific
         subclass of Explainer. Descriptions of each subclasses' __call__ arguments
         are available in their respective doc-strings.
         """
-
         # if max_evals == "auto":
         #     self._brute_force_fallback
 
@@ -228,11 +230,11 @@ class Explainer(Serializable):
             if num_rows is None:
                 try:
                     num_rows = len(args[i])
-                except Exception: # pylint: disable=broad-except
+                except Exception:
                     pass
 
             # convert DataFrames to numpy arrays
-            if safe_isinstance(args[i], "pandas.core.frame.DataFrame"):
+            if isinstance(args[i], pd.DataFrame):
                 feature_names[i] = list(args[i].columns)
                 args[i] = args[i].to_numpy()
 
@@ -361,7 +363,7 @@ class Explainer(Serializable):
         return out[0] if len(out) == 1 else out
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, outputs, silent, **kwargs):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
 
         This is an abstract method meant to be implemented by each subclass.
 
@@ -373,13 +375,13 @@ class Explainer(Serializable):
             the expected value of the model for each sample (which is the same for all samples unless there
             are fixed inputs present, like labels when explaining the loss), and row_mask_shapes is a list
             of all the input shapes (since the row_values is always flattened),
-        """
 
+        """
         return {}
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
@@ -387,8 +389,12 @@ class Explainer(Serializable):
 
     @staticmethod
     def _compute_main_effects(fm, expected_value, inds):
-        """ A utility method to compute the main effects from a MaskedModel.
-        """
+        """A utility method to compute the main effects from a MaskedModel."""
+        warnings.warn(
+            "This function is not used within the shap library and will therefore be removed in an upcoming release. "
+            "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
+            DeprecationWarning
+        )
 
         # mask each input on in isolation
         masks = np.zeros(2*len(inds)-1, dtype=int)
@@ -410,8 +416,7 @@ class Explainer(Serializable):
         return expanded_main_effects
 
     def save(self, out_file, model_saver=".save", masker_saver=".save"):
-        """ Write the explainer to the given file stream.
-        """
+        """Write the explainer to the given file stream."""
         super().save(out_file)
         with Serializer(out_file, "shap.Explainer", version=0) as s:
             s.save("model", self.model, model_saver)
@@ -420,11 +425,12 @@ class Explainer(Serializable):
 
     @classmethod
     def load(cls, in_file, model_loader=Model.load, masker_loader=Masker.load, instantiate=True):
-        """ Load an Explainer from the given file stream.
+        """Load an Explainer from the given file stream.
 
         Parameters
         ----------
         in_file : The file stream to load objects from.
+
         """
         if instantiate:
             return cls._instantiated_load(in_file, model_loader=model_loader, masker_loader=masker_loader)
@@ -437,9 +443,7 @@ class Explainer(Serializable):
         return kwargs
 
 def pack_values(values):
-    """ Used the clean up arrays before putting them into an Explanation object.
-    """
-
+    """Used the clean up arrays before putting them into an Explanation object."""
     if not hasattr(values, "__len__"):
         return values
 

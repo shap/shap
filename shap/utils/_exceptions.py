@@ -1,6 +1,5 @@
 class DimensionError(Exception):
-    """
-    Used for instances where dimensions are either
+    """Used for instances where dimensions are either
     not supported or cause errors.
     """
 
@@ -17,9 +16,8 @@ class InvalidMaskerError(ValueError):
     pass
 
 class ExplainerError(Exception):
-    """
-    Generic errors related to Explainers
-    """
+    """Generic errors related to Explainers"""
+
     pass
 
 class InvalidAlgorithmError(ValueError):

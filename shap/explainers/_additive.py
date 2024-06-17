@@ -5,7 +5,7 @@ from ._explainer import Explainer
 
 
 class AdditiveExplainer(Explainer):
-    """ Computes SHAP values for generalized additive models.
+    """Computes SHAP values for generalized additive models.
 
     This assumes that the model only has first-order effects. Extending this to
     second- and third-order effects is future work (if you apply this to those models right now
@@ -13,7 +13,7 @@ class AdditiveExplainer(Explainer):
     """
 
     def __init__(self, model, masker, link=None, feature_names=None, linearize_link=True):
-        """ Build an Additive explainer for the given model using the given masker object.
+        """Build an Additive explainer for the given model using the given masker object.
 
         Parameters
         ----------
@@ -21,13 +21,14 @@ class AdditiveExplainer(Explainer):
             A callable python object that executes the model given a set of input data samples.
 
         masker : function or numpy.array or pandas.DataFrame
-            A callable python object used to "mask" out hidden features of the form `masker(mask, *fargs)`.
+            A callable python object used to "mask" out hidden features of the form ``masker(mask, *fargs)``.
             It takes a single a binary mask and an input sample and returns a matrix of masked samples. These
             masked samples are evaluated using the model function and the outputs are then averaged.
             As a shortcut for the standard masking used by SHAP you can pass a background data matrix
             instead of a function and that matrix will be used for masking. To use a clustering
-            game structure you can pass a shap.maskers.Tabular(data, hclustering=\"correlation\") object, but
+            game structure you can pass a ``shap.maskers.Tabular(data, hclustering="correlation")`` object, but
             note that this structure information has no effect on the explanations of additive models.
+
         """
         super().__init__(model, masker, feature_names=feature_names, linearize_link=linearize_link)
 
@@ -64,16 +65,14 @@ class AdditiveExplainer(Explainer):
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
     def __call__(self, *args, max_evals=None, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iterable args.
-        """
-
+        """Explains the output of model(*args), where args represents one or more parallel iterable args."""
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
         return super().__call__(*args, max_evals=max_evals, silent=silent)
 
     @staticmethod
     def supports_model_with_masker(model, masker):
-        """ Determines if this explainer can handle the given model.
+        """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
@@ -85,9 +84,7 @@ class AdditiveExplainer(Explainer):
         return False
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         x = row_args[0]
         inputs = np.zeros((len(x), len(x)))
         for i in range(len(x)):
@@ -133,9 +130,7 @@ class AdditiveExplainer(Explainer):
 #             raise ValueError("The passed model must be a recognized object or a function!")
 
 #         # convert dataframes
-#         if safe_isinstance(data, "pandas.core.series.Series"):
-#             data = data.values
-#         elif safe_isinstance(data, "pandas.core.frame.DataFrame"):
+#         if isinstance(data, (pd.Series, pd.DataFrame)):
 #             data = data.values
 #         self.data = data
 
@@ -169,20 +164,15 @@ class AdditiveExplainer(Explainer):
 #         """
 
 #         # convert dataframes
-#         if str(type(X)).endswith("pandas.core.series.Series'>"):
-#             X = X.values
-#         elif str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+#         if isinstance(X, (pd.Series, pd.DataFrame)):
 #             X = X.values
 
-#         #assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+#         # assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
 #         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
 #         # convert dataframes
-#         if safe_isinstance(X, "pandas.core.series.Series"):
+#         if isinstance(X, (pd.Series, pd.DataFrame)):
 #             X = X.values
-#         elif safe_isinstance(X, "pandas.core.frame.DataFrame"):
-#             X = X.values
-
 
 #         phi = np.zeros(X.shape)
 #         tmp = np.zeros(X.shape)

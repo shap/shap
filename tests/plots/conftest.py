@@ -13,8 +13,7 @@ def close_matplotlib_plots_after_tests():
 
 @pytest.fixture()
 def explainer():
-    """ A simple explainer to be used as a test fixture.
-    """
+    """A simple explainer to be used as a test fixture."""
     xgboost = pytest.importorskip('xgboost')
     # get a dataset on income prediction
     X, y = shap.datasets.adult()

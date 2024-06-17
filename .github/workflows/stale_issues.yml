@@ -1,0 +1,59 @@
+name: 'Close stale issues and PRs'
+# See CONTIBUTING.md : "Issue Triage"
+# See also: https://github.com/shap/shap/discussions/3051
+
+on:
+  schedule:
+    # Run at 2:30 AM every day
+    - cron: '30 2 * * *'
+  # Enable manual run
+  workflow_dispatch:
+
+permissions:
+  actions: write  # Workaround for https://github.com/actions/stale/issues/1090
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # See discussion on generous time limits:
+          # https://github.com/shap/shap/discussions/3051
+          days-before-stale: 730  # 2 years
+          days-before-close: 90   # 3 months
+          stale-issue-message: "This issue has been inactive for two years, so it's
+            been automatically marked as 'stale'.
+            \n\n
+            We value your input! If this issue is still relevant, please leave a
+            comment below. This will remove the 'stale' label and keep it open.
+            \n\n
+            If there's no activity in the next 90 days the issue will be closed."
+          stale-pr-message: "We appreciate your contribution! This Pull Request has
+            been inactive for two years, so it's been automatically marked as 'stale'.
+            \n\n
+            Please leave a comment if you would still like the PR to remain open, and
+            the 'stale' label will be removed.
+            \n\n
+            Otherwise, if there is no activity in the next 90 days the PR will be
+            closed."
+          close-issue-message: "This issue has been automatically closed due to lack of
+            recent activity.
+            \n\n
+            Your input is important to us! Please feel free to open a new issue if the
+            problem persists or becomes relevant again."
+          close-pr-message: "This PR has been automatically closed due to a lack of
+            recent activity.
+            \n\n
+            We welcome your contributions! If your patch is still relevant, please
+            don't hesitate to open a new PR."
+          stale-issue-label: stale
+          stale-pr-label: stale
+          # If an issue or PR is marked with the "todo" label, never mark it as stale.
+          exempt-issue-labels: todo
+          exempt-pr-labels: todo
+          operations-per-run: 500
+          # Process the oldest issues first:
+          ascending: true

@@ -1,7 +1,5 @@
-""" Unit tests for the Permutation explainer.
-"""
+"""Unit tests for the Permutation explainer."""
 
-# pylint: disable=missing-function-docstring
 import pickle
 
 import numpy as np
@@ -12,8 +10,7 @@ from . import common
 
 
 def test_exact_second_order(random_seed):
-    """ This tests that the Perumtation explain gives exact answers for second order functions.
-    """
+    """This tests that the Perumtation explain gives exact answers for second order functions."""
     rs = np.random.RandomState(random_seed)
     data = rs.randint(0, 2, size=(100,5))
     def model(data):

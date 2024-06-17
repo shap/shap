@@ -1,9 +1,9 @@
-"""
-This module is a pure python implementation of Tree SHAP.
+"""This module is a pure python implementation of Tree SHAP.
 It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implementation.
 """
 import numpy as np
+import pandas as pd
 
 #import numba
 from ..utils._exceptions import ExplainerError
@@ -39,12 +39,10 @@ from ..utils._exceptions import ExplainerError
 #             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
 #         # convert dataframes
-#         if str(type(X)).endswith("pandas.core.series.Series'>"):
-#             X = X.values
-#         elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+#         if isinstance(X, (pd.Series, pd.DataFrame)):
 #             X = X.values
 
-#         assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+#         assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
 #         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
 #         n_outputs = self.trees[0].values.shape[1]
@@ -137,8 +135,7 @@ from ..utils._exceptions import ExplainerError
 
 
 class TreeExplainer:
-    """ A pure Python (slow) implementation of Tree SHAP.
-    """
+    """A pure Python (slow) implementation of Tree SHAP."""
 
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
@@ -180,12 +177,10 @@ class TreeExplainer:
             return self.trees.predict(X, num_iteration=tree_limit, pred_contrib=True)
 
         # convert dataframes
-        if str(type(X)).endswith("pandas.core.series.Series'>"):
-            X = X.values
-        elif str(type(X)).endswith("pandas.core.frame.DataFrame'>"):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
             X = X.values
 
-        assert str(type(X)).endswith("'numpy.ndarray'>"), "Unknown instance type: " + str(type(X))
+        assert isinstance(X, np.ndarray), "Unknown instance type: " + str(type(X))
         assert len(X.shape) == 1 or len(X.shape) == 2, "Instance must have 1 or 2 dimensions!"
 
         n_outputs = self.trees[0].values.shape[1]

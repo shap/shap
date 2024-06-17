@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "oldest-supported-numpy", "packaging>20.9"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "oldest-supported-numpy", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,7 @@ license = {text = "MIT License"}
 authors = [
   {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
   'numpy',
   'scipy',
@@ -18,7 +18,7 @@ dependencies = [
   'pandas',
   'tqdm>=4.27.0',
   'packaging>20.9',
-  'slicer==0.0.7',
+  'slicer==0.0.8',
   'numba',
   'cloudpickle'
 ]
@@ -27,10 +27,10 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
@@ -47,10 +47,11 @@ docs = [
   "matplotlib",
   "ipython",
   "numpydoc",
-  "sphinx_rtd_theme==1.2.2",
-  "sphinx==6.2.1",
-  "nbsphinx==0.9.2",
+  "sphinx_rtd_theme==2.0.0",
+  "sphinx==7.2.6",
+  "nbsphinx==0.9.3",
   "sphinx_github_changelog==1.2.1",
+  "myst-parser==2.0.0",
   "requests",
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov"]
@@ -62,16 +63,28 @@ test = [
   "lightgbm",
   "catboost",
   "gpboost",
-  "ngboost;python_version<'3.11'",  # FIXME: pending py3.11 support
+  "ngboost",
   "pyspark",
   "pyod",
   "transformers",
+  "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
-  "torch",
+  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
+  "torch; sys_platform != 'darwin'",
   "torchvision",
   "tensorflow",
   "sentencepiece",
   "opencv-python",
+]
+
+test_notebooks = [
+  "jupyter",
+  "nbconvert",
+  "nbformat",
+  "nlp",
+  "transformers",
+  "datasets",
+  "keras",
 ]
 
 [project.urls]
@@ -95,13 +108,11 @@ packages = [
   'shap.actions',
   'shap.models'
 ]
-zip-safe = false
 
-[tool.setuptools.dynamic]
-version = {attr = "shap.__version__"}
-
-[tool.setuptools.package-data]
-shap = ["plots/resources/*", "cext/*"]
+[tool.setuptools_scm]
+version_file = "shap/_version.py"
+# Use "no-local-version" so dev releases are compatibile with PyPI
+local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
 addopts = "--mpl"
@@ -113,35 +124,63 @@ filterwarnings = [
 ]
 
 [tool.ruff]
+# Careful: when running on pre-commit, ruff's "include" and "exclude" config
+# options are ignored! So, instead of "exclude", use the "per-file-ignores"
+# config to always disable linting for specific files.
+include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+extend-exclude = ["**/tree_shap_paper/**", "docs/user_studies/*"]
+
+[tool.ruff.lint]
 select = [
   "F",  # pyflakes
   "I",  # isort
   "UP",  # pyupgrade
   "E",  # pycodestyle
   "W",  # warning
+  "D",  # pydocstyle
+  # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
-  # Aim to progressively fix address these codes over time
+  # Recommended rules to disable when using ruff formatter:
+  "E117",  # Over-indented
   "E501",  # Line too long
-  "E741",  # Ambiguous variable name: `l`
-  "E402",  # Module level import not at top of file
-  "UP032",  # Use f-string instead of `format` call
+
+  # pydocstyle issues not yet fixed
+  "D100",  # Missing docstring in public module
+  "D101",  # Missing docstring in public class
+  "D102",  # Missing docstring in public method
+  "D103",  # Missing docstring in public function
+  "D104",  # Missing docstring in public package
+  "D105",  # Missing docstring in magic method
+  "D205",  # 1 blank line required between summary line and description
+  "D400",  # First line should end with a period
+  "D401",  # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
+  "D404",  # First word of the docstring should not be "This"
 ]
 
-# Careful: when running on pre-commit, ruff's "include" and "exclude" config
-# options are ignored! So, use the "per-file-ignores" config to disable linting
-# for specific files.
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
 "shap/plots/colors/_colorconv.py" = ["ALL"]
+
+# Ignore notebooks in user_studies, which are not maintained
+"docs/user_studies/*.ipynb" = ["ALL"]
 
 # Ignore SHAP Paper, as it is an unmaintained record of a published paper
 "notebooks/tabular_examples/tree_based_models/tree_shap_paper/*"  = ["ALL"]
 
 # Disable some unwanted rules on Jupyter notebooks
-"*.ipynb" = ["E703"]  # Trailing semicolons, used to supress outputs
+"*.ipynb" = ["D", "E703", "E402"]  # Allow trailing semicolons, allow imports not at top
+
+# Ignore pycodestyle in tests
+"tests/*py" = ["D"]
+
+[tool.ruff.format]
+# For now, only Jupyter notebooks are autoformatted.
+exclude = ["**.py"]
 
 [tool.coverage.run]
 source_pkgs = ["shap"]

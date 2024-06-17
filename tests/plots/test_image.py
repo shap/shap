@@ -1,29 +1,25 @@
 import matplotlib
 import numpy as np
 
+import shap
+
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
 
 
 def test_random_single_image():
-    """ Just make sure the image_plot function doesn't crash.
-    """
-
+    """Just make sure the image_plot function doesn't crash."""
     shap.image_plot(np.random.randn(3, 20, 20), np.random.randn(3, 20, 20), show=False)
 
 def test_random_multi_image():
-    """ Just make sure the image_plot function doesn't crash.
-    """
-
+    """Just make sure the image_plot function doesn't crash."""
     shap.image_plot([np.random.randn(3, 20, 20) for i in range(3)], np.random.randn(3, 20, 20), show=False)
 
 def test_image_to_text_single():
-    """ Just make sure the image_to_text function doesn't crash.
-    """
+    """Just make sure the image_to_text function doesn't crash."""
 
-    class MockImageExplanation: # pylint: disable=too-few-public-methods
-        """ Fake explanation object.
-        """
+    class MockImageExplanation:
+        """Fake explanation object."""
+
         def __init__(self, data, values, output_names):
             self.data = data
             self.values = values

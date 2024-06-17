@@ -9,17 +9,15 @@ import numpy as np
 log = logging.getLogger('shap')
 
 class Serializable:
-    """ This is the superclass of all serializable objects.
-    """
+    """This is the superclass of all serializable objects."""
 
     def save(self, out_file):
-        """ Save the model to the given file stream.
-        """
+        """Save the model to the given file stream."""
         pickle.dump(type(self), out_file)
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ This is meant to be overridden by subclasses and called with super.
+        """This is meant to be overridden by subclasses and called with super.
 
         We return constructor argument values when not being instantiated. Since there are no
         constructor arguments for the Serializable class we just return an empty dictionary.
@@ -30,7 +28,7 @@ class Serializable:
 
     @classmethod
     def _instantiated_load(cls, in_file, **kwargs):
-        """ This is meant to be overridden by subclasses and called with super.
+        """This is meant to be overridden by subclasses and called with super.
 
         We return constructor argument values (we have no values to load in this abstract class).
         """
@@ -48,8 +46,8 @@ class Serializable:
 
 
 class Serializer:
-    """ Save data items to an input stream.
-    """
+    """Save data items to an input stream."""
+
     def __init__(self, out_stream, block_name, version):
         self.out_stream = out_stream
         self.block_name = block_name
@@ -70,8 +68,7 @@ class Serializer:
         pickle.dump("END_BLOCK___", self.out_stream)
 
     def save(self, name, value, encoder="auto"):
-        """ Dump a data item to the current input stream.
-        """
+        """Dump a data item to the current input stream."""
         log.debug("name = %s", name)
         pickle.dump(name, self.out_stream)
         if encoder is None or encoder is False:
@@ -102,8 +99,7 @@ class Serializer:
         log.debug("value = %s", str(value))
 
 class Deserializer:
-    """ Load data items from an input stream.
-    """
+    """Load data items from an input stream."""
 
     def __init__(self, in_stream, block_name, min_version, max_version):
         self.in_stream = in_stream
@@ -168,8 +164,7 @@ class Deserializer:
         )
 
     def load(self, name, decoder=None):
-        """ Load a data item from the current input stream.
-        """
+        """Load a data item from the current input stream."""
         # confirm the block name
         loaded_name = pickle.load(self.in_stream)
         log.debug("loaded_name = %s", loaded_name)

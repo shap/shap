@@ -5,13 +5,14 @@ from tqdm.auto import tqdm
 
 from shap import Explanation, links
 from shap.maskers import FixedComposite, Image, Text
-from shap.utils import MaskedModel, partition_tree_shuffle, safe_isinstance
+from shap.utils import MaskedModel, partition_tree_shuffle
+from shap.utils._exceptions import DimensionError
 
 from ._result import BenchmarkResult
 
 
 class ExplanationError:
-    """ A measure of the explanation error relative to a model's actual output.
+    """A measure of the explanation error relative to a model's actual output.
 
     This benchmark metric measures the discrepancy between the output of the model predicted by an
     attribution explanation vs. the actual output of the model. This discrepancy is measured over
@@ -26,7 +27,7 @@ class ExplanationError:
     """
 
     def __init__(self, masker, model, *model_args, batch_size=500, num_permutations=10, link=links.identity, linearize_link=True, seed=38923):
-        """ Build a new explanation error benchmarker with the given masker, model, and model args.
+        """Build a new explanation error benchmarker with the given masker, model, and model args.
 
         Parameters
         ----------
@@ -57,8 +58,8 @@ class ExplanationError:
         linearize_link : bool
             Non-linear links can destroy additive separation in generalized linear models, so by linearizing the link we can
             retain additive separation. See upcoming paper/doc for details.
-        """
 
+        """
         self.masker = masker
         self.model = model
         self.model_args = model_args
@@ -79,18 +80,20 @@ class ExplanationError:
             self.data_type = "tabular"
 
     def __call__(self, explanation, name, step_fraction=0.01, indices=[], silent=False):
-        """ Run this benchmark on the given explanation.
-        """
-
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        """Run this benchmark on the given explanation."""
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
         else:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
-        assert len(attributions) == len(self.model_args[0]), "The explanation passed must have the same number of rows as " + \
-                                                             "the self.model_args that were passed!"
+        if len(attributions) != len(self.model_args[0]):
+            emsg = (
+                "The explanation passed must have the same number of rows as "
+                "the self.model_args that were passed!"
+            )
+            raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise
@@ -148,8 +151,8 @@ class ExplanationError:
                     values.append(masked_model(masks_arr[j:j + self.batch_size]))
                 values = np.concatenate(values)
                 base_value = values[0]
-                for l, v in enumerate(values):
-                    values[l] = (v - (base_value + np.sum(sample_attributions[masks_arr[l]])))**2
+                for j, v in enumerate(values):
+                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]])))**2
 
                 if total_values is None:
                     total_values = values

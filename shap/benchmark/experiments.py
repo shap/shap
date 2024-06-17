@@ -320,7 +320,7 @@ def __print_status():
 
 
 def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
-    """ Use ssh to run the experiments on remote machines in parallel.
+    """Use ssh to run the experiments on remote machines in parallel.
 
     Parameters
     ----------
@@ -333,8 +333,8 @@ def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
 
     rate_limit : int
         How many ssh connections we make per minute to each host (to avoid throttling issues).
-    """
 
+    """
     global ssh_conn_per_min_limit
     ssh_conn_per_min_limit = rate_limit
 
@@ -387,13 +387,12 @@ def __run_remote_experiment(experiment, remote, cache_dir="/tmp", python_binary=
 
     # run the benchmark on the remote machine
     #start = time.time()
-    cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+" -c \"import shap; shap.benchmark.run_experiment(['{}', '{}', '{}', '{}'], cache_dir='{}')\" &> {}/{}.output".format(
-        dataset_name, model_name, method_name, metric_name, cache_dir, cache_dir, cache_id
-    )
+    func = f"shap.benchmark.run_experiment(['{dataset_name}', '{model_name}', '{method_name}', '{metric_name}'], cache_dir='{cache_dir}')"
+    cmd = "CUDA_VISIBLE_DEVICES=\"\" "+python_binary+f" -c \"import shap; {func}\" &> {cache_dir}/{cache_id}.output"
     try:
         subprocess.check_output(["ssh", remote, cmd])
     except subprocess.CalledProcessError as e:
-        print("The following command failed on %s:" % remote, file=sys.stderr)
+        print(f"The following command failed on {remote}:", file=sys.stderr)
         print(cmd, file=sys.stderr)
         total_failed += 1
         print(e)

@@ -1,12 +1,12 @@
 import warnings
 
 import numpy as np
+import pandas as pd
 import scipy.cluster
 import scipy.spatial
 import sklearn
 from numba import njit
 
-from ._general import safe_isinstance
 from ._show_progress import show_progress
 
 
@@ -17,18 +17,17 @@ def partition_tree(X, metric="correlation"):
 
 
 def partition_tree_shuffle(indexes, index_mask, partition_tree):
-    """ Randomly shuffle the indexes in a way that is consistent with the given partition tree.
+    """Randomly shuffle the indexes in a way that is consistent with the given partition tree.
 
     Parameters
     ----------
     indexes: np.array
         The output location of the indexes we want shuffled. Note that len(indexes) should equal index_mask.sum().
-
     index_mask: np.array
         A bool mask of which indexes we want to include in the shuffled list.
-
     partition_tree: np.array
         The partition tree we should follow.
+
     """
     M = len(index_mask)
     #switch = np.random.randn(M) < 0
@@ -81,16 +80,14 @@ def _mask_delta_score(m1, m2):
 
 
 def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
-    """ A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar.
-    """
-
+    """A leaf ordering is under-defined, this picks the ordering that keeps nearby samples similar."""
     # compute a hierarchical clustering and return the optimal leaf ordering
     D = scipy.spatial.distance.pdist(X, metric)
     cluster_matrix = scipy.cluster.hierarchy.complete(D)
     return scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
 
 def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
-    """ Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
+    """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
     predicting the output of these models using univariate XGBoost models of other features. If one
@@ -99,7 +96,6 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
     proportion of variance explained). Note these distances are not symmetric.
     """
-
     import xgboost
 
     # pick our train/text split
@@ -140,12 +136,47 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     return dist
 
 def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
-    if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+    """Fit a hierarcical clustering model for features X relative to target variable y.
+
+    For more information on clutering methods see:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+
+    Parameters
+    ----------
+    X: np.array
+        Features to cluster
+    y: np.array | None
+        Target variable
+    linkage: str
+        Defines the method to calculate the distance between clusters. Must be
+        one of "single", "complete" or "average".
+    metric: str
+        Scipy distance metric or "xgboost_distances_r2".
+
+        * If "xgboost_distances_r2", estimate redundancy distances between
+          features X with respect to target variable y using
+          :func:`shap.utils.xgboost_distances_r2`.
+        * Otherwise, calculate distances between features using the given
+          distance metric.
+        * If ``auto`` (default), use ``xgboost_distances_r2`` if target variable
+          is provided, or else ``cosine`` distance metric.
+    random_state: int
+        Numpy random state
+
+    Returns
+    -------
+    clustering: np.array
+        The hierarchical clustering encoded as a linkage matrix.
+
+    """
+    if isinstance(X, pd.DataFrame):
         X = X.values
 
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
+        else:
+            metric = "cosine"
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
@@ -169,7 +200,7 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     else:
         if y is not None:
             warnings.warn("Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!")
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             bg_no_nan = X.values.copy()
         else:
             bg_no_nan = X.copy()

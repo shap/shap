@@ -15,7 +15,7 @@ tf_execute = None
 tf_gradients_impl = None
 
 def custom_record_gradient(op_name, inputs, attrs, results):
-    """ This overrides tensorflow.python.eager.backprop._record_gradient.
+    """This overrides tensorflow.python.eager.backprop._record_gradient.
 
     We need to override _record_gradient in order to get gradient backprop to
     get called for ResourceGather operations. In order to make this work we
@@ -38,14 +38,13 @@ def custom_record_gradient(op_name, inputs, attrs, results):
     return out
 
 class TFDeep(Explainer):
-    """
-    Using tf.gradients to implement the backpropagation was
+    """Using tf.gradients to implement the backpropagation was
     inspired by the gradient-based implementation approach proposed by Ancona et al, ICLR 2018. Note
     that this package does not currently use the reveal-cancel rule for ReLu units proposed in DeepLIFT.
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
-        """ An explainer object for a deep model using a given background dataset.
+        """An explainer object for a deep model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
@@ -85,10 +84,10 @@ class TFDeep(Explainer):
             from tensorflow.python.eager import backprop as tf_backprop
             from tensorflow.python.eager import execute as tf_execute
             from tensorflow.python.framework import (
-                ops as tf_ops,  # pylint: disable=E0611
+                ops as tf_ops,
             )
             from tensorflow.python.ops import (
-                gradients_impl as tf_gradients_impl,  # pylint: disable=E0611
+                gradients_impl as tf_gradients_impl,
             )
             if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
                 from tensorflow.python.ops import gradients_util as tf_gradients_impl
@@ -170,9 +169,13 @@ class TFDeep(Explainer):
         if not self.multi_output:
             self.phi_symbolics = [None]
         else:
-            noutputs = self.model_output.shape.as_list()[1]
+            model_output_shape = self.model_output.shape
+            if isinstance(model_output_shape, tuple):
+                noutputs = model_output_shape[1]
+            else:
+                noutputs = model_output_shape.as_list()[1]
             if noutputs is not None:
-                self.phi_symbolics = [None for i in range(noutputs)]
+                self.phi_symbolics = [None for _ in range(noutputs)]
             else:
                 raise DimensionError("The model output tensor to be explained cannot have a static shape in dim 1 of None!")
 
@@ -216,8 +219,7 @@ class TFDeep(Explainer):
             self.used_types[op.type] = True
 
     def _variable_inputs(self, op):
-        """ Return which inputs of this operation are variable (i.e. depend on the model inputs).
-        """
+        """Return which inputs of this operation are variable (i.e. depend on the model inputs)."""
         if op not in self._vinputs:
             out = np.zeros(len(op.inputs), dtype=bool)
             for i,t in enumerate(op.inputs):
@@ -226,8 +228,7 @@ class TFDeep(Explainer):
         return self._vinputs[op]
 
     def phi_symbolic(self, i):
-        """ Get the SHAP value computation graph for a given model output.
-        """
+        """Get the SHAP value computation graph for a given model output."""
         if self.phi_symbolics[i] is None:
 
             if not tf.executing_eagerly():
@@ -237,21 +238,36 @@ class TFDeep(Explainer):
 
                 self.phi_symbolics[i] = self.execute_with_overridden_gradients(anon)
             else:
-                @tf.function
-                def grad_graph(shap_rAnD):
-                    phase = tf.keras.backend.learning_phase()
-                    tf.keras.backend.set_learning_phase(0)
+                if version.parse(tf.__version__) < version.parse("2.16.0"):
+                    # TODO: set a deprecation warning for this
+                    @tf.function
+                    def grad_graph(shap_rAnD):
+                        phase = tf.keras.backend.learning_phase()
+                        tf.keras.backend.set_learning_phase(0)
 
-                    with tf.GradientTape(watch_accessed_variables=False) as tape:
-                        tape.watch(shap_rAnD)
-                        out = self.model(shap_rAnD)
-                        if self.multi_output:
-                            out = out[:,i]
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(shap_rAnD)
+                            out = self.model(shap_rAnD)
+                            if self.multi_output:
+                                out = out[:,i]
 
-                    self._init_between_tensors(out.op, shap_rAnD)
-                    x_grad = tape.gradient(out, shap_rAnD)
-                    tf.keras.backend.set_learning_phase(phase)
-                    return x_grad
+                        self._init_between_tensors(out.op, shap_rAnD)
+                        x_grad = tape.gradient(out, shap_rAnD)
+                        tf.keras.backend.set_learning_phase(phase)
+                        return x_grad
+
+                else:
+                    @tf.function
+                    def grad_graph(shap_rAnD):
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(shap_rAnD)
+                            out = self.model(shap_rAnD, training=False)
+                            if self.multi_output:
+                                out = out[:,i]
+
+                        self._init_between_tensors(out.op, shap_rAnD)
+                        x_grad = tape.gradient(out, shap_rAnD)
+                        return x_grad
 
                 self.phi_symbolics[i] = grad_graph
 
@@ -261,7 +277,7 @@ class TFDeep(Explainer):
         # check if we have multiple inputs
         if not self.multi_input:
             if isinstance(X, list) and len(X) != 1:
-                assert False, "Expected a single tensor as model input!"
+                raise ValueError("Expected a single tensor as model input!")
             elif not isinstance(X, list):
                 X = [X]
         else:
@@ -282,7 +298,8 @@ class TFDeep(Explainer):
             elif output_rank_order == "max_abs":
                 model_output_ranks = np.argsort(np.abs(model_output_values))
             else:
-                assert False, "output_rank_order must be max, min, or max_abs!"
+                emsg = "output_rank_order must be max, min, or max_abs!"
+                raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:,:ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.phi_symbolics)), (X[0].shape[0], 1))
@@ -295,25 +312,25 @@ class TFDeep(Explainer):
                 phis.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
                 if (hasattr(self.data, '__call__')):
-                    bg_data = self.data([X[l][j] for l in range(len(X))])
+                    bg_data = self.data([X[t][j] for t in range(len(X))])
                     if not isinstance(bg_data, list):
                         bg_data = [bg_data]
                 else:
                     bg_data = self.data
 
                 # tile the inputs to line up with the background data samples
-                tiled_X = [np.tile(X[l][j:j+1], (bg_data[l].shape[0],) + tuple([1 for k in range(len(X[l].shape)-1)])) for l in range(len(X))]
+                tiled_X = [np.tile(X[t][j:j+1], (bg_data[t].shape[0],) + tuple([1 for k in range(len(X[t].shape)-1)])) for t in range(len(X))]
 
                 # we use the first sample for the current sample and the rest for the references
-                joint_input = [np.concatenate([tiled_X[l], bg_data[l]], 0) for l in range(len(X))]
+                joint_input = [np.concatenate([tiled_X[t], bg_data[t]], 0) for t in range(len(X))]
 
                 # run attribution computation graph
                 feature_ind = model_output_ranks[j,i]
                 sample_phis = self.run(self.phi_symbolic(feature_ind), self.model_inputs, joint_input)
 
                 # assign the attributions to the right part of the output arrays
-                for l in range(len(X)):
-                    phis[l][j] = (sample_phis[l][bg_data[l].shape[0]:] * (X[l][j] - bg_data[l])).mean(0)
+                for t in range(len(X)):
+                    phis[t][j] = (sample_phis[t][bg_data[t].shape[0]:] * (X[t][j] - bg_data[t])).mean(0)
 
             output_phis.append(phis[0] if not self.multi_input else phis)
 
@@ -326,16 +343,21 @@ class TFDeep(Explainer):
 
             _check_additivity(self, model_output, output_phis)
 
-        if not self.multi_output:
-            return output_phis[0]
-        elif ranked_outputs is not None:
+        if isinstance(output_phis, list):
+            # in this case we have multiple inputs and potentially multiple outputs
+            if isinstance(output_phis[0], list):
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
+                               for i in range(len(output_phis[0]))]
+            # multiple outputs case
+            else:
+                output_phis = np.stack(output_phis, axis=-1)
+        if ranked_outputs is not None:
             return output_phis, model_output_ranks
         else:
             return output_phis
 
     def run(self, out, model_inputs, X):
-        """ Runs the model while also setting the learning phase flags to False.
-        """
+        """Runs the model while also setting the learning phase flags to False."""
         if not tf.executing_eagerly():
             feed_dict = dict(zip(model_inputs, X))
             for t in self.learning_phase_flags:
@@ -363,8 +385,7 @@ class TFDeep(Explainer):
             return self.execute_with_overridden_gradients(anon)
 
     def custom_grad(self, op, *grads):
-        """ Passes a gradient op creation request to the correct handler.
-        """
+        """Passes a gradient op creation request to the correct handler."""
         type_name = op.type[5:] if op.type.startswith("shap_") else op.type
         out = op_handlers[type_name](self, op, *grads) # we cut off the shap_ prefix before the lookup
         return out
@@ -415,7 +436,7 @@ class TFDeep(Explainer):
             return [v.numpy() for v in out]
 
 def tensors_blocked_by_false(ops):
-    """ Follows a set of ops assuming their value is False and find blocked Switch paths.
+    """Follows a set of ops assuming their value is False and find blocked Switch paths.
 
     This is used to prune away parts of the model graph that are only used during the training
     phase (like dropout, batch norm, etc.).
@@ -460,7 +481,7 @@ def forward_walk_ops(start_ops, tensor_blacklist, op_type_blacklist, within_ops)
 
 
 def softmax(explainer, op, *grads):
-    """ Just decompose softmax into its components and recurse, we can handle all of them :)
+    """Just decompose softmax into its components and recurse, we can handle all of them :)
 
     We assume the 'axis' is the last dimension because the TF codebase swaps the 'axis' to
     the last dimension before the softmax op if 'axis' is not already the last dimension.
@@ -546,7 +567,8 @@ def gather(explainer, op, *grads):
             op.type = op.type[5:]
         return [explainer.orig_grads[op.type](op, grads[0]), None] # linear in this case
     else:
-        assert False, "Axis not yet supported to be varying for gather op!"
+        raise ValueError("Axis not yet supported to be varying for gather op!")
+
 
 def linearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
     def handler(explainer, op, *grads):
@@ -608,7 +630,9 @@ def nonlinearity_1d_handler(input_ind, explainer, op, *grads):
     return out
 
 def nonlinearity_2d_handler(input_ind0, input_ind1, op_func, explainer, op, *grads):
-    assert input_ind0 == 0 and input_ind1 == 1, "TODO: Can't yet handle double inputs that are not first!"
+    if not (input_ind0 == 0 and input_ind1 == 1):
+        emsg = "TODO: Can't yet handle double inputs that are not first!"
+        raise Exception(emsg)
     xout,rout = tf.split(op.outputs[0], 2)
     in0 = op.inputs[input_ind0]
     in1 = op.inputs[input_ind1]
@@ -673,7 +697,7 @@ def passthrough(explainer, op, *grads):
     return explainer.orig_grads[op.type](op, *grads)
 
 def break_dependence(explainer, op, *grads):
-    """ This function name is used to break attribution dependence in the graph traversal.
+    """This function name is used to break attribution dependence in the graph traversal.
 
     These operation types may be connected above input data values in the graph but their outputs
     don't depend on the input values (for example they just depend on the shape).
@@ -692,6 +716,7 @@ op_handlers["Pack"] = passthrough
 op_handlers["BiasAdd"] = passthrough
 op_handlers["Unpack"] = passthrough
 op_handlers["Add"] = passthrough
+op_handlers["AddV2"] = passthrough
 op_handlers["Sub"] = passthrough
 op_handlers["Merge"] = passthrough
 op_handlers["Sum"] = passthrough
@@ -725,6 +750,7 @@ op_handlers["FusedBatchNorm"] = linearity_1d(0)
 
 # ops that are nonlinear and only allow a single input to vary
 op_handlers["Relu"] = nonlinearity_1d(0)
+op_handlers["Selu"] = nonlinearity_1d(0)
 op_handlers["Elu"] = nonlinearity_1d(0)
 op_handlers["Sigmoid"] = nonlinearity_1d(0)
 op_handlers["Tanh"] = nonlinearity_1d(0)

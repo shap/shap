@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from .._explanation import Explanation
-from ..utils import safe_isinstance
+from ..utils._exceptions import ExplainerError
 from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ._kernel import KernelExplainer
 
@@ -37,6 +37,7 @@ class SamplingExplainer(KernelExplainer):
         we would approximate a feature being missing by setting it to zero. Unlike the
         KernelExplainer, this data can be the whole training set, even if that is a large set. This
         is because SamplingExplainer only samples from this background dataset.
+
     """
 
     def __init__(self, model, data, **kwargs):
@@ -46,11 +47,13 @@ class SamplingExplainer(KernelExplainer):
         super().__init__(model, data, **kwargs)
         log.setLevel(level)
 
-        assert str(self.link) == "identity", "SamplingExplainer only supports the identity link not " + str(self.link)
+        if str(self.link) != "identity":
+            emsg = f"SamplingExplainer only supports the identity link, not {self.link}"
+            raise ValueError(emsg)
 
     def __call__(self, X, y=None, nsamples=2000):
 
-        if safe_isinstance(X, "pandas.core.frame.DataFrame"):
+        if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
             X = X.values
         else:
@@ -67,7 +70,9 @@ class SamplingExplainer(KernelExplainer):
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
 
-        assert len(self.data.groups) == self.P, "SamplingExplainer does not support feature groups!"
+        if len(self.data.groups) != self.P:
+            emsg = "SamplingExplainer does not support feature groups!"
+            raise ExplainerError(emsg)
 
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model
@@ -178,7 +183,7 @@ class SamplingExplainer(KernelExplainer):
         X_masked = self.X_masked[:nsamples * 2,:]
         inds = np.arange(X.shape[1])
 
-        for i in range(0, nsamples):
+        for i in range(nsamples):
             np.random.shuffle(inds)
             pos = np.where(inds == j)[0][0]
             rind = np.random.randint(X.shape[0])

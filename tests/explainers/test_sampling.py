@@ -1,7 +1,5 @@
-""" Unit tests for the Sampling explainer.
-"""
+"""Unit tests for the Sampling explainer."""
 
-# pylint: disable=missing-function-docstring
 import numpy as np
 import pytest
 

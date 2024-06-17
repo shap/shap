@@ -18,9 +18,6 @@ from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
 
-# .shape[0] messes up pylint a lot here
-# pylint: disable=unsubscriptable-object
-
 
 def image(shap_values: Explanation or np.ndarray,
           pixel_values: Optional[np.ndarray] = None,
@@ -67,11 +64,9 @@ def image(shap_values: Explanation or np.ndarray,
 
     Examples
     --------
-
     See `image plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/image.html>`_.
 
     """
-
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -181,7 +176,7 @@ def image(shap_values: Explanation or np.ndarray,
 
 
 def image_to_text(shap_values):
-    """ Plots SHAP values for image inputs with test outputs.
+    """Plots SHAP values for image inputs with test outputs.
 
     Parameters
     ----------

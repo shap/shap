@@ -2,13 +2,13 @@ import matplotlib
 import numpy as np
 import pandas as pd
 
+import shap
+
 matplotlib.use('Agg')
-import shap  # pylint: disable=wrong-import-position
 
 
 def test_dependence_one_string_feature():
-    """ Test the dependence plot with a string feature.
-    """
+    """Test the dependence plot with a string feature."""
     X = _create_sample_dataset(string_features={"Sex"})
 
     shap.dependence_plot(
@@ -21,8 +21,7 @@ def test_dependence_one_string_feature():
 
 
 def test_dependence_two_string_features():
-    """ Test the dependence plot with two string features.
-    """
+    """Test the dependence plot with two string features."""
     X = _create_sample_dataset(string_features={"Sex", "Blood group"})
 
     shap.dependence_plot(
@@ -35,8 +34,7 @@ def test_dependence_two_string_features():
 
 
 def test_dependence_one_string_feature_no_interaction():
-    """ Test the dependence plot with no interactions.
-    """
+    """Test the dependence plot with no interactions."""
     X = _create_sample_dataset(string_features={"Sex"})
 
     shap.dependence_plot(
@@ -49,8 +47,7 @@ def test_dependence_one_string_feature_no_interaction():
 
 
 def test_dependence_one_string_feature_auto_interaction():
-    """ Test the dependence plot with auto interaction detection.
-    """
+    """Test the dependence plot with auto interaction detection."""
     X = _create_sample_dataset(string_features={"Sex"})
 
     shap.dependence_plot(
@@ -63,8 +60,7 @@ def test_dependence_one_string_feature_auto_interaction():
 
 
 def test_approximate_interactions():
-    """ Test the approximate interaction detector.
-    """
+    """Test the approximate interaction detector."""
     X_no_string_features = _create_sample_dataset(string_features={})
     X_one_string_feature = _create_sample_dataset(string_features={"Sex"})
     X_two_string_features = _create_sample_dataset(string_features={"Sex", "Blood group"})

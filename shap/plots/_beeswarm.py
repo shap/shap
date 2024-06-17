@@ -1,10 +1,10 @@
-""" Summary plots of SHAP values across a whole dataset.
-"""
+"""Summary plots of SHAP values across a whole dataset."""
 
 import warnings
 
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
@@ -28,7 +28,7 @@ from ._utils import (
 def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
              clustering=None, cluster_threshold=0.5, color=None,
              axis_color="#333333", alpha=1, show=True, log_scale=False,
-             color_bar=True, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
+             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -43,11 +43,14 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
+        Setting this to ``False`` allows the plot to be customized further
+        after it has been created, returning the current axis via plt.gca().
 
     color_bar : bool
         Whether to draw the color bar (legend).
+
+    s : float
+        What size to make the markers. For further information see `s` in ``matplotlib.pyplot.scatter``.
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default, the size is auto-scaled based on the
@@ -58,11 +61,9 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     Examples
     --------
-
     See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
 
     """
-
     if not isinstance(shap_values, Explanation):
         emsg = (
             "The beeswarm plot requires an `Explanation` object as the "
@@ -121,7 +122,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     idx2cat = None
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         # feature index to category flag
@@ -169,7 +170,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         partition_tree = clustering
 
     if partition_tree is not None:
-        assert partition_tree.shape[1] == 4, "The clustering provided by the Explanation object does not seem to be a partition tree (which is all shap.plots.bar supports)!"
+        if partition_tree.shape[1] != 4:
+            emsg = (
+                "The clustering provided by the Explanation object does not seem to "
+                "be a partition tree (which is all shap.plots.bar supports)!"
+            )
+            raise ValueError(emsg)
 
     # FIXME: introduce beeswarm interaction values as a separate function `beeswarm_interaction()` (?)
     #   In the meantime, users can use the `shap.summary_plot()` function.
@@ -368,12 +374,14 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             if vmin > vmax: # fixes rare numerical precision issues
                 vmin = vmax
 
-            assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
+            if features.shape[0] != len(shaps):
+                emsg = "Feature and SHAP matrices must have the same number of rows!"
+                raise DimensionError(emsg)
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
             pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
-                        s=16, alpha=alpha, linewidth=0,
+                        s=s, alpha=alpha, linewidth=0,
                         zorder=3, rasterized=len(shaps) > 500)
 
             # plot the non-nan fvalues colored by the trimmed feature value
@@ -383,12 +391,12 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             cvals[cvals_imp > vmax] = vmax
             cvals[cvals_imp < vmin] = vmin
             pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                        cmap=color, vmin=vmin, vmax=vmax, s=16,
+                        cmap=color, vmin=vmin, vmax=vmax, s=s,
                         c=cvals, alpha=alpha, linewidth=0,
                         zorder=3, rasterized=len(shaps) > 500)
         else:
 
-            pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
+            pl.scatter(shaps, pos + ys, s=s, alpha=alpha, linewidth=0, zorder=3,
                         color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
 
 
@@ -420,6 +428,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     pl.xlabel(labels['VALUE'], fontsize=13)
     if show:
         pl.show()
+    else:
+        return pl.gca()
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
@@ -477,8 +487,8 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
     show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
-    """
 
+    """
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -492,7 +502,9 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     # deprecation warnings
     if auto_size_plot is not None:
-        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
+        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead. "
+                      "The parameter auto_size_plot will be removed in the next release 0.46.0.",
+                      DeprecationWarning)
 
     multi_class = False
     if isinstance(shap_values, list):
@@ -517,7 +529,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
     idx2cat = None
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         # feature index to category flag

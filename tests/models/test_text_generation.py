@@ -1,5 +1,4 @@
-""" This file contains tests for the TextGeneration class.
-"""
+"""This file contains tests for the TextGeneration class."""
 
 import sys
 
@@ -10,15 +9,15 @@ import shap
 
 @pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
 def test_call_function_text_generation():
-    """ Tests if target sentence from model and model wrapped in a function (mimics model agnostic scenario)
-        produces the same ids.
+    """Tests if target sentence from model and model wrapped in a function (mimics model agnostic scenario)
+    produces the same ids.
     """
-
     torch = pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained("sshleifer/distilbart-xsum-12-6")
-    model = transformers.AutoModelForSeq2SeqLM.from_pretrained("sshleifer/distilbart-xsum-12-6")
+    name = "hf-internal-testing/tiny-random-BartModel"
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name)
+    model = transformers.AutoModelForSeq2SeqLM.from_pretrained(name)
 
     # Define function
     def f(x):

@@ -1,5 +1,4 @@
-""" Visualize the SHAP values with additive force style layouts.
-"""
+"""Visualize the SHAP values with additive force style layouts."""
 
 import base64
 import json
@@ -11,6 +10,7 @@ import warnings
 from collections.abc import Sequence
 
 import numpy as np
+import pandas as pd
 import scipy.sparse
 
 try:
@@ -92,8 +92,8 @@ def force(
         Controls the feature names/values that are displayed on force plot.
         Only features that the magnitude of their shap value is larger than min_perc * (sum of all abs shap values)
         will be displayed.
-    """
 
+    """
     # support passing an explanation object
     if str(type(base_value)).endswith("Explanation'>"):
         shap_exp = base_value
@@ -119,12 +119,12 @@ def force(
             base_value = base_value[0]
 
     if isinstance(base_value, (np.ndarray, list)):
-        if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
+        if not isinstance(shap_values, (list, np.ndarray)) or len(shap_values) != len(base_value):
             emsg = (
                 "In v0.20, force plot now requires the base value as the first parameter! "
                 "Try shap.plots.force(explainer.expected_value, shap_values) or "
                 "for multi-output models try "
-                "shap.plots.force(explainer.expected_value[0], shap_values[0])."
+                "shap.plots.force(explainer.expected_value[0], shap_values[..., 0])."
             )
             raise TypeError(emsg)
 
@@ -138,11 +138,11 @@ def force(
         return visualize(shap_values)
 
     # convert from a DataFrame or other types
-    if str(type(features)) == "<class 'pandas.core.frame.DataFrame'>":
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = list(features.columns)
         features = features.values
-    elif str(type(features)) == "<class 'pandas.core.series.Series'>":
+    elif isinstance(features, pd.Series):
         if feature_names is None:
             feature_names = list(features.index)
         features = features.values
@@ -247,9 +247,7 @@ class AdditiveExplanation(Explanation):
     """Data structure for AdditiveForceVisualizer / AdditiveForceArrayVisualizer."""
 
     def __init__(self, base_value, out_value, effects, effects_var, instance, link, model, data):
-        """
-
-        Parameters
+        """Parameters
         ----------
         base_value : float
             This is the reference value that the feature contributions start from.
@@ -258,6 +256,7 @@ class AdditiveExplanation(Explanation):
         out_value : float
             The model prediction value, taken as the sum of the SHAP values across all
             features and the ``base_value``.
+
         """
         self.base_value = base_value
         self.out_value = out_value
@@ -307,7 +306,7 @@ def initjs():
 
 
 def save_html(out_file, plot, full_html=True):
-    """ Save html plots to an output file.
+    """Save html plots to an output file.
 
     Parameters
     ----------
@@ -321,8 +320,8 @@ def save_html(out_file, plot, full_html=True):
         If ``True``, writes a complete HTML document starting
         with an ``<html>`` tag. If ``False``, only script and div
         tags are included.
-    """
 
+    """
     if not isinstance(plot, BaseVisualizer):
         raise TypeError("`save_html` requires a Visualizer returned by `shap.plots.force()`.")
 
@@ -398,6 +397,7 @@ def visualize(
     ----------
     e : AdditiveExplanation
         Contains the data necessary for additive force plots.
+
     """
     plot_cmap = verify_valid_cmap(plot_cmap)
 
@@ -455,14 +455,15 @@ class SimpleListVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return """
-<div id='{id}'>{err_msg}</div>
+        generated_id = id_generator()
+        return f"""
+<div id='{generated_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.SimpleListVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.SimpleListVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{generated_id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def _repr_html_(self):
         return self.html()
@@ -472,15 +473,14 @@ class AdditiveForceVisualizer(BaseVisualizer):
     """Visualizer for a single Additive Force plot."""
 
     def __init__(self, e, plot_cmap="RdBu"):
-        """
-
-        Parameters
+        """Parameters
         ----------
         e : AdditiveExplanation
             Contains the data necessary for additive force plots.
 
         plot_cmap : str or list[str]
             Color map to use. It can be a string (defaults to ``RdBu``) or a list of hex color strings.
+
         """
         if not isinstance(e, AdditiveExplanation):
             emsg = "AdditiveForceVisualizer can only visualize AdditiveExplanation objects!"
@@ -506,14 +506,15 @@ class AdditiveForceVisualizer(BaseVisualizer):
     def html(self, label_margin=20):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
-        return """
-<div id='{id}'>{err_msg}</div>
+        generated_id = id_generator()
+        return f"""
+<div id='{generated_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{generated_id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
         fig = draw_additive_plot(self.data,
@@ -576,14 +577,15 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return """
-<div id='{id}'>{err_msg}</div>
+        _id = id_generator()
+        return f"""
+<div id='{_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{_id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def _repr_html_(self):
         return self.html()

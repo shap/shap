@@ -1,5 +1,6 @@
 import matplotlib.pyplot as pl
 import numpy as np
+import pandas as pd
 import scipy.stats
 
 from . import colors
@@ -13,7 +14,7 @@ def truncate_text(text, max_len):
         return text
 
 def monitoring(ind, shap_values, features, feature_names=None, show=True):
-    """ Create a SHAP monitoring plot.
+    """Create a SHAP monitoring plot.
 
     (Note this function is preliminary and subject to change!!)
     A SHAP monitoring plot is meant to display the behavior of a model
@@ -34,9 +35,9 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
 
     feature_names : list
         Names of the features (length # features)
-    """
 
-    if str(type(features)).endswith("'pandas.core.frame.DataFrame'>"):
+    """
+    if isinstance(features, pd.DataFrame):
         if feature_names is None:
             feature_names = features.columns
         features = features.values

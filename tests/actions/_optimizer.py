@@ -1,7 +1,5 @@
-""" Unit tests for the Exact explainer.
-"""
+"""Unit tests for the Exact explainer."""
 
-# pylint: disable=missing-function-docstring
 import numpy as np
 import pandas as pd
 import pytest
@@ -14,8 +12,7 @@ def create_basic_scenario():
     X = pd.DataFrame({"feature1": np.ones(5), "feature2": np.ones(5), "feature3": np.ones(5)})
 
     class IncreaseFeature1(shap.actions.Action):
-        """ Sample action.
-        """
+        """Sample action."""
 
         def __init__(self, amount):
             self.amount = amount
@@ -28,8 +25,7 @@ def create_basic_scenario():
             return f"Improve feature1 by {self.amount}."
 
     class IncreaseFeature2(shap.actions.Action):
-        """ Sample action.
-        """
+        """Sample action."""
 
         def __init__(self, amount):
             self.amount = amount
@@ -42,8 +38,7 @@ def create_basic_scenario():
             return f"Improve feature2 by {self.amount}."
 
     class IncreaseFeature3(shap.actions.Action):
-        """ Sample action.
-        """
+        """Sample action."""
 
         def __init__(self, amount):
             self.amount = amount
