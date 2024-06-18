@@ -11,11 +11,18 @@ from ..utils._general import encode_array_if_needed
 from . import colors
 from ._labels import labels
 
+no_plotly = False
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots  
+    from plotly.express.colors import sample_colorscale
+except:
+    no_plotly = True
 
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
-def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=colors.red_blue,
+def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=None,
             dot_size=16, x_jitter="auto", alpha=1, title=None, xmin=None, xmax=None, ymin=None, ymax=None,
-            overlay=None, ax=None, ylabel="SHAP value", show=True):
+            overlay=None, ax=None, ylabel="SHAP value", show=True, rendering_engine='matplotlib'):
     """Create a SHAP dependence scatter plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -74,6 +81,9 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         Whether ``matplotlib.pyplot.show()`` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
+        
+    rendering_engine : str
+        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'                
 
     Examples
     --------
@@ -81,6 +91,8 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     """
     assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
+    if no_plotly and rendering_engine.lower() == 'plotly':
+        raise ValueError('Plotly must be installed prior to using it as a rendering engine.')
 
     # see if we are plotting multiple columns
     if not isinstance(shap_values.feature_names, str) and len(shap_values.feature_names) > 0:
@@ -91,27 +103,65 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             ymin = nan_min - (nan_max - nan_min)/20
         if ymax is None:
             ymax = nan_max + (nan_max - nan_min)/20
-        _ = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
+        if rendering_engine == 'plotly':
+            fig = make_subplots(rows=1, cols=len(inds))
+            fig.update_layout(plot_bgcolor='white')
+        else:
+            _ = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
-            ax = pl.subplot(1,len(inds),i+1)
-            scatter(shap_values[:,i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
-            if overlay is not None:
-                line_styles = ["solid", "dotted", "dashed"]
-                for j, name in enumerate(overlay):
-                    vals = overlay[name]
-                    if isinstance(vals[i][0][0], (float, int)):
-                        pl.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
-            if i == 0:
-                ax.set_ylabel(ylabel)
+            if rendering_engine == 'plotly':
+                fig.add_trace(go.Scatter(shap_values[:, i], mode='markers', marker={'color':color}), row=1, col=i)
+                fig.update_yaxes(range=(ymin, ymax))
+                if overlay is not None:
+                    line_styles = [None, "dot", "dash"]
+                    for j, name in enumerate(overlay):
+                        vals = overlay[name]
+                        if isinstance(vals[i][0][0], (float, int)):
+                            fig.add_trace(go.Scatter(x=vals[i][0], y=vals[i][1], name=name, mode='lines', 
+                                                     line={'color':color, 'dash':line_styles[j]}))
+                if i == 0: 
+                    fig.update_yaxes(title=ylabel)
+                else:
+                    fig.update_yaxes(title='')
+                
             else:
-                ax.set_ylabel("")
-                ax.set_yticks([])
-                ax.spines['left'].set_visible(False)
-        if overlay is not None:
-            pl.legend()
-        if show:
-            pl.show()
-        return
+                ax = pl.subplot(1,len(inds),i+1)
+                scatter(shap_values[:,i], color=color, show=False, ax=ax, ymin=ymin, ymax=ymax)
+                if overlay is not None:
+                    line_styles = ["solid", "dotted", "dashed"]
+                    for j, name in enumerate(overlay):
+                        vals = overlay[name]
+                        if isinstance(vals[i][0][0], (float, int)):
+                            pl.plot(vals[i][0], vals[i][1], color="#000000", linestyle=line_styles[j], label=name)
+                if i == 0:
+                    ax.set_ylabel(ylabel)
+                else:
+                    ax.set_ylabel("")
+                    ax.set_yticks([])
+                    ax.spines['left'].set_visible(False)
+        
+        if rendering_engine == 'plotly':
+            if overlay is not None:
+                fig.update_layout(showlegend=True)
+                
+            if show:
+                fig.show()
+            
+            return fig
+        else: #matplotlib
+            if overlay is not None:
+                pl.legend()
+        
+            if show:
+                pl.show()
+            return
+    
+    # Pick correct color palette
+    if cmap is None:
+        if rendering_engine == 'plotly':
+            cmap = [[0, 'rgb(0,128,255)'], [0.5, 'rgb(255,0,255)'], [1, 'rgb(255,0,128)']]
+        else:
+            cmap = colors.red_blue            
 
     if len(shap_values.shape) != 1:
         raise Exception("The passed Explanation object has multiple columns, please pass a single feature column to " + \
@@ -216,12 +266,19 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
     categorical_interaction = False
 
     # create a matplotlib figure, if `ax` hasn't been specified.
-    if not ax:
-        figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
-        fig = pl.figure(figsize=figsize)
-        ax = fig.gca()
-    else:
-        fig = ax.get_figure()
+    if rendering_engine == 'plotly':
+        fig = go.Figure()
+        fig.update_layout(plot_bgcolor='white')
+        fig.update_xaxes(linewidth=1, linecolor='black')
+        fig.update_yaxes(linewidth=1, linecolor='black')
+        fig.update_layout(showlegend=False)
+    else: # matplotlib
+        if not ax:
+            figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
+            fig = pl.figure(figsize=figsize)
+            ax = fig.gca()
+        else:
+            fig = ax.get_figure()
 
     # plotting SHAP interaction values
     if len(shap_values_arr.shape) == 3 and hasattr(ind, "__len__") and len(ind) == 2:
@@ -233,23 +290,42 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             proj_shap_values_arr = shap_values_arr[:, ind2, :] * 2  # off-diag values are split in half
 
         # there is no interaction coloring for the main effect
-        if ind1 == ind2:
-            fig.set_size_inches(6, 5, forward=True)
+        if rendering_engine == 'plotly':
+            pass
+        else: # matplotlib        
+            if ind1 == ind2:
+                fig.set_size_inches(6, 5, forward=True)
 
+        if rendering_engine == 'plotly':
         # TODO: remove recursion; generally the functions should be shorter for more maintainable code
-        dependence_legacy(
-            ind1, proj_shap_values_arr, features, feature_names=feature_names,
-            interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
-            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
-        )
-        if ind1 == ind2:
-            ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
-        else:
-            ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
+            dependence_legacy(
+                ind1, proj_shap_values_arr, features, feature_names=feature_names,
+                interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=fig, show=False,
+                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            )
+            ylabel = labels['MAIN_EFFECT'] % feature_names[ind1] if ind1== ind2 else \
+                     labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2])
+            fig.update_yaxes(title=ylabel)
+        else: # matplotlib        
+        # TODO: remove recursion; generally the functions should be shorter for more maintainable code
+            dependence_legacy(
+                ind1, proj_shap_values_arr, features, feature_names=feature_names,
+                interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
+                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            )
+            if ind1 == ind2:
+                ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
+            else:
+                ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
 
-        if show:
-            pl.show()
-        return
+        if rendering_engine == 'plotly':
+            if show:
+                fig.show()
+            return fig
+        else: # matplotlib
+            if show:
+                pl.show()
+            return
 
     assert shap_values_arr.shape[0] == features.shape[0], \
         "'shap_values_arr' and 'features' values must have the same number of rows!"
@@ -298,8 +374,12 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if categorical_interaction and clow != chigh:
             clow = np.nanmin(cv.astype(float))
             chigh = np.nanmax(cv.astype(float))
-            bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
-            color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
+            if rendering_engine == 'plotly':
+                #color_norm = sample_colorscale(cmap, int(chigh - clow + 2), low=clow, high=chigh)
+                pass
+            else: # matplotlib
+                bounds = np.linspace(clow, chigh, min(int(chigh - clow + 2), cmap.N-1))
+                color_norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N-1)
 
     # optionally add jitter to feature values
     xv_no_jitter = xv.copy()
@@ -328,41 +408,71 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
         cvals[cvals_imp < clow] = clow
-        if color_norm is None:
-            vmin = clow
-            vmax = chigh
-        else:
-            vmin = vmax = None
-        ax.axhline(0, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
-        p = ax.scatter(
-            xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
-            cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax,
-            norm=color_norm, rasterized=len(xv) > 500
-        )
-        p.set_array(cvals[xv_notnan])
+        if rendering_engine == 'plotly':
+            xdatalim = [min(xv[xv_notnan]), max(xv[xv_notnan])]
+            ydatalim = [min(s[xv_notnan]), max(s[xv_notnan])]
+            fig.add_hline(y=0, line_color='#888888', line_dash='dash', line_width=0.5)
+            fig.add_trace(go.Scatter(x=xv[xv_notnan], y=s[xv_notnan], mode='markers', 
+                                     opacity=alpha, 
+                                     marker={'size':dot_size/3, 'color':cvals[xv_notnan], 
+                                             'colorscale':cmap, 'cmin':clow, 'cmax':chigh,
+                                             'showscale':True, 'colorbar':{'thickness':10, 'outlinewidth':0}}))
+        else: # matplotlib            
+            if color_norm is None:
+                vmin = clow
+                vmax = chigh
+            else:
+                vmin = vmax = None
+            ax.axhline(0, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
+            p = ax.scatter(
+                xv[xv_notnan], s[xv_notnan], s=dot_size, linewidth=0, c=cvals[xv_notnan],
+                cmap=cmap, alpha=alpha, vmin=vmin, vmax=vmax,
+                norm=color_norm, rasterized=len(xv) > 500
+            )
+            p.set_array(cvals[xv_notnan])
     else:
-        p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
-                       alpha=alpha, rasterized=len(xv) > 500)
+        if rendering_engine == 'plotly':
+            xdatalim = [min(xv), max(xv)]
+            ydatalim = [min(s), max(s)]
+            fig.add_trace(go.Scatter(x=xv, y=s, mode='markers', marker={'color':color, 'size':dot_size/3}))
+        else: # matplotlib
+            p = ax.scatter(xv, s, s=dot_size, linewidth=0, color=color,
+                           alpha=alpha, rasterized=len(xv) > 500)
+            
+    if rendering_engine == 'plotly':
+        xmargin = (xdatalim[1] - xdatalim[0]) * 0.05
+        ymargin = (ydatalim[1] - ydatalim[0]) * 0.05
+        xplotlim = [xdatalim[0] - xmargin, xdatalim[1] + xmargin]
+        yplotlim = [ydatalim[0] - ymargin, ydatalim[1] + ymargin]
 
     if interaction_index != ind and interaction_index is not None:
-        # draw the color bar
-        if isinstance(cd[0], str):
-            tick_positions = np.array([cname_map[n] for n in cnames])
-            tick_positions *= 1 - 1 / len(cnames)
-            tick_positions += 0.5 * (chigh - clow) / (chigh - clow + 1)
-            cb = pl.colorbar(p, ticks=tick_positions, ax=ax, aspect=80)
-            cb.set_ticklabels(cnames)
-        else:
-            cb = pl.colorbar(p, ax=ax, aspect=80)
-
-        cb.set_label(feature_names[interaction_index], size=13)
-        cb.ax.tick_params(labelsize=11)
-        if categorical_interaction:
-            cb.ax.tick_params(length=0)
-        cb.set_alpha(1)
-        cb.outline.set_visible(False)
-#         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-#         cb.ax.set_aspect((bbox.height - 0.7) * 20)
+        if rendering_engine == 'plotly':
+            # draw the color bar title
+            fig.add_annotation(text=feature_names[interaction_index], xshift=70, 
+                               x=1.02, xref='paper', yref='paper', y=0.5, showarrow=False, 
+                               textangle=-90)
+            
+            # do any tick updates here
+            
+        else: # matplotlib        
+            # draw the color bar
+            if isinstance(cd[0], str):
+                tick_positions = np.array([cname_map[n] for n in cnames])
+                tick_positions *= 1 - 1 / len(cnames)
+                tick_positions += 0.5 * (chigh - clow) / (chigh - clow + 1)
+                cb = pl.colorbar(p, ticks=tick_positions, ax=ax, aspect=80)
+                cb.set_ticklabels(cnames)
+            else:
+                cb = pl.colorbar(p, ax=ax, aspect=80)
+    
+            cb.set_label(feature_names[interaction_index], size=13)
+            cb.ax.tick_params(labelsize=11)
+            if categorical_interaction:
+                cb.ax.tick_params(length=0)
+            cb.set_alpha(1)
+            cb.outline.set_visible(False)
+#             bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#             cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
     # handles any setting of xmax and xmin
     # note that we handle None,float, or "percentile(float)" formats
@@ -377,7 +487,10 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if xmax is None or xmax == np.nanmax(xv):
             xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
 
-        ax.set_xlim(xmin, xmax)
+        if rendering_engine == 'plotly':
+            fig.update_xaxes(range=[xmin, xmax])
+        else: # matplotlib
+            ax.set_xlim(xmin, xmax)
 
     if ymin is not None or ymax is not None:
         # if type(ymin) == str and ymin.startswith("percentile"):
@@ -390,29 +503,46 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
         if ymax is None or ymax == np.nanmax(xv):
             ymax = np.nanmax(xv) + (np.nanmax(xv) - ymin)/20
 
-        ax.set_ylim(ymin, ymax)
+        if rendering_engine == 'plotly':
+            fig.update_yaxes(range=[ymin, ymax])
+        else: # matplotlib
+            ax.set_ylim(ymin, ymax)
 
     # plot any nan feature values as tick marks along the y-axis
-    xlim = ax.get_xlim()
-    if interaction_index is not None:
-        p = ax.scatter(
-            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
-            vmin=clow, vmax=chigh
-        )
-        p.set_array(cvals[xv_nan])
-    else:
-        ax.scatter(
-            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, color=color, alpha=alpha
-        )
-    ax.set_xlim(xlim)
+    if rendering_engine == 'plotly':
+        if interaction_index is not None:
+            fig.add_trace(go.Scatter(x=xplotlim[0] * np.ones(xv_nan.sum()), y=s[xv_nan], opacity=alpha,
+                                    mode='markers+lines', line={'width':2},
+                                    marker={'size':1, 'colorscale':cmap, 'cmin':clow, 'cmax':chigh, 'color':cvals_imp[xv_nan], 
+                                            'showscale':True, 'colorbar':{'thickness':10, 'outlinewidth':0}}))
+        else:
+            fig.add_trace(go.Scatter(x=xplotlim[0] * np.ones(xv_nan.sum()), y=s[xv_nan], opacity=alpha,
+                                    mode='markers+lines', line={'width':2}, 
+                                    marker={'size':1, 'color':color}))
+    else: # matplotlib
+        xlim = ax.get_xlim()
+        if interaction_index is not None:
+            p = ax.scatter(
+                xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+                linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
+                vmin=clow, vmax=chigh
+            )
+            p.set_array(cvals[xv_nan])
+        else:
+            ax.scatter(
+                xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+                linewidth=2, color=color, alpha=alpha
+            )
+        ax.set_xlim(xlim)
 
     # the histogram of the data
     if hist:
-        ax2 = ax.twinx()
-        #n, bins, patches =
-        xlim = ax.get_xlim()
+        if rendering_engine == 'plotly':
+            pass
+        else: # matplotlib
+            ax2 = ax.twinx()
+            #n, bins, patches =
+            xlim = ax.get_xlim()
         xvals = np.unique(xv_no_jitter)
 
         if len(xvals) / len(xv_no_jitter) < 0.2 and len(xvals) < 75 and np.max(xvals) < 75 and np.min(xvals) >= 0:
@@ -425,7 +555,10 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             bin_edges.append(int(np.max(xvals))+0.5)
 
             lim = np.floor(np.min(xvals) - 0.5) + 0.5, np.ceil(np.max(xvals) + 0.5) - 0.5
-            ax.set_xlim(lim)
+            if rendering_engine == 'plotly':
+                fig.update_xaxes(range=lim)
+            else: # matplotlib
+                ax.set_xlim(lim)
         else:
             if len(xv_no_jitter) >= 500:
                 bin_edges = 50
@@ -436,45 +569,66 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
             else:
                 bin_edges = 5
 
-        ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
-        ax2.set_ylim(0,len(xv))
+        if rendering_engine == 'plotly': 
+            h = np.histogram(xv[~np.isnan(xv)], bins=bin_edges, range=(xdatalim[0], xdatalim[1]), density=False)            
+            x = 0.5 * (np.array(h[1])[1:] + np.array(h[1])[:-1])
+            y = np.array(h[0]) / np.sum(h[0]) * (ydatalim[1]-ydatalim[0])
+            w = np.array(h[1])[1:] - np.array(h[1])[:-1]
+            fig.add_trace(go.Bar(x=x, y=y, opacity=0.1, marker={'color':'black', 'line':{'color':'black'}}, 
+                                 orientation='v', width=w, base=yplotlim[0]))
+            
+        else: # matplotlib
+            ax2.hist(xv[~np.isnan(xv)], bin_edges, density=False, facecolor='#000000', alpha=0.1, range=(xlim[0], xlim[1]), zorder=-1)
+            ax2.set_ylim(0,len(xv))
+    
+            ax2.xaxis.set_ticks_position('bottom')
+            ax2.yaxis.set_ticks_position('left')
+            ax2.yaxis.set_ticks([])
+            ax2.spines['right'].set_visible(False)
+            ax2.spines['top'].set_visible(False)
+            ax2.spines['left'].set_visible(False)
+            ax2.spines['bottom'].set_visible(False)
 
-        ax2.xaxis.set_ticks_position('bottom')
-        ax2.yaxis.set_ticks_position('left')
-        ax2.yaxis.set_ticks([])
-        ax2.spines['right'].set_visible(False)
-        ax2.spines['top'].set_visible(False)
-        ax2.spines['left'].set_visible(False)
-        ax2.spines['bottom'].set_visible(False)
+    if rendering_engine == 'plotly':
+        fig.update_xaxes(title={'text':name, 'font':{'color':axis_color, 'size':13}})
+        fig.update_yaxes(title={'text':labels['VALUE_FOR'] % name, 'font':{'color':axis_color, 'size':13}})
+        fig.update_layout(title={'text':title, 'x':0.5, 'font':{'color':axis_color, 'size':13}})
+        fig.update_yaxes(range=[yplotlim[0], yplotlim[1]])
 
-    pl.sca(ax)
+        
+        if show:
+            fig.show()
+        return fig
+    
+    else: # matplotlib
+        pl.sca(ax)
 
-    # make the plot more readable
-    ax.set_xlabel(name, color=axis_color, fontsize=13)
-    ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
-    if title is not None:
-        ax.set_title(title, color=axis_color, fontsize=13)
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('left')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
-    for spine in ax.spines.values():
-        spine.set_edgecolor(axis_color)
-    if isinstance(xd[0], str):
-        ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
-    if show:
-        with warnings.catch_warnings(): # ignore expected matplotlib warnings
-            warnings.simplefilter("ignore", RuntimeWarning)
-            pl.show()
+        # make the plot more readable
+        ax.set_xlabel(name, color=axis_color, fontsize=13)
+        ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
+        if title is not None:
+            ax.set_title(title, color=axis_color, fontsize=13)
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
+        for spine in ax.spines.values():
+            spine.set_edgecolor(axis_color)
+        if isinstance(xd[0], str):
+            ax.set_xticks([name_map[n] for n in xnames])
+            ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
+        if show:
+            with warnings.catch_warnings(): # ignore expected matplotlib warnings
+                warnings.simplefilter("ignore", RuntimeWarning)
+                pl.show()
 
 
 def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, display_features=None,
                       interaction_index="auto",
                       color="#1E88E5", axis_color="#333333", cmap=None,
                       dot_size=16, x_jitter=0, alpha=1, title=None, xmin=None, xmax=None, ax=None, show=True,
-                      ymin=None, ymax=None):
+                      ymin=None, ymax=None, rendering_engine='matplotlib'):
     """Create a SHAP dependence plot, colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
@@ -535,9 +689,18 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
     ymax : float
         Represents the upper bound of the plot's y-axis.
 
+    rendering_engine : str
+        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'                
+        
+
     """
+
+    # Pick correct color palette
     if cmap is None:
-        cmap = colors.red_blue
+        if rendering_engine == 'plotly':
+            cmap = [[0, 'rgb(0,128,255)'], [0.5, 'rgb(255,0,255)'], [1, 'rgb(255,0,128)']]
+        else:
+            cmap = colors.red_blue
 
     if isinstance(shap_values, list):
         raise TypeError("The passed shap_values are a list not an array! If you have a list of explanations try " \
@@ -573,13 +736,21 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         interaction_index = convert_name(interaction_index, shap_values, feature_names)
     categorical_interaction = False
 
-    # create a matplotlib figure, if `ax` hasn't been specified.
-    if not ax:
-        figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
-        fig = pl.figure(figsize=figsize)
-        ax = fig.gca()
-    else:
-        fig = ax.get_figure()
+    # create a figure, if `ax` hasn't been specified.
+    if rendering_engine == 'plotly':
+        fig = go.Figure if ax is None else ax           
+        fig.update_layout(plot_bgcolor='white')
+        fig.update_xaxes(linewidth=1, linecolor='black')
+        fig.update_yaxes(linewidth=1, linecolor='black')
+        fig.update_layout(showlegend=False)
+        
+    else: # matplotlib 
+        if not ax:
+            figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
+            fig = pl.figure(figsize=figsize)
+            ax = fig.gca()
+        else:
+            fig = ax.get_figure()
 
     # plotting SHAP interaction values
     if len(shap_values.shape) == 3 and hasattr(ind, "__len__") and len(ind) == 2:
@@ -591,23 +762,42 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
             proj_shap_values = shap_values[:, ind2, :] * 2  # off-diag values are split in half
 
         # there is no interaction coloring for the main effect
-        if ind1 == ind2:
-            fig.set_size_inches(6, 5, forward=True)
+        if rendering_engine == 'plotly':
+            pass
+        else: # matplotlib
+            if ind1 == ind2:
+                fig.set_size_inches(6, 5, forward=True)
 
-        # TODO: remove recursion; generally the functions should be shorter for more maintainable code
-        dependence_legacy(
-            ind1, proj_shap_values, features, feature_names=feature_names,
-            interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
-            xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
-        )
-        if ind1 == ind2:
-            ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
-        else:
-            ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
-
-        if show:
-            pl.show()
-        return
+        if rendering_engine == 'plotly':
+            # TODO: remove recursion; generally the functions should be shorter for more maintainable code
+            dependence_legacy(
+                ind1, proj_shap_values, features, feature_names=feature_names,
+                interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=fig, show=False,
+                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            )
+            ylabel = labels['MAIN_EFFECT'] % feature_names[ind1] if ind1 == ind2 else \
+                     labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2])
+            fig.update_yaxes(title=ylabel)
+            
+            if show:
+                fig.show()
+            return fig
+        
+        else: # matplotlib        
+            # TODO: remove recursion; generally the functions should be shorter for more maintainable code
+            dependence_legacy(
+                ind1, proj_shap_values, features, feature_names=feature_names,
+                interaction_index=(None if ind1 == ind2 else ind2), display_features=display_features, ax=ax, show=False,
+                xmin=xmin, xmax=xmax, x_jitter=x_jitter, alpha=alpha
+            )
+            if ind1 == ind2:
+                ax.set_ylabel(labels['MAIN_EFFECT'] % feature_names[ind1])
+            else:
+                ax.set_ylabel(labels['INTERACTION_EFFECT'] % (feature_names[ind1], feature_names[ind2]))
+    
+            if show:
+                pl.show()
+            return
 
     assert shap_values.shape[0] == features.shape[0], \
         "'shap_values' and 'features' values must have the same number of rows!"
@@ -696,25 +886,32 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
                        alpha=alpha, rasterized=len(xv) > 500)
 
     if interaction_index != ind and interaction_index is not None:
-        # draw the color bar
-        if isinstance(cd[0], str):
-            tick_positions = [cname_map[n] for n in cnames]
-            if len(tick_positions) == 2:
-                tick_positions[0] -= 0.25
-                tick_positions[1] += 0.25
-            cb = pl.colorbar(p, ticks=tick_positions, ax=ax, aspect=80)
-            cb.set_ticklabels(cnames)
-        else:
-            cb = pl.colorbar(p, ax=ax, aspect=80)
+        if rendering_engine == 'plotly':
+            # draw the color bar title
+            fig.add_annotation(text=feature_names[interaction_index], xshift=40, x=1, xref='paper', yref='paper', y=0.5)
+            
+            # do any tick updates here
 
-        cb.set_label(feature_names[interaction_index], size=13)
-        cb.ax.tick_params(labelsize=11)
-        if categorical_interaction:
-            cb.ax.tick_params(length=0)
-        cb.set_alpha(1)
-        cb.outline.set_visible(False)
-#         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-#         cb.ax.set_aspect((bbox.height - 0.7) * 20)
+        else: # matplotlib
+            # draw the color bar
+            if isinstance(cd[0], str):
+                tick_positions = [cname_map[n] for n in cnames]
+                if len(tick_positions) == 2:
+                    tick_positions[0] -= 0.25
+                    tick_positions[1] += 0.25
+                cb = pl.colorbar(p, ticks=tick_positions, ax=ax, aspect=80)
+                cb.set_ticklabels(cnames)
+            else:
+                cb = pl.colorbar(p, ax=ax, aspect=80)
+    
+            cb.set_label(feature_names[interaction_index], size=13)
+            cb.ax.tick_params(labelsize=11)
+            if categorical_interaction:
+                cb.ax.tick_params(length=0)
+            cb.set_alpha(1)
+            cb.outline.set_visible(False)
+#           bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#           cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
     # handles any setting of xmax and xmin
     # note that we handle None,float, or "percentile(float)" formats
@@ -729,49 +926,67 @@ def dependence_legacy(ind, shap_values=None, features=None, feature_names=None, 
         if xmax is None or xmax == np.nanmax(xv):
             xmax = np.nanmax(xv) + (np.nanmax(xv) - xmin)/20
 
-        ax.set_xlim(xmin, xmax)
+        if rendering_engine == 'plotly':
+            pass
+        else: # matplotlib
+            ax.set_xlim(xmin, xmax)
 
     # plot any nan feature values as tick marks along the y-axis
-    xlim = ax.get_xlim()
-    if interaction_index is not None:
-        p = ax.scatter(
-            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
-            vmin=clow, vmax=chigh
-        )
-        p.set_array(cvals[xv_nan])
-    else:
-        ax.scatter(
-            xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
-            linewidth=2, color=color, alpha=alpha
-        )
-    ax.set_xlim(xlim)
-
-    # make the plot more readable
-    ax.set_xlabel(name, color=axis_color, fontsize=13)
-    ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
-
-    if (ymin is not None) or (ymax is not None):
-        if ymin is None:
-            ymin = -ymax
-        if ymax is None:
-            ymax = -ymin
-
-        ax.set_ylim(ymin, ymax)
-
-    if title is not None:
-        ax.set_title(title, color=axis_color, fontsize=13)
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('left')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
-    for spine in ax.spines.values():
-        spine.set_edgecolor(axis_color)
+    if rendering_engine == 'plotly':    
+        xdatalim = [min(xv[xv_notnan]), max(xv[xv_notnan])]
+        xmargin = (xdatalim[1] - xdatalim[0]) * 0.05
+        xplotlim = [xdatalim[0] - xmargin, xdatalim[1] + xmargin]
+        
+        if interaction_index is not None:
+            fig.add_trace(go.Scatter(x=xplotlim[0] * np.ones(xv_nan.sum()), y=s[xv_nan], opacity=alpha,
+                                    mode='markers+lines', line={'width':2},
+                                    marker={'size':1, 'colorscale':cmap, 'cmin':clow, 'cmax':chigh, 'color':cvals_imp[xv_nan], 
+                                            'showscale':True, 'colorbar':{'thickness':10, 'outlinewidth':0}}))
+        else:
+            fig.add_trace(go.Scatter(x=xplotlim[0] * np.ones(xv_nan.sum()), y=s[xv_nan], opacity=alpha,
+                                    mode='markers+lines', line={'width':2}, 
+                                    marker={'size':1, 'color':color}))
+    else: # matplotlib
+        xlim = ax.get_xlim()
+        if interaction_index is not None:
+            p = ax.scatter(
+                xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+                linewidth=2, c=cvals_imp[xv_nan], cmap=cmap, alpha=alpha,
+                vmin=clow, vmax=chigh
+            )
+            p.set_array(cvals[xv_nan])
+        else:
+            ax.scatter(
+                xlim[0] * np.ones(xv_nan.sum()), s[xv_nan], marker=1,
+                linewidth=2, color=color, alpha=alpha
+            )
+        ax.set_xlim(xlim)
+    
+        # make the plot more readable
+        ax.set_xlabel(name, color=axis_color, fontsize=13)
+        ax.set_ylabel(labels['VALUE_FOR'] % name, color=axis_color, fontsize=13)
+    
+        if (ymin is not None) or (ymax is not None):
+            if ymin is None:
+                ymin = -ymax
+            if ymax is None:
+                ymax = -ymin
+    
+            ax.set_ylim(ymin, ymax)
+    
+        if title is not None:
+            ax.set_title(title, color=axis_color, fontsize=13)
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.tick_params(color=axis_color, labelcolor=axis_color, labelsize=11)
+        for spine in ax.spines.values():
+            spine.set_edgecolor(axis_color)
     if isinstance(xd[0], str):
-        ax.set_xticks([name_map[n] for n in xnames])
-        ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
-    if show:
-        with warnings.catch_warnings(): # ignore expected matplotlib warnings
-            warnings.simplefilter("ignore", RuntimeWarning)
-            pl.show()
+            ax.set_xticks([name_map[n] for n in xnames])
+            ax.set_xticklabels(xnames, fontdict=dict(rotation='vertical', fontsize=11))
+        if show:
+            with warnings.catch_warnings(): # ignore expected matplotlib warnings
+                warnings.simplefilter("ignore", RuntimeWarning)
+                pl.show()

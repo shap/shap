@@ -7,10 +7,16 @@ from . import colors
 from ._labels import labels
 from ._utils import convert_ordering
 
+no_plotly = False
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+except:
+    no_plotly = True
 
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0),
-            feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
-            plot_width=8, ax=None):
+            feature_order=None, max_display=10, cmap=None, show=True,
+            plot_width=8, ax=None, rendering_engine='matplotlib'):
     """Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
@@ -51,17 +57,26 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     ax : matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
+        
+    rendering_engine : str
+        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'        
 
     Returns
     -------
-    ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it.
-
+ 	ax: matplotlib Axes
+        Returns the Axes object with the plot drawn onto it. Only returned if 
+		``rendering_engine=="matplotlib"``.
+    fig: Plotly Figure
+        Returns the Figure object with the plot drawn onto it. Only returned if 
+		``rendering_engine=="plotly"``.
     Examples
     --------
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
 
     """
+    if no_plotly and rendering_engine.lower() == 'plotly':
+        raise ValueError('Plotly must be installed prior to using it as a rendering engine.')
+
     # sort the SHAP values matrix by rows and columns
     values = shap_values.values
     if issubclass(type(feature_values), OpChain):
@@ -105,87 +120,134 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         feature_values = new_feature_values
 
     # define the plot size based on how many features we are plotting
-    row_height = 0.5
-    if ax is None:
-        pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
-        ax = pl.gca()
+    if rendering_engine == 'plotly':
+        if cmap is None: 
+            cmap = [[0, 'rgb(255,0,128)'], [0.5, 'rgb(255,255,255)'], [1, 'rgb(0,128,255)']]
+            
+        fig = make_subplots(rows=2, cols=2, vertical_spacing=0, horizontal_spacing=0,
+                            shared_xaxes=True, shared_yaxes=True, 
+                            column_widths=[0.9, 0.1], row_heights=[0.1, 0.9], )
+        
+        # plot the matrix of SHAP values as a heat map
+        vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
+        zmin = min(vmin,-vmax)
+        zmax=max(-vmin,vmax)
+        fig.add_trace(go.Heatmap(z=values.T, zmin=zmin, zmax=zmax, colorscale=cmap, reversescale=True,
+                                 colorbar={'thickness':10, 'tickmode':'array', 'tickvals':[zmin, zmax]}), 
+                      row=2, col=1)
 
-    # plot the matrix of SHAP values as a heat map
-    vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
-    ax.imshow(
-        values.T,
-        aspect=0.7 * values.shape[0] / values.shape[1],
-        interpolation="nearest",
-        vmin=min(vmin,-vmax),
-        vmax=max(-vmin,vmax),
-        cmap=cmap,
-    )
+        # plot the f(x) line chart above the heat map
+        fx = values.T.mean(0)
+        fig.add_trace(go.Scatter(y=-fx / np.abs(fx).max() - 1.5, mode="lines", line={'color':'black', 'width':1}), row=1, col=1)        
+        fig.add_hline(y=-1.5, line_color='#aaaaaa', line_dash='dash', line_width=0.5, row=1, col=1)
+        
+        # plot the bar plot on the right spine of the heat map
+        heatmap_yticks_pos = np.arange(values.shape[1])
+        bar_sizes = (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20
+        fig.add_trace(go.Bar(x=bar_sizes, y=heatmap_yticks_pos, width=0.7, marker_color="black",
+                             orientation='h'), row=2, col=2)
+        fig.update_layout(plot_bgcolor="white", showlegend=False)
 
-    # adjust the axes ticks and spines for the heat map + f(x) line chart
-    ax.xaxis.set_ticks_position("bottom")
-    ax.yaxis.set_ticks_position("left")
-    ax.spines[["left", "right"]].set_visible(True)
-    ax.spines[["left", "right"]].set_bounds(values.shape[1] - row_height, -row_height)
-    ax.spines[["top", "bottom"]].set_visible(False)
-    ax.tick_params(axis="both", direction="out")
+        # adjust the axes ticks and spines for the heat map + f(x) line chart
+        fig['layout']['yaxis'].update(title='f(x)', showticklabels=False)
+        fig['layout']['xaxis3'].update(title=xlabel)
+        fig['layout']['xaxis4'].update(showticklabels=False)
+        fig['layout']['yaxis3'].update(tickmode='array', tickvals=list(range(len(feature_names))), ticktext=feature_names)
+        fig.update_yaxes(autorange="reversed")
+        
+        # Colorbar title
+        fig.update_layout(annotations=[{'text':'SHAP Value', 'textangle':-90, 'showarrow':False, 
+                                        'xref':'paper', 'yref':'paper', 'x':1.025, 'y':0.5, 'xshift':40}])
+                
+        if show:
+            fig.show()
+            
+        return fig
+    else:
+        if cmap is None: 
+            cmap= colors.red_white_blue
 
-    ax.set_ylim(values.shape[1] - row_height, -3)
-    heatmap_yticks_pos = np.arange(values.shape[1])
-    heatmap_yticks_labels = feature_names
-    ax.yaxis.set_ticks(
-        [-1.5, *heatmap_yticks_pos],
-        [r"$f(x)$", *heatmap_yticks_labels],
-        fontsize=13,
-    )
-    # remove the y-tick line for the f(x) label
-    ax.yaxis.get_ticklines()[0].set_visible(False)
+        row_height = 0.5
+        if ax is None:
+            pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
+            ax = pl.gca()
 
-    ax.set_xlim(-0.5, values.shape[0] - 0.5)
-    ax.set_xlabel(xlabel)
+        # plot the matrix of SHAP values as a heat map
+        vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
+        ax.imshow(
+            values.T,
+            aspect=0.7 * values.shape[0] / values.shape[1],
+            interpolation="nearest",
+            vmin=min(vmin,-vmax),
+            vmax=max(-vmin,vmax),
+            cmap=cmap,
+        )
+    
+        # adjust the axes ticks and spines for the heat map + f(x) line chart
+        ax.xaxis.set_ticks_position("bottom")
+        ax.yaxis.set_ticks_position("left")
+        ax.spines[["left", "right"]].set_visible(True)
+        ax.spines[["left", "right"]].set_bounds(values.shape[1] - row_height, -row_height)
+        ax.spines[["top", "bottom"]].set_visible(False)
+        ax.tick_params(axis="both", direction="out")
+    
+        ax.set_ylim(values.shape[1] - row_height, -3)
+        heatmap_yticks_pos = np.arange(values.shape[1])
+        heatmap_yticks_labels = feature_names
+        ax.yaxis.set_ticks(
+            [-1.5, *heatmap_yticks_pos],
+            [r"$f(x)$", *heatmap_yticks_labels],
+            fontsize=13,
+        )
+        # remove the y-tick line for the f(x) label
+        ax.yaxis.get_ticklines()[0].set_visible(False)
+    
+        ax.set_xlim(-0.5, values.shape[0] - 0.5)
+        ax.set_xlabel(xlabel)
+    
+        # plot the f(x) line chart above the heat map
+        ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
+        fx = values.T.mean(0)
+        ax.plot(
+            -fx / np.abs(fx).max() - 1.5,
+            color="#000000",
+            linewidth=1,
+        )
+    
+        # plot the bar plot on the right spine of the heat map
+        bar_container = ax.barh(
+            heatmap_yticks_pos,
+            (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
+            height=0.7,
+            align="center",
+            color="#000000",
+            left=values.shape[0] * 1.0 - 0.5,
+            # color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
+        )
+        for b in bar_container:
+            b.set_clip_on(False)
+    
+        # draw the color bar
+        import matplotlib.cm as cm
+        m = cm.ScalarMappable(cmap=cmap)
+        m.set_array([min(vmin, -vmax), max(-vmin, vmax)])
+        cb = pl.colorbar(
+            m,
+            ticks=[min(vmin, -vmax), max(-vmin, vmax)],
+            ax=ax,
+            aspect=80,
+            fraction=0.01,
+            pad=0.10,  # padding between the cb and the main axes
+        )
+        cb.set_label(labels["VALUE"], size=12, labelpad=-10)
+        cb.ax.tick_params(labelsize=11, length=0)
+        cb.set_alpha(1)
+        cb.outline.set_visible(False)
+        # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+        # cb.ax.set_aspect((bbox.height - 0.9) * 15)
+        # cb.draw_all()
+    
+        if show:
+            pl.show()
 
-    # plot the f(x) line chart above the heat map
-    ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
-    fx = values.T.sum(0)
-    ax.plot(
-        -fx / np.abs(fx).max() - 1.5,
-        color="#000000",
-        linewidth=1,
-    )
-
-    # plot the bar plot on the right spine of the heat map
-    bar_container = ax.barh(
-        heatmap_yticks_pos,
-        (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20,
-        height=0.7,
-        align="center",
-        color="#000000",
-        left=values.shape[0] * 1.0 - 0.5,
-        # color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
-    )
-    for b in bar_container:
-        b.set_clip_on(False)
-
-    # draw the color bar
-    import matplotlib.cm as cm
-    m = cm.ScalarMappable(cmap=cmap)
-    m.set_array([min(vmin, -vmax), max(-vmin, vmax)])
-    cb = pl.colorbar(
-        m,
-        ticks=[min(vmin, -vmax), max(-vmin, vmax)],
-        ax=ax,
-        aspect=80,
-        fraction=0.01,
-        pad=0.10,  # padding between the cb and the main axes
-    )
-    cb.set_label(labels["VALUE"], size=12, labelpad=-10)
-    cb.ax.tick_params(labelsize=11, length=0)
-    cb.set_alpha(1)
-    cb.outline.set_visible(False)
-    # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-    # cb.ax.set_aspect((bbox.height - 0.9) * 15)
-    # cb.draw_all()
-
-    if show:
-        pl.show()
-
-    return ax
+        return ax

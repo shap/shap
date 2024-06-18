@@ -23,12 +23,18 @@ from ._utils import (
     sort_inds,
 )
 
+no_plotly = False
+try:
+    import plotly.graph_objects as go
+except:
+    no_plotly = True
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
              clustering=None, cluster_threshold=0.5, color=None,
              axis_color="#333333", alpha=1, show=True, log_scale=False,
-             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
+             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"],
+             rendering_engine='matplotlib'):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -58,12 +64,18 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         each row to be that many inches high. Passing a pair of floats will scale the
         plot by that number of inches. If ``None`` is passed, then the size of the
         current figure will be left unchanged.
+    
+    rendering_engine : "matplotlib" (default), or "plotly"
+        Which plotting engine to use to render the plot. 
 
     Examples
     --------
     See `beeswarm plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/beeswarm.html>`_.
 
     """
+    if no_plotly and rendering_engine.lower() == 'plotly':
+        raise ValueError('Plotly must be installed prior to using it as a rendering engine.')
+
     if not isinstance(shap_values, Explanation):
         emsg = (
             "The beeswarm plot requires an `Explanation` object as the "
@@ -113,12 +125,16 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     #     assert len(values.shape) != 1, "Summary plots need a matrix of values, not a vector."
 
     # default color:
-    if color is None:
-        if features is not None:
-            color = colors.red_blue
-        else:
-            color = colors.blue_rgb
-    color = convert_color(color)
+    rendering_engine = rendering_engine.lower()
+    if color is None:    
+        if rendering_engine == 'plotly':
+            color = 'Bluered'
+        else: # matplotlib
+            if features is not None:
+                color = colors.red_blue
+            else:
+                color = colors.blue_rgb
+        color = convert_color(color)
 
     idx2cat = None
     # convert from a DataFrame or other types
@@ -154,9 +170,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     if feature_names is None:
         feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
-
-    if log_scale:
-        pl.xscale('symlog')
 
     if clustering is None:
         partition_tree = getattr(shap_values, "clustering", None)
@@ -317,18 +330,40 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     if num_features < len(values[0]):
         yticklabels[-1] = "Sum of %d other features" % num_cut
 
+    if rendering_engine == 'plotly':
+        fig = go.Figure()
+
     row_height = 0.4
     if plot_size == "auto":
-        pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
+        if rendering_engine == 'plotly':
+            fig.update_layout(autosize=True)
+        else: # matplotlib
+            pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
     elif type(plot_size) in (list, tuple):
-        pl.gcf().set_size_inches(plot_size[0], plot_size[1])
+        if rendering_engine == 'plotly':
+            fig.update_layout(autosize=False, width=plot_size[0]*100, height=plot_size[1]*100)
+        else: # matplotlib
+            pl.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
-        pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
-    pl.axvline(x=0, color="#999999", zorder=-1)
+        if rendering_engine == 'plotly':
+            fig.update_layout(autosize=False, width=800, height=min(len(feature_order), max_display) * plot_size*100 + 150)
+        else: # matplotlib
+            pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
+    if rendering_engine == 'plotly':
+        fig.add_vline(x=0, line_color='#999999')
+    else: # matplotlib
+        pl.axvline(x=0, color="#999999", zorder=-1)
+    
+    if log_scale:
+        if rendering_engine == 'plotly':
+            fig.update_xaxes(type="log")
+        else: # matplotlib
+            pl.xscale('symlog')
 
     # make the beeswarm dots
     for pos, i in enumerate(reversed(feature_inds)):
-        pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+        if rendering_engine == 'matplotlib':
+            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
         shaps = values[:, i]
         fvalues = None if features is None else features[:, i]
         inds = np.arange(len(shaps))
@@ -361,7 +396,8 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             last_bin = quant[ind]
         ys *= 0.9 * (row_height / np.max(ys + 1))
 
-        if safe_isinstance(color, "matplotlib.colors.Colormap") and features is not None and colored_feature:
+        if ((rendering_engine == 'matplotlib' and safe_isinstance(color, "matplotlib.colors.Colormap")) or 
+            (rendering_engine == 'plotly' and isinstance(color, str))) and features is not None and colored_feature:
             # trim the color range, but prevent the color range from collapsing
             vmin = np.nanpercentile(fvalues, 5)
             vmax = np.nanpercentile(fvalues, 95)
@@ -380,9 +416,16 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
-            pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
-                        s=s, alpha=alpha, linewidth=0,
-                        zorder=3, rasterized=len(shaps) > 500)
+            if rendering_engine == 'plotly':
+                fig.add_trace(go.Scatter(x=shaps[nan_mask], y=pos+ys[nan_mask], 
+                                         mode='markers',
+                                         marker={'cmin':vmin, 'cmax':vmax, 
+                                                 'color':'rgba(119,119,119,%i)'%(alpha*255), 
+                                                 'size':8}))
+            else:
+                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
+                            s=s, alpha=alpha, linewidth=0,
+                            zorder=3, rasterized=len(shaps) > 500)
 
             # plot the non-nan fvalues colored by the trimmed feature value
             cvals = fvalues[np.invert(nan_mask)].astype(np.float64)
@@ -390,18 +433,35 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
             cvals[cvals_imp > vmax] = vmax
             cvals[cvals_imp < vmin] = vmin
-            pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                        cmap=color, vmin=vmin, vmax=vmax, s=s,
-                        c=cvals, alpha=alpha, linewidth=0,
-                        zorder=3, rasterized=len(shaps) > 500)
+            if rendering_engine == 'plotly':
+                if isinstance(color, str) and color_bar and features is not None:
+                    fig.add_trace(go.Scatter(x=shaps[np.invert(nan_mask)], y=pos + ys[np.invert(nan_mask)], 
+                                         mode='markers', 
+                                         marker={'cmin':vmin, 'cmax':vmax, 
+                                                 'size':8, 'color':cvals, 'colorscale':color,
+                                                 'colorbar':{'thickness':10, 'tickmode':'array', 
+                                                             'tickvals':[vmin,vmax], 'ticktext':['Low','High']}}))
+                else:
+                    fig.add_trace(go.Scatter(x=shaps[np.invert(nan_mask)], y=pos + ys[np.invert(nan_mask)], 
+                                         mode='markers', marker={'cmin':vmin, 'cmax':vmax, 'size':8, 
+                                                                 'color':cvals, 'colorscale':color}))            
+            else: #matplotlib
+                pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
+                            cmap=color, vmin=vmin, vmax=vmax, s=s,
+                            c=cvals, alpha=alpha, linewidth=0,
+                            zorder=3, rasterized=len(shaps) > 500)
         else:
-
-            pl.scatter(shaps, pos + ys, s=s, alpha=alpha, linewidth=0, zorder=3,
-                        color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
+            if rendering_engine == 'plotly':
+                fig.add_trace(go.Scatter(x=shaps, y=pos + ys, mode='markers',
+                                         marker={'colorscale':color if colored_feature else'#777777', 
+                                                 'size':8}))
+            else:
+                pl.scatter(shaps, pos + ys, s=s, alpha=alpha, linewidth=0, zorder=3,
+                            color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
 
 
     # draw the color bar
-    if safe_isinstance(color, "matplotlib.colors.Colormap") and color_bar and features is not None:
+    if rendering_engine == 'matplotlib' and safe_isinstance(color, "matplotlib.colors.Colormap") and color_bar and features is not None:
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=color)
         m.set_array([0, 1])
@@ -414,22 +474,37 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
 #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
+    elif rendering_engine == 'plotly' and isinstance(color, str) and color_bar and features is not None:
+        fig.update_layout(annotations=[{'text':'Feature Value', 'textangle':-90, 'showarrow':False, 
+                                        'xref':'paper', 'yref':'paper', 'x':1.025, 'y':0.5, 'xshift':40}])
 
-    pl.gca().xaxis.set_ticks_position('bottom')
-    pl.gca().yaxis.set_ticks_position('none')
-    pl.gca().spines['right'].set_visible(False)
-    pl.gca().spines['top'].set_visible(False)
-    pl.gca().spines['left'].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    pl.yticks(range(len(feature_inds)), reversed(yticklabels), fontsize=13)
-    pl.gca().tick_params('y', length=20, width=0.5, which='major')
-    pl.gca().tick_params('x', labelsize=11)
-    pl.ylim(-1, len(feature_inds))
-    pl.xlabel(labels['VALUE'], fontsize=13)
-    if show:
-        pl.show()
-    else:
-        return pl.gca()
+    if rendering_engine == 'plotly':
+        fig.update_layout(xaxis_title='SHAP value (impact on model ouput)')
+        fig.update_layout(yaxis={'tickmode':'array', 'ticktext':list(reversed(yticklabels)), 'tickvals':list(range(len(yticklabels)))})
+        fig.update_layout(showlegend=False)
+    else: # matplotlib       
+        pl.gca().xaxis.set_ticks_position('bottom')
+        pl.gca().yaxis.set_ticks_position('none')
+        pl.gca().spines['right'].set_visible(False)
+        pl.gca().spines['top'].set_visible(False)
+        pl.gca().spines['left'].set_visible(False)
+        pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
+        pl.yticks(range(len(feature_inds)), reversed(yticklabels), fontsize=13)
+        pl.gca().tick_params('y', length=20, width=0.5, which='major')
+        pl.gca().tick_params('x', labelsize=11)
+        pl.ylim(-1, len(feature_inds))
+        pl.xlabel(labels['VALUE'], fontsize=13)
+    
+    if rendering_engine == 'plotly':
+        if show:
+            fig.show()
+        else:
+            return fig
+    else: # matplotlib
+        if show:
+            pl.show()
+        else:
+            return pl.gca()
 
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
