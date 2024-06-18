@@ -16,6 +16,18 @@ def test_random_decision(random_seed):
         show=False
     )
     pl.close()
+    
+def test_random_decision_plotly(random_seed):
+    """Make sure the decision plot does not crash on random data."""
+    rs = np.random.RandomState(random_seed)
+    shap.decision_plot(
+        0,
+        rs.standard_normal(size=(20, 5)),
+        rs.standard_normal(size=(20, 5)),
+        show=False,
+        rendering_engine='plotly'
+    )
+    pl.close()
 
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 #

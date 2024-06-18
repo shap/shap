@@ -57,7 +57,13 @@ def test_simple_bar(explainer):
     shap.plots.bar(shap_values, show=False)
     plt.tight_layout()
     return fig
-
+    
+@pytest.mark.mpl_image_compare
+def test_simple_bar_plotly(explainer):
+    """Check that the bar plot is unchanged."""
+    shap_values = explainer(explainer.data)
+    fig = shap.plots.bar(shap_values, show=False, rendering_engine="plotly")
+    return fig
 
 @pytest.mark.mpl_image_compare
 def test_simple_bar_with_cohorts_dict():

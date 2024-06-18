@@ -14,6 +14,12 @@ def test_heatmap(explainer):
     plt.tight_layout()
     return fig
 
+@pytest.mark.mpl_image_compare
+def test_heatmap_plotly(explainer):
+    """Make sure the heatmap plot is unchanged."""
+    shap_values = explainer(explainer.data)
+    fig = shap.plots.heatmap(shap_values, show=False, rendering_engine="plotly")
+    return fig
 
 @pytest.mark.mpl_image_compare
 def test_heatmap_feature_order(explainer):

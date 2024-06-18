@@ -54,3 +54,12 @@ def test_simple_beeswarm(explainer):
     shap.plots.beeswarm(shap_values)
     plt.tight_layout()
     return fig
+
+@pytest.mark.mpl_image_compare
+def test_simple_beeswarm_plotly(explainer):
+    """Check a beeswarm chart renders correctly with shap_values as an Explanation
+    object (default settings).
+    """
+    shap_values = explainer(explainer.data)
+    fig = shap.plots.beeswarm(shap_values, rendering_engine="plotly")
+    return fig
