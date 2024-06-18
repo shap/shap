@@ -16,11 +16,17 @@ from ._utils import (
     sort_inds,
 )
 
+no_plotly = False
+try:
+    import plotly.graph_objects as go
+    from plotly.express.colors import sample_colorscale
+except:
+    no_plotly = True
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
 # TODO: Have the Explanation object track enough data so that we can tell (and so show) how many instances are in each cohort
 def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clustering_cutoff=0.5,
-        show_data="auto", ax=None, show=True):
+        show_data="auto", ax=None, show=True, rendering_engine="matplotlib"):
     """Create a bar plot of a set of SHAP values.
 
     Parameters
@@ -56,16 +62,25 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
+    rendering_engine : str
+        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'         
     Returns
     -------
     ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it. Only returned if ``show=False``.
-
+        Returns the Axes object with the plot drawn onto it. Only returned if ``show=False``
+		and ``rendering_engine=="matplotlib"``.
+    fig: Plotly Figure
+        Returns the Figure object with the plot drawn onto it. Only returned if ``show=False``
+		and ``rendering_engine=="plotly"``.
     Examples
     --------
     See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
+
+    if no_plotly and rendering_engine() == 'plotly':
+        raise ValueError('Plotly must be installed prior to using it as a rendering engine.')
+
     # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
 
     # convert Explanation objects to dictionaries
@@ -230,145 +245,247 @@ def bar(shap_values, max_display=10, order=Explanation.abs, clustering=None, clu
     if num_features < len(values[0]):
         yticklabels[-1] = "Sum of %d other features" % num_cut
 
-    if ax is None:
-        ax = pl.gca()
-        # Only modify the figure size if ax was not passed in
-        # compute our figure size based on how many features we are showing
-        fig = pl.gcf()
-        row_height = 0.5
-        fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
-
-    # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
+    # other plot setup
     negative_values_present = np.sum(values[:,feature_order[:num_features]] < 0) > 0
-    if negative_values_present:
-        ax.axvline(0, 0, 1, color="#000000", linestyle="-", linewidth=1, zorder=1)
 
-    # draw the bars
-    patterns = (None, '\\\\', '++', 'xx', '////', '*', 'o', 'O', '.', '-')
-    total_width = 0.7
-    bar_width = total_width / len(values)
-    for i in range(len(values)):
-        ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
-        ax.barh(
-            y_pos + ypos_offset, values[i,feature_inds],
-            bar_width, align='center',
-            color=[colors.blue_rgb if values[i,feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
-            hatch=patterns[i], edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
-        )
+    #Draw the plot
+    if rendering_engine == 'plotly':
+        fig = go.Figure()
+        fig.update_layout(plot_bgcolor='white')
+        fig.update_xaxes(title=xlabel, linewidth=1, linecolor='black')
+        if len(values) > 1:
+            fig.update_layout(showlegend=True)
+        else:
+            fig.update_layout(showlegend=False)
+        
+        # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
+        if negative_values_present:
+            fig.add_vline(x=0, line_color="#000000")
+        else:
+            fig.update_yaxes(linewidth=1, linecolor='black')        
 
-    # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
-    ax.set_yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split('=')[-1] for t in yticklabels], fontsize=13)
+        # put horizontal lines for each feature row
+        for i in range(num_features):
+            fig.add_hline(y=i+1, line={'color':"#888888", 'width':0.5, 'dash':'dot'})            
+            
+        # draw the bars
+        patterns = (None, '\\', '+', 'x', '/', '|', '.', '-')
+        total_width = 0.7
+        bar_width = total_width / len(values)
+        xdatalim = [np.inf, -np.inf]
+        for i in range(len(values)):
+            ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
+            bar_negative = [1 if values[i,feature_inds[j]] <= 0 else 0 for j in range(len(y_pos))]
+            label = '%s [%i]'%(cohort_labels[i], cohort_sizes[i]) if i < len(cohort_sizes) else None
+            fig.add_trace(go.Bar(y=y_pos + ypos_offset, x=values[i,feature_inds], 
+                                 width=bar_width, orientation='h', name=label, 
+                                 marker={'color':bar_negative, 'cmin':0, 'cmax':1, 'pattern':{'shape':patterns[i]},
+                                         'colorscale':[[0, 'rgb(255,0,128)'], [1, 'rgb(0,128,255)']]}, 
+                                 text=['%+0.02f'%v for v in values[i,feature_inds]], textposition='outside', 
+                                         ))
+                
+            # Define data limits
+            cur_lim = [np.min(values[i,feature_inds]), np.max(values[i,feature_inds])]
+            xdatalim = [np.min([cur_lim[0], xdatalim[0]]), np.max([cur_lim[1], xdatalim[1]])] 
 
-    xlen = ax.get_xlim()[1] - ax.get_xlim()[0]
-    #xticks = ax.get_xticks()
-    bbox = ax.get_window_extent().transformed(ax.figure.dpi_scale_trans.inverted())
-    width = bbox.width
-    bbox_to_xscale = xlen/width
-
-    for i in range(len(values)):
-        ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
-        for j in range(len(y_pos)):
-            ind = feature_order[j]
-            if values[i,ind] < 0:
-                ax.text(
-                    values[i,ind] - (5/72)*bbox_to_xscale, y_pos[j] + ypos_offset, format_value(values[i,ind], '%+0.02f'),
-                    horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
-                    fontsize=12
-                )
+        # Define plot x limits
+        xlen = xdatalim[1] - xdatalim[0]
+        margin = xlen * 0.1
+        if negative_values_present:
+            xplotlim = [xdatalim[0] - margin, xdatalim[1] + margin]
+        else:
+            xplotlim = [0, xdatalim[1] + margin]
+        fig.update_xaxes(range=xplotlim)
+        
+        # Write the y labels        
+        formatted_labels = []
+        for y in yticklabels:
+            if '=' in y:
+                parts = y.split('=')
+                parts[0] = '<span style="color:#999999">%s</span>'%parts[0]
+                formatted_labels.append('='.join(parts))
             else:
-                ax.text(
-                    values[i,ind] + (5/72)*bbox_to_xscale, y_pos[j] + ypos_offset, format_value(values[i,ind], '%+0.02f'),
-                    horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
-                    fontsize=12
-                )
+                formatted_labels.append(y)            
+        fig.update_yaxes(tickmode='array', tickvals=y_pos, ticktext=formatted_labels)
 
-    # put horizontal lines for each feature row
-    for i in range(num_features):
-        ax.axhline(i+1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
+        # draw a dendrogram if we are given a partition tree
+        if partition_tree is not None:
+            # compute the dendrogram line positions based on our current feature order
+            feature_pos = np.argsort(feature_order)
+            ylines,xlines = dendrogram_coords(feature_pos, partition_tree)
+            
+            # plot the distance cut line above which we don't show tree edges
+            xlines_min,xlines_max = np.min(xlines),np.max(xlines)
+            ct_line_pos = (clustering_cutoff / (xlines_max - xlines_min)) * 0.1 * (xplotlim[1] - xplotlim[0]) + xplotlim[1]
+            
+            ymin, ymax = 0, max(y_pos) + ypos_offset
+            
+            fig.add_annotation(x=1, xshift=20, xref='paper',
+                               y=(ymax - ymin)/2, text="Clustering cutoff = " + format_value(clustering_cutoff, '%0.02f'), 
+                               textangle=90, 
+                              )
 
-    if features is not None:
-        features = list(features)
+            max_x = -np.inf
+            for (xline, yline) in zip(xlines, ylines):           
+                # normalize the x values to fall between 0 and 1
+                xv = (np.array(xline) / (xlines_max - xlines_min))
+    
+                # only draw if we are not going past distance threshold
+                if np.array(xline).max() <= clustering_cutoff:
+                    # only draw if we are not going past the bottom of the plot
+                    if yline.max() < max_display:
+                        x = xv * 0.1 * (xplotlim[1] - xplotlim[0]) + xplotlim[1]
+                        fig.add_trace(go.Scatter(x=x, 
+                                                 y=max_display - np.array(yline), 
+                                                 mode='lines', line={'color':'#999999'}))
+                        max_x = max([max_x, max(x)])
+                        fig.update_xaxes(range=[xplotlim[0], max_x])
 
-        # try and round off any trailing zeros after the decimal point in the feature values
-        for i in range(len(features)):
-            try:
-                if round(features[i]) == features[i]:
-                    features[i] = int(features[i])
-            except Exception:
-                pass # features[i] must not be a number
+        if show:
+            fig.show()
+        else:
+            return fig
+			
+    else: # matplotlib
 
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('none')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    if negative_values_present:
-        ax.spines['left'].set_visible(False)
-    ax.tick_params('x', labelsize=11)
+	    if ax is None:
+	        ax = pl.gca()
+	        # Only modify the figure size if ax was not passed in
+	        # compute our figure size based on how many features we are showing
+	        fig = pl.gcf()
+	        row_height = 0.5
+	        fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
 
-    xmin, xmax = ax.get_xlim()
-    ymin, ymax = ax.get_ylim()
-    x_buffer = (xmax-xmin)*0.05
+	    # if negative values are present then we draw a vertical line to mark 0, otherwise the axis does this for us...
+	    if negative_values_present:
+	        ax.axvline(0, 0, 1, color="#000000", linestyle="-", linewidth=1, zorder=1)
 
-    if negative_values_present:
-        ax.set_xlim(xmin - x_buffer, xmax + x_buffer)
-    else:
-        ax.set_xlim(xmin, xmax + x_buffer)
+	    # draw the bars
+	    patterns = (None, '\\\\', '++', 'xx', '////', '*', 'o', 'O', '.', '-')
+	    total_width = 0.7
+	    bar_width = total_width / len(values)
+	    for i in range(len(values)):
+	        ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
+	        ax.barh(
+	            y_pos + ypos_offset, values[i,feature_inds],
+	            bar_width, align='center',
+	            color=[colors.blue_rgb if values[i,feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
+	            hatch=patterns[i], edgecolor=(1,1,1,0.8), label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]"
+	        )
 
-    # if features is None:
-    #     pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
-    # else:
-    ax.set_xlabel(xlabel, fontsize=13)
+	    # draw the yticks (the 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks)
+	    ax.set_yticks(list(y_pos) + list(y_pos + 1e-8), yticklabels + [t.split('=')[-1] for t in yticklabels], fontsize=13)
 
-    if len(values) > 1:
-        ax.legend(fontsize=12)
+	    xlen = ax.get_xlim()[1] - ax.get_xlim()[0]
+	    #xticks = ax.get_xticks()
+	    bbox = ax.get_window_extent().transformed(ax.figure.dpi_scale_trans.inverted())
+	    width = bbox.width
+	    bbox_to_xscale = xlen/width
 
-    # color the y tick labels that have the feature values as gray
-    # (these fall behind the black ones with just the feature name)
-    tick_labels = ax.yaxis.get_majorticklabels()
-    for i in range(num_features):
-        tick_labels[i].set_color("#999999")
+	    for i in range(len(values)):
+	        ypos_offset = - ((i - len(values) / 2) * bar_width + bar_width / 2)
+	        for j in range(len(y_pos)):
+	            ind = feature_order[j]
+	            if values[i,ind] < 0:
+	                ax.text(
+	                    values[i,ind] - (5/72)*bbox_to_xscale, y_pos[j] + ypos_offset, format_value(values[i,ind], '%+0.02f'),
+	                    horizontalalignment='right', verticalalignment='center', color=colors.blue_rgb,
+	                    fontsize=12
+	                )
+	            else:
+	                ax.text(
+	                    values[i,ind] + (5/72)*bbox_to_xscale, y_pos[j] + ypos_offset, format_value(values[i,ind], '%+0.02f'),
+	                    horizontalalignment='left', verticalalignment='center', color=colors.red_rgb,
+	                    fontsize=12
+	                )
 
-    # draw a dendrogram if we are given a partition tree
-    if partition_tree is not None:
+	    # put horizontal lines for each feature row
+	    for i in range(num_features):
+	        ax.axhline(i+1, color="#888888", lw=0.5, dashes=(1, 5), zorder=-1)
 
-        # compute the dendrogram line positions based on our current feature order
-        feature_pos = np.argsort(feature_order)
-        ylines,xlines = dendrogram_coords(feature_pos, partition_tree)
+	    if features is not None:
+	        features = list(features)
 
-        # plot the distance cut line above which we don't show tree edges
-        xmin,xmax = ax.get_xlim()
-        xlines_min,xlines_max = np.min(xlines),np.max(xlines)
-        ct_line_pos = (clustering_cutoff / (xlines_max - xlines_min)) * 0.1 * (xmax - xmin) + xmax
-        ax.text(
-            ct_line_pos + 0.005 * (xmax - xmin), (ymax - ymin)/2, "Clustering cutoff = " + format_value(clustering_cutoff, '%0.02f'),
-            horizontalalignment='left', verticalalignment='center', color="#999999",
-            fontsize=12, rotation=-90
-        )
-        line = ax.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
-        line.set_clip_on(False)
+	        # try and round off any trailing zeros after the decimal point in the feature values
+	        for i in range(len(features)):
+	            try:
+	                if round(features[i]) == features[i]:
+	                    features[i] = int(features[i])
+	            except Exception:
+	                pass # features[i] must not be a number
 
-        for (xline, yline) in zip(xlines, ylines):
+	    ax.xaxis.set_ticks_position('bottom')
+	    ax.yaxis.set_ticks_position('none')
+	    ax.spines['right'].set_visible(False)
+	    ax.spines['top'].set_visible(False)
+	    if negative_values_present:
+	        ax.spines['left'].set_visible(False)
+	    ax.tick_params('x', labelsize=11)
 
-            # normalize the x values to fall between 0 and 1
-            xv = (np.array(xline) / (xlines_max - xlines_min))
+	    xmin, xmax = ax.get_xlim()
+	    ymin, ymax = ax.get_ylim()
+	    x_buffer = (xmax-xmin)*0.05
 
-            # only draw if we are not going past distance threshold
-            if np.array(xline).max() <= clustering_cutoff:
+	    if negative_values_present:
+	        ax.set_xlim(xmin - x_buffer, xmax + x_buffer)
+	    else:
+	        ax.set_xlim(xmin, xmax + x_buffer)
 
-                # only draw if we are not going past the bottom of the plot
-                if yline.max() < max_display:
-                    lines = ax.plot(
-                        xv * 0.1 * (xmax - xmin) + xmax,
-                        max_display - np.array(yline),
-                        color="#999999"
-                    )
-                    for line in lines:
-                        line.set_clip_on(False)
+	    # if features is None:
+	    #     pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
+	    # else:
+	    ax.set_xlabel(xlabel, fontsize=13)
 
-    if show:
-        pl.show()
-    else:
-        return ax
+	    if len(values) > 1:
+	        ax.legend(fontsize=12)
+
+	    # color the y tick labels that have the feature values as gray
+	    # (these fall behind the black ones with just the feature name)
+	    tick_labels = ax.yaxis.get_majorticklabels()
+	    for i in range(num_features):
+	        tick_labels[i].set_color("#999999")
+
+	    # draw a dendrogram if we are given a partition tree
+	    if partition_tree is not None:
+
+	        # compute the dendrogram line positions based on our current feature order
+	        feature_pos = np.argsort(feature_order)
+	        ylines,xlines = dendrogram_coords(feature_pos, partition_tree)
+
+	        # plot the distance cut line above which we don't show tree edges
+	        xmin,xmax = ax.get_xlim()
+	        xlines_min,xlines_max = np.min(xlines),np.max(xlines)
+	        ct_line_pos = (clustering_cutoff / (xlines_max - xlines_min)) * 0.1 * (xmax - xmin) + xmax
+	        ax.text(
+	            ct_line_pos + 0.005 * (xmax - xmin), (ymax - ymin)/2, "Clustering cutoff = " + format_value(clustering_cutoff, '%0.02f'),
+	            horizontalalignment='left', verticalalignment='center', color="#999999",
+	            fontsize=12, rotation=-90
+	        )
+	        line = ax.axvline(ct_line_pos, color="#dddddd", dashes=(1, 1))
+	        line.set_clip_on(False)
+
+	        for (xline, yline) in zip(xlines, ylines):
+
+	            # normalize the x values to fall between 0 and 1
+	            xv = (np.array(xline) / (xlines_max - xlines_min))
+
+	            # only draw if we are not going past distance threshold
+	            if np.array(xline).max() <= clustering_cutoff:
+
+	                # only draw if we are not going past the bottom of the plot
+	                if yline.max() < max_display:
+	                    lines = ax.plot(
+	                        xv * 0.1 * (xmax - xmin) + xmax,
+	                        max_display - np.array(yline),
+	                        color="#999999"
+	                    )
+	                    for line in lines:
+	                        line.set_clip_on(False)
+
+	    if show:
+	        pl.show()
+	    else:
+	        return ax
 
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
