@@ -12,6 +12,13 @@ from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
 
+no_plotly = False
+try:
+    import plotly.graph_objects as go
+    from plotly.express.colors import sample_colorscale
+except:
+    no_plotly = True
+
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:
     """Shift SHAP base value to a new value. This function assumes that `base_value` and `new_base_value` are scalars
@@ -161,6 +168,110 @@ def __decision_plot_matplotlib(
     if show:
         pl.show()
 
+def __decision_plot_plotly(
+    base_value,
+    cumsum,
+    ascending,
+    feature_display_count,
+    features,
+    feature_names,
+    highlight,
+    plot_color,
+    axis_color,
+    y_demarc_color,
+    xlim,
+    alpha,
+    color_bar,
+    auto_size_plot,
+    title,
+    show,
+    legend_labels,
+    legend_location,
+):
+    """plotly rendering for decision_plot()"""
+    fig = go.Figure()
+
+    # image size
+    if auto_size_plot:
+        fig.update_layout(autosize=True)
+
+    # draw vertical line indicating center
+    fig.add_vline(x=base_value, line_color='#999999')
+
+    # initialize highlighting
+    linestyle = np.array(None, dtype=object)
+    linestyle = np.repeat(linestyle, cumsum.shape[0])
+    linewidth = np.repeat(1, cumsum.shape[0])
+    if highlight is not None:
+        linestyle[highlight] = "dashdot"
+        linewidth[highlight] = 2
+
+    # plot each observation's cumulative SHAP values.
+    fig.update_layout(yaxis_range=xlim)
+    y_pos = np.arange(0, feature_display_count + 1)
+    max_cumsum= np.max(cumsum)
+    min_cumsum= np.min(cumsum)
+    for i in range(cumsum.shape[0]):
+        name = legend_labels[i] if legend_labels is not None else None
+        
+        # if there is a single observation and feature values are supplied, print them.
+        if (cumsum.shape[0] == 1) and (features is not None):
+            text = ["(%s)"%(i.strip() if isinstance(i, str) else ".3f"%i.rstrip("0").rstrip(".")) for i in features[0, :]]
+            text_position = 'right'
+        else:
+            text=None
+            text_position=None
+            col = sample_colorscale(plot_color, [(cumsum[i, -1] - min_cumsum)/(max_cumsum - min_cumsum)])[0]
+            fig.add_trace(go.Scatter(x=cumsum[i, :], y=y_pos, 
+                                name = name,
+                                mode='lines', 
+                                opacity = alpha,
+                                text=text,
+                                textposition=text_position,
+                                line={'width':linewidth[i], 
+                                      'dash':linestyle[i],
+                                      'color':col, 
+                                      }))
+
+    # determine font size. if ' *\n' character sequence is found (as in interaction labels), use a smaller
+    # font. we don't shrink the font for all interaction plots because if an interaction term is not
+    # in the display window there is no need to shrink the font.
+    s = next((s for s in feature_names if " *\n" in s), None)
+    fontsize = 13 if s is None else 9
+
+    # style axes
+    fig.update_xaxes(title=labels["MODEL_OUTPUT"])
+    fig.update_layout({'yaxis':{'tickmode':'array', 'tickvals':np.array(range(feature_display_count))+0.5, 
+                                'ticktext':feature_names, 'range':[0, feature_display_count]}})
+    fig.update_layout(plot_bgcolor='white')
+    for i in range(feature_display_count + 1):
+        fig.add_hline(y=i, line_color=y_demarc_color, line_dash='dot')
+        
+    # Colorbar
+    fig.add_trace(go.Scatter(x=[base_value], y=[0], mode='markers', 
+                             marker={'colorscale':plot_color, 'showscale':True, 'size':0, 
+                                     'cmin':min_cumsum, 'cmax':max_cumsum,
+                                     'colorbar':{'orientation':'h', 'thickness':15, 'ticklabelposition':'inside',
+                                                 'y':1.0, 'len':1, 'lenmode':'fraction', 'borderwidth':0, 'xpad':0,
+                                                 'ypad':0}}))
+        
+    if title:
+        # TODO decide on style/size
+        fig.update_layout(title=title)
+
+    if ascending:
+        fig.update_xaxes(autorange="reversed")
+
+    if legend_labels is not None:
+        fig.update_layout(showlegend=True)
+    else:
+        fig.update_layout(showlegend=False)
+
+    if show:
+        fig.show()
+        
+    return fig
+
 
 class DecisionPlotResult:
     """The optional return value of decision_plot.
@@ -229,6 +340,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
+    rendering_engine='matplotlib'
 ) -> Union[DecisionPlotResult, None]:
     """Visualize model decisions using cumulative SHAP values.
 
@@ -275,8 +387,9 @@ def decision(
         Use "identity" or "logit" to specify the transformation used for the x-axis. The "logit" link transforms
         log-odds into probabilities.
 
-    plot_color : str or matplotlib.colors.ColorMap
-        Color spectrum used to draw the plot lines. If ``str``, a registered matplotlib color name is assumed.
+    plot_color : str or matplotlib.colors.ColorMap (if rendering engine is matplotlib) or color scale list from plotly.colors
+        (if rendering engine is plotly). Color spectrum used to draw the plot lines. If ``str``, a registered color name 
+        or color map for the selected rendering engine is assumed.
 
     axis_color : str or int
         Color used to draw plot axes.
@@ -332,6 +445,9 @@ def decision(
     legend_location : str
         Legend location. Any of "best", "upper right", "upper left", "lower left", "lower right", "right",
         "center left", "center right", "lower center", "upper center", "center".
+        
+    rendering_engine : str
+        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'
 
     Returns
     -------
@@ -349,6 +465,9 @@ def decision(
     See more `decision plot examples here <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/decision_plot.html>`_.
 
     """
+    if rendering_engine.lower() == 'plotly' and no_plotly:
+        raise ValueError('Plotly must be installed prior to using it as a rendering engine.')
+
     # code taken from force_plot. auto unwrap the base_value
     if type(base_value) == np.ndarray and len(base_value) == 1:
         base_value = base_value[0]
@@ -525,35 +644,66 @@ def decision(
     if alpha is None:
         alpha = 1.0
 
-    if plot_color is None:
-        plot_color = colors.red_blue
+    if rendering_engine.lower() == 'matplotlib':
+        if plot_color is None:
+            plot_color = colors.red_blue
+            
+        __decision_plot_matplotlib(
+            base_value,
+            cumsum,
+            ascending,
+            feature_display_count,
+            features_display,
+            feature_names_display,
+            highlight,
+            plot_color,
+            axis_color,
+            y_demarc_color,
+            xlim,
+            alpha,
+            color_bar,
+            auto_size_plot,
+            title,
+            show,
+            legend_labels,
+            legend_location,
+        )
+        if not return_objects:
+            return None
+    
+        return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
+        
+    elif rendering_engine.lower() == 'plotly':
+        if plot_color is None:
+            plot_color = [[0, 'rgb(0,128,255)'], [0.5, 'rgb(128,0,128)'], [1, 'rgb(255,0,0)']]
+            
+        fig = __decision_plot_plotly(
+                 base_value,
+                 cumsum,
+                 ascending,
+                 feature_display_count,
+                 features_display,
+                 feature_names_display,
+                 highlight,
+                 plot_color,
+                 axis_color,
+                 y_demarc_color,
+                 xlim,
+                 alpha,
+                 color_bar,
+                 auto_size_plot,
+                 title,
+                 show,
+                 legend_labels,
+                 legend_location,
+             )
+        if not return_objects:
+            return fig
+    
+        return fig, DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
-    __decision_plot_matplotlib(
-        base_value,
-        cumsum,
-        ascending,
-        feature_display_count,
-        features_display,
-        feature_names_display,
-        highlight,
-        plot_color,
-        axis_color,
-        y_demarc_color,
-        xlim,
-        alpha,
-        color_bar,
-        auto_size_plot,
-        title,
-        show,
-        legend_labels,
-        legend_location,
-    )
-
-    if not return_objects:
-        return None
-
-    return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
-
+    else:
+        raise ValueError("Invalid rendering engine. Options are 'matplotlib' and 'plotly'.")
 
 def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union[DecisionPlotResult, None]:
     """Decision plot for multioutput models.
