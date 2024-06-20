@@ -16,7 +16,7 @@ no_plotly = False
 try:
     import plotly.graph_objects as go
     from plotly.express.colors import sample_colorscale
-except:
+except ImportError:
     no_plotly = True
 
 
@@ -188,7 +188,7 @@ def __decision_plot_plotly(
     legend_labels,
     legend_location,
 ):
-    """plotly rendering for decision_plot()"""
+    """Plotly rendering for decision_plot()"""
     fig = go.Figure()
 
     # image size
@@ -213,48 +213,48 @@ def __decision_plot_plotly(
     min_cumsum= np.min(cumsum)
     for i in range(cumsum.shape[0]):
         name = legend_labels[i] if legend_labels is not None else None
-        
+
         # if there is a single observation and feature values are supplied, print them.
         if (cumsum.shape[0] == 1) and (features is not None):
-            text = ["(%s)"%(i.strip() if isinstance(i, str) else ".3f"%i.rstrip("0").rstrip(".")) for i in features[0, :]]
+            text = ["(%s)"%(i.strip() if isinstance(i, str) else "f{i}".rstrip("0").rstrip(".")) for i in features[0, :]]
             text_position = 'right'
         else:
             text=None
             text_position=None
             col = sample_colorscale(plot_color, [(cumsum[i, -1] - min_cumsum)/(max_cumsum - min_cumsum)])[0]
-            fig.add_trace(go.Scatter(x=cumsum[i, :], y=y_pos, 
+            fig.add_trace(go.Scatter(x=cumsum[i, :], y=y_pos,
                                 name = name,
-                                mode='lines', 
+                                mode='lines',
                                 opacity = alpha,
                                 text=text,
                                 textposition=text_position,
-                                line={'width':linewidth[i], 
+                                line={'width':linewidth[i],
                                       'dash':linestyle[i],
-                                      'color':col, 
+                                      'color':col,
                                       }))
 
     # determine font size. if ' *\n' character sequence is found (as in interaction labels), use a smaller
     # font. we don't shrink the font for all interaction plots because if an interaction term is not
     # in the display window there is no need to shrink the font.
-    s = next((s for s in feature_names if " *\n" in s), None)
-    fontsize = 13 if s is None else 9
+    #s = next((s for s in feature_names if " *\n" in s), None)
+    #fontsize = 13 if s is None else 9
 
     # style axes
     fig.update_xaxes(title=labels["MODEL_OUTPUT"])
-    fig.update_layout({'yaxis':{'tickmode':'array', 'tickvals':np.array(range(feature_display_count))+0.5, 
+    fig.update_layout({'yaxis':{'tickmode':'array', 'tickvals':np.array(range(feature_display_count))+0.5,
                                 'ticktext':feature_names, 'range':[0, feature_display_count]}})
     fig.update_layout(plot_bgcolor='white')
     for i in range(feature_display_count + 1):
         fig.add_hline(y=i, line_color=y_demarc_color, line_dash='dot')
-        
+
     # Colorbar
-    fig.add_trace(go.Scatter(x=[base_value], y=[0], mode='markers', 
-                             marker={'colorscale':plot_color, 'showscale':True, 'size':0, 
+    fig.add_trace(go.Scatter(x=[base_value], y=[0], mode='markers',
+                             marker={'colorscale':plot_color, 'showscale':True, 'size':0,
                                      'cmin':min_cumsum, 'cmax':max_cumsum,
                                      'colorbar':{'orientation':'h', 'thickness':15, 'ticklabelposition':'inside',
                                                  'y':1.0, 'len':1, 'lenmode':'fraction', 'borderwidth':0, 'xpad':0,
                                                  'ypad':0}}))
-        
+
     if title:
         # TODO decide on style/size
         fig.update_layout(title=title)
@@ -269,8 +269,7 @@ def __decision_plot_plotly(
 
     if show:
         fig.show()
-        
-    return fig
+#    return fig
 
 
 class DecisionPlotResult:
@@ -388,7 +387,7 @@ def decision(
         log-odds into probabilities.
 
     plot_color : str or matplotlib.colors.ColorMap (if rendering engine is matplotlib) or color scale list from plotly.colors
-        (if rendering engine is plotly). Color spectrum used to draw the plot lines. If ``str``, a registered color name 
+        (if rendering engine is plotly). Color spectrum used to draw the plot lines. If ``str``, a registered color name
         or color map for the selected rendering engine is assumed.
 
     axis_color : str or int
@@ -445,7 +444,7 @@ def decision(
     legend_location : str
         Legend location. Any of "best", "upper right", "upper left", "lower left", "lower right", "right",
         "center left", "center right", "lower center", "upper center", "center".
-        
+
     rendering_engine : str
         Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'
 
@@ -647,7 +646,7 @@ def decision(
     if rendering_engine.lower() == 'matplotlib':
         if plot_color is None:
             plot_color = colors.red_blue
-            
+
         __decision_plot_matplotlib(
             base_value,
             cumsum,
@@ -670,13 +669,13 @@ def decision(
         )
         if not return_objects:
             return None
-    
+
         return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
-        
+
     elif rendering_engine.lower() == 'plotly':
         if plot_color is None:
             plot_color = [[0, 'rgb(0,128,255)'], [0.5, 'rgb(128,0,128)'], [1, 'rgb(255,0,0)']]
-            
+
         fig = __decision_plot_plotly(
                  base_value,
                  cumsum,
@@ -699,7 +698,7 @@ def decision(
              )
         if not return_objects:
             return fig
-    
+
         return fig, DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
     else:

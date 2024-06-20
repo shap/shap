@@ -11,7 +11,7 @@ no_plotly = False
 try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
-except:
+except ImportError:
     no_plotly = True
 
 def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0),
@@ -57,18 +57,19 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     ax : matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
-        
+
     rendering_engine : str
-        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'        
+        Plot framework used to render the plot. Any of 'matplotlib' (default) or 'plotly'
 
     Returns
     -------
- 	ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it. Only returned if 
-		``rendering_engine=="matplotlib"``.
+    ax: matplotlib Axes
+        Returns the Axes object with the plot drawn onto it. Only returned if
+    ``rendering_engine=="matplotlib"``.
     fig: Plotly Figure
-        Returns the Figure object with the plot drawn onto it. Only returned if 
-		``rendering_engine=="plotly"``.
+        Returns the Figure object with the plot drawn onto it. Only returned if
+    ``rendering_engine=="plotly"``.
+
     Examples
     --------
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
@@ -121,26 +122,26 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     # define the plot size based on how many features we are plotting
     if rendering_engine == 'plotly':
-        if cmap is None: 
+        if cmap is None:
             cmap = [[0, 'rgb(255,0,128)'], [0.5, 'rgb(255,255,255)'], [1, 'rgb(0,128,255)']]
-            
+
         fig = make_subplots(rows=2, cols=2, vertical_spacing=0, horizontal_spacing=0,
-                            shared_xaxes=True, shared_yaxes=True, 
+                            shared_xaxes=True, shared_yaxes=True,
                             column_widths=[0.9, 0.1], row_heights=[0.1, 0.9], )
-        
+
         # plot the matrix of SHAP values as a heat map
         vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
         zmin = min(vmin,-vmax)
         zmax=max(-vmin,vmax)
         fig.add_trace(go.Heatmap(z=values.T, zmin=zmin, zmax=zmax, colorscale=cmap, reversescale=True,
-                                 colorbar={'thickness':10, 'tickmode':'array', 'tickvals':[zmin, zmax]}), 
+                                 colorbar={'thickness':10, 'tickmode':'array', 'tickvals':[zmin, zmax]}),
                       row=2, col=1)
 
         # plot the f(x) line chart above the heat map
         fx = values.T.mean(0)
-        fig.add_trace(go.Scatter(y=-fx / np.abs(fx).max() - 1.5, mode="lines", line={'color':'black', 'width':1}), row=1, col=1)        
+        fig.add_trace(go.Scatter(y=-fx / np.abs(fx).max() - 1.5, mode="lines", line={'color':'black', 'width':1}), row=1, col=1)
         fig.add_hline(y=-1.5, line_color='#aaaaaa', line_dash='dash', line_width=0.5, row=1, col=1)
-        
+
         # plot the bar plot on the right spine of the heat map
         heatmap_yticks_pos = np.arange(values.shape[1])
         bar_sizes = (feature_values / np.abs(feature_values).max()) * values.shape[0] / 20
@@ -154,17 +155,17 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         fig['layout']['xaxis4'].update(showticklabels=False)
         fig['layout']['yaxis3'].update(tickmode='array', tickvals=list(range(len(feature_names))), ticktext=feature_names)
         fig.update_yaxes(autorange="reversed")
-        
+
         # Colorbar title
-        fig.update_layout(annotations=[{'text':'SHAP Value', 'textangle':-90, 'showarrow':False, 
+        fig.update_layout(annotations=[{'text':'SHAP Value', 'textangle':-90, 'showarrow':False,
                                         'xref':'paper', 'yref':'paper', 'x':1.025, 'y':0.5, 'xshift':40}])
-                
+
         if show:
             fig.show()
-            
+
         return fig
     else:
-        if cmap is None: 
+        if cmap is None:
             cmap= colors.red_white_blue
 
         row_height = 0.5
@@ -182,7 +183,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
             vmax=max(-vmin,vmax),
             cmap=cmap,
         )
-    
+
         # adjust the axes ticks and spines for the heat map + f(x) line chart
         ax.xaxis.set_ticks_position("bottom")
         ax.yaxis.set_ticks_position("left")
@@ -190,7 +191,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         ax.spines[["left", "right"]].set_bounds(values.shape[1] - row_height, -row_height)
         ax.spines[["top", "bottom"]].set_visible(False)
         ax.tick_params(axis="both", direction="out")
-    
+
         ax.set_ylim(values.shape[1] - row_height, -3)
         heatmap_yticks_pos = np.arange(values.shape[1])
         heatmap_yticks_labels = feature_names
@@ -201,10 +202,10 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         )
         # remove the y-tick line for the f(x) label
         ax.yaxis.get_ticklines()[0].set_visible(False)
-    
+
         ax.set_xlim(-0.5, values.shape[0] - 0.5)
         ax.set_xlabel(xlabel)
-    
+
         # plot the f(x) line chart above the heat map
         ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
         fx = values.T.mean(0)
@@ -213,7 +214,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
             color="#000000",
             linewidth=1,
         )
-    
+
         # plot the bar plot on the right spine of the heat map
         bar_container = ax.barh(
             heatmap_yticks_pos,
@@ -226,7 +227,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         )
         for b in bar_container:
             b.set_clip_on(False)
-    
+
         # draw the color bar
         import matplotlib.cm as cm
         m = cm.ScalarMappable(cmap=cmap)
@@ -246,7 +247,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
         # cb.ax.set_aspect((bbox.height - 0.9) * 15)
         # cb.draw_all()
-    
+
         if show:
             pl.show()
 
