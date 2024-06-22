@@ -1222,7 +1222,7 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    @pytest.skipif(sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709.")
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709.")
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
         """Test that xgboost sklearn attributues are properly passed to the DMatrix
