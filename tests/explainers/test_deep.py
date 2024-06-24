@@ -46,26 +46,9 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     """This is the basic mnist cnn example from keras."""
     tf = pytest.importorskip('tensorflow')
     rs = np.random.RandomState(random_seed)
-    tf.compat.v1.random.set_random_seed(random_seed)
 
-    from tensorflow import keras
-    from tensorflow.compat.v1 import ConfigProto, InteractiveSession
-    from tensorflow.keras import backend as K
-    from tensorflow.keras.layers import (
-        Activation,
-        Conv2D,
-        Dense,
-        Dropout,
-        Flatten,
-        MaxPooling2D,
-    )
-    from tensorflow.keras.models import Sequential
-
-    config = ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
-    sess = InteractiveSession(config=config)
-
-    tf.compat.v1.disable_eager_execution()
 
     batch_size = 64
     num_classes = 10
@@ -81,7 +64,7 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     x_test = rs.randn(200, 28, 28)
     y_test = rs.randint(0, 9, 200)
 
-    if K.image_data_format() == 'channels_first':
+    if tf.keras.backend.image_data_format() == 'channels_first':
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
         x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
         input_shape = (1, img_rows, img_cols)
@@ -96,45 +79,45 @@ def test_tf_keras_mnist_cnn_call(random_seed):
     x_test /= 255
 
     # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_train = tf.keras.utils.to_categorical(y_train, num_classes)
+    y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
-    model = Sequential()
-    model.add(Conv2D(2, kernel_size=(3, 3),
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Conv2D(2, kernel_size=(3, 3),
                      activation='relu',
                      input_shape=input_shape))
-    model.add(Conv2D(4, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(16, activation='relu')) # 128
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes))
-    model.add(Activation('softmax'))
+    model.add(tf.keras.layers.Conv2D(4, (3, 3), activation='relu'))
+    model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(tf.keras.layers.Dropout(0.25))
+    model.add(tf.keras.layers.Flatten())
+    model.add(tf.keras.layers.Dense(16, activation='relu')) # 128
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(num_classes))
+    model.add(tf.keras.layers.Activation('softmax'))
 
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer=keras.optimizers.legacy.Adadelta(),
+    model.compile(loss=tf.keras.losses.categorical_crossentropy,
+                  optimizer=tf.keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    model.fit(x_train[:10, :], y_train[:10, :],
+    model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
               verbose=1,
-              validation_data=(x_test[:10, :], y_test[:10, :]))
+              validation_data=(x_test, y_test))
 
     # explain by passing the tensorflow inputs and outputs
     inds = rs.choice(x_train.shape[0], 3, replace=False)
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
+    e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
     shap_values_call = e(x_test[:1])
 
     np.testing.assert_array_almost_equal(shap_values, shap_values_call.values, decimal=8)
 
-    predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
+    predicted = model(x_test[:1])
 
     sums = shap_values.sum(axis=(1, 2, 3))
     np.testing.assert_allclose(sums + e.expected_value, predicted, atol=1e-3), "Sum of SHAP values does not match difference!"
-    sess.close()
+
 
 @pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
 def test_tf_keras_activations(activation):
@@ -146,9 +129,7 @@ def test_tf_keras_activations(activation):
 
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.models import Model
-    from tensorflow.keras.optimizers.legacy import SGD
-
-    tf.compat.v1.disable_eager_execution()
+    from tensorflow.keras.optimizers import SGD
 
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
@@ -169,7 +150,7 @@ def test_tf_keras_activations(activation):
     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     # explain
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    e = shap.DeepExplainer((model.inputs[0], model.layers[-1].output), x)
     shap_values = e.shap_values(x)
     preds = model.predict(x)
 
@@ -186,9 +167,11 @@ def test_tf_keras_linear():
 
     from tensorflow.keras.layers import Dense, Input
     from tensorflow.keras.models import Model
-    from tensorflow.keras.optimizers.legacy import SGD
 
-    tf.compat.v1.disable_eager_execution()
+    # from tensorflow.keras.optimizers.legacy import SGD
+    from tensorflow.keras.optimizers import SGD
+
+    # tf.compat.v1.disable_eager_execution()
 
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
@@ -211,7 +194,7 @@ def test_tf_keras_linear():
     fit_coef = model.layers[1].get_weights()[0].T[0]
 
     # explain
-    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
 
     assert shap_values.shape == (1000, 2, 1)

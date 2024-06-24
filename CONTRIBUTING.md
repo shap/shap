@@ -341,6 +341,17 @@ a given release, such as those relating to deprecation cycles.
 We use `setuptools-scm` to source the version number from the git history
 automatically. At build time, the version number is determined from the git tag.
 
+### Minimum supported dependencies
+
+We aim to follow the [SPEC 0](https://scientific-python.org/specs/spec-0000/) convention
+on minimum supported dependencies.
+
+- Support for Python versions are dropped 3 years after their initial release.
+- Support for core package dependencies are dropped 2 years after their initial release.
+
+We may support python versions for slightly longer than this window where it does
+not add any extra maintenance burden.
+
 ### Making releases
 
 We try to use automation to make the release process reliable, transparent and
