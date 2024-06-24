@@ -207,9 +207,9 @@ class DecisionPlotResult:
 
 
 def decision(
-    base_value,
-    shap_values,
-    features=None,
+    base_value: float | np.ndarray,
+    shap_values: np.ndarray,
+    features: np.ndarray | pd.Series | pd.DataFrame | list=None,
     feature_names=None,
     feature_order="importance",
     feature_display_range=None,
@@ -405,16 +405,16 @@ def decision(
         triu_count = feature_count * (feature_count - 1) // 2
         idx_diag = np.diag_indices_from(shap_values[0])
         idx_triu = np.triu_indices_from(shap_values[0], 1)
-        a = np.ndarray((observation_count, feature_count + triu_count), shap_values.dtype)
+        a: np.ndarray = np.ndarray((observation_count, feature_count + triu_count), shap_values.dtype)
         a[:, :feature_count] = shap_values[:, idx_diag[0], idx_diag[1]]
         a[:, feature_count:] = shap_values[:, idx_triu[0], idx_triu[1]] * 2
         shap_values = a
         # names
-        a = [None] * shap_values.shape[1]
-        a[:feature_count] = feature_names
+        b: list[None | str] = [None] * shap_values.shape[1]
+        b[:feature_count] = feature_names
         for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
-            a[i] = f"{feature_names[row]} *\n{feature_names[col]}"
-        feature_names = a
+            b[i] = f"{feature_names[row]} *\n{feature_names[col]}"
+        feature_names = b
         feature_count = shap_values.shape[1]
         features = None  # Can't use feature values for interactions...
 
@@ -448,10 +448,10 @@ def decision(
         # Negative values in a range are not the same as negs in a slice. Consider range(2, -1, -1) == [2, 1, 0],
         # but slice(2, -1, -1) == [] when len(features) > 2. However, range(2, -1, -1) == slice(2, -inf, -1) after
         # clipping.
-        a = np.iinfo(np.integer).min
+        c = np.iinfo(np.integer).min
         feature_display_range = slice(
-            feature_display_range.start if feature_display_range.start >= 0 else a,  # should never happen, but...
-            feature_display_range.stop if feature_display_range.stop >= 0 else a,
+            feature_display_range.start if feature_display_range.start >= 0 else c,  # should never happen, but...
+            feature_display_range.stop if feature_display_range.stop >= 0 else c,
             feature_display_range.step
         )
 
@@ -464,25 +464,25 @@ def decision(
     # ascending indices and expand by one in the negative direction. why? we are plotting the change in prediction
     # for every feature. this requires that we include the value previous to the first displayed feature
     # (i.e. i_0 - 1 to i_n).
-    a = feature_display_range.indices(feature_count)
+    d = feature_display_range.indices(feature_count)
     ascending = True
-    if a[2] == -1:  # The step
+    if d[2] == -1:  # The step
         ascending = False
-        a = (a[1] + 1, a[0] + 1, 1)
-    feature_display_count = a[1] - a[0]
+        d = (d[1] + 1, d[0] + 1, 1)
+    feature_display_count = d[1] - d[0]
     shap_values = shap_values[:, feature_idx]
-    if a[0] == 0:
-        cumsum = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
+    if d[0] == 0:
+        cumsum: np.ndarray = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
         cumsum[:, 0] = base_value
-        cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0:a[1]], axis=1)
+        cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0:d[1]], axis=1)
     else:
-        cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (a[0] - 1):a[1]]
+        cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (d[0] - 1):d[1]]
 
     # Select and sort feature names and features according to the range selected above
     feature_names = np.array(feature_names)
-    feature_names_display = feature_names[feature_idx[a[0]:a[1]]].tolist()
+    feature_names_display = feature_names[feature_idx[d[0]:d[1]]].tolist()
     feature_names = feature_names[feature_idx].tolist()
-    features_display = None if features is None else features[:, feature_idx[a[0]:a[1]]]
+    features_display = None if features is None else features[:, feature_idx[d[0]:d[1]]]
 
     # throw large data errors
     if not ignore_warnings:
@@ -512,14 +512,14 @@ def decision(
         xmin = np.min((cumsum.min(), base_value))
         xmax = np.max((cumsum.max(), base_value))
         # create a symmetric axis around base_value
-        a, b = (base_value - xmin), (xmax - base_value)
-        if a > b:
-            xlim = (base_value - a, base_value + a)
+        n, m = (base_value - xmin), (xmax - base_value)
+        if n > m:
+            xlim = (base_value - n, base_value + m)
         else:
-            xlim = (base_value - b, base_value + b)
+            xlim = (base_value - m, base_value + m)
         # Adjust xlim to include a little visual margin.
-        a = (xlim[1] - xlim[0]) * 0.02
-        xlim = (xlim[0] - a, xlim[1] + a)
+        e = (xlim[1] - xlim[0]) * 0.02
+        xlim = (xlim[0] - e, xlim[1] + e)
 
     # Initialize style arguments
     if alpha is None:

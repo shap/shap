@@ -10,7 +10,7 @@ from ._tree import (
 )
 
 try:
-    from .. import _cext_gpu
+    from .. import _cext_gpu  # type: ignore
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
 

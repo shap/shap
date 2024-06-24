@@ -54,7 +54,7 @@ docs = [
   "myst-parser==2.0.0",
   "requests",
 ]
-test-core = ["pytest", "pytest-mpl", "pytest-cov"]
+test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
 test = [
   "pytest",
   "pytest-mpl",
@@ -90,6 +90,14 @@ test_notebooks = [
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
+
+[tool.mypy]
+ignore_missing_imports = true
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+exclude = ["shap/benchmark/*"]
 
 [tool.setuptools]
 packages = [

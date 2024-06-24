@@ -1,6 +1,8 @@
 import warnings
+from typing import Callable
 
 import numpy as np
+import tensorflow as tf
 from packaging import version
 
 from ...utils._exceptions import DimensionError
@@ -8,7 +10,6 @@ from .._explainer import Explainer
 from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
 from .deep_utils import _check_additivity
 
-tf = None
 tf_ops = None
 tf_backprop = None
 tf_execute = None
@@ -564,7 +565,7 @@ def linearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
             return [None for _ in op.inputs] # no inputs vary, we must be hidden by a switch function
     return handler
 
-def nonlinearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
+def nonlinearity_1d_nonlinearity_2d(input_ind0: int, input_ind1: int, op_func: Callable) -> Callable:
     def handler(explainer, op, *grads):
         var = explainer._variable_inputs(op)
         if var[input_ind0] and not var[input_ind1]:
@@ -686,7 +687,7 @@ def break_dependence(explainer, op, *grads):
     return [None for _ in op.inputs]
 
 
-op_handlers = {}
+op_handlers: dict[str, Callable] = {}
 
 # ops that are always linear
 op_handlers["Identity"] = passthrough
