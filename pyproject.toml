@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "oldest-supported-numpy", "packaging>20.9"]
+# Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
+# https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
