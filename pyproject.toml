@@ -12,7 +12,7 @@ authors = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-  'numpy',
+  'numpy<2.0.0',  # wait till dependent libraries are compatible with numpy 2.0, see GH #3707
   'scipy',
   'scikit-learn',
   'pandas',
