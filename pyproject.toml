@@ -12,7 +12,7 @@ authors = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-  'numpy',
+  'numpy<2.0.0',  # wait till dependent libraries are compatible with numpy 2.0, see GH #3707
   'scipy',
   'scikit-learn',
   'pandas',
@@ -67,11 +67,12 @@ test = [
   "pyspark",
   "pyod",
   "transformers",
+  "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
   "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
   "torch; sys_platform != 'darwin'",
   "torchvision",
-  "tensorflow<2.16;python_version<'3.12'",  # FIXME: pending keras 3.0 support, pending tf py3.12 support
+  "tensorflow",
   "sentencepiece",
   "opencv-python",
 ]
@@ -137,6 +138,7 @@ select = [
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
+  "NPY",  # Numpy
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -155,6 +157,7 @@ ignore = [
   "D400",  # First line should end with a period
   "D401",  # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
   "D404",  # First word of the docstring should not be "This"
+  "NPY002",  # Allow numpy RandomState objects in tests
 ]
 
 [tool.ruff.lint.pydocstyle]

@@ -1798,6 +1798,10 @@ class XGBTreeModelLoader:
         n_targets = max(int(learner_model_param["num_target"]), 1)
         n_targets = max(n_targets, n_classes)
 
+        # darts booster does not have the standard format.
+        # Therefore we need to unpack the gbtree key.
+        if "gbtree" in booster and "model" not in booster:
+            booster = booster["gbtree"]
         # Check the input model doesn't have vector-leaf
         if booster["model"].get("iteration_indptr", None) is not None:
             # iteration_indptr was introduced in 2.0.
