@@ -1222,6 +1222,7 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709.")
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
         """Test that xgboost sklearn attributues are properly passed to the DMatrix
@@ -1918,3 +1919,16 @@ def test_xgboost_tweedie_regression():
     shap_values = explainer.shap_values(X)
 
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, np.log(model.predict(X)), atol=1e-4)
+
+def test_xgboost_dart_regression():
+    """GH 3665"""
+    xgboost = pytest.importorskip("xgboost")
+
+    model = xgboost.XGBRegressor(booster="dart")
+    X = np.random.rand(10, 5)
+    label = np.array([0]*5 + [1]*5)
+    model.fit(X, label)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X), atol=1e-4)

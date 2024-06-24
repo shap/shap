@@ -98,7 +98,7 @@ class Tabular(Masker):
             self.clustering = None
             self.partition = None
 
-        
+
 
         # self._last_mask = np.zeros(self.data.shape[1], dtype=bool)
         self._masked_data = data.copy()

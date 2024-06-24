@@ -39,7 +39,7 @@ jobs:
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}

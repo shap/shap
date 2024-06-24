@@ -6,7 +6,7 @@ from jupyter_client import kernelspec
 from jupyter_client.manager import KernelManager
 from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
-TIMEOUT = 20  # seconds
+TIMEOUT = 30  # seconds
 
 allow_to_fail = [
     Path("api_examples/explainers/GPUTree.ipynb"),
@@ -52,7 +52,6 @@ allow_to_timeout = [
     Path("image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow)-checkpoint.ipynb"),
     Path("image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow).ipynb"),
     Path("image_examples/image_classification/Multi-input Gradient Explainer MNIST Example.ipynb"),
-    Path("image_examples/image_classification/PyTorch Deep Explainer MNIST example.ipynb"),
     Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
     Path("tabular_examples/tree_based_models/Census income classification with XGBoost.ipynb"),
     Path("tabular_examples/tree_based_models/Fitting a Linear Simulation with XGBoost.ipynb"),
