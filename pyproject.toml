@@ -138,6 +138,7 @@ select = [
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
+  "NP201",  # Numpy 2.0 compatibility
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
