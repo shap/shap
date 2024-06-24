@@ -138,7 +138,7 @@ select = [
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
-  "NP201",  # Numpy 2.0 compatibility
+  "NPY",  # Numpy
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -157,6 +157,7 @@ ignore = [
   "D400",  # First line should end with a period
   "D401",  # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
   "D404",  # First word of the docstring should not be "This"
+  "NPY002",  # Allow numpy RandomState objects in tests
 ]
 
 [tool.ruff.lint.pydocstyle]
