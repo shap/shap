@@ -1,6 +1,6 @@
 """Visualize cumulative SHAP values."""
 
-from typing import Union
+from typing import Optional, Union
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as pl
@@ -207,9 +207,9 @@ class DecisionPlotResult:
 
 
 def decision(
-    base_value: float | np.ndarray,
+    base_value: Union[float, np.ndarray],
     shap_values: np.ndarray,
-    features: np.ndarray | pd.Series | pd.DataFrame | list=None,
+    features: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, list]]=None,
     feature_names=None,
     feature_order="importance",
     feature_display_range=None,
@@ -229,7 +229,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> Union[DecisionPlotResult, None]:
+) -> Optional[DecisionPlotResult]:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -410,7 +410,7 @@ def decision(
         a[:, feature_count:] = shap_values[:, idx_triu[0], idx_triu[1]] * 2
         shap_values = a
         # names
-        b: list[None | str] = [None] * shap_values.shape[1]
+        b: list[Optional[str]] = [None] * shap_values.shape[1]
         b[:feature_count] = feature_names
         for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
             b[i] = f"{feature_names[row]} *\n{feature_names[col]}"

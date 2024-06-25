@@ -26,7 +26,7 @@ class PyTorchDeep(Explainer):
         self.interim = False
         self.interim_inputs_shape = None
         self.expected_value = None  # to keep the DeepExplainer base happy
-        if type(model) == tuple:
+        if isinstance(model, tuple):
             self.interim = True
             model, layer = model
             model = model.eval()

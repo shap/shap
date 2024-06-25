@@ -1,7 +1,7 @@
 import json
 import random
 import string
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -19,15 +19,15 @@ from ..utils._legacy import kmeans
 from . import colors
 
 
-def image(shap_values: Explanation | np.ndarray | list[np.ndarray],
+def image(shap_values: Union[Explanation, np.ndarray, list[np.ndarray]],
           pixel_values: Optional[np.ndarray] = None,
-          labels: Optional[list[str] | np.ndarray] = None,
+          labels: Optional[Union[list[str], np.ndarray]] = None,
           true_labels: Optional[list] = None,
           width: Optional[int] = 20,
           aspect: Optional[float] = 0.2,
           hspace: Optional[float] = 0.2,
           labelpad: Optional[float] = None,
-          cmap: Optional[str | Colormap] = colors.red_transparent_blue,
+          cmap: Optional[Union[str, Colormap]] = colors.red_transparent_blue,
           show: Optional[bool] = True):
     """Plots SHAP values for image inputs.
 
