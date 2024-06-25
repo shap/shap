@@ -4,16 +4,23 @@ from typing import Callable
 import numpy as np
 import tensorflow as tf
 from packaging import version
+from tensorflow.python.eager import backprop as tf_backprop
+from tensorflow.python.eager import execute as tf_execute
+from tensorflow.python.framework import (
+    ops as tf_ops,
+)
+from tensorflow.python.ops import (
+    gradients_impl as tf_gradients_impl,
+)
 
 from ...utils._exceptions import DimensionError
 from .._explainer import Explainer
 from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
 from .deep_utils import _check_additivity
 
-tf_ops = None
-tf_backprop = None
-tf_execute = None
-tf_gradients_impl = None
+if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
+    from tensorflow.python.ops import gradients_util as tf_gradients_impl
+
 
 def custom_record_gradient(op_name, inputs, attrs, results):
     """This overrides tensorflow.python.eager.backprop._record_gradient.
@@ -79,22 +86,8 @@ class TFDeep(Explainer):
             have a value of False during predictions (and hence explanations).
 
         """
-        # try to import tensorflow
-        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
-        if tf is None:
-            from tensorflow.python.eager import backprop as tf_backprop
-            from tensorflow.python.eager import execute as tf_execute
-            from tensorflow.python.framework import (
-                ops as tf_ops,
-            )
-            from tensorflow.python.ops import (
-                gradients_impl as tf_gradients_impl,
-            )
-            if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
-                from tensorflow.python.ops import gradients_util as tf_gradients_impl
-            import tensorflow as tf
-            if version.parse(tf.__version__) < version.parse("1.4.0"):
-                warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
+        if version.parse(tf.__version__) < version.parse("1.4.0"):
+            warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn("Your TensorFlow version is newer than 2.4.0 and so graph support has been removed in eager mode and some static graphs may not be supported. See PR #1483 for discussion.")

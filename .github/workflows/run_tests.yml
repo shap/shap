@@ -85,6 +85,9 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
+      - name: Run mypy
+        if: matrix.extras == 'test-core'
+        run: mypy shap
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
