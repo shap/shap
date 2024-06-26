@@ -1,5 +1,6 @@
 import queue  # multi-producer, multi-consumer queues
 import time  # time execution
+from itertools import chain, combinations, product
 
 import numpy as np  # numpy base
 from numba import njit  # just in time compiler
@@ -9,7 +10,7 @@ from shap import Explanation, links  # shap modules
 from shap.explainers._explainer import Explainer
 from shap.models import Model
 from shap.utils import MaskedModel, OpChain, make_masks, safe_isinstance
-from itertools import chain, combinations, product
+
 
 class PartitionExplainer(Explainer):
     """Uses the Partition SHAP method to explain the output of any function.
@@ -131,7 +132,7 @@ class PartitionExplainer(Explainer):
             self._clustering = masker.clustering
             if not callable(masker.clustering):
                 self._mask_matrix = make_masks(self._clustering)
-                
+
         # if getattr(self.masker, "clustering", None) is None:
         #     raise ValueError(
         #         "The passed masker must have a .clustering attribute defined! Try shap.maskers.Partition(data) for example."
@@ -207,7 +208,7 @@ class PartitionExplainer(Explainer):
             outputs=outputs,
             silent=silent,
         )
-        
+
     def explain_row(
         self,
         *row_args,
@@ -353,8 +354,8 @@ class PartitionExplainer(Explainer):
                 #print("the values", (on_result - off_result) / num_permutations)
                 marginal_contribution = (on_result - off_result) /num_permutations
                 #print("the marginal", marginal_contribution)
-                shap_values[feature_name_to_index[last_key]] += marginal_contribution.item() 
-                
+                shap_values[feature_name_to_index[last_key]] += marginal_contribution.item()
+
         # Step 4: Return results
         #print(shap_values)
         #print(len(fm.mask_shapes[0]))
@@ -625,8 +626,8 @@ class Node:
 
     def __repr__(self):
         return f"({self.key}): {self.child} -> {self.permutations}"
-    
-# This function is to encode the dictionary to our specific structure 
+
+# This function is to encode the dictionary to our specific structure
 def build_tree(d, root):
     if isinstance(d, dict):
         for key, value in d.items():
@@ -639,29 +640,29 @@ def build_tree(d, root):
             root.child.append(node)
     # get all the sibling permutations
     generate_permutations(root)
-            
+
 #generate all permutations of sibling nodes and assign it to the nodes
 def generate_permutations(node):
     if not node.child:  # Leaf node
         node.permutations = []
         return
-    
+
     children_keys = [child.key for child in node.child]
     node.permutations = {}
-    
+
     for i, child in enumerate(node.child):
         excluded = children_keys[:i] + children_keys[i + 1:]
         generate_permutations(child)
-        
+
         # Generate all unique combinations of permutations for each child
         child.permutations = list(all_subsets(excluded))
-        
+
 def all_subsets(iterable):
-    "Return all subsets of a given iterable."
+    """Return all subsets of a given iterable."""
     return chain.from_iterable(combinations(iterable, n) for n in range(len(iterable) + 1))
 
-            
-# Functions to generate the base masks for every node in the hierarchy 
+
+# Functions to generate the base masks for every node in the hierarchy
 def get_all_leaf_values(node):
     leaves = []
     if not node.child:
@@ -670,7 +671,7 @@ def get_all_leaf_values(node):
         for child in node.child:
             leaves.extend(get_all_leaf_values(child))
     return leaves
-            
+
 def create_masks1(node, columns):
     masks = [np.zeros(len(columns),dtype=bool)] # not very efficient for huge trees? maybe??
     keys = [()]
@@ -684,7 +685,7 @@ def create_masks1(node, columns):
         current_node_mask = columns.isin(get_all_leaf_values(node))
         masks.append(current_node_mask)
         keys.append(node.key)
-        
+
         # Recursively create masks for all child nodes
         for subset in node.child:
             child_masks, child_keys = create_masks1(subset, columns)
@@ -694,23 +695,23 @@ def create_masks1(node, columns):
     return  masks, keys
 
 
-# combine all the permutations along depth first traversal 
+# combine all the permutations along depth first traversal
 def generate_paths_and_combinations(node):
     paths = []
-    
+
     def dfs(current_node, current_path):
         current_path.append((current_node.key, current_node.permutations))
-        
+
         if not current_node.child:  # Leaf node
             paths.append(current_path[:])  # Make a copy of current_path
         else:
-            for child in current_node.child: 
+            for child in current_node.child:
                 dfs(child, current_path)
-        
+
         current_path.pop()  # Backtrack
-    
+
     dfs(node, [])
-    
+
     combinations_list = []
 
     for path in paths:
@@ -721,10 +722,10 @@ def generate_paths_and_combinations(node):
             last_key = node_keys[-1]
             for combination in path_combinations:
                 combinations_list.append((last_key, combination))
-    
+
     return combinations_list
 
-# functions to combine the masks for all the permutations created 
+# functions to combine the masks for all the permutations created
 def combine_masks(masks):
     combined_mask = np.logical_or.reduce(masks)
     return combined_mask
@@ -737,7 +738,7 @@ def combine_masks(masks):
 #         if masks:
 #             combined_mask = combine_masks(masks)
 #             combined_masks.append((last_key, combined_mask))
-            
+
 #             # Add the combined mask with the last key's mask
 #             if last_key in masks_dict:
 #                 combined_mask_with_last_key = combine_masks(masks + [masks_dict[last_key]])
@@ -757,12 +758,12 @@ def create_combined_masks(combinations, masks_dict):
             for key in keys:
                 if key in masks_dict:
                     masks.append(masks_dict[key])
-        
+
         if masks:
             # Combine all the masks using logical OR
             combined_mask = combine_masks(masks)
             combined_masks.append((last_key, combined_mask))
-            
+
             # Add the combined mask with the last key's mask if it's present
             if last_key in masks_dict:
                 combined_mask_with_last_key = combine_masks(masks + [masks_dict[last_key]])
@@ -771,7 +772,7 @@ def create_combined_masks(combinations, masks_dict):
             # If no masks were found, create a mask of all False values
             combined_mask = np.zeros_like(list(masks_dict.values())[0])
             combined_masks.append((last_key, combined_mask))
-            
+
             if last_key in masks_dict:
                 combined_mask_with_last_key = combine_masks([combined_mask, masks_dict[last_key]])
                 combined_masks.append((last_key, combined_mask_with_last_key))
@@ -781,15 +782,15 @@ def create_combined_masks(combinations, masks_dict):
 def map_combinations_to_unique_masks(combined_masks, unique_masks):
     # Create a mapping from mask arrays to their unique index
     unique_mask_index_map = {tuple(mask): idx for idx, mask in enumerate(unique_masks)}
-    
+
     # Create dictionaries to hold the mapping of last_key to unique mask indexes for ON and OFF
     last_key_to_off_indexes = {}
     last_key_to_on_indexes = {}
-    
+
     for i, (last_key, combined_mask) in enumerate(combined_masks):
         mask_tuple = tuple(combined_mask)
         unique_index = unique_mask_index_map[mask_tuple]
-        
+
         if i % 2 == 0:  # Even index -> OFF value
             if last_key not in last_key_to_off_indexes:
                 last_key_to_off_indexes[last_key] = []
@@ -798,7 +799,7 @@ def map_combinations_to_unique_masks(combined_masks, unique_masks):
             if last_key not in last_key_to_on_indexes:
                 last_key_to_on_indexes[last_key] = []
             last_key_to_on_indexes[last_key].append(unique_index)
-    
+
     return last_key_to_off_indexes, last_key_to_on_indexes
 
 def create_partition_hierarchy(linkage_matrix, columns):
@@ -811,7 +812,7 @@ def create_partition_hierarchy(linkage_matrix, columns):
             left_subtree = build_hierarchy(left_child, linkage_matrix, columns)
             right_subtree = build_hierarchy(right_child, linkage_matrix, columns)
             return {f'cluster_{node}': {**left_subtree, **right_subtree}}
-    
+
     root_node = len(linkage_matrix) + len(columns) - 1
     hierarchy = build_hierarchy(root_node, linkage_matrix, columns)
     return hierarchy[f'cluster_{root_node}']
