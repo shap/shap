@@ -20,8 +20,6 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
                  class_inds=None,
                  color_bar_label=labels["FEATURE_VALUE"],
                  cmap=colors.red_blue,
-                 # deprecated
-                 auto_size_plot=None,
                  use_log_scale=False,
     ):
     """Create a SHAP violin plot, colored by feature values when they are provided.
@@ -66,6 +64,11 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
     See `violin plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/violin.html>`_.
 
     """
+    if title is not None:
+        warnings.warn(
+            "The `title` argument is unused and will be removed in a future release.",
+            DeprecationWarning
+        )
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
@@ -76,10 +79,6 @@ def violin(shap_values, features=None, feature_names=None, max_display=None, plo
             feature_names = shap_exp.feature_names
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
-
-    # deprecation warnings
-    if auto_size_plot is not None:
-        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
 
     if isinstance(shap_values, list):
         emsg = (

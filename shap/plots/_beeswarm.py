@@ -97,10 +97,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     order = convert_ordering(order, values)
 
-    # # deprecation warnings
-    # if auto_size_plot is not None:
-    #     warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
-
     # multi_class = False
     # if isinstance(values, list):
     #     multi_class = True
@@ -452,8 +448,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                  color_bar_label=labels["FEATURE_VALUE"],
                  cmap=colors.red_blue,
                  show_values_in_legend=False,
-                 # depreciated
-                 auto_size_plot=None,
                  use_log_scale=False):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -499,12 +493,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             feature_names = shap_exp.feature_names
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
-
-    # deprecation warnings
-    if auto_size_plot is not None:
-        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead. "
-                      "The parameter auto_size_plot will be removed in the next release 0.46.0.",
-                      DeprecationWarning)
 
     multi_class = False
     if isinstance(shap_values, list):
