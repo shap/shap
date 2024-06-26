@@ -72,7 +72,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: bdist_files
+          name: bdist_files_${{ matrix.only }}
 
   build_sdist:
     name: Build source distribution
@@ -112,8 +112,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: bdist_files
           path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
 
       - uses: actions/download-artifact@v4
         with:
@@ -135,8 +136,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: bdist_files
           path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
 
       - uses: actions/download-artifact@v4
         with:
