@@ -1528,7 +1528,7 @@ class SingleTree:
                     self.values[index] = [node.prediction()]  # prediction for the node
                 else:
                     self.values[index] = [e for e in node.impurityStats().stats()] #for gini: NDarray(numLabel): 1 per label: number of item for each label which went through this node
-                self.node_sample_weight[index] = node.impurityStats().count()  # weighted count of element through this node
+                self.node_sample_weight[index] = sum([e for e in node.impurityStats().stats()]) #weighted count of element through this node
 
                 if node.subtreeDepth() == 0:
                     return index
