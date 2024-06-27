@@ -162,6 +162,7 @@ def __decision_plot_matplotlib(
         pl.show()
 
 
+
 class DecisionPlotResult:
     """The optional return value of decision_plot.
 
@@ -582,6 +583,7 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
         Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
 
     """
+    # todo: adjust to breaking changes made in #3318
     if not (isinstance(base_values, list) and isinstance(shap_values, list)):
         raise ValueError("The base_values and shap_values args expect lists.")
 
