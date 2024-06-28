@@ -8,6 +8,16 @@ import shap
 
 matplotlib.use('Agg')
 
+@pytest.fixture
+def values_features():
+    X, y = shap.datasets.adult(n_points=10)
+    rfc = sklearn.ensemble.RandomForestClassifier()
+    rfc.fit(X, y)
+    ex = shap.TreeExplainer(rfc)
+    shap_values = ex(X)
+    return shap_values, X
+
+
 def test_random_decision(random_seed):
     """Make sure the decision plot does not crash on random data."""
     rs = np.random.RandomState(random_seed)
@@ -17,21 +27,14 @@ def test_random_decision(random_seed):
         rs.standard_normal(size=(20, 5)),
         show=False
     )
-    plt.close()
 
 @pytest.mark.mpl_image_compare
-def test_decision_plot():
-    # base_value,
-    # shap_values,
+def test_decision_plot(values_features):
     fig = plt.figure()
+    shap_values, _X = values_features
 
-    X, y = shap.datasets.adult(n_points=10)
-    rfc = sklearn.ensemble.RandomForestClassifier()
-    rfc.fit(X, y)
-    ex = shap.TreeExplainer(rfc)
-    result_values = ex(X)
-    shap.decision_plot(result_values.base_values[0, 1],
-                       result_values.values[:, :, 1],
+    shap.decision_plot(shap_values.base_values[0, 1],
+                       shap_values.values[:, :, 1],
                        show=False,
                        return_objects=True,
                        title="Decision Plot",
@@ -40,18 +43,12 @@ def test_decision_plot():
     return fig
 
 @pytest.mark.mpl_image_compare
-def test_decision_plot_single_instance():
-    # base_value,
-    # shap_values,
+def test_decision_plot_single_instance(values_features):
     fig = plt.figure()
+    shap_values, X = values_features
 
-    X, y = shap.datasets.adult(n_points=10)
-    rfc = sklearn.ensemble.RandomForestClassifier()
-    rfc.fit(X, y)
-    ex = shap.TreeExplainer(rfc)
-    result_values = ex(X)
-    shap.decision_plot(result_values.base_values[0, 1],
-                       result_values.values[0, :, 1],
+    shap.decision_plot(shap_values.base_values[0, 1],
+                       shap_values.values[0, :, 1],
                        features=X.iloc[0],
                        show=False,
                        new_base_value=0,
@@ -78,14 +75,6 @@ def test_decision_plot_interactions():
     plt.tight_layout()
     return fig
 
-@pytest.fixture
-def values_features():
-    X, y = shap.datasets.adult(n_points=10)
-    rfc = sklearn.ensemble.RandomForestClassifier()
-    rfc.fit(X, y)
-    ex = shap.TreeExplainer(rfc)
-    shap_values = ex(X)
-    return shap_values, X
 
 
 @pytest.mark.mpl_image_compare
