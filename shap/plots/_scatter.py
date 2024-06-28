@@ -189,23 +189,27 @@ def scatter(shap_values, color="#1E88E5", hist=True, axis_color="#333333", cmap=
 
     # pick jitter for categorical features
     vals = np.sort(np.unique(features[:,ind]))
-    min_dist = np.inf
-    for i in range(1,len(vals)):
-        d = vals[i] - vals[i-1]
-        if d > 1e-8 and d < min_dist:
-            min_dist = d
-    num_points_per_value = len(features[:,ind]) / len(vals)
-    if num_points_per_value < 10:
-        #categorical = False
-        if x_jitter == "auto":
+    if x_jitter == "auto":
+        min_dist = 1
+        for i in range(1,len(vals)):
+            # If vals contains numbers,
+            # check for min_dist based on difference in vals
+            # Otherwise, min_dist remains set arbitrarily at 1
+            try:
+                d = vals[i] - vals[i-1]
+                if d > 1e-8 and d < min_dist:
+                    min_dist = d
+            except TypeError:
+                pass
+        num_points_per_value = len(features[:,ind]) / len(vals)
+        if num_points_per_value < 10:
+            #categorical = False
             x_jitter = 0
-    elif num_points_per_value < 100:
-        #categorical = True
-        if x_jitter == "auto":
+        elif num_points_per_value < 100:
+            #categorical = True
             x_jitter = min_dist * 0.1
-    else:
-        #categorical = True
-        if x_jitter == "auto":
+        else:
+            #categorical = True
             x_jitter = min_dist * 0.2
 
     # guess what other feature as the stongest interaction with the plotted feature
