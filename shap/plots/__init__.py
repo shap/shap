@@ -16,6 +16,7 @@ from ._monitoring import monitoring
 from ._partial_dependence import partial_dependence
 from ._scatter import scatter
 from ._text import text
+from ._video import video
 from ._violin import violin
 from ._waterfall import waterfall
 
@@ -30,6 +31,7 @@ __all__ = [
     "group_difference",
     "heatmap",
     "image",
+    "video",
     "image_to_text",
     "monitoring",
     "partial_dependence",

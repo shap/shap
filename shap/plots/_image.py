@@ -164,6 +164,7 @@ def image(shap_values: Explanation or np.ndarray,
                                     extent=(-1, sv.shape[1], sv.shape[0], -1))
             im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
             axes[row, i + 1].axis('off')
+
     if hspace == 'auto':
         fig.tight_layout()
     else:
