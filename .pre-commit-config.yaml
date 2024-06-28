@@ -26,6 +26,6 @@ repos:
   - id: end-of-file-fixer
 
 - repo: https://github.com/stefsmeets/nbcheckorder/
-    rev: v0.2.0
-    hooks:
-      - id: nbcheckorder
+  rev: v0.2.0
+  hooks:
+  - id: nbcheckorder
