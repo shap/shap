@@ -54,3 +54,9 @@ def test_simple_beeswarm(explainer):
     shap.plots.beeswarm(shap_values)
     plt.tight_layout()
     return fig
+
+def test_simple_beeswarm_plotly(explainer):
+    """Check a beeswarm chart runs.
+    """
+    shap_values = explainer(explainer.data)
+    shap.plots.beeswarm(shap_values, show=False, rendering_engine="plotly")

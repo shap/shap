@@ -58,6 +58,10 @@ def test_simple_bar(explainer):
     plt.tight_layout()
     return fig
 
+def test_simple_bar_plotly(explainer):
+    """Check that the bar plot runs."""
+    shap_values = explainer(explainer.data)
+    shap.plots.bar(shap_values, show=False, rendering_engine="plotly")
 
 @pytest.mark.mpl_image_compare
 def test_simple_bar_with_cohorts_dict():
