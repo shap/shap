@@ -8,7 +8,7 @@ import shap
 
 def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
     """Create a basic XGBoost model on a data set."""
-    xgboost = pytest.importorskip('xgboost')
+    xgboost = pytest.importorskip("xgboost")
 
     # get a dataset on income prediction
     X, y = dataset()
@@ -32,7 +32,6 @@ def test_additivity(explainer_type, model, masker, data, **kwargs):
 
     # a multi-output additivity check
     if len(shap_values.shape) == 3:
-
         # this works with ragged arrays and for models that we can't call directly (they get auto-wrapped)
         for i in range(shap_values.shape[0]):
             row = shap_values[i]
@@ -47,12 +46,14 @@ def test_additivity(explainer_type, model, masker, data, **kwargs):
     else:
         assert np.max(np.abs(shap_values.base_values + shap_values.values.sum(1) - model(data)) < 1e6)
 
+
 def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
     """Test explainer and masker for additivity on a single output prediction problem."""
     explainer = explainer_type(model, masker, **kwargs)
     shap_values = explainer(data, interactions=True)
 
     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model(data)) < 1e6)
+
 
 # def test_multi_class(explainer_type, model, masker, data, **kwargs):
 #     """ Test explainer and masker for additivity on a multi-class prediction problem.
@@ -74,23 +75,24 @@ def test_interactions_additivity(explainer_type, model, masker, data, **kwargs):
 
 #     assert np.max(np.abs(shap_values.base_values + shap_values.values.sum((1, 2)) - model.predict(X[:100])) < 1e6)
 
+
 def test_serialization(explainer_type, model, masker, data, rtol=1e-05, atol=1e-8, **kwargs):
     """Test serialization with a given explainer algorithm."""
-    explainer_kwargs = {k: v for k,v in kwargs.items() if k in ["algorithm"]}
+    explainer_kwargs = {k: v for k, v in kwargs.items() if k in ["algorithm"]}
     explainer_original = explainer_type(model, masker, **explainer_kwargs)
     shap_values_original = explainer_original(data[:1])
 
     # Serialization
     with tempfile.TemporaryFile() as temp_serialization_file:
-        save_kwargs = {k: v for k,v in kwargs.items() if k in ["model_saver", "masker_saver"]}
+        save_kwargs = {k: v for k, v in kwargs.items() if k in ["model_saver", "masker_saver"]}
         explainer_original.save(temp_serialization_file, **save_kwargs)
 
         # Deserialization
         temp_serialization_file.seek(0)
-        load_kwargs = {k: v for k,v in kwargs.items() if k in ["model_loader", "masker_loader"]}
+        load_kwargs = {k: v for k, v in kwargs.items() if k in ["model_loader", "masker_loader"]}
         explainer_new = explainer_type.load(temp_serialization_file, **load_kwargs)
 
-    call_kwargs = {k: v for k,v in kwargs.items() if k in ["max_evals"]}
+    call_kwargs = {k: v for k, v in kwargs.items() if k in ["max_evals"]}
     shap_values_new = explainer_new(data[:1], **call_kwargs)
 
     assert np.allclose(shap_values_original.base_values, shap_values_new.base_values, rtol=rtol, atol=atol)
