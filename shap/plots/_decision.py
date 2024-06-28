@@ -165,7 +165,6 @@ def __decision_plot_matplotlib(
         pl.show()
 
 
-
 class DecisionPlotResult:
     """The optional return value of decision_plot.
 
