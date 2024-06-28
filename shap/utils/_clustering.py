@@ -32,6 +32,7 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
     M = len(index_mask)
     #switch = np.random.randn(M) < 0
     _pt_shuffle_rec(partition_tree.shape[0]-1, indexes, index_mask, partition_tree, M, 0)
+
 @njit
 def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     if i < 0:
