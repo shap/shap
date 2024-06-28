@@ -131,6 +131,7 @@ filterwarnings = [
 # config to always disable linting for specific files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 extend-exclude = ["**/tree_shap_paper/**", "docs/user_studies/*"]
+line-length = 120
 
 [tool.ruff.lint]
 select = [
@@ -181,10 +182,6 @@ convention = "numpy"
 
 # Ignore pycodestyle in tests
 "tests/*py" = ["D"]
-
-[tool.ruff.format]
-# For now, only Jupyter notebooks are autoformatted.
-exclude = ["**.py"]
 
 [tool.coverage.run]
 source_pkgs = ["shap"]

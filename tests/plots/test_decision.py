@@ -6,7 +6,8 @@ import sklearn
 
 import shap
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
+
 
 @pytest.fixture
 def values_features():
@@ -108,6 +109,7 @@ def test_multioutput_decision_raises(values_features):
                                        )
 
 # (base_values, shap_values, row_index, **kwargs)
+
 
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 #
