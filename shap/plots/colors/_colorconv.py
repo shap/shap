@@ -626,7 +626,7 @@ _integer_types = (
     np.ulonglong,
 )  # 64 bits
 _integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max) for t in _integer_types}
-dtype_range = {
+dtype_range: dict[Any, Tuple[Union[bool, int], Union[bool, int]]] = {
     np.bool_: (False, True),
     bool: (False, True),
     np.float16: (-1, 1),

@@ -179,7 +179,7 @@ def image(
     cb = fig.colorbar(
         im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0] / aspect
     )
-    cb.outline.set_visible(False)
+    cb.outline.set_visible(False)  # type: ignore
     if show:
         pl.show()
 
