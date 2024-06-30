@@ -60,19 +60,19 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.19.1
         with:
           only: ${{ matrix.only }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: bdist_files
+          name: bdist_files_${{ matrix.only }}
 
   build_sdist:
     name: Build source distribution
@@ -100,7 +100,7 @@ jobs:
           python -m pip install build
           python -m build --sdist
       - name: Upload sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sdist_files
           path: dist/*.tar.gz
@@ -110,12 +110,13 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: bdist_files
           path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: sdist_files
           path: dist
@@ -133,12 +134,13 @@ jobs:
     # Only publish tagged releases to PyPI
     if: startsWith(github.ref, 'refs/tags')
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: bdist_files
           path: dist
+          pattern: bdist_files_*
+          merge-multiple: true
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: sdist_files
           path: dist

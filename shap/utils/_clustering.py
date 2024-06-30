@@ -30,8 +30,10 @@ def partition_tree_shuffle(indexes, index_mask, partition_tree):
 
     """
     M = len(index_mask)
-    #switch = np.random.randn(M) < 0
-    _pt_shuffle_rec(partition_tree.shape[0]-1, indexes, index_mask, partition_tree, M, 0)
+    # switch = np.random.randn(M) < 0
+    _pt_shuffle_rec(partition_tree.shape[0] - 1, indexes, index_mask, partition_tree, M, 0)
+
+
 @njit
 def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
     if i < 0:
@@ -41,8 +43,8 @@ def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
             return pos + 1
         else:
             return pos
-    left = int(partition_tree[i,0] - M)
-    right = int(partition_tree[i,1] - M)
+    left = int(partition_tree[i, 0] - M)
+    right = int(partition_tree[i, 1] - M)
     if np.random.randn() < 0:
         pos = _pt_shuffle_rec(left, indexes, index_mask, partition_tree, M, pos)
         pos = _pt_shuffle_rec(right, indexes, index_mask, partition_tree, M, pos)
@@ -51,29 +53,38 @@ def _pt_shuffle_rec(i, indexes, index_mask, partition_tree, M, pos):
         pos = _pt_shuffle_rec(left, indexes, index_mask, partition_tree, M, pos)
     return pos
 
+
 @njit
 def delta_minimization_order(all_masks, max_swap_size=100, num_passes=2):
     order = np.arange(len(all_masks))
     for _ in range(num_passes):
         for length in list(range(2, max_swap_size)):
-            for i in range(1, len(order)-length):
+            for i in range(1, len(order) - length):
                 if _reverse_window_score_gain(all_masks, order, i, length) > 0:
                     _reverse_window(order, i, length)
     return order
+
+
 @njit
 def _reverse_window(order, start, length):
     for i in range(length // 2):
         tmp = order[start + i]
         order[start + i] = order[start + length - i - 1]
         order[start + length - i - 1] = tmp
+
+
 @njit
 def _reverse_window_score_gain(masks, order, start, length):
-    forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + \
-                    _mask_delta_score(masks[order[start + length-1]], masks[order[start + length]])
-    reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length-1]]) + \
-                    _mask_delta_score(masks[order[start]], masks[order[start + length]])
+    forward_score = _mask_delta_score(masks[order[start - 1]], masks[order[start]]) + _mask_delta_score(
+        masks[order[start + length - 1]], masks[order[start + length]]
+    )
+    reverse_score = _mask_delta_score(masks[order[start - 1]], masks[order[start + length - 1]]) + _mask_delta_score(
+        masks[order[start]], masks[order[start + length]]
+    )
 
     return forward_score - reverse_score
+
+
 @njit
 def _mask_delta_score(m1, m2):
     return (m1 ^ m2).sum()
@@ -86,7 +97,10 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
     cluster_matrix = scipy.cluster.hierarchy.complete(D)
     return scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
 
-def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0):
+
+def xgboost_distances_r2(
+    X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0
+):
     """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
@@ -99,16 +113,22 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     import xgboost
 
     # pick our train/text split
-    X_train,X_test,y_train,y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
     # fit an XGBoost model on each of the features
     test_preds = []
     train_preds = []
     for i in range(X.shape[1]):
-        model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1, early_stopping_rounds=early_stopping_rounds)
-        model.fit(X_train[:,i:i+1], y_train, eval_set=[(X_test[:,i:i+1], y_test)], verbose=False)
-        train_preds.append(model.predict(X_train[:,i:i+1]))
-        test_preds.append(model.predict(X_test[:,i:i+1]))
+        model = xgboost.XGBRegressor(
+            subsample=subsample,
+            n_estimators=max_estimators,
+            learning_rate=learning_rate,
+            max_depth=1,
+            early_stopping_rounds=early_stopping_rounds,
+        )
+        model.fit(X_train[:, i : i + 1], y_train, eval_set=[(X_test[:, i : i + 1], y_test)], verbose=False)
+        train_preds.append(model.predict(X_train[:, i : i + 1]))
+        test_preds.append(model.predict(X_test[:, i : i + 1]))
     train_preds = np.vstack(train_preds).T
     test_preds = np.vstack(test_preds).T
 
@@ -117,23 +137,37 @@ def xgboost_distances_r2(X, y, learning_rate=0.6, early_stopping_rounds=2, subsa
     for i in show_progress(range(X.shape[1]), total=X.shape[1]):
         for j in range(X.shape[1]):
             if i == j:
-                dist[i,j] = 0
+                dist[i, j] = 0
                 continue
 
             # skip features that have not variance in their predictions (likely because the feature is a constant)
-            preds_var = np.var(test_preds[:,i])
+            preds_var = np.var(test_preds[:, i])
             if preds_var < 1e-4:
-                warnings.warn(f"No/low signal found from feature {i} (this is typically caused by constant or near-constant features)! Cluster distances can't be computed for it (so setting all distances to 1).")
+                warnings.warn(
+                    f"No/low signal found from feature {i} (this is typically caused by constant or near-constant features)! Cluster distances can't be computed for it (so setting all distances to 1)."
+                )
                 r2 = 0
 
             # fit the model
             else:
-                model = xgboost.XGBRegressor(subsample=subsample, n_estimators=max_estimators, learning_rate=learning_rate, max_depth=1, early_stopping_rounds=early_stopping_rounds)
-                model.fit(X_train[:,j:j+1], train_preds[:,i], eval_set=[(X_test[:,j:j+1], test_preds[:,i])], verbose=False)
-                r2 = max(0, 1 - np.mean((test_preds[:,i] - model.predict(X_test[:,j:j+1]))**2) / preds_var)
-            dist[i,j] = 1 - r2
+                model = xgboost.XGBRegressor(
+                    subsample=subsample,
+                    n_estimators=max_estimators,
+                    learning_rate=learning_rate,
+                    max_depth=1,
+                    early_stopping_rounds=early_stopping_rounds,
+                )
+                model.fit(
+                    X_train[:, j : j + 1],
+                    train_preds[:, i],
+                    eval_set=[(X_test[:, j : j + 1], test_preds[:, i])],
+                    verbose=False,
+                )
+                r2 = max(0, 1 - np.mean((test_preds[:, i] - model.predict(X_test[:, j : j + 1])) ** 2) / preds_var)
+            dist[i, j] = 1 - r2
 
     return dist
+
 
 def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     """Fit a hierarcical clustering model for features X relative to target variable y.
@@ -185,28 +219,30 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
         # build a condensed upper triangular version by taking the max distance from either direction
         dist = []
         for i in range(dist_full.shape[0]):
-            for j in range(i+1, dist_full.shape[1]):
+            for j in range(i + 1, dist_full.shape[1]):
                 if i != j:
                     if linkage == "single":
-                        dist.append(min(dist_full[i,j], dist_full[j,i]))
+                        dist.append(min(dist_full[i, j], dist_full[j, i]))
                     elif linkage == "complete":
-                        dist.append(max(dist_full[i,j], dist_full[j,i]))
+                        dist.append(max(dist_full[i, j], dist_full[j, i]))
                     elif linkage == "average":
-                        dist.append((dist_full[i,j] + dist_full[j,i]) / 2)
+                        dist.append((dist_full[i, j] + dist_full[j, i]) / 2)
                     else:
                         raise Exception("Unsupported linkage type!")
         dist = np.array(dist)
 
     else:
         if y is not None:
-            warnings.warn("Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!")
+            warnings.warn(
+                "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!"
+            )
         if isinstance(X, pd.DataFrame):
             bg_no_nan = X.values.copy()
         else:
             bg_no_nan = X.copy()
         for i in range(bg_no_nan.shape[1]):
-            np.nan_to_num(bg_no_nan[:,i], nan=np.nanmean(bg_no_nan[:,i]), copy=False)
-        dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape)*1e-8, metric=metric)
+            np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
+        dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
     # else:
     #     raise Exception("Unknown metric: " + str(metric))
 
