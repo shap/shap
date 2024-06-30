@@ -36,6 +36,11 @@ jobs:
           - os: macos-latest
             python-version: "3.11"
             extras: "test"
+          # Run tests with only the core dependencies, to ensure we
+          # cover the latest version of numpy/pandas. See GH dsgibbons#46
+          - os: ubuntu-latest
+            python-version: "3.12"
+            extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -80,9 +85,6 @@ jobs:
           # Use "eager" update strategy in case cached dependencies are outdated
           # Using regular install NOT editable install: see GH #3020
           pip install --upgrade --upgrade-strategy eager '.[${{ matrix.extras }},plots]'
-      - name: Run mypy
-        if: matrix.extras == 'test-core'
-        run: mypy shap
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
@@ -123,9 +125,9 @@ jobs:
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
-  run_test_core_and_mypy:
-    # Run basic tests and mypy on the latest Python version
-    name: run test-core and mypy
+  run_ypy:
+    # Run mypy on the latest Python version
+    name: run mypy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -141,12 +143,3 @@ jobs:
           pip install --upgrade --upgrade-strategy eager '.[test-core,plots]'
       - name: Run mypy
         run: mypy shap
-      - name: Test with pytest
-        # Ensure we avoid adding current working directory to sys.path:
-        # - Use "pytest" over "python -m pytest"
-        # - Use "append" import mode rather than default "prepend"
-        run: >
-          pytest --durations=20
-          --cov --cov-report=xml
-          --mpl-generate-summary=html --mpl-results-path=./mpl-results
-          --import-mode=append
