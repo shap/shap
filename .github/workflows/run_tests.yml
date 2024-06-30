@@ -124,10 +124,7 @@ jobs:
         run: pytest --durations=20 --import-mode=append
 
   run_test_core_and_mypy:
-    # Package is built with numpy 2.X, and tested against numpy 1.X.
-    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
-    # The "oldest supported numpy" is determined by SPEC 0:
-    # https://scientific-python.org/specs/spec-0000/
+    # Run basic tests and mypy on the latest Python version
     name: run test-core and mypy
     runs-on: ubuntu-latest
     steps:
