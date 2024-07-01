@@ -76,11 +76,11 @@ def compile_cuda_module(host_args):
 
     print("NVCC ==> ", nvcc)
     arch_flags = (
-        "-arch=sm_37 "
-        "-gencode=arch=compute_37,code=sm_37 "
+        "-gencode=arch=compute_60,code=sm_60 "
         "-gencode=arch=compute_70,code=sm_70 "
         "-gencode=arch=compute_75,code=sm_75 "
-        "-gencode=arch=compute_75,code=compute_75"
+        "-gencode=arch=compute_75,code=compute_75 "
+        "-gencode=arch=compute_80,code=sm_80"
     )
     nvcc_command = (
         f"-allow-unsupported-compiler shap/cext/_cext_gpu.cu -lib -o {lib_out} "

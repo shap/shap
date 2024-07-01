@@ -1,4 +1,5 @@
 import copy
+import warnings
 
 import numpy as np
 import scipy.sparse
@@ -293,6 +294,11 @@ def _convert_delta_mask_to_full(masks, full_masks):
 #@njit # TODO: figure out how to jit this function, or most of it
 def _build_delta_masked_inputs(masks, batch_positions, num_mask_samples, num_varying_rows, delta_indexes,
                                varying_rows, args, masker, variants, variants_column_sums):
+    warnings.warn(
+        "This function is not used within the shap library and will therefore be removed in an upcoming release. "
+        "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
+        DeprecationWarning
+    )
     all_masked_inputs = [[] for a in args]
     dpos = 0
     i = -1

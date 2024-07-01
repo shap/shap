@@ -120,12 +120,12 @@ def force(
             base_value = base_value[0]
 
     if isinstance(base_value, (np.ndarray, list)):
-        if not isinstance(shap_values, list) or len(shap_values) != len(base_value):
+        if not isinstance(shap_values, (list, np.ndarray)) or len(shap_values) != len(base_value):
             emsg = (
                 "In v0.20, force plot now requires the base value as the first parameter! "
                 "Try shap.plots.force(explainer.expected_value, shap_values) or "
                 "for multi-output models try "
-                "shap.plots.force(explainer.expected_value[0], shap_values[0])."
+                "shap.plots.force(explainer.expected_value[0], shap_values[..., 0])."
             )
             raise TypeError(emsg)
 
@@ -456,12 +456,13 @@ class SimpleListVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
+        generated_id = id_generator()
         return f"""
-<div id='{id_generator()}'>{err_msg}</div>
+<div id='{generated_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.SimpleListVisualizer, {json.dumps(self.data)}),
-    document.getElementById('{id_generator()}')
+    document.getElementById('{generated_id}')
   );
 </script>"""
 
@@ -507,12 +508,13 @@ class AdditiveForceVisualizer(BaseVisualizer):
     def html(self, label_margin=20):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
         self.data["labelMargin"] = label_margin
+        generated_id = id_generator()
         return f"""
-<div id='{id_generator()}'>{err_msg}</div>
+<div id='{generated_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
     SHAP.React.createElement(SHAP.AdditiveForceVisualizer, {json.dumps(self.data)}),
-    document.getElementById('{id_generator()}')
+    document.getElementById('{generated_id}')
   );
 </script>"""
 
@@ -577,14 +579,15 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
     def html(self):
         # assert have_ipython, "IPython must be installed to use this visualizer! Run `pip install ipython` and then restart shap."
-        return """
-<div id='{id}'>{err_msg}</div>
+        _id = id_generator()
+        return f"""
+<div id='{_id}'>{err_msg}</div>
  <script>
    if (window.SHAP) SHAP.ReactDom.render(
-    SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {data}),
-    document.getElementById('{id}')
+    SHAP.React.createElement(SHAP.AdditiveForceArrayVisualizer, {json.dumps(self.data)}),
+    document.getElementById('{_id}')
   );
-</script>""".format(err_msg=err_msg, data=json.dumps(self.data), id=id_generator())
+</script>"""
 
     def _repr_html_(self):
         return self.html()

@@ -8,7 +8,6 @@ import pytest
 from packaging import version
 
 import shap
-from shap import DeepExplainer
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -377,7 +376,7 @@ def test_tf_eager(random_seed):
     model.compile(loss="categorical_crossentropy", optimizer="Adam")
     model.fit(x.values, y.values, epochs=2)
 
-    e = DeepExplainer(model, x.values[:1])
+    e = shap.DeepExplainer(model, x.values[:1])
     sv = e.shap_values(x.values)
     assert np.abs(e.expected_value[0] + sv[0].sum(-1) - model(x.values)[:, 0]).max() < 1e-4
 
@@ -468,13 +467,53 @@ def test_tf_keras_mnist_cnn(random_seed):
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].input), x_train[inds, :, :])
     shap_values = e.shap_values(x_test[:1])
 
-    diff = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]}) - \
-    sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_train[inds, :, :]}).mean(0)
+    predicted = sess.run(model.layers[-1].input, feed_dict={model.layers[0].input: x_test[:1]})
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()
-    assert d / np.abs(diff).sum() < 0.001, "Sum of SHAP values does not match difference! %f" % d
+    sums = shap_values.sum(axis=(1, 2, 3))
+    np.testing.assert_allclose(sums + e.expected_value, predicted, atol=1e-3), "Sum of SHAP values does not match difference!"
     sess.close()
+
+@pytest.mark.parametrize("activation", ["relu", "elu", "selu"])
+def test_tf_keras_activations(activation):
+    """Test verifying that a linear model with linear data gives the correct result.
+    """
+
+    # FIXME: this test should ideally pass with any random seed. See #2960
+    random_seed = 0
+
+    tf = pytest.importorskip('tensorflow')
+
+    from tensorflow.keras.layers import Dense, Input
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.optimizers.legacy import SGD
+
+    tf.compat.v1.disable_eager_execution()
+
+    tf.compat.v1.random.set_random_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    # coefficients relating y with x1 and x2.
+    coef = np.array([1, 2]).T
+
+    # generate data following a linear relationship
+    x = rs.normal(1, 10, size=(1000, len(coef)))
+    y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
+
+    # create a linear model
+    inputs = Input(shape=(2,))
+    preds = Dense(1, activation=activation)(inputs)
+
+    model = Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=SGD(), loss='mse', metrics=['mse'])
+    model.fit(x, y, epochs=30, shuffle=False, verbose=0)
+
+    # explain
+    e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
+    shap_values = e.shap_values(x)
+    preds = model.predict(x)
+
+    assert shap_values.shape == (1000, 2, 1)
+    np.testing.assert_allclose(shap_values.sum(axis=1) + e.expected_value, preds, atol=1e-5)
 
 
 def test_tf_keras_linear():
@@ -516,13 +555,11 @@ def test_tf_keras_linear():
     e = shap.DeepExplainer((model.layers[0].input, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
 
+    assert shap_values.shape == (1000, 2, 1)
+
     # verify that the explanation follows the equation in LinearExplainer
-    values = shap_values[0] # since this is a "multi-output" model with one output
-
-    assert values.shape == (1000, 2)
-
     expected = (x - x.mean(0)) * fit_coef
-    np.testing.assert_allclose(expected - values, 0, atol=1e-5)
+    np.testing.assert_allclose(shap_values.sum(-1), expected, atol=1e-5)
 
 
 def test_tf_keras_imdb_lstm(random_seed):
@@ -577,8 +614,35 @@ def test_tf_keras_imdb_lstm(random_seed):
     sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
     diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - \
         sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: background}).mean(0)
-    assert np.allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
+    np.testing.testing_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
+
+def test_tf_deep_multi_inputs_multi_outputs():
+    tf = pytest.importorskip('tensorflow')
+
+    input1 = tf.keras.layers.Input(shape=(3,))
+    input2 = tf.keras.layers.Input(shape=(4,))
+
+    # Concatenate input layers
+    concatenated = tf.keras.layers.concatenate([input1, input2])
+
+    # Dense layers
+    x = tf.keras.layers.Dense(16, activation='relu')(concatenated)
+
+    # Output layer
+    output = tf.keras.layers.Dense(3, activation='softmax')(x)
+    model = tf.keras.models.Model(inputs=[input1, input2], outputs=output)
+    batch_size = 32
+    # Generate random input data for input1 with shape (batch_size, 3)
+    input1_data = np.random.rand(batch_size, 3)
+
+    # Generate random input data for input2 with shape (batch_size, 4)
+    input2_data = np.random.rand(batch_size, 4)
+
+    predicted = model.predict([input1_data, input2_data])
+    explainer = shap.DeepExplainer(model, [input1_data, input2_data])
+    shap_values = explainer.shap_values([input1_data, input2_data])
+    np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + explainer.expected_value, predicted, atol=1e-3)
 
 #######################
 # Torch related tests #
@@ -721,12 +785,10 @@ def test_pytorch_mnist_cnn(torch_device, interim):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(input_tensor) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        outputs = model(input_tensor).detach().cpu().numpy()
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    sums = shap_values.sum((1, 2, 3))
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -801,9 +863,11 @@ def test_pytorch_custom_nested_models(torch_device):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
 
     random_seed = 777  # TODO: #2960
@@ -847,12 +911,10 @@ def test_pytorch_custom_nested_models(torch_device):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        diff = model(test_x).detach().cpu().numpy()
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    sums = shap_values.sum(axis=(1))
+    np.testing.assert_allclose(sums + e.expected_value, diff, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -897,9 +959,11 @@ def test_pytorch_single_output(torch_device):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
 
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -942,14 +1006,10 @@ def test_pytorch_single_output(torch_device):
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x) - model(next_x_random_choices)).detach().cpu().numpy().mean(0)
+        outputs = model(test_x).detach().cpu().numpy()
 
-    sums = np.array([shap_values[i].sum() for i in range(len(shap_values))])
-    d = np.abs(sums - diff).sum()  / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
-
-
+    sums = shap_values.sum(axis=(1))
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"
 
 
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
@@ -1001,9 +1061,11 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
             loss.backward()
             optimizer.step()
             if batch_idx % 2 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
 
     random_seed = 42  # TODO: 2960
     torch.manual_seed(random_seed)
@@ -1041,15 +1103,15 @@ def test_pytorch_multiple_inputs(torch_device, disconnected):
     test_x1 = test_x1_tmp[:1].to(device)
     test_x2 = test_x2_tmp[:1].to(device)
 
-    shap_x1, shap_x2 = e.shap_values([test_x1[:1], test_x2[:1]])
+    shap_values = e.shap_values([test_x1[:1], test_x2[:1]])
 
     model.eval()
     model.zero_grad()
 
     with torch.no_grad():
-        diff = (model(test_x1, test_x2[:1]) - model(*background)).detach().cpu().numpy().mean(0)
+        outputs = model(test_x1, test_x2[:1]).detach().cpu().numpy()
 
-    sums = np.array([shap_x1[i].sum() + shap_x2[i].sum() for i in range(len(shap_x1))])
-    d = np.abs(sums - diff).sum() / np.abs(diff).sum()
-
-    assert d < 0.001, f"Sum of SHAP values does not match difference! {d}"
+    # the shap values have the shape (num_samples, num_features, num_inputs, num_outputs)
+    # so since we have just one output, we slice it out
+    sums = shap_values[0].sum(1) + shap_values[1].sum(1)
+    np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3), "Sum of SHAP values does not match difference!"

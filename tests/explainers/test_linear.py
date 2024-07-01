@@ -1,25 +1,20 @@
 """ Unit tests for the Linear explainer.
 """
-
 import numpy as np
 import pytest
 import scipy.special
+from sklearn.linear_model import Ridge
 
 import shap
+from shap.utils._exceptions import InvalidFeaturePerturbationError
 
-# Ignore expected internal shap warnings about deprecated syntax in LinearExplainer
-# In future when the deprecated syntax is fully removed, the tests must be updated
-pytestmark = [
-    pytest.mark.filterwarnings('ignore:The option feature.* has been renamed'),
-    pytest.mark.filterwarnings('ignore:The feature_perturbation option is now deprecated'),
-]
 
 def test_tied_pair():
     beta = np.array([1, 0, 0])
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
     X = np.ones((1, 3))
-    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="correlation")
+    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_perturbation="correlation_dependent")
     assert np.abs(explainer.shap_values(X) - np.array([0.5, 0.5, 0])).max() < 0.05
 
 def test_tied_pair_independent():
@@ -27,7 +22,7 @@ def test_tied_pair_independent():
     mu = np.zeros(3)
     Sigma = np.array([[1, 0.999999, 0], [0.999999, 1, 0], [0, 0, 1]])
     X = np.ones((1, 3))
-    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="independent")
+    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_perturbation="interventional")
     assert np.abs(explainer.shap_values(X) - np.array([1, 0, 0])).max() < 0.05
 
 def test_tied_pair_new():
@@ -47,7 +42,7 @@ def test_tied_triple():
     mu = 1*np.ones(4)
     Sigma = np.array([[1, 0.999999, 0.999999, 0], [0.999999, 1, 0.999999, 0], [0.999999, 0.999999, 1, 0], [0, 0, 0, 1]])
     X = 2*np.ones((1, 4))
-    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_dependence="correlation")
+    explainer = shap.LinearExplainer((beta, 0), (mu, Sigma), feature_perturbation="correlation_dependent")
     assert explainer.expected_value == 1
     assert np.abs(explainer.shap_values(X) - np.array([0.33333, 0.33333, 0.33333, 0])).max() < 0.05
 
@@ -73,7 +68,7 @@ def test_sklearn_linear_old_style():
     model.fit(X, y)
 
     # explain the model's predictions using SHAP values
-    explainer = shap.LinearExplainer(model, X, feature_perturbation="independent")
+    explainer = shap.LinearExplainer(model, X, feature_perturbation="interventional")
     assert np.abs(explainer.expected_value - model.predict(X).mean()) < 1e-6
     explainer.shap_values(X)
 
@@ -116,7 +111,7 @@ def test_perfect_colinear():
     X.iloc[:, 3] = 0 # test null features
     model = LinearRegression()
     model.fit(X, y)
-    explainer = shap.LinearExplainer(model, X, feature_dependence="correlation")
+    explainer = shap.LinearExplainer(model, X, feature_perturbation="correlation_dependent")
     shap_values = explainer.shap_values(X)
     assert np.abs(shap_values.sum(1) - model.predict(X) + model.predict(X).mean()).sum() < 1e-7
 
@@ -190,12 +185,41 @@ def test_sparse():
     assert np.max(np.abs(scipy.special.expit(explainer.expected_value + shap_values.sum(1)) - model.predict_proba(X)[:, 1])) < 1e-6
 
 
+@pytest.mark.xfail(reason="This should pass but it doesn't.")
+def test_sparse_multi_class():
+    """ Validate running LinearExplainer on scipy sparse data
+    """
+    make_multilabel_classification = pytest.importorskip('sklearn.datasets').make_multilabel_classification
+    LogisticRegression = pytest.importorskip('sklearn.linear_model').LogisticRegression
+
+    n_features = 4
+    X, y = make_multilabel_classification(n_samples=100, sparse=False, n_features=n_features, n_classes=3, n_labels=2)
+    y = np.argmax(y, axis=1)
+
+    # train linear model
+    model = LogisticRegression()
+    model.fit(X, y)
+    pred = model.predict_proba(X)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.LinearExplainer(model, X)
+    shap_values = explainer(X)
+    np.testing.assert_allclose(scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values), pred, atol=1e-6)
+
+
+def test_invalid_feature_perturbation_raises():
+    # train linear model
+    X, y = shap.datasets.california(n_points=100)
+    model = Ridge(0.1).fit(X, y)
+
+    with pytest.raises(InvalidFeaturePerturbationError, match="feature_perturbation must be one of "):
+        shap.LinearExplainer(model, X, feature_perturbation="nonsense")
+
+
 @pytest.mark.parametrize("feature_pertubation,masker", [
     (None, shap.maskers.Independent),
     ("interventional", shap.maskers.Independent),
-    ("independent", shap.maskers.Independent),
     ("correlation_dependent", shap.maskers.Impute),
-    ("correlation", shap.maskers.Impute)
 ])
 def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
     Ridge = pytest.importorskip('sklearn.linear_model').Ridge
@@ -207,3 +231,17 @@ def test_feature_perturbation_sets_correct_masker(feature_pertubation, masker):
 
     explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation=feature_pertubation)
     assert isinstance(explainer.masker, masker)
+
+
+def test_interventional_multi_regression():
+    ridge = pytest.importorskip('sklearn.linear_model').Ridge
+
+    # train linear model
+    X, y = shap.datasets.linnerud(n_points=100)
+    model = ridge(0.1)
+    model.fit(X, y)
+    outputs = model.predict(X)
+
+    explainer = shap.explainers.LinearExplainer(model, X, feature_perturbation="interventional")
+    shap_values = explainer.shap_values(X)
+    assert np.allclose(shap_values.sum(1) + explainer.expected_value, outputs, atol=1e-6)

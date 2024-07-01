@@ -491,16 +491,16 @@ def decision(
     # throw large data errors
     if not ignore_warnings:
         if observation_count > 2000:
-            raise RuntimeError("Plotting {} observations may be slow. Consider subsampling or set "
-                               "ignore_warnings=True to ignore this message.".format(observation_count))
+            raise RuntimeError(f"Plotting {observation_count} observations may be slow. Consider subsampling or set "
+                               "ignore_warnings=True to ignore this message.")
         if feature_display_count > 200:
-            raise RuntimeError("Plotting {} features may create a very large plot. Set "
+            raise RuntimeError(f"Plotting {feature_display_count} features may create a very large plot. Set "
                                "ignore_warnings=True to ignore this "
-                               "message.".format(feature_display_count))
+                               "message.")
         if feature_count * observation_count > 100000000:
-            raise RuntimeError("Processing SHAP values for {} features over {} observations may be slow. Set "
+            raise RuntimeError(f"Processing SHAP values for {feature_count} features over {observation_count} observations may be slow. Set "
                                "ignore_warnings=True to ignore this "
-                               "message.".format(feature_count, observation_count))
+                               "message.")
 
     # convert values based on link and update x-axis extents
     create_xlim = xlim is None
