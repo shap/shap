@@ -9,7 +9,7 @@ import pandas as pd
 import scipy.special
 import sklearn
 
-import_errors = {}
+import_errors: dict[str, tuple[str, Exception]] = {}
 
 
 def assert_import(package_name):

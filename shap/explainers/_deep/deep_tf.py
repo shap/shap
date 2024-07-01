@@ -1,18 +1,25 @@
 import warnings
+from typing import Callable
 
 import numpy as np
+import tensorflow as tf
 from packaging import version
+from tensorflow.python.eager import backprop as tf_backprop
+from tensorflow.python.eager import execute as tf_execute
+from tensorflow.python.framework import (
+    ops as tf_ops,
+)
+from tensorflow.python.ops import (
+    gradients_impl as tf_gradients_impl,
+)
 
 from ...utils._exceptions import DimensionError
 from .._explainer import Explainer
 from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
 from .deep_utils import _check_additivity
 
-tf = None
-tf_ops = None
-tf_backprop = None
-tf_execute = None
-tf_gradients_impl = None
+if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
+    from tensorflow.python.ops import gradients_util as tf_gradients_impl
 
 
 def custom_record_gradient(op_name, inputs, attrs, results):
@@ -80,24 +87,8 @@ class TFDeep(Explainer):
             have a value of False during predictions (and hence explanations).
 
         """
-        # try to import tensorflow
-        global tf, tf_ops, tf_backprop, tf_execute, tf_gradients_impl
-        if tf is None:
-            from tensorflow.python.eager import backprop as tf_backprop
-            from tensorflow.python.eager import execute as tf_execute
-            from tensorflow.python.framework import (
-                ops as tf_ops,
-            )
-            from tensorflow.python.ops import (
-                gradients_impl as tf_gradients_impl,
-            )
-
-            if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
-                from tensorflow.python.ops import gradients_util as tf_gradients_impl
-            import tensorflow as tf
-
-            if version.parse(tf.__version__) < version.parse("1.4.0"):
-                warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
+        if version.parse(tf.__version__) < version.parse("1.4.0"):
+            warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
 
         if version.parse(tf.__version__) >= version.parse("2.4.0"):
             warnings.warn(
@@ -591,7 +582,7 @@ def linearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
     return handler
 
 
-def nonlinearity_1d_nonlinearity_2d(input_ind0, input_ind1, op_func):
+def nonlinearity_1d_nonlinearity_2d(input_ind0: int, input_ind1: int, op_func: Callable) -> Callable:
     def handler(explainer, op, *grads):
         var = explainer._variable_inputs(op)
         if var[input_ind0] and not var[input_ind1]:
@@ -726,7 +717,7 @@ def break_dependence(explainer, op, *grads):
     return [None for _ in op.inputs]
 
 
-op_handlers = {}
+op_handlers: dict[str, Callable] = {}
 
 # ops that are always linear
 op_handlers["Identity"] = passthrough

@@ -1,7 +1,7 @@
 import json
 import random
 import string
-from typing import Optional
+from typing import Optional, Union, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -21,15 +21,15 @@ from . import colors
 
 
 def image(
-    shap_values: Explanation or np.ndarray,
+    shap_values: Union[Explanation, np.ndarray, list[np.ndarray]],
     pixel_values: Optional[np.ndarray] = None,
-    labels: Optional[list or np.ndarray] = None,
+    labels: Optional[Union[list[str], np.ndarray]] = None,
     true_labels: Optional[list] = None,
     width: Optional[int] = 20,
     aspect: Optional[float] = 0.2,
     hspace: Optional[float] = 0.2,
     labelpad: Optional[float] = None,
-    cmap: Optional[str or Colormap] = colors.red_transparent_blue,
+    cmap: Optional[Union[str, Colormap]] = colors.red_transparent_blue,
     show: Optional[bool] = True,
 ):
     """Plots SHAP values for image inputs.
@@ -71,25 +71,29 @@ def image(
 
     """
     # support passing an explanation object
-    if str(type(shap_values)).endswith("Explanation'>"):
-        shap_exp = shap_values
+    if isinstance(shap_values, Explanation):
+        shap_exp: Explanation = shap_values
         # feature_names = [shap_exp.feature_names]
         # ind = 0
         if len(shap_exp.output_dims) == 1:
-            shap_values = [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])]
+            shap_values = cast(list[np.ndarray], [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
         elif len(shap_exp.output_dims) == 0:
-            shap_values = shap_exp.values
+            shap_values = cast(list[np.ndarray], [shap_exp.values])
         else:
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
-            pixel_values = shap_exp.data
+            pixel_values = cast(np.ndarray, shap_exp.data)
         if labels is None:
-            labels = shap_exp.output_names
+            labels = cast(list[str], shap_exp.output_names)
+    else:
+        assert isinstance(
+            pixel_values, np.ndarray
+        ), "The input pixel_values must be a numpy array or an Explanation object must be provided!"
 
     # multi_output = True
     if not isinstance(shap_values, list):
         # multi_output = False
-        shap_values = [shap_values]
+        shap_values = cast(list[np.ndarray], [shap_values])
 
     if len(shap_values[0].shape) == 3:
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
@@ -113,7 +117,7 @@ def image(
     label_kwargs = {} if labelpad is None else {"pad": labelpad}
 
     # plot our explanations
-    x = pixel_values
+    x: np.ndarray = pixel_values
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
@@ -175,7 +179,7 @@ def image(
     cb = fig.colorbar(
         im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0] / aspect
     )
-    cb.outline.set_visible(False)
+    cb.outline.set_visible(False)  # type: ignore
     if show:
         pl.show()
 

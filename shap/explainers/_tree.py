@@ -26,7 +26,7 @@ from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
 
 try:
-    from .. import _cext
+    from .. import _cext  # type: ignore
 except ImportError as e:
     record_import_error("cext", "C extension was not built during install!", e)
 
