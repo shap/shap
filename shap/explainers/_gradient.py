@@ -178,7 +178,7 @@ class _TFGradient(Explainer):
             except Exception:
                 pass
         if tf.executing_eagerly():
-            if isinstance(model, tuple) or isinstance(model, list):
+            if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
                 from tensorflow.keras import Model
 

@@ -142,6 +142,7 @@ select = [
   "W",  # warning
   "D",  # pydocstyle
   "NPY",  # Numpy
+  "SIM101",  # flake8-simplify
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [

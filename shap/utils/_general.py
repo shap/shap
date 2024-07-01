@@ -219,7 +219,7 @@ def safe_isinstance(obj, class_path_str):
     """
     if isinstance(class_path_str, str):
         class_path_strs = [class_path_str]
-    elif isinstance(class_path_str, list) or isinstance(class_path_str, tuple):
+    elif isinstance(class_path_str, (list, tuple)):
         class_path_strs = class_path_str
     else:
         class_path_strs = [""]

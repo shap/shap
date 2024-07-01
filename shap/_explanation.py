@@ -755,7 +755,7 @@ def compute_output_dims(values, base_values, data, output_names):
 
 
 def is_1d(val):
-    return not (isinstance(val[0], list) or isinstance(val[0], np.ndarray))
+    return not (isinstance(val[0], (list, np.ndarray)))
 
 
 class Op:
