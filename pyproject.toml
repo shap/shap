@@ -122,6 +122,7 @@ module = [
   "cloudpickle",
   "cv2",
   "IPython.*",
+  "lightgbm.*",
   "lime.*",
   "numba",
   "pandas",
