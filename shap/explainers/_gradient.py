@@ -442,7 +442,7 @@ class _PyTorchGradient(Explainer):
         self.layer = None
         self.input_handle = None
         self.interim = False
-        if type(model) == tuple:
+        if isinstance(model, tuple):
             self.interim = True
             model, layer = model
             model = model.eval()

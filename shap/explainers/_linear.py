@@ -286,7 +286,7 @@ class LinearExplainer(Explainer):
     def _parse_model(model):
         """Attempt to pull out the coefficients and intercept from the given model object."""
         # raw coefficients
-        if type(model) == tuple and len(model) == 2:
+        if isinstance(model, tuple) and len(model) == 2:
             coef = model[0]
             intercept = model[1]
 
