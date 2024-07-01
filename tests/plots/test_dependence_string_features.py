@@ -1,3 +1,5 @@
+from typing import Any
+
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -52,11 +54,13 @@ def test_approximate_interactions():
 
 
 def _create_sample_dataset(string_features):
+    sex_values: list[Any]
     if "Sex" in string_features:
         sex_values = ["Male", "Female", "Male", "Male", "Female", "Female"]
     else:
         sex_values = [0, 1, 0, 0, 1, 1]
 
+    blood_values: list[Any]
     if "Blood group" in string_features:
         blood_values = ["A", "B", "A", "O", "O", "O"]
     else:

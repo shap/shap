@@ -99,7 +99,7 @@ check_untyped_defs = true
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-exclude = ["shap/benchmark/*"]
+exclude = ["shap/benchmark/*", "tests/benchmark/*"]
 
 [[tool.mypy.overrides]]
 # Disable some checks from certain shap modules
@@ -125,6 +125,7 @@ module = [
   "lime.*",
   "numba",
   "pandas",
+  "pyod.*",
   "pyspark.*",
   "scipy.*",
   "sklearn.*",
