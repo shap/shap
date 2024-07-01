@@ -118,16 +118,21 @@ check_untyped_defs = false
 [[tool.mypy.overrides]]
 # Ignore missing types for 3rd party libraries
 module = [
-  "catboost",
+  "catboost.*",
   "cloudpickle",
+  "cv2",
+  "IPython.*",
   "lime.*",
   "numba",
   "pandas",
+  "pyspark.*",
   "scipy.*",
   "sklearn.*",
   "slicer",
   "tensorflow.*",
+  "torch.*",
   "tqdm.*",
+  "xgboost.*",
 ]
 ignore_missing_imports = true
 
