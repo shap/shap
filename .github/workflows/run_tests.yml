@@ -125,7 +125,7 @@ jobs:
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
-  run_ypy:
+  run_mypy:
     # Run mypy on the latest Python version
     name: run mypy
     runs-on: ubuntu-latest
