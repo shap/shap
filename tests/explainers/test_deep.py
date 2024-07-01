@@ -253,7 +253,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     diff = sess.run(mod.layers[-1].output, feed_dict={mod.layers[0].input: testx})[0, :] - sess.run(
         mod.layers[-1].output, feed_dict={mod.layers[0].input: background}
     ).mean(0)
-    np.testing.testing_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
+    np.testing.assert_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
 def test_tf_deep_imbdb_transformers():
@@ -667,12 +667,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
 
-    if activation == "relu":
-        activation_func = nn.ReLU()
-    elif activation == "selu":
-        activation_func = nn.SELU()
-    else:
-        raise ValueError(f"Unknown activation function: {activation}")
+    activation_func = {"relu": nn.ReLU(), "selu": nn.SELU()}[activation]
 
     class Net(nn.Module):
         """Testing model."""

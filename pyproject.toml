@@ -99,7 +99,9 @@ check_untyped_defs = true
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-exclude = ["shap/benchmark/*"]
+exclude = ["shap/benchmark/*", "tests/benchmark/*"]
+
+plugins = ["numpy.typing.mypy_plugin"]
 
 [[tool.mypy.overrides]]
 # Disable some checks from certain shap modules
@@ -122,9 +124,11 @@ module = [
   "cloudpickle",
   "cv2",
   "IPython.*",
+  "lightgbm.*",
   "lime.*",
   "numba",
   "pandas",
+  "pyod.*",
   "pyspark.*",
   "scipy.*",
   "sklearn.*",

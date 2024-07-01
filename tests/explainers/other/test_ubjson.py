@@ -1,4 +1,5 @@
 from io import BytesIO
+from typing import Any
 
 import numpy as np
 
@@ -34,6 +35,7 @@ def test_decode_simple_key_value_pair():
 
 
 def test_decode_object():
+    expected_value: dict[str, Any]
     regression_loss = b"L\x00\x00\x00\x00\x00\x00\x00\x0ereg_loss_param{L\x00\x00\x00\x00\x00\x00\x00\x10scale_pos_weightSL\x00\x00\x00\x00\x00\x00\x00\x011}"
     fp = BytesIO(regression_loss)
     key_type = fp.read(1)
