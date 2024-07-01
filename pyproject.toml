@@ -101,6 +101,8 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
 
+plugins = ["numpy.typing.mypy_plugin"]
+
 [[tool.mypy.overrides]]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
