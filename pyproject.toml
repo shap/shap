@@ -95,12 +95,26 @@ Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
 
 [tool.mypy]
-ignore_missing_imports = true
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 check_untyped_defs = false
 exclude = ["shap/benchmark/*"]
+
+[[tool.mypy.overrides]]
+module = [
+    "catboost",
+    "cloudpickle",
+    "lime.*",
+    "numba",
+    "pandas",
+    "scipy.*",
+    "sklearn.*",
+    "slicer",
+    "tensorflow.*",
+    "tqdm.*",
+]
+ignore_missing_imports = true
 
 [tool.setuptools]
 packages = [
