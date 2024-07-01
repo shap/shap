@@ -95,24 +95,39 @@ Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
 
 [tool.mypy]
+check_untyped_defs = true
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-check_untyped_defs = false
 exclude = ["shap/benchmark/*"]
 
 [[tool.mypy.overrides]]
+# Disable some checks from certain shap modules
+# TODO: get these passing!
 module = [
-    "catboost",
-    "cloudpickle",
-    "lime.*",
-    "numba",
-    "pandas",
-    "scipy.*",
-    "sklearn.*",
-    "slicer",
-    "tensorflow.*",
-    "tqdm.*",
+  "shap._explanation",
+  "shap.actions.*",
+  "shap.explainers.*",
+  "shap.maskers.*",
+  "shap.models.*",
+  "shap.plots.*",
+  "shap.utils.*",
+]
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+# Ignore missing types for 3rd party libraries
+module = [
+  "catboost",
+  "cloudpickle",
+  "lime.*",
+  "numba",
+  "pandas",
+  "scipy.*",
+  "sklearn.*",
+  "slicer",
+  "tensorflow.*",
+  "tqdm.*",
 ]
 ignore_missing_imports = true
 

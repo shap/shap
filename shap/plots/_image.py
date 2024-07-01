@@ -1,7 +1,7 @@
 import json
 import random
 import string
-from typing import Optional, Union, cast
+from typing import Literal, Optional, Union, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -27,7 +27,7 @@ def image(
     true_labels: Optional[list] = None,
     width: Optional[int] = 20,
     aspect: Optional[float] = 0.2,
-    hspace: Optional[float] = 0.2,
+    hspace: Optional[float] | Literal["auto"] = 0.2,
     labelpad: Optional[float] = None,
     cmap: Optional[Union[str, Colormap]] = colors.red_transparent_blue,
     show: Optional[bool] = True,
