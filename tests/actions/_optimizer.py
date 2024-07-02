@@ -92,4 +92,4 @@ def test_run_out_of_group():
 
 def test_bad_action():
     with pytest.raises(InvalidAction):
-        shap.ActionOptimizer(None, [None])
+        shap.ActionOptimizer(None, [None])  # type: ignore
