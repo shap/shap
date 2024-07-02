@@ -1,5 +1,6 @@
 import copy
 import operator
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -22,47 +23,47 @@ class MetaExplanation(type):
         return op_chain_root.__getitem__(item)
 
     @property
-    def abs(cls):
+    def abs(cls) -> OpChain:
         """Element-wise absolute value op."""
         return op_chain_root.abs
 
     @property
-    def identity(cls):
+    def identity(cls) -> OpChain:
         """A no-op."""
         return op_chain_root.identity
 
     @property
-    def argsort(cls):
+    def argsort(cls) -> OpChain:
         """Numpy style argsort."""
         return op_chain_root.argsort
 
     @property
-    def sum(cls):
+    def sum(cls) -> OpChain:
         """Numpy style sum."""
         return op_chain_root.sum
 
     @property
-    def max(cls):
+    def max(cls) -> OpChain:
         """Numpy style max."""
         return op_chain_root.max
 
     @property
-    def min(cls):
+    def min(cls) -> OpChain:
         """Numpy style min."""
         return op_chain_root.min
 
     @property
-    def mean(cls):
+    def mean(cls) -> OpChain:
         """Numpy style mean."""
         return op_chain_root.mean
 
     @property
-    def sample(cls):
+    def sample(cls) -> OpChain:
         """Numpy style sample."""
         return op_chain_root.sample
 
     @property
-    def hclust(cls):
+    def hclust(cls) -> OpChain:
         """Hierarchical clustering op."""
         return op_chain_root.hclust
 
@@ -409,7 +410,7 @@ class Explanation(metaclass=MetaExplanation):
     def __len__(self):
         return self.shape[0]
 
-    def __copy__(self):
+    def __copy__(self) -> "Explanation":
         new_exp = Explanation(
             self.values,
             self.base_values,
@@ -545,7 +546,7 @@ class Explanation(metaclass=MetaExplanation):
         else:
             raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
-    def hstack(self, other):
+    def hstack(self, other: "Explanation") -> "Explanation":
         """Stack two explanations column-wise."""
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
         assert (
@@ -636,7 +637,7 @@ class Explanation(metaclass=MetaExplanation):
         return self[list(inds)]
 
     def _flatten_feature_names(self):
-        new_values = {}
+        new_values: dict[Any, Any] = {}
         for i in range(len(self.values)):
             for s, v in zip(self.feature_names[i], self.values[i]):
                 if s not in new_values:
@@ -645,7 +646,7 @@ class Explanation(metaclass=MetaExplanation):
         return new_values
 
     def _use_data_as_feature_names(self):
-        new_values = {}
+        new_values: dict[Any, Any] = {}
         for i in range(len(self.values)):
             for s, v in zip(self.data[i], self.values[i]):
                 if s not in new_values:
@@ -672,7 +673,7 @@ class Explanation(metaclass=MetaExplanation):
 
 def group_features(shap_values, feature_map):
     # TODOsomeday: support and deal with clusterings
-    reverse_map = {}
+    reverse_map: dict[Any, list[Any]] = {}
     for name in feature_map:
         reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
 
@@ -866,12 +867,12 @@ def _auto_cohorts(shap_values, max_cohorts):
                         name += " >= "
                     name += str(threshold) + " & "
         path_names.append(name[:-3])  # the -3 strips off the last unneeded ' & '
-    path_names = np.array(path_names)
+    path_names_arr = np.array(path_names)
 
     # split the instances into cohorts by their path names
     cohorts = {}
-    for name in np.unique(path_names):
-        cohorts[name] = shap_values[path_names == name]
+    for name in np.unique(path_names_arr):
+        cohorts[name] = shap_values[path_names_arr == name]
 
     return Cohorts(**cohorts)
 
