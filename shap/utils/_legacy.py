@@ -93,7 +93,6 @@ def match_instance_to_data(instance, data):
                 instance.x[0, group[0]] if len(group) == 1 else "" for group in data.groups
             ]
         assert len(instance.group_display_values) == len(data.groups)
-        instance.groups = data.groups
 
 
 class Model:
