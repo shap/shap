@@ -3,16 +3,18 @@ import os
 import re
 import sys
 from contextlib import contextmanager
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
 import scipy.special
 import sklearn
+from numpy.typing import ArrayLike
 
 import_errors: dict[str, tuple[str, Exception]] = {}
 
 
-def assert_import(package_name):
+def assert_import(package_name: str) -> None:
     global import_errors
     if package_name in import_errors:
         msg, e = import_errors[package_name]
@@ -20,12 +22,12 @@ def assert_import(package_name):
         raise e
 
 
-def record_import_error(package_name, msg, e):
+def record_import_error(package_name: str, msg: str, e: ImportError) -> None:
     global import_errors
     import_errors[package_name] = (msg, e)
 
 
-def shapley_coefficients(n):
+def shapley_coefficients(n: int) -> np.ndarray:
     out = np.zeros(n)
     for i in range(n):
         out[i] = 1 / (n * scipy.special.comb(n - 1, i))
@@ -161,7 +163,7 @@ def encode_array_if_needed(arr, dtype=np.float64):
         return encoded_array
 
 
-def sample(X, nsamples=100, random_state=0):
+def sample(X: ArrayLike, nsamples: int = 100, random_state: int = 0) -> ArrayLike:
     """Performs sampling without replacement of the input data ``X``.
 
     This is a simple wrapper over scikit-learn's ``shuffle`` function.
@@ -198,7 +200,7 @@ def sample(X, nsamples=100, random_state=0):
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 
-def safe_isinstance(obj, class_path_str):
+def safe_isinstance(obj: Any, class_path_str: Union[str, list[str]]) -> bool:
     """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
@@ -274,7 +276,7 @@ def ordinal_str(n):
 class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
-    def __init__(self, root_name=""):
+    def __init__(self, root_name: str = "") -> None:
         self._ops = []
         self._root_name = root_name
 
@@ -288,7 +290,7 @@ class OpChain:
                 obj = getattr(obj, op)
         return obj
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> "OpChain":
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -302,7 +304,7 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> "OpChain":
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
             return None
