@@ -1,6 +1,9 @@
 class Action:
     """Abstract action class."""
 
+    def __init__(self, cost):
+        self.cost = cost
+
     def __lt__(self, other_action):
         return self.cost < other_action.cost
 
