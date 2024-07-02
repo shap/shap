@@ -108,7 +108,6 @@ plugins = ["numpy.typing.mypy_plugin"]
 # TODO: get these passing!
 module = [
   "shap._explanation",
-  "shap.actions.*",
   "shap.explainers.*",
   "shap.maskers.*",
   "shap.models.*",

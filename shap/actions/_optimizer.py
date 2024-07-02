@@ -1,6 +1,7 @@
 import copy
 import queue
 import warnings
+from typing import Any
 
 from ..utils._exceptions import ConvergenceError, InvalidAction
 from ._action import Action
@@ -9,9 +10,9 @@ from ._action import Action
 class ActionOptimizer:
     def __init__(self, model, actions):
         self.model = model
-        warnings.warn("Note that ActionOptimizer is still in an alpha state and is subjust to API changes.")
+        warnings.warn("Note that ActionOptimizer is still in an alpha state and is subject to API changes.")
         # actions go into mutually exclusive groups
-        self.action_groups = []
+        self.action_groups: list[Any] = []
         for group in actions:
             if issubclass(type(group), Action):
                 group._group_index = len(self.action_groups)
