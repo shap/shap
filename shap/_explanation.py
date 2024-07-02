@@ -163,8 +163,8 @@ class Explanation(metaclass=MetaExplanation):
     @property
     def shape(self) -> tuple[Union[int, None], ...]:
         """Compute the shape over potentially complex data nesting."""
-        shape = _compute_shape(self._s.values)
-        return shape
+        # TODO: check if the return type should actually be tuple[int, ...]
+        return _compute_shape(self._s.values)
 
     @property
     def values(self):
