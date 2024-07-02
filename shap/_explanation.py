@@ -1,6 +1,6 @@
 import copy
 import operator
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -104,7 +104,9 @@ class Explanation(metaclass=MetaExplanation):
         values_shape = _compute_shape(values)
 
         if output_names is None and len(self.output_dims) == 1:
-            output_names = [f"Output {i}" for i in range(values_shape[self.output_dims[0]])]
+            num_names = values_shape[self.output_dims[0]]
+            assert num_names is not None, "Unexpected shape of values"
+            output_names = [f"Output {i}" for i in range(num_names)]
 
         if (
             len(_compute_shape(feature_names)) == 1
@@ -159,9 +161,10 @@ class Explanation(metaclass=MetaExplanation):
         )
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[Union[int, None], ...]:
         """Compute the shape over potentially complex data nesting."""
-        return _compute_shape(self._s.values)
+        shape = _compute_shape(self._s.values)
+        return shape
 
     @property
     def values(self):
@@ -297,7 +300,7 @@ class Explanation(metaclass=MetaExplanation):
             out += "\n\n.data =\n" + self.data.__repr__()
         return out
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> "Explanation":
         """This adds support for OpChain indexing."""
         new_self = None
         if not isinstance(item, tuple):
@@ -399,7 +402,7 @@ class Explanation(metaclass=MetaExplanation):
         # call slicer for the real work
         item = tuple(v for v in item)  # SML I cut out: `if not isinstance(v, str)`
         if len(item) == 0:
-            return new_self
+            return new_self  # type: ignore
         if new_self is None:
             new_self = copy.copy(self)
         new_self._s = new_self._s.__getitem__(item)
@@ -632,7 +635,9 @@ class Explanation(metaclass=MetaExplanation):
 
         """
         prev_seed = np.random.seed(random_state)
-        inds = np.random.choice(self.shape[0], min(max_samples, self.shape[0]), replace=replace)
+        length = self.shape[0]
+        assert length is not None
+        inds = np.random.choice(length, min(max_samples, length), replace=replace)
         np.random.seed(prev_seed)
         return self[list(inds)]
 
@@ -721,7 +726,7 @@ def group_features(shap_values, feature_map):
     )
 
 
-def compute_output_dims(values, base_values, data, output_names):
+def compute_output_dims(values, base_values, data, output_names) -> tuple[int, ...]:
     """Uses the passed data to infer which dimensions correspond to the model's output."""
     values_shape = _compute_shape(values)
 
@@ -777,7 +782,7 @@ def _first_item(x):
     return None
 
 
-def _compute_shape(x):
+def _compute_shape(x) -> tuple[Union[int, None], ...]:
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
     elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
