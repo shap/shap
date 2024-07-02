@@ -3,13 +3,14 @@ import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 import scipy.special
 import sklearn
-from numpy.typing import ArrayLike
+
+from ._types import _ArrayT
 
 import_errors: dict[str, tuple[str, Exception]] = {}
 
@@ -163,7 +164,7 @@ def encode_array_if_needed(arr, dtype=np.float64):
         return encoded_array
 
 
-def sample(X: ArrayLike, nsamples: int = 100, random_state: int = 0) -> ArrayLike:
+def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
     """Performs sampling without replacement of the input data ``X``.
 
     This is a simple wrapper over scikit-learn's ``shuffle`` function.
@@ -277,7 +278,7 @@ class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
     def __init__(self, root_name: str = "") -> None:
-        self._ops = []
+        self._ops: list[list[Any]] = []
         self._root_name = root_name
 
     def apply(self, obj):
@@ -304,7 +305,7 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name: str) -> "OpChain":
+    def __getattr__(self, name: str) -> Optional["OpChain"]:
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
             return None

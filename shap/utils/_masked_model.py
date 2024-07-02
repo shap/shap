@@ -1,5 +1,6 @@
 import copy
 import warnings
+from typing import Any
 
 import numpy as np
 import scipy.sparse
@@ -78,7 +79,7 @@ class MaskedModel:
         all_outputs = []
         for batch_ind in range(0, len(masks), batch_size):
             mask_batch = masks[batch_ind : batch_ind + batch_size]
-            all_masked_inputs = []
+            all_masked_inputs: list[list[Any]] = []
             num_mask_samples = np.zeros(len(mask_batch), dtype=int)
             last_mask = np.zeros(mask_batch.shape[1], dtype=bool)
             for i, mask in enumerate(mask_batch):
@@ -151,14 +152,14 @@ class MaskedModel:
         averaged_outs = np.zeros((len(batch_positions) - 1,) + outputs.shape[1:])
         max_outs = self._masker_rows if self._masker_rows is not None else max(len(r) for r in varying_rows)
         last_outs = np.zeros((max_outs,) + outputs.shape[1:])
-        varying_rows = np.array(varying_rows)
+        varying_rows_array = np.array(varying_rows)
 
         _build_fixed_output(
             averaged_outs,
             last_outs,
             outputs,
             batch_positions,
-            varying_rows,
+            varying_rows_array,
             num_varying_rows,
             self.link,
             self._linearizing_weights,
@@ -323,7 +324,7 @@ def _build_delta_masked_inputs(
         "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
         DeprecationWarning,
     )
-    all_masked_inputs = [[] for a in args]
+    all_masked_inputs: list[list[Any]] = [[] for a in args]
     dpos = 0
     i = -1
     masks_pos = 0
