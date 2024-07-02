@@ -111,7 +111,6 @@ module = [
   "shap.maskers.*",
   "shap.models.*",
   "shap.plots.*",
-  "shap.utils.*",
 ]
 check_untyped_defs = false
 
