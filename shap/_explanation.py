@@ -17,7 +17,7 @@ op_chain_root = OpChain("shap.Explanation")
 
 
 class MetaExplanation(type):
-    """This metaclass exposes the Explanation object's methods for creating template op chains."""
+    """This metaclass exposes the Explanation object's class methods for creating template op chains."""
 
     def __getitem__(cls, item):
         return op_chain_root.__getitem__(item)
@@ -69,7 +69,16 @@ class MetaExplanation(type):
 
 
 class Explanation(metaclass=MetaExplanation):
-    """A sliceable set of parallel arrays representing a SHAP explanation."""
+    """A sliceable set of parallel arrays representing a SHAP explanation.
+
+    Note
+    ----
+    The *instance* methods such as `.max()` return new Explanation objects with the
+    operation applied.
+
+    The *class* methods such as `Explanation.max` return OpChain objects that represent
+    a set of dot chained operations without actually running them.
+    """
 
     def __init__(
         self,
