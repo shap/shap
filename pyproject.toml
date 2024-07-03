@@ -107,7 +107,6 @@ plugins = ["numpy.typing.mypy_plugin"]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
 module = [
-  "shap.actions.*",
   "shap.explainers.*",
   "shap.maskers.*",
   "shap.models.*",
