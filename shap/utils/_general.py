@@ -3,7 +3,7 @@ import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -305,10 +305,10 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name: str) -> Optional["OpChain"]:
+    def __getattr__(self, name: str) -> "OpChain":
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
-            return None
+            return None  # type: ignore
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops.append([name, None, None])
