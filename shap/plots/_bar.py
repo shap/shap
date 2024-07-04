@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
@@ -74,8 +76,6 @@ def bar(
     See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
-    # assert str(type(shap_values)).endswith("Explanation'>"), "The shap_values parameter must be a shap.Explanation object!"
-
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
         cohorts = {"": shap_values}
@@ -392,6 +392,10 @@ def bar(
 
 
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
+    warnings.warn(
+        "The behaviour of this function will change in a future version to the new plotting API."
+        " Use `shap.plots.bar` to opt-in to the new behaviour and silence this warning."
+    )
     # unwrap pandas series
     if isinstance(features, pd.Series):
         if feature_names is None:
