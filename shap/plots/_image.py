@@ -121,9 +121,7 @@ def image(
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
-    if len(axes.shape) == 1:
-        axes = axes.reshape(1, axes.size)
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size, squeeze=False)
     for row in range(x.shape[0]):
         x_curr = x[row].copy()
 
