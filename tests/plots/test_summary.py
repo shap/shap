@@ -1,4 +1,3 @@
-import lightgbm
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -126,6 +125,7 @@ def test_random_summary_with_log_scale():
 
 def test_summary_plot_with_multiclass_model():
     # See GH #2893
+    lightgbm = pytest.importorskip("lightgbm")
     num_examples, num_features = 20, 3
     X = np.random.uniform(size=[num_examples, num_features])
     y = np.random.choice([0, 1], size=num_examples)
