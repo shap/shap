@@ -124,7 +124,8 @@ def test_random_summary_with_log_scale():
     return fig
 
 
-def test_no_type_error_in_summary_plot():
+def test_summary_plot_with_multiclass_model():
+    # See GH #2893
     num_examples, num_features = 20, 3
     X = np.random.uniform(size=[num_examples, num_features])
     y = np.random.choice([0, 1], size=num_examples)
