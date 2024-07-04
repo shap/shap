@@ -394,7 +394,10 @@ def bar(
 def bar_legacy(shap_values, features=None, feature_names=None, max_display=None, show=True):
     warnings.warn(
         "The behaviour of this function will change in a future version to the new plotting API."
-        " Use `shap.plots.bar` to opt-in to the new behaviour and silence this warning."
+        "\nUse `shap.plots.bar` to opt-in to the new behaviour and silence this warning."
+        "\nFor more information on using the new API, see:\n"
+        "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
+        DeprecationWarning,
     )
     # unwrap pandas series
     if isinstance(features, pd.Series):
