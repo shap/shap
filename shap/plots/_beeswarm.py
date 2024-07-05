@@ -651,7 +651,7 @@ def summary_legacy(
         summary_legacy(
             proj_shap_values,
             features[:, sort_inds] if features is not None else None,
-            feature_names=feature_names[sort_inds],
+            feature_names=np.array(feature_names)[sort_inds].tolist(),
             sort=False,
             show=False,
             color_bar=False,
