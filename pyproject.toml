@@ -55,6 +55,7 @@ docs = [
   "sphinx_github_changelog==1.2.1",
   "myst-parser==2.0.0",
   "requests",
+  "ipywidgets",  # For tqdm in notebooks
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
 test = [
