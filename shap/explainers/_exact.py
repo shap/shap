@@ -196,6 +196,7 @@ def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff
                 set_size -= 1
 
         # update the output row values
+        print(shapley_coeff)
         on_coeff = shapley_coeff[set_size-1]
         if set_size < M:
             off_coeff = shapley_coeff[set_size]

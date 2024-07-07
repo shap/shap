@@ -351,8 +351,8 @@ class PartitionExplainer(Explainer):
                 on_result = mask_results[tuple(self.unique_masks[on_index])]
 
                 #print("off", off_index, off_result,"on", on_index, on_result, num_permutations)
-                #print("the values", (on_result - off_result) / num_permutations)
-                marginal_contribution = (on_result - off_result) /num_permutations
+                print("normalisation", 1/num_permutations)
+                marginal_contribution = (on_result - off_result) #/ num_permutations
                 #print("the marginal", marginal_contribution)
                 shap_values[feature_name_to_index[last_key]] += marginal_contribution.item()
 
