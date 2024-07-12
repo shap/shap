@@ -3,7 +3,6 @@ import sys
 import pytest
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Integer division bug in HuggingFace on Windows")
 @pytest.fixture(scope="session")
 def basic_translation_scenario():
     """Create a basic transformers translation model and tokenizer."""
@@ -25,3 +24,11 @@ def basic_translation_scenario():
     ]
 
     return model, tokenizer, data
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Integer division bug in HuggingFace on Windows")
+def test_basic_translation_scenario(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
+    assert model is not None
+    assert tokenizer is not None
+    assert len(data) > 0

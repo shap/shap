@@ -141,9 +141,13 @@ class TreeExplainer:
     def __init__(self, model, **kwargs):
         self.model_type = "internal"
 
-        if str(type(model)).endswith("sklearn.ensemble.forest.RandomForestRegressor'>"):
+        if str(type(model)).endswith("sklearn.ensemble._forest.RandomForestRegressor'>") or str(type(model)).endswith(
+            "sklearn.ensemble.forest.RandomForestRegressor'>"
+        ):
             self.trees = [Tree(e.tree_) for e in model.estimators_]
-        elif str(type(model)).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
+        elif str(type(model)).endswith("sklearn.ensemble._forest.RandomForestClassifier'>") or str(
+            type(model)
+        ).endswith("sklearn.ensemble.forest.RandomForestClassifier'>"):
             self.trees = [Tree(e.tree_, normalize=True) for e in model.estimators_]
         elif str(type(model)).endswith("xgboost.core.Booster'>"):
             self.model_type = "xgboost"
