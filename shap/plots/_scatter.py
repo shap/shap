@@ -364,7 +364,7 @@ def scatter(
     xv_notnan = np.invert(xv_nan)
     if interaction_index is not None:
         # plot the nan values in the interaction feature as grey
-        cvals = features[oinds, interaction_index].astype(np.float64)
+        cvals = encode_array_if_needed(features[oinds, interaction_index]).astype(np.float64)
         cvals_imp = cvals.copy()
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
