@@ -59,15 +59,15 @@ class Text(Masker):
         self.output_type = output_type
         self.collapse_mask_token = collapse_mask_token
         self.input_mask_token = mask_token
-        self.mask_token = mask_token # could be recomputed later in this function
+        self.mask_token = mask_token  # could be recomputed later in this function
         self.mask_token_id = mask_token if isinstance(mask_token, int) else None
         parsed_tokenizer_dict = parse_prefix_suffix_for_tokenizer(self.tokenizer)
 
-        self.keep_prefix = parsed_tokenizer_dict['keep_prefix']
-        self.keep_suffix = parsed_tokenizer_dict['keep_suffix']
+        self.keep_prefix = parsed_tokenizer_dict["keep_prefix"]
+        self.keep_suffix = parsed_tokenizer_dict["keep_suffix"]
         # self.prefix_strlen = parsed_tokenizer_dict['prefix_strlen']
         # self.suffix_strlen = parsed_tokenizer_dict['suffix_strlen']
-        #null_tokens = parsed_tokenizer_dict['null_tokens']
+        # null_tokens = parsed_tokenizer_dict['null_tokens']
 
         self.text_data = True
 
@@ -115,10 +115,10 @@ class Text(Masker):
         # if we have a fixed prefix or suffix then we need to grow the mask to account for that
         if self.keep_prefix > 0:
             mask = mask.copy()
-            mask[:self.keep_prefix] = True
+            mask[: self.keep_prefix] = True
         if self.keep_suffix > 0:
             mask = mask.copy()
-            mask[-self.keep_suffix:] = True
+            mask[-self.keep_suffix :] = True
 
         if self.output_type == "string":
             # if self.mask_token == "":
@@ -134,7 +134,9 @@ class Text(Masker):
                     out_parts.append(self._segments_s[i])
                     is_previous_appended_token_mask_token = False
                 else:
-                    if not self.collapse_mask_token or (self.collapse_mask_token and not is_previous_appended_token_mask_token):
+                    if not self.collapse_mask_token or (
+                        self.collapse_mask_token and not is_previous_appended_token_mask_token
+                    ):
                         out_parts.append(" " + self.mask_token)
                         is_previous_appended_token_mask_token = True
             out = "".join(out_parts)
@@ -143,10 +145,12 @@ class Text(Masker):
             # by replacing whitespace encoded as '_' for sentencepiece tokenizer or 'Ġ' for sentencepiece like encoding (GPT2TokenizerFast)
             # with ' '
             if safe_isinstance(self.tokenizer, SENTENCEPIECE_TOKENIZERS):
-                out = out.replace('▁', ' ')
+                out = out.replace("▁", " ")
 
             # replace sequence of spaces with a single space and strip beginning and end spaces
-            out = re.sub(r"[\s]+", " ", out).strip() # TODOmaybe: should do strip?? (originally because of fast vs. slow tokenizer differences)
+            out = re.sub(
+                r"[\s]+", " ", out
+            ).strip()  # TODOmaybe: should do strip?? (originally because of fast vs. slow tokenizer differences)
 
         else:
             if self.mask_token_id is None:
@@ -176,11 +180,11 @@ class Text(Masker):
             token_data = self.tokenizer(s, return_offsets_mapping=True)
             offsets = token_data["offset_mapping"]
             offsets = [(0, 0) if o is None else o for o in offsets]
-            parts = [s[offsets[i][0]:max(offsets[i][1], offsets[i+1][0])] for i in range(len(offsets)-1)]
-            parts.append(s[offsets[len(offsets)-1][0]:offsets[len(offsets)-1][1]])
+            parts = [s[offsets[i][0] : max(offsets[i][1], offsets[i + 1][0])] for i in range(len(offsets) - 1)]
+            parts.append(s[offsets[len(offsets) - 1][0] : offsets[len(offsets) - 1][1]])
             return parts, token_data["input_ids"]
-        except (NotImplementedError, TypeError): # catch lack of support for return_offsets_mapping
-            token_ids = self.tokenizer(s)['input_ids']
+        except (NotImplementedError, TypeError):  # catch lack of support for return_offsets_mapping
+            token_ids = self.tokenizer(s)["input_ids"]
             if hasattr(self.tokenizer, "convert_ids_to_tokens"):
                 tokens = self.tokenizer.convert_ids_to_tokens(token_ids)
             else:
@@ -188,7 +192,10 @@ class Text(Masker):
             if hasattr(self.tokenizer, "get_special_tokens_mask"):
                 special_tokens_mask = self.tokenizer.get_special_tokens_mask(token_ids, already_has_special_tokens=True)
                 # avoid masking separator tokens, but still mask beginning of sentence and end of sentence tokens
-                special_keep = [getattr_silent(self.tokenizer, 'sep_token'), getattr_silent(self.tokenizer, 'mask_token')]
+                special_keep = [
+                    getattr_silent(self.tokenizer, "sep_token"),
+                    getattr_silent(self.tokenizer, "mask_token"),
+                ]
                 for i, v in enumerate(special_tokens_mask):
                     if v == 1 and (tokens[i] not in special_keep or i + 1 == len(special_tokens_mask)):
                         tokens[i] = ""
@@ -222,7 +229,12 @@ class Text(Masker):
         space_end = re.compile(r"^.*\W$")
         letter_start = re.compile(r"^[A-Za-z]")
         for i, v in enumerate(self._segments_s):
-            if i > 0 and space_end.match(self._segments_s[i-1]) is None and letter_start.match(v) is not None and tokens[i-1] != "":
+            if (
+                i > 0
+                and space_end.match(self._segments_s[i - 1]) is None
+                and letter_start.match(v) is not None
+                and tokens[i - 1] != ""
+            ):
                 tokens.append("##" + v.strip())
             else:
                 tokens.append(v.strip())
@@ -299,9 +311,9 @@ class Text(Masker):
 
         invariants = np.zeros(len(self._tokenized_s), dtype=bool)
         if self.keep_prefix > 0:
-            invariants[:self.keep_prefix] = True
+            invariants[: self.keep_prefix] = True
         if self.keep_suffix > 0:
-            invariants[-self.keep_suffix:] = True
+            invariants[-self.keep_suffix :] = True
         # mark separator tokens as invariant
         for i, v in enumerate(self._tokenized_s):
             if v == getattr_silent(self.tokenizer, "sep_token_id"):
@@ -367,17 +379,15 @@ class SimpleTokenizer:
 
 def post_process_sentencepiece_tokenizer_output(s):
     """Replaces whitespace encoded as '_' with ' ' for sentencepiece tokenizers."""
-    s = s.replace('▁', ' ')
+    s = s.replace("▁", " ")
     return s
 
-openers = {
-    "(": ")"
-}
-closers = {
-    ")": "("
-}
+
+openers = {"(": ")"}
+closers = {")": "("}
 enders = [".", ","]
 connectors = ["but", "and", "or"]
+
 
 class Token:
     """A token representation used for token clustering."""
@@ -396,6 +406,7 @@ class Token:
         if not self.balanced:
             return self.s + "!"
         return self.s
+
 
 class TokenGroup:
     """A token group (substring) representation used for token clustering."""
@@ -416,6 +427,7 @@ class TokenGroup:
     def __len__(self):
         return len(self.g)
 
+
 def merge_score(group1, group2, special_tokens):
     """Compute the score of merging two token groups.
 
@@ -425,7 +437,7 @@ def merge_score(group1, group2, special_tokens):
     # ensures special tokens are combined last, so 1st subtree is 1st sentence and 2nd subtree is 2nd sentence
     if len(special_tokens) > 0:
         if group1[-1].s in special_tokens and group2[0].s in special_tokens:
-            score -= math.inf # subtracting infinity to create lowest score and ensure combining these groups last
+            score -= math.inf  # subtracting infinity to create lowest score and ensure combining these groups last
 
     # merge broken-up parts of words first
     if group2[0].s.startswith("##"):
@@ -459,7 +471,7 @@ def merge_score(group1, group2, special_tokens):
     if group1[-1].s == ",":
         score -= 10
     if group2[0].s == ",":
-        if len(group2) > 1: # reach across
+        if len(group2) > 1:  # reach across
             score -= 10
         else:
             score -= 1
@@ -468,28 +480,29 @@ def merge_score(group1, group2, special_tokens):
     if group1[-1].s in [".", "?", "!"]:
         score -= 20
     if group2[0].s in [".", "?", "!"]:
-        if len(group2) > 1: # reach across
+        if len(group2) > 1:  # reach across
             score -= 20
         else:
             score -= 1
 
     score -= len(group1) + len(group2)
-    #print(group1, group2, score)
+    # print(group1, group2, score)
     return score
+
 
 def merge_closest_groups(groups, special_tokens):
     """Finds the two token groups with the best merge score and merges them."""
-    scores = [merge_score(groups[i], groups[i+1], special_tokens) for i in range(len(groups)-1)]
-    #print(scores)
+    scores = [merge_score(groups[i], groups[i + 1], special_tokens) for i in range(len(groups) - 1)]
+    # print(scores)
     ind = np.argmax(scores)
-    groups[ind] = groups[ind] + groups[ind+1]
-    #print(groups[ind][0].s in openers, groups[ind][0])
-    if groups[ind][0].s in openers and groups[ind+1][-1].s == openers[groups[ind][0].s]:
+    groups[ind] = groups[ind] + groups[ind + 1]
+    # print(groups[ind][0].s in openers, groups[ind][0])
+    if groups[ind][0].s in openers and groups[ind + 1][-1].s == openers[groups[ind][0].s]:
         groups[ind][0].balanced = True
-        groups[ind+1][-1].balanced = True
+        groups[ind + 1][-1].balanced = True
 
+    groups.pop(ind + 1)
 
-    groups.pop(ind+1)
 
 def partition_tree(decoded_tokens, special_tokens):
     """Build a heriarchial clustering of tokens that align with sentence structure.
@@ -498,31 +511,33 @@ def partition_tree(decoded_tokens, special_tokens):
     TODO: Build this using a real constituency parser.
     """
     token_groups = [TokenGroup([Token(t)], i) for i, t in enumerate(decoded_tokens)]
-#     print(token_groups)
+    #     print(token_groups)
     M = len(decoded_tokens)
     new_index = M
-    clustm = np.zeros((M-1, 4))
-    for i in range(len(token_groups)-1):
-        scores = [merge_score(token_groups[i], token_groups[i+1], special_tokens) for i in range(len(token_groups)-1)]
-#         print(scores)
+    clustm = np.zeros((M - 1, 4))
+    for i in range(len(token_groups) - 1):
+        scores = [
+            merge_score(token_groups[i], token_groups[i + 1], special_tokens) for i in range(len(token_groups) - 1)
+        ]
+        #         print(scores)
         ind = np.argmax(scores)
 
         lind = token_groups[ind].index
-        rind = token_groups[ind+1].index
-        clustm[new_index-M, 0] = token_groups[ind].index
-        clustm[new_index-M, 1] = token_groups[ind+1].index
-        clustm[new_index-M, 2] = -scores[ind]
-        clustm[new_index-M, 3] = (clustm[lind-M, 3] if lind >= M else 1) + (clustm[rind-M, 3] if rind >= M else 1)
+        rind = token_groups[ind + 1].index
+        clustm[new_index - M, 0] = token_groups[ind].index
+        clustm[new_index - M, 1] = token_groups[ind + 1].index
+        clustm[new_index - M, 2] = -scores[ind]
+        clustm[new_index - M, 3] = (clustm[lind - M, 3] if lind >= M else 1) + (clustm[rind - M, 3] if rind >= M else 1)
 
-        token_groups[ind] = token_groups[ind] + token_groups[ind+1]
+        token_groups[ind] = token_groups[ind] + token_groups[ind + 1]
         token_groups[ind].index = new_index
 
         # track balancing of openers/closers
-        if token_groups[ind][0].s in openers and token_groups[ind+1][-1].s == openers[token_groups[ind][0].s]:
+        if token_groups[ind][0].s in openers and token_groups[ind + 1][-1].s == openers[token_groups[ind][0].s]:
             token_groups[ind][0].balanced = True
-            token_groups[ind+1][-1].balanced = True
+            token_groups[ind + 1][-1].balanced = True
 
-        token_groups.pop(ind+1)
+        token_groups.pop(ind + 1)
         new_index += 1
 
     # negative means we should never split a group, so we add 10 to ensure these are very tight groups

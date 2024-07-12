@@ -1,47 +1,40 @@
 import copy
 import queue
 import warnings
+from typing import Union
 
 from ..utils._exceptions import ConvergenceError, InvalidAction
 from ._action import Action
 
 
 class ActionOptimizer:
-    def __init__(self, model, actions):
+    def __init__(self, model, actions: list[Union[Action, list[Action]]]):
         self.model = model
-        warnings.warn(
-            "Note that ActionOptimizer is still in an alpha state and is subjust to API changes."
-        )
+        warnings.warn("Note that ActionOptimizer is still in an alpha state and is subject to API changes.")
         # actions go into mutually exclusive groups
-        self.action_groups = []
+        self.action_groups: list[list[Action]] = []
         for group in actions:
-
-            if issubclass(type(group), Action):
+            if isinstance(group, Action):
                 group._group_index = len(self.action_groups)
                 group._grouped_index = 0
                 self.action_groups.append([copy.copy(group)])
-            elif issubclass(type(group), list):
+            elif isinstance(group, list):
                 group = sorted([copy.copy(v) for v in group], key=lambda a: a.cost)
                 for i, v in enumerate(group):
                     v._group_index = len(self.action_groups)
                     v._grouped_index = i
                 self.action_groups.append(group)
             else:
-                raise InvalidAction(
-                    "A passed action was not an Action or list of actions!"
-                )
+                raise InvalidAction("A passed action was not an Action or list of actions!")
 
     def __call__(self, *args, max_evals=10000):
-
         # init our queue with all the least costly actions
-        q = queue.PriorityQueue()
-        for i in range(len(self.action_groups)):
-            group = self.action_groups[i]
+        q: queue.PriorityQueue[tuple[float, list[Action]]] = queue.PriorityQueue()
+        for group in self.action_groups:
             q.put((group[0].cost, [group[0]]))
 
         nevals = 0
         while not q.empty():
-
             # see if we have exceeded our runtime budget
             nevals += 1
             if nevals > max_evals:
