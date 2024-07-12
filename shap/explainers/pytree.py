@@ -192,7 +192,7 @@ class TreeExplainer:
 
         # single instance
         if len(X.shape) == 1:
-            phi = np.zeros((X.shape[0] + 1, n_outputs))
+            phi = np.zeros(X.shape[0] + 1, n_outputs)
             x_missing = np.zeros(X.shape[0], dtype=bool)
             for t in self.trees:
                 self.tree_shap(t, X, x_missing, phi)
