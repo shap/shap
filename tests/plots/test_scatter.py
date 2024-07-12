@@ -7,7 +7,7 @@ import shap
 @pytest.fixture()
 def shap_values():
     """Adopted from explainer in conftest.py but using a categorical input."""
-    xgboost = pytest.importorskip('xgboost')
+    xgboost = pytest.importorskip("xgboost")
     # get a dataset on income prediction
     X, y = shap.datasets.diabetes()
 
@@ -16,10 +16,16 @@ def shap_values():
     # true non-float-castable category values
     X.loc[X["sex"] < 0, "sex"] = 0
     X.loc[X["sex"] > 0, "sex"] = 1
-    X["sex"] = X["sex"].map({
-        1: "Male",
-        0: "Female",
-    }).astype("category")
+    X["sex"] = (
+        X["sex"]
+        .map(
+            {
+                1: "Male",
+                0: "Female",
+            }
+        )
+        .astype("category")
+    )
 
     # train an XGBoost model (but any other model type would also work)
     model = xgboost.XGBRegressor(random_state=0, enable_categorical=True, max_cat_to_onehot=1, base_score=0.5)
