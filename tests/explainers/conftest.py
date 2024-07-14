@@ -1,9 +1,6 @@
-import sys
-
 import pytest
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Integer division bug in HuggingFace on Windows")
 @pytest.fixture(scope="session")
 def basic_translation_scenario():
     """Create a basic transformers translation model and tokenizer."""
