@@ -146,7 +146,6 @@ def xgboost_distances_r2(
     for i in show_progress(range(num_features), total=num_features):
         for j in range(num_features):
             if i == j:
-                dist[i, j] = 0
                 continue
 
             # skip features that have not variance in their predictions (likely because the feature is a constant)
