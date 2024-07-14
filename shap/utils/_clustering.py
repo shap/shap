@@ -258,10 +258,7 @@ def hclust(
                 "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is "
                 "not based on label fitting!"
             )
-        if isinstance(X, pd.DataFrame):
-            bg_no_nan = X.values.copy()
-        else:
-            bg_no_nan = X.copy()
+        bg_no_nan = X.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
         dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
