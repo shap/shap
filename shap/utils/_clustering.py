@@ -106,10 +106,10 @@ def xgboost_distances_r2(
     learning_rate: float = 0.6,
     early_stopping_rounds: Optional[int] = 2,
     subsample: Optional[float] = 1.0,
-    max_estimators: Optional[int] = 10000,
+    max_estimators: Optional[int] = 10_000,
     random_state: Union[int, np.random.RandomState] = 0,
-):
-    """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
+) -> np.ndarray:
+    """Compute redundancy distances scaled from 0-1 among all the features in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
     predicting the output of these models using univariate XGBoost models of other features. If one
@@ -184,10 +184,13 @@ def hclust(
     metric: str = "auto",
     random_state: Union[int, np.random.RandomState] = 0,
 ) -> np.ndarray:
-    """Fit a hierarcical clustering model for features X relative to target variable y.
+    """Fit a hierarchical clustering model for features X relative to target variable y.
 
-    For more information on clutering methods see:
+    For more information on clustering methods, see:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+
+    For more information on scipy distance metrics, see:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
 
     Parameters
     ----------
