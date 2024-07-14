@@ -124,9 +124,10 @@ def xgboost_distances_r2(
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
     # fit an XGBoost model on each of the features
+    num_features = X.shape[1]
     train_preds_list = []
     test_preds_list = []
-    for i in range(X.shape[1]):
+    for i in range(num_features):
         model = xgboost.XGBRegressor(
             subsample=subsample,
             n_estimators=max_estimators,
@@ -141,9 +142,9 @@ def xgboost_distances_r2(
     test_preds = np.vstack(test_preds_list).T
 
     # fit XGBoost models to predict the outputs of other XGBoost models to see how redundant features are
-    dist = np.zeros((X.shape[1], X.shape[1]))
-    for i in show_progress(range(X.shape[1]), total=X.shape[1]):
-        for j in range(X.shape[1]):
+    dist = np.zeros((num_features, num_features))
+    for i in show_progress(range(num_features), total=num_features):
+        for j in range(num_features):
             if i == j:
                 dist[i, j] = 0
                 continue
