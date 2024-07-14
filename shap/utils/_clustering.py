@@ -149,10 +149,12 @@ def xgboost_distances_r2(
                 continue
 
             # skip features that have not variance in their predictions (likely because the feature is a constant)
-            preds_var = np.var(test_preds[:, i])
+            preds_var: float = np.var(test_preds[:, i])
             if preds_var < 1e-4:
                 warnings.warn(
-                    f"No/low signal found from feature {i} (this is typically caused by constant or near-constant features)! Cluster distances can't be computed for it (so setting all distances to 1)."
+                    f"No/low signal found from feature {i} (this is typically caused by constant or "
+                    "near-constant features)! Cluster distances can't be computed for it (so setting "
+                    "all redundancy distances to 1)."
                 )
                 r2 = 0
 
@@ -253,7 +255,8 @@ def hclust(
     else:
         if y is not None:
             warnings.warn(
-                "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!"
+                "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is "
+                "not based on label fitting!"
             )
         if isinstance(X, pd.DataFrame):
             bg_no_nan = X.values.copy()
@@ -262,8 +265,6 @@ def hclust(
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
         dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
-    # else:
-    #     raise Exception("Unknown metric: " + str(metric))
 
     # build linkage
     if linkage == "single":
