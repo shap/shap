@@ -224,6 +224,10 @@ def hclust(
     if isinstance(X, pd.DataFrame):
         X = X.values
 
+    known_linkages = ("single", "complete", "average")
+    if linkage not in known_linkages:
+        raise ValueError(f"Unknown linkage type: {linkage}")
+
     if metric == "auto":
         if y is not None:
             metric = "xgboost_distances_r2"
@@ -245,8 +249,6 @@ def hclust(
                         dist_list.append(max(dist_full[i, j], dist_full[j, i]))
                     elif linkage == "average":
                         dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
-                    else:
-                        raise ValueError("Unsupported linkage type!")
         dist = np.array(dist_list)
 
     else:
@@ -271,5 +273,3 @@ def hclust(
         return scipy.cluster.hierarchy.complete(dist)
     elif linkage == "average":
         return scipy.cluster.hierarchy.average(dist)
-    else:
-        raise ValueError("Unknown linkage: " + str(linkage))
