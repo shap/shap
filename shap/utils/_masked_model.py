@@ -324,7 +324,7 @@ def _build_delta_masked_inputs(
         "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
         DeprecationWarning,
     )
-    all_masked_inputs: list[list[Any]] = [[] for a in args]
+    all_masked_inputs: list[list[Any]] = [[] for _ in args]
     dpos = 0
     i = -1
     masks_pos = 0
