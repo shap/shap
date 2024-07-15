@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -101,7 +101,13 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
 
 
 def xgboost_distances_r2(
-    X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0
+    X,
+    y,
+    learning_rate: float = 0.6,
+    early_stopping_rounds: Optional[int] = 2,
+    subsample: Optional[float] = 1.0,
+    max_estimators: Optional[int] = 10000,
+    random_state: Union[int, np.random.RandomState] = 0,
 ):
     """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
 
@@ -118,8 +124,8 @@ def xgboost_distances_r2(
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
     # fit an XGBoost model on each of the features
-    test_preds_list = []
     train_preds_list = []
+    test_preds_list = []
     for i in range(X.shape[1]):
         model = xgboost.XGBRegressor(
             subsample=subsample,
@@ -176,7 +182,7 @@ def hclust(
     y: Optional[_ArrayLike] = None,
     linkage: Literal["single", "complete", "average"] = "single",
     metric: str = "auto",
-    random_state: int = 0,
+    random_state: Union[int, np.random.RandomState] = 0,
 ) -> np.ndarray:
     """Fit a hierarcical clustering model for features X relative to target variable y.
 
@@ -262,4 +268,4 @@ def hclust(
     elif linkage == "average":
         return scipy.cluster.hierarchy.average(dist)
     else:
-        raise Exception("Unknown linkage: " + str(linkage))
+        raise ValueError("Unknown linkage: " + str(linkage))
