@@ -353,7 +353,7 @@ def decision(
 
     """
     # code taken from force_plot. auto unwrap the base_value
-    if type(base_value) == np.ndarray and len(base_value) == 1:
+    if isinstance(base_value, np.ndarray) and len(base_value) == 1:
         base_value = base_value[0]
 
     if isinstance(base_value, list) or isinstance(shap_values, list):
