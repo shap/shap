@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from .._serializable import Deserializer, Serializer
@@ -46,6 +48,7 @@ class TextGeneration(Model):
         self.device = device
         if self.device is None:
             self.device = getattr(self.inner_model, "device", None)
+        self.model_type: Optional[str]  # Type hint for mypy
         if safe_isinstance(model, "transformers.PreTrainedModel"):
             self.model_agnostic = False
             self.model_type = "pt"

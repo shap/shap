@@ -149,6 +149,7 @@ class TopKLM(Model):
             Computes log odds for corresponding top-k token ids.
 
         """
+        assert self.topk_token_ids is not None
 
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
@@ -181,7 +182,7 @@ class TopKLM(Model):
         self.tokenizer.padding_side = "right"
         return inputs
 
-    def generate_topk_token_ids(self, X):
+    def generate_topk_token_ids(self, X) -> np.ndarray:
         """Generates top-k token ids for Causal/Masked LM.
 
         Parameters
