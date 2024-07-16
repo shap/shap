@@ -1,4 +1,5 @@
 import warnings
+from typing import Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ import sklearn
 from numba import njit
 
 from ._show_progress import show_progress
+from ._types import _ArrayLike
 
 
 def partition_tree(X, metric="correlation"):
@@ -99,7 +101,13 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
 
 
 def xgboost_distances_r2(
-    X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0
+    X,
+    y,
+    learning_rate: float = 0.6,
+    early_stopping_rounds: Optional[int] = 2,
+    subsample: Optional[float] = 1.0,
+    max_estimators: Optional[int] = 10000,
+    random_state: Union[int, np.random.RandomState] = 0,
 ):
     """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
 
@@ -116,8 +124,8 @@ def xgboost_distances_r2(
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
     # fit an XGBoost model on each of the features
-    test_preds = []
-    train_preds = []
+    train_preds_list = []
+    test_preds_list = []
     for i in range(X.shape[1]):
         model = xgboost.XGBRegressor(
             subsample=subsample,
@@ -127,10 +135,10 @@ def xgboost_distances_r2(
             early_stopping_rounds=early_stopping_rounds,
         )
         model.fit(X_train[:, i : i + 1], y_train, eval_set=[(X_test[:, i : i + 1], y_test)], verbose=False)
-        train_preds.append(model.predict(X_train[:, i : i + 1]))
-        test_preds.append(model.predict(X_test[:, i : i + 1]))
-    train_preds = np.vstack(train_preds).T
-    test_preds = np.vstack(test_preds).T
+        train_preds_list.append(model.predict(X_train[:, i : i + 1]))
+        test_preds_list.append(model.predict(X_test[:, i : i + 1]))
+    train_preds = np.vstack(train_preds_list).T
+    test_preds = np.vstack(test_preds_list).T
 
     # fit XGBoost models to predict the outputs of other XGBoost models to see how redundant features are
     dist = np.zeros((X.shape[1], X.shape[1]))
@@ -169,7 +177,13 @@ def xgboost_distances_r2(
     return dist
 
 
-def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
+def hclust(
+    X: _ArrayLike,
+    y: Optional[_ArrayLike] = None,
+    linkage: Literal["single", "complete", "average"] = "single",
+    metric: str = "auto",
+    random_state: Union[int, np.random.RandomState] = 0,
+) -> np.ndarray:
     """Fit a hierarcical clustering model for features X relative to target variable y.
 
     For more information on clutering methods see:
@@ -217,19 +231,19 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
         dist_full = xgboost_distances_r2(X, y, random_state=random_state)
 
         # build a condensed upper triangular version by taking the max distance from either direction
-        dist = []
+        dist_list = []
         for i in range(dist_full.shape[0]):
             for j in range(i + 1, dist_full.shape[1]):
                 if i != j:
                     if linkage == "single":
-                        dist.append(min(dist_full[i, j], dist_full[j, i]))
+                        dist_list.append(min(dist_full[i, j], dist_full[j, i]))
                     elif linkage == "complete":
-                        dist.append(max(dist_full[i, j], dist_full[j, i]))
+                        dist_list.append(max(dist_full[i, j], dist_full[j, i]))
                     elif linkage == "average":
-                        dist.append((dist_full[i, j] + dist_full[j, i]) / 2)
+                        dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
                     else:
-                        raise Exception("Unsupported linkage type!")
-        dist = np.array(dist)
+                        raise ValueError("Unsupported linkage type!")
+        dist = np.array(dist_list)
 
     else:
         if y is not None:
@@ -254,4 +268,4 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     elif linkage == "average":
         return scipy.cluster.hierarchy.average(dist)
     else:
-        raise Exception("Unknown linkage: " + str(linkage))
+        raise ValueError("Unknown linkage: " + str(linkage))
