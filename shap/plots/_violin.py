@@ -320,7 +320,7 @@ def violin(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.cm.datad else color
+                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
@@ -330,7 +330,7 @@ def violin(
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.cm.datad)
+        and (plot_type != "layered_violin" or color in pl.colormaps)
     ):
         import matplotlib.cm as cm
 
