@@ -94,7 +94,7 @@ def __decision_plot_matplotlib(
 
     # if there is a single observation and feature values are supplied, print them.
     if (cumsum.shape[0] == 1) and (features is not None):
-        renderer = pl.gcf().canvas.get_renderer()
+        renderer = pl.gcf().canvas.get_renderer()  # type: ignore
         inverter = pl.gca().transData.inverted()
         y_pos = y_pos + 0.5
         for i in range(feature_display_count):
@@ -141,12 +141,12 @@ def __decision_plot_matplotlib(
 
         # place the colorbar
         pl.ylim(0, feature_display_count + 0.25)
-        ax_cb = ax.inset_axes([xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25], transform=ax.transData)
+        ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
         cb = pl.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(alpha)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
 
         # re-activate the main axis for drawing.
         pl.sca(ax)

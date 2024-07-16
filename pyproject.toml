@@ -113,7 +113,14 @@ plugins = ["numpy.typing.mypy_plugin"]
 module = [
   "shap.explainers.*",
   "shap.maskers.*",
-  "shap.plots.*",
+  "shap.plots._beeswarm",
+  "shap.plots._benchmark",
+  "shap.plots._force_matplotlib",
+  "shap.plots._force",
+  "shap.plots._heatmap",
+  "shap.plots._scatter.*",
+  "shap.plots._text",
+  "shap.plots._waterfall",
 ]
 check_untyped_defs = false
 

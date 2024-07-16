@@ -256,7 +256,7 @@ def violin(
                 showmedians=False,
             )
 
-            for pc in parts["bodies"]:
+            for pc in parts["bodies"]:  # type: ignore
                 pc.set_facecolor(color)
                 pc.set_edgecolor("none")
                 pc.set_alpha(alpha)
@@ -341,7 +341,7 @@ def violin(
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
         # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
         # cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
