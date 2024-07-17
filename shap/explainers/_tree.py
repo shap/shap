@@ -473,7 +473,7 @@ class TreeExplainer(Explainer):
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
 
-                if type(X) != catboost.Pool:
+                if not isinstance(X, catboost.Pool):
                     X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapValues")
 
@@ -649,7 +649,7 @@ class TreeExplainer(Explainer):
             assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             import catboost
 
-            if type(X) != catboost.Pool:
+            if not isinstance(X, catboost.Pool):
                 X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
             phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapInteractionValues")
             # note we pull off the last column and keep it as our expected_value
