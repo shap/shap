@@ -135,7 +135,7 @@ def force(
 
     link = convert_to_link(link)
 
-    if type(shap_values) != np.ndarray:
+    if not isinstance(shap_values, np.ndarray):
         return visualize(shap_values)
 
     # convert from a DataFrame or other types
@@ -168,7 +168,7 @@ def force(
             feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
         if features is None:
             features = ["" for _ in range(len(feature_names))]
-        if type(features) == np.ndarray:
+        if isinstance(features, np.ndarray):
             features = features.flatten()
 
         # check that the shape of the shap_values and features match
