@@ -542,11 +542,13 @@ def summary_legacy(
         #     out_names = shap_exp.output_names
 
     multi_class = False
+    shap_values_as_list = []
     if isinstance(shap_values, list):
         multi_class = True
         if plot_type is None:
             plot_type = "bar"  # default for multi-output explanations
         assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
+        shap_values_as_list = [shap_values[:,:,i] for i in range(shap_values.shape[2])]
     else:
         if plot_type is None:
             plot_type = "dot"  # default for single output explanations
@@ -579,7 +581,7 @@ def summary_legacy(
         feature_names = features
         features = None
 
-    num_features = shap_values[0].shape[1] if multi_class else shap_values.shape[1]
+    num_features = shap_values.shape[1]
 
     if features is not None:
         shape_msg = "The shape of the shap_values matrix does not match the shape of the " "provided data matrix."
@@ -695,7 +697,7 @@ def summary_legacy(
     if sort:
         # order features by the sum of their effect magnitudes
         if multi_class:
-            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
+            feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values_as_list), axis=1), axis=0))
         else:
             feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
         feature_order = feature_order[-min(max_display, len(feature_order)) :]
@@ -989,29 +991,29 @@ def summary_legacy(
 
     elif multi_class and plot_type == "bar":
         if class_names is None:
-            class_names = ["Class " + str(i) for i in range(len(shap_values))]
+            class_names = ["Class " + str(i) for i in range(len(shap_values_as_list))]
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         left_pos = np.zeros(len(feature_inds))
 
         if class_inds is None:
-            class_inds = np.argsort([-np.abs(shap_values[i]).mean() for i in range(len(shap_values))])
+            class_inds = np.argsort([-np.abs(shap_values_as_list[i]).mean() for i in range(len(shap_values))])
         elif class_inds == "original":
-            class_inds = range(len(shap_values))
+            class_inds = range(len(shap_values_as_list))
 
         if show_values_in_legend:
             # Get the smallest decimal place of the first significant digit
             # to print on the legend. The legend will print ('n_decimal'+1)
             # decimal places.
             # Set to 1 if the smallest number is bigger than 1.
-            smallest_shap = np.min(np.abs(shap_values).mean((1, 2)))
+            smallest_shap = np.min(np.abs(shap_values_as_list).mean((1, 2)))
             if smallest_shap > 1:
                 n_decimals = 1
             else:
                 n_decimals = int(-np.floor(np.log10(smallest_shap)))
 
         for i, ind in enumerate(class_inds):
-            global_shap_values = np.abs(shap_values[ind]).mean(0)
+            global_shap_values = np.abs(shap_values_as_list[ind]).mean(0)
             if show_values_in_legend:
                 label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values),(n_decimals+1))})"
             else:
