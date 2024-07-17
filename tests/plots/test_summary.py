@@ -121,6 +121,48 @@ def test_random_summary_with_log_scale():
     return fig
 
 
+@pytest.mark.mpl_image_compare
+def test_random_multi_class_summary_class_inds_original():
+    """Test class_inds set to 'original'."""
+    np.random.seed(0)
+    fig = plt.figure()
+    shap.summary_plot(
+        np.random.randn(20, 5, 3), 
+        np.random.randn(20, 5), 
+        plot_type="bar", 
+        class_inds="original", 
+        show=False
+    )
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_summary_plot_size_tuple():
+    """Test plot_size passed as tuple."""
+    np.random.seed(0)
+    fig = plt.figure()
+    shap.summary_plot(
+        np.random.randn(20, 5), 
+        plot_type="dot", 
+        plot_size=(10, 5), 
+        show=False
+    )
+    return fig
+
+@pytest.mark.mpl_image_compare
+def test_summary_plot_size_scalar():
+    """Test plot_size passed as a scalar."""
+    np.random.seed(0)
+    fig = plt.figure()
+    shap.summary_plot(
+        np.random.randn(20, 5), 
+        plot_type="dot", 
+        plot_size=1, 
+        show=False
+    )
+    return fig
+
+
 def test_summary_plot_with_multiclass_model():
     # See GH #2893
     lightgbm = pytest.importorskip("lightgbm")
