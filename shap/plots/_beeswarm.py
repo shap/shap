@@ -561,7 +561,7 @@ def summary_legacy(
         elif multi_class:
 
             def color(i):
-                return colors.red_blue_circle(i / len(shap_values))
+                return colors.red_blue_circle(i / len(shap_values_as_list))
         else:
             color = colors.blue_rgb
 
