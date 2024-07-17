@@ -543,7 +543,7 @@ def summary_legacy(
 
     multi_class = False
     shap_values_as_list = []
-    if isinstance(shap_values, list):
+    if isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
         multi_class = True
         if plot_type is None:
             plot_type = "bar"  # default for multi-output explanations
