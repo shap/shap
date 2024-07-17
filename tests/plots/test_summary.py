@@ -42,9 +42,7 @@ def test_random_multi_class_summary_legend_decimals():
     """
     np.random.seed(0)
     fig = plt.figure()
-    shap.summary_plot(
-        np.random.randn(20, 5, 3), np.random.randn(20, 5), show=False, show_values_in_legend=True
-    )
+    shap.summary_plot(np.random.randn(20, 5, 3), np.random.randn(20, 5), show=False, show_values_in_legend=True)
     fig.set_layout_engine("tight")
     return fig
 
@@ -57,7 +55,8 @@ def test_random_multi_class_summary_legend():
     np.random.seed(0)
     fig = plt.figure()
     shap.summary_plot(
-        np.random.randn(20, 5, 3), np.random.randn(20, 5),
+        np.random.randn(20, 5, 3),
+        np.random.randn(20, 5),
         show=False,
         show_values_in_legend=True,
     )

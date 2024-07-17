@@ -548,7 +548,7 @@ def summary_legacy(
         if plot_type is None:
             plot_type = "bar"  # default for multi-output explanations
         assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
-        shap_values_as_list = [shap_values[:,:,i] for i in range(shap_values.shape[2])]
+        shap_values_as_list = [shap_values[:, :, i] for i in range(shap_values.shape[2])]
     else:
         if plot_type is None:
             plot_type = "dot"  # default for single output explanations
