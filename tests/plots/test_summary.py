@@ -30,7 +30,7 @@ def test_random_multi_class_summary():
     """Check a multiclass run."""
     np.random.seed(0)
     fig = plt.figure()
-    shap.summary_plot([np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False)
+    shap.summary_plot(np.random.randn(20, 5, 3), np.random.randn(20, 5), show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -43,7 +43,7 @@ def test_random_multi_class_summary_legend_decimals():
     np.random.seed(0)
     fig = plt.figure()
     shap.summary_plot(
-        [np.random.randn(20, 5) for i in range(3)], np.random.randn(20, 5), show=False, show_values_in_legend=True
+        np.random.randn(20, 5, 3), np.random.randn(20, 5), show=False, show_values_in_legend=True
     )
     fig.set_layout_engine("tight")
     return fig
@@ -57,8 +57,7 @@ def test_random_multi_class_summary_legend():
     np.random.seed(0)
     fig = plt.figure()
     shap.summary_plot(
-        [(2 + np.random.randn(20, 5)) for i in range(3)],
-        2 + np.random.randn(20, 5),
+        np.random.randn(20, 5, 3), np.random.randn(20, 5),
         show=False,
         show_values_in_legend=True,
     )
@@ -123,6 +122,7 @@ def test_random_summary_with_log_scale():
     return fig
 
 
+@pytest.mark.mpl_image_compare
 def test_summary_plot_with_multiclass_model():
     # See GH #2893
     lightgbm = pytest.importorskip("lightgbm")

@@ -997,7 +997,7 @@ def summary_legacy(
         left_pos = np.zeros(len(feature_inds))
 
         if class_inds is None:
-            class_inds = np.argsort([-np.abs(shap_values_as_list[i]).mean() for i in range(len(shap_values))])
+            class_inds = np.argsort([-np.abs(shap_values_as_list[i]).mean() for i in range(len(shap_values_as_list))])
         elif class_inds == "original":
             class_inds = range(len(shap_values_as_list))
 
