@@ -121,7 +121,6 @@ def test_random_summary_with_log_scale():
     return fig
 
 
-@pytest.mark.mpl_image_compare
 def test_summary_plot_with_multiclass_model():
     # See GH #2893
     lightgbm = pytest.importorskip("lightgbm")
@@ -135,3 +134,4 @@ def test_summary_plot_with_multiclass_model():
     explainer = shap.TreeExplainer(model)  # Background dataset not passed
     shap_values = explainer.shap_values(X)  # Has shape (20, 3, 2)
     shap.summary_plot(shap_values, X, feature_names=["foo", "bar", "baz"])
+
