@@ -34,7 +34,6 @@ repos:
         docs/notebooks/plots/bar.ipynb|
         notebooks/api_examples/plots/decision_plot.ipynb|
         notebooks/api_examples/plots/heatmap.ipynb|
-        notebooks/api_examples/plots/scatter.ipynb|
         notebooks/api_examples/plots/text.ipynb|
         notebooks/api_examples/plots/violin.ipynb|
         notebooks/image_examples/image_captioning/Image.Captioning.using.Azure.Cognitive.Services.ipynb|
