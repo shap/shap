@@ -523,8 +523,8 @@ def decision(
             # Expand [0, 1] limits a little for a visual margin
             xlim = (-0.02, 1.02)
     elif create_xlim:
-        xmin = np.min((cumsum.min(), base_value))
-        xmax = np.max((cumsum.max(), base_value))
+        xmin: float = min((cumsum.min(), base_value))
+        xmax: float = max((cumsum.max(), base_value))
         # create a symmetric axis around base_value
         n, m = (base_value - xmin), (xmax - base_value)
         if n > m:
