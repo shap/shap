@@ -91,7 +91,7 @@ def violin(
         #     out_names = shap_exp.output_names
 
     if isinstance(shap_values, list):
-        emsg = "Violin plots don't support multi-output explanations! " "Use 'shap.plots.bar` instead."
+        emsg = "Violin plots don't support multi-output explanations! Use 'shap.plots.bar` instead."
         raise TypeError(emsg)
 
     if plot_type is None:
@@ -125,7 +125,7 @@ def violin(
     num_features = shap_values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape " "of the provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             shape_msg += (
                 " Perhaps the extra column in the shap_values matrix is the "

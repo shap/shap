@@ -358,7 +358,7 @@ def decision(
 
     if isinstance(base_value, list) or isinstance(shap_values, list):
         raise TypeError(
-            "Looks like multi output. Try base_value[i] and shap_values[i], " "or use shap.multioutput_decision_plot()."
+            "Looks like multi output. Try base_value[i] and shap_values[i], or use shap.multioutput_decision_plot()."
         )
 
     # validate shap_values

@@ -725,7 +725,7 @@ def _scale(a, n, m, copy=True):
             dtype = "uint{}".format(mnew)
         n = int(np.ceil(n / 2) * 2)
         warn(
-            "Downcasting {} to {} without scaling because max " "value {} fits in {}".format(
+            "Downcasting {} to {} without scaling because max value {} fits in {}".format(
                 a.dtype, dtype, a.max(), dtype
             ),
             stacklevel=3,

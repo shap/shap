@@ -77,7 +77,7 @@ def beeswarm(
 
     """
     if not isinstance(shap_values, Explanation):
-        emsg = "The beeswarm plot requires an `Explanation` object as the " "`shap_values` argument."
+        emsg = "The beeswarm plot requires an `Explanation` object as the `shap_values` argument."
         raise TypeError(emsg)
 
     sv_shape = shap_values.shape
@@ -144,7 +144,7 @@ def beeswarm(
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape " "of the provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             shape_msg += (
                 " Perhaps the extra column in the shap_values matrix is the "
@@ -582,7 +582,7 @@ def summary_legacy(
     num_features = shap_values[0].shape[1] if multi_class else shap_values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " "provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, (
                 shape_msg + " Perhaps the extra column in the shap_values matrix is the "

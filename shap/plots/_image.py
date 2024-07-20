@@ -193,7 +193,7 @@ def image_to_text(shap_values):
 
     """
     if not have_ipython:
-        msg = "IPython is required for this function but is not installed." " Fix this with `pip install ipython`."
+        msg = "IPython is required for this function but is not installed. Fix this with `pip install ipython`."
         raise ImportError(msg)
 
     if len(shap_values.values.shape) == 5:

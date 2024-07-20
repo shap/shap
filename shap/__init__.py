@@ -23,7 +23,7 @@ except ImportError:
     __version__ = "0.0.0-not-built"
 
 _no_matplotlib_warning = (
-    "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " "to fix this."
+    "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this."
 )
 
 
