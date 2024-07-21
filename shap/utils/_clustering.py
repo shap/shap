@@ -119,6 +119,14 @@ def xgboost_distances_r2(
     then the second feature is redundant with the first with respect to y. A distance of 1 corresponds
     to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
     proportion of variance explained). Note these distances are not symmetric.
+
+    Returns
+    -------
+    np.ndarray
+        A square matrix of shape (n_features, n_features) containing the pairwise
+        redundancy distances between features. Each element [i, j] represents the
+        redundancy distance from feature i to feature j with respect to y.
+
     """
     import xgboost
 
