@@ -160,7 +160,7 @@ def xgboost_distances_r2(
         if i == j:
             continue
 
-        # skip features that have not variance in their predictions (likely because the feature is a constant)
+        # skip features that have no variance in their predictions (likely because the feature is a constant)
         preds_var: float = np.var(test_preds[:, i])
         if preds_var < 1e-4:
             warnings.warn(
