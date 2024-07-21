@@ -31,6 +31,7 @@ def test_hclust_runs(linkage):
     ],
 )
 def test_hclust_errors_on_input_shapes(X):
+    # hclust only accepts 2-d arrays for X
     with pytest.raises(DimensionError):
         hclust(X, random_state=0)
 
