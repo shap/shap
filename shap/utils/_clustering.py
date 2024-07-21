@@ -210,7 +210,7 @@ def hclust(
     ----------
     X: 2d-array-like
         Features to cluster
-    y: array-like | None
+    y: array-like or None
         Target variable
     linkage: str
         Defines the method to calculate the distance between clusters. Must be
