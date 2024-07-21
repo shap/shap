@@ -1,3 +1,4 @@
+import itertools as it
 import warnings
 from typing import Literal, Optional, Union
 
@@ -144,38 +145,40 @@ def xgboost_distances_r2(
 
     # fit XGBoost models to predict the outputs of other XGBoost models to see how redundant features are
     dist = np.zeros((num_features, num_features))
-    for i in show_progress(range(num_features), total=num_features):
-        for j in range(num_features):
-            if i == j:
-                continue
+    for i, j in show_progress(
+        it.product(range(num_features), range(num_features)),
+        total=num_features * num_features,
+    ):
+        if i == j:
+            continue
 
-            # skip features that have not variance in their predictions (likely because the feature is a constant)
-            preds_var: float = np.var(test_preds[:, i])
-            if preds_var < 1e-4:
-                warnings.warn(
-                    f"No/low signal found from feature {i} (this is typically caused by constant or "
-                    "near-constant features)! Cluster distances can't be computed for it (so setting "
-                    "all redundancy distances to 1)."
-                )
-                r2 = 0
+        # skip features that have not variance in their predictions (likely because the feature is a constant)
+        preds_var: float = np.var(test_preds[:, i])
+        if preds_var < 1e-4:
+            warnings.warn(
+                f"No/low signal found from feature {i} (this is typically caused by constant or "
+                "near-constant features)! Cluster distances can't be computed for it (so setting "
+                "all redundancy distances to 1)."
+            )
+            r2 = 0
 
-            # fit the model
-            else:
-                model = xgboost.XGBRegressor(
-                    subsample=subsample,
-                    n_estimators=max_estimators,
-                    learning_rate=learning_rate,
-                    max_depth=1,
-                    early_stopping_rounds=early_stopping_rounds,
-                )
-                model.fit(
-                    X_train[:, j : j + 1],
-                    train_preds[:, i],
-                    eval_set=[(X_test[:, j : j + 1], test_preds[:, i])],
-                    verbose=False,
-                )
-                r2 = max(0, 1 - np.mean((test_preds[:, i] - model.predict(X_test[:, j : j + 1])) ** 2) / preds_var)
-            dist[i, j] = 1 - r2
+        # fit the model
+        else:
+            model = xgboost.XGBRegressor(
+                subsample=subsample,
+                n_estimators=max_estimators,
+                learning_rate=learning_rate,
+                max_depth=1,
+                early_stopping_rounds=early_stopping_rounds,
+            )
+            model.fit(
+                X_train[:, j : j + 1],
+                train_preds[:, i],
+                eval_set=[(X_test[:, j : j + 1], test_preds[:, i])],
+                verbose=False,
+            )
+            r2 = max(0, 1 - np.mean((test_preds[:, i] - model.predict(X_test[:, j : j + 1])) ** 2) / preds_var)
+        dist[i, j] = 1 - r2
 
     return dist
 
