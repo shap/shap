@@ -192,7 +192,7 @@ def image_to_text(shap_values):
         for each sample
 
     """
-    if not have_ipython:
+    if not have_ipython:  # pragma: no cover
         msg = "IPython is required for this function but is not installed. Fix this with `pip install ipython`."
         raise ImportError(msg)
 
