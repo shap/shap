@@ -12,14 +12,15 @@ def test_hclust_runs(linkage):
     X = np.column_stack((np.arange(1, 10), np.arange(100, 1000, step=100)))
     y = np.where(X[:, 0] > 5, 1, 0)
 
-    # just check if clustered ran successfully
+    # just check if clustered ran successfully (using xgboost_distances_r2)
     clustered = hclust(X, y, linkage=linkage, random_state=0)
     assert isinstance(clustered, np.ndarray)
     assert clustered.shape == (1, 4)
 
-    # Check clustering runs if y=None
+    # Check clustering runs if y=None (using scipy metrics)
     clustered = hclust(X, linkage=linkage, random_state=0)
     assert isinstance(clustered, np.ndarray)
+    assert clustered.shape == (1, 4)
 
 
 @pytest.mark.parametrize(

@@ -218,7 +218,7 @@ def hclust(
     metric: str
         Scipy distance metric or "xgboost_distances_r2".
 
-        * If "xgboost_distances_r2", estimate redundancy distances between
+        * If ``xgboost_distances_r2``, estimate redundancy distances between
           features X with respect to target variable y using
           :func:`shap.utils.xgboost_distances_r2`.
         * Otherwise, calculate distances between features using the given
@@ -253,19 +253,19 @@ def hclust(
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
-        dist_full = xgboost_distances_r2(X_arr, y, random_state=random_state)
+        dist_full: np.ndarray = xgboost_distances_r2(X_arr, y, random_state=random_state)
 
         # build a condensed upper triangular version by taking the max distance from either direction
-        dist_list = []
-        for i in range(dist_full.shape[0]):
-            for j in range(i + 1, dist_full.shape[1]):
-                if i != j:
-                    if linkage == "single":
-                        dist_list.append(min(dist_full[i, j], dist_full[j, i]))
-                    elif linkage == "complete":
-                        dist_list.append(max(dist_full[i, j], dist_full[j, i]))
-                    elif linkage == "average":
-                        dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
+        dist_list: list[float] = []
+        for i, j in it.combinations_with_replacement(range(len(dist_full)), 2):
+            if i == j:
+                continue
+            if linkage == "single":
+                dist_list.append(min(dist_full[i, j], dist_full[j, i]))
+            elif linkage == "complete":
+                dist_list.append(max(dist_full[i, j], dist_full[j, i]))
+            elif linkage == "average":
+                dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
         dist = np.array(dist_list)
 
     else:
