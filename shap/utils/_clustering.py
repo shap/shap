@@ -8,6 +8,7 @@ import scipy.spatial
 import sklearn
 from numba import njit
 
+from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
 from ._types import _ArrayLike
 
@@ -196,9 +197,9 @@ def hclust(
 
     Parameters
     ----------
-    X: np.array
+    X: 2d-array-like
         Features to cluster
-    y: np.array | None
+    y: array-like | None
         Target variable
     linkage: str
         Defines the method to calculate the distance between clusters. Must be
@@ -213,8 +214,8 @@ def hclust(
           distance metric.
         * If ``auto`` (default), use ``xgboost_distances_r2`` if target variable
           is provided, or else ``cosine`` distance metric.
-    random_state: int
-        Numpy random state
+    random_state: int or np.random.RandomState
+        Numpy random state, defaults to 0.
 
     Returns
     -------
@@ -223,7 +224,11 @@ def hclust(
 
     """
     if isinstance(X, pd.DataFrame):
-        X = X.values
+        X_arr = X.values
+    else:
+        X_arr = np.array(X)
+    if len(X_arr.shape) != 2:
+        raise DimensionError("X needs to be a 2-dimensional array-like object")
 
     known_linkages = ("single", "complete", "average")
     if linkage not in known_linkages:
@@ -237,7 +242,7 @@ def hclust(
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
-        dist_full = xgboost_distances_r2(X, y, random_state=random_state)
+        dist_full = xgboost_distances_r2(X_arr, y, random_state=random_state)
 
         # build a condensed upper triangular version by taking the max distance from either direction
         dist_list = []
@@ -258,7 +263,7 @@ def hclust(
                 "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is "
                 "not based on label fitting!"
             )
-        bg_no_nan = X.copy()
+        bg_no_nan: np.ndarray = X_arr.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
         dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
