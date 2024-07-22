@@ -99,9 +99,7 @@ class ExplanationError:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
         if len(attributions) != len(self.model_args[0]):
-            emsg = (
-                "The explanation passed must have the same number of rows as " "the self.model_args that were passed!"
-            )
+            emsg = "The explanation passed must have the same number of rows as the self.model_args that were passed!"
             raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing

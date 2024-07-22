@@ -105,7 +105,7 @@ def bar(
             # collapse the Explanation arrays to be of shape (#features,)
             cohort_exps[i] = exp.abs.mean(0)
         if cohort_exps[i].shape != cohort_exps[0].shape:
-            emsg = "When passing several Explanation objects, they must all have " "the same number of feature columns!"
+            emsg = "When passing several Explanation objects, they must all have the same number of feature columns!"
             raise DimensionError(emsg)
         # TODO: check other attributes for equality? like feature names perhaps? probably clustering as well.
 

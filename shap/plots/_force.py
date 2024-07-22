@@ -529,7 +529,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
         if not isinstance(arr[0], AdditiveExplanation):
-            emsg = "AdditiveForceArrayVisualizer can only visualize arrays of " "AdditiveExplanation objects!"
+            emsg = "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
             raise TypeError(emsg)
 
         # order the samples by their position in a hierarchical clustering

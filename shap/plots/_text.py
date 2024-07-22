@@ -1470,6 +1470,6 @@ def unpack_shap_explanation_contents(shap_values):
 def _ipython_display_html(data):
     """Check IPython is installed, then display HTML"""
     if not have_ipython:
-        msg = "IPython is required for this function but is not installed." " Fix this with `pip install ipython`."
+        msg = "IPython is required for this function but is not installed. Fix this with `pip install ipython`."
         raise ImportError(msg)
     return ipython_display(HTML(data))

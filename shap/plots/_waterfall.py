@@ -49,7 +49,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
     # make sure the input is an Explanation object
     if not isinstance(shap_values, Explanation):
-        emsg = "The waterfall plot requires an `Explanation` object as the " "`shap_values` argument."
+        emsg = "The waterfall plot requires an `Explanation` object as the `shap_values` argument."
         raise TypeError(emsg)
 
     # make sure we only have a single explanation to plot

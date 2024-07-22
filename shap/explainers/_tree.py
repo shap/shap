@@ -50,8 +50,8 @@ feature_perturbation_codes = {
 
 
 def _check_xgboost_version(v: str):
-    if version.parse(v) < version.parse("1.6"):
-        raise RuntimeError(f"SHAP requires XGBoost >= v1.6 , but found version {v}. Please upgrade" " XGBoost.")
+    if version.parse(v) < version.parse("1.6"):  # pragma: no cover
+        raise RuntimeError(f"SHAP requires XGBoost >= v1.6 , but found version {v}. Please upgrade XGBoost.")
 
 
 def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
