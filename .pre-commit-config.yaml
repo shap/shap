@@ -31,7 +31,6 @@ repos:
     # TODO: get passing on all notebooks
     exclude: |
       (?x)^(
-        docs/notebooks/plots/bar.ipynb|
         notebooks/api_examples/plots/decision_plot.ipynb|
         notebooks/api_examples/plots/heatmap.ipynb|
         notebooks/api_examples/plots/text.ipynb|
