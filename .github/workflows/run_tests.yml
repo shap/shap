@@ -105,19 +105,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Prune uv cache
         # See https://github.com/astral-sh/uv/pull/5391
-        if: matrix.os != 'windows-latest'  # TODO: remove when debugging commands not needed
-        run: |
-          CACHE_DIR=$(uv cache dir)
-          echo "** uv cache dir: $CACHE_DIR"
-          echo "** Before:"
-          du -sh $CACHE_DIR 2>/dev/null || echo "Directory not found"
-          ls $CACHE_DIR
-          pip cache info
-          echo "** pruning.."
-          uv cache prune --ci
-          echo "** after:"
-          du -sh $CACHE_DIR 2>/dev/null || echo "Directory not found"
-          ls $CACHE_DIR
+        run: uv cache prune --ci
 
 
   test_oldest_supported_numpy:
