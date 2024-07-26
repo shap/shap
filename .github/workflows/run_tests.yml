@@ -68,12 +68,15 @@ jobs:
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
+      - name: Get uv cache dir
+        id: uv-cache-dir
+        run: echo "dir=$(uv cache dir)" >> $GITHUB_OUTPUT
       - name: Cache built wheels
         uses: actions/cache@v4
         if: matrix.extras == 'test'
-        id: cache-uv
+        id: uv-cache-restore
         with:
-          path: ~/.cache/uv
+          path: ${{ steps.uv-cache-dir.outputs.dir }}
           key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
       - name: Install dependencies
         run: |
