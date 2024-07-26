@@ -80,12 +80,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
 
-  test_oldest_supported_numpy:
-    # Package is built with numpy 2.X, and tested against numpy 1.X.
+  test_oldest_supported:
+    # Use uv's "--resolution=lowest-direct" flag to install the lowest compatible versions for all direct dependencies,
+    # while using the latest compatible versions for all transitive dependencies.
+    # For numpy specifically: this package is built with numpy 2.X, and tested against numpy 1.X.
     # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
     # The "oldest supported numpy" is determined by SPEC 0:
     # https://scientific-python.org/specs/spec-0000/
-    name: run tests (oldest supported numpy)
+    name: run tests (oldest supported)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +98,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system numpy==1.24.0 '.[test-core,plots]'
+          uv pip install --system --resolution=lowest-direct '.[test-core,plots]'
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
