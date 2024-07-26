@@ -102,14 +102,16 @@ jobs:
       - name: Prune uv cache
         # See https://github.com/astral-sh/uv/pull/5391
         run: |
+          CACHE_DIR=$(uv cache dir)
+          echo "** uv cache dir: $CACHE_DIR"
           echo "** Before:"
-          du -sh ~/.cache/uv
-          ls ~/.cache/uv
+          du -sh $CACHE_DIR 2>/dev/null || echo "Directory not found"
+          ls $CACHE_DIR
           echo "** pruning.."
           uv cache prune --ci
           echo "** after:"
-          du -sh ~/.cache/uv
-          ls ~/.cache/uv
+          du -sh $CACHE_DIR 2>/dev/null || echo "Directory not found"
+          ls $CACHE_DIR
 
 
   test_oldest_supported_numpy:
