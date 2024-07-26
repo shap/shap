@@ -14,10 +14,10 @@ authors = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-  'numpy',
-  'scipy',
-  'scikit-learn',
-  'pandas',
+  'numpy>=1.20, <3',
+  'scipy>=1.6.0',
+  'scikit-learn>=1.0',
+  'pandas>=1.2.0',
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
