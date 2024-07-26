@@ -102,7 +102,7 @@ jobs:
       - name: Prune uv cache
         # See https://github.com/astral-sh/uv/pull/5391
         run: |
-          echo "** Before:
+          echo "** Before:"
           du -sh ~/.cache/uv
           ls ~/.cache/uv
           echo "** pruning.."
