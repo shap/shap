@@ -43,7 +43,7 @@ classifiers = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-plots = ["matplotlib", "ipython"]
+plots = ["matplotlib>=3.3", "ipython>=7.20"]
 others = ["lime"]
 docs = [
   "matplotlib",
@@ -59,7 +59,7 @@ docs = [
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
 test = [
-  "pytest",
+  "pytest>=7",
   "pytest-mpl",
   "pytest-cov",
   "xgboost",
