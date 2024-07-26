@@ -65,17 +65,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # - name: Cache python libs
-      #   uses: actions/cache@v4
-      #   if: matrix.extras == 'test'
-      #   with:
-      #     path: |
-      #       # Only cache a subset of libraries, ensuring cache size remains under 10GB. See GH dsgibbons#42
-      #       ${{ env.pythonLocation }}/**/site-packages/pyspark*
-      #       ${{ env.pythonLocation }}/**/site-packages/nvidia*
-      #       ${{ env.pythonLocation }}/**/site-packages/torch*
-      #       ${{ env.pythonLocation }}/**/site-packages/functorch*
-      #     key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py', 'pyproject.toml') }}-0
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
