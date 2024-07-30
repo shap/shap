@@ -1,6 +1,6 @@
 """Visualize cumulative SHAP values."""
 
-from typing import Optional, Union
+from __future__ import annotations
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as pl
@@ -210,9 +210,9 @@ class DecisionPlotResult:
 
 
 def decision(
-    base_value: Union[float, np.ndarray],
+    base_value: float | np.ndarray,
     shap_values: np.ndarray,
-    features: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, list]] = None,
+    features: np.ndarray | pd.Series | pd.DataFrame | list | None = None,
     feature_names=None,
     feature_order="importance",
     feature_display_range=None,
@@ -232,7 +232,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> Optional[DecisionPlotResult]:
+) -> DecisionPlotResult | None:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -414,7 +414,7 @@ def decision(
         a[:, feature_count:] = shap_values[:, idx_triu[0], idx_triu[1]] * 2
         shap_values = a
         # names
-        b: list[Optional[str]] = [None] * shap_values.shape[1]
+        b: list[str | None] = [None] * shap_values.shape[1]
         b[:feature_count] = feature_names
         for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
             b[i] = f"{feature_names[row]} *\n{feature_names[col]}"
@@ -569,7 +569,7 @@ def decision(
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
 
-def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union[DecisionPlotResult, None]:
+def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | None:
     """Decision plot for multioutput models.
 
     Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values

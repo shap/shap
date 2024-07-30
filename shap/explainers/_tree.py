@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import io
 import json
 import os
 import time
 import warnings
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -1977,7 +1978,7 @@ class XGBTreeModelLoader:
         if feature_types is not None:
             cat_feature_indices: np.ndarray = np.where(np.asarray(feature_types) == "c")[0]
             if len(cat_feature_indices) == 0:
-                self.cat_feature_indices: Optional[np.ndarray] = None
+                self.cat_feature_indices: np.ndarray | None = None
             else:
                 self.cat_feature_indices = cat_feature_indices
         else:

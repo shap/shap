@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import copy
 import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -201,7 +203,7 @@ def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 
-def safe_isinstance(obj: Any, class_path_str: Union[str, list[str]]) -> bool:
+def safe_isinstance(obj: Any, class_path_str: str | list[str]) -> bool:
     """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
@@ -291,7 +293,7 @@ class OpChain:
                 obj = getattr(obj, op)
         return obj
 
-    def __call__(self, *args, **kwargs) -> "OpChain":
+    def __call__(self, *args, **kwargs) -> OpChain:
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -305,7 +307,7 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name: str) -> "OpChain":
+    def __getattr__(self, name: str) -> OpChain:
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
             return None  # type: ignore
