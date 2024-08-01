@@ -230,7 +230,7 @@ class PartitionExplainer(Explainer):
         )
 
         feature_name_to_index = {name: idx for idx, name in enumerate(self.masker.feature_names)}
-        collected_weights = []
+        #collected_weights = []
         # Step 4: Implement Owen values weighting
         for last_key in last_key_to_off_indexes:
             off_indexes = last_key_to_off_indexes[last_key]
@@ -238,12 +238,14 @@ class PartitionExplainer(Explainer):
             weight_list = weights[last_key]
             
             for off_index, on_index, weight in zip(off_indexes, on_indexes, weight_list):
+                #print(weight)
                 off_result = mask_results[tuple(self.unique_masks[off_index])]
                 on_result = mask_results[tuple(self.unique_masks[on_index])]
                 #print(off_result)
                 #print(on_result)
                # print("weight before calculation", weight) # this might be interesting to plot
-                collected_weights.append(weight)
+                #collected_weights.append(weight)
+                
                 marginal_contribution = (on_result - off_result) * weight
                 #print(marginal_contribution)
                 shap_values[feature_name_to_index[last_key]] += marginal_contribution #.item()
