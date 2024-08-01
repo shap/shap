@@ -1,6 +1,6 @@
+import math
 import queue  # multi-producer, multi-consumer queues
 import time  # time execution
-import math
 from itertools import chain, combinations, product
 
 import numpy as np  # numpy base
@@ -236,7 +236,7 @@ class PartitionExplainer(Explainer):
             off_indexes = last_key_to_off_indexes[last_key]
             on_indexes = last_key_to_on_indexes[last_key]
             weight_list = weights[last_key]
-            
+
             for off_index, on_index, weight in zip(off_indexes, on_indexes, weight_list):
                 #print(weight)
                 off_result = mask_results[tuple(self.unique_masks[off_index])]
@@ -245,7 +245,7 @@ class PartitionExplainer(Explainer):
                 #print(on_result)
                # print("weight before calculation", weight) # this might be interesting to plot
                 #collected_weights.append(weight)
-                
+
                 marginal_contribution = (on_result - off_result) * weight
                 #print(marginal_contribution)
                 shap_values[feature_name_to_index[last_key]] += marginal_contribution #.item()
@@ -510,15 +510,15 @@ def generate_paths_and_combinations(node):
 
     def dfs(current_node, current_path):
         current_path.append((current_node.key, current_node.permutations, current_node.weights))
-        
+
         if not current_node.child:  # Leaf node
             paths.append(current_path[:])  # Make a copy of current_path
         else:
-            for child in current_node.child: 
+            for child in current_node.child:
                 dfs(child, current_path)
-        
+
         current_path.pop()  # Backtrack
-    
+
     dfs(node, [])
 
 
