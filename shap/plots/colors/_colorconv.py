@@ -121,10 +121,11 @@
 #     POSSIBILITY OF SUCH DAMAGE.
 
 
-
 import numpy as np
 from scipy import linalg
 from warnings import warn
+from typing import Any, Tuple, Union
+
 
 def rgb2xyz(rgb):
     """RGB to XYZ color space conversion.
@@ -160,6 +161,7 @@ def rgb2xyz(rgb):
     arr[mask] = np.power((arr[mask] + 0.055) / 1.055, 2.4)
     arr[~mask] /= 12.92
     return arr @ xyz_from_rgb.T.astype(arr.dtype)
+
 
 def lab2xyz(lab, illuminant="D65", observer="2"):
     """CIE-LAB to XYZcolor space conversion.
@@ -198,26 +200,26 @@ def lab2xyz(lab, illuminant="D65", observer="2"):
     arr = _prepare_colorarray(lab).copy()
 
     L, a, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
-    y = (L + 16.) / 116.
-    x = (a / 500.) + y
-    z = y - (b / 200.)
+    y = (L + 16.0) / 116.0
+    x = (a / 500.0) + y
+    z = y - (b / 200.0)
 
     if np.any(z < 0):
         invalid = np.nonzero(z < 0)
-        warn('Color data out of range: Z < 0 in %s pixels' % invalid[0].size,
-             stacklevel=2)
+        warn("Color data out of range: Z < 0 in %s pixels" % invalid[0].size, stacklevel=2)
         z[invalid] = 0
 
     out = np.dstack([x, y, z])
 
     mask = out > 0.2068966
-    out[mask] = np.power(out[mask], 3.)
-    out[~mask] = (out[~mask] - 16.0 / 116.) / 7.787
+    out[mask] = np.power(out[mask], 3.0)
+    out[~mask] = (out[~mask] - 16.0 / 116.0) / 7.787
 
     # rescale to the reference white (illuminant)
     xyz_ref_white = get_xyz_coords(illuminant, observer)
     out *= xyz_ref_white
     return out
+
 
 def xyz2lab(xyz, illuminant="D65", observer="2"):
     """XYZ to CIE-LAB color space conversion.
@@ -269,16 +271,17 @@ def xyz2lab(xyz, illuminant="D65", observer="2"):
     # Nonlinear distortion and linear transformation
     mask = arr > 0.008856
     arr[mask] = np.cbrt(arr[mask])
-    arr[~mask] = 7.787 * arr[~mask] + 16. / 116.
+    arr[~mask] = 7.787 * arr[~mask] + 16.0 / 116.0
 
     x, y, z = arr[..., 0], arr[..., 1], arr[..., 2]
 
     # Vector scaling
-    L = (116. * y) - 16.
+    L = (116.0 * y) - 16.0
     a = 500.0 * (x - y)
     b = 200.0 * (y - z)
 
     return np.concatenate([x[..., np.newaxis] for x in [L, a, b]], axis=-1)
+
 
 def lab2rgb(lab, illuminant="D65", observer="2"):
     """Lab to RGB color space conversion.
@@ -343,6 +346,7 @@ def rgb2lab(rgb, illuminant="D65", observer="2"):
     """
     return xyz2lab(rgb2xyz(rgb), illuminant, observer)
 
+
 def lch2lab(lch):
     """CIE-LCH to CIE-LAB color space conversion.
     LCH is the cylindrical representation of the LAB (Cartesian) colorspace
@@ -375,6 +379,7 @@ def lch2lab(lch):
     lch[..., 1], lch[..., 2] = c * np.cos(h), c * np.sin(h)
     return lch
 
+
 def _prepare_lab_array(arr):
     """Ensure input for lab2lch, lch2lab are well-posed.
     Arrays must be in floating point and have at least 3 elements in
@@ -383,8 +388,9 @@ def _prepare_lab_array(arr):
     arr = np.asarray(arr)
     shape = arr.shape
     if shape[-1] < 3:
-        raise ValueError('Input array has less than 3 color channels')
+        raise ValueError("Input array has less than 3 color channels")
     return img_as_float(arr, force_copy=True)
+
 
 def get_xyz_coords(illuminant, observer):
     """Get the XYZ coordinates of the given illuminant and observer [1]_.
@@ -412,8 +418,11 @@ def get_xyz_coords(illuminant, observer):
     try:
         return illuminants[illuminant][observer]
     except KeyError:
-        raise ValueError("Unknown illuminant/observer combination\
-        (\'{0}\', \'{1}\')".format(illuminant, observer))
+        raise ValueError(
+            "Unknown illuminant/observer combination\
+        ('{0}', '{1}')".format(illuminant, observer)
+        )
+
 
 def _prepare_colorarray(arr):
     """Check the shape of the array and convert it to
@@ -422,11 +431,16 @@ def _prepare_colorarray(arr):
     arr = np.asanyarray(arr)
 
     if arr.ndim not in [3, 4] or arr.shape[-1] != 3:
-        msg = ("the input array must be have a shape == (.., ..,[ ..,] 3)), " +
-               "got (" + (", ".join(map(str, arr.shape))) + ")")
+        msg = (
+            "the input array must be have a shape == (.., ..,[ ..,] 3)), "
+            + "got ("
+            + (", ".join(map(str, arr.shape)))
+            + ")"
+        )
         raise ValueError(msg)
 
     return img_as_float(arr)
+
 
 def xyz2rgb(xyz):
     """XYZ to RGB color space conversion.
@@ -466,6 +480,7 @@ def xyz2rgb(xyz):
     np.clip(arr, 0, 1, out=arr)
     return arr
 
+
 def _convert(matrix, arr):
     """Do the color space conversion.
     Parameters
@@ -483,28 +498,27 @@ def _convert(matrix, arr):
 
     return arr @ matrix.T.copy()
 
+
 # ---------------------------------------------------------------
 # Primaries for the coordinate systems
 # ---------------------------------------------------------------
 cie_primaries = np.array([700, 546.1, 435.8])
-sb_primaries = np.array([1. / 155, 1. / 190, 1. / 225]) * 1e5
+sb_primaries = np.array([1.0 / 155, 1.0 / 190, 1.0 / 225]) * 1e5
 
 # ---------------------------------------------------------------
 # Matrices that define conversion between different color spaces
 # ---------------------------------------------------------------
 
 # From sRGB specification
-xyz_from_rgb = np.array([[0.412453, 0.357580, 0.180423],
-                         [0.212671, 0.715160, 0.072169],
-                         [0.019334, 0.119193, 0.950227]])
+xyz_from_rgb = np.array(
+    [[0.412453, 0.357580, 0.180423], [0.212671, 0.715160, 0.072169], [0.019334, 0.119193, 0.950227]]
+)
 
 rgb_from_xyz = linalg.inv(xyz_from_rgb)
 
 # From https://en.wikipedia.org/wiki/CIE_1931_color_space
 # Note: Travis's code did not have the divide by 0.17697
-xyz_from_rgbcie = np.array([[0.49, 0.31, 0.20],
-                            [0.17697, 0.81240, 0.01063],
-                            [0.00, 0.01, 0.99]]) / 0.17697
+xyz_from_rgbcie = np.array([[0.49, 0.31, 0.20], [0.17697, 0.81240, 0.01063], [0.00, 0.01, 0.99]]) / 0.17697
 
 rgbcie_from_xyz = linalg.inv(xyz_from_rgbcie)
 
@@ -513,44 +527,36 @@ rgbcie_from_rgb = rgbcie_from_xyz @ xyz_from_rgb
 rgb_from_rgbcie = rgb_from_xyz @ xyz_from_rgbcie
 
 
-gray_from_rgb = np.array([[0.2125, 0.7154, 0.0721],
-                          [0, 0, 0],
-                          [0, 0, 0]])
+gray_from_rgb = np.array([[0.2125, 0.7154, 0.0721], [0, 0, 0], [0, 0, 0]])
 
-yuv_from_rgb = np.array([[ 0.299     ,  0.587     ,  0.114      ],
-                         [-0.14714119, -0.28886916,  0.43601035 ],
-                         [ 0.61497538, -0.51496512, -0.10001026 ]])
+yuv_from_rgb = np.array(
+    [[0.299, 0.587, 0.114], [-0.14714119, -0.28886916, 0.43601035], [0.61497538, -0.51496512, -0.10001026]]
+)
 
 rgb_from_yuv = linalg.inv(yuv_from_rgb)
 
-yiq_from_rgb = np.array([[0.299     ,  0.587     ,  0.114     ],
-                         [0.59590059, -0.27455667, -0.32134392],
-                         [0.21153661, -0.52273617,  0.31119955]])
+yiq_from_rgb = np.array(
+    [[0.299, 0.587, 0.114], [0.59590059, -0.27455667, -0.32134392], [0.21153661, -0.52273617, 0.31119955]]
+)
 
 rgb_from_yiq = linalg.inv(yiq_from_rgb)
 
-ypbpr_from_rgb = np.array([[ 0.299   , 0.587   , 0.114   ],
-                           [-0.168736,-0.331264, 0.5     ],
-                           [ 0.5     ,-0.418688,-0.081312]])
+ypbpr_from_rgb = np.array([[0.299, 0.587, 0.114], [-0.168736, -0.331264, 0.5], [0.5, -0.418688, -0.081312]])
 
 rgb_from_ypbpr = linalg.inv(ypbpr_from_rgb)
 
-ycbcr_from_rgb = np.array([[    65.481,   128.553,    24.966],
-                           [   -37.797,   -74.203,   112.0  ],
-                           [   112.0  ,   -93.786,   -18.214]])
+ycbcr_from_rgb = np.array([[65.481, 128.553, 24.966], [-37.797, -74.203, 112.0], [112.0, -93.786, -18.214]])
 
 rgb_from_ycbcr = linalg.inv(ycbcr_from_rgb)
 
-ydbdr_from_rgb = np.array([[    0.299,   0.587,    0.114],
-                           [   -0.45 ,  -0.883,    1.333],
-                           [   -1.333,   1.116,    0.217]])
+ydbdr_from_rgb = np.array([[0.299, 0.587, 0.114], [-0.45, -0.883, 1.333], [-1.333, 1.116, 0.217]])
 
 rgb_from_ydbdr = linalg.inv(ydbdr_from_rgb)
 
 
 # CIE LAB constants for Observer=2A, Illuminant=D65
 # NOTE: this is actually the XYZ values for the illuminant above.
-lab_ref_white = np.array([0.95047, 1., 1.08883])
+lab_ref_white = np.array([0.95047, 1.0, 1.08883])
 
 
 # XYZ coordinates of the illuminants, scaled to [0, 1]. For each illuminant I
@@ -576,27 +582,27 @@ lab_ref_white = np.array([0.95047, 1., 1.08883])
 #    ----------
 #    .. [1] https://en.wikipedia.org/wiki/Standard_illuminant
 
-illuminants = \
-    {"A": {'2': (1.098466069456375, 1, 0.3558228003436005),
-           '10': (1.111420406956693, 1, 0.3519978321919493)},
-     "D50": {'2': (0.9642119944211994, 1, 0.8251882845188288),
-             '10': (0.9672062750333777, 1, 0.8142801513128616)},
-     "D55": {'2': (0.956797052643698, 1, 0.9214805860173273),
-             '10': (0.9579665682254781, 1, 0.9092525159847462)},
-     "D65": {'2': (0.95047, 1., 1.08883),   # This was: `lab_ref_white`
-             '10': (0.94809667673716, 1, 1.0730513595166162)},
-     "D75": {'2': (0.9497220898840717, 1, 1.226393520724154),
-             '10': (0.9441713925645873, 1, 1.2064272211720228)},
-     "E": {'2': (1.0, 1.0, 1.0),
-           '10': (1.0, 1.0, 1.0)}}
+illuminants = {
+    "A": {"2": (1.098466069456375, 1, 0.3558228003436005), "10": (1.111420406956693, 1, 0.3519978321919493)},
+    "D50": {"2": (0.9642119944211994, 1, 0.8251882845188288), "10": (0.9672062750333777, 1, 0.8142801513128616)},
+    "D55": {"2": (0.956797052643698, 1, 0.9214805860173273), "10": (0.9579665682254781, 1, 0.9092525159847462)},
+    "D65": {
+        "2": (0.95047, 1.0, 1.08883),  # This was: `lab_ref_white`
+        "10": (0.94809667673716, 1, 1.0730513595166162),
+    },
+    "D75": {"2": (0.9497220898840717, 1, 1.226393520724154), "10": (0.9441713925645873, 1, 1.2064272211720228)},
+    "E": {"2": (1.0, 1.0, 1.0), "10": (1.0, 1.0, 1.0)},
+}
 
 
-
-
-__all__ = ['img_as_float32', 'img_as_float64', 'img_as_float',
-           #'img_as_int', 'img_as_uint', 'img_as_ubyte',
-           #'img_as_bool',
-           'dtype_limits']
+__all__ = [
+    "img_as_float32",
+    "img_as_float64",
+    "img_as_float",
+    #'img_as_int', 'img_as_uint', 'img_as_ubyte',
+    #'img_as_bool',
+    "dtype_limits",
+]
 
 # For integers Numpy uses `_integer_types` basis internally, and builds a leaky
 # `np.XintYY` abstraction on top of it. This leads to situations when, for
@@ -607,18 +613,26 @@ __all__ = ['img_as_float32', 'img_as_float64', 'img_as_float',
 # For convenience, for these dtypes we indicate also the possible bit depths
 # (some of them are platform specific). For the details, see:
 # http://www.unix.org/whitepapers/64bit.html
-_integer_types = (np.byte, np.ubyte,          # 8 bits
-                  np.short, np.ushort,        # 16 bits
-                  np.intc, np.uintc,          # 16 or 32 or 64 bits
-                  np.int_, np.uint,           # 32 or 64 bits
-                  np.longlong, np.ulonglong)  # 64 bits
-_integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max)
-                   for t in _integer_types}
-dtype_range = {np.bool_: (False, True),
-               bool: (False, True),
-               np.float16: (-1, 1),
-               np.float32: (-1, 1),
-               np.float64: (-1, 1)}
+_integer_types = (
+    np.byte,
+    np.ubyte,  # 8 bits
+    np.short,
+    np.ushort,  # 16 bits
+    np.intc,
+    np.uintc,  # 16 or 32 or 64 bits
+    np.int_,
+    np.uint,  # 32 or 64 bits
+    np.longlong,
+    np.ulonglong,
+)  # 64 bits
+_integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max) for t in _integer_types}  # type:ignore
+dtype_range: dict[Any, Tuple[Union[bool, int], Union[bool, int]]] = {
+    np.bool_: (False, True),
+    bool: (False, True),
+    np.float16: (-1, 1),
+    np.float32: (-1, 1),
+    np.float64: (-1, 1),
+}
 dtype_range.update(_integer_ranges)
 
 _supported_types = list(dtype_range.keys())
@@ -678,8 +692,7 @@ def _dtype_bits(kind, bits, itemsize=1):
         Data type of `kind` that can store a `bits` wide unsigned int
     """
 
-    s = next(i for i in (itemsize, ) + (2, 4, 8) if
-             bits < (i * 8) or (bits == (i * 8) and kind == 'u'))
+    s = next(i for i in (itemsize,) + (2, 4, 8) if bits < (i * 8) or (bits == (i * 8) and kind == "u"))
 
     return np.dtype(kind + str(s))
 
@@ -704,16 +717,19 @@ def _scale(a, n, m, copy=True):
         Output image array. Has the same kind as `a`.
     """
     kind = a.dtype.kind
-    if n > m and a.max() < 2 ** m:
+    if n > m and a.max() < 2**m:
         mnew = int(np.ceil(m / 2) * 2)
         if mnew > m:
             dtype = "int{}".format(mnew)
         else:
             dtype = "uint{}".format(mnew)
         n = int(np.ceil(n / 2) * 2)
-        warn("Downcasting {} to {} without scaling because max "
-             "value {} fits in {}".format(a.dtype, dtype, a.max(), dtype),
-             stacklevel=3)
+        warn(
+            "Downcasting {} to {} without scaling because max value {} fits in {}".format(
+                a.dtype, dtype, a.max(), dtype
+            ),
+            stacklevel=3,
+        )
         return a.astype(_dtype_bits(kind, m))
     elif n == m:
         return a.copy() if copy else a
@@ -721,11 +737,10 @@ def _scale(a, n, m, copy=True):
         # downscale with precision loss
         if copy:
             b = np.empty(a.shape, _dtype_bits(kind, m))
-            np.floor_divide(a, 2**(n - m), out=b, dtype=a.dtype,
-                            casting='unsafe')
+            np.floor_divide(a, 2 ** (n - m), out=b, dtype=a.dtype, casting="unsafe")
             return b
         else:
-            a //= 2**(n - m)
+            a //= 2 ** (n - m)
             return a
     elif m % n == 0:
         # exact upscale to a multiple of `n` bits
@@ -744,12 +759,12 @@ def _scale(a, n, m, copy=True):
         if copy:
             b = np.empty(a.shape, _dtype_bits(kind, o))
             np.multiply(a, (2**o - 1) // (2**n - 1), out=b, dtype=b.dtype)
-            b //= 2**(o - m)
+            b //= 2 ** (o - m)
             return b
         else:
             a = a.astype(_dtype_bits(kind, o, a.dtype.itemsize), copy=False)
             a *= (2**o - 1) // (2**n - 1)
-            a //= 2**(o - m)
+            a //= 2 ** (o - m)
             return a
 
 
@@ -822,30 +837,29 @@ def convert(image, dtype, force_copy=False, uniform=False):
         return image
 
     if not (dtype_in in _supported_types and dtype_out in _supported_types):
-        raise ValueError("Can not convert from {} to {}."
-                         .format(dtypeobj_in, dtypeobj_out))
+        raise ValueError("Can not convert from {} to {}.".format(dtypeobj_in, dtypeobj_out))
 
-    if kind_in in 'ui':
+    if kind_in in "ui":
         imin_in = np.iinfo(dtype_in).min
         imax_in = np.iinfo(dtype_in).max
-    if kind_out in 'ui':
+    if kind_out in "ui":
         imin_out = np.iinfo(dtype_out).min
         imax_out = np.iinfo(dtype_out).max
 
     # any -> binary
-    if kind_out == 'b':
+    if kind_out == "b":
         return image > dtype_in(dtype_range[dtype_in][1] / 2)
 
     # binary -> any
-    if kind_in == 'b':
+    if kind_in == "b":
         result = image.astype(dtype_out)
-        if kind_out != 'f':
+        if kind_out != "f":
             result *= dtype_out(dtype_range[dtype_out][1])
         return result
 
     # float -> any
-    if kind_in == 'f':
-        if kind_out == 'f':
+    if kind_in == "f":
+        if kind_out == "f":
             # float -> float
             return image.astype(dtype_out)
 
@@ -853,41 +867,34 @@ def convert(image, dtype, force_copy=False, uniform=False):
             raise ValueError("Images of type float must be between -1 and 1.")
         # floating point -> integer
         # use float type that can represent output integer type
-        computation_type = _dtype_itemsize(itemsize_out, dtype_in,
-                                           np.float32, np.float64)
+        computation_type = _dtype_itemsize(itemsize_out, dtype_in, np.float32, np.float64)
 
         if not uniform:
-            if kind_out == 'u':
-                image_out = np.multiply(image, imax_out,
-                                        dtype=computation_type)
+            if kind_out == "u":
+                image_out = np.multiply(image, imax_out, dtype=computation_type)
             else:
-                image_out = np.multiply(image, (imax_out - imin_out) / 2,
-                                        dtype=computation_type)
-                image_out -= 1.0 / 2.
+                image_out = np.multiply(image, (imax_out - imin_out) / 2, dtype=computation_type)
+                image_out -= 1.0 / 2.0
             np.rint(image_out, out=image_out)
             np.clip(image_out, imin_out, imax_out, out=image_out)
-        elif kind_out == 'u':
-            image_out = np.multiply(image, imax_out + 1,
-                                    dtype=computation_type)
+        elif kind_out == "u":
+            image_out = np.multiply(image, imax_out + 1, dtype=computation_type)
             np.clip(image_out, 0, imax_out, out=image_out)
         else:
-            image_out = np.multiply(image, (imax_out - imin_out + 1.0) / 2.0,
-                                    dtype=computation_type)
+            image_out = np.multiply(image, (imax_out - imin_out + 1.0) / 2.0, dtype=computation_type)
             np.floor(image_out, out=image_out)
             np.clip(image_out, imin_out, imax_out, out=image_out)
         return image_out.astype(dtype_out)
 
     # signed/unsigned int -> float
-    if kind_out == 'f':
+    if kind_out == "f":
         # use float type that can exactly represent input integers
-        computation_type = _dtype_itemsize(itemsize_in, dtype_out,
-                                           np.float32, np.float64)
+        computation_type = _dtype_itemsize(itemsize_in, dtype_out, np.float32, np.float64)
 
-        if kind_in == 'u':
+        if kind_in == "u":
             # using np.divide or np.multiply doesn't copy the data
             # until the computation time
-            image = np.multiply(image, 1. / imax_in,
-                                dtype=computation_type)
+            image = np.multiply(image, 1.0 / imax_in, dtype=computation_type)
             # DirectX uses this conversion also for signed ints
             # if imin_in:
             #     np.maximum(image, -1.0, out=image)
@@ -898,8 +905,8 @@ def convert(image, dtype, force_copy=False, uniform=False):
         return np.asarray(image, dtype_out)
 
     # unsigned int -> signed/unsigned int
-    if kind_in == 'u':
-        if kind_out == 'i':
+    if kind_in == "u":
+        if kind_out == "i":
             # unsigned int -> signed int
             image = _scale(image, 8 * itemsize_in, 8 * itemsize_out - 1)
             return image.view(dtype_out)
@@ -908,17 +915,17 @@ def convert(image, dtype, force_copy=False, uniform=False):
             return _scale(image, 8 * itemsize_in, 8 * itemsize_out)
 
     # signed int -> unsigned int
-    if kind_out == 'u':
+    if kind_out == "u":
         image = _scale(image, 8 * itemsize_in - 1, 8 * itemsize_out)
         result = np.empty(image.shape, dtype_out)
-        np.maximum(image, 0, out=result, dtype=image.dtype, casting='unsafe')
+        np.maximum(image, 0, out=result, dtype=image.dtype, casting="unsafe")
         return result
 
     # signed int -> signed int
     if itemsize_in > itemsize_out:
         return _scale(image, 8 * itemsize_in - 1, 8 * itemsize_out - 1)
 
-    image = image.astype(_dtype_bits('i', itemsize_out * 8))
+    image = image.astype(_dtype_bits("i", itemsize_out * 8))
     image -= imin_in
     image = _scale(image, 8 * itemsize_in, 8 * itemsize_out, copy=False)
     image += imin_out

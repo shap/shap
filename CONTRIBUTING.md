@@ -23,6 +23,7 @@
   - [Issue triage](#issue-triage)
   - [PR triage](#pr-triage)
   - [Versioning](#versioning)
+  - [Minimum supported dependencies](#minimum-supported-dependencies)
   - [Making releases](#making-releases)
   - [Release notes from PR labels](#release-notes-from-pr-labels)
 

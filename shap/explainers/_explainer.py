@@ -24,8 +24,18 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
-    def __init__(self, model, masker=None, link=links.identity, algorithm="auto", output_names=None, feature_names=None, linearize_link=True,
-                 seed=None, **kwargs):
+    def __init__(
+        self,
+        model,
+        masker=None,
+        link=links.identity,
+        algorithm="auto",
+        output_names=None,
+        feature_names=None,
+        linearize_link=True,
+        seed=None,
+        **kwargs,
+    ):
         """Build a new explainer for the passed model.
 
         Parameters
@@ -79,15 +89,16 @@ class Explainer(Serializable):
         self.feature_names = feature_names
 
         # wrap the incoming masker object as a shap.Masker object
-        if (
-            isinstance(masker, pd.DataFrame)
-            or ((isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2)
+        if isinstance(masker, pd.DataFrame) or (
+            (isinstance(masker, np.ndarray) or scipy.sparse.issparse(masker)) and len(masker.shape) == 2
         ):
             if algorithm == "partition":
                 self.masker = maskers.Partition(masker)
             else:
                 self.masker = maskers.Independent(masker)
-        elif safe_isinstance(masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]):
+        elif safe_isinstance(
+            masker, ["transformers.PreTrainedTokenizer", "transformers.tokenization_utils_base.PreTrainedTokenizerBase"]
+        ):
             if is_transformers_lm(self.model):
                 # auto assign text infilling if model is a transformer model with lm head
                 self.masker = maskers.Text(masker, mask_token="...", collapse_mask_token=True)
@@ -99,8 +110,14 @@ class Explainer(Serializable):
             self.masker = maskers.Independent(masker)
         elif masker is None and isinstance(self.model, models.TransformersPipeline):
             return self.__init__(
-                self.model, self.model.inner_model.tokenizer,
-                link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
+                self.model,
+                self.model.inner_model.tokenizer,
+                link=link,
+                algorithm=algorithm,
+                output_names=output_names,
+                feature_names=feature_names,
+                linearize_link=linearize_link,
+                **kwargs,
             )
         else:
             self.masker = masker
@@ -109,25 +126,39 @@ class Explainer(Serializable):
         if safe_isinstance(self.model, "transformers.pipelines.Pipeline"):
             if is_transformers_lm(self.model.model):
                 return self.__init__(
-                    self.model.model, self.model.tokenizer if self.masker is None else self.masker,
-                    link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
+                    self.model.model,
+                    self.model.tokenizer if self.masker is None else self.masker,
+                    link=link,
+                    algorithm=algorithm,
+                    output_names=output_names,
+                    feature_names=feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
                 )
             else:
                 return self.__init__(
-                    models.TransformersPipeline(self.model), self.masker,
-                    link=link, algorithm=algorithm, output_names=output_names, feature_names=feature_names, linearize_link=linearize_link, **kwargs
+                    models.TransformersPipeline(self.model),
+                    self.masker,
+                    link=link,
+                    algorithm=algorithm,
+                    output_names=output_names,
+                    feature_names=feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
                 )
 
         # wrap self.masker and self.model for output text explanation algorithm
         if is_transformers_lm(self.model):
             self.model = models.TeacherForcing(self.model, self.masker.tokenizer)
             self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
-        elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(self.masker, ["shap.maskers.Text", "shap.maskers.Image"]):
+        elif safe_isinstance(self.model, "shap.models.TeacherForcing") and safe_isinstance(
+            self.masker, ["shap.maskers.Text", "shap.maskers.Image"]
+        ):
             self.masker = maskers.OutputComposite(self.masker, self.model.text_generate)
         elif safe_isinstance(self.model, "shap.models.TopKLM") and safe_isinstance(self.masker, "shap.maskers.Text"):
             self.masker = maskers.FixedComposite(self.masker)
 
-        #self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
+        # self._brute_force_fallback = explainers.BruteForce(self.model, self.masker)
 
         # validate and save the link function
         if callable(link):
@@ -139,15 +170,15 @@ class Explainer(Serializable):
         # if we are called directly (as opposed to through super()) then we convert ourselves to the subclass
         # that implements the specific algorithm that was chosen
         if self.__class__ is Explainer:
-
             # do automatic algorithm selection
-            #from .. import explainers
+            # from .. import explainers
             if algorithm == "auto":
-
                 # use implementation-aware methods if possible
                 if explainers.LinearExplainer.supports_model_with_masker(model, self.masker):
                     algorithm = "linear"
-                elif explainers.TreeExplainer.supports_model_with_masker(model, self.masker): # TODO: check for Partition?
+                elif explainers.TreeExplainer.supports_model_with_masker(
+                    model, self.masker
+                ):  # TODO: check for Partition?
                     algorithm = "tree"
                 elif explainers.AdditiveExplainer.supports_model_with_masker(model, self.masker):
                     algorithm = "additive"
@@ -164,43 +195,114 @@ class Explainer(Serializable):
                             algorithm = "exact"
                         else:
                             algorithm = "permutation"
-                    elif (getattr(self.masker, "text_data", False) or getattr(self.masker, "image_data", False)) and hasattr(self.masker, "clustering"):
+                    elif (
+                        getattr(self.masker, "text_data", False) or getattr(self.masker, "image_data", False)
+                    ) and hasattr(self.masker, "clustering"):
                         algorithm = "partition"
                     else:
                         algorithm = "permutation"
 
                 # if we get here then we don't know how to handle what was given to us
                 else:
-                    raise TypeError("The passed model is not callable and cannot be analyzed directly with the given masker! Model: " + str(model))
+                    raise TypeError(
+                        "The passed model is not callable and cannot be analyzed directly with the given masker! Model: "
+                        + str(model)
+                    )
 
             # build the right subclass
             if algorithm == "exact":
                 self.__class__ = explainers.ExactExplainer
-                explainers.ExactExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                explainers.ExactExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
+                )
             elif algorithm == "permutation":
                 self.__class__ = explainers.PermutationExplainer
-                explainers.PermutationExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, seed=seed, **kwargs)
+                explainers.PermutationExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    seed=seed,
+                    **kwargs,
+                )
             elif algorithm == "partition":
                 self.__class__ = explainers.PartitionExplainer
-                explainers.PartitionExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, output_names=self.output_names, **kwargs)
+                explainers.PartitionExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    output_names=self.output_names,
+                    **kwargs,
+                )
             elif algorithm == "tree":
                 self.__class__ = explainers.TreeExplainer
-                explainers.TreeExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                explainers.TreeExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
+                )
             elif algorithm == "additive":
                 self.__class__ = explainers.AdditiveExplainer
-                explainers.AdditiveExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                explainers.AdditiveExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
+                )
             elif algorithm == "linear":
                 self.__class__ = explainers.LinearExplainer
-                explainers.LinearExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                explainers.LinearExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
+                )
             elif algorithm == "deep":
                 self.__class__ = explainers.DeepExplainer
-                explainers.DeepExplainer.__init__(self, self.model, self.masker, link=self.link, feature_names=self.feature_names, linearize_link=linearize_link, **kwargs)
+                explainers.DeepExplainer.__init__(
+                    self,
+                    self.model,
+                    self.masker,
+                    link=self.link,
+                    feature_names=self.feature_names,
+                    linearize_link=linearize_link,
+                    **kwargs,
+                )
             else:
                 raise InvalidAlgorithmError(f"Unknown algorithm type passed: {algorithm}!")
 
-
-    def __call__(self, *args, max_evals="auto", main_effects=False, error_bounds=False, batch_size="auto",
-                 outputs=None, silent=False, **kwargs):
+    def __call__(
+        self,
+        *args,
+        max_evals="auto",
+        main_effects=False,
+        error_bounds=False,
+        batch_size="auto",
+        outputs=None,
+        silent=False,
+        **kwargs,
+    ):
         """Explains the output of model(*args), where args is a list of parallel iterable datasets.
 
         Note this default version could be an abstract method that is implemented by each algorithm-specific
@@ -212,7 +314,7 @@ class Explainer(Serializable):
 
         start_time = time.time()
 
-        if issubclass(type(self.masker), maskers.OutputComposite) and len(args)==2:
+        if issubclass(type(self.masker), maskers.OutputComposite) and len(args) == 2:
             self.masker.model = models.TextGeneration(target_sentences=args[1])
             args = args[:1]
         # parse our incoming arguments
@@ -225,7 +327,6 @@ class Explainer(Serializable):
         else:
             feature_names = [copy.deepcopy(self.feature_names)]
         for i in range(len(args)):
-
             # try and see if we can get a length from any of the for our progress bar
             if num_rows is None:
                 try:
@@ -262,10 +363,16 @@ class Explainer(Serializable):
         error_std = []
         if callable(getattr(self.masker, "feature_names", None)):
             feature_names = [[] for _ in range(len(args))]
-        for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__+" explainer", silent):
+        for row_args in show_progress(zip(*args), num_rows, self.__class__.__name__ + " explainer", silent):
             row_result = self.explain_row(
-                *row_args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
-                batch_size=batch_size, outputs=outputs, silent=silent, **kwargs
+                *row_args,
+                max_evals=max_evals,
+                main_effects=main_effects,
+                error_bounds=error_bounds,
+                batch_size=batch_size,
+                outputs=outputs,
+                silent=silent,
+                **kwargs,
             )
             values.append(row_result.get("values", None))
             output_indices.append(row_result.get("output_indices", None))
@@ -288,7 +395,7 @@ class Explainer(Serializable):
             pos = 0
             for j in range(len(args)):
                 mask_length = np.prod(mask_shapes[i][j])
-                arg_values[j].append(values[i][pos:pos+mask_length])
+                arg_values[j].append(values[i][pos : pos + mask_length])
                 pos += mask_length
 
         # collapse the arrays as possible
@@ -309,18 +416,22 @@ class Explainer(Serializable):
                 if not ragged_outputs:
                     sliced_labels = np.array(output_names)
                 else:
-                    sliced_labels = [np.array(output_names[i])[index_list] for i,index_list in enumerate(output_indices)]
+                    sliced_labels = [
+                        np.array(output_names[i])[index_list] for i, index_list in enumerate(output_indices)
+                    ]
             else:
                 sliced_labels = None
         else:
-            assert output_indices is not None, "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            assert (
+                output_indices is not None
+            ), "You have passed a list for output_names but the model seems to not have multiple outputs!"
             labels = np.array(self.output_names)
             sliced_labels = [labels[index_list] for index_list in output_indices]
             if not ragged_outputs:
                 sliced_labels = np.array(sliced_labels)
 
         if isinstance(sliced_labels, np.ndarray) and len(sliced_labels.shape) == 2:
-            if np.all(sliced_labels[0,:] == sliced_labels):
+            if np.all(sliced_labels[0, :] == sliced_labels):
                 sliced_labels = sliced_labels[0]
 
         # allow the masker to transform the input data to better match the masking pattern
@@ -334,11 +445,10 @@ class Explainer(Serializable):
         # build the explanation objects
         out = []
         for j, data in enumerate(args):
-
             # reshape the attribution values using the mask_shapes
             tmp = []
             for i, v in enumerate(arg_values[j]):
-                if np.prod(mask_shapes[i][j]) != np.prod(v.shape): # see if we have multiple outputs
+                if np.prod(mask_shapes[i][j]) != np.prod(v.shape):  # see if we have multiple outputs
                     tmp.append(v.reshape(*mask_shapes[i][j], -1))
                 else:
                     tmp.append(v.reshape(*mask_shapes[i][j]))
@@ -347,19 +457,23 @@ class Explainer(Serializable):
             if feature_names[j] is None:
                 feature_names[j] = ["Feature " + str(i) for i in range(data.shape[1])]
 
-
             # build an explanation object for this input argument
-            out.append(Explanation(
-                arg_values[j], expected_values, data,
-                feature_names=feature_names[j], main_effects=main_effects,
-                clustering=clustering,
-                hierarchical_values=hierarchical_values,
-                output_names=sliced_labels, # self.output_names
-                error_std=error_std,
-                compute_time=time.time() - start_time
-                # output_shape=output_shape,
-                #lower_bounds=v_min, upper_bounds=v_max
-            ))
+            out.append(
+                Explanation(
+                    arg_values[j],
+                    expected_values,
+                    data,
+                    feature_names=feature_names[j],
+                    main_effects=main_effects,
+                    clustering=clustering,
+                    hierarchical_values=hierarchical_values,
+                    output_names=sliced_labels,  # self.output_names
+                    error_std=error_std,
+                    compute_time=time.time() - start_time,
+                    # output_shape=output_shape,
+                    # lower_bounds=v_min, upper_bounds=v_max
+                )
+            )
         return out[0] if len(out) == 1 else out
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, outputs, silent, **kwargs):
@@ -393,16 +507,16 @@ class Explainer(Serializable):
         warnings.warn(
             "This function is not used within the shap library and will therefore be removed in an upcoming release. "
             "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
-            DeprecationWarning
+            DeprecationWarning,
         )
 
         # mask each input on in isolation
-        masks = np.zeros(2*len(inds)-1, dtype=int)
+        masks = np.zeros(2 * len(inds) - 1, dtype=int)
         last_ind = -1
         for i in range(len(inds)):
             if i > 0:
-                masks[2*i - 1] = -last_ind - 1 # turn off the last input
-            masks[2*i] = inds[i] # turn on this input
+                masks[2 * i - 1] = -last_ind - 1  # turn off the last input
+            masks[2 * i] = inds[i]  # turn on this input
             last_ind = inds[i]
 
         # compute the main effects for the given indexes
@@ -441,6 +555,7 @@ class Explainer(Serializable):
             kwargs["masker"] = s.load("masker", masker_loader)
             kwargs["link"] = s.load("link")
         return kwargs
+
 
 def pack_values(values):
     """Used the clean up arrays before putting them into an Explanation object."""

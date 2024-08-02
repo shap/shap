@@ -37,7 +37,6 @@ allow_to_fail = [
 allow_to_timeout = [
     Path("api_examples/plots/beeswarm.ipynb"),
     Path("api_examples/plots/image.ipynb"),
-    Path("api_examples/plots/scatter.ipynb"),
     Path("api_examples/plots/text.ipynb"),
     Path("api_examples/plots/waterfall.ipynb"),
     Path("benchmarks/image/Image Multiclass Classification Benchmark Demo.ipynb"),
@@ -87,7 +86,7 @@ def main():
             nb = nbformat.read(f, as_version=4)
         start_time = time.time()
         try:
-            ep.preprocess(nb, resources={'metadata': {'path': str(notebook_path.parent)}}, km=km)
+            ep.preprocess(nb, resources={"metadata": {"path": str(notebook_path.parent)}}, km=km)
             print(f"Executed notebook {notebook_path} in {time.time() - start_time:.2f} seconds.")
         except CellExecutionError as e:
             print(f"FAILED: {notebook_path}:\n{e}")
@@ -100,6 +99,7 @@ def main():
         raise RuntimeError("Not all notebooks executed successfully.")
     else:
         print("All notebooks executed successfully.")
+
 
 if __name__ == "__main__":
     main()

@@ -9,6 +9,7 @@ try:
 except ImportError:
     pass
 
+
 class LimeTabular(Explainer):
     """Simply wrap of lime.lime_tabular.LimeTabularExplainer into the common shap interface.
 
@@ -44,10 +45,12 @@ class LimeTabular(Explainer):
             self.out_dim = 1
             self.flat_out = True
             if mode == "classification":
-                def pred(X): # assume that 1d outputs are probabilities
+
+                def pred(X):  # assume that 1d outputs are probabilities
                     preds = self.model(X).reshape(-1, 1)
                     p0 = 1 - preds
                     return np.hstack((p0, preds))
+
                 self.model = pred
         else:
             self.out_dim = self.model(data[0:1]).shape[1]
@@ -61,10 +64,12 @@ class LimeTabular(Explainer):
 
         out = [np.zeros(X.shape) for j in range(self.out_dim)]
         for i in range(X.shape[0]):
-            exp = self.explainer.explain_instance(X[i], self.model, labels=range(self.out_dim), num_features=num_features)
+            exp = self.explainer.explain_instance(
+                X[i], self.model, labels=range(self.out_dim), num_features=num_features
+            )
             for j in range(self.out_dim):
-                for k,v in exp.local_exp[j]:
-                    out[j][i,k] = v
+                for k, v in exp.local_exp[j]:
+                    out[j][i, k] = v
 
         # because it output two results even for only one model output, and they are negated from what we expect
         if self.mode == "regression":
