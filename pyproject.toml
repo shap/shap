@@ -196,6 +196,7 @@ select = [
   "D",  # pydocstyle
   "NPY",  # Numpy
   "SIM101",  # flake8-simplify
+  "FA",  # future annotations
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
