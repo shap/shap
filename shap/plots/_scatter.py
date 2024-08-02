@@ -229,14 +229,14 @@ def scatter(
         if num_points_per_value < 10:
             # categorical = False
             x_jitter = 0
-    elif num_points_per_value < 100:
-        # categorical = True
-        if x_jitter == "auto":
-            x_jitter = min_dist * 0.1
-    else:
-        # categorical = True
-        if x_jitter == "auto":
-            x_jitter = min_dist * 0.2
+        elif num_points_per_value < 100:
+            # categorical = True
+            if x_jitter == "auto":
+                x_jitter = min_dist * 0.1
+        else:
+            # categorical = True
+            if x_jitter == "auto":
+                x_jitter = min_dist * 0.2
 
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
