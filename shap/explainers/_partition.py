@@ -131,8 +131,7 @@ class PartitionExplainer(Explainer):
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
             raise ValueError(
-                "Unknown fixed_context value passed (must be 0, 1 or None): %s"
-                % fixed_context
+                f"Unknown fixed_context value passed (must be 0, 1 or None): {fixed_context}"
             )
 
         fm = MaskedModel(
@@ -149,16 +148,16 @@ class PartitionExplainer(Explainer):
         if self.partition_tree is not None:
             return self.explain_with_partition_tree(fm, self._curr_base_value,  outputs)
         else:
-            return self.explain_with_clustering(fm, self._curr_base_value, f11, max_evals, outputs, fixed_context, batch_size, silent)
+            return self.explain_with_clustering(fm, self._curr_base_value, f11, max_evals, outputs, fixed_context, batch_size, silent, row_args)
 
     def explain_with_clustering(
-        self, fm, f00, f11, max_evals, outputs, fixed_context, batch_size, silent
+        self, fm, f00, f11, max_evals, outputs, fixed_context, batch_size, silent, row_args
     ):
         if callable(self.masker.clustering):
             self._clustering = self.masker.clustering(*row_args)
             self._mask_matrix = make_masks(self._clustering)
         M = len(fm)
-        m00 = np.zeros(M, dtype=bool)
+        #m00 = np.zeros(M, dtype=bool)
         if (
             hasattr(self._curr_base_value, "shape")
             and len(self._curr_base_value.shape) > 0
