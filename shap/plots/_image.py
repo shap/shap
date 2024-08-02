@@ -214,19 +214,15 @@ def image_to_text(shap_values):
     for i in range(model_output.shape[0]):
         output_text_html += (
             "<div style='display:inline; text-align:center;'>"
-            + f"<div id='{uuid}_output_flat_value_label_"
-            + str(i)
-            + "'"
-            + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>"
-            + "</div>"
-            + f"<div id='{uuid}_output_flat_token_"
-            + str(i)
-            + "'"
-            + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'"
-            + f'onmouseover="onMouseHoverFlat_{uuid}(this.id)" '
-            + f'onmouseout="onMouseOutFlat_{uuid}(this.id)" '
-            + f'onclick="onMouseClickFlat_{uuid}(this.id)" '
-            + ">"
+            f"<div id='{uuid}_output_flat_value_label_{i}'"
+            "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>"
+            "</div>"
+            f"<div id='{uuid}_output_flat_token_{i}'"
+            "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'"
+            f'onmouseover="onMouseHoverFlat_{uuid}(this.id)" '
+            f'onmouseout="onMouseOutFlat_{uuid}(this.id)" '
+            f'onclick="onMouseClickFlat_{uuid}(this.id)" '
+            ">"
             + model_output[i]
             .replace("<", "&lt;")
             .replace(">", "&gt;")
