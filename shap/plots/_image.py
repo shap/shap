@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 import random
 import string
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
-from matplotlib.colors import Colormap
 
 try:
     from IPython.display import HTML, display
@@ -20,6 +19,9 @@ from .._explanation import Explanation
 from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
+
+if TYPE_CHECKING:
+    from matplotlib.colors import Colormap
 
 
 def image(

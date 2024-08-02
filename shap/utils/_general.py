@@ -5,14 +5,15 @@ import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import scipy.special
 import sklearn
 
-from ._types import _ArrayT
+if TYPE_CHECKING:
+    from ._types import _ArrayT
 
 import_errors: dict[str, tuple[str, Exception]] = {}
 

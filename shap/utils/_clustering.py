@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools as it
 import warnings
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,9 @@ from numba import njit
 
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
-from ._types import _ArrayLike
+
+if TYPE_CHECKING:
+    from ._types import _ArrayLike
 
 
 def partition_tree(X, metric="correlation"):

@@ -197,6 +197,7 @@ select = [
   "NPY",  # Numpy
   "SIM101",  # flake8-simplify
   "FA",  # future annotations
+  "TCH",  # Move type only imports to type-checking condition.
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
