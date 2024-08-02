@@ -1,7 +1,7 @@
 import json
 import random
 import string
-from typing import Literal, Optional, Union, cast
+from typing import Optional
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -9,7 +9,6 @@ from matplotlib.colors import Colormap
 
 try:
     from IPython.display import HTML, display
-
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -20,18 +19,16 @@ from ..utils._legacy import kmeans
 from . import colors
 
 
-def image(
-    shap_values: Union[Explanation, np.ndarray, list[np.ndarray]],
-    pixel_values: Optional[np.ndarray] = None,
-    labels: Optional[Union[list[str], np.ndarray]] = None,
-    true_labels: Optional[list] = None,
-    width: Optional[int] = 20,
-    aspect: Optional[float] = 0.2,
-    hspace: Union[Optional[float], Literal["auto"]] = 0.2,
-    labelpad: Optional[float] = None,
-    cmap: Optional[Union[str, Colormap]] = colors.red_transparent_blue,
-    show: Optional[bool] = True,
-):
+def image(shap_values: Explanation or np.ndarray,
+          pixel_values: Optional[np.ndarray] = None,
+          labels: Optional[list or np.ndarray] = None,
+          true_labels: Optional[list] = None,
+          width: Optional[int] = 20,
+          aspect: Optional[float] = 0.2,
+          hspace: Optional[float] = 0.2,
+          labelpad: Optional[float] = None,
+          cmap: Optional[str or Colormap] = colors.red_transparent_blue,
+          show: Optional[bool] = True):
     """Plots SHAP values for image inputs.
 
     Parameters
@@ -71,29 +68,25 @@ def image(
 
     """
     # support passing an explanation object
-    if isinstance(shap_values, Explanation):
-        shap_exp: Explanation = shap_values
+    if str(type(shap_values)).endswith("Explanation'>"):
+        shap_exp = shap_values
         # feature_names = [shap_exp.feature_names]
         # ind = 0
         if len(shap_exp.output_dims) == 1:
-            shap_values = cast(list[np.ndarray], [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
+            shap_values = [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])]
         elif len(shap_exp.output_dims) == 0:
-            shap_values = cast(list[np.ndarray], [shap_exp.values])
+            shap_values = shap_exp.values
         else:
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
-            pixel_values = cast(np.ndarray, shap_exp.data)
+            pixel_values = shap_exp.data
         if labels is None:
-            labels = cast(list[str], shap_exp.output_names)
-    else:
-        assert isinstance(
-            pixel_values, np.ndarray
-        ), "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+            labels = shap_exp.output_names
 
     # multi_output = True
     if not isinstance(shap_values, list):
         # multi_output = False
-        shap_values = cast(list[np.ndarray], [shap_values])
+        shap_values = [shap_values]
 
     if len(shap_values[0].shape) == 3:
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
@@ -114,14 +107,16 @@ def image(
     #     else:
     #         assert len(labels[0].shape) == 1, "Labels must be a vector for single output shap_values."
 
-    label_kwargs = {} if labelpad is None else {"pad": labelpad}
+    label_kwargs = {} if labelpad is None else {'pad': labelpad}
 
     # plot our explanations
-    x: np.ndarray = pixel_values
+    x = pixel_values
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size, squeeze=False)
+    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size)
+    if len(axes.shape) == 1:
+        axes = axes.reshape(1, axes.size)
     for row in range(x.shape[0]):
         x_curr = x[row].copy()
 
@@ -134,7 +129,8 @@ def image(
 
         # get a grayscale version of the image
         if len(x_curr.shape) == 3 and x_curr.shape[2] == 3:
-            x_curr_gray = 0.2989 * x_curr[:, :, 0] + 0.5870 * x_curr[:, :, 1] + 0.1140 * x_curr[:, :, 2]  # rgb to gray
+            x_curr_gray = (
+                    0.2989 * x_curr[:, :, 0] + 0.5870 * x_curr[:, :, 1] + 0.1140 * x_curr[:, :, 2])  # rgb to gray
             x_curr_disp = x_curr
         elif len(x_curr.shape) == 3:
             x_curr_gray = x_curr.mean(2)
@@ -144,18 +140,17 @@ def image(
             flat_vals = (flat_vals.T - flat_vals.mean(1)).T
             means = kmeans(flat_vals, 3, round_values=False).data.T.reshape([x_curr.shape[0], x_curr.shape[1], 3])
             x_curr_disp = (means - np.percentile(means, 0.5, (0, 1))) / (
-                np.percentile(means, 99.5, (0, 1)) - np.percentile(means, 1, (0, 1))
-            )
+                    np.percentile(means, 99.5, (0, 1)) - np.percentile(means, 1, (0, 1)))
             x_curr_disp[x_curr_disp > 1] = 1
             x_curr_disp[x_curr_disp < 0] = 0
         else:
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap("gray"))
+        axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap('gray'))
         if true_labels:
             axes[row, 0].set_title(true_labels[row], **label_kwargs)
-        axes[row, 0].axis("off")
+        axes[row, 0].axis('off')
         if len(shap_values[0][row].shape) == 2:
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
@@ -165,19 +160,17 @@ def image(
             if labels is not None:
                 axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
-            axes[row, i + 1].imshow(
-                x_curr_gray, cmap=pl.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
-            )
+            axes[row, i + 1].imshow(x_curr_gray, cmap=pl.get_cmap('gray'), alpha=0.15,
+                                    extent=(-1, sv.shape[1], sv.shape[0], -1))
             im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
-            axes[row, i + 1].axis("off")
-    if hspace == "auto":
+            axes[row, i + 1].axis('off')
+    if hspace == 'auto':
         fig.tight_layout()
     else:
         fig.subplots_adjust(hspace=hspace)
-    cb = fig.colorbar(
-        im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal", aspect=fig_size[0] / aspect
-    )
-    cb.outline.set_visible(False)  # type: ignore
+    cb = fig.colorbar(im, ax=np.ravel(axes).tolist(), label="SHAP value", orientation="horizontal",
+                      aspect=fig_size[0] / aspect)
+    cb.outline.set_visible(False)
     if show:
         pl.show()
 
@@ -192,8 +185,11 @@ def image_to_text(shap_values):
         for each sample
 
     """
-    if not have_ipython:  # pragma: no cover
-        msg = "IPython is required for this function but is not installed. Fix this with `pip install ipython`."
+    if not have_ipython:
+        msg = (
+            "IPython is required for this function but is not installed."
+            " Fix this with `pip install ipython`."
+        )
         raise ImportError(msg)
 
     if len(shap_values.values.shape) == 5:
@@ -203,39 +199,30 @@ def image_to_text(shap_values):
 
         return
 
-    uuid = "".join(random.choices(string.ascii_lowercase, k=20))
+    uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
 
     # creating input html tokens
 
     model_output = shap_values.output_names
 
-    output_text_html = ""
+    output_text_html = ''
 
     for i in range(model_output.shape[0]):
-        output_text_html += (
-            "<div style='display:inline; text-align:center;'>"
-            + f"<div id='{uuid}_output_flat_value_label_"
-            + str(i)
-            + "'"
-            + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>"
-            + "</div>"
-            + f"<div id='{uuid}_output_flat_token_"
-            + str(i)
-            + "'"
-            + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'"
-            + f'onmouseover="onMouseHoverFlat_{uuid}(this.id)" '
-            + f'onmouseout="onMouseOutFlat_{uuid}(this.id)" '
-            + f'onclick="onMouseClickFlat_{uuid}(this.id)" '
-            + ">"
-            + model_output[i]
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace(" ##", "")
-            .replace("▁", "")
-            .replace("Ġ", "")
-            + " </div>"
-            + "</div>"
-        )
+        output_text_html += "<div style='display:inline; text-align:center;'>" \
+                            + f"<div id='{uuid}_output_flat_value_label_" + str(i) + "'" \
+                            + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>" \
+                            + "</div>" \
+                            + f"<div id='{uuid}_output_flat_token_" + str(i) + "'" \
+                            + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'" \
+                            + f"onmouseover=\"onMouseHoverFlat_{uuid}(this.id)\" " \
+                            + f"onmouseout=\"onMouseOutFlat_{uuid}(this.id)\" " \
+                            + f"onclick=\"onMouseClickFlat_{uuid}(this.id)\" " \
+                            + ">" \
+                            + model_output[i].replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '').replace('▁',
+                                                                                                                   '').replace(
+            'Ġ', '') \
+                            + " </div>" \
+                            + "</div>"
 
     # computing gray scale images
     image_data = shap_values.data
@@ -256,11 +243,8 @@ def image_to_text(shap_values):
     shap_values_color_dict = {}
 
     for index in range(model_output.shape[0]):
-        shap_values_color_dict[f"{uuid}_output_flat_token_{index}"] = (
-            (colors.red_transparent_blue(0.5 + 0.5 * shap_values_color_maps[:, :, index] / max_val) * 255)
-            .astype(int)
-            .tolist()
-        )
+        shap_values_color_dict[f'{uuid}_output_flat_token_{index}'] = (colors.red_transparent_blue(
+            0.5 + 0.5 * shap_values_color_maps[:, :, index] / max_val) * 255).astype(int).tolist()
 
     # converting to json to be read in javascript
 

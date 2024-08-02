@@ -1,6 +1,6 @@
+
 import copy
 import operator
-from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -14,71 +14,60 @@ from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
 op_chain_root = OpChain("shap.Explanation")
-
-
 class MetaExplanation(type):
-    """This metaclass exposes the Explanation object's class methods for creating template op chains."""
+    """This metaclass exposes the Explanation object's methods for creating template op chains."""
 
     def __getitem__(cls, item):
         return op_chain_root.__getitem__(item)
 
     @property
-    def abs(cls) -> OpChain:
+    def abs(cls):
         """Element-wise absolute value op."""
         return op_chain_root.abs
 
     @property
-    def identity(cls) -> OpChain:
+    def identity(cls):
         """A no-op."""
         return op_chain_root.identity
 
     @property
-    def argsort(cls) -> OpChain:
+    def argsort(cls):
         """Numpy style argsort."""
         return op_chain_root.argsort
 
     @property
-    def sum(cls) -> OpChain:
+    def sum(cls):
         """Numpy style sum."""
         return op_chain_root.sum
 
     @property
-    def max(cls) -> OpChain:
+    def max(cls):
         """Numpy style max."""
         return op_chain_root.max
 
     @property
-    def min(cls) -> OpChain:
+    def min(cls):
         """Numpy style min."""
         return op_chain_root.min
 
     @property
-    def mean(cls) -> OpChain:
+    def mean(cls):
         """Numpy style mean."""
         return op_chain_root.mean
 
     @property
-    def sample(cls) -> OpChain:
+    def sample(cls):
         """Numpy style sample."""
         return op_chain_root.sample
 
     @property
-    def hclust(cls) -> OpChain:
+    def hclust(cls):
         """Hierarchical clustering op."""
         return op_chain_root.hclust
 
 
 class Explanation(metaclass=MetaExplanation):
-    """A sliceable set of parallel arrays representing a SHAP explanation.
-
-    Note
-    ----
-    The *instance* methods such as `.max()` return new Explanation objects with the
-    operation applied.
-
-    The *class* methods such as `Explanation.max` return OpChain objects that represent
-    a set of dot chained operations without actually running them.
-    """
+    """A sliceable set of parallel arrays representing a SHAP explanation."""
 
     def __init__(
         self,
@@ -96,7 +85,7 @@ class Explanation(metaclass=MetaExplanation):
         main_effects=None,
         hierarchical_values=None,
         clustering=None,
-        compute_time=None,
+        compute_time=None
     ):
         self.op_history = []
 
@@ -113,21 +102,15 @@ class Explanation(metaclass=MetaExplanation):
         values_shape = _compute_shape(values)
 
         if output_names is None and len(self.output_dims) == 1:
-            num_names = values_shape[self.output_dims[0]]
-            assert num_names is not None, "Unexpected shape of values"
-            output_names = [f"Output {i}" for i in range(num_names)]
+            output_names = [f"Output {i}" for i in range(values_shape[self.output_dims[0]])]
 
-        if (
-            len(_compute_shape(feature_names)) == 1
-        ):  # TODO: should always be an alias once slicer supports per-row aliases
+        if len(_compute_shape(feature_names)) == 1:  # TODO: should always be an alias once slicer supports per-row aliases
             if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
                 feature_names = Alias(list(feature_names), 1)
             elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
                 feature_names = Alias(list(feature_names), 0)
 
-        if (
-            len(_compute_shape(output_names)) == 1
-        ):  # TODO: should always be an alias once slicer supports per-row aliases
+        if len(_compute_shape(output_names)) == 1:  # TODO: should always be an alias once slicer supports per-row aliases
             output_names = Alias(list(output_names), self.output_dims[0])
             # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
             #     output_names = Alias(list(output_names), 0)
@@ -166,20 +149,18 @@ class Explanation(metaclass=MetaExplanation):
             error_std=list_wrap(error_std),
             main_effects=list_wrap(main_effects),
             hierarchical_values=list_wrap(hierarchical_values),
-            clustering=None if clustering is None else Obj(clustering, [0]),
+            clustering=None if clustering is None else Obj(clustering, [0])
         )
 
     @property
-    def shape(self) -> tuple[Union[int, None], ...]:
+    def shape(self):
         """Compute the shape over potentially complex data nesting."""
-        # TODO: check if the return type should actually be tuple[int, ...]
         return _compute_shape(self._s.values)
 
     @property
     def values(self):
         """Pass-through from the underlying slicer object."""
         return self._s.values
-
     @values.setter
     def values(self, new_values):
         self._s.values = new_values
@@ -188,7 +169,6 @@ class Explanation(metaclass=MetaExplanation):
     def base_values(self):
         """Pass-through from the underlying slicer object."""
         return self._s.base_values
-
     @base_values.setter
     def base_values(self, new_base_values):
         self._s.base_values = new_base_values
@@ -197,7 +177,6 @@ class Explanation(metaclass=MetaExplanation):
     def data(self):
         """Pass-through from the underlying slicer object."""
         return self._s.data
-
     @data.setter
     def data(self, new_data):
         self._s.data = new_data
@@ -206,7 +185,6 @@ class Explanation(metaclass=MetaExplanation):
     def display_data(self):
         """Pass-through from the underlying slicer object."""
         return self._s.display_data
-
     @display_data.setter
     def display_data(self, new_display_data):
         if issubclass(type(new_display_data), pd.DataFrame):
@@ -222,7 +200,6 @@ class Explanation(metaclass=MetaExplanation):
     def output_names(self):
         """Pass-through from the underlying slicer object."""
         return self._s.output_names
-
     @output_names.setter
     def output_names(self, new_output_names):
         self._s.output_names = new_output_names
@@ -236,7 +213,6 @@ class Explanation(metaclass=MetaExplanation):
     def feature_names(self):
         """Pass-through from the underlying slicer object."""
         return self._s.feature_names
-
     @feature_names.setter
     def feature_names(self, new_feature_names):
         self._s.feature_names = new_feature_names
@@ -260,7 +236,6 @@ class Explanation(metaclass=MetaExplanation):
     def main_effects(self):
         """Pass-through from the underlying slicer object."""
         return self._s.main_effects
-
     @main_effects.setter
     def main_effects(self, new_main_effects):
         self._s.main_effects = new_main_effects
@@ -269,7 +244,6 @@ class Explanation(metaclass=MetaExplanation):
     def hierarchical_values(self):
         """Pass-through from the underlying slicer object."""
         return self._s.hierarchical_values
-
     @hierarchical_values.setter
     def hierarchical_values(self, new_hierarchical_values):
         self._s.hierarchical_values = new_hierarchical_values
@@ -278,7 +252,6 @@ class Explanation(metaclass=MetaExplanation):
     def clustering(self):
         """Pass-through from the underlying slicer object."""
         return self._s.clustering
-
     @clustering.setter
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
@@ -302,14 +275,14 @@ class Explanation(metaclass=MetaExplanation):
 
     def __repr__(self):
         """Display some basic printable info, but not everything."""
-        out = ".values =\n" + self.values.__repr__()
+        out = ".values =\n"+self.values.__repr__()
         if self.base_values is not None:
-            out += "\n\n.base_values =\n" + self.base_values.__repr__()
+            out += "\n\n.base_values =\n"+self.base_values.__repr__()
         if self.data is not None:
-            out += "\n\n.data =\n" + self.data.__repr__()
+            out += "\n\n.data =\n"+self.data.__repr__()
         return out
 
-    def __getitem__(self, item) -> "Explanation":
+    def __getitem__(self, item):
         """This adds support for OpChain indexing."""
         new_self = None
         if not isinstance(item, tuple):
@@ -328,13 +301,14 @@ class Explanation(metaclass=MetaExplanation):
             orig_t = t
             if issubclass(type(t), OpChain):
                 t = t.apply(self)
-                if issubclass(type(t), (np.int64, np.int32)):  # because slicer does not like numpy indexes
+                if issubclass(type(t), (np.int64, np.int32)): # because slicer does not like numpy indexes
                     t = int(t)
                 elif issubclass(type(t), np.ndarray):
-                    t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
+                    t = [int(v) for v in t] # slicer wants lists not numpy arrays for indexing
             elif issubclass(type(t), Explanation):
                 t = t.values
             elif isinstance(t, str):
+
                 # work around for 2D output_names since they are not yet slicer supported
                 output_names_dims = []
                 if "output_names" in self._s._objects:
@@ -352,7 +326,7 @@ class Explanation(metaclass=MetaExplanation):
                         for i, v in enumerate(self.values):
                             for j, s in enumerate(self.output_names[i]):
                                 if s == t:
-                                    new_values.append(np.array(v[:, j]))
+                                    new_values.append(np.array(v[:,j]))
                                     new_data.append(np.array(self.data[i]))
                                     new_base_values.append(self.base_values[i][j])
 
@@ -363,14 +337,14 @@ class Explanation(metaclass=MetaExplanation):
                             self.display_data,
                             self.instance_names,
                             np.array(new_data),
-                            t,  # output_names
+                            t, # output_names
                             self.output_indexes,
                             self.lower_bounds,
                             self.upper_bounds,
                             self.error_std,
                             self.main_effects,
                             self.hierarchical_values,
-                            self.clustering,
+                            self.clustering
                         )
                         new_self.op_history = copy.copy(self.op_history)
                         # new_self = copy.deepcopy(self)
@@ -389,7 +363,7 @@ class Explanation(metaclass=MetaExplanation):
                     new_values = []
                     new_data = []
                     for i, val_i in enumerate(self.values):
-                        for s, v, d in zip(self.feature_names[i], val_i, self.data[i]):
+                        for s,v,d in zip(self.feature_names[i], val_i, self.data[i]):
                             if s == t:
                                 new_values.append(v)
                                 new_data.append(d)
@@ -409,20 +383,24 @@ class Explanation(metaclass=MetaExplanation):
                 item = tuple(tmp)
 
         # call slicer for the real work
-        item = tuple(v for v in item)  # SML I cut out: `if not isinstance(v, str)`
+        item = tuple(v for v in item) # SML I cut out: `if not isinstance(v, str)`
         if len(item) == 0:
-            return new_self  # type: ignore
+            return new_self
         if new_self is None:
             new_self = copy.copy(self)
         new_self._s = new_self._s.__getitem__(item)
-        new_self.op_history.append({"name": "__getitem__", "args": (item,), "prev_shape": self.shape})
+        new_self.op_history.append({
+            "name": "__getitem__",
+            "args": (item,),
+            "prev_shape": self.shape
+        })
 
         return new_self
 
     def __len__(self):
         return self.shape[0]
 
-    def __copy__(self) -> "Explanation":
+    def __copy__(self):
         new_exp = Explanation(
             self.values,
             self.base_values,
@@ -437,7 +415,7 @@ class Explanation(metaclass=MetaExplanation):
             self.error_std,
             self.main_effects,
             self.hierarchical_values,
-            self.clustering,
+            self.clustering
         )
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
@@ -445,7 +423,11 @@ class Explanation(metaclass=MetaExplanation):
     def _apply_binary_operator(self, other, binary_op, op_name):
         new_exp = self.__copy__()
         new_exp.op_history = copy.copy(self.op_history)
-        new_exp.op_history.append({"name": op_name, "args": (other,), "prev_shape": self.shape})
+        new_exp.op_history.append({
+            "name": op_name,
+            "args": (other,),
+            "prev_shape": self.shape
+        })
         if isinstance(other, Explanation):
             new_exp.values = binary_op(new_exp.values, other.values)
             if new_exp.data is not None:
@@ -505,13 +487,13 @@ class Explanation(metaclass=MetaExplanation):
             new_self = new_self[1]
         elif axis == 2:
             new_self = new_self[2]
-        if axis in [0, 1, 2]:
-            new_self.op_history = new_self.op_history[:-1]  # pop off the slicing operation we just used
+        if axis in [0,1,2]:
+            new_self.op_history = new_self.op_history[:-1] # pop off the slicing operation we just used
 
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
             new_self.feature_names = np.array(list(new_values.keys()))
-            new_self.values = np.array([getattr(np, fname)(v, 0) for v in new_values.values()])
+            new_self.values = np.array([getattr(np, fname)(v,0) for v in new_values.values()])
             new_self.clustering = None
         else:
             new_self.values = getattr(np, fname)(np.array(self.values), **kwargs)
@@ -531,9 +513,12 @@ class Explanation(metaclass=MetaExplanation):
             else:
                 new_self.clustering = None
 
-        new_self.op_history.append(
-            {"name": fname, "kwargs": kwargs, "prev_shape": self.shape, "collapsed_instances": axis == 0}
-        )
+        new_self.op_history.append({
+            "name": fname,
+            "kwargs": kwargs,
+            "prev_shape": self.shape,
+            "collapsed_instances": axis == 0
+        })
 
         return new_self
 
@@ -558,12 +543,10 @@ class Explanation(metaclass=MetaExplanation):
         else:
             raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
-    def hstack(self, other: "Explanation") -> "Explanation":
+    def hstack(self, other):
         """Stack two explanations column-wise."""
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
-        assert (
-            np.max(np.abs(self.base_values - other.base_values)) < 1e-6
-        ), "Can't hstack explanations with different base values!"
+        assert np.max(np.abs(self.base_values - other.base_values)) < 1e-6, "Can't hstack explanations with different base values!"
 
         new_exp = Explanation(
             values=np.hstack([self.values, other.values]),
@@ -601,6 +584,7 @@ class Explanation(metaclass=MetaExplanation):
     @property
     def flip(self):
         return self._numpy_func("flip")
+
 
     def hclust(self, metric="sqeuclidean", axis=0):
         """Computes an optimal leaf ordering sort order using hclustering.
@@ -644,25 +628,23 @@ class Explanation(metaclass=MetaExplanation):
 
         """
         prev_seed = np.random.seed(random_state)
-        length = self.shape[0]
-        assert length is not None
-        inds = np.random.choice(length, min(max_samples, length), replace=replace)
+        inds = np.random.choice(self.shape[0], min(max_samples, self.shape[0]), replace=replace)
         np.random.seed(prev_seed)
         return self[list(inds)]
 
     def _flatten_feature_names(self):
-        new_values: dict[Any, Any] = {}
+        new_values = {}
         for i in range(len(self.values)):
-            for s, v in zip(self.feature_names[i], self.values[i]):
+            for s,v in zip(self.feature_names[i], self.values[i]):
                 if s not in new_values:
                     new_values[s] = []
                 new_values[s].append(v)
         return new_values
 
     def _use_data_as_feature_names(self):
-        new_values: dict[Any, Any] = {}
+        new_values = {}
         for i in range(len(self.values)):
-            for s, v in zip(self.data[i], self.values[i]):
+            for s,v in zip(self.data[i], self.values[i]):
                 if s not in new_values:
                     new_values[s] = []
                 new_values[s].append(v)
@@ -678,16 +660,18 @@ class Explanation(metaclass=MetaExplanation):
         else:
             new_self.values = np.percentile(new_self.values, q, axis)
             new_self.data = np.percentile(new_self.data, q, axis)
-        # new_self.data = None
-        new_self.op_history.append(
-            {"name": "percentile", "args": (axis,), "prev_shape": self.shape, "collapsed_instances": axis == 0}
-        )
+        #new_self.data = None
+        new_self.op_history.append({
+            "name": "percentile",
+            "args": (axis,),
+            "prev_shape": self.shape,
+            "collapsed_instances": axis == 0
+        })
         return new_self
-
 
 def group_features(shap_values, feature_map):
     # TODOsomeday: support and deal with clusterings
-    reverse_map: dict[Any, list[Any]] = {}
+    reverse_map = {}
     for name in feature_map:
         reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
 
@@ -710,32 +694,29 @@ def group_features(shap_values, feature_map):
             sv_new.values[i] = shap_values.values[old_inds].sum()
             sv_new.data[i] = shap_values.data[old_inds].sum()
         else:
-            sv_new.values[:, i] = shap_values.values[:, old_inds].sum(1)
-            sv_new.data[:, i] = shap_values.data[:, old_inds].sum(1)
+            sv_new.values[:,i] = shap_values.values[:,old_inds].sum(1)
+            sv_new.data[:,i] = shap_values.data[:,old_inds].sum(1)
         sv_new.feature_names[i] = new_name
         i += 1
 
     return Explanation(
-        sv_new.values[:i] if rank1 else sv_new.values[:, :i],
-        base_values=sv_new.base_values,
-        data=sv_new.data[:i] if rank1 else sv_new.data[:, :i],
-        display_data=None
-        if sv_new.display_data is None
-        else (sv_new.display_data[:, :i] if rank1 else sv_new.display_data[:, :i]),
-        instance_names=None,
-        feature_names=None if sv_new.feature_names is None else sv_new.feature_names[:i],
-        output_names=None,
-        output_indexes=None,
-        lower_bounds=None,
-        upper_bounds=None,
-        error_std=None,
-        main_effects=None,
-        hierarchical_values=None,
-        clustering=None,
+        sv_new.values[:i] if rank1 else sv_new.values[:,:i],
+        base_values = sv_new.base_values,
+        data = sv_new.data[:i] if rank1 else sv_new.data[:,:i],
+        display_data = None if sv_new.display_data is None else (sv_new.display_data[:,:i] if rank1 else sv_new.display_data[:,:i]),
+        instance_names = None,
+        feature_names = None if sv_new.feature_names is None else sv_new.feature_names[:i],
+        output_names = None,
+        output_indexes = None,
+        lower_bounds = None,
+        upper_bounds = None,
+        error_std = None,
+        main_effects = None,
+        hierarchical_values = None,
+        clustering = None
     )
 
-
-def compute_output_dims(values, base_values, data, output_names) -> tuple[int, ...]:
+def compute_output_dims(values, base_values, data, output_names):
     """Uses the passed data to infer which dimensions correspond to the model's output."""
     values_shape = _compute_shape(values)
 
@@ -752,11 +733,8 @@ def compute_output_dims(values, base_values, data, output_names) -> tuple[int, .
         output_shape = _compute_shape(output_names)
 
         # if our output_names are per sample then we need to drop the sample dimension here
-        if (
-            values_shape[-len(output_shape) :] != output_shape
-            and values_shape[-len(output_shape) + 1 :] == output_shape[1:]
-            and values_shape[0] == output_shape[0]
-        ):
+        if values_shape[-len(output_shape):] != output_shape and \
+                values_shape[-len(output_shape)+1:] == output_shape[1:] and values_shape[0] == output_shape[0]:
             output_shape = output_shape[1:]
 
     elif base_values is not None:
@@ -768,30 +746,25 @@ def compute_output_dims(values, base_values, data, output_names) -> tuple[int, .
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
     return tuple(output_dims)
 
-
 def is_1d(val):
-    return not (isinstance(val[0], (list, np.ndarray)))
-
+    return not (isinstance(val[0], list) or isinstance(val[0], np.ndarray))
 
 class Op:
     pass
-
 
 class Percentile(Op):
     def __init__(self, percentile):
         self.percentile = percentile
 
     def add_repr(self, s, verbose=False):
-        return "percentile(" + s + ", " + str(self.percentile) + ")"
-
+        return "percentile("+s+", "+str(self.percentile)+")"
 
 def _first_item(x):
     for item in x:
         return item
     return None
 
-
-def _compute_shape(x) -> tuple[Union[int, None], ...]:
+def _compute_shape(x):
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
     elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
@@ -813,25 +786,20 @@ def _compute_shape(x) -> tuple[Union[int, None], ...]:
             first_shape = _compute_shape(_first_item(x))
             if first_shape == tuple():
                 return (len(x),)
-            else:  # we have an array of arrays...
+            else: # we have an array of arrays...
                 matches = np.ones(len(first_shape), dtype=bool)
                 for i in range(1, len(x)):
                     shape = _compute_shape(x[i])
-                    assert len(shape) == len(
-                        first_shape
-                    ), "Arrays in Explanation objects must have consistent inner dimensions!"
+                    assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
                     for j in range(len(shape)):
                         matches[j] &= shape[j] == first_shape[j]
                 return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
-
 
 class Cohorts:
     def __init__(self, **kwargs):
         self.cohorts = kwargs
         for k in self.cohorts:
-            assert isinstance(
-                self.cohorts[k], Explanation
-            ), "All the arguments to a Cohorts set must be Explanation objects!"
+            assert isinstance(self.cohorts[k], Explanation), "All the arguments to a Cohorts set must be Explanation objects!"
 
     def __getitem__(self, item):
         new_cohorts = Cohorts()
@@ -869,10 +837,10 @@ def _auto_cohorts(shap_values, max_cohorts):
     for i in range(shap_values.shape[0]):
         name = ""
         for j in range(len(paths[i])):
-            if paths[i, j] > 0:
+            if paths[i,j] > 0:
                 feature = m.tree_.feature[j]
                 threshold = m.tree_.threshold[j]
-                val = shap_values.data[i, feature]
+                val = shap_values.data[i,feature]
                 if feature >= 0:
                     name += str(shap_values.feature_names[feature])
                     if val < threshold:
@@ -880,16 +848,15 @@ def _auto_cohorts(shap_values, max_cohorts):
                     else:
                         name += " >= "
                     name += str(threshold) + " & "
-        path_names.append(name[:-3])  # the -3 strips off the last unneeded ' & '
-    path_names_arr = np.array(path_names)
+        path_names.append(name[:-3]) # the -3 strips off the last unneeded ' & '
+    path_names = np.array(path_names)
 
     # split the instances into cohorts by their path names
     cohorts = {}
-    for name in np.unique(path_names_arr):
-        cohorts[name] = shap_values[path_names_arr == name]
+    for name in np.unique(path_names):
+        cohorts[name] = shap_values[path_names == name]
 
     return Cohorts(**cohorts)
-
 
 def list_wrap(x):
     """A helper to patch things since slicer doesn't handle arrays of arrays (it does handle lists of arrays)"""
