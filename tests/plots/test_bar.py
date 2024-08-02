@@ -30,7 +30,7 @@ def test_input_shap_values_type(unsupported_inputs):
 def test_input_shap_values_type_2():
     """Check that a DimensionError is raised if the cohort Explanation objects have different shape."""
     rs = np.random.RandomState(42)
-    emsg = "When passing several Explanation objects, they must all have " "the same number of feature columns!"
+    emsg = "When passing several Explanation objects, they must all have the same number of feature columns!"
     with pytest.raises(DimensionError, match=emsg):
         shap.plots.bar(
             {

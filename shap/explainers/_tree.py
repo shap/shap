@@ -1421,7 +1421,7 @@ class TreeEnsemble:
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                emsg = 'model_output = "log_loss" is not yet supported when model.objective = ' f'"{self.objective}"!'
+                emsg = f'model_output = "log_loss" is not yet supported when model.objective = "{self.objective}"!'
                 raise NotImplementedError(emsg)
         else:
             emsg = (

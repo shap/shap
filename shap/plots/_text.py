@@ -384,8 +384,8 @@ def process_shap_values(tokens, values, grouping_threshold, separator, clusterin
         if clustering is None:
             raise ValueError(
                 "The length of the attribution values must match the number of "
-                + "tokens if shap_values.clustering is None! When passing hierarchical "
-                + "attributions the clustering is also required."
+                "tokens if shap_values.clustering is None! When passing hierarchical "
+                "attributions the clustering is also required."
             )
 
         # compute the groups, lower_values, and max_values
@@ -765,8 +765,8 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
         if partition_tree is None:
             raise ValueError(
                 "The length of the attribution values must match the number of "
-                + "tokens if partition_tree is None! When passing hierarchical "
-                + "attributions the partition_tree is also required."
+                "tokens if partition_tree is None! When passing hierarchical "
+                "attributions the partition_tree is also required."
             )
 
         # compute the groups, lower_values, and max_values
