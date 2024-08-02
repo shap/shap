@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "oldest-supported-numpy", "packaging>20.9"]
+# Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
+# https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -12,7 +14,7 @@ authors = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-  'numpy<2.0.0',  # wait till dependent libraries are compatible with numpy 2.0, see GH #3707
+  'numpy',
   'scipy',
   'scikit-learn',
   'pandas',
@@ -53,8 +55,9 @@ docs = [
   "sphinx_github_changelog==1.2.1",
   "myst-parser==2.0.0",
   "requests",
+  "ipywidgets",  # For tqdm in notebooks
 ]
-test-core = ["pytest", "pytest-mpl", "pytest-cov"]
+test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
 test = [
   "pytest",
   "pytest-mpl",
@@ -75,6 +78,9 @@ test = [
   "tensorflow",
   "sentencepiece",
   "opencv-python",
+  # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
+  # See GH #3707 and #3768
+  "numpy<2.0; python_version < '3.12'",
 ]
 
 test_notebooks = [
@@ -91,6 +97,48 @@ test_notebooks = [
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+exclude = ["shap/benchmark/*", "tests/benchmark/*"]
+
+plugins = ["numpy.typing.mypy_plugin"]
+
+[[tool.mypy.overrides]]
+# Disable some checks from certain shap modules
+# TODO: get these passing!
+module = [
+  "shap.explainers.*",
+  "shap.maskers.*",
+  "shap.plots.*",
+]
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+# Ignore missing types for 3rd party libraries
+module = [
+  "catboost.*",
+  "cloudpickle",
+  "cv2",
+  "IPython.*",
+  "lightgbm.*",
+  "lime.*",
+  "numba",
+  "pandas",
+  "pyod.*",
+  "pyspark.*",
+  "scipy.*",
+  "sklearn.*",
+  "slicer",
+  "tensorflow.*",
+  "torch.*",
+  "tqdm.*",
+  "xgboost.*",
+]
+ignore_missing_imports = true
 
 [tool.setuptools]
 packages = [
@@ -129,6 +177,7 @@ filterwarnings = [
 # config to always disable linting for specific files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 extend-exclude = ["**/tree_shap_paper/**", "docs/user_studies/*"]
+line-length = 120
 
 [tool.ruff.lint]
 select = [
@@ -139,6 +188,7 @@ select = [
   "W",  # warning
   "D",  # pydocstyle
   "NPY",  # Numpy
+  "SIM101",  # flake8-simplify
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -179,10 +229,6 @@ convention = "numpy"
 
 # Ignore pycodestyle in tests
 "tests/*py" = ["D"]
-
-[tool.ruff.format]
-# For now, only Jupyter notebooks are autoformatted.
-exclude = ["**.py"]
 
 [tool.coverage.run]
 source_pkgs = ["shap"]

@@ -3,16 +3,18 @@ import numpy as np
 
 import shap
 
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 
 
 def test_random_single_image():
     """Just make sure the image_plot function doesn't crash."""
     shap.image_plot(np.random.randn(3, 20, 20), np.random.randn(3, 20, 20), show=False)
 
+
 def test_random_multi_image():
     """Just make sure the image_plot function doesn't crash."""
     shap.image_plot([np.random.randn(3, 20, 20) for i in range(3)], np.random.randn(3, 20, 20), show=False)
+
 
 def test_image_to_text_single():
     """Just make sure the image_to_text function doesn't crash."""

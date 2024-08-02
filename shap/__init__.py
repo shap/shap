@@ -22,8 +22,9 @@ except ImportError:
     # Expected when running locally without build
     __version__ = "0.0.0-not-built"
 
-_no_matplotlib_warning = "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` " \
-                         "to fix this."
+_no_matplotlib_warning = (
+    "matplotlib is not installed so plotting is not available! Run `pip install matplotlib` to fix this."
+)
 
 
 # plotting (only loaded if matplotlib is present)
@@ -38,6 +39,7 @@ class UnsupportedModule:
 
 try:
     import matplotlib  # noqa: F401
+
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
@@ -81,7 +83,7 @@ else:
     # If matplotlib is available, then the plots submodule will be directly available.
     # If not, we need to define something that will issue a meaningful warning message
     # (rather than ModuleNotFound).
-    plots = UnsupportedModule()
+    plots = UnsupportedModule()  # type: ignore
 
 
 # other stuff :)
@@ -89,14 +91,13 @@ from . import datasets, links, utils  # noqa: E402
 from .actions._optimizer import ActionOptimizer  # noqa: E402
 from .utils import approximate_interactions, sample  # noqa: E402
 
-#from . import benchmark
+# from . import benchmark
 from .utils._legacy import kmeans  # noqa: E402
 
 # Use __all__ to let type checkers know what is part of the public API.
 __all__ = [
     "Cohorts",
     "Explanation",
-
     # Explainers
     "other",
     "AdditiveExplainer",
@@ -111,7 +112,6 @@ __all__ = [
     "PermutationExplainer",
     "SamplingExplainer",
     "TreeExplainer",
-
     # Plots
     "plots",
     "bar_plot",
@@ -132,7 +132,6 @@ __all__ = [
     "text_plot",
     "violin_plot",
     "waterfall_plot",
-
     # Other stuff
     "datasets",
     "links",
