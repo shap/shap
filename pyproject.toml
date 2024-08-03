@@ -190,6 +190,7 @@ line-length = 120
 select = [
   "F",  # pyflakes
   "I",  # isort
+  "ISC",  # string literal concatenation.
   "UP",  # pyupgrade
   "E",  # pycodestyle
   "W",  # warning

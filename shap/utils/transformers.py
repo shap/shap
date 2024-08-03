@@ -118,8 +118,8 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
         else:
             raise Exception(
                 "The given tokenizer produces one token when applied to the empty string, but "
-                + "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] "
-                + "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!"
+                "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] "
+                "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!"
             )
     else:
         assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"
