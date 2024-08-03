@@ -257,9 +257,7 @@ def hclust(
 
         # build a condensed upper triangular version by taking the max distance from either direction
         dist_list: list[float] = []
-        for i, j in it.combinations_with_replacement(range(len(dist_full)), 2):
-            if i == j:
-                continue
+        for i, j in it.combinations(range(len(dist_full)), 2):
             if linkage == "single":
                 dist_list.append(min(dist_full[i, j], dist_full[j, i]))
             elif linkage == "complete":
