@@ -79,7 +79,7 @@ class Image(Masker):
         if np.prod(x.shape) != np.prod(self.input_shape):
             raise DimensionError(
                 "The length of the image to be masked must match the shape given in the "
-                + "ImageMasker constructor: "
+                "ImageMasker constructor: "
                 + " * ".join([str(i) for i in x.shape])
                 + " != "
                 + " * ".join([str(i) for i in self.input_shape])
