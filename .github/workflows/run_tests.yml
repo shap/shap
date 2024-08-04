@@ -44,7 +44,8 @@ jobs:
         # Do regular install NOT editable install: see GH #3020
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system '.[${{ matrix.extras }},plots]'
+          # uv pip install --system '.[${{ matrix.extras }},plots]'
+          uv pip install --system matplotlib==3.9.1
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
