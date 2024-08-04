@@ -883,12 +883,6 @@ class Cohorts:
             new_cohorts.cohorts[k] = getattr(self._cohorts[k], name)
         return new_cohorts
 
-    def __call__(self, *args, **kwargs) -> "Cohorts":
-        new_cohorts = Cohorts()
-        for k in self._cohorts:
-            new_cohorts.cohorts[k] = self._cohorts[k].__call__(*args, **kwargs)
-        return new_cohorts
-
     def __repr__(self):
         return f"<shap._explanation.Cohorts object with {len(self._cohorts)} cohorts of sizes: {[v.shape for v in self._cohorts.values()]}>"
 
