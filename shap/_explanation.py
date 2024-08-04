@@ -852,33 +852,45 @@ def _compute_shape(x) -> tuple[int | None, ...]:
 
 
 class Cohorts:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.cohorts = kwargs
-        for k in self.cohorts:
-            assert isinstance(
-                self.cohorts[k], Explanation
-            ), "All the arguments to a Cohorts set must be Explanation objects!"
 
-    def __getitem__(self, item):
+    @property
+    def cohorts(self):
+        return self._cohorts
+
+    @cohorts.setter
+    def cohorts(self, cval):
+        if not isinstance(cval, dict):
+            emsg = "self.cohorts must be a dictionary!"
+            raise TypeError(emsg)
+        if not all(isinstance(exp, Explanation) for exp in cval.values()):
+            emsg = "All the arguments to a Cohorts set must be Explanation objects!"
+            raise ValueError(emsg)
+
+        cast(dict[str, Explanation], cval)  # type narrowing for mypy
+        self._cohorts: dict[str, Explanation] = cval
+
+    def __getitem__(self, item) -> "Cohorts":
         new_cohorts = Cohorts()
-        for k in self.cohorts:
-            new_cohorts.cohorts[k] = self.cohorts[k].__getitem__(item)
+        for k in self._cohorts:
+            new_cohorts.cohorts[k] = self._cohorts[k].__getitem__(item)
         return new_cohorts
 
-    def __getattr__(self, name):
+    def __getattr__(self, name) -> "Cohorts":
         new_cohorts = Cohorts()
-        for k in self.cohorts:
-            new_cohorts.cohorts[k] = getattr(self.cohorts[k], name)
+        for k in self._cohorts:
+            new_cohorts.cohorts[k] = getattr(self._cohorts[k], name)
         return new_cohorts
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> "Cohorts":
         new_cohorts = Cohorts()
-        for k in self.cohorts:
-            new_cohorts.cohorts[k] = self.cohorts[k].__call__(*args, **kwargs)
+        for k in self._cohorts:
+            new_cohorts.cohorts[k] = self._cohorts[k].__call__(*args, **kwargs)
         return new_cohorts
 
     def __repr__(self):
-        return f"<shap._explanation.Cohorts object with {len(self.cohorts)} cohorts of sizes: {[v.shape for v in self.cohorts.values()]}>"
+        return f"<shap._explanation.Cohorts object with {len(self._cohorts)} cohorts of sizes: {[v.shape for v in self._cohorts.values()]}>"
 
 
 def _auto_cohorts(shap_values, max_cohorts):
