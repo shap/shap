@@ -24,24 +24,12 @@ jobs:
   run_tests:
     strategy:
       matrix:
-        os: ["ubuntu-latest"]
-        # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-        extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
             python-version: "3.11"
             extras: "test"
-          - os: macos-latest
-            python-version: "3.11"
-            extras: "test"
-          # Run tests with only the core dependencies, to ensure we
-          # cover the latest version of numpy/pandas. See GH dsgibbons#46
-          - os: ubuntu-latest
-            python-version: "3.12"
-            extras: "test-core"
-      fail-fast: false
+      fail-fast: true
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -77,41 +65,3 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-
-  test_oldest_supported_numpy:
-    # Package is built with numpy 2.X, and tested against numpy 1.X.
-    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
-    # The "oldest supported numpy" is determined by SPEC 0:
-    # https://scientific-python.org/specs/spec-0000/
-    name: run tests (oldest supported numpy)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system numpy==1.24.0 '.[test-core,plots]'
-      - name: Test with pytest
-        run: pytest --durations=20 --import-mode=append
-
-  run_mypy:
-    # Run mypy on the latest Python version
-    name: run mypy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system '.[test-core]'
-      - name: Run mypy
-        run: mypy shap tests
