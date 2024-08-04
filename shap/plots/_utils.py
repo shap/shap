@@ -22,7 +22,7 @@ def convert_ordering(ordering, shap_values):
     if issubclass(type(ordering), OpChain):
         ordering = ordering.apply(Explanation(shap_values))
     if issubclass(type(ordering), Explanation):
-        if "argsort" in [op["name"] for op in ordering.op_history]:
+        if any("argsort" in op.name for op in ordering.op_history):
             ordering = ordering.values
         else:
             ordering = ordering.argsort.flip.values
