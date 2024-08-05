@@ -59,13 +59,13 @@ docs = [
   "ipywidgets",  # For tqdm in notebooks
 ]
 test-core = [
-  "pytest",
+  "pytest>=8.3.2",
   "pytest-mpl",
   "pytest-cov",
   "mypy",
 ]
 test = [
-  "pytest>=8.3.2",
+  "pytest",
   "pytest-mpl",
   "pytest-cov",
   "xgboost",
