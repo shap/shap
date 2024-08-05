@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import copy
 import operator
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -170,7 +172,7 @@ class Explanation(metaclass=MetaExplanation):
         )
 
     @property
-    def shape(self) -> tuple[Union[int, None], ...]:
+    def shape(self) -> tuple[int | None, ...]:
         """Compute the shape over potentially complex data nesting."""
         # TODO: check if the return type should actually be tuple[int, ...]
         return _compute_shape(self._s.values)
@@ -309,7 +311,7 @@ class Explanation(metaclass=MetaExplanation):
             out += "\n\n.data =\n" + self.data.__repr__()
         return out
 
-    def __getitem__(self, item) -> "Explanation":
+    def __getitem__(self, item) -> Explanation:
         """This adds support for OpChain indexing."""
         new_self = None
         if not isinstance(item, tuple):
@@ -422,7 +424,7 @@ class Explanation(metaclass=MetaExplanation):
     def __len__(self):
         return self.shape[0]
 
-    def __copy__(self) -> "Explanation":
+    def __copy__(self) -> Explanation:
         new_exp = Explanation(
             self.values,
             self.base_values,
@@ -558,7 +560,7 @@ class Explanation(metaclass=MetaExplanation):
         else:
             raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
-    def hstack(self, other: "Explanation") -> "Explanation":
+    def hstack(self, other: Explanation) -> Explanation:
         """Stack two explanations column-wise."""
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
         assert (
@@ -791,7 +793,7 @@ def _first_item(x):
     return None
 
 
-def _compute_shape(x) -> tuple[Union[int, None], ...]:
+def _compute_shape(x) -> tuple[int | None, ...]:
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
     elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):

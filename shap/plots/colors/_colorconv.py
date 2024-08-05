@@ -416,7 +416,7 @@ def get_xyz_coords(illuminant, observer):
     """
     illuminant = illuminant.upper()
     try:
-        return illuminants[illuminant][observer]
+        return illuminants[illuminant][observer]  # type: ignore
     except KeyError:
         raise ValueError(
             "Unknown illuminant/observer combination\
@@ -843,8 +843,8 @@ def convert(image, dtype, force_copy=False, uniform=False):
         imin_in = np.iinfo(dtype_in).min
         imax_in = np.iinfo(dtype_in).max
     if kind_out in "ui":
-        imin_out = np.iinfo(dtype_out).min
-        imax_out = np.iinfo(dtype_out).max
+        imin_out = np.iinfo(dtype_out).min  # type: ignore
+        imax_out = np.iinfo(dtype_out).max  # type: ignore
 
     # any -> binary
     if kind_out == "b":

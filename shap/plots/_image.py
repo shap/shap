@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import json
 import random
 import string
-from typing import Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
-from matplotlib.colors import Colormap
 
 try:
     from IPython.display import HTML, display
@@ -19,18 +20,21 @@ from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
 
+if TYPE_CHECKING:
+    from matplotlib.colors import Colormap
+
 
 def image(
-    shap_values: Union[Explanation, np.ndarray, list[np.ndarray]],
-    pixel_values: Optional[np.ndarray] = None,
-    labels: Optional[Union[list[str], np.ndarray]] = None,
-    true_labels: Optional[list] = None,
-    width: Optional[int] = 20,
-    aspect: Optional[float] = 0.2,
-    hspace: Union[Optional[float], Literal["auto"]] = 0.2,
-    labelpad: Optional[float] = None,
-    cmap: Optional[Union[str, Colormap]] = colors.red_transparent_blue,
-    show: Optional[bool] = True,
+    shap_values: Explanation | np.ndarray | list[np.ndarray],
+    pixel_values: np.ndarray | None = None,
+    labels: list[str] | np.ndarray | None = None,
+    true_labels: list | None = None,
+    width: int | None = 20,
+    aspect: float | None = 0.2,
+    hspace: float | Literal["auto"] | None = 0.2,
+    labelpad: float | None = None,
+    cmap: str | Colormap | None = colors.red_transparent_blue,
+    show: bool | None = True,
 ):
     """Plots SHAP values for image inputs.
 

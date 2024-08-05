@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import inspect
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import scipy.special
@@ -83,8 +85,8 @@ class TeacherForcing(Model):
                 self.similarity_tokenizer.pad_token = self.similarity_tokenizer.eos_token
             self.model_agnostic = True
         # initializing target which is the target sentence/ids for every new row of explanation
-        self.output: Optional[np.ndarray] = None
-        self.output_names: Optional[list[Any]] = None
+        self.output: np.ndarray | None = None
+        self.output_names: list[Any] | None = None
 
         self.similarity_model_type = None
         if safe_isinstance(self.similarity_model, "transformers.PreTrainedModel"):

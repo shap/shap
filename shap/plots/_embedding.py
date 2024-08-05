@@ -59,7 +59,7 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     # pl.title(feature_names[ind])
     cb = pl.colorbar()
     cb.set_label("SHAP value for\n" + fname, size=13)
-    cb.outline.set_visible(False)
+    cb.outline.set_visible(False)  # type: ignore
 
     pl.gcf().set_size_inches(7.5, 5)
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())

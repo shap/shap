@@ -1,4 +1,4 @@
-from typing import Union
+from __future__ import annotations
 
 from ..._explanation import Explanation
 from .._explainer import Explainer
@@ -96,7 +96,7 @@ class DeepExplainer(Explainer):
         self.expected_value = self.explainer.expected_value
         self.explainer.framework = framework
 
-    def __call__(self, X: Union[list, "np.ndarray", "pd.DataFrame", "torch.tensor"]) -> Explanation:  # type: ignore  # noqa: F821
+    def __call__(self, X: list | np.ndarray | pd.DataFrame | torch.tensor) -> Explanation:  # type: ignore  # noqa: F821
         """Return an explanation object for the model applied to X.
 
         Parameters

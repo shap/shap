@@ -40,8 +40,8 @@ def group_difference(
     for i in range(200):
         r = np.random.rand(shap_values.shape[0]) > gmean
         vs.append(shap_values[r].mean(0) - shap_values[~r].mean(0))
-    vs = np.array(vs)
-    xerr = np.vstack([np.percentile(vs, 95, axis=0), np.percentile(vs, 5, axis=0)])
+    vs_ = np.array(vs)
+    xerr = np.vstack([np.percentile(vs_, 95, axis=0), np.percentile(vs_, 5, axis=0)])
 
     # See if we were passed a single model output vector and not a matrix of SHAP values
     if len(shap_values.shape) == 1:

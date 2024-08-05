@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import copy
 import queue
 import warnings
-from typing import Union
 
 from ..utils._exceptions import ConvergenceError, InvalidAction
 from ._action import Action
 
 
 class ActionOptimizer:
-    def __init__(self, model, actions: list[Union[Action, list[Action]]]):
+    def __init__(self, model, actions: list[Action | list[Action]]):
         self.model = model
         warnings.warn("Note that ActionOptimizer is still in an alpha state and is subject to API changes.")
         # actions go into mutually exclusive groups
