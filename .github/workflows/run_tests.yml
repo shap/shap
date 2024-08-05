@@ -98,6 +98,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
+          echo "**Dry run install"
+          uv pip install --system --resolution=lowest-direct --dry-run '.[test-core,plots]'
+          echo "**Actual install"
           uv pip install --system --resolution=lowest-direct '.[test-core,plots]'
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
