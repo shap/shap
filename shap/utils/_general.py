@@ -3,35 +3,30 @@ import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import Any, Union
 
 import numpy as np
 import pandas as pd
 import scipy.special
 import sklearn
 
-from ._types import _ArrayT
+import_errors = {}
 
-import_errors: dict[str, tuple[str, Exception]] = {}
-
-
-def assert_import(package_name: str) -> None:
+def assert_import(package_name):
     global import_errors
     if package_name in import_errors:
-        msg, e = import_errors[package_name]
+        msg,e = import_errors[package_name]
         print(msg)
         raise e
 
-
-def record_import_error(package_name: str, msg: str, e: ImportError) -> None:
+def record_import_error(package_name, msg, e):
     global import_errors
     import_errors[package_name] = (msg, e)
 
 
-def shapley_coefficients(n: int) -> np.ndarray:
+def shapley_coefficients(n):
     out = np.zeros(n)
     for i in range(n):
-        out[i] = 1 / (n * scipy.special.comb(n - 1, i))
+        out[i] = 1 / (n * scipy.special.comb(n-1,i))
     return out
 
 
@@ -53,7 +48,6 @@ def convert_name(ind, shap_values, input_names):
             return nzinds[0]
     else:
         return ind
-
 
 def potential_interactions(shap_values_column, shap_values_matrix):
     """Order other features by how much interaction they seem to have with the feature at the given index.
@@ -86,16 +80,16 @@ def potential_interactions(shap_values_column, shap_values_matrix):
         v = 0.0
         if not (i in ignore_inds or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
-                if np.std(val_other[j : j + inc]) > 0 and np.std(shap_ref[j : j + inc]) > 0:
-                    v += abs(np.corrcoef(shap_ref[j : j + inc], val_other[j : j + inc])[0, 1])
+                if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
+                    v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
         val_v = v
 
         val_other = np.isnan(encoded_val_other)
         v = 0.0
         if not (i in ignore_inds or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
-                if np.std(val_other[j : j + inc]) > 0 and np.std(shap_ref[j : j + inc]) > 0:
-                    v += abs(np.corrcoef(shap_ref[j : j + inc], val_other[j : j + inc])[0, 1])
+                if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
+                    v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
         nan_v = v
 
         interactions.append(max(val_v, nan_v))
@@ -137,22 +131,21 @@ def approximate_interactions(index, shap_values, X, feature_names=None):
         v = 0.0
         if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
-                if np.std(val_other[j : j + inc]) > 0 and np.std(shap_ref[j : j + inc]) > 0:
-                    v += abs(np.corrcoef(shap_ref[j : j + inc], val_other[j : j + inc])[0, 1])
+                if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
+                    v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
         val_v = v
 
         val_other = np.isnan(encoded_val_other)
         v = 0.0
         if not (i == index or np.sum(np.abs(val_other)) < 1e-8):
             for j in range(0, len(x), inc):
-                if np.std(val_other[j : j + inc]) > 0 and np.std(shap_ref[j : j + inc]) > 0:
-                    v += abs(np.corrcoef(shap_ref[j : j + inc], val_other[j : j + inc])[0, 1])
+                if np.std(val_other[j:j + inc]) > 0 and np.std(shap_ref[j:j + inc]) > 0:
+                    v += abs(np.corrcoef(shap_ref[j:j + inc], val_other[j:j + inc])[0, 1])
         nan_v = v
 
         interactions.append(max(val_v, nan_v))
 
     return np.argsort(-np.abs(interactions))
-
 
 def encode_array_if_needed(arr, dtype=np.float64):
     try:
@@ -164,7 +157,7 @@ def encode_array_if_needed(arr, dtype=np.float64):
         return encoded_array
 
 
-def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
+def sample(X, nsamples=100, random_state=0):
     """Performs sampling without replacement of the input data ``X``.
 
     This is a simple wrapper over scikit-learn's ``shuffle`` function.
@@ -201,7 +194,7 @@ def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 
-def safe_isinstance(obj: Any, class_path_str: Union[str, list[str]]) -> bool:
+def safe_isinstance(obj, class_path_str):
     """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
@@ -222,18 +215,16 @@ def safe_isinstance(obj: Any, class_path_str: Union[str, list[str]]) -> bool:
     """
     if isinstance(class_path_str, str):
         class_path_strs = [class_path_str]
-    elif isinstance(class_path_str, (list, tuple)):
+    elif isinstance(class_path_str, list) or isinstance(class_path_str, tuple):
         class_path_strs = class_path_str
     else:
-        class_path_strs = [""]
+        class_path_strs = ['']
 
     # try each module path in order
     for class_path_str in class_path_strs:
         if "." not in class_path_str:
-            raise ValueError(
-                "class_path_str must be a string or list of strings specifying a full \
-                module path to a class. Eg, 'sklearn.ensemble.RandomForestRegressor'"
-            )
+            raise ValueError("class_path_str must be a string or list of strings specifying a full \
+                module path to a class. Eg, 'sklearn.ensemble.RandomForestRegressor'")
 
         # Splits on last occurrence of "."
         module_name, class_name = class_path_str.rsplit(".", 1)
@@ -246,7 +237,7 @@ def safe_isinstance(obj: Any, class_path_str: Union[str, list[str]]) -> bool:
 
         module = sys.modules[module_name]
 
-        # Get class
+        #Get class
         _class = getattr(module, class_name, None)
 
         if _class is None:
@@ -262,36 +253,34 @@ def format_value(s, format_str):
     """Strips trailing zeros and uses a unicode minus sign."""
     if not issubclass(type(s), str):
         s = format_str % s
-    s = re.sub(r"\.?0+$", "", s)
+    s = re.sub(r'\.?0+$', '', s)
     if s[0] == "-":
         s = "\u2212" + s[1:]
     return s
 
-
 # From: https://groups.google.com/forum/m/#!topic/openrefine/G7_PSdUeno0
 def ordinal_str(n):
     """Converts a number to and ordinal string."""
-    return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
-
+    return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(4 if 10 <= n % 100 < 20 else n % 10, "th")
 
 class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
-    def __init__(self, root_name: str = "") -> None:
-        self._ops: list[list[Any]] = []
+    def __init__(self, root_name=""):
+        self._ops = []
         self._root_name = root_name
 
     def apply(self, obj):
         """Applies all our ops to the given object."""
         for o in self._ops:
-            op, args, kwargs = o
+            op,args,kwargs = o
             if args is not None:
                 obj = getattr(obj, op)(*args, **kwargs)
             else:
                 obj = getattr(obj, op)
         return obj
 
-    def __call__(self, *args, **kwargs) -> "OpChain":
+    def __call__(self, *args, **kwargs):
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -305,10 +294,10 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name: str) -> "OpChain":
+    def __getattr__(self, name):
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
-            return None  # type: ignore
+            return None
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops.append([name, None, None])
@@ -317,7 +306,7 @@ class OpChain:
     def __repr__(self):
         out = self._root_name
         for o in self._ops:
-            op, args, kwargs = o
+            op,args,kwargs = o
             out += "."
             out += op
             if (args is not None and len(args) > 0) or (kwargs is not None and len(kwargs) > 0):
@@ -325,10 +314,9 @@ class OpChain:
                 if args is not None and len(args) > 0:
                     out += ", ".join([str(v) for v in args])
                 if kwargs is not None and len(kwargs) > 0:
-                    out += ", " + ", ".join([str(k) + "=" + str(kwargs[k]) for k in kwargs.keys()])
+                    out += ", " + ", ".join([str(k)+"="+str(kwargs[k]) for k in kwargs.keys()])
                 out += ")"
         return out
-
 
 # https://thesmithfam.org/blog/2012/10/25/temporarily-suppress-console-output-in-python/
 @contextmanager
