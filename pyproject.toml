@@ -226,7 +226,7 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
-"shap/plots/colors/_colorconv.py" = ["ALL"]
+"shap/plots/colors/_vendored/*" = ["ALL"]
 
 # Ignore notebooks in user_studies, which are not maintained
 "docs/user_studies/*.ipynb" = ["ALL"]

@@ -3,7 +3,7 @@
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
-from ._colorconv import lab2rgb, lch2lab
+from ._vendored._colorconv import lab2rgb, lch2lab
 
 
 def lch2rgb(x):

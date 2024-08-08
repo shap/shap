@@ -9,5 +9,5 @@ comment:
   after_n_builds: 7
 ignore:
   # Ignore coverage on vendored code
-  - "shap/plots/colors/_colorconv.py"
+  - "shap/plots/colors/_vendored"
   - "shap/explainers/other/_maple.py"
