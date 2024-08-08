@@ -143,9 +143,9 @@ class channel_as_last_axis:
                         new_args.append(np.moveaxis(arg, channel_axis[0], -1))
                     else:
                         new_args.append(arg)
-                new_args = tuple(new_args)
+                new_args = tuple(new_args)  # type: ignore
             else:
-                new_args = args
+                new_args = args  # type: ignore
 
             for name in self.kwarg_names:
                 kwargs[name] = np.moveaxis(kwargs[name], channel_axis[0], -1)

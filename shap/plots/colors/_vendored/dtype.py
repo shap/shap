@@ -64,7 +64,7 @@ _integer_types = (
     np.uintp,
     np.uintc,
 )
-_integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max) for t in _integer_types}
+_integer_ranges = {t: (np.iinfo(t).min, np.iinfo(t).max) for t in _integer_types}  # type: ignore
 dtype_range = {
     bool: (False, True),
     np.bool_: (False, True),
@@ -81,7 +81,7 @@ with warnings.catch_warnings():
     if hasattr(np, "bool8"):
         dtype_range[np.bool8] = (False, True)
 
-dtype_range.update(_integer_ranges)
+dtype_range.update(_integer_ranges)  # type: ignore
 
 _supported_types = list(dtype_range.keys())
 
@@ -286,8 +286,8 @@ def _convert(image, dtype, force_copy=False, uniform=False):
         imin_in = np.iinfo(dtype_in).min
         imax_in = np.iinfo(dtype_in).max
     if kind_out in "ui":
-        imin_out = np.iinfo(dtype_out).min
-        imax_out = np.iinfo(dtype_out).max
+        imin_out = np.iinfo(dtype_out).min  # type: ignore
+        imax_out = np.iinfo(dtype_out).max  # type: ignore
 
     # any -> binary
     if kind_out == "b":

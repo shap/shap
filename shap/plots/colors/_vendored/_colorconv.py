@@ -173,7 +173,7 @@ def xyz_tristimulus_values(*, illuminant, observer, dtype=float):
     illuminant = illuminant.upper()
     observer = observer.upper()
     try:
-        return np.asarray(_illuminants[illuminant][observer], dtype=dtype)
+        return np.asarray(_illuminants[illuminant][observer], dtype=dtype)  # type: ignore
     except KeyError:
         raise ValueError(f"Unknown illuminant/observer combination " f"(`{illuminant}`, `{observer}`)")
 
