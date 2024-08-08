@@ -3,8 +3,6 @@
 # here because all we need is a couple color conversion routines (lab2rgb, lch2lab)
 # and adding all of skimage as dependency is really heavy.
 
-# Disable linting on vendored code:
-# ruff: noqa
 
 # Copyright (C) 2019, the scikit-image team
 # All rights reserved.
@@ -48,7 +46,7 @@ def _prepare_colorarray(arr, *, channel_axis=-1):
     arr = np.asanyarray(arr)
 
     if arr.shape[channel_axis] != 3:
-        msg = f"the input array must have size 3 along `channel_axis`, " f"got {arr.shape}"
+        msg = f"the input array must have size 3 along `channel_axis`, got {arr.shape}"
         raise ValueError(msg)
 
     return arr.astype(np.float64)
