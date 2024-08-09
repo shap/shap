@@ -21,6 +21,8 @@ op_chain_root = OpChain("shap.Explanation")
 
 @dataclass
 class OpHistoryItem:
+    """An operation that has been applied to an Explanation object."""
+
     name: str
     prev_shape: tuple[int, ...]
     args: tuple[Any, ...] = ()
