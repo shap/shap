@@ -14,7 +14,7 @@ def test_default_style():
 
 
 def test_style_context():
-    custom_style = _style.StyleConfig(text="green")
+    custom_style = _style.StyleConfig(text_color="green")
     assert _style.STYLE.text_color == "white"
     with _style.style_context(custom_style):
         assert _style.STYLE.text_color == "green"
@@ -23,7 +23,7 @@ def test_style_context():
 
 def test_style_overrides():
     assert _style.STYLE.text_color == "white"
-    with _style.style_overrides(text="green"):
+    with _style.style_overrides(text_color="green"):
         assert _style.STYLE.text_color == "green"
     assert _style.STYLE.text_color == "white"
 

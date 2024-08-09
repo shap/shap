@@ -49,10 +49,13 @@ def load_default_style() -> StyleConfig:
 
 
 # Singleton instance that determines the current style.
-# Caution! To ensure the correct object is picked up, this must be used like:
+# CAREFUL! Only access this instance from the `_style` namespace, do not import it directly.
+# This is to ensure that the correct instance is picked up when the STYLE object is
+# reassigned in the _style module.
+#
 #     from shap.plots import _style
-#     color = _style.STYLE.text_color
-# And NOT like:
+#     color = _style.STYLE.text_color       # Correct
+#
 #     from shap.plots._style import STYLE   # Wrong!
 #     color = STYLE.text_color
 
