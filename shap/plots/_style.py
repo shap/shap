@@ -6,14 +6,16 @@ NOTE: This is experimental and subject to change!
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass, field
-from typing import TypeAlias, Union
+from dataclasses import dataclass, field, replace
+from typing import Union
+
+import numpy as np
 
 from . import colors
 
 # Type hints, adapted from matplotlib.typing
-RGBColorType: TypeAlias = Union[tuple[float, float, float], str]
-RGBAColorType: TypeAlias = Union[
+RGBColorType = Union[tuple[float, float, float], str]
+RGBAColorType = Union[
     str,  # "none" or "#RRGGBBAA"/"#RGBA" hex strings
     tuple[float, float, float, float],
     # 2 tuple (color, alpha) representations, not infinitely recursive
@@ -22,12 +24,12 @@ RGBAColorType: TypeAlias = Union[
     # (4-tuple, float) is odd, but accepted as the outer float overriding A of 4-tuple
     tuple[tuple[float, float, float, float], float],
 ]
-ColorType: TypeAlias = Union[RGBColorType, RGBAColorType]
+ColorType = Union[RGBColorType, RGBAColorType, np.ndarray]
 
 
 @dataclass
 class StyleConfig:
-    """Configuration of colors for shap plots."""
+    """Configuration of colors across all matplotlib-based shap plots."""
 
     # Waterfall plot config
     positive_arrow: ColorType = field(default_factory=lambda: colors.red_rgb)
@@ -40,28 +42,65 @@ class StyleConfig:
     tick_labels: ColorType = "#999999"
 
 
-def _load_default_style() -> StyleConfig:
+def load_default_style() -> StyleConfig:
+    """Load the default style configuration."""
     # In future, this could allow reading from a persistent config file, like matplotlib rcParams
     return StyleConfig()
 
 
-# Singleton instance that determines the current style
-STYLE = _load_default_style()
+# Singleton instance that determines the current style.
+# Caution! To ensure the correct object is picked up, this must be used like:
+#     from shap.plots import _style
+#     color = _style.STYLE.text
+# And NOT like:
+#     from shap.plots._style import STYLE   # Wrong!
+#     color = STYLE.text
+
+STYLE = load_default_style()
+
+
+def get_style() -> StyleConfig:
+    """Return the current style configuration."""
+    return STYLE
+
+
+def set_style(style: StyleConfig):
+    """Set the current style configuration."""
+    global STYLE
+    STYLE = style
 
 
 @contextmanager
-def use_style(style: StyleConfig):
+def style_context(style: StyleConfig):
     """Context manager to temporarily change the style.
 
     NOTE: This is experimental and subject to change!
 
     Example
     -------
-    with shap.plots.style.use_style(new_style):
+    with shap.plots.style_context(new_style):
         shap.plots.waterfall(...)
     """
     global STYLE
     old_style = STYLE
     STYLE = style
+    yield
+    STYLE = old_style
+
+
+@contextmanager
+def style_overrides(**kwargs):
+    """Context manager to temporarily override a subset of parameters.
+
+    NOTE: This is experimental and subject to change!
+
+    Example
+    -------
+    with shap.plots.style_overrides(text="black"):
+        shap.plots.waterfall(...)
+    """
+    global STYLE
+    old_style = STYLE
+    STYLE = replace(old_style, **kwargs)
     yield
     STYLE = old_style

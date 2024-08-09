@@ -6,17 +6,24 @@ from shap.plots import _style
 
 
 def test_default_style():
-    new_style = _style._load_default_style()
+    new_style = _style.load_default_style()
     assert configs_are_equal(_style.STYLE, new_style)
 
     new_style.default_negative_color = "black"
     assert not configs_are_equal(_style.STYLE, new_style)
 
 
-def test_style_context_manager():
+def test_style_context():
     custom_style = _style.StyleConfig(text="green")
     assert _style.STYLE.text == "white"
-    with _style.use_style(custom_style):
+    with _style.style_context(custom_style):
+        assert _style.STYLE.text == "green"
+    assert _style.STYLE.text == "white"
+
+
+def test_style_overrides():
+    assert _style.STYLE.text == "white"
+    with _style.style_overrides(text="green"):
         assert _style.STYLE.text == "green"
     assert _style.STYLE.text == "white"
 
