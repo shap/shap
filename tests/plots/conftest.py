@@ -4,11 +4,18 @@ import matplotlib.pyplot as plt
 import pytest
 
 import shap
+from shap.plots import _style
 
 
 @pytest.fixture(autouse=True)
 def close_matplotlib_plots_after_tests():
     plt.close("all")
+
+
+@pytest.fixture(autouse=True)
+def reset_style_to_default():
+    # Protect against any unintended state changes between tests
+    _style.STYLE = _style._load_default_style()
 
 
 @pytest.fixture()
