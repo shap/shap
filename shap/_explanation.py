@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import copy
 import operator
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,17 @@ from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
 op_chain_root = OpChain("shap.Explanation")
+
+
+@dataclass
+class OpHistoryItem:
+    """An operation that has been applied to an Explanation object."""
+
+    name: str
+    prev_shape: tuple[int, ...]
+    args: tuple[Any, ...] = ()
+    kwargs: dict[str, Any] = field(default_factory=dict)
+    collapsed_instances: bool = False
 
 
 class MetaExplanation(type):
@@ -100,7 +112,7 @@ class Explanation(metaclass=MetaExplanation):
         clustering=None,
         compute_time=None,
     ):
-        self.op_history = []
+        self.op_history: list[OpHistoryItem] = []
 
         self.compute_time = compute_time
 
@@ -172,10 +184,12 @@ class Explanation(metaclass=MetaExplanation):
         )
 
     @property
-    def shape(self) -> tuple[int | None, ...]:
+    def shape(self) -> tuple[int, ...]:
         """Compute the shape over potentially complex data nesting."""
-        # TODO: check if the return type should actually be tuple[int, ...]
-        return _compute_shape(self._s.values)
+        shap_values_shape = _compute_shape(self._s.values)
+        # impl: `Explanation.values` always corresponds to the shap values, which is a numpy array, so the
+        # shape will always be of tuple[int, ...] type, not tuple[int|None, ...].
+        return cast(tuple[int, ...], shap_values_shape)
 
     @property
     def values(self):
@@ -417,7 +431,7 @@ class Explanation(metaclass=MetaExplanation):
         if new_self is None:
             new_self = copy.copy(self)
         new_self._s = new_self._s.__getitem__(item)
-        new_self.op_history.append({"name": "__getitem__", "args": (item,), "prev_shape": self.shape})
+        new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
 
         return new_self
 
@@ -447,7 +461,7 @@ class Explanation(metaclass=MetaExplanation):
     def _apply_binary_operator(self, other, binary_op, op_name):
         new_exp = self.__copy__()
         new_exp.op_history = copy.copy(self.op_history)
-        new_exp.op_history.append({"name": op_name, "args": (other,), "prev_shape": self.shape})
+        new_exp.op_history.append(OpHistoryItem(name=op_name, args=(other,), prev_shape=self.shape))
         if isinstance(other, Explanation):
             new_exp.values = binary_op(new_exp.values, other.values)
             if new_exp.data is not None:
@@ -489,10 +503,10 @@ class Explanation(metaclass=MetaExplanation):
     #     """
     #     new_self = copy.copy(self)
     #     new_self.values = np.abs(new_self.values)
-    #     new_self.op_history.append({
-    #         "name": "abs",
-    #         "prev_shape": self.shape
-    #     })
+    #     new_self.op_history.append(OpHistoryItem(
+    #         name="abs",
+    #         prev_shape=self.shape,
+    #     ))
     #     return new_self
 
     def _numpy_func(self, fname, **kwargs):
@@ -534,7 +548,12 @@ class Explanation(metaclass=MetaExplanation):
                 new_self.clustering = None
 
         new_self.op_history.append(
-            {"name": fname, "kwargs": kwargs, "prev_shape": self.shape, "collapsed_instances": axis == 0}
+            OpHistoryItem(
+                name=fname,
+                kwargs=kwargs,
+                prev_shape=self.shape,
+                collapsed_instances=axis == 0,
+            ),
         )
 
         return new_self
@@ -682,7 +701,12 @@ class Explanation(metaclass=MetaExplanation):
             new_self.data = np.percentile(new_self.data, q, axis)
         # new_self.data = None
         new_self.op_history.append(
-            {"name": "percentile", "args": (axis,), "prev_shape": self.shape, "collapsed_instances": axis == 0}
+            OpHistoryItem(
+                name="percentile",
+                args=(axis,),
+                prev_shape=self.shape,
+                collapsed_instances=axis == 0,
+            ),
         )
         return new_self
 

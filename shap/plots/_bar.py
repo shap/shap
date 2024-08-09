@@ -1,4 +1,5 @@
 import warnings
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -17,6 +18,9 @@ from ._utils import (
     merge_nodes,
     sort_inds,
 )
+
+if TYPE_CHECKING:
+    from .._explanation import OpHistoryItem
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
@@ -124,7 +128,7 @@ def bar(
                 "The clustering provided by the Explanation object does not seem to be a "
                 "partition tree, which is all shap.plots.bar supports."
             )
-    op_history = cohort_exps[0].op_history
+    op_history: list[OpHistoryItem] = cohort_exps[0].op_history
     values = np.array([cohort_exps[i].values for i in range(len(cohort_exps))])
 
     if len(values[0]) == 0:
@@ -132,7 +136,7 @@ def bar(
 
     # we show the data on auto only when there are no transforms (excluding getitem calls)
     if show_data == "auto":
-        transforms = [t for t in op_history if t.get("name") != "__getitem__"]
+        transforms = [op for op in op_history if op.name != "__getitem__"]
         show_data = len(transforms) == 0
 
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
@@ -142,19 +146,19 @@ def bar(
     # build our auto xlabel based on the transform history of the Explanation object
     xlabel = "SHAP value"
     for op in op_history:
-        if op["name"] == "abs":
-            xlabel = "|" + xlabel + "|"
-        elif op["name"] == "__getitem__":
+        if op.name == "abs":
+            xlabel = f"|{xlabel}|"
+        elif op.name == "__getitem__":
             pass  # no need for slicing to effect our label, it will be used later to find the sizes of cohorts
         else:
-            xlabel = str(op["name"]) + "(" + xlabel + ")"
+            xlabel = f"{op.name}({xlabel})"
 
     # find how many instances are in each cohort (if they were created from an Explanation object)
     cohort_sizes = []
     for exp in cohort_exps:
         for op in exp.op_history:
-            if op.get("collapsed_instances", False):  # see if this if the first op to collapse the instances
-                cohort_sizes.append(op["prev_shape"][0])
+            if op.collapsed_instances:  # see if this if the first op to collapse the instances
+                cohort_sizes.append(op.prev_shape[0])
                 break
 
     # unwrap any pandas series

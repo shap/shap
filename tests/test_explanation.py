@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import shap
+from shap._explanation import OpHistoryItem
 
 
 def test_explanation_hstack(random_seed):
@@ -88,3 +89,29 @@ def test_feature_names_slicing_for_square_arrays(random_seed, N):
     assert first_sample.feature_names == first_sample.output_names == featnames
     column_e = exp[..., "e"]
     assert column_e.feature_names == "e"
+
+
+def test_populating_op_history():
+    """Tests whether the Explanation.op_history attribute is populated properly after operations have been applied."""
+    values = np.arange(-18, 17).reshape(7, 5)
+
+    # apply some operations
+    exp = shap.Explanation(values=values).abs.sample(5, random_state=0).flip[..., :3].mean(axis=0)
+    exp += 2
+    expected_op_names = [
+        "abs",
+        "__getitem__",
+        "flip",
+        "__getitem__",
+        "mean",
+        "__add__",
+    ]
+
+    op_history = exp.op_history
+    # sanity check for op_history
+    assert len(op_history) == 6
+    assert all(isinstance(op, OpHistoryItem) for op in op_history)
+    assert [op.name for op in op_history] == expected_op_names
+
+    # check that operations have been applied and produce the correct output
+    assert np.allclose(exp.values, [10.8, 11.0, 11.6])
