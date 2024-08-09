@@ -53,7 +53,7 @@ red_blue_no_bounds = LinearSegmentedColormap(
 )
 
 red_blue_transparent = LinearSegmentedColormap(
-    "red_blue_no_bounds", {"red": reds, "green": greens, "blue": blues, "alpha": [(a[0], 0.5, 0.5) for a in alphas]}
+    "red_blue_transparent", {"red": reds, "green": greens, "blue": blues, "alpha": [(a[0], 0.5, 0.5) for a in alphas]}
 )
 
 # define a circular version of the color scale for categorical coloring
@@ -112,7 +112,7 @@ for alpha in np.linspace(1, 0, 100):
 for alpha in np.linspace(0, 1, 100):
     c = red_rgb * alpha + (1 - alpha) * white_rgb
     colors.append(c)
-red_white_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
+red_white_blue = LinearSegmentedColormap.from_list("red_white_blue", colors)
 
 
 # default_colors = ["#1E88E5", "#ff0d57", "#13B755", "#7C52FF", "#FFC000", "#00AEEF"]
