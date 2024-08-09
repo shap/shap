@@ -1,4 +1,5 @@
 import warnings
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -6,7 +7,6 @@ import pandas as pd
 import scipy
 
 from .. import Cohorts, Explanation
-from .._explanation import OpHistoryItem
 from ..utils import format_value, ordinal_str
 from ..utils._exceptions import DimensionError
 from . import colors
@@ -18,6 +18,9 @@ from ._utils import (
     merge_nodes,
     sort_inds,
 )
+
+if TYPE_CHECKING:
+    from .._explanation import OpHistoryItem
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
