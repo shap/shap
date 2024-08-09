@@ -9,23 +9,23 @@ def test_default_style():
     new_style = _style.load_default_style()
     assert configs_are_equal(_style.STYLE, new_style)
 
-    new_style.default_negative_color = "black"
+    new_style.secondary_color_negative = "black"
     assert not configs_are_equal(_style.STYLE, new_style)
 
 
 def test_style_context():
     custom_style = _style.StyleConfig(text="green")
-    assert _style.STYLE.text == "white"
+    assert _style.STYLE.text_color == "white"
     with _style.style_context(custom_style):
-        assert _style.STYLE.text == "green"
-    assert _style.STYLE.text == "white"
+        assert _style.STYLE.text_color == "green"
+    assert _style.STYLE.text_color == "white"
 
 
 def test_style_overrides():
-    assert _style.STYLE.text == "white"
+    assert _style.STYLE.text_color == "white"
     with _style.style_overrides(text="green"):
-        assert _style.STYLE.text == "green"
-    assert _style.STYLE.text == "white"
+        assert _style.STYLE.text_color == "green"
+    assert _style.STYLE.text_color == "white"
 
 
 # Helper functions to compare equality of config dataclasses

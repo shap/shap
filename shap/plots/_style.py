@@ -32,14 +32,14 @@ class StyleConfig:
     """Configuration of colors across all matplotlib-based shap plots."""
 
     # Waterfall plot config
-    positive_arrow: ColorType = field(default_factory=lambda: colors.red_rgb)
-    negative_arrow: ColorType = field(default_factory=lambda: colors.blue_rgb)
-    default_positive_color: ColorType = field(default_factory=lambda: colors.light_red_rgb)
-    default_negative_color: ColorType = field(default_factory=lambda: colors.light_blue_rgb)
-    hlines: ColorType = "#cccccc"
-    vlines: ColorType = "#bbbbbb"
-    text: ColorType = "white"
-    tick_labels: ColorType = "#999999"
+    primary_color_positive: ColorType = field(default_factory=lambda: colors.red_rgb)
+    primary_color_negative: ColorType = field(default_factory=lambda: colors.blue_rgb)
+    secondary_color_positive: ColorType = field(default_factory=lambda: colors.light_red_rgb)
+    secondary_color_negative: ColorType = field(default_factory=lambda: colors.light_blue_rgb)
+    hlines_color: ColorType = "#cccccc"
+    vlines_color: ColorType = "#bbbbbb"
+    text_color: ColorType = "white"
+    tick_labels_color: ColorType = "#999999"
 
 
 def load_default_style() -> StyleConfig:
@@ -51,10 +51,10 @@ def load_default_style() -> StyleConfig:
 # Singleton instance that determines the current style.
 # Caution! To ensure the correct object is picked up, this must be used like:
 #     from shap.plots import _style
-#     color = _style.STYLE.text
+#     color = _style.STYLE.text_color
 # And NOT like:
 #     from shap.plots._style import STYLE   # Wrong!
-#     color = STYLE.text
+#     color = STYLE.text_color
 
 STYLE = load_default_style()
 
