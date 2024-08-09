@@ -112,7 +112,6 @@ for alpha in np.linspace(1, 0, 100):
 for alpha in np.linspace(0, 1, 100):
     c = red_rgb * alpha + (1 - alpha) * white_rgb
     colors.append(c)
-
 red_white_blue = LinearSegmentedColormap.from_list("red_white_blue", colors)
 
 
