@@ -28,8 +28,8 @@ def test_waterfall_wrong_explanation_shape(explainer):
 def test_waterfall(explainer):
     """Test the new waterfall plot."""
     fig = plt.figure()
-    shap_values = explainer(explainer.data)
-    shap.plots.waterfall(shap_values[0])
+    explanation = explainer(explainer.data)
+    shap.plots.waterfall(explanation[0])
     plt.tight_layout()
     return fig
 
@@ -40,6 +40,18 @@ def test_waterfall_legacy(explainer):
     shap_values = explainer.shap_values(explainer.data)
     fig = plt.figure()
     shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0])
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare(tolerance=3)
+def test_waterfall_bounds(explainer):
+    """Test the waterfall plot with upper and lower error bounds plotted."""
+    fig = plt.figure()
+    explanation = explainer(explainer.data)
+    explanation._s.lower_bounds = explanation.values - 0.1
+    explanation._s.upper_bounds = explanation.values + 0.1
+    shap.plots.waterfall(explanation[0])
     plt.tight_layout()
     return fig
 
