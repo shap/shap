@@ -15,7 +15,7 @@ def close_matplotlib_plots_after_tests():
 @pytest.fixture(autouse=True)
 def reset_style_to_default():
     # Protect against any unintended state changes between tests
-    _style.STYLE = _style._load_default_style()
+    _style.STYLE = _style.load_default_style()
 
 
 @pytest.fixture()
