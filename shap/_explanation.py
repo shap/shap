@@ -299,7 +299,7 @@ class Explanation(metaclass=MetaExplanation):
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
 
-    def cohorts(self, cohorts):
+    def cohorts(self, cohorts) -> Cohorts:
         """Split this explanation into several cohorts.
 
         Parameters
@@ -307,6 +307,10 @@ class Explanation(metaclass=MetaExplanation):
         cohorts : int or array
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
+
+        Returns
+        -------
+        Cohorts object
 
         """
         if isinstance(cohorts, int):
@@ -852,11 +856,52 @@ def _compute_shape(x) -> tuple[int | None, ...]:
 
 
 class Cohorts:
-    def __init__(self, **kwargs) -> None:
+    """A collection of :class:`.Explanation` objects, typically each explaining a cluster of similar samples.
+
+    Examples
+    --------
+    A ``Cohorts`` object can be initialized in a variety of ways.
+
+    By explicitly specifying the cohorts:
+
+    >>> exp = Explanation(
+    ...     values=np.random.uniform(low=-1, high=1, size=(500, 5)),
+    ...     data=np.random.normal(loc=1, scale=3, size=(500, 5)),
+    ...     feature_names=list("abcde"),
+    ... )
+    >>> cohorts = Cohorts(
+    ...     col_a_neg=exp[exp[:, "a"].data < 0],
+    ...     col_a_pos=exp[exp[:, "a"].data >= 0],
+    ... )
+    >>> cohorts
+    <shap._explanation.Cohorts object with 2 cohorts of sizes: [(198, 5), (302, 5)]>
+
+    Or using the :meth:`.Explanation.cohorts` method:
+
+    >>> cohorts2 = exp.cohorts(3)
+    >>> cohorts2
+    <shap._explanation.Cohorts object with 3 cohorts of sizes: [(182, 5), (12, 5), (306, 5)]>
+
+    Most of the :class:`.Explanation` interface is also exposed in ``Cohorts``. For example, to retrieve the
+    SHAP values corresponding to column 'a' across all cohorts, you can use:
+
+    >>> cohorts[..., 'a'].values
+    <shap._explanation.Cohorts object with 2 cohorts of sizes: [(198,), (302,)]>
+
+    To actually retrieve the values of a particular :class:`.Explanation`, you'll need to access it via the
+    :meth:`.Cohorts.cohorts` property:
+
+    >>> cohorts.cohorts["col_a_neg"][..., 'a'].values
+    array([...])  # truncated
+
+    """
+
+    def __init__(self, **kwargs: Explanation) -> None:
         self.cohorts = kwargs
 
     @property
-    def cohorts(self):
+    def cohorts(self) -> dict[str, Explanation]:
+        """Internal collection of cohorts, stored as a dictionary."""
         return self._cohorts
 
     @cohorts.setter
@@ -871,13 +916,13 @@ class Cohorts:
         cast(dict[str, Explanation], cval)  # type narrowing for mypy
         self._cohorts: dict[str, Explanation] = cval
 
-    def __getitem__(self, item) -> "Cohorts":
+    def __getitem__(self, item) -> Cohorts:
         new_cohorts = Cohorts()
         for k in self._cohorts:
             new_cohorts.cohorts[k] = self._cohorts[k].__getitem__(item)
         return new_cohorts
 
-    def __getattr__(self, name) -> "Cohorts":
+    def __getattr__(self, name) -> Cohorts:
         new_cohorts = Cohorts()
         for k in self._cohorts:
             new_cohorts.cohorts[k] = getattr(self._cohorts[k], name)
@@ -887,7 +932,7 @@ class Cohorts:
         return f"<shap._explanation.Cohorts object with {len(self._cohorts)} cohorts of sizes: {[v.shape for v in self._cohorts.values()]}>"
 
 
-def _auto_cohorts(shap_values, max_cohorts):
+def _auto_cohorts(shap_values, max_cohorts) -> Cohorts:
     """This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values."""
     # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
