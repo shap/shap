@@ -4,7 +4,7 @@
 # and adding all of skimage as dependency is really heavy.
 
 
-# Copyright (C) 2019, the scikit-image team
+# Copyright: 2009-2022 the scikit-image team
 # All rights reserved.
 
 # License: BSD-3-Clause
