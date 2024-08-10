@@ -911,7 +911,7 @@ class Cohorts:
             raise TypeError(emsg)
         if not all(isinstance(exp, Explanation) for exp in cval.values()):
             emsg = "All the arguments to a Cohorts set must be Explanation objects!"
-            raise ValueError(emsg)
+            raise TypeError(emsg)
 
         cast(dict[str, Explanation], cval)  # type narrowing for mypy
         self._cohorts: dict[str, Explanation] = cval
