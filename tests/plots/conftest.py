@@ -1,5 +1,7 @@
 """Shared pytest fixtures"""
 
+from contextlib import ExitStack
+
 import matplotlib.pyplot as plt
 import pytest
 
@@ -7,8 +9,18 @@ import shap
 
 
 @pytest.fixture(autouse=True)
-def close_matplotlib_plots_after_tests():
-    plt.close("all")
+def mpl_test_cleanup():
+    """Run tests in a context manager and close figures after each test."""
+    # Adapted from matplotlib test suite in cartopy
+    with ExitStack() as stack:
+        # At exit, close all open figures and switch backend back to original.
+        stack.callback(plt.switch_backend, plt.get_backend())
+        stack.callback(plt.close, "all")
+
+        # Run each test in a context manager so that state does not leak out
+        plt.switch_backend("Agg")
+        stack.enter_context(plt.rc_context())
+        yield
 
 
 @pytest.fixture()
