@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from pytest import param
 
 import shap
 from shap._explanation import OpHistoryItem
@@ -115,3 +116,67 @@ def test_populating_op_history():
 
     # check that operations have been applied and produce the correct output
     assert np.allclose(exp.values, [10.8, 11.0, 11.6])
+
+
+@pytest.mark.parametrize(
+    "inp",
+    [
+        param(None, id="None"),
+        param([1, 2, 3], id="list[int]"),
+        param({"a": 10}, id="dict[int]"),
+    ],
+)
+def test_cohorts_invalid_input(inp):
+    with pytest.raises(TypeError):
+        _ = shap.Cohorts(test_grp=inp)
+
+    with pytest.raises(TypeError):
+        ch = shap.Cohorts()
+        ch.cohorts = inp
+
+
+def test_cohorts_magic_methods(random_seed):
+    rs = np.random.RandomState(random_seed)
+    e_size = (1_000, 5)
+    exp = shap.Explanation(
+        values=rs.uniform(low=-1, high=1, size=e_size),
+        data=rs.normal(loc=1, scale=3, size=e_size),
+        feature_names=list("abcde"),
+    )
+
+    exp_neg = exp[exp[:, "a"].data < 0]
+    exp_pos = exp[exp[:, "a"].data >= 0]
+    ch = shap.Cohorts(col_a_neg=exp_neg, col_a_pos=exp_pos)
+
+    # normal attribute access AND method access -> should be dispatched to Explanation objects
+    new_ch = ch.abs.mean(axis=0)
+    assert isinstance(new_ch, shap.Cohorts)
+    assert np.allclose(
+        new_ch.cohorts["col_a_neg"].values,
+        exp_neg.abs.mean(axis=0).values,
+    )
+    assert np.allclose(
+        new_ch.cohorts["col_a_pos"].values,
+        exp_pos.abs.mean(axis=0).values,
+    )
+
+    # getitem access -> should be dispatched to Explanation objects
+    new_ch = ch[..., "a"]
+    assert isinstance(new_ch, shap.Cohorts)
+    assert np.allclose(
+        new_ch.cohorts["col_a_neg"].values,
+        exp_neg[..., "a"].values,
+    )
+    assert np.allclose(
+        new_ch.cohorts["col_a_pos"].values,
+        exp_pos[..., "a"].values,
+    )
+
+
+def test_cohorts_magic_methods_errors():
+    """We don't support dispatching __call__ to the Explanation objects in Cohorts.
+    The only valid use case for cohorts.__call__() is for invoking Explanation methods (see above test).
+    """
+    ch = shap.Cohorts()
+    with pytest.raises(ValueError, match=r"No methods"):
+        ch(axis=0)
