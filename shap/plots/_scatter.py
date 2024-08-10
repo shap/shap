@@ -109,6 +109,7 @@ def scatter(
             ymin = nan_min - (nan_max - nan_min) / 20
         if ymax is None:
             ymax = nan_max + (nan_max - nan_min) / 20
+        # FIXME: the following code ignores any passed in `ax`
         _ = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = pl.subplot(1, len(inds), i + 1)
