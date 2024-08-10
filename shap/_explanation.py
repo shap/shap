@@ -898,6 +898,7 @@ class Cohorts:
 
     def __init__(self, **kwargs: Explanation) -> None:
         self.cohorts = kwargs
+        self._callables = {}
 
     @property
     def cohorts(self) -> dict[str, Explanation]:
@@ -923,9 +924,24 @@ class Cohorts:
         return Cohorts(**new_cohorts)
 
     def __getattr__(self, name: str) -> Cohorts:
-        new_cohorts = {}
+        new_cohorts = Cohorts()
         for k in self._cohorts:
-            new_cohorts[k] = getattr(self._cohorts[k], name)
+            result = getattr(self._cohorts[k], name)
+            if callable(result):
+                new_cohorts._callables[k] = result  # bound methods like .mean, .sample
+            else:
+                new_cohorts._cohorts[k] = result
+        return new_cohorts
+
+    def __call__(self, *args, **kwargs) -> Cohorts:
+        """Call the bound methods on the Explanation objects retrieved during attribute access."""
+        if not self._callables:
+            emsg = "No methods to __call__!"
+            raise ValueError(emsg)
+
+        new_cohorts = {}
+        for k, bound_method in self._callables.items():
+            new_cohorts[k] = bound_method(*args, **kwargs)
         return Cohorts(**new_cohorts)
 
     def __repr__(self):
