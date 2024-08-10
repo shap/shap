@@ -65,10 +65,10 @@ def test_violin(explainer):
 # ------ "legacy" violin plots -------
 # Currently using the same files as the `test_summary.py` violin tests for comparison
 @pytest.mark.mpl_image_compare(
-    filename="test_random_summary_violin_with_data.png",
+    filename="test_summary_violin_with_data.png",
     tolerance=5,
 )
-def test_random_summary_violin_with_data2():
+def test_summary_violin_with_data2():
     """Check a violin chart with shap_values as a np.array."""
     rs = np.random.RandomState(0)
     fig = plt.figure()
@@ -84,10 +84,10 @@ def test_random_summary_violin_with_data2():
 
 # Currently using the same files as the `test_summary.py` violin tests for comparison
 @pytest.mark.mpl_image_compare(
-    filename="test_random_summary_layered_violin_with_data.png",
+    filename="test_summary_layered_violin_with_data.png",
     tolerance=5,
 )
-def test_random_summary_layered_violin_with_data2():
+def test_summary_layered_violin_with_data2():
     """Check a layered violin chart with shap_values as a np.array."""
     rs = np.random.RandomState(0)
     fig = plt.figure()
