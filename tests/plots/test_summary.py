@@ -6,7 +6,7 @@ import shap
 
 
 @pytest.mark.mpl_image_compare
-def test_random_summary():
+def test_summary():
     """Just make sure the summary_plot function doesn't crash."""
     np.random.seed(0)
     fig = plt.figure()
@@ -16,7 +16,7 @@ def test_random_summary():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_summary_with_data():
+def test_summary_with_data():
     """Just make sure the summary_plot function doesn't crash with data."""
     np.random.seed(0)
     fig = plt.figure()
@@ -26,7 +26,7 @@ def test_random_summary_with_data():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_multi_class_summary():
+def test_summary_multi_class():
     """Check a multiclass run."""
     np.random.seed(0)
     fig = plt.figure()
@@ -36,7 +36,7 @@ def test_random_multi_class_summary():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_multi_class_summary_legend_decimals():
+def test_summary_multi_class_legend_decimals():
     """Check the functionality of printing the legend in the plot of a multiclass run when
     all the SHAP values are smaller than 1.
     """
@@ -50,7 +50,7 @@ def test_random_multi_class_summary_legend_decimals():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_multi_class_summary_legend():
+def test_summary_multi_class_legend():
     """Check the functionality of printing the legend in the plot of a multiclass run when
     SHAP values are bigger than 1.
     """
@@ -67,7 +67,7 @@ def test_random_multi_class_summary_legend():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_summary_bar_with_data():
+def test_summary_bar_with_data():
     """Check a bar chart."""
     np.random.seed(0)
     fig = plt.figure()
@@ -77,7 +77,7 @@ def test_random_summary_bar_with_data():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_summary_dot_with_data():
+def test_summary_dot_with_data():
     """Check a dot chart."""
     np.random.seed(0)
     fig = plt.figure()
@@ -87,7 +87,7 @@ def test_random_summary_dot_with_data():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_summary_violin_with_data():
+def test_summary_violin_with_data():
     """Check a violin chart."""
     np.random.seed(0)
     fig = plt.figure()
@@ -97,7 +97,7 @@ def test_random_summary_violin_with_data():
 
 
 @pytest.mark.mpl_image_compare
-def test_random_summary_layered_violin_with_data():
+def test_summary_layered_violin_with_data():
     """Check a layered violin chart."""
     rs = np.random.RandomState(0)
     fig = plt.figure()
@@ -114,7 +114,7 @@ def test_random_summary_layered_violin_with_data():
 
 
 @pytest.mark.mpl_image_compare(tolerance=6)
-def test_random_summary_with_log_scale():
+def test_summary_with_log_scale():
     """Check a with a log scale."""
     np.random.seed(0)
     fig = plt.figure()
