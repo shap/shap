@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import operator
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -898,7 +898,7 @@ class Cohorts:
 
     def __init__(self, **kwargs: Explanation) -> None:
         self.cohorts = kwargs
-        self._callables = {}
+        self._callables: dict[str, Callable] = {}
 
     @property
     def cohorts(self) -> dict[str, Explanation]:
