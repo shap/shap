@@ -917,16 +917,16 @@ class Cohorts:
         self._cohorts: dict[str, Explanation] = cval
 
     def __getitem__(self, item) -> Cohorts:
-        new_cohorts = Cohorts()
+        new_cohorts = {}
         for k in self._cohorts:
-            new_cohorts.cohorts[k] = self._cohorts[k].__getitem__(item)
-        return new_cohorts
+            new_cohorts[k] = self._cohorts[k].__getitem__(item)
+        return Cohorts(**new_cohorts)
 
-    def __getattr__(self, name) -> Cohorts:
-        new_cohorts = Cohorts()
+    def __getattr__(self, name: str) -> Cohorts:
+        new_cohorts = {}
         for k in self._cohorts:
-            new_cohorts.cohorts[k] = getattr(self._cohorts[k], name)
-        return new_cohorts
+            new_cohorts[k] = getattr(self._cohorts[k], name)
+        return Cohorts(**new_cohorts)
 
     def __repr__(self):
         return f"<shap._explanation.Cohorts object with {len(self._cohorts)} cohorts of sizes: {[v.shape for v in self._cohorts.values()]}>"
