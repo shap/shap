@@ -135,4 +135,4 @@ def test_summary_plot_with_multiclass_model():
 
     explainer = shap.TreeExplainer(model)  # Background dataset not passed
     shap_values = explainer.shap_values(X)  # Has shape (20, 3, 2)
-    shap.summary_plot(shap_values, X, feature_names=["foo", "bar", "baz"])
+    shap.summary_plot(shap_values, X, feature_names=["foo", "bar", "baz"], show=False)

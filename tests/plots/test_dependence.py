@@ -39,4 +39,5 @@ def test_dependence_use_line_collection_bug():
         feature_expected_value=True,
         ice=False,
         shap_values=shap_values[:1, :],
+        show=False,
     )
