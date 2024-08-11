@@ -910,9 +910,10 @@ class Cohorts:
         if not isinstance(cval, dict):
             emsg = "self.cohorts must be a dictionary!"
             raise TypeError(emsg)
-        if not all(isinstance(exp, Explanation) for exp in cval.values()):
-            emsg = "All the arguments to a Cohorts set must be Explanation objects!"
-            raise TypeError(emsg)
+        for exp in cval.values():
+            if not isinstance(exp, Explanation):
+                emsg = f"Arguments to a Cohorts set must be Explanation objects, but found {type(exp)}"
+                raise TypeError(emsg)
 
         cast(dict[str, Explanation], cval)  # type narrowing for mypy
         self._cohorts: dict[str, Explanation] = cval
