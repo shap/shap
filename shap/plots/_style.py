@@ -49,28 +49,20 @@ def load_default_style() -> StyleConfig:
 
 
 # Singleton instance that determines the current style.
-# CAREFUL! Only access this instance from the `_style` namespace, do not import it directly.
-# This is to ensure that the correct instance is picked up when the STYLE object is
-# reassigned in the _style module.
-#
-#     from shap.plots import _style
-#     color = _style.STYLE.text_color       # Correct
-#
-#     from shap.plots._style import STYLE   # Wrong!
-#     color = STYLE.text_color
-
-STYLE = load_default_style()
+# CAREFUL! To ensure the correct object is picked up, do not import this directly,
+# but intead access this at runtime with get_style().
+_STYLE = load_default_style()
 
 
 def get_style() -> StyleConfig:
     """Return the current style configuration."""
-    return STYLE
+    return _STYLE
 
 
 def set_style(style: StyleConfig):
     """Set the current style configuration."""
-    global STYLE
-    STYLE = style
+    global _STYLE
+    _STYLE = style
 
 
 @contextmanager
@@ -84,11 +76,11 @@ def style_context(style: StyleConfig):
     with shap.plots.style_context(new_style):
         shap.plots.waterfall(...)
     """
-    global STYLE
-    old_style = STYLE
-    STYLE = style
+    global _STYLE
+    old_style = _STYLE
+    _STYLE = style
     yield
-    STYLE = old_style
+    _STYLE = old_style
 
 
 @contextmanager
@@ -102,8 +94,8 @@ def style_overrides(**kwargs):
     with shap.plots.style_overrides(text="black"):
         shap.plots.waterfall(...)
     """
-    global STYLE
-    old_style = STYLE
-    STYLE = replace(old_style, **kwargs)
+    global _STYLE
+    old_style = _STYLE
+    _STYLE = replace(old_style, **kwargs)
     yield
-    STYLE = old_style
+    _STYLE = old_style
