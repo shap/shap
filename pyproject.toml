@@ -123,7 +123,6 @@ module = [
   "shap.plots._force_matplotlib",
   "shap.plots._force",
   "shap.plots._heatmap",
-  "shap.plots._scatter.*",
   "shap.plots._text",
   "shap.plots._waterfall",
 ]
