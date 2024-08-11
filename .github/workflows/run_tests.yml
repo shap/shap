@@ -43,6 +43,7 @@ jobs:
             extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
