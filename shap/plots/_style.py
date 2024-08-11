@@ -72,10 +72,12 @@ def style_context(style: StyleConfig):
 
     NOTE: This is experimental and subject to change!
 
-    Example
-    -------
-    with shap.plots.style_context(new_style):
-        shap.plots.waterfall(...)
+    Examples
+    --------
+    To set a new style::
+
+        with shap.plots.style_context(new_style):
+            shap.plots.waterfall(...)
     """
     global _STYLE
     old_style = _STYLE
@@ -90,10 +92,12 @@ def style_overrides(**kwargs):
 
     NOTE: This is experimental and subject to change!
 
-    Example
-    -------
-    with shap.plots.style_overrides(text="black"):
-        shap.plots.waterfall(...)
+    Examples
+    --------
+    To temporarily override a style option::
+
+        with shap.plots.style_overrides(text_color="black"):
+            shap.plots.waterfall(...)
     """
     global _STYLE
     old_style = _STYLE
