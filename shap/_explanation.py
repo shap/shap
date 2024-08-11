@@ -915,7 +915,6 @@ class Cohorts:
                 emsg = f"Arguments to a Cohorts set must be Explanation objects, but found {type(exp)}"
                 raise TypeError(emsg)
 
-        cast(dict[str, Explanation], cval)  # type narrowing for mypy
         self._cohorts: dict[str, Explanation] = cval
 
     def __getitem__(self, item) -> Cohorts:
