@@ -79,7 +79,7 @@ def test_decision_plot_interactions():
 
 
 @pytest.mark.mpl_image_compare
-def test_multioutput_decision(values_features):
+def test_decision_multioutput(values_features):
     adult_rfc_shap_values, X = values_features
     fig = plt.figure()
     adult_rfc_shap_values_list = [adult_rfc_shap_values.values[:, :, i] for i in range(adult_rfc_shap_values.shape[2])]

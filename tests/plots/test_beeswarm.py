@@ -42,7 +42,7 @@ def test_beeswarm_wrong_features_shape():
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_beeswarm(explainer):
+def test_beeswarm(explainer):
     """Check a beeswarm chart renders correctly with shap_values as an Explanation
     object (default settings).
     """
