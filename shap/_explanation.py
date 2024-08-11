@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import operator
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -299,7 +299,7 @@ class Explanation(metaclass=MetaExplanation):
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
 
-    def cohorts(self, cohorts):
+    def cohorts(self, cohorts) -> Cohorts:
         """Split this explanation into several cohorts.
 
         Parameters
@@ -307,6 +307,10 @@ class Explanation(metaclass=MetaExplanation):
         cohorts : int or array
             If this is an integer then we auto build that many cohorts using a decision tree. If this is
             an array then we treat that as an array of cohort names/ids for each instance.
+
+        Returns
+        -------
+        Cohorts object
 
         """
         if isinstance(cohorts, int):
@@ -852,36 +856,106 @@ def _compute_shape(x) -> tuple[int | None, ...]:
 
 
 class Cohorts:
-    def __init__(self, **kwargs):
+    """A collection of :class:`.Explanation` objects, typically each explaining a cluster of similar samples.
+
+    Examples
+    --------
+    A ``Cohorts`` object can be initialized in a variety of ways.
+
+    By explicitly specifying the cohorts:
+
+    >>> exp = Explanation(
+    ...     values=np.random.uniform(low=-1, high=1, size=(500, 5)),
+    ...     data=np.random.normal(loc=1, scale=3, size=(500, 5)),
+    ...     feature_names=list("abcde"),
+    ... )
+    >>> cohorts = Cohorts(
+    ...     col_a_neg=exp[exp[:, "a"].data < 0],
+    ...     col_a_pos=exp[exp[:, "a"].data >= 0],
+    ... )
+    >>> cohorts
+    <shap._explanation.Cohorts object with 2 cohorts of sizes: [(198, 5), (302, 5)]>
+
+    Or using the :meth:`.Explanation.cohorts` method:
+
+    >>> cohorts2 = exp.cohorts(3)
+    >>> cohorts2
+    <shap._explanation.Cohorts object with 3 cohorts of sizes: [(182, 5), (12, 5), (306, 5)]>
+
+    Most of the :class:`.Explanation` interface is also exposed in ``Cohorts``. For example, to retrieve the
+    SHAP values corresponding to column 'a' across all cohorts, you can use:
+
+    >>> cohorts[..., 'a'].values
+    <shap._explanation.Cohorts object with 2 cohorts of sizes: [(198,), (302,)]>
+
+    To actually retrieve the values of a particular :class:`.Explanation`, you'll need to access it via the
+    :meth:`.Cohorts.cohorts` property:
+
+    >>> cohorts.cohorts["col_a_neg"][..., 'a'].values
+    array([...])  # truncated
+
+    """
+
+    def __init__(self, **kwargs: Explanation) -> None:
         self.cohorts = kwargs
-        for k in self.cohorts:
-            assert isinstance(
-                self.cohorts[k], Explanation
-            ), "All the arguments to a Cohorts set must be Explanation objects!"
+        self._callables: dict[str, Callable] = {}
 
-    def __getitem__(self, item):
+    @property
+    def cohorts(self) -> dict[str, Explanation]:
+        """Internal collection of cohorts, stored as a dictionary."""
+        return self._cohorts
+
+    @cohorts.setter
+    def cohorts(self, cval):
+        if not isinstance(cval, dict):
+            emsg = "self.cohorts must be a dictionary!"
+            raise TypeError(emsg)
+        for exp in cval.values():
+            if not isinstance(exp, Explanation):
+                emsg = f"Arguments to a Cohorts set must be Explanation objects, but found {type(exp)}"
+                raise TypeError(emsg)
+
+        self._cohorts: dict[str, Explanation] = cval
+
+    def __getitem__(self, item) -> Cohorts:
+        new_cohorts = {}
+        for k in self._cohorts:
+            new_cohorts[k] = self._cohorts[k].__getitem__(item)
+        return Cohorts(**new_cohorts)
+
+    def __getattr__(self, name: str) -> Cohorts:
         new_cohorts = Cohorts()
-        for k in self.cohorts:
-            new_cohorts.cohorts[k] = self.cohorts[k].__getitem__(item)
+        for k in self._cohorts:
+            result = getattr(self._cohorts[k], name)
+            if callable(result):
+                new_cohorts._callables[k] = result  # bound methods like .mean, .sample
+            else:
+                new_cohorts._cohorts[k] = result
         return new_cohorts
 
-    def __getattr__(self, name):
-        new_cohorts = Cohorts()
-        for k in self.cohorts:
-            new_cohorts.cohorts[k] = getattr(self.cohorts[k], name)
-        return new_cohorts
+    def __call__(self, *args, **kwargs) -> Cohorts:
+        """Call the bound methods on the Explanation objects retrieved during attribute access.
 
-    def __call__(self, *args, **kwargs):
-        new_cohorts = Cohorts()
-        for k in self.cohorts:
-            new_cohorts.cohorts[k] = self.cohorts[k].__call__(*args, **kwargs)
-        return new_cohorts
+        For example,
+        ``Cohorts(...).mean(axis=0)`` would first run ``__getattr__("mean")`` and return a bound method
+        ``Explanation.mean`` for all the :class:`Explanation` objects inside the ``Cohorts``, returned as a
+        new ``Cohorts`` object. Then the ``(axis=0)`` call would be executed on that returned ``Cohorts``
+        object, which is why we need ``__call__`` defined.
+        """
+        if not self._callables:
+            emsg = "No methods to __call__!"
+            raise ValueError(emsg)
+
+        new_cohorts = {}
+        for k, bound_method in self._callables.items():
+            new_cohorts[k] = bound_method(*args, **kwargs)
+        return Cohorts(**new_cohorts)
 
     def __repr__(self):
-        return f"<shap._explanation.Cohorts object with {len(self.cohorts)} cohorts of sizes: {[v.shape for v in self.cohorts.values()]}>"
+        return f"<shap._explanation.Cohorts object with {len(self._cohorts)} cohorts of sizes: {[v.shape for v in self._cohorts.values()]}>"
 
 
-def _auto_cohorts(shap_values, max_cohorts):
+def _auto_cohorts(shap_values, max_cohorts) -> Cohorts:
     """This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values."""
     # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
