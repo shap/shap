@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from typing import TypedDict, Union, Unpack
+from typing import TypedDict, Union
 
 import numpy as np
+from typing_extensions import Unpack
 
 from ..utils._exceptions import InvalidOptionError
 from . import colors
