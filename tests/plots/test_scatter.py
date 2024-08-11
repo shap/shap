@@ -32,6 +32,16 @@ def test_scatter_dotchain(explainer):
 
 
 @pytest.mark.mpl_image_compare
+def test_scatter_multiple_cols(explainer):
+    explanation = explainer(explainer.data)
+    shap_values = explanation[:, ["Age", "Workclass"]]
+    shap.plots.scatter(shap_values, show=False)
+    fig = plt.gcf()
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
 def test_scatter_custom(explainer):
     # Test with custom x/y limits, alpha and colormap
     explanation = explainer(explainer.data)
