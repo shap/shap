@@ -31,7 +31,7 @@ ColorType = Union[RGBColorType, RGBAColorType, np.ndarray]
 
 @dataclass(frozen=True)
 class StyleConfig:
-    """All configuration options for matplotlib-based shap plots."""
+    """A complete set of configuration options for matplotlib-based shap plots."""
 
     primary_color_positive: ColorType
     primary_color_negative: ColorType
@@ -44,12 +44,11 @@ class StyleConfig:
 
 
 class StyleOptions(TypedDict, total=False):
-    """A TypedDict of possible updates to a style configuration"""
+    """A TypedDict of partial updates to a style configuration"""
 
     # Nb. There is some duplication here with the StyleConfig dataclass, but
-    # it's necessary to provide type hints. StyleConfig represents a full set of
-    # options at runtime, whilst StyleOptions represents a partial set of
-    # updates to the options.
+    # it's necessary to provide helpful type hints with `typing.Unpack`.
+    # See https://github.com/python/typing/issues/1495
     primary_color_positive: ColorType
     primary_color_negative: ColorType
     secondary_color_positive: ColorType
@@ -60,7 +59,7 @@ class StyleOptions(TypedDict, total=False):
     tick_labels_color: ColorType
 
 
-_style_defaults = StyleConfig(
+_shap_defaults = StyleConfig(
     primary_color_positive=colors.red_rgb,
     primary_color_negative=colors.blue_rgb,
     secondary_color_positive=colors.light_red_rgb,
@@ -74,8 +73,8 @@ _style_defaults = StyleConfig(
 
 def load_default_style() -> StyleConfig:
     """Load the default style configuration."""
-    # In future, this could allow reading from a persistent config file, like matplotlib rcParams
-    return _style_defaults
+    # In future, this could allow reading from a persistent config file, like matplotlib rcParams.
+    return _shap_defaults
 
 
 # Singleton instance that determines the current style.
