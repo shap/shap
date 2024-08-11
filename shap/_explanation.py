@@ -935,7 +935,14 @@ class Cohorts:
         return new_cohorts
 
     def __call__(self, *args, **kwargs) -> Cohorts:
-        """Call the bound methods on the Explanation objects retrieved during attribute access."""
+        """Call the bound methods on the Explanation objects retrieved during attribute access.
+
+        For example,
+        ``Cohorts(...).mean(axis=0)`` would first run ``__getattr__("mean")`` and return a bound method
+        ``Explanation.mean`` for all the :class:`Explanation` objects inside the ``Cohorts``, returned as a
+        new ``Cohorts`` object. Then the ``(axis=0)`` call would be executed on that returned ``Cohorts``
+        object, which is why we need ``__call__`` defined.
+        """
         if not self._callables:
             emsg = "No methods to __call__!"
             raise ValueError(emsg)
