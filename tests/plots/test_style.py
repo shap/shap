@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from shap.plots import _style
+from shap.plots._style import get_style
 from shap.utils._exceptions import InvalidOptionError
 
 # TODO: when the API is finalised, these functions will probably be
@@ -12,26 +13,26 @@ from shap.utils._exceptions import InvalidOptionError
 
 def test_default_style():
     new_style = _style.load_default_style()
-    assert configs_are_equal(_style._STYLE, new_style)
+    assert configs_are_equal(get_style(), new_style)
 
     new_style.secondary_color_negative = "black"
-    assert not configs_are_equal(_style._STYLE, new_style)
+    assert not configs_are_equal(get_style(), new_style)
 
 
 def test_style_context():
-    original_text_color = _style._STYLE.text_color
+    original_text_color = get_style().text_color
     custom_style = _style.StyleConfig(text_color="green")
-    assert _style._STYLE.text_color == original_text_color
+    assert get_style().text_color == original_text_color
     with _style.style_context(custom_style):
-        assert _style._STYLE.text_color == "green"
-    assert _style._STYLE.text_color == original_text_color
+        assert get_style().text_color == "green"
+    assert get_style().text_color == original_text_color
 
 
 def test_style_overrides():
-    original_text_color = _style._STYLE.text_color
+    original_text_color = get_style().text_color
     with _style.style_overrides(text_color="green"):
-        assert _style._STYLE.text_color == "green"
-    assert _style._STYLE.text_color == original_text_color
+        assert get_style().text_color == "green"
+    assert get_style().text_color == original_text_color
 
 
 def test_style_overrides_raises_on_invalid_options():
