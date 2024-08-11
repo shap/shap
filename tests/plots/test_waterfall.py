@@ -60,15 +60,14 @@ def test_waterfall_bounds(explainer):
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_waterfall_custom_style(explainer):
     """Test the waterfall plot in the context of custom styles"""
-    custom_style = _style.StyleConfig(
+    with _style.style_context(
         primary_color_positive="#9ACD32",
         primary_color_negative="#FFA500",
         text_color="black",
         hlines_color="red",
         vlines_color="red",
         tick_labels_color="red",
-    )
-    with _style.style_context(custom_style):
+    ):
         fig = plt.figure()
         explanation = explainer(explainer.data)
         shap.plots.waterfall(explanation[0])
