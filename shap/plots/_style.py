@@ -56,12 +56,12 @@ _STYLE = load_default_style()
 
 
 def get_style() -> StyleConfig:
-    """Return the current style configuration."""
+    """Return the currently active global style configuration."""
     return _STYLE
 
 
 def set_style(style: StyleConfig):
-    """Set the current style configuration."""
+    """Set the currently active global style configuration."""
     global _STYLE
     _STYLE = style
 

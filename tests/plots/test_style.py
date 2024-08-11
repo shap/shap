@@ -19,18 +19,19 @@ def test_default_style():
 
 
 def test_style_context():
+    original_text_color = _style._STYLE.text_color
     custom_style = _style.StyleConfig(text_color="green")
-    assert _style._STYLE.text_color == "white"
+    assert _style._STYLE.text_color == original_text_color
     with _style.style_context(custom_style):
         assert _style._STYLE.text_color == "green"
-    assert _style._STYLE.text_color == "white"
+    assert _style._STYLE.text_color == original_text_color
 
 
 def test_style_overrides():
-    assert _style._STYLE.text_color == "white"
+    original_text_color = _style._STYLE.text_color
     with _style.style_overrides(text_color="green"):
         assert _style._STYLE.text_color == "green"
-    assert _style._STYLE.text_color == "white"
+    assert _style._STYLE.text_color == original_text_color
 
 
 def test_style_overrides_raises_on_invalid_options():
