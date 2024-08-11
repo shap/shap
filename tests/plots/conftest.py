@@ -1,5 +1,7 @@
 """Shared pytest fixtures"""
 
+from dataclasses import asdict
+
 import matplotlib.pyplot as plt
 import pytest
 
@@ -15,7 +17,8 @@ def close_matplotlib_plots_after_tests():
 @pytest.fixture(autouse=True)
 def reset_style_to_default():
     # Protect against any unintended state changes between tests
-    _style.set_style(_style.load_default_style())
+    options = asdict(_style.load_default_style())
+    _style.set_style(**options)
 
 
 @pytest.fixture()

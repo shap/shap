@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -12,33 +13,40 @@ from shap.utils._exceptions import InvalidOptionError
 
 
 def test_default_style():
-    new_style = _style.load_default_style()
-    assert configs_are_equal(get_style(), new_style)
+    default_stype = _style.load_default_style()
+    assert configs_are_equal(get_style(), default_stype)
 
-    new_style.secondary_color_negative = "black"
-    assert not configs_are_equal(get_style(), new_style)
+
+def test_set_style():
+    prev_style = get_style()
+    _style.set_style(text_color="green")
+    assert get_style().text_color == "green"
+    assert not configs_are_equal(get_style(), prev_style)
 
 
 def test_style_context():
     original_text_color = get_style().text_color
-    custom_style = _style.StyleConfig(text_color="green")
-    assert get_style().text_color == original_text_color
-    with _style.style_context(custom_style):
+    with _style.style_context(text_color="green"):
         assert get_style().text_color == "green"
     assert get_style().text_color == original_text_color
 
 
-def test_style_overrides():
-    original_text_color = get_style().text_color
-    with _style.style_overrides(text_color="green"):
-        assert get_style().text_color == "green"
-    assert get_style().text_color == original_text_color
-
-
-def test_style_overrides_raises_on_invalid_options():
+def test_set_style_raises_on_invalid_options():
     with pytest.raises(InvalidOptionError, match="Invalid style options"):
-        with _style.style_overrides(foo="bar"):
+        _style.set_style(foo="bar")
+
+
+def test_style_context_raises_on_invalid_options():
+    with pytest.raises(InvalidOptionError, match="Invalid style options"):
+        with _style.style_context(foo="bar"):
             pass
+
+
+def test_consistent_style_config_and_style_options():
+    # The StyleConfig dataclass should have the same keys and Types as the StyleOptions TypedDict
+    style_config_types = get_type_hints(_style.StyleConfig)
+    style_options_types = get_type_hints(_style.StyleOptions)
+    assert style_config_types == style_options_types
 
 
 # Helper functions to compare equality of config dataclasses
