@@ -6,7 +6,7 @@ NOTE: This is experimental and subject to change!
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from typing import TypedDict, Union
 
 import numpy as np
@@ -91,10 +91,7 @@ def get_style() -> StyleConfig:
 def set_style(**options: Unpack[StyleOptions]) -> None:
     """Set options in the currently active global style configuration."""
     global _STYLE
-    try:
-        _STYLE = replace(_STYLE, **options)
-    except TypeError as e:
-        raise InvalidOptionError("Invalid style options") from e
+    _STYLE = _apply_options(_STYLE, options)
 
 
 @contextmanager
@@ -112,9 +109,15 @@ def style_context(**options: Unpack[StyleOptions]):
     """
     global _STYLE
     old_style = _STYLE
-    try:
-        _STYLE = replace(_STYLE, **options)
-    except TypeError as e:
-        raise InvalidOptionError("Invalid style options") from e
+    _STYLE = _apply_options(_STYLE, options)
     yield
     _STYLE = old_style
+
+
+def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:
+    """Return a new StyleConfig with any changes applied, handling any invalid options."""
+    valid_keys = set(f.name for f in fields(StyleConfig))
+    for key in changes.keys():
+        if key not in valid_keys:
+            raise InvalidOptionError(f"Invalid style config option: {key}")
+    return replace(style, **changes)

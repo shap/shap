@@ -32,12 +32,12 @@ def test_style_context():
 
 
 def test_set_style_raises_on_invalid_options():
-    with pytest.raises(InvalidOptionError, match="Invalid style options"):
+    with pytest.raises(InvalidOptionError, match="Invalid style config option"):
         _style.set_style(foo="bar")  # type: ignore
 
 
 def test_style_context_raises_on_invalid_options():
-    with pytest.raises(InvalidOptionError, match="Invalid style options"):
+    with pytest.raises(InvalidOptionError, match="Invalid style config option"):
         with _style.style_context(foo="bar"):  # type: ignore
             pass
 
