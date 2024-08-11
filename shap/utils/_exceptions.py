@@ -38,3 +38,7 @@ class InvalidModelError(ValueError):
 
 class InvalidClusteringError(ValueError):
     pass
+
+
+class InvalidOptionError(ValueError):
+    pass

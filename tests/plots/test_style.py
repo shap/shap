@@ -1,31 +1,42 @@
 from dataclasses import asdict
 
 import numpy as np
+import pytest
 
 from shap.plots import _style
+from shap.utils._exceptions import InvalidOptionError
+
+# TODO: when the API is finalised, these functions will probably be
+# exposed in shap.plots, not shap.plots._style
 
 
 def test_default_style():
     new_style = _style.load_default_style()
-    assert configs_are_equal(_style.STYLE, new_style)
+    assert configs_are_equal(_style._STYLE, new_style)
 
     new_style.secondary_color_negative = "black"
-    assert not configs_are_equal(_style.STYLE, new_style)
+    assert not configs_are_equal(_style._STYLE, new_style)
 
 
 def test_style_context():
     custom_style = _style.StyleConfig(text_color="green")
-    assert _style.STYLE.text_color == "white"
+    assert _style._STYLE.text_color == "white"
     with _style.style_context(custom_style):
-        assert _style.STYLE.text_color == "green"
-    assert _style.STYLE.text_color == "white"
+        assert _style._STYLE.text_color == "green"
+    assert _style._STYLE.text_color == "white"
 
 
 def test_style_overrides():
-    assert _style.STYLE.text_color == "white"
+    assert _style._STYLE.text_color == "white"
     with _style.style_overrides(text_color="green"):
-        assert _style.STYLE.text_color == "green"
-    assert _style.STYLE.text_color == "white"
+        assert _style._STYLE.text_color == "green"
+    assert _style._STYLE.text_color == "white"
+
+
+def test_style_overrides_raises_on_invalid_options():
+    with pytest.raises(InvalidOptionError, match="Invalid style options"):
+        with _style.style_overrides(foo="bar"):
+            pass
 
 
 # Helper functions to compare equality of config dataclasses

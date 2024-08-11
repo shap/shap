@@ -11,6 +11,7 @@ from typing import Union
 
 import numpy as np
 
+from ..utils._exceptions import InvalidOptionError
 from . import colors
 
 # Type hints, adapted from matplotlib.typing
@@ -96,6 +97,11 @@ def style_overrides(**kwargs):
     """
     global _STYLE
     old_style = _STYLE
-    _STYLE = replace(old_style, **kwargs)
+
+    try:
+        _STYLE = replace(old_style, **kwargs)
+    except TypeError as e:
+        raise InvalidOptionError("Invalid style options") from e
+
     yield
     _STYLE = old_style
