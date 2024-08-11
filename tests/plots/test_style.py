@@ -45,6 +45,7 @@ def test_style_overrides_raises_on_invalid_options():
 def configs_are_equal(config1: _style.StyleConfig, config2: _style.StyleConfig):
     d1 = asdict(config1)
     d2 = asdict(config2)
+    assert d1.keys() == d2.keys()
     return all(_values_are_equivalent(d1[key], d2[key]) for key in d1.keys())
 
 
