@@ -47,8 +47,9 @@ def scatter(
     Parameters
     ----------
     shap_values : shap.Explanation
-        A single column of an :class:`.Explanation` object (i.e.
+        Typically a single column of an :class:`.Explanation` object (i.e.
         ``shap_values[:,"Feature A"]``).
+        Alternatively, pass multiple columns to create several subplots.
 
     color : string or shap.Explanation
         How to color the scatter plot points. This can be a fixed color string, or an
