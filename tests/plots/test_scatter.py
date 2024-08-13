@@ -32,10 +32,16 @@ def test_scatter_dotchain(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_scatter_multiple_cols(explainer):
+def test_scatter_multiple_cols_overlay(explainer):
     explanation = explainer(explainer.data)
     shap_values = explanation[:, ["Age", "Workclass"]]
-    shap.plots.scatter(shap_values, show=False)
+    overlay = {
+        "foo": [
+            ([20, 40, 70], [0, 1, 2]),
+            ([1, 4, 6], [2, 1, 0]),
+        ],
+    }
+    shap.plots.scatter(shap_values, overlay=overlay, show=False)
     fig = plt.gcf()
     plt.tight_layout()
     return fig
