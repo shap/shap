@@ -133,7 +133,6 @@ module = [
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
   "shap.maskers._composite",
-  "shap.maskers._fixed_composite",
   "shap.maskers._fixed",
   "shap.maskers._image",
   "shap.maskers._masker",
