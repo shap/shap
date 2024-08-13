@@ -368,11 +368,11 @@ def beeswarm(
         ax.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
         shaps = values[:, i]
         fvalues = None if features is None else features[:, i]
-        feature_inds = np.arange(len(shaps))
-        np.random.shuffle(feature_inds)
+        f_inds = np.arange(len(shaps))
+        np.random.shuffle(f_inds)
         if fvalues is not None:
-            fvalues = fvalues[feature_inds]
-        shaps = shaps[feature_inds]
+            fvalues = fvalues[f_inds]
+        shaps = shaps[f_inds]
         colored_feature = True
         try:
             if idx2cat is not None and idx2cat[i]:  # check categorical feature
