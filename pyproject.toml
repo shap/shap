@@ -118,7 +118,6 @@ plugins = ["numpy.typing.mypy_plugin"]
 module = [
   "shap.explainers.*",
   "shap.maskers.*",
-  "shap.plots._beeswarm",
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
   "shap.plots._force",
