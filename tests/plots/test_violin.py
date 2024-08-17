@@ -56,7 +56,7 @@ def test_violin(explainer):
     """Make sure the violin plot is unchanged."""
     fig = plt.figure()
     shap_values = explainer.shap_values(explainer.data)
-    shap.plots.violin(shap_values)
+    shap.plots.violin(shap_values, show=False)
     plt.tight_layout()
     return fig
 
