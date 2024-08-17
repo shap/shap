@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal, overload
 from urllib.request import urlretrieve
 
 import numpy as np
@@ -306,6 +306,12 @@ def diabetes(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     return df, target
 
 
+@overload
+def iris(display: Literal[False] = ..., n_points: int | None = ...) -> tuple[pd.DataFrame, np.ndarray]: ...
+@overload
+def iris(display: Literal[True] = ..., n_points: int | None = ...) -> tuple[pd.DataFrame, list[str]]: ...
+
+
 def iris(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray | list[str]]:
     """Return the classic Iris dataset in a convenient package.
 
@@ -351,7 +357,7 @@ def iris(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFra
         target = shap.utils.sample(target, n_points, random_state=0)
 
     if display:
-        return df, [d.target_names[v] for v in target]
+        return df, [str(d.target_names[v]) for v in target]
     return df, target
 
 
