@@ -47,8 +47,9 @@ def scatter(
     Parameters
     ----------
     shap_values : shap.Explanation
-        A single column of an :class:`.Explanation` object (i.e.
+        Typically a single column of an :class:`.Explanation` object (i.e.
         ``shap_values[:,"Feature A"]``).
+        Alternatively, pass multiple columns to create several subplots.
 
     color : string or shap.Explanation
         How to color the scatter plot points. This can be a fixed color string, or an
@@ -109,6 +110,7 @@ def scatter(
             ymin = nan_min - (nan_max - nan_min) / 20
         if ymax is None:
             ymax = nan_max + (nan_max - nan_min) / 20
+        # FIXME: the following code ignores any passed in `ax`
         _ = pl.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
             ax = pl.subplot(1, len(inds), i + 1)

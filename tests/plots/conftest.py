@@ -2,16 +2,10 @@
 
 from dataclasses import asdict
 
-import matplotlib.pyplot as plt
 import pytest
 
 import shap
 from shap.plots import _style
-
-
-@pytest.fixture(autouse=True)
-def close_matplotlib_plots_after_tests():
-    plt.close("all")
 
 
 @pytest.fixture(autouse=True)

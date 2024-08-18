@@ -48,6 +48,6 @@ def test_beeswarm(explainer):
     """
     fig = plt.figure()
     shap_values = explainer(explainer.data)
-    shap.plots.beeswarm(shap_values)
+    shap.plots.beeswarm(shap_values, show=False)
     plt.tight_layout()
     return fig

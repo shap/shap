@@ -1,9 +1,6 @@
-import matplotlib
 import numpy as np
 
 import shap
-
-matplotlib.use("Agg")
 
 
 def test_random_single_image():

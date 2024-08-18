@@ -1,13 +1,11 @@
 from contextlib import nullcontext as does_not_raise
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from pytest import param
 
-matplotlib.use("Agg")
-import shap  # noqa: E402
+import shap
 
 
 @pytest.mark.parametrize(

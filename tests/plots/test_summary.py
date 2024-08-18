@@ -123,16 +123,18 @@ def test_summary_with_log_scale():
     return fig
 
 
-def test_summary_plot_with_multiclass_model():
+@pytest.mark.parametrize("background", [True, False])
+def test_summary_binary_multiclass(background):
     # See GH #2893
     lightgbm = pytest.importorskip("lightgbm")
-    num_examples, num_features = 20, 3
-    X = np.random.uniform(size=[num_examples, num_features])
-    y = np.random.choice([0, 1], size=num_examples)
+    num_examples, num_features = 100, 3
+    rs = np.random.RandomState(0)
+    X = rs.normal(size=[num_examples, num_features])
+    y = ((2 * X[:, 0] + X[:, 1]) > 0).astype(int)
 
     train_data = lightgbm.Dataset(X, label=y)
     model = lightgbm.train(dict(objective="multiclass", num_classes=2), train_data)
-
-    explainer = shap.TreeExplainer(model)  # Background dataset not passed
-    shap_values = explainer.shap_values(X)  # Has shape (20, 3, 2)
-    shap.summary_plot(shap_values, X, feature_names=["foo", "bar", "baz"])
+    data = X if background else None
+    explainer = shap.TreeExplainer(model, data=data)
+    shap_values = explainer.shap_values(X)
+    shap.summary_plot(shap_values, X, feature_names=["foo", "bar", "baz"], show=False)
