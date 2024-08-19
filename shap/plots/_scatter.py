@@ -258,14 +258,9 @@ def scatter(
     categorical_interaction = False
 
     # create a matplotlib figure, if `ax` hasn't been specified.
-    if not ax:
+    if ax is None:
         figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
-        fig = plt.figure(figsize=figsize)
-        ax = fig.gca()
-    else:
-        _fig = ax.get_figure()
-        assert _fig is not None  # Type narrowing for mypy
-        fig = _fig
+        _, ax = plt.subplots(figsize=figsize)
 
     assert (
         shap_values_arr.shape[0] == features.shape[0]
