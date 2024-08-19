@@ -63,11 +63,14 @@ def scatter(
 
     color : string or shap.Explanation
         How to color the scatter plot points. This can be a fixed color string, or an
-        :class:`.Explanation` object. If it is an :class:`.Explanation` object, then the
-        scatter plot points are colored by the feature that seems to have the strongest
-        interaction effect with the feature given by the ``shap_values`` argument. This
-        is calculated using :func:`shap.utils.approximate_interactions`. If only a
-        single column of an :class:`.Explanation` object is passed, then that
+        :class:`.Explanation` object.
+
+        If it is an :class:`.Explanation` object, then the scatter plot points are
+        colored by the feature that seems to have the strongest interaction effect with
+        the feature given by the ``shap_values`` argument. This is calculated using
+        :func:`shap.utils.approximate_interactions`.
+
+        If only a single column of an :class:`.Explanation` object is passed, then that
         feature column will be used to color the data points.
 
     hist : bool
