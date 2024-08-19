@@ -1,21 +1,116 @@
-import matplotlib
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
+import pytest
+import sklearn
 
 import shap
 
-matplotlib.use('Agg')
+
+@pytest.fixture
+def values_features():
+    X, y = shap.datasets.adult(n_points=10)
+    rfc = sklearn.ensemble.RandomForestClassifier()
+    rfc.fit(X, y)
+    ex = shap.TreeExplainer(rfc)
+    shap_values = ex(X)
+    return shap_values, X
+
 
 def test_random_decision(random_seed):
     """Make sure the decision plot does not crash on random data."""
     rs = np.random.RandomState(random_seed)
+    shap.decision_plot(0, rs.standard_normal(size=(20, 5)), rs.standard_normal(size=(20, 5)), show=False)
+
+
+@pytest.mark.mpl_image_compare
+def test_decision_plot(values_features):
+    fig = plt.figure()
+    shap_values, _X = values_features
+
     shap.decision_plot(
-        0,
-        rs.standard_normal(size=(20, 5)),
-        rs.standard_normal(size=(20, 5)),
-        show=False
+        shap_values.base_values[0, 1],
+        shap_values.values[:, :, 1],
+        show=False,
+        return_objects=True,
+        title="Decision Plot",
+        link="identity",
     )
-    pl.close()
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_decision_plot_single_instance(values_features):
+    fig = plt.figure()
+    shap_values, X = values_features
+
+    shap.decision_plot(
+        shap_values.base_values[0, 1],
+        shap_values.values[0, :, 1],
+        features=X.iloc[0],
+        show=False,
+        new_base_value=0,
+        return_objects=True,
+    )
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_decision_plot_interactions():
+    fig = plt.figure()
+
+    X, y = shap.datasets.adult(n_points=10)
+    rfc = sklearn.ensemble.RandomForestClassifier()
+    rfc.fit(X, y)
+    ex = shap.TreeExplainer(rfc)
+    result_values = ex(X, interactions=True)
+    shap.decision_plot(
+        result_values.base_values[0, 1],
+        result_values.values[:, :, :, 1],
+        features=X,
+        show=False,
+    )
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_decision_multioutput(values_features):
+    adult_rfc_shap_values, X = values_features
+    fig = plt.figure()
+    adult_rfc_shap_values_list = [adult_rfc_shap_values.values[:, :, i] for i in range(adult_rfc_shap_values.shape[2])]
+    base_values_list = list(adult_rfc_shap_values.base_values[0, :])
+    shap.multioutput_decision_plot(base_values_list, adult_rfc_shap_values_list, row_index=0, features=X, show=False)
+    plt.tight_layout()
+    return fig
+
+
+def test_multioutput_decision_raises(values_features):
+    adult_rfc_shap_values, X = values_features
+    with pytest.raises(ValueError, match="The base_values and shap_values args expect lists."):
+        shap.multioutput_decision_plot(
+            adult_rfc_shap_values.base_values[0, :],
+            adult_rfc_shap_values.values[:, :, :],
+            row_index=0,
+            features=X,
+        )
+    with pytest.raises(
+        ValueError, match="The shap_values arg should be a list of two or three dimensional SHAP arrays."
+    ):
+        adult_rfc_shap_values_list = [
+            adult_rfc_shap_values.values[:, 0, i] for i in range(adult_rfc_shap_values.shape[2])
+        ]
+        base_values_list = list(adult_rfc_shap_values.base_values[0, :])
+        shap.multioutput_decision_plot(
+            base_values_list,
+            adult_rfc_shap_values_list,
+            row_index=0,
+        )
+
+
+# (base_values, shap_values, row_index, **kwargs)
+
 
 # ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 #
