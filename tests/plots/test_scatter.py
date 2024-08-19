@@ -80,16 +80,7 @@ def categorical_explanation():
     # true non-float-castable category values
     X.loc[X["sex"] < 0, "sex"] = 0
     X.loc[X["sex"] > 0, "sex"] = 1
-    X["sex"] = (
-        X["sex"]
-        .map(
-            {
-                1: "Male",
-                0: "Female",
-            }
-        )
-        .astype("category")
-    )
+    X["sex"] = X["sex"].map({1: "Male", 0: "Female"}).astype("category")
 
     # train an XGBoost model (but any other model type would also work)
     model = xgboost.XGBRegressor(random_state=0, enable_categorical=True, max_cat_to_onehot=1, base_score=0.5)
@@ -105,7 +96,7 @@ def categorical_explanation():
 
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_scatter_categorical(categorical_explanation):
-    """Test the scatter plot with categorical data"""
+    """Test the scatter plot with categorical data. See GH #3135"""
     fig, ax = plt.subplots()
     shap.plots.scatter(categorical_explanation[:, "sex"], ax=ax, show=False)
     plt.tight_layout()
