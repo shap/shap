@@ -1,4 +1,8 @@
+from __future__ import annotations
+
+import itertools as it
 import warnings
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -7,7 +11,11 @@ import scipy.spatial
 import sklearn
 from numba import njit
 
+from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
+
+if TYPE_CHECKING:
+    from ._types import _ArrayLike
 
 
 def partition_tree(X, metric="correlation"):
@@ -99,9 +107,15 @@ def hclust_ordering(X, metric="sqeuclidean", anchor_first=False):
 
 
 def xgboost_distances_r2(
-    X, y, learning_rate=0.6, early_stopping_rounds=2, subsample=1, max_estimators=10000, random_state=0
-):
-    """Compute reducancy distances scaled from 0-1 among all the feature in X relative to the label y.
+    X,
+    y,
+    learning_rate: float = 0.6,
+    early_stopping_rounds: int | None = 2,
+    subsample: float | None = 1.0,
+    max_estimators: int | None = 10_000,
+    random_state: int | np.random.RandomState = 0,
+) -> np.ndarray:
+    """Compute redundancy distances scaled from 0-1 among all the features in X relative to the label y.
 
     Distances are measured by training univariate XGBoost models of y for all the features, and then
     predicting the output of these models using univariate XGBoost models of other features. If one
@@ -109,6 +123,14 @@ def xgboost_distances_r2(
     then the second feature is redundant with the first with respect to y. A distance of 1 corresponds
     to no redundancy while a distance of 0 corresponds to perfect redundancy (measured using the
     proportion of variance explained). Note these distances are not symmetric.
+
+    Returns
+    -------
+    np.ndarray
+        A square matrix of shape (n_features, n_features) containing the pairwise
+        redundancy distances between features. Each element [i, j] represents the
+        redundancy distance from feature i to feature j with respect to y.
+
     """
     import xgboost
 
@@ -116,9 +138,10 @@ def xgboost_distances_r2(
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, random_state=random_state)
 
     # fit an XGBoost model on each of the features
-    test_preds = []
-    train_preds = []
-    for i in range(X.shape[1]):
+    num_features = X.shape[1]
+    train_preds_list = []
+    test_preds_list = []
+    for i in range(num_features):
         model = xgboost.XGBRegressor(
             subsample=subsample,
             n_estimators=max_estimators,
@@ -127,59 +150,71 @@ def xgboost_distances_r2(
             early_stopping_rounds=early_stopping_rounds,
         )
         model.fit(X_train[:, i : i + 1], y_train, eval_set=[(X_test[:, i : i + 1], y_test)], verbose=False)
-        train_preds.append(model.predict(X_train[:, i : i + 1]))
-        test_preds.append(model.predict(X_test[:, i : i + 1]))
-    train_preds = np.vstack(train_preds).T
-    test_preds = np.vstack(test_preds).T
+        train_preds_list.append(model.predict(X_train[:, i : i + 1]))
+        test_preds_list.append(model.predict(X_test[:, i : i + 1]))
+    train_preds = np.vstack(train_preds_list).T
+    test_preds = np.vstack(test_preds_list).T
 
     # fit XGBoost models to predict the outputs of other XGBoost models to see how redundant features are
-    dist = np.zeros((X.shape[1], X.shape[1]))
-    for i in show_progress(range(X.shape[1]), total=X.shape[1]):
-        for j in range(X.shape[1]):
-            if i == j:
-                dist[i, j] = 0
-                continue
+    dist = np.zeros((num_features, num_features))
+    for i, j in show_progress(
+        it.product(range(num_features), range(num_features)),
+        total=num_features * num_features,
+    ):
+        if i == j:
+            continue
 
-            # skip features that have not variance in their predictions (likely because the feature is a constant)
-            preds_var = np.var(test_preds[:, i])
-            if preds_var < 1e-4:
-                warnings.warn(
-                    f"No/low signal found from feature {i} (this is typically caused by constant or near-constant features)! Cluster distances can't be computed for it (so setting all distances to 1)."
-                )
-                r2 = 0
+        # skip features that have no variance in their predictions (likely because the feature is a constant)
+        preds_var: float = np.var(test_preds[:, i])
+        if preds_var < 1e-4:
+            warnings.warn(
+                f"No/low signal found from feature {i} (this is typically caused by constant or "
+                "near-constant features)! Cluster distances can't be computed for it (so setting "
+                "all redundancy distances to 1)."
+            )
+            r2 = 0
 
-            # fit the model
-            else:
-                model = xgboost.XGBRegressor(
-                    subsample=subsample,
-                    n_estimators=max_estimators,
-                    learning_rate=learning_rate,
-                    max_depth=1,
-                    early_stopping_rounds=early_stopping_rounds,
-                )
-                model.fit(
-                    X_train[:, j : j + 1],
-                    train_preds[:, i],
-                    eval_set=[(X_test[:, j : j + 1], test_preds[:, i])],
-                    verbose=False,
-                )
-                r2 = max(0, 1 - np.mean((test_preds[:, i] - model.predict(X_test[:, j : j + 1])) ** 2) / preds_var)
-            dist[i, j] = 1 - r2
+        # fit the model
+        else:
+            model = xgboost.XGBRegressor(
+                subsample=subsample,
+                n_estimators=max_estimators,
+                learning_rate=learning_rate,
+                max_depth=1,
+                early_stopping_rounds=early_stopping_rounds,
+            )
+            model.fit(
+                X_train[:, j : j + 1],
+                train_preds[:, i],
+                eval_set=[(X_test[:, j : j + 1], test_preds[:, i])],
+                verbose=False,
+            )
+            r2 = max(0, 1 - np.mean((test_preds[:, i] - model.predict(X_test[:, j : j + 1])) ** 2) / preds_var)
+        dist[i, j] = 1 - r2
 
     return dist
 
 
-def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
-    """Fit a hierarcical clustering model for features X relative to target variable y.
+def hclust(
+    X: _ArrayLike,
+    y: _ArrayLike | None = None,
+    linkage: Literal["single", "complete", "average"] = "single",
+    metric: str = "auto",
+    random_state: int | np.random.RandomState = 0,
+) -> np.ndarray:
+    """Fit a hierarchical clustering model for features X relative to target variable y.
 
-    For more information on clutering methods see:
+    For more information on clustering methods, see:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+
+    For more information on scipy distance metrics, see:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
 
     Parameters
     ----------
-    X: np.array
+    X: 2d-array-like
         Features to cluster
-    y: np.array | None
+    y: array-like or None
         Target variable
     linkage: str
         Defines the method to calculate the distance between clusters. Must be
@@ -187,15 +222,15 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
     metric: str
         Scipy distance metric or "xgboost_distances_r2".
 
-        * If "xgboost_distances_r2", estimate redundancy distances between
+        * If ``xgboost_distances_r2``, estimate redundancy distances between
           features X with respect to target variable y using
           :func:`shap.utils.xgboost_distances_r2`.
         * Otherwise, calculate distances between features using the given
           distance metric.
         * If ``auto`` (default), use ``xgboost_distances_r2`` if target variable
           is provided, or else ``cosine`` distance metric.
-    random_state: int
-        Numpy random state
+    random_state: int or np.random.RandomState
+        Numpy random state, defaults to 0.
 
     Returns
     -------
@@ -204,7 +239,15 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
 
     """
     if isinstance(X, pd.DataFrame):
-        X = X.values
+        X_arr = X.values
+    else:
+        X_arr = np.array(X)
+    if len(X_arr.shape) != 2:
+        raise DimensionError("X needs to be a 2-dimensional array-like object")
+
+    known_linkages = ("single", "complete", "average")
+    if linkage not in known_linkages:
+        raise ValueError(f"Unknown linkage type: {linkage}")
 
     if metric == "auto":
         if y is not None:
@@ -214,37 +257,29 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
 
     # build the distance matrix
     if metric == "xgboost_distances_r2":
-        dist_full = xgboost_distances_r2(X, y, random_state=random_state)
+        dist_full: np.ndarray = xgboost_distances_r2(X_arr, y, random_state=random_state)
 
         # build a condensed upper triangular version by taking the max distance from either direction
-        dist = []
-        for i in range(dist_full.shape[0]):
-            for j in range(i + 1, dist_full.shape[1]):
-                if i != j:
-                    if linkage == "single":
-                        dist.append(min(dist_full[i, j], dist_full[j, i]))
-                    elif linkage == "complete":
-                        dist.append(max(dist_full[i, j], dist_full[j, i]))
-                    elif linkage == "average":
-                        dist.append((dist_full[i, j] + dist_full[j, i]) / 2)
-                    else:
-                        raise Exception("Unsupported linkage type!")
-        dist = np.array(dist)
+        dist_list: list[float] = []
+        for i, j in it.combinations(range(len(dist_full)), 2):
+            if linkage == "single":
+                dist_list.append(min(dist_full[i, j], dist_full[j, i]))
+            elif linkage == "complete":
+                dist_list.append(max(dist_full[i, j], dist_full[j, i]))
+            elif linkage == "average":
+                dist_list.append((dist_full[i, j] + dist_full[j, i]) / 2)
+        dist = np.array(dist_list)
 
     else:
         if y is not None:
             warnings.warn(
-                "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is not based on label fitting!"
+                "Ignoring the y argument passed to shap.utils.hclust since the given clustering metric is "
+                "not based on label fitting!"
             )
-        if isinstance(X, pd.DataFrame):
-            bg_no_nan = X.values.copy()
-        else:
-            bg_no_nan = X.copy()
+        bg_no_nan: np.ndarray = X_arr.copy()
         for i in range(bg_no_nan.shape[1]):
             np.nan_to_num(bg_no_nan[:, i], nan=np.nanmean(bg_no_nan[:, i]), copy=False)
         dist = scipy.spatial.distance.pdist(bg_no_nan.T + np.random.randn(*bg_no_nan.T.shape) * 1e-8, metric=metric)
-    # else:
-    #     raise Exception("Unknown metric: " + str(metric))
 
     # build linkage
     if linkage == "single":
@@ -253,5 +288,3 @@ def hclust(X, y=None, linkage="single", metric="auto", random_state=0):
         return scipy.cluster.hierarchy.complete(dist)
     elif linkage == "average":
         return scipy.cluster.hierarchy.average(dist)
-    else:
-        raise Exception("Unknown linkage: " + str(linkage))

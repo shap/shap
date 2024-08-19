@@ -1,6 +1,6 @@
 """Visualize cumulative SHAP values."""
 
-from typing import Optional, Union
+from __future__ import annotations
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as pl
@@ -94,7 +94,7 @@ def __decision_plot_matplotlib(
 
     # if there is a single observation and feature values are supplied, print them.
     if (cumsum.shape[0] == 1) and (features is not None):
-        renderer = pl.gcf().canvas.get_renderer()
+        renderer = pl.gcf().canvas.get_renderer()  # type: ignore
         inverter = pl.gca().transData.inverted()
         y_pos = y_pos + 0.5
         for i in range(feature_display_count):
@@ -141,12 +141,12 @@ def __decision_plot_matplotlib(
 
         # place the colorbar
         pl.ylim(0, feature_display_count + 0.25)
-        ax_cb = ax.inset_axes([xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25], transform=ax.transData)
+        ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
         cb = pl.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(alpha)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
 
         # re-activate the main axis for drawing.
         pl.sca(ax)
@@ -210,9 +210,9 @@ class DecisionPlotResult:
 
 
 def decision(
-    base_value: Union[float, np.ndarray],
+    base_value: float | np.ndarray,
     shap_values: np.ndarray,
-    features: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, list]] = None,
+    features: np.ndarray | pd.Series | pd.DataFrame | list | None = None,
     feature_names=None,
     feature_order="importance",
     feature_display_range=None,
@@ -232,7 +232,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> Optional[DecisionPlotResult]:
+) -> DecisionPlotResult | None:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -353,12 +353,12 @@ def decision(
 
     """
     # code taken from force_plot. auto unwrap the base_value
-    if type(base_value) == np.ndarray and len(base_value) == 1:
+    if isinstance(base_value, np.ndarray) and len(base_value) == 1:
         base_value = base_value[0]
 
     if isinstance(base_value, list) or isinstance(shap_values, list):
         raise TypeError(
-            "Looks like multi output. Try base_value[i] and shap_values[i], " "or use shap.multioutput_decision_plot()."
+            "Looks like multi output. Try base_value[i] and shap_values[i], or use shap.multioutput_decision_plot()."
         )
 
     # validate shap_values
@@ -414,7 +414,7 @@ def decision(
         a[:, feature_count:] = shap_values[:, idx_triu[0], idx_triu[1]] * 2
         shap_values = a
         # names
-        b: list[Optional[str]] = [None] * shap_values.shape[1]
+        b: list[str | None] = [None] * shap_values.shape[1]
         b[:feature_count] = feature_names
         for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
             b[i] = f"{feature_names[row]} *\n{feature_names[col]}"
@@ -523,8 +523,8 @@ def decision(
             # Expand [0, 1] limits a little for a visual margin
             xlim = (-0.02, 1.02)
     elif create_xlim:
-        xmin = np.min((cumsum.min(), base_value))
-        xmax = np.max((cumsum.max(), base_value))
+        xmin: float = min((cumsum.min(), base_value))
+        xmax: float = max((cumsum.max(), base_value))
         # create a symmetric axis around base_value
         n, m = (base_value - xmin), (xmax - base_value)
         if n > m:
@@ -569,7 +569,7 @@ def decision(
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
 
-def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union[DecisionPlotResult, None]:
+def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | None:
     """Decision plot for multioutput models.
 
     Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values

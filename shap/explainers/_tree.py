@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import io
 import json
 import os
 import time
 import warnings
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -50,8 +51,8 @@ feature_perturbation_codes = {
 
 
 def _check_xgboost_version(v: str):
-    if version.parse(v) < version.parse("1.6"):
-        raise RuntimeError(f"SHAP requires XGBoost >= v1.6 , but found version {v}. Please upgrade" " XGBoost.")
+    if version.parse(v) < version.parse("1.6"):  # pragma: no cover
+        raise RuntimeError(f"SHAP requires XGBoost >= v1.6 , but found version {v}. Please upgrade XGBoost.")
 
 
 def _xgboost_n_iterations(tree_limit: int, num_stacked_models: int) -> int:
@@ -473,7 +474,7 @@ class TreeExplainer(Explainer):
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
 
-                if type(X) != catboost.Pool:
+                if not isinstance(X, catboost.Pool):
                     X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
                 phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapValues")
 
@@ -649,7 +650,7 @@ class TreeExplainer(Explainer):
             assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
             import catboost
 
-            if type(X) != catboost.Pool:
+            if not isinstance(X, catboost.Pool):
                 X = catboost.Pool(X, cat_features=self.model.cat_feature_indices)
             phi = self.model.original_model.get_feature_importance(data=X, fstr_type="ShapInteractionValues")
             # note we pull off the last column and keep it as our expected_value
@@ -1421,7 +1422,7 @@ class TreeEnsemble:
             elif self.objective == "binary_crossentropy":
                 transform = "logistic_nlogloss"
             else:
-                emsg = 'model_output = "log_loss" is not yet supported when model.objective = ' f'"{self.objective}"!'
+                emsg = f'model_output = "log_loss" is not yet supported when model.objective = "{self.objective}"!'
                 raise NotImplementedError(emsg)
         else:
             emsg = (
@@ -1977,7 +1978,7 @@ class XGBTreeModelLoader:
         if feature_types is not None:
             cat_feature_indices: np.ndarray = np.where(np.asarray(feature_types) == "c")[0]
             if len(cat_feature_indices) == 0:
-                self.cat_feature_indices: Optional[np.ndarray] = None
+                self.cat_feature_indices: np.ndarray | None = None
             else:
                 self.cat_feature_indices = cat_feature_indices
         else:

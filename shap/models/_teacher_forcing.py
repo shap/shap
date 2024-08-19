@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import inspect
+from typing import Any
 
 import numpy as np
 import scipy.special
@@ -82,8 +85,8 @@ class TeacherForcing(Model):
                 self.similarity_tokenizer.pad_token = self.similarity_tokenizer.eos_token
             self.model_agnostic = True
         # initializing target which is the target sentence/ids for every new row of explanation
-        self.output = None
-        self.output_names = None
+        self.output: np.ndarray | None = None
+        self.output_names: list[Any] | None = None
 
         self.similarity_model_type = None
         if safe_isinstance(self.similarity_model, "transformers.PreTrainedModel"):
@@ -132,7 +135,7 @@ class TeacherForcing(Model):
             start_batch_idx += self.batch_size
         return output_batch
 
-    def update_output_names(self, output):
+    def update_output_names(self, output: np.ndarray):
         """The function updates output tokens.
 
         It mimics the caching mechanism to update the output tokens for every
@@ -244,6 +247,7 @@ class TeacherForcing(Model):
 
         """
         # set output ids for which scores are to be extracted
+        assert self.output is not None
         if self.output.dtype.type is np.str_:
             output_ids = self.get_outputs(self.output)[0]
         else:

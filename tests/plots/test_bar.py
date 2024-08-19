@@ -30,7 +30,7 @@ def test_input_shap_values_type(unsupported_inputs):
 def test_input_shap_values_type_2():
     """Check that a DimensionError is raised if the cohort Explanation objects have different shape."""
     rs = np.random.RandomState(42)
-    emsg = "When passing several Explanation objects, they must all have " "the same number of feature columns!"
+    emsg = "When passing several Explanation objects, they must all have the same number of feature columns!"
     with pytest.raises(DimensionError, match=emsg):
         shap.plots.bar(
             {
@@ -48,7 +48,7 @@ def test_input_shap_values_type_2():
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar(explainer):
+def test_bar(explainer):
     """Check that the bar plot is unchanged."""
     shap_values = explainer(explainer.data)
     fig = plt.figure()
@@ -58,7 +58,7 @@ def test_simple_bar(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar_with_cohorts_dict():
+def test_bar_with_cohorts_dict():
     """Ensure that bar plots supports dictionary of Explanations as input."""
     rs = np.random.RandomState(42)
     fig = plt.figure()
@@ -80,7 +80,7 @@ def test_simple_bar_with_cohorts_dict():
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar_local_feature_importance(explainer):
+def test_bar_local_feature_importance(explainer):
     """Bar plot with single row of SHAP values"""
     shap_values = explainer(explainer.data)
     fig = plt.figure()
@@ -90,7 +90,7 @@ def test_simple_bar_local_feature_importance(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar_with_clustering(explainer):
+def test_bar_with_clustering(explainer):
     """Bar plot with clustering"""
     shap_values = explainer(explainer.data)
     clustering = shap.utils.hclust(explainer.data, metric="cosine")

@@ -55,6 +55,7 @@ docs = [
   "sphinx_github_changelog==1.2.1",
   "myst-parser==2.0.0",
   "requests",
+  "ipywidgets",  # For tqdm in notebooks
 ]
 test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
 test = [
@@ -77,6 +78,9 @@ test = [
   "tensorflow",
   "sentencepiece",
   "opencv-python",
+  # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
+  # See GH #3707 and #3768
+  "numpy<2.0; python_version < '3.12'",
 ]
 
 test_notebooks = [
@@ -109,9 +113,14 @@ plugins = ["numpy.typing.mypy_plugin"]
 module = [
   "shap.explainers.*",
   "shap.maskers.*",
-  "shap.models.*",
-  "shap.plots.*",
-  "shap.utils.*",
+  "shap.plots._beeswarm",
+  "shap.plots._benchmark",
+  "shap.plots._force_matplotlib",
+  "shap.plots._force",
+  "shap.plots._heatmap",
+  "shap.plots._scatter.*",
+  "shap.plots._text",
+  "shap.plots._waterfall",
 ]
 check_untyped_defs = false
 
@@ -181,12 +190,15 @@ line-length = 120
 select = [
   "F",  # pyflakes
   "I",  # isort
+  "ISC",  # string literal concatenation.
   "UP",  # pyupgrade
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
   "NPY",  # Numpy
   "SIM101",  # flake8-simplify
+  "FA",  # future annotations
+  "TCH",  # Move type only imports to type-checking condition.
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -214,7 +226,6 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
-"shap/plots/colors/_colorconv.py" = ["ALL"]
 
 # Ignore notebooks in user_studies, which are not maintained
 "docs/user_studies/*.ipynb" = ["ALL"]

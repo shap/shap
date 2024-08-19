@@ -4,8 +4,72 @@ import pytest
 import shap
 
 
+@pytest.mark.mpl_image_compare
+def test_scatter_single(explainer):
+    explanation = explainer(explainer.data)
+    shap.plots.scatter(explanation[:, "Age"], show=False)
+    fig = plt.gcf()
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_scatter_interaction(explainer):
+    explanation = explainer(explainer.data)
+    shap.plots.scatter(explanation[:, "Age"], color=explanation[:, "Workclass"], show=False)
+    fig = plt.gcf()
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_scatter_dotchain(explainer):
+    explanation = explainer(explainer.data)
+    shap.plots.scatter(explanation[:, explanation.abs.mean(0).argsort[-2]], show=False)
+    fig = plt.gcf()
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_scatter_multiple_cols_overlay(explainer):
+    explanation = explainer(explainer.data)
+    shap_values = explanation[:, ["Age", "Workclass"]]
+    overlay = {
+        "foo": [
+            ([20, 40, 70], [0, 1, 2]),
+            ([1, 4, 6], [2, 1, 0]),
+        ],
+    }
+    shap.plots.scatter(shap_values, overlay=overlay, show=False)
+    fig = plt.gcf()
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_scatter_custom(explainer):
+    # Test with custom x/y limits, alpha and colormap
+    explanation = explainer(explainer.data)
+    age = explanation[:, "Age"]
+    shap.plots.scatter(
+        age,
+        color=explanation[:, "Workclass"],
+        xmin=age.percentile(20),
+        xmax=age.percentile(80),
+        ymin=age.percentile(10),
+        ymax=age.percentile(90),
+        alpha=0.5,
+        cmap=plt.get_cmap("cool"),
+        show=False,
+    )
+    fig = plt.gcf()
+    plt.tight_layout()
+    return fig
+
+
 @pytest.fixture()
-def shap_values():
+def categorical_explanation():
     """Adopted from explainer in conftest.py but using a categorical input."""
     xgboost = pytest.importorskip("xgboost")
     # get a dataset on income prediction
@@ -40,10 +104,9 @@ def shap_values():
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
-def test_scatter(shap_values):
-    """Test the scatter plot."""
-
+def test_scatter_categorical(categorical_explanation):
+    """Test the scatter plot with categorical data"""
     fig, ax = plt.subplots()
-    shap.plots.scatter(shap_values[:, "sex"], ax=ax)
+    shap.plots.scatter(categorical_explanation[:, "sex"], ax=ax, show=False)
     plt.tight_layout()
     return fig

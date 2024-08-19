@@ -91,13 +91,13 @@ def violin(
         #     out_names = shap_exp.output_names
 
     if isinstance(shap_values, list):
-        emsg = "Violin plots don't support multi-output explanations! " "Use 'shap.plots.bar` instead."
+        emsg = "Violin plots don't support multi-output explanations! Use 'shap.plots.bar` instead."
         raise TypeError(emsg)
 
     if plot_type is None:
         plot_type = "violin"
     if plot_type not in {"violin", "layered_violin"}:
-        emsg = "plot_type: Expected one of ('violin','layered_violin'), received " f"{plot_type} instead."
+        emsg = f"plot_type: Expected one of ('violin','layered_violin'), received {plot_type} instead."
         raise ValueError(emsg)
 
     assert len(shap_values.shape) != 1, "Violin summary plots need a matrix of shap_values, not a vector."
@@ -125,7 +125,7 @@ def violin(
     num_features = shap_values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape " "of the provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             shape_msg += (
                 " Perhaps the extra column in the shap_values matrix is the "
@@ -256,7 +256,7 @@ def violin(
                 showmedians=False,
             )
 
-            for pc in parts["bodies"]:
+            for pc in parts["bodies"]:  # type: ignore
                 pc.set_facecolor(color)
                 pc.set_edgecolor("none")
                 pc.set_alpha(alpha)
@@ -320,7 +320,7 @@ def violin(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.cm.datad else color
+                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
@@ -330,7 +330,7 @@ def violin(
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.cm.datad)
+        and (plot_type != "layered_violin" or color in pl.colormaps)
     ):
         import matplotlib.cm as cm
 
@@ -341,7 +341,7 @@ def violin(
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
         # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
         # cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()

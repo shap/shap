@@ -22,7 +22,7 @@ def convert_ordering(ordering, shap_values):
     if issubclass(type(ordering), OpChain):
         ordering = ordering.apply(Explanation(shap_values))
     if issubclass(type(ordering), Explanation):
-        if "argsort" in [op["name"] for op in ordering.op_history]:
+        if any(op.name == "argsort" for op in ordering.op_history):
             ordering = ordering.values
         else:
             ordering = ordering.argsort.flip.values
@@ -128,8 +128,8 @@ def dendrogram_coords(leaf_positions, partition_tree):
     Note that scipy can compute these coords as well, but it does not allow you to easily specify
     a specific leaf order, hence this reimplementation.
     """
-    xout = []
-    yout = []
+    xout: list[list[float]] = []
+    yout: list[list[float]] = []
     _dendrogram_coords_rec(partition_tree.shape[0] - 1, leaf_positions, partition_tree, xout, yout)
 
     return np.array(xout), np.array(yout)

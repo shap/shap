@@ -1,13 +1,11 @@
 from contextlib import nullcontext as does_not_raise
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from pytest import param
 
-matplotlib.use("Agg")
-import shap  # noqa: E402
+import shap
 
 
 @pytest.mark.parametrize(
@@ -90,7 +88,7 @@ def test_random_force_plot_mpl_text_rotation_with_data():
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
-def test_random_force_plot_negative_sign():
+def test_force_plot_negative_sign():
     np.random.seed(0)
     base = 100
     contribution = np.r_[-np.random.rand(5)]
@@ -107,7 +105,7 @@ def test_random_force_plot_negative_sign():
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
-def test_random_force_plot_positive_sign():
+def test_force_plot_positive_sign():
     np.random.seed(0)
     base = 100
     contribution = np.r_[np.random.rand(5)]

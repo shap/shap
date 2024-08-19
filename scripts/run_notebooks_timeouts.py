@@ -37,7 +37,6 @@ allow_to_fail = [
 allow_to_timeout = [
     Path("api_examples/plots/beeswarm.ipynb"),
     Path("api_examples/plots/image.ipynb"),
-    Path("api_examples/plots/scatter.ipynb"),
     Path("api_examples/plots/text.ipynb"),
     Path("api_examples/plots/waterfall.ipynb"),
     Path("benchmarks/image/Image Multiclass Classification Benchmark Demo.ipynb"),
