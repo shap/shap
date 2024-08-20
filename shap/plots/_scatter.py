@@ -92,13 +92,13 @@ def scatter(
         show the density of the data points when using a large dataset.
 
     xmin, xmax, ymin, ymax : float, string, aggregated Explanation or None
-        Custom axis limits.
+        Desired axis limits. Can be a float to specify a fixed limit.
 
-        It can be a string of the format `"percentile(float)"` to denote that
+        It can be a string of the format ``"percentile(float)"`` to denote that
         percentile of the feature's value.
 
         It can also be an aggregated column of a single column of an Explanation,
-        such as `explanation[:, "feature_name"].percentile(20)`.
+        such as ``explanation[:, "feature_name"].percentile(20)``.
 
     overlay: dict
         Optional dictionary of curves to overlay as line plots.
@@ -121,7 +121,7 @@ def scatter(
     Returns
     -------
     ax : matplotlib Axes object
-        Only returned if show=False.
+        Only returned if ``show=False``.
 
     Examples
     --------
