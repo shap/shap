@@ -92,6 +92,7 @@ def categorical_explanation():
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_scatter_categorical(categorical_explanation):
     """Test the scatter plot with categorical data. See GH #3135"""
-    shap.plots.scatter(categorical_explanation[:, "sex"], show=False)
+    fig, ax = plt.subplots()
+    shap.plots.scatter(categorical_explanation[:, "sex"], ax=ax, show=False)
     plt.tight_layout()
-    return plt.gcf()
+    return fig
