@@ -227,31 +227,8 @@ def scatter(
     ind = convert_name(ind, shap_values_arr, feature_names)
 
     # pick jitter for categorical features
-    vals = np.sort(np.unique(features[:, ind]))
     if x_jitter == "auto":
-        min_dist = 1
-        for i in range(1, len(vals)):
-            # If vals contains numbers,
-            # check for min_dist based on difference in vals
-            # Otherwise, min_dist remains set arbitrarily at 1
-            try:
-                d = vals[i] - vals[i - 1]
-                if d > 1e-8 and d < min_dist:
-                    min_dist = d
-            except TypeError:
-                pass
-        num_points_per_value = len(features[:, ind]) / len(vals)
-        if num_points_per_value < 10:
-            # categorical = False
-            x_jitter = 0
-        elif num_points_per_value < 100:
-            # categorical = True
-            if x_jitter == "auto":
-                x_jitter = min_dist * 0.1
-        else:
-            # categorical = True
-            if x_jitter == "auto":
-                x_jitter = min_dist * 0.2
+        x_jitter = _suggest_x_jitter(features[:, ind])
 
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
@@ -513,6 +490,30 @@ def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values:
     if ax_max is None:
         ax_max = float(nan_max + buffer)
     return ax_min, ax_max
+
+
+def _suggest_x_jitter(values: np.ndarray) -> float:
+    """Suggest a suitable x_jitter value based on the unique values in the feature"""
+    unique_vals = np.sort(np.unique(values))
+    try:
+        # Identify the smallest difference between uniqu evalues
+        diffs = np.diff(unique_vals)
+        min_dist = np.min(diffs[diffs > 1e-8])
+    except TypeError:
+        # If unique_vals contains non-numeric values, set arbitrarily at 1
+        min_dist = 1
+
+    num_points_per_value = len(values) / len(unique_vals)
+    if num_points_per_value < 10:
+        # categorical = False
+        x_jitter = 0
+    elif num_points_per_value < 100:
+        # categorical = True
+        x_jitter = min_dist * 0.1
+    else:
+        # categorical = True
+        x_jitter = min_dist * 0.2
+    return x_jitter
 
 
 def dependence_legacy(
