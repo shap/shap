@@ -32,7 +32,7 @@ from ..utils._legacy import (
 )
 from ._explainer import Explainer
 
-log = logging.getLogger('shap')
+log = logging.getLogger("shap")
 
 
 class KernelExplainer(Explainer):
@@ -78,12 +78,12 @@ class KernelExplainer(Explainer):
     Examples
     --------
     See :ref:`Kernel Explainer Examples <kernel_explainer_examples>`.
+
     """
 
     def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
-
         if feature_names is not None:
-            self.data_feature_names=feature_names
+            self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
             self.data_feature_names = list(data.columns)
 
@@ -105,9 +105,13 @@ class KernelExplainer(Explainer):
 
         # warn users about large background data sets
         if len(self.data.weights) > 100:
-            log.warning("Using " + str(len(self.data.weights)) + " background data samples could cause " +
-                        "slower run times. Consider using shap.sample(data, K) or shap.kmeans(data, K) to " +
-                        "summarize the background as K samples.")
+            log.warning(
+                "Using "
+                + str(len(self.data.weights))
+                + " background data samples could cause "
+                + "slower run times. Consider using shap.sample(data, K) or shap.kmeans(data, K) to "
+                + "summarize the background as K samples."
+            )
 
         # init our parameters
         self.N = self.data.data.shape[0]
@@ -121,6 +125,8 @@ class KernelExplainer(Explainer):
             model_null = np.squeeze(model_null.values)
         if safe_isinstance(model_null, "tensorflow.python.framework.ops.EagerTensor"):
             model_null = model_null.numpy()
+        elif safe_isinstance(model_null, "tensorflow.python.framework.ops.SymbolicTensor"):
+            model_null = self._convert_symbolic_tensor(model_null)
         self.fnull = np.sum((model_null.T * self.data.weights).T, 0)
         self.expected_value = self.linkfv(self.fnull)
 
@@ -134,8 +140,22 @@ class KernelExplainer(Explainer):
         else:
             self.D = self.fnull.shape[0]
 
-    def __call__(self, X):
+    @staticmethod
+    def _convert_symbolic_tensor(symbolic_tensor) -> np.ndarray:
+        import tensorflow as tf
 
+        if tf.__version__ >= "2.0.0":
+            with tf.compat.v1.Session() as sess:
+                sess.run(tf.compat.v1.global_variables_initializer())
+                tensor_as_np_array = sess.run(symbolic_tensor)
+        else:
+            # this is untested
+            with tf.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                tensor_as_np_array = sess.run(symbolic_tensor)
+        return tensor_as_np_array
+
+    def __call__(self, X, l1_reg="auto", silent=False):
         start_time = time.time()
 
         if isinstance(X, pd.DataFrame):
@@ -143,13 +163,13 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
-        v = self.shap_values(X)
+        v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
-            v = np.stack(v, axis=-1) # put outputs at the end
+            v = np.stack(v, axis=-1)  # put outputs at the end
 
         # the explanation object expects an expected value for each row
         if hasattr(self.expected_value, "__len__"):
-            ev_tiled = np.tile(self.expected_value, (v.shape[0],1))
+            ev_tiled = np.tile(self.expected_value, (v.shape[0], 1))
         else:
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
@@ -162,7 +182,7 @@ class KernelExplainer(Explainer):
         )
 
     def shap_values(self, X, **kwargs):
-        """ Estimate the SHAP values for a set of samples.
+        """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
@@ -175,27 +195,45 @@ class KernelExplainer(Explainer):
             `nsamples = 2 * X.shape[1] + 2048`.
 
         l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
-            The l1 regularization to use for feature selection (the estimation procedure is based on
-            a debiased lasso). The auto option currently uses "aic" when less that 20% of the possible sample
-            space is enumerated, otherwise it uses no regularization. THE BEHAVIOR OF "auto" WILL CHANGE
-            in a future version to be based on num_features instead of AIC.
-            The "aic" and "bic" options use the AIC and BIC rules for regularization.
-            Using "num_features(int)" selects a fix number of top features. Passing a float directly sets the
-            "alpha" parameter of the sklearn.linear_model.Lasso model used for feature selection.
+            The l1 regularization to use for feature selection. The estimation
+            procedure is based on a debiased lasso.
+
+            * "num_features(int)" selects a fixed number of top features.
+            * "aic" and "bic" options use the AIC and BIC rules for regularization.
+            * Passing a float directly sets the "alpha" parameter of the
+              ``sklearn.linear_model.Lasso`` model used for feature selection.
+            * "auto" (default for now but deprecated): uses "aic" when less than
+              20% of the possible sample space is enumerated, otherwise it uses
+              no regularization.
+
+            Note: The default behaviour will change in a future version to be ``"num_features(10)"``.
+            Pass this value explicitly to silence the DeprecationWarning.
+
+        silent: bool
+            If True, hide tqdm progress bar. Default False.
 
         gc_collect : bool
            Run garbage collection after each explanation round. Sometime needed for memory intensive explanations (default False).
 
         Returns
         -------
-        array or list
-            For models with a single output this returns a matrix of SHAP values
-            (# samples x # features). Each row sums to the difference between the model output for that
-            sample and the expected value of the model output (which is stored as expected_value
-            attribute of the explainer). For models with vector outputs this returns a list
-            of such matrices, one for each output.
-        """
+        np.array or list
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
 
+            Each row sums to the difference between the model output for that
+            sample and the expected value of the model output (which is stored as the ``expected_value``
+            attribute of the explainer).
+
+            The type and shape of the return value depends on the number of model inputs and outputs:
+
+            * one input, one output: array of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: array of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs: list of arrays of corresponding shape above.
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed from list to np.ndarray.
+
+        """
         # convert dataframes
         if isinstance(X, pd.Series):
             X = X.values
@@ -222,25 +260,17 @@ class KernelExplainer(Explainer):
 
             # vector-output
             s = explanation.shape
-            if len(s) == 2:
-                outs = [np.zeros(s[0]) for j in range(s[1])]
-                for j in range(s[1]):
-                    outs[j] = explanation[:, j]
-                return outs
-
-            # single-output
-            else:
-                out = np.zeros(s[0])
-                out[:] = explanation
-                return out
+            out = np.zeros(s)
+            out[:] = explanation
+            return out
 
         # explain the whole dataset
         elif len(X.shape) == 2:
             explanations = []
             for i in tqdm(range(X.shape[0]), disable=kwargs.get("silent", False)):
-                data = X[i:i + 1, :]
+                data = X[i : i + 1, :]
                 if self.keep_index:
-                    data = convert_to_instance_with_index(data, column_name, index_value[i:i + 1], index_name)
+                    data = convert_to_instance_with_index(data, column_name, index_value[i : i + 1], index_name)
                 explanations.append(self.explain(data, **kwargs))
                 if kwargs.get("gc_collect", False):
                     gc.collect()
@@ -252,6 +282,7 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
+                outs = np.stack(outs, axis=-1)
                 return outs
 
             # single-output
@@ -294,6 +325,8 @@ class KernelExplainer(Explainer):
             model_out = self.model.f(instance.x)
         if isinstance(model_out, (pd.DataFrame, pd.Series)):
             model_out = model_out.values
+        elif safe_isinstance(model_out, "tensorflow.python.framework.ops.SymbolicTensor"):
+            model_out = self._convert_symbolic_tensor(model_out)
         self.fx = model_out[0]
 
         if not self.vector_out:
@@ -310,7 +343,7 @@ class KernelExplainer(Explainer):
             phi_var = np.zeros((self.data.groups_size, self.D))
             diff = self.link.f(self.fx) - self.link.f(self.fnull)
             for d in range(self.D):
-                phi[self.varyingInds[0],d] = diff[d]
+                phi[self.varyingInds[0], d] = diff[d]
 
         # if more than one feature varies then we have to do real work
         else:
@@ -322,9 +355,9 @@ class KernelExplainer(Explainer):
                 self.nsamples = 2 * self.M + 2**11
 
             # if we have enough samples to enumerate all subsets then ignore the unneeded samples
-            self.max_samples = 2 ** 30
+            self.max_samples = 2**30
             if self.M <= 30:
-                self.max_samples = 2 ** self.M - 2
+                self.max_samples = 2**self.M - 2
                 if self.nsamples > self.max_samples:
                     self.nsamples = self.max_samples
 
@@ -346,21 +379,24 @@ class KernelExplainer(Explainer):
             # given nsamples*remaining_weight_vector[subset_size]
             num_full_subsets = 0
             num_samples_left = self.nsamples
-            group_inds = np.arange(self.M, dtype='int64')
+            group_inds = np.arange(self.M, dtype="int64")
             mask = np.zeros(self.M)
             remaining_weight_vector = copy.copy(weight_vector)
             for subset_size in range(1, num_subset_sizes + 1):
-
                 # determine how many subsets (and their complements) are of the current size
                 nsubsets = binom(self.M, subset_size)
                 if subset_size <= num_paired_subset_sizes:
                     nsubsets *= 2
                 log.debug(f"{subset_size = }")
                 log.debug(f"{nsubsets = }")
-                log.debug("self.nsamples*weight_vector[subset_size-1] = {}".format(
-                    num_samples_left * remaining_weight_vector[subset_size - 1]))
-                log.debug("self.nsamples*weight_vector[subset_size-1]/nsubsets = {}".format(
-                    num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets))
+                log.debug(
+                    "self.nsamples*weight_vector[subset_size-1] = "
+                    f"{num_samples_left * remaining_weight_vector[subset_size - 1]}"
+                )
+                log.debug(
+                    "self.nsamples*weight_vector[subset_size-1]/nsubsets = "
+                    f"{num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets}"
+                )
 
                 # see if we have enough samples to enumerate all subsets of this size
                 if num_samples_left * remaining_weight_vector[subset_size - 1] / nsubsets >= 1.0 - 1e-8:
@@ -369,7 +405,7 @@ class KernelExplainer(Explainer):
 
                     # rescale what's left of the remaining weight vector to sum to 1
                     if remaining_weight_vector[subset_size - 1] < 1.0:
-                        remaining_weight_vector /= (1 - remaining_weight_vector[subset_size - 1])
+                        remaining_weight_vector /= 1 - remaining_weight_vector[subset_size - 1]
 
                     # add all the samples of the current subset size
                     w = weight_vector[subset_size - 1] / binom(self.M, subset_size)
@@ -377,7 +413,7 @@ class KernelExplainer(Explainer):
                         w /= 2.0
                     for inds in itertools.combinations(group_inds, subset_size):
                         mask[:] = 0.0
-                        mask[np.array(inds, dtype='int64')] = 1.0
+                        mask[np.array(inds, dtype="int64")] = 1.0
                         self.addsample(instance.x, mask, w)
                         if subset_size <= num_paired_subset_sizes:
                             mask[:] = np.abs(mask - 1)
@@ -392,7 +428,7 @@ class KernelExplainer(Explainer):
             log.debug(f"{samples_left = }")
             if num_full_subsets != num_subset_sizes:
                 remaining_weight_vector = copy.copy(weight_vector)
-                remaining_weight_vector[:num_paired_subset_sizes] /= 2 # because we draw two samples each below
+                remaining_weight_vector[:num_paired_subset_sizes] /= 2  # because we draw two samples each below
                 remaining_weight_vector = remaining_weight_vector[num_full_subsets:]
                 remaining_weight_vector /= np.sum(remaining_weight_vector)
                 log.info(f"{remaining_weight_vector = }")
@@ -402,7 +438,7 @@ class KernelExplainer(Explainer):
                 used_masks = {}
                 while samples_left > 0 and ind_set_pos < len(ind_set):
                     mask.fill(0.0)
-                    ind = ind_set[ind_set_pos] # we call np.random.choice once to save time and then just read it here
+                    ind = ind_set[ind_set_pos]  # we call np.random.choice once to save time and then just read it here
                     ind_set_pos += 1
                     subset_size = ind + num_full_subsets + 1
                     mask[np.random.permutation(self.M)[:subset_size]] = 1.0
@@ -466,7 +502,7 @@ class KernelExplainer(Explainer):
     def varying_groups(self, x):
         if not scipy.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
-            for i in range(0, self.data.groups_size):
+            for i in range(self.data.groups_size):
                 inds = self.data.groups[i]
                 x_group = x[0, inds]
                 if scipy.sparse.issparse(x_group):
@@ -484,7 +520,7 @@ class KernelExplainer(Explainer):
             # if both background and evaluation are zero, the column does not vary
             varying_indices = np.unique(np.union1d(self.data.data.nonzero()[1], x.nonzero()[1]))
             remove_unvarying_indices = []
-            for i in range(0, len(varying_indices)):
+            for i in range(len(varying_indices)):
                 varying_index = varying_indices[i]
                 # now verify the nonzero values do vary
                 data_rows = self.data.data[:, [varying_index]]
@@ -496,8 +532,9 @@ class KernelExplainer(Explainer):
                         background_data_rows = background_data_rows.toarray()
                     num_mismatches = np.sum(np.abs(background_data_rows - x[0, varying_index]) > 1e-7)
                     # Note: If feature column non-zero but some background zero, can't remove index
-                    if num_mismatches == 0 and not \
-                        (np.abs(x[0, [varying_index]][0, 0]) > 1e-7 and len(nonzero_rows) < data_rows.shape[0]):
+                    if num_mismatches == 0 and not (
+                        np.abs(x[0, [varying_index]][0, 0]) > 1e-7 and len(nonzero_rows) < data_rows.shape[0]
+                    ):
                         remove_unvarying_indices.append(i)
             mask = np.ones(len(varying_indices), dtype=bool)
             mask[remove_unvarying_indices] = False
@@ -522,7 +559,7 @@ class KernelExplainer(Explainer):
                 last_indptr_idx = indptr[len(indptr) - 1]
                 indptr_wo_last = indptr[:-1]
                 new_indptrs = []
-                for i in range(0, self.nsamples - 1):
+                for i in range(self.nsamples - 1):
                     new_indptrs.append(indptr_wo_last + (i * last_indptr_idx))
                 new_indptrs.append(indptr + ((self.nsamples - 1) * last_indptr_idx))
                 new_indptr = np.concatenate(new_indptrs)
@@ -548,14 +585,14 @@ class KernelExplainer(Explainer):
             for j in range(self.M):
                 for k in self.varyingFeatureGroups[j]:
                     if m[j] == 1.0:
-                        self.synth_data[offset:offset+self.N, k] = x[0, k]
+                        self.synth_data[offset : offset + self.N, k] = x[0, k]
         else:
             # for non-jagged numpy array we can significantly boost performance
             mask = m == 1.0
             groups = self.varyingFeatureGroups[mask]
             if len(groups.shape) == 2:
                 for group in groups:
-                    self.synth_data[offset:offset+self.N, group] = x[0, group]
+                    self.synth_data[offset : offset + self.N, group] = x[0, group]
             else:
                 # further performance optimization in case each group has a single feature
                 evaluation_data = x[0, groups]
@@ -563,16 +600,16 @@ class KernelExplainer(Explainer):
                 # is all sparse, make evaluation data dense
                 if scipy.sparse.issparse(x) and not scipy.sparse.issparse(self.synth_data):
                     evaluation_data = evaluation_data.toarray()
-                self.synth_data[offset:offset+self.N, groups] = evaluation_data
+                self.synth_data[offset : offset + self.N, groups] = evaluation_data
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1
 
     def run(self):
         num_to_run = self.nsamplesAdded * self.N - self.nsamplesRun * self.N
-        data = self.synth_data[self.nsamplesRun*self.N:self.nsamplesAdded*self.N,:]
+        data = self.synth_data[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :]
         if self.keep_index:
-            index = self.synth_data_index[self.nsamplesRun*self.N:self.nsamplesAdded*self.N]
+            index = self.synth_data_index[self.nsamplesRun * self.N : self.nsamplesAdded * self.N]
             index = pd.DataFrame(index, columns=[self.data.index_name])
             data = pd.DataFrame(data, columns=self.data.group_names)
             data = pd.concat([index, data], axis=1).set_index(self.data.index_name)
@@ -581,12 +618,15 @@ class KernelExplainer(Explainer):
         modelOut = self.model.f(data)
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values
-        self.y[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
+        elif safe_isinstance(modelOut, "tensorflow.python.framework.ops.SymbolicTensor"):
+            modelOut = self._convert_symbolic_tensor(modelOut)
+
+        self.y[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
         for i in range(self.nsamplesRun, self.nsamplesAdded):
             eyVal = np.zeros(self.D)
-            for j in range(0, self.N):
+            for j in range(self.N):
                 eyVal += self.y[i * self.N + j, :] * self.data.weights[j]
 
             self.ey[i, :] = eyVal
@@ -599,11 +639,13 @@ class KernelExplainer(Explainer):
         # do feature selection if we have not well enumerated the space
         nonzero_inds = np.arange(self.M)
         log.debug(f"{fraction_evaluated = }")
-        # if self.l1_reg == "auto":
-        #     warnings.warn(
-        #         "l1_reg=\"auto\" is deprecated and in the next version (v0.29) the behavior will change from a " \
-        #         "conditional use of AIC to simply \"num_features(10)\"!"
-        #     )
+        if self.l1_reg == "auto":
+            warnings.warn(
+                "l1_reg='auto' is deprecated and in a future version the behavior will change from a "
+                "conditional use of AIC to simply a fixed number of top features. "
+                "Pass l1_reg='num_features(10)' to opt-in to the new default behaviour.",
+                DeprecationWarning,
+            )
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info(f"{np.sum(w_aug) = }")
@@ -612,11 +654,11 @@ class KernelExplainer(Explainer):
             eyAdj_aug = np.hstack((eyAdj, eyAdj - (self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))))
             eyAdj_aug *= w_sqrt_aug
             mask_aug = np.transpose(w_sqrt_aug * np.transpose(np.vstack((self.maskMatrix, self.maskMatrix - 1))))
-            #var_norms = np.array([np.linalg.norm(mask_aug[:, i]) for i in range(mask_aug.shape[1])])
+            # var_norms = np.array([np.linalg.norm(mask_aug[:, i]) for i in range(mask_aug.shape[1])])
 
             # select a fixed number of top features
             if isinstance(self.l1_reg, str) and self.l1_reg.startswith("num_features("):
-                r = int(self.l1_reg[len("num_features("):-1])
+                r = int(self.l1_reg[len("num_features(") : -1])
                 nonzero_inds = lars_path(mask_aug, eyAdj_aug, max_iter=r)[1]
 
             # use an adaptive regularization method
@@ -640,7 +682,8 @@ class KernelExplainer(Explainer):
 
         # eliminate one variable with the constraint that all features sum to the output
         eyAdj2 = eyAdj - self.maskMatrix[:, nonzero_inds[-1]] * (
-                    self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim]))
+            self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])
+        )
         etmp = np.transpose(np.transpose(self.maskMatrix[:, nonzero_inds[:-1]]) - self.maskMatrix[:, nonzero_inds[-1]])
         log.debug(f"{etmp[:4, :] = }")
 
@@ -659,7 +702,7 @@ class KernelExplainer(Explainer):
         #     lm = LinearRegression(fit_intercept=False).fit(etmp, eyAdj2, sample_weight=self.kernelWeights)
         # Under the hood, as of scikit-learn version 1.3, LinearRegression still uses np.linalg.lstsq and
         # there are more performant options. See https://github.com/scikit-learn/scikit-learn/issues/22855.
-        y = eyAdj2
+        y = np.asarray(eyAdj2)
         X = etmp
         WX = self.kernelWeights[:, None] * X
         try:
@@ -677,8 +720,9 @@ class KernelExplainer(Explainer):
             sqrt_W = np.sqrt(self.kernelWeights)
             w = np.linalg.lstsq(sqrt_W[:, None] * X, sqrt_W * y, rcond=None)[0]
         log.debug(f"{np.sum(w) = }")
-        log.debug("self.link(self.fx) - self.link(self.fnull) = {}".format(
-            self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])))
+        log.debug(
+            f"self.link(self.fx) - self.link(self.fnull) = {self.link.f(self.fx[dim]) - self.link.f(self.fnull[dim])}"
+        )
         log.debug(f"self.fx = {self.fx[dim]}")
         log.debug(f"self.link(self.fx) = {self.link.f(self.fx[dim])}")
         log.debug(f"self.fnull = {self.fnull[dim]}")

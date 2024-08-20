@@ -18,10 +18,8 @@ body:
     id: example
     attributes:
       label: Minimal Reproducible Example
-      description: >
+      description: |
         Please provide a minimal, self-contained example that reproduces the issue.
-        See [this guide](https://matthewrocklin.com/minimal-bug-reports)
-        for guidance on how to write good examples that are helpful for maintainers.
       placeholder: |
         import shap
 
@@ -29,6 +27,18 @@ body:
       render: python
     validations:
       required: true
+  - type: markdown
+    attributes:
+      value: |
+        **Note**: without a working Minimal Reproducible Example, the maintainers will not be able to help you and your issue will be closed!
+
+        Your example should be:
+
+        1. **Minimal**: Use as little code as possible that still produces the same problem.
+        2. **Self-contained**: Provide all minimal imports, data and code needed to reproduce the problem.
+        3. **Verifiable**: Test the example to make sure it reproduces the problem.
+
+        See [Matt's guide](https://matthewrocklin.com/minimal-bug-reports) for further information on how to write helpful bug reports.
   - type: textarea
     id: traceback
     attributes:

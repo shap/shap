@@ -1,10 +1,11 @@
+from __future__ import annotations
+
+from ..._explanation import Explanation
 from .._explainer import Explainer
-from .deep_pytorch import PyTorchDeep
-from .deep_tf import TFDeep
 
 
 class DeepExplainer(Explainer):
-    """ Meant to approximate SHAP values for deep learning models.
+    """Meant to approximate SHAP values for deep learning models.
 
     This is an enhanced version of the DeepLIFT algorithm (Deep SHAP) where, similar to Kernel SHAP, we
     approximate the conditional expectations of SHAP values using a selection of background samples.
@@ -17,10 +18,11 @@ class DeepExplainer(Explainer):
     Examples
     --------
     See :ref:`Deep Explainer Examples <deep_explainer_examples>`
+
     """
 
     def __init__(self, model, data, session=None, learning_phase_flags=None):
-        """ An explainer object for a differentiable model using a given background dataset.
+        """An explainer object for a differentiable model using a given background dataset.
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
@@ -43,15 +45,13 @@ class DeepExplainer(Explainer):
             layer argument. layer must be a layer in the model, i.e. model.conv2
 
         data :
-            if framework == 'tensorflow': [numpy.array] or [pandas.DataFrame]
+            if framework == 'tensorflow': [np.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
             The background dataset to use for integrating out features. Deep integrates
             over these samples. The data passed here must match the input tensors given in the
             first argument. Note that since these samples are integrated over for each sample you
             should only something like 100 or 1000 random background samples, not the whole training
             dataset.
-
-        if framework == 'tensorflow':
 
         session : None or tensorflow.Session
             The TensorFlow session that has the model we are explaining. If None is passed then
@@ -64,37 +64,63 @@ class DeepExplainer(Explainer):
             batch norm or dropout. If None is passed then we look for tensors in the graph that look like
             learning phase flags (this works for Keras models). Note that we assume all the flags should
             have a value of False during predictions (and hence explanations).
+
         """
         # first, we need to find the framework
         if type(model) is tuple:
             a, b = model
             try:
                 a.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except Exception:
-                framework = 'tensorflow'
+                framework = "tensorflow"
         else:
             try:
                 model.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except Exception:
-                framework = 'tensorflow'
+                framework = "tensorflow"
 
-        if framework == 'tensorflow':
+        masker = data
+        super().__init__(model, masker)
+
+        if framework == "tensorflow":
+            from .deep_tf import TFDeep
+
             self.explainer = TFDeep(model, data, session, learning_phase_flags)
-        elif framework == 'pytorch':
+        elif framework == "pytorch":
+            from .deep_pytorch import PyTorchDeep
+
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
         self.explainer.framework = framework
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
-        """ Return approximate SHAP values for the model applied to the data given by X.
+    def __call__(self, X: list | np.ndarray | pd.DataFrame | torch.tensor) -> Explanation:  # type: ignore  # noqa: F821
+        """Return an explanation object for the model applied to X.
 
         Parameters
         ----------
         X : list,
             if framework == 'tensorflow': numpy.array, or pandas.DataFrame
+            if framework == 'pytorch': torch.tensor
+            A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
+            explain the model's output.
+
+        Returns
+        -------
+        shap.Explanation:
+        """
+        shap_values = self.shap_values(X)
+        return Explanation(values=shap_values, data=X)
+
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
+        """Return approximate SHAP values for the model applied to the data given by X.
+
+        Parameters
+        ----------
+        X : list,
+            if framework == 'tensorflow': np.array, or pandas.DataFrame
             if framework == 'pytorch': torch.tensor
             A tensor (or list of tensors) of samples (where X.shape[0] == # samples) on which to
             explain the model's output.
@@ -113,13 +139,23 @@ class DeepExplainer(Explainer):
 
         Returns
         -------
-        array or list
-            For a models with a single output this returns a tensor of SHAP values with the same shape
-            as X. For a model with multiple outputs this returns a list of SHAP value tensors, each of
-            which are the same shape as X. If ranked_outputs is None then this list of tensors matches
+        np.array or list
+            Estimated SHAP values, usually of shape ``(# samples x # features)``.
+
+            The shape of the returned array depends on the number of model outputs:
+
+            * one input, one output: matrix of shape ``(#num_samples, *X.shape[1:])``.
+            * one input, multiple outputs: matrix of shape ``(#num_samples, *X.shape[1:], #num_outputs)``
+            * multiple inputs, one or more outputs: list of matrices, with shapes of one of the above.
+
+            If ranked_outputs is ``None`` then this list of tensors matches
             the number of model outputs. If ranked_outputs is a positive integer a pair is returned
             (shap_values, indexes), where shap_values is a list of tensors with a length of
             ranked_outputs, and indexes is a matrix that indicates for each sample which output indexes
             were chosen as "top".
+
+            .. versionchanged:: 0.45.0
+                Return type for models with multiple outputs and one input changed from list to np.ndarray.
+
         """
         return self.explainer.shap_values(X, ranked_outputs, output_rank_order, check_additivity=check_additivity)

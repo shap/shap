@@ -8,9 +8,17 @@ from ._labels import labels
 from ._utils import convert_ordering
 
 
-def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Explanation.abs.mean(0),
-            feature_order=None, max_display=10, cmap=colors.red_white_blue, show=True,
-            plot_width=8):
+def heatmap(
+    shap_values,
+    instance_order=Explanation.hclust(),
+    feature_values=Explanation.abs.mean(0),
+    feature_order=None,
+    max_display=10,
+    cmap=colors.red_white_blue,
+    show=True,
+    plot_width=8,
+    ax=None,
+):
     """Create a heatmap plot of a set of SHAP values.
 
     This plot is designed to show the population substructure of a dataset using supervised
@@ -46,16 +54,22 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
-    plot_width: int, default 8
+    plot_width : int, default 8
         The width of the heatmap plot.
+
+    ax : matplotlib Axes
+        Axes object to draw the plot onto, otherwise uses the current Axes.
+
+    Returns
+    -------
+    ax: matplotlib Axes
+        Returns the Axes object with the plot drawn onto it.
 
     Examples
     --------
-
     See `heatmap plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/heatmap.html>`_.
 
     """
-
     # sort the SHAP values matrix by rows and columns
     values = shap_values.values
     if issubclass(type(feature_values), OpChain):
@@ -67,7 +81,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     elif issubclass(type(feature_order), OpChain):
         feature_order = feature_order.apply(Explanation(values))
     elif not hasattr(feature_order, "__len__"):
-        raise Exception("Unsupported feature_order: %s!" % str(feature_order))
+        raise Exception(f"Unsupported feature_order: {str(feature_order)}!")
     xlabel = "Instances"
     instance_order = convert_ordering(instance_order, shap_values)
     # if issubclass(type(instance_order), OpChain):
@@ -79,20 +93,20 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
     #     instance_order_ops = None
 
     feature_names = np.array(shap_values.feature_names)[feature_order]
-    values = shap_values.values[instance_order][:,feature_order]
+    values = shap_values.values[instance_order][:, feature_order]
     feature_values = feature_values[feature_order]
 
     # if we have more features than `max_display`, then group all the excess features
     # into a single feature
     if values.shape[1] > max_display:
         new_values = np.zeros((values.shape[0], max_display))
-        new_values[:, :-1] = values[:, :max_display-1]
-        new_values[:, -1] = values[:, max_display-1:].sum(1)
+        new_values[:, :-1] = values[:, : max_display - 1]
+        new_values[:, -1] = values[:, max_display - 1 :].sum(1)
         new_feature_values = np.zeros(max_display)
-        new_feature_values[:-1] = feature_values[:max_display-1]
-        new_feature_values[-1] = feature_values[max_display-1:].sum()
+        new_feature_values[:-1] = feature_values[: max_display - 1]
+        new_feature_values[-1] = feature_values[max_display - 1 :].sum()
         feature_names = [
-            *feature_names[:max_display-1],
+            *feature_names[: max_display - 1],
             f"Sum of {values.shape[1] - max_display + 1} other features",
         ]
         values = new_values
@@ -100,8 +114,9 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     # define the plot size based on how many features we are plotting
     row_height = 0.5
-    pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
-    ax = pl.gca()
+    if ax is None:
+        pl.gcf().set_size_inches(plot_width, values.shape[1] * row_height + 2.5)
+        ax = pl.gca()
 
     # plot the matrix of SHAP values as a heat map
     vmin, vmax = np.nanpercentile(values.flatten(), [1, 99])
@@ -109,8 +124,8 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
         values.T,
         aspect=0.7 * values.shape[0] / values.shape[1],
         interpolation="nearest",
-        vmin=min(vmin,-vmax),
-        vmax=max(-vmin,vmax),
+        vmin=min(vmin, -vmax),
+        vmax=max(-vmin, vmax),
         cmap=cmap,
     )
 
@@ -138,7 +153,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     # plot the f(x) line chart above the heat map
     ax.axhline(-1.5, color="#aaaaaa", linestyle="--", linewidth=0.5)
-    fx = values.T.mean(0)
+    fx = values.T.sum(0)
     ax.plot(
         -fx / np.abs(fx).max() - 1.5,
         color="#000000",
@@ -160,6 +175,7 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     # draw the color bar
     import matplotlib.cm as cm
+
     m = cm.ScalarMappable(cmap=cmap)
     m.set_array([min(vmin, -vmax), max(-vmin, vmax)])
     cb = pl.colorbar(
@@ -180,3 +196,5 @@ def heatmap(shap_values, instance_order=Explanation.hclust(), feature_values=Exp
 
     if show:
         pl.show()
+
+    return ax

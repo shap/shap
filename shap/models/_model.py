@@ -1,23 +1,18 @@
+from typing import Any
+
 import numpy as np
 
 from .._serializable import Deserializer, Serializable, Serializer
-from ..utils import record_import_error, safe_isinstance
-
-try:
-    import torch  # noqa: F401
-except ImportError as e:
-    record_import_error("torch", "torch could not be imported!", e)
+from ..utils import safe_isinstance
 
 
 class Model(Serializable):
-    """ This is the superclass of all models.
-    """
+    """This is the superclass of all models."""
 
     def __init__(self, model=None):
-        """ Wrap a callable model as a SHAP Model object.
-        """
+        """Wrap a callable model as a SHAP Model object."""
         if isinstance(model, Model):
-            self.inner_model = model.inner_model
+            self.inner_model: Any = model.inner_model
         else:
             self.inner_model = model
 
@@ -31,8 +26,7 @@ class Model(Serializable):
         return out
 
     def save(self, out_file):
-        """ Save the model to the given file stream.
-        """
+        """Save the model to the given file stream."""
         super().save(out_file)
         with Serializer(out_file, "shap.Model", version=0) as s:
             s.save("model", self.inner_model)
