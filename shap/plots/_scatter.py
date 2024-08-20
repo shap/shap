@@ -215,24 +215,30 @@ def scatter(
 
     # pick jitter for categorical features
     vals = np.sort(np.unique(features[:, ind]))
-    min_dist = np.inf
-    for i in range(1, len(vals)):
-        d = vals[i] - vals[i - 1]
-        if d > 1e-8 and d < min_dist:
-            min_dist = d
-    num_points_per_value = len(features[:, ind]) / len(vals)
-    if num_points_per_value < 10:
-        # categorical = False
-        if x_jitter == "auto":
+    if x_jitter == "auto":
+        min_dist = 1
+        for i in range(1, len(vals)):
+            # If vals contains numbers,
+            # check for min_dist based on difference in vals
+            # Otherwise, min_dist remains set arbitrarily at 1
+            try:
+                d = vals[i] - vals[i - 1]
+                if d > 1e-8 and d < min_dist:
+                    min_dist = d
+            except TypeError:
+                pass
+        num_points_per_value = len(features[:, ind]) / len(vals)
+        if num_points_per_value < 10:
+            # categorical = False
             x_jitter = 0
-    elif num_points_per_value < 100:
-        # categorical = True
-        if x_jitter == "auto":
-            x_jitter = min_dist * 0.1
-    else:
-        # categorical = True
-        if x_jitter == "auto":
-            x_jitter = min_dist * 0.2
+        elif num_points_per_value < 100:
+            # categorical = True
+            if x_jitter == "auto":
+                x_jitter = min_dist * 0.1
+        else:
+            # categorical = True
+            if x_jitter == "auto":
+                x_jitter = min_dist * 0.2
 
     # guess what other feature as the stongest interaction with the plotted feature
     if not hasattr(ind, "__len__"):
@@ -360,7 +366,7 @@ def scatter(
     xv_notnan = np.invert(xv_nan)
     if interaction_index is not None:
         # plot the nan values in the interaction feature as grey
-        cvals = features[oinds, interaction_index].astype(np.float64)
+        cvals = encode_array_if_needed(features[oinds, interaction_index]).astype(np.float64)
         cvals_imp = cvals.copy()
         cvals_imp[np.isnan(cvals)] = (clow + chigh) / 2.0
         cvals[cvals_imp > chigh] = chigh
