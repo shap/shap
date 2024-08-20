@@ -87,7 +87,7 @@ def beeswarm(
 
     """
     if not isinstance(shap_values, Explanation):
-        emsg = "The beeswarm plot requires an `Explanation` object as the " "`shap_values` argument."
+        emsg = "The beeswarm plot requires an `Explanation` object as the `shap_values` argument."
         raise TypeError(emsg)
 
     sv_shape = shap_values.shape
@@ -122,10 +122,6 @@ def beeswarm(
     #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
-
-    # # deprecation warnings
-    # if auto_size_plot is not None:
-    #     warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
 
     # multi_class = False
     # if isinstance(values, list):
@@ -165,7 +161,7 @@ def beeswarm(
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape " "of the provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             shape_msg += (
                 " Perhaps the extra column in the shap_values matrix is the "
@@ -340,8 +336,7 @@ def beeswarm(
     if num_features < len(values[0]):
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features - 1, len(values[0]))])
         values[:, feature_order[num_features - 1]] = np.sum(
-            [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))],
-            0,
+            [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))], 0
         )
 
     # build our y-tick labels
@@ -521,8 +516,6 @@ def summary_legacy(
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
     show_values_in_legend=False,
-    # depreciated
-    auto_size_plot=None,
     use_log_scale=False,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
@@ -570,14 +563,6 @@ def summary_legacy(
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
-    # deprecation warnings
-    if auto_size_plot is not None:
-        warnings.warn(
-            "auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead. "
-            "The parameter auto_size_plot will be removed in the next release 0.46.0.",
-            DeprecationWarning,
-        )
-
     multi_class = False
     if isinstance(shap_values, list):
         multi_class = True
@@ -619,7 +604,7 @@ def summary_legacy(
     num_features = shap_values[0].shape[1] if multi_class else shap_values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " "provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             assert False, (
                 shape_msg + " Perhaps the extra column in the shap_values matrix is the "
@@ -688,7 +673,7 @@ def summary_legacy(
         summary_legacy(
             proj_shap_values,
             features[:, sort_inds] if features is not None else None,
-            feature_names=feature_names[sort_inds],
+            feature_names=np.array(feature_names)[sort_inds].tolist(),
             sort=False,
             show=False,
             color_bar=False,
@@ -1011,7 +996,7 @@ def summary_legacy(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.cm.datad else color
+                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
@@ -1054,13 +1039,7 @@ def summary_legacy(
             else:
                 label = class_names[ind]
             pl.barh(
-                y_pos,
-                global_shap_values[feature_inds],
-                0.7,
-                left=left_pos,
-                align="center",
-                color=color(i),
-                label=label,
+                y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align="center", color=color(i), label=label
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
@@ -1072,7 +1051,7 @@ def summary_legacy(
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.cm.datad)
+        and (plot_type != "layered_violin" or color in pl.colormaps)
     ):
         import matplotlib.cm as cm
 
@@ -1094,11 +1073,7 @@ def summary_legacy(
     pl.gca().spines["top"].set_visible(False)
     pl.gca().spines["left"].set_visible(False)
     pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    pl.yticks(
-        range(len(feature_order)),
-        [feature_names[i] for i in feature_order],
-        fontsize=13,
-    )
+    pl.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
     if plot_type != "bar":
         pl.gca().tick_params("y", length=20, width=0.5, which="major")
     pl.gca().tick_params("x", labelsize=11)
