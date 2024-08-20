@@ -21,7 +21,7 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba',
+  'numba>0.52',
   'cloudpickle',
   'typing-extensions',
 ]
@@ -58,7 +58,12 @@ docs = [
   "requests",
   "ipywidgets",  # For tqdm in notebooks
 ]
-test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
+test-core = [
+  "pytest",
+  "pytest-mpl",
+  "pytest-cov",
+  "mypy",
+]
 test = [
   "pytest",
   "pytest-mpl",
