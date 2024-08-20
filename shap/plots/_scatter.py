@@ -103,7 +103,7 @@ def scatter(
     overlay: dict
         Optional dictionary of curves to overlay as line plots.
 
-        The dictionary map a curve name to a list of (xvalues, yvalues) pairs, where
+        The dictionary maps a curve name to a list of (xvalues, yvalues) pairs, where
         there is one pair for each feature to be plotted.
 
     ax : matplotlib Axes object
@@ -114,8 +114,9 @@ def scatter(
 
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
+
+        Setting this to ``False`` allows the plot to be customized further after it
+        has been created.
 
     Returns
     -------
