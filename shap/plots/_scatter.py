@@ -398,50 +398,7 @@ def scatter(
 
     # the histogram of the data
     if hist:
-        ax2 = typing.cast(plt.Axes, ax.twinx())
-        # n, bins, patches =
-        xlim = ax.get_xlim()
-        xvals = np.unique(xv_no_jitter)
-
-        bins: list[float] | int  # Hint for mypy
-        if len(xvals) / len(xv_no_jitter) < 0.2 and len(xvals) < 75 and np.max(xvals) < 75 and np.min(xvals) >= 0:
-            np.sort(xvals)
-            bins = []
-            for i in range(int(np.max(xvals) + 1)):
-                bins.append(i - 0.5)
-
-                # bin_edges.append((xvals[i] + xvals[i+1])/2)
-            bins.append(int(np.max(xvals)) + 0.5)
-
-            lim = np.floor(np.min(xvals) - 0.5) + 0.5, np.ceil(np.max(xvals) + 0.5) - 0.5
-            ax.set_xlim(lim)
-        else:
-            if len(xv_no_jitter) >= 500:
-                bins = 50
-            elif len(xv_no_jitter) >= 200:
-                bins = 20
-            elif len(xv_no_jitter) >= 100:
-                bins = 10
-            else:
-                bins = 5
-        ax2.hist(
-            xv[~np.isnan(xv)],
-            bins,
-            density=False,
-            facecolor="#000000",
-            alpha=0.1,
-            range=(xlim[0], xlim[1]),
-            zorder=-1,
-        )
-        ax2.set_ylim(0, len(xv))
-
-        ax2.xaxis.set_ticks_position("bottom")
-        ax2.yaxis.set_ticks_position("left")
-        ax2.yaxis.set_ticks([])
-        ax2.spines["right"].set_visible(False)
-        ax2.spines["top"].set_visible(False)
-        ax2.spines["left"].set_visible(False)
-        ax2.spines["bottom"].set_visible(False)
+        _plot_histogram(ax, xv, xv_no_jitter)
 
     plt.sca(ax)
 
@@ -514,6 +471,53 @@ def _suggest_x_jitter(values: np.ndarray) -> float:
         # categorical = True
         x_jitter = min_dist * 0.2
     return x_jitter
+
+
+def _plot_histogram(ax: plt.Axes, xv, xv_no_jitter):
+    """Add a histogram of the data on a matching secondary axes"""
+    ax2 = typing.cast(plt.Axes, ax.twinx())
+    xlim = ax.get_xlim()
+    xvals = np.unique(xv_no_jitter)
+
+    # Determine suitable bins and limits
+    bins: list[float] | int  # Hint for mypy
+    if len(xvals) / len(xv_no_jitter) < 0.2 and len(xvals) < 75 and np.max(xvals) < 75 and np.min(xvals) >= 0:
+        np.sort(xvals)
+        bins = []
+        for i in range(int(np.max(xvals) + 1)):
+            bins.append(i - 0.5)
+        bins.append(int(np.max(xvals)) + 0.5)
+
+        lim = np.floor(np.min(xvals) - 0.5) + 0.5, np.ceil(np.max(xvals) + 0.5) - 0.5
+        ax.set_xlim(lim)
+    else:
+        if len(xv_no_jitter) >= 500:
+            bins = 50
+        elif len(xv_no_jitter) >= 200:
+            bins = 20
+        elif len(xv_no_jitter) >= 100:
+            bins = 10
+        else:
+            bins = 5
+
+    # Plot the histogram
+    ax2.hist(
+        xv[~np.isnan(xv)],
+        bins,
+        density=False,
+        facecolor="#000000",
+        alpha=0.1,
+        range=(xlim[0], xlim[1]),
+        zorder=-1,
+    )
+    ax2.set_ylim(0, len(xv))
+    ax2.xaxis.set_ticks_position("bottom")
+    ax2.yaxis.set_ticks_position("left")
+    ax2.yaxis.set_ticks([])
+    ax2.spines["right"].set_visible(False)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["left"].set_visible(False)
+    ax2.spines["bottom"].set_visible(False)
 
 
 def dependence_legacy(
