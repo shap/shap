@@ -34,6 +34,7 @@ def image(
     hspace: float | Literal["auto"] | None = 0.2,
     labelpad: float | None = None,
     cmap: str | Colormap | None = colors.red_transparent_blue,
+    vmax: float | None = None,
     show: bool | None = True,
 ):
     """Plots SHAP values for image inputs.
@@ -63,6 +64,12 @@ def image(
 
     labelpad : float
         How much padding to use around the model output labels.
+
+    cmap: str or matplotlib.colors.Colormap
+        Colormap to use when plotting the SHAP values.
+
+    vmax: Optional float
+        Sets the colormap scale for SHAP values from ``-vmax` to ``+vmax``.
 
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
@@ -164,7 +171,9 @@ def image(
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
             abs_vals = np.stack([np.abs(shap_values[i].sum(-1)) for i in range(len(shap_values))], 0).flatten()
-        max_val = np.nanpercentile(abs_vals, 99.9)
+
+        max_val = np.nanpercentile(abs_vals, 99.9) if vmax is None else vmax
+
         for i in range(len(shap_values)):
             if labels is not None:
                 if row == 0:
