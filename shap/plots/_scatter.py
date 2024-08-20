@@ -117,6 +117,11 @@ def scatter(
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
+    Returns
+    -------
+    ax : matplotlib Axes object
+        Only returned if show=False.
+
     Examples
     --------
     See `scatter plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/scatter.html>`_.
@@ -421,6 +426,8 @@ def scatter(
         with warnings.catch_warnings():  # ignore expected matplotlib warnings
             warnings.simplefilter("ignore", RuntimeWarning)
             plt.show()
+    else:
+        return ax
 
 
 def _parse_limit(ax_limit: LimitSpec, ax_values: np.ndarray, is_shap_axis: bool) -> float | None:
