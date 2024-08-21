@@ -146,6 +146,7 @@ module = [
   "sklearn.*",
   "slicer",
   "tensorflow.*",
+  "transformers.*",
   "torch.*",
   "tqdm.*",
   "xgboost.*",
