@@ -15,6 +15,7 @@ Explanation
     :toctree: generated/
 
     shap.Explanation
+    shap.Cohorts
 
 
 .. _explainers_api:
@@ -25,14 +26,18 @@ explainers
     :toctree: generated/
 
     shap.Explainer
-    shap.explainers.Tree
-    shap.explainers.GPUTree
-    shap.explainers.Linear
-    shap.explainers.Permutation
-    shap.explainers.Partition
-    shap.explainers.Sampling
-    shap.explainers.Additive
-    shap.explainers.other.Coefficent
+    shap.TreeExplainer
+    shap.GPUTreeExplainer
+    shap.LinearExplainer
+    shap.PermutationExplainer
+    shap.PartitionExplainer
+    shap.SamplingExplainer
+    shap.AdditiveExplainer
+    shap.DeepExplainer
+    shap.KernelExplainer
+    shap.GradientExplainer
+    shap.ExactExplainer
+    shap.explainers.other.Coefficient
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
     shap.explainers.other.Maple
@@ -55,6 +60,14 @@ plots
     shap.plots.text
     shap.plots.image
     shap.plots.partial_dependence
+    shap.plots.decision
+    shap.plots.embedding
+    shap.plots.initjs
+    shap.plots.group_difference
+    shap.plots.image_to_text
+    shap.plots.monitoring
+    shap.plots.beeswarm
+    shap.plots.violin
 
 
 .. _maskers_api:
@@ -67,6 +80,11 @@ maskers
     shap.maskers.Masker
     shap.maskers.Independent
     shap.maskers.Partition
+    shap.maskers.Impute
+    shap.maskers.Fixed
+    shap.maskers.Composite
+    shap.maskers.FixedComposite
+    shap.maskers.OutputComposite
     shap.maskers.Text
     shap.maskers.Image
 
@@ -79,7 +97,10 @@ models
     :toctree: generated/
 
     shap.models.Model
-    shap.models.TeacherForcingLogits
+    shap.models.TeacherForcing
+    shap.models.TextGeneration
+    shap.models.TopKLM
+    shap.models.TransformersPipeline
 
 
 .. _utils_api:
@@ -90,9 +111,19 @@ utils
     :toctree: generated/
 
     shap.utils.hclust
+    shap.utils.hclust_ordering
+    shap.utils.partition_tree
+    shap.utils.partition_tree_shuffle
+    shap.utils.delta_minimization_order
+    shap.utils.approximate_interactions
+    shap.utils.potential_interactions
     shap.utils.sample
     shap.utils.shapley_coefficients
+    shap.utils.convert_name
+    shap.utils.OpChain
+    shap.utils.show_progress
     shap.utils.MaskedModel
+    shap.utils.make_masks
 
 
 .. _datasets_api:
@@ -102,8 +133,9 @@ datasets
 .. autosummary::
     :toctree: generated/
 
+    shap.datasets.a1a
     shap.datasets.adult
-    shap.datasets.boston
+    shap.datasets.california
     shap.datasets.communitiesandcrime
     shap.datasets.corrgroups60
     shap.datasets.diabetes
@@ -111,4 +143,6 @@ datasets
     shap.datasets.imdb
     shap.datasets.independentlinear60
     shap.datasets.iris
+    shap.datasets.linnerud
     shap.datasets.nhanesi
+    shap.datasets.rank

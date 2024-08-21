@@ -1,17 +1,16 @@
-""" Unit tests for the Exact explainer.
-"""
+"""Unit tests for the Exact explainer."""
 
-# pylint: disable=missing-function-docstring
 import numpy as np
 import pandas as pd
+
 import shap
+
 
 def test_create_and_run():
     X = pd.DataFrame({"feature1": np.ones(5), "feature2": np.ones(5)})
 
     class IncreaseFeature1(shap.actions.Action):
-        """ Sample action.
-        """
+        """Sample action."""
 
         def __init__(self, amount):
             self.amount = amount

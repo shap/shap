@@ -1,9 +1,10 @@
-""" This file contains tests for the Image masker.
-"""
+"""This file contains tests for the Image masker."""
 
 import tempfile
-import pytest
+
 import numpy as np
+import pytest
+
 import shap
 from shap.utils import assert_import
 
@@ -12,10 +13,9 @@ try:
 except ImportError:
     pytestmark = pytest.mark.skip("opencv not installed")
 
-def test_serialization_image_masker_inpaint_telea():
-    """ Make sure image serialization works with inpaint telea mask.
-    """
 
+def test_serialization_image_masker_inpaint_telea():
+    """Make sure image serialization works with inpaint telea mask."""
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -24,7 +24,6 @@ def test_serialization_image_masker_inpaint_telea():
     original_image_masker = shap.maskers.Image("inpaint_telea", test_shape)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize independent masker
         original_image_masker.save(temp_serialization_file)
 
@@ -41,10 +40,9 @@ def test_serialization_image_masker_inpaint_telea():
     # comparing masked values
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
-def test_serialization_image_masker_inpaint_ns():
-    """ Make sure image serialization works with inpaint ns mask.
-    """
 
+def test_serialization_image_masker_inpaint_ns():
+    """Make sure image serialization works with inpaint ns mask."""
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -53,7 +51,6 @@ def test_serialization_image_masker_inpaint_ns():
     original_image_masker = shap.maskers.Image("inpaint_ns", test_shape)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize independent masker
         original_image_masker.save(temp_serialization_file)
 
@@ -70,10 +67,9 @@ def test_serialization_image_masker_inpaint_ns():
     # comparing masked values
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
-def test_serialization_image_masker_blur():
-    """ Make sure image serialization works with blur mask.
-    """
 
+def test_serialization_image_masker_blur():
+    """Make sure image serialization works with blur mask."""
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -82,7 +78,6 @@ def test_serialization_image_masker_blur():
     original_image_masker = shap.maskers.Image("blur(10,10)", test_shape)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize independent masker
         original_image_masker.save(temp_serialization_file)
 
@@ -99,10 +94,9 @@ def test_serialization_image_masker_blur():
     # comparing masked values
     assert np.array_equal(original_image_masker(mask, test_data), new_image_masker(mask, test_data))
 
-def test_serialization_image_masker_mask():
-    """ Make sure image serialization works.
-    """
 
+def test_serialization_image_masker_mask():
+    """Make sure image serialization works."""
     test_image_height = 500
     test_image_width = 500
     test_data = np.ones((test_image_height, test_image_width, 3)) * 50
@@ -112,7 +106,6 @@ def test_serialization_image_masker_mask():
     original_image_masker = shap.maskers.Image(test_mask, test_shape)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize independent masker
         original_image_masker.save(temp_serialization_file)
 
