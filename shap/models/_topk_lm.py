@@ -214,36 +214,41 @@ class TopKLM(Model):
             Logits corresponding to next word/masked word.
 
         """
-        if self.model_type in ["pt", "tf"]:
-            from transformers import MODEL_FOR_CAUSAL_LM_MAPPING
+        if self.model_type not in ["pt", "tf"]:
+            raise NotImplementedError("Only PyTorch and TensorFlow models are supported!")
 
-            if type(self.inner_model) in MODEL_FOR_CAUSAL_LM_MAPPING.values():
-                inputs = self.get_inputs(X, padding_side="left")
-                if self.model_type == "pt":
-                    import torch
+        from transformers import MODEL_FOR_CAUSAL_LM_MAPPING
 
-                    inputs["position_ids"] = inputs["attention_mask"].long().cumsum(-1) - 1
-                    inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
-                    inputs = inputs.to(self.device)
-                    # generate outputs and logits
-                    with torch.no_grad():
-                        outputs = self.inner_model(**inputs, return_dict=True)
-                    # extract only logits corresponding to target sentence ids
-                    logits = outputs.logits.detach().cpu().numpy().astype("float64")[:, -1, :]
-                elif self.model_type == "tf":
-                    import tensorflow as tf
+        if type(self.inner_model) in MODEL_FOR_CAUSAL_LM_MAPPING.values():
+            inputs = self.get_inputs(X, padding_side="left")
+            if self.model_type == "pt":
+                import torch
 
-                    inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
-                    inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
-                    if self.device is None:
-                        outputs = self.inner_model(inputs, return_dict=True)
-                    else:
-                        try:
-                            with tf.device(self.device):
-                                outputs = self.inner_model(inputs, return_dict=True)
-                        except RuntimeError as err:
-                            print(err)
-                    logits = outputs.logits.numpy().astype("float64")[:, -1, :]
+                inputs["position_ids"] = inputs["attention_mask"].long().cumsum(-1) - 1
+                inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
+                inputs = inputs.to(self.device)
+                # generate outputs and logits
+                with torch.no_grad():
+                    outputs = self.inner_model(**inputs, return_dict=True)
+                # extract only logits corresponding to target sentence ids
+                logits = outputs.logits.detach().cpu().numpy().astype("float64")[:, -1, :]
+            else:
+                assert self.model_type == "tf"
+                import tensorflow as tf
+
+                inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
+                inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
+                if self.device is None:
+                    outputs = self.inner_model(inputs, return_dict=True)
+                else:
+                    try:
+                        with tf.device(self.device):
+                            outputs = self.inner_model(inputs, return_dict=True)
+                    except RuntimeError as err:
+                        print(err)
+                logits = outputs.logits.numpy().astype("float64")[:, -1, :]
+        else:
+            raise NotImplementedError(f"Model type '{type(self.inner_model)}' not supported!")
         return logits
 
     def save(self, out_file):
