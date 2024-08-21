@@ -5,7 +5,7 @@
 <!-- javascript from CDN for conversion -->
   <script type="text/javascript" src="http://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js" charset="UTF-8"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.5/marked.js"></script>
 
-    
+
 
 
 <script type="text/x-mathjax-config">
@@ -14,8 +14,8 @@ MathJax.Hub.Config({ TeX: { equationNumbers: {
     autoNumber: "AMS", // All AMS equations are numbered
     useLabelIds: true, // labels as ids
     // format the equation number - uses an offset eqNumInitial (default 0)
-    formatNumber: function (n) {return String(Number(n)+Number(1)-1)} 
-    } } 
+    formatNumber: function (n) {return String(Number(n)+Number(1)-1)}
+    } }
 });
 </script>
 
@@ -9150,15 +9150,15 @@ label {
 }
 /* Flexible box model classes */
 /* Taken from Alex Russell http://infrequently.org/2009/08/css-3-progress/ */
-/* This file is a compatability layer.  It allows the usage of flexible box 
+/* This file is a compatability layer.  It allows the usage of flexible box
 model layouts accross multiple browsers, including older browsers.  The newest,
 universal implementation of the flexible box model is used when available (see
-`Modern browsers` comments below).  Browsers that are known to implement this 
+`Modern browsers` comments below).  Browsers that are known to implement this
 new spec completely include:
 
     Firefox 28.0+
     Chrome 29.0+
-    Internet Explorer 11+ 
+    Internet Explorer 11+
     Opera 17.0+
 
 Browsers not listed, including Safari, are supported via the styling under the
@@ -12540,7 +12540,7 @@ div#pager .ui-resizable-handle {
   background: #f7f7f7;
   border-top: 1px solid #cfcfcf;
   border-bottom: 1px solid #cfcfcf;
-  /* This injects handle bars (a short, wide = symbol) for 
+  /* This injects handle bars (a short, wide = symbol) for
         the resize handle. */
 }
 div#pager .ui-resizable-handle::after {
@@ -13039,7 +13039,7 @@ ul.typeahead-list  > li > a.pull-right {
 .highlight .il { color: #666666 } /* Literal.Number.Integer.Long */
     </style>
 <style type="text/css">
-    
+
 /* Temporary definitions which will become obsolete with Notebook release 5.0 */
 .ansi-black-fg { color: #3E424D; }
 .ansi-black-bg { background-color: #3E424D; }
@@ -13093,14 +13093,14 @@ div#notebook {
   div.cell {
     display: block;
     page-break-inside: avoid;
-  } 
-  div.output_wrapper { 
-    display: block;
-    page-break-inside: avoid; 
   }
-  div.output { 
+  div.output_wrapper {
     display: block;
-    page-break-inside: avoid; 
+    page-break-inside: avoid;
+  }
+  div.output {
+    display: block;
+    page-break-inside: avoid;
   }
 }
 </style>
@@ -13142,9 +13142,9 @@ div#notebook {
 <link rel="stylesheet" type="text/css" href="https://rawgit.com/jfbercher/jupyter_latex_envs/master/src/latex_envs/static/latex_envs.css">
 
 <!-- Custom stylesheet, it must be in the same directory as the html file -->
-<link rel="stylesheet" href="custom.css"> 
+<link rel="stylesheet" href="custom.css">
 
-<!-- Load mathjax 
+<!-- Load mathjax
 <script src="https://rawgit.com/ipython-contrib/jupyter_contrib_nbextensions/master/src/jupyter_contrib_nbextensions/nbextensions/latex_envs/thmsInNb4.js"></script>
 -->
 <script type="text/javascript"  src="https://rawgit.com/jfbercher/jupyter_latex_envs/master/src/latex_envs/static/thmsInNb4.js"> </script>
@@ -13159,9 +13159,9 @@ div#notebook {
 <script>
 $( document ).ready(function(){
 
-        //Value of configuration variables, some taken from the notebook's metada. 
+        //Value of configuration variables, some taken from the notebook's metada.
         eqNum = 0; // begins equation numbering at eqNum+1
-        eqLabelWithNumbers = "True"=="True" ? true : false; //if true, label equations with equation numbers; 
+        eqLabelWithNumbers = "True"=="True" ? true : false; //if true, label equations with equation numbers;
                                        //otherwise using the tag specified by \label
         conversion_to_html = false;
         current_cit=1;
@@ -13172,9 +13172,9 @@ $( document ).ready(function(){
         // Read environment map config
         initmap();
         // Read user envs config, if specified
-        
-                environmentMap = $.extend(true,{}, environmentInitialMap)        
-        
+
+                environmentMap = $.extend(true,{}, environmentInitialMap)
+
 
         // fire the main function with these parameters
         var html_to_analyse = $('body').html()
@@ -13189,7 +13189,7 @@ $( document ).ready(function(){
         reset_counters();
         renumberAllEnvs();
 
-  
+
         // toc2
         var cfg = {"base_numbering": 1, "nav_menu": {"height": "404px", "width": "394px"}, "number_sections": true, "sideBar": true, "skip_h1_title": false, "title_cell": "Table of Contents", "title_sidebar": "Contents", "toc_cell": true, "toc_position": {}, "toc_section_display": true, "toc_window_display": true};
         // fire the main function with these parameters
@@ -13546,7 +13546,7 @@ Early stopping, best iteration is:
 <div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">force_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_values</span><span class="p">[</span><span class="n">misclassified</span><span class="p">],</span> <span class="n">features_display</span><span class="p">[</span><span class="n">misclassified</span><span class="p">],</span> 
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">force_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_values</span><span class="p">[</span><span class="n">misclassified</span><span class="p">],</span> <span class="n">features_display</span><span class="p">[</span><span class="n">misclassified</span><span class="p">],</span>
                 <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span> <span class="n">matplotlib</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 
@@ -13730,11 +13730,11 @@ Early stopping, best iteration is:
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">row_index</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">shap</span><span class="o">.</span><span class="n">multioutput_decision_plot</span><span class="p">(</span><span class="n">heart_base_values</span><span class="p">,</span> <span class="n">heart_shap_values</span><span class="p">,</span>
-                               <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span> 
-                               <span class="n">feature_names</span><span class="o">=</span><span class="n">heart_feature_names</span><span class="p">,</span> 
+                               <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                               <span class="n">feature_names</span><span class="o">=</span><span class="n">heart_feature_names</span><span class="p">,</span>
                                <span class="n">highlight</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">heart_predictions</span><span class="p">[</span><span class="n">row_index</span><span class="p">])],</span>
                                <span class="n">legend_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">(</span><span class="n">row_index</span><span class="p">),</span>
-                               <span class="n">legend_location</span><span class="o">=</span><span class="s1">&#39;lower right&#39;</span><span class="p">)</span>    
+                               <span class="n">legend_location</span><span class="o">=</span><span class="s1">&#39;lower right&#39;</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13779,11 +13779,11 @@ Early stopping, best iteration is:
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">row_index</span> <span class="o">=</span> <span class="mi">3</span>
 <span class="n">shap</span><span class="o">.</span><span class="n">multioutput_decision_plot</span><span class="p">(</span><span class="n">heart_base_values</span><span class="p">,</span> <span class="n">heart_shap_values</span><span class="p">,</span>
-                               <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span> 
-                               <span class="n">feature_names</span><span class="o">=</span><span class="n">heart_feature_names</span><span class="p">,</span> 
+                               <span class="n">row_index</span><span class="o">=</span><span class="n">row_index</span><span class="p">,</span>
+                               <span class="n">feature_names</span><span class="o">=</span><span class="n">heart_feature_names</span><span class="p">,</span>
                                <span class="n">highlight</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">heart_predictions</span><span class="p">[</span><span class="n">row_index</span><span class="p">])],</span>
                                <span class="n">legend_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">(</span><span class="n">row_index</span><span class="p">),</span>
-                               <span class="n">legend_location</span><span class="o">=</span><span class="s1">&#39;lower right&#39;</span><span class="p">)</span>    
+                               <span class="n">legend_location</span><span class="o">=</span><span class="s1">&#39;lower right&#39;</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13933,7 +13933,7 @@ Name: 25, dtype: object</pre>
 <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
     <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
     <span class="n">hypothetical_shap_values</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">shap_values</span><span class="p">(</span><span class="n">R</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-    
+
 <span class="n">hypothetical_predictions</span> <span class="o">=</span> <span class="n">expected_value</span> <span class="o">+</span> <span class="n">hypothetical_shap_values</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">hypothetical_predictions</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">hypothetical_predictions</span><span class="p">))</span>
 </pre></div>
@@ -14002,7 +14002,7 @@ Name: 25, dtype: object</pre>
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># The feature ordering was determined via &#39;hclust&#39; on the synthetic data set. We specify the order here manually so </span>
 <span class="c1"># the following two plots match up.</span>
 <span class="n">feature_idx</span> <span class="o">=</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-<span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">hypothetical_shap_values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">X_display</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">feature_order</span><span class="o">=</span><span class="n">feature_idx</span><span class="p">,</span> 
+<span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">hypothetical_shap_values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">X_display</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">feature_order</span><span class="o">=</span><span class="n">feature_idx</span><span class="p">,</span>
                    <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">)</span>
 </pre></div>
 
@@ -14406,7 +14406,7 @@ Best score: 0.2785044277595166
 <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="s1">&#39;Model {i + 1} ({ensemble_predictions[i].round(2):.2f})&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">model_count</span><span class="p">)]</span>
 
 <span class="c1"># Plot</span>
-<span class="n">shap</span><span class="o">.</span><span class="n">multioutput_decision_plot</span><span class="p">(</span><span class="n">ensemble_base_values</span><span class="p">,</span> <span class="n">ensemble_shap_values</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">feature_names</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_list</span><span class="p">(),</span> 
+<span class="n">shap</span><span class="o">.</span><span class="n">multioutput_decision_plot</span><span class="p">(</span><span class="n">ensemble_base_values</span><span class="p">,</span> <span class="n">ensemble_shap_values</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">feature_names</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">to_list</span><span class="p">(),</span>
                                <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span> <span class="n">legend_labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span> <span class="n">legend_location</span><span class="o">=</span><span class="s1">&#39;lower right&#39;</span><span class="p">)</span>
 </pre></div>
 
@@ -14514,7 +14514,7 @@ Best score: 0.2785044277595166
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>SHAP dimensions: (20, 78) 
+<pre>SHAP dimensions: (20, 78)
 
 [&#39;Age&#39;,
  &#39;Relationship&#39;,
@@ -14639,7 +14639,7 @@ Best score: 0.2785044277595166
 <div class="prompt input_prompt">In&nbsp;[34]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span> 
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span>
                    <span class="n">feature_order</span><span class="o">=</span><span class="s1">&#39;hclust&#39;</span><span class="p">,</span> <span class="n">feature_display_range</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 
@@ -14683,7 +14683,7 @@ Best score: 0.2785044277595166
 <div class="prompt input_prompt">In&nbsp;[35]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span> 
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span>
                    <span class="n">feature_order</span><span class="o">=</span><span class="s1">&#39;hclust&#39;</span><span class="p">,</span> <span class="n">feature_display_range</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
 </pre></div>
 
@@ -14727,7 +14727,7 @@ Best score: 0.2785044277595166
 <div class="prompt input_prompt">In&nbsp;[36]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span> 
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span>
                    <span class="n">feature_order</span><span class="o">=</span><span class="s1">&#39;hclust&#39;</span><span class="p">,</span> <span class="n">feature_display_range</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 
@@ -14771,7 +14771,7 @@ Best score: 0.2785044277595166
 <div class="prompt input_prompt">In&nbsp;[37]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span> 
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">shap</span><span class="o">.</span><span class="n">decision_plot</span><span class="p">(</span><span class="n">expected_value</span><span class="p">,</span> <span class="n">shap_interaction_values</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">link</span><span class="o">=</span><span class="s1">&#39;logit&#39;</span><span class="p">,</span>
                    <span class="n">feature_order</span><span class="o">=</span><span class="s1">&#39;hclust&#39;</span><span class="p">,</span> <span class="n">feature_display_range</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
 </pre></div>
 

@@ -1,14 +1,18 @@
 import time
+
 import numpy as np
-from tqdm import tqdm
-from shap.utils import safe_isinstance, MaskedModel, partition_tree_shuffle
+from tqdm.auto import tqdm
+
 from shap import Explanation, links
-from shap.maskers import Text, Image, FixedComposite
-from . import BenchmarkResult
+from shap.maskers import FixedComposite, Image, Text
+from shap.utils import MaskedModel, partition_tree_shuffle
+from shap.utils._exceptions import DimensionError
+
+from ._result import BenchmarkResult
 
 
-class ExplanationError():
-    """ A measure of the explanation error relative to a model's actual output.
+class ExplanationError:
+    """A measure of the explanation error relative to a model's actual output.
 
     This benchmark metric measures the discrepancy between the output of the model predicted by an
     attribution explanation vs. the actual output of the model. This discrepancy is measured over
@@ -22,8 +26,18 @@ class ExplanationError():
     computations, but of course you could choose to summarize explanation errors in others ways as well.
     """
 
-    def __init__(self, masker, model, *model_args, batch_size=500, num_permutations=10, link=links.identity, linearize_link=True, seed=38923):
-        """ Build a new explanation error benchmarker with the given masker, model, and model args.
+    def __init__(
+        self,
+        masker,
+        model,
+        *model_args,
+        batch_size=500,
+        num_permutations=10,
+        link=links.identity,
+        linearize_link=True,
+        seed=38923,
+    ):
+        """Build a new explanation error benchmarker with the given masker, model, and model args.
 
         Parameters
         ----------
@@ -54,8 +68,8 @@ class ExplanationError():
         linearize_link : bool
             Non-linear links can destroy additive separation in generalized linear models, so by linearizing the link we can
             retain additive separation. See upcoming paper/doc for details.
-        """
 
+        """
         self.masker = masker
         self.model = model
         self.model_args = model_args
@@ -76,18 +90,17 @@ class ExplanationError():
             self.data_type = "tabular"
 
     def __call__(self, explanation, name, step_fraction=0.01, indices=[], silent=False):
-        """ Run this benchmark on the given explanation.
-        """
-
-        if safe_isinstance(explanation, "numpy.ndarray"):
+        """Run this benchmark on the given explanation."""
+        if isinstance(explanation, np.ndarray):
             attributions = explanation
         elif isinstance(explanation, Explanation):
             attributions = explanation.values
         else:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
-        assert len(attributions) == len(self.model_args[0]), "The explanation passed must have the same number of rows as " + \
-                                                             "the self.model_args that were passed!"
+        if len(attributions) != len(self.model_args[0]):
+            emsg = "The explanation passed must have the same number of rows as the self.model_args that were passed!"
+            raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing
         # so as to avoid needless noise
@@ -100,9 +113,10 @@ class ExplanationError():
         mask_vals = []
 
         for i, args in enumerate(zip(*self.model_args)):
-
             if len(args[0].shape) != len(attributions[i].shape):
-                raise ValueError("The passed explanation must have the same dim as the model_args and must not have a vector output!")
+                raise ValueError(
+                    "The passed explanation must have the same dim as the model_args and must not have a vector output!"
+                )
 
             feature_size = np.prod(attributions[i].shape)
             sample_attributions = attributions[i].flatten()
@@ -115,38 +129,40 @@ class ExplanationError():
                 elif callable(self.masker.clustering):
                     row_clustering = self.masker.clustering(*args)
                 else:
-                    raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!")
+                    raise NotImplementedError(
+                        "The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!"
+                    )
 
             masked_model = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *args)
 
             total_values = None
             for _ in range(self.num_permutations):
                 masks = []
-                mask = np.zeros(feature_size, dtype=np.bool)
+                mask = np.zeros(feature_size, dtype=bool)
                 masks.append(mask.copy())
                 ordered_inds = np.arange(feature_size)
 
                 # shuffle the indexes so we get a random permutation ordering
                 if row_clustering is not None:
-                    inds_mask = np.ones(feature_size, dtype=np.bool)
+                    inds_mask = np.ones(feature_size, dtype=bool)
                     partition_tree_shuffle(ordered_inds, inds_mask, row_clustering)
                 else:
                     np.random.shuffle(ordered_inds)
 
                 increment = max(1, int(feature_size * step_fraction))
                 for j in range(0, feature_size, increment):
-                    mask[ordered_inds[np.arange(j, min(feature_size, j+increment))]] = True
+                    mask[ordered_inds[np.arange(j, min(feature_size, j + increment))]] = True
                     masks.append(mask.copy())
                 mask_vals.append(masks)
 
                 values = []
                 masks_arr = np.array(masks)
                 for j in range(0, len(masks_arr), self.batch_size):
-                    values.append(masked_model(masks_arr[j:j + self.batch_size]))
+                    values.append(masked_model(masks_arr[j : j + self.batch_size]))
                 values = np.concatenate(values)
                 base_value = values[0]
-                for l, v in enumerate(values):
-                    values[l] = (v - (base_value + np.sum(sample_attributions[masks_arr[l]])))**2
+                for j, v in enumerate(values):
+                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]]))) ** 2
 
                 if total_values is None:
                     total_values = values
@@ -157,8 +173,10 @@ class ExplanationError():
             svals.append(total_values)
 
             if pbar is None and time.time() - start_time > 5:
-                pbar = tqdm(total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}")
-                pbar.update(i+1)
+                pbar = tqdm(
+                    total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}"
+                )
+                pbar.update(i + 1)
             if pbar is not None:
                 pbar.update(1)
 
@@ -170,4 +188,4 @@ class ExplanationError():
         # reset the random seed so we don't mess up the caller
         np.random.seed(old_seed)
 
-        return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values)/len(total_values)))
+        return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values) / len(total_values)))

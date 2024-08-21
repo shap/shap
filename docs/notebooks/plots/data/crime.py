@@ -1,8 +1,10 @@
 # Create 'crime.pickle'
 
-from sklearn.model_selection import train_test_split
-import lightgbm as lgb
 import pickle
+
+import lightgbm as lgb
+from sklearn.model_selection import train_test_split
+
 import shap
 
 random_state = 1203344
@@ -20,6 +22,5 @@ shap_values = explainer.shap_values(X_test.iloc[[idx]], y_test[idx])
 
 # Dump to pickle
 o = (explainer.expected_value, shap_values, X_test.iloc[0])
-with open('./crime.pickle', 'wb') as fl:
+with open("./crime.pickle", "wb") as fl:
     pickle.dump(o, fl)
-

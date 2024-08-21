@@ -1,0 +1,5 @@
+# Ensure consistent treatment of line endings
+* text=auto
+
+# Do not raise merge conflicts for multiple changelog edits
+CHANGELOG.md merge=union
