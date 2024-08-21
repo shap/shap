@@ -10,16 +10,20 @@ SENTENCEPIECE_TOKENIZERS = [
 
 def is_transformers_lm(model):
     """Check if the given model object is a huggingface transformers language model."""
-    if safe_isinstance(
-            model, "transformers.PreTrainedModel") or safe_isinstance(
-            model, "transformers.TFPreTrainedModel"):
+    if safe_isinstance(model, "transformers.PreTrainedModel") or safe_isinstance(
+        model, "transformers.TFPreTrainedModel"
+    ):
         from transformers import (
             MODEL_FOR_CAUSAL_LM_MAPPING,
             MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING,
         )
-        return type(model) in MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING.values() or type(
-            model) in MODEL_FOR_CAUSAL_LM_MAPPING.values()
+
+        return (
+            type(model) in MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING.values()
+            or type(model) in MODEL_FOR_CAUSAL_LM_MAPPING.values()
+        )
     return False
+
 
 def parse_prefix_suffix_for_tokenizer(tokenizer):
     """Set prefix and suffix tokens based on null tokens.
