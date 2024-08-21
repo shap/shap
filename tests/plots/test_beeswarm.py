@@ -54,12 +54,10 @@ def test_beeswarm(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_beeswarm_no_sum_remaining(explainer):
-    """Check a beeswarm chart renders correctly with shap_values as an Explanation
-    object (default settings).
-    """
+def test_beeswarm_no_group_remaining(explainer):
+    """Beeswarm with group_remaining_features=False."""
     fig = plt.figure()
     shap_values = explainer(explainer.data)
-    shap.plots.beeswarm(shap_values, show=False, sum_bottom_features=False)
+    shap.plots.beeswarm(shap_values, show=False, group_remaining_features=False)
     plt.tight_layout()
     return fig
