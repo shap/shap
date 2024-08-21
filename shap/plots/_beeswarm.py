@@ -174,9 +174,10 @@ def beeswarm(
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
-    fig = pl.gcf()
     if ax is None:
         ax = pl.gca()
+    fig = ax.get_figure()
+    assert fig is not None  # type narrowing for mypy
 
     if log_scale:
         ax.set_xscale("symlog")
@@ -479,7 +480,6 @@ def beeswarm(
     if show:
         pl.show()
     else:
-        pl.close(fig)
         return ax
 
 
