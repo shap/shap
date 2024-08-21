@@ -41,6 +41,7 @@ def beeswarm(
     s=16,
     plot_size="auto",
     color_bar_label=labels["FEATURE_VALUE"],
+    group_remaining_features=True,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -75,6 +76,10 @@ def beeswarm(
         plot by that number of inches. If ``None`` is passed, then the size of the
         current figure will be left unchanged. If ax is not ``None``, then passing
         plot_size will raise a Value Error.
+
+    group_remaining_features: bool
+        If there are more features than ``max_display``, then plot a row representing
+        the sum of SHAP values of all remaining features. Default True.
 
     Returns
     -------
@@ -334,7 +339,8 @@ def beeswarm(
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
-    if num_features < len(values[0]):
+    include_grouped_remaining = num_features < len(values[0]) and group_remaining_features
+    if include_grouped_remaining:
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features - 1, len(values[0]))])
         values[:, feature_order[num_features - 1]] = np.sum(
             [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))], 0
@@ -342,7 +348,7 @@ def beeswarm(
 
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
-    if num_features < len(values[0]):
+    if include_grouped_remaining:
         yticklabels[-1] = "Sum of %d other features" % num_cut
 
     row_height = 0.4
