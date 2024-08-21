@@ -1,4 +1,3 @@
-
 import inspect
 import logging
 import pickle
@@ -6,7 +5,8 @@ import pickle
 import cloudpickle
 import numpy as np
 
-log = logging.getLogger('shap')
+log = logging.getLogger("shap")
+
 
 class Serializable:
     """This is the superclass of all serializable objects."""
@@ -52,7 +52,7 @@ class Serializer:
         self.out_stream = out_stream
         self.block_name = block_name
         self.block_version = version
-        self.serializer_version = 0 # update this when the serializer changes
+        self.serializer_version = 0  # update this when the serializer changes
 
     def __enter__(self):
         log.debug("serializer_version = %d", self.serializer_version)
@@ -81,7 +81,7 @@ class Serializer:
         elif encoder == ".save" or (isinstance(value, Serializable) and encoder == "auto"):
             log.debug("encoder_name = %s", "serializable.save")
             pickle.dump("serializable.save", self.out_stream)
-            if len(inspect.getfullargspec(value.save)[0]) == 3: # backward compat for MLflow, can remove 4/1/2021
+            if len(inspect.getfullargspec(value.save)[0]) == 3:  # backward compat for MLflow, can remove 4/1/2021
                 value.save(self.out_stream, value)
             else:
                 value.save(self.out_stream)
@@ -98,6 +98,7 @@ class Serializer:
             raise ValueError(f"Unknown encoder type '{encoder}' given for serialization!")
         log.debug("value = %s", str(value))
 
+
 class Deserializer:
     """Load data items from an input stream."""
 
@@ -112,18 +113,17 @@ class Deserializer:
         self.serializer_max_version = 0
 
     def __enter__(self):
-
         # confirm the serializer version
         serializer_version = pickle.load(self.in_stream)
         log.debug("serializer_version = %d", serializer_version)
         if serializer_version < self.serializer_min_version:
             raise ValueError(
-                f"The file being loaded was saved with a serializer version of {serializer_version}, " + \
+                f"The file being loaded was saved with a serializer version of {serializer_version}, "
                 f"but the current deserializer in SHAP requires at least version {self.serializer_min_version}."
             )
         if serializer_version > self.serializer_max_version:
             raise ValueError(
-                f"The file being loaded was saved with a serializer version of {serializer_version}, " + \
+                f"The file being loaded was saved with a serializer version of {serializer_version}, "
                 f"but the current deserializer in SHAP only support up to version {self.serializer_max_version}."
             )
 
@@ -132,7 +132,7 @@ class Deserializer:
         log.debug("block_name = %s", block_name)
         if block_name != self.block_name:
             raise ValueError(
-                f"The next data block in the file being loaded was supposed to be {self.block_name}, " + \
+                f"The next data block in the file being loaded was supposed to be {self.block_name}, "
                 f"but the next block found was {block_name}."
             )
 
@@ -141,12 +141,12 @@ class Deserializer:
         log.debug("block_version = %d", block_version)
         if block_version < self.block_min_version:
             raise ValueError(
-                f"The file being loaded was saved with a block version of {block_version}, " + \
+                f"The file being loaded was saved with a block version of {block_version}, "
                 f"but the current deserializer in SHAP requires at least version {self.block_min_version}."
             )
         if block_version > self.block_max_version:
             raise ValueError(
-                f"The file being loaded was saved with a block version of {block_version}, " + \
+                f"The file being loaded was saved with a block version of {block_version}, "
                 f"but the current deserializer in SHAP only support up to version {self.block_max_version}."
             )
         return self
@@ -159,9 +159,7 @@ class Deserializer:
             if end_token == "END_BLOCK___":
                 return
             self._load_data_value()
-        raise ValueError(
-            f"The data block end token wsa not found for the block {self.block_name}."
-        )
+        raise ValueError(f"The data block end token wsa not found for the block {self.block_name}.")
 
     def load(self, name, decoder=None):
         """Load a data item from the current input stream."""
@@ -171,9 +169,9 @@ class Deserializer:
         print("loaded_name", loaded_name)
         if loaded_name != name:
             raise ValueError(
-                f"The next data item in the file being loaded was supposed to be {name}, " + \
+                f"The next data item in the file being loaded was supposed to be {name}, "
                 f"but the next block found was {loaded_name}."
-            ) # We should eventually add support for skipping over unused data items in old formats...
+            )  # We should eventually add support for skipping over unused data items in old formats...
 
         value = self._load_data_value(decoder)
         log.debug("value = %s", str(value))

@@ -4,8 +4,9 @@ SENTENCEPIECE_TOKENIZERS = [
     "transformers.MarianTokenizer",
     "transformers.T5Tokenizer",
     "transformers.XLNetTokenizer",
-    "transformers.AlbertTokenizer"
+    "transformers.AlbertTokenizer",
 ]
+
 
 def is_transformers_lm(model):
     """Check if the given model object is a huggingface transformers language model."""
@@ -33,21 +34,23 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
         null_token = null_tokens[0]
         if hasattr(tokenizer, "special_tokens_map") and hasattr(tokenizer, "decode"):
             st_map = tokenizer.special_tokens_map
-            assert (('eos_token' in st_map) or ('bos_token' in st_map)), "No eos token or bos token found in tokenizer!"
-            if ('eos_token' in st_map) and (tokenizer.decode(null_token) == st_map['eos_token']):
+            assert ("eos_token" in st_map) or ("bos_token" in st_map), "No eos token or bos token found in tokenizer!"
+            if ("eos_token" in st_map) and (tokenizer.decode(null_token) == st_map["eos_token"]):
                 keep_prefix = 0
                 keep_suffix = 1
                 # prefix_strlen = 0
                 # suffix_strlen = len(tokenizer.decode(null_tokens[-keep_suffix:]))
-            elif ('bos_token' in st_map) and (tokenizer.decode(null_token) == st_map['bos_token']):
+            elif ("bos_token" in st_map) and (tokenizer.decode(null_token) == st_map["bos_token"]):
                 keep_prefix = 1
                 keep_suffix = 0
                 # prefix_strlen = len(tokenizer.decode(null_tokens[:keep_prefix]))
                 # suffix_strlen = 0
         else:
-            raise Exception("The given tokenizer produces one token when applied to the empty string, but " + \
-                            "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] " + \
-                            "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!")
+            raise Exception(
+                "The given tokenizer produces one token when applied to the empty string, but "
+                "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] "
+                "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!"
+            )
     else:
         assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"
         keep_prefix = len(null_tokens) // 2
@@ -56,12 +59,13 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
         # suffix_strlen = len(tokenizer.decode(null_tokens[-keep_suffix:]))
 
     return {
-        'keep_prefix' : keep_prefix,
-        'keep_suffix' : keep_suffix,
+        "keep_prefix": keep_prefix,
+        "keep_suffix": keep_suffix,
         # 'prefix_strlen' : prefix_strlen,
         # 'suffix_strlen' : suffix_strlen,
-        'null_tokens' : null_tokens
+        "null_tokens": null_tokens,
     }
+
 
 def getattr_silent(obj, attr):
     """This turns of verbose logging of missing attributes for huggingface transformers.
@@ -70,7 +74,7 @@ def getattr_silent(obj, attr):
     when we access unset properties.
     """
     reset_verbose = False
-    if getattr(obj, 'verbose', False):
+    if getattr(obj, "verbose", False):
         reset_verbose = True
         obj.verbose = False
 
