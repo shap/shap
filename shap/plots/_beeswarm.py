@@ -41,7 +41,7 @@ def beeswarm(
     s=16,
     plot_size="auto",
     color_bar_label=labels["FEATURE_VALUE"],
-    group_remaining_features: bool = True,
+    group_remaining_features=True,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
