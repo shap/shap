@@ -315,7 +315,7 @@ def beeswarm(
             ):
                 # values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values), partition_tree)
-                for i in range(len(values)):
+                for _ in range(len(values)):
                     values[:, ind1] += values[:, ind2]
                     values = np.delete(values, ind2, 1)
                     orig_inds[ind1] += orig_inds[ind2]
@@ -328,7 +328,7 @@ def beeswarm(
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
     feature_names_new = []
-    for pos, inds in enumerate(orig_inds):
+    for inds in orig_inds:
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
         elif len(inds) <= 2:
@@ -834,7 +834,7 @@ def summary_legacy(
                 )
 
     elif plot_type == "violin":
-        for pos, i in enumerate(feature_order):
+        for pos in range(len(feature_order)):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:

@@ -37,7 +37,7 @@ def group_difference(
     # Compute confidence bounds for the group difference value
     vs = []
     gmean = group_mask.mean()
-    for i in range(200):
+    for _ in range(200):
         r = np.random.rand(shap_values.shape[0]) > gmean
         vs.append(shap_values[r].mean(0) - shap_values[~r].mean(0))
     vs_ = np.array(vs)
