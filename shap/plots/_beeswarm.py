@@ -612,7 +612,7 @@ def summary_legacy(
     if features is not None:
         shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
-            assert False, (
+            raise ValueError(
                 shape_msg + " Perhaps the extra column in the shap_values matrix is the "
                 "constant offset? Of so just pass shap_values[:,:-1]."
             )
