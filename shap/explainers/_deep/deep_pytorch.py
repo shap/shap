@@ -123,7 +123,7 @@ class PyTorchDeep(Explainer):
                 if grad is not None:
                     grad = grad.cpu().numpy()
                 else:
-                    grad = torch.zeros_like(X[idx]).cpu().numpy()
+                    grad = torch.zeros_like(x).cpu().numpy()
                 grads.append(grad)
             return grads
 
