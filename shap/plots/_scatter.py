@@ -12,6 +12,7 @@ from matplotlib.markers import MarkerStyle
 
 from .._explanation import Explanation
 from ..utils import approximate_interactions, convert_name
+from ..utils._exceptions import DimensionError
 from ..utils._general import encode_array_if_needed
 from . import colors
 from ._labels import labels
@@ -61,7 +62,7 @@ def scatter(
         Alternatively, pass multiple columns to create several subplots
         (i.e. ``shap_values[:, ["Feature A", "Feature B"]]``).
 
-    color : string or shap.Explanation
+    color : string or shap.Explanation, optional
         How to color the scatter plot points. This can be a fixed color string, or an
         :class:`.Explanation` object.
 
@@ -84,7 +85,7 @@ def scatter(
         increase plot readability when a feature is discrete. By default, ``x_jitter``
         is chosen based on auto-detection of categorical features.
 
-    title: Optional str
+    title: str, optional
         Plot title.
 
     alpha : float
@@ -100,13 +101,13 @@ def scatter(
         It can also be an aggregated column of a single column of an :class:`.Explanation`,
         such as ``explanation[:, "feature_name"].percentile(20)``.
 
-    overlay: dict
+    overlay: dict, optional
         Optional dictionary of curves to overlay as line plots.
 
         The dictionary maps a curve name to a list of (xvalues, yvalues) pairs, where
         there is one pair for each feature to be plotted.
 
-    ax : matplotlib Axes object
+    ax : matplotlib Axes, optional
         Optionally specify an existing matplotlib ``Axes`` object, into which
         the plot will be placed.
 
@@ -163,7 +164,7 @@ def scatter(
         return
 
     if len(shap_values.shape) != 1:
-        raise ValueError(
+        raise DimensionError(
             "The passed Explanation object has multiple columns. Please pass a single feature column to "
             "shap.plots.scatter like: shap_values[:, column]"
         )
@@ -434,9 +435,11 @@ def scatter(
 def _parse_limit(ax_limit: LimitSpec, ax_values: np.ndarray, is_shap_axis: bool) -> float | None:
     """Handle axis limits in "percentile(float)" format or from Explanation objects"""
     if isinstance(ax_limit, str):
-        if not ax_limit.startswith("percentile(") or not ax_limit.endswith(")"):
-            raise ValueError("Only strings of the format `percentile(x)` are supported.")
-        return np.nanpercentile(ax_values, float(ax_limit[11:-1]))
+        try:
+            percentage = float(ax_limit.removeprefix("percentile(").removesuffix(")"))
+        except ValueError as e:
+            raise ValueError("Only strings of the format `percentile(x)` are supported.") from e
+        return np.nanpercentile(ax_values, percentage)
     if isinstance(ax_limit, Explanation):
         # Expect Explanation aggregated to a single value, e.g. `explanation[:, "feature_name"].percentile(20)`
         # Extract relevant attribute, depending if x- or y-axis
