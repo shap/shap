@@ -171,7 +171,7 @@ def scatter(
 
     # this unpacks the explanation object for the code that was written earlier
     feature_names = [shap_values.feature_names]
-    ind: Any = 0
+    ind: int = 0
     shap_values_arr = shap_values.values.reshape(-1, 1)
     features = shap_values.data.reshape(-1, 1)
     if shap_values.display_data is None:
@@ -231,17 +231,14 @@ def scatter(
     if len(features.shape) == 1:
         features = np.reshape(features, (len(features), 1))
 
-    ind = convert_name(ind, shap_values_arr, feature_names)
-
     # pick jitter for categorical features
     if x_jitter == "auto":
         x_jitter = _suggest_x_jitter(features[:, ind])
 
     # guess what other feature as the stongest interaction with the plotted feature
-    if not hasattr(ind, "__len__"):
-        if interaction_index == "auto":
-            interaction_index = approximate_interactions(ind, shap_values_arr, features)[0]
-        interaction_index = convert_name(interaction_index, shap_values_arr, feature_names)
+    if interaction_index == "auto":
+        interaction_index = approximate_interactions(ind, shap_values_arr, features)[0]
+    interaction_index = convert_name(interaction_index, shap_values_arr, feature_names)
     categorical_interaction = False
 
     # create a matplotlib figure, if `ax` hasn't been specified.
