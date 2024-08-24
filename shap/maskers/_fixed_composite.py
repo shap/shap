@@ -41,10 +41,10 @@ class FixedComposite(Masker):
     def __call__(self, mask, *args):
         """Computes mask on the args using the masker data attribute and returns tuple containing masked input with args."""
         masked_X = self.masker(mask, *args)
-        wrapped_args = []
+        wrapped_args_list = []
         for item in args:
-            wrapped_args.append(np.array([item]))
-        wrapped_args = tuple(wrapped_args)
+            wrapped_args_list.append(np.array([item]))
+        wrapped_args = tuple(wrapped_args_list)
         if not isinstance(masked_X, tuple):
             masked_X = (masked_X,)
         return masked_X + wrapped_args

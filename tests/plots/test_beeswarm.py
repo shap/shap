@@ -12,7 +12,7 @@ def test_beeswarm_input_is_explanation():
         TypeError,
         match="beeswarm plot requires an `Explanation` object",
     ):
-        _ = shap.plots.beeswarm(np.random.randn(20, 5), show=False)
+        _ = shap.plots.beeswarm(np.random.randn(20, 5), show=False)  # type: ignore
 
 
 def test_beeswarm_wrong_features_shape():
@@ -49,5 +49,15 @@ def test_beeswarm(explainer):
     fig = plt.figure()
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_beeswarm_no_group_remaining(explainer):
+    """Beeswarm with group_remaining_features=False."""
+    fig = plt.figure()
+    shap_values = explainer(explainer.data)
+    shap.plots.beeswarm(shap_values, show=False, group_remaining_features=False)
     plt.tight_layout()
     return fig
