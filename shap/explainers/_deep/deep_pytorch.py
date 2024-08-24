@@ -123,7 +123,7 @@ class PyTorchDeep(Explainer):
                 if grad is not None:
                     grad = grad.cpu().numpy()
                 else:
-                    grad = torch.zeros_like(X[idx]).cpu().numpy()
+                    grad = torch.zeros_like(x).cpu().numpy()
                 grads.append(grad)
             return grads
 
@@ -286,13 +286,13 @@ def add_interim_values(module, input, output):
             if func_name in ["maxpool", "nonlinear_1d"]:
                 # only save tensors if necessary
                 if type(input) is tuple:
-                    setattr(module, "x", torch.nn.Parameter(input[0].detach()))
+                    module.x = torch.nn.Parameter(input[0].detach())
                 else:
-                    setattr(module, "x", torch.nn.Parameter(input.detach()))
+                    module.x = torch.nn.Parameter(input.detach())
                 if type(output) is tuple:
-                    setattr(module, "y", torch.nn.Parameter(output[0].detach()))
+                    module.y = torch.nn.Parameter(output[0].detach())
                 else:
-                    setattr(module, "y", torch.nn.Parameter(output.detach()))
+                    module.y = torch.nn.Parameter(output.detach())
 
 
 def get_target_input(module, input, output):
@@ -303,7 +303,7 @@ def get_target_input(module, input, output):
         del module.target_input
     except AttributeError:
         pass
-    setattr(module, "target_input", input)
+    module.target_input = input
 
 
 def passthrough(module, grad_input, grad_output):
