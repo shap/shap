@@ -461,7 +461,7 @@ def _suggest_x_jitter(values: np.ndarray) -> float:
     """Suggest a suitable x_jitter value based on the unique values in the feature"""
     unique_vals = np.sort(np.unique(values))
     try:
-        # Identify the smallest difference between uniqu evalues
+        # Identify the smallest difference between unique values
         diffs = np.diff(unique_vals)
         min_dist = np.min(diffs[diffs > 1e-8])
     except TypeError:
