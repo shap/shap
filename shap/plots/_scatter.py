@@ -373,10 +373,10 @@ def scatter(
     #         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
-    xmin = _parse_limit(xmin, xv, False)
-    xmax = _parse_limit(xmax, xv, False)
-    ymin = _parse_limit(ymin, s, True)
-    ymax = _parse_limit(ymax, s, True)
+    xmin = _parse_limit(xmin, xv, is_shap_axis=False)
+    xmax = _parse_limit(xmax, xv, is_shap_axis=False)
+    ymin = _parse_limit(ymin, s, is_shap_axis=True)
+    ymax = _parse_limit(ymax, s, is_shap_axis=True)
     if xmin is not None or xmax is not None:
         ax.set_xlim(*_suggest_buffered_limits(xmin, xmax, xv))
     if ymin is not None or ymax is not None:
