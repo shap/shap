@@ -40,7 +40,7 @@ def scatter(
     ylabel: str = "SHAP value",
     show: bool = True,
 ):
-    """Create a SHAP dependence scatter plot, colored by an interaction feature.
+    """Create a SHAP dependence scatter plot, optionally colored by an interaction feature.
 
     Plots the value of the feature on the x-axis and the SHAP value of the same feature
     on the y-axis. This shows how the model depends on the given feature, and is like a
@@ -97,7 +97,7 @@ def scatter(
         It can be a string of the format ``"percentile(float)"`` to denote that
         percentile of the feature's value.
 
-        It can also be an aggregated column of a single column of an Explanation,
+        It can also be an aggregated column of a single column of an :class:`.Explanation`,
         such as ``explanation[:, "feature_name"].percentile(20)``.
 
     overlay: dict
@@ -137,8 +137,8 @@ def scatter(
             raise ValueError("The ax parameter is not supported when plotting multiple features")
         # Define order of columns (features) to plot based on average shap value
         inds = np.argsort(np.abs(shap_values.values).mean(0))
-        ymin = _parse_limit(ymin, shap_values.values, True)
-        ymax = _parse_limit(ymax, shap_values.values, True)
+        ymin = _parse_limit(ymin, shap_values.values, is_shap_axis=True)
+        ymax = _parse_limit(ymax, shap_values.values, is_shap_axis=True)
         ymin, ymax = _suggest_buffered_limits(ymin, ymax, shap_values.values)
         _ = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
