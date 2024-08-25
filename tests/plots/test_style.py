@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from shap.plots import _style
-from shap.plots._style import get_style
+from shap.plots._style import get_active_state
 from shap.utils._exceptions import InvalidStyleOptionError
 
 # TODO: when the API is finalised, these functions will probably be
@@ -14,21 +14,21 @@ from shap.utils._exceptions import InvalidStyleOptionError
 
 def test_default_style():
     default_stype = _style.load_default_style()
-    assert configs_are_equal(get_style(), default_stype)
+    assert configs_are_equal(get_active_state(), default_stype)
 
 
 def test_set_style():
-    prev_style = get_style()
+    prev_style = get_active_state()
     _style.set_style(text_color="green")
-    assert get_style().text_color == "green"
-    assert not configs_are_equal(get_style(), prev_style)
+    assert get_active_state().text_color == "green"
+    assert not configs_are_equal(get_active_state(), prev_style)
 
 
 def test_style_context():
-    original_text_color = get_style().text_color
+    original_text_color = get_active_state().text_color
     with _style.style_context(text_color="green"):
-        assert get_style().text_color == "green"
-    assert get_style().text_color == original_text_color
+        assert get_active_state().text_color == "green"
+    assert get_active_state().text_color == original_text_color
 
 
 def test_set_style_raises_on_invalid_options():

@@ -5,8 +5,8 @@ NOTE: This is experimental and subject to change!
 
 from __future__ import annotations
 
+import dataclasses
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, fields, replace
 from typing import TypedDict, Union
 
 import numpy as np
@@ -29,7 +29,7 @@ RGBAColorType = Union[
 ColorType = Union[RGBColorType, RGBAColorType, np.ndarray]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class StyleConfig:
     """A complete set of configuration options for matplotlib-based shap plots."""
 
@@ -41,6 +41,9 @@ class StyleConfig:
     vlines_color: ColorType
     text_color: ColorType
     tick_labels_color: ColorType
+
+    def asdict(self):
+        return dataclasses.asdict(self)
 
 
 class StyleOptions(TypedDict, total=False):
@@ -79,13 +82,21 @@ def load_default_style() -> StyleConfig:
 
 # Singleton instance that determines the current style.
 # CAREFUL! To ensure the correct object is picked up, do not import this directly,
-# but instead access this at runtime with get_style().
+# but instead access this at runtime with get_active_state().
 _STYLE = load_default_style()
 
 
-def get_style() -> StyleConfig:
-    """Return all currently active global style configuration options."""
+def get_active_state() -> StyleConfig:
+    """Return active global style options as a dataclass.
+
+    Intended for use within plotting functions, allowing safe attribute access.
+    """
     return _STYLE
+
+
+def get_style() -> StyleOptions:
+    """Return active global style options as a typed dictionary."""
+    return get_active_state().asdict()
 
 
 def set_style(**options: Unpack[StyleOptions]) -> None:
@@ -110,13 +121,13 @@ def style_context(**options: Unpack[StyleOptions]):
     old_style = get_style()
     set_style(**options)
     yield
-    set_style(**asdict(old_style))
+    set_style(**old_style)
 
 
 def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:
     """Return a new StyleConfig with any changes applied, handling any invalid options."""
-    valid_keys = set(f.name for f in fields(StyleConfig))
+    valid_keys = set(f.name for f in dataclasses.fields(StyleConfig))
     for key in changes.keys():
         if key not in valid_keys:
             raise InvalidStyleOptionError(f"Invalid style config option: {key}")
-    return replace(style, **changes)
+    return dataclasses.replace(style, **changes)
