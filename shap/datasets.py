@@ -10,7 +10,7 @@ import sklearn.datasets
 
 import shap
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import scipy.sparse as ssp
 
 github_data_url: Final[str] = "https://github.com/shap/shap/raw/master/data/"
