@@ -40,5 +40,5 @@ class InvalidClusteringError(ValueError):
     pass
 
 
-class InvalidOptionError(ValueError):
+class InvalidStyleOptionError(ValueError):
     pass

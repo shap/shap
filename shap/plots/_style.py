@@ -12,7 +12,7 @@ from typing import TypedDict, Union
 import numpy as np
 from typing_extensions import Unpack
 
-from ..utils._exceptions import InvalidOptionError
+from ..utils._exceptions import InvalidStyleOptionError
 from . import colors
 
 # Type hints, adapted from matplotlib.typing
@@ -119,5 +119,5 @@ def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:
     valid_keys = set(f.name for f in fields(StyleConfig))
     for key in changes.keys():
         if key not in valid_keys:
-            raise InvalidOptionError(f"Invalid style config option: {key}")
+            raise InvalidStyleOptionError(f"Invalid style config option: {key}")
     return replace(style, **changes)

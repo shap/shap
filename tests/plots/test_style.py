@@ -6,7 +6,7 @@ import pytest
 
 from shap.plots import _style
 from shap.plots._style import get_style
-from shap.utils._exceptions import InvalidOptionError
+from shap.utils._exceptions import InvalidStyleOptionError
 
 # TODO: when the API is finalised, these functions will probably be
 # exposed in shap.plots, not shap.plots._style
@@ -32,12 +32,12 @@ def test_style_context():
 
 
 def test_set_style_raises_on_invalid_options():
-    with pytest.raises(InvalidOptionError, match="Invalid style config option"):
+    with pytest.raises(InvalidStyleOptionError, match="Invalid style config option"):
         _style.set_style(foo="bar")  # type: ignore
 
 
 def test_style_context_raises_on_invalid_options():
-    with pytest.raises(InvalidOptionError, match="Invalid style config option"):
+    with pytest.raises(InvalidStyleOptionError, match="Invalid style config option"):
         with _style.style_context(foo="bar"):  # type: ignore
             pass
 
