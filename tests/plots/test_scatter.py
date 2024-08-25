@@ -8,27 +8,24 @@ import shap
 def test_scatter_single(explainer):
     explanation = explainer(explainer.data)
     shap.plots.scatter(explanation[:, "Age"], show=False)
-    fig = plt.gcf()
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
 def test_scatter_interaction(explainer):
     explanation = explainer(explainer.data)
     shap.plots.scatter(explanation[:, "Age"], color=explanation[:, "Workclass"], show=False)
-    fig = plt.gcf()
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
 def test_scatter_dotchain(explainer):
     explanation = explainer(explainer.data)
     shap.plots.scatter(explanation[:, explanation.abs.mean(0).argsort[-2]], show=False)
-    fig = plt.gcf()
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
@@ -42,9 +39,8 @@ def test_scatter_multiple_cols_overlay(explainer):
         ],
     }
     shap.plots.scatter(shap_values, overlay=overlay, show=False)
-    fig = plt.gcf()
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
@@ -63,9 +59,8 @@ def test_scatter_custom(explainer):
         cmap=plt.get_cmap("cool"),
         show=False,
     )
-    fig = plt.gcf()
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.fixture()

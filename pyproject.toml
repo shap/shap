@@ -141,7 +141,6 @@ module = [
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
   "shap.plots._force",
-  "shap.plots._scatter.*",
   "shap.plots._text",
   "shap.plots._waterfall",
 ]
