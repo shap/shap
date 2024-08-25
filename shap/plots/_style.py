@@ -79,7 +79,7 @@ def load_default_style() -> StyleConfig:
 
 # Singleton instance that determines the current style.
 # CAREFUL! To ensure the correct object is picked up, do not import this directly,
-# but intead access this at runtime with get_style().
+# but instead access this at runtime with get_style().
 _STYLE = load_default_style()
 
 
@@ -102,7 +102,7 @@ def style_context(**options: Unpack[StyleOptions]):
 
     Examples
     --------
-    To set a new style::
+    To temporarily use black text color instead of the default (white)::
 
         with shap.plots.style_context(text_color="black"):
             shap.plots.waterfall(...)
