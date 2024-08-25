@@ -6,7 +6,7 @@ NOTE: This is experimental and subject to change!
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass, fields, replace
+from dataclasses import asdict, dataclass, fields, replace
 from typing import TypedDict, Union
 
 import numpy as np
@@ -107,11 +107,10 @@ def style_context(**options: Unpack[StyleOptions]):
         with shap.plots.style_context(text_color="black"):
             shap.plots.waterfall(...)
     """
-    global _STYLE
-    old_style = _STYLE
-    _STYLE = _apply_options(_STYLE, options)
+    old_style = get_style()
+    set_style(**options)
     yield
-    _STYLE = old_style
+    set_style(**asdict(old_style))
 
 
 def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:
