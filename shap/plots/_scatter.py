@@ -102,7 +102,7 @@ def scatter(
         such as ``explanation[:, "feature_name"].percentile(20)``.
 
     overlay: dict, optional
-        Optional dictionary of curves to overlay as line plots.
+        Optional dictionary of up to three additional curves to overlay as line plots.
 
         The dictionary maps a curve name to a list of (xvalues, yvalues) pairs, where
         there is one pair for each feature to be plotted.
