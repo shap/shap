@@ -29,7 +29,7 @@ RGBAColorType = Union[
 ColorType = Union[RGBColorType, RGBAColorType, np.ndarray]
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class StyleConfig:
     """A complete set of configuration options for matplotlib-based shap plots."""
 
@@ -82,25 +82,23 @@ def load_default_style() -> StyleConfig:
 
 # Singleton instance that determines the current style.
 # CAREFUL! To ensure the correct object is picked up, do not import this directly,
-# but instead access this at runtime with get_active_state().
+# but instead access this at runtime with get_style().
 _STYLE = load_default_style()
 
 
-def get_active_state() -> StyleConfig:
-    """Return active global style options as a dataclass.
-
-    Intended for use within plotting functions, allowing safe attribute access.
-    """
+def get_style() -> StyleConfig:
+    """Return all currently active global style configuration options."""
     return _STYLE
 
 
-def get_style() -> StyleOptions:
-    """Return active global style options as a typed dictionary."""
-    return get_active_state().asdict()
+def set_style(_style: StyleConfig | None = None, /, **options: Unpack[StyleOptions]) -> None:
+    """Set options in the currently active global style configuration.
 
-
-def set_style(**options: Unpack[StyleOptions]) -> None:
-    """Set options in the currently active global style configuration."""
+    Pass keyword arguments to set individual options, or pass a StyleConfig dataclass to replace all options.
+    """
+    if _style is not None:
+        # Unpack the dataclass; any keyword arguments take precendence.
+        options = _style.asdict() | options
     global _STYLE
     _STYLE = _apply_options(_STYLE, options)
 
@@ -121,7 +119,7 @@ def style_context(**options: Unpack[StyleOptions]):
     old_style = get_style()
     set_style(**options)
     yield
-    set_style(**old_style)
+    set_style(**old_style.asdict())
 
 
 def _apply_options(style: StyleConfig, changes: StyleOptions) -> StyleConfig:

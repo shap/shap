@@ -6,7 +6,7 @@ import pandas as pd
 from .. import Explanation
 from ..utils import format_value
 from ._labels import labels
-from ._style import get_active_state
+from ._style import get_style
 
 
 # TODO: If we make a JS version of this plot then we could let users click on a bar and then see the dependence
@@ -43,7 +43,7 @@ def waterfall(shap_values, max_display=10, show=True):
     See `waterfall plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/waterfall.html>`_.
 
     """
-    style = get_active_state()
+    style = get_style()
     # Turn off interactive plot
     if show is False:
         plt.ioff()
@@ -404,7 +404,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         to be customized further after it has been created.
 
     """
-    style = get_active_state()
+    style = get_style()
     # Turn off interactive plot when not calling plt.show
     if show is False:
         plt.ioff()
