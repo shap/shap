@@ -29,7 +29,8 @@ RGBAColorType = Union[
 ColorType = Union[RGBColorType, RGBAColorType, np.ndarray]
 
 
-@dataclasses.dataclass(frozen=True, kw_only=True)
+# TODO: Use dataclass(kw_only=True) when we drop Python 3.9
+@dataclasses.dataclass(frozen=True)
 class StyleConfig:
     """A complete set of configuration options for matplotlib-based shap plots."""
 
