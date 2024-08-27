@@ -124,10 +124,6 @@ def test_tf_keras_activations(activation):
 
     tf = pytest.importorskip("tensorflow")
 
-    from tensorflow.keras.layers import Dense, Input
-    from tensorflow.keras.models import Model
-    from tensorflow.keras.optimizers import SGD
-
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
 
@@ -139,11 +135,11 @@ def test_tf_keras_activations(activation):
     y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
 
     # create a linear model
-    inputs = Input(shape=(2,))
-    preds = Dense(1, activation=activation)(inputs)
+    inputs = tf.keras.layers.Input(shape=(2,))
+    preds = tf.keras.layers.Dense(1, activation=activation)(inputs)
 
-    model = Model(inputs=inputs, outputs=preds)
-    model.compile(optimizer=SGD(), loss="mse", metrics=["mse"])
+    model = tf.keras.models.Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=tf.keras.optimizers.SGD(), loss="mse", metrics=["mse"])
     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     # explain
