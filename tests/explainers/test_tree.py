@@ -4,6 +4,7 @@ import itertools
 import math
 import pickle
 import sys
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -1636,8 +1637,8 @@ class TestExplainerLightGBM:
         assert (explanation.values == shap_values).all()
 
 
-class TestCausalmlCausalTrees:
-    """Tests for the TreeExplainer when the model passed in is a causalml causal tree instance.
+class TestExplainerCausalML:
+    """Tests for the TreeExplainer when the model passed in is a CausalML causal tree instance.
 
     Included models:
         * CausalTreeRegressor
@@ -1652,7 +1653,7 @@ class TestCausalmlCausalTrees:
     random_seed = 42
     n_estimators = 5
 
-    def prepare_data(self, generate_data: callable) -> tuple:
+    def prepare_data(self, generate_data: Callable) -> tuple:
         data = generate_data(mode=self.data_mode, n=self.data_size, p=self.n_features, sigma=self.sigma)
         y, X, treatment, tau, b, e = data
         return X, y, treatment
