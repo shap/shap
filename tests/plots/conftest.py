@@ -1,8 +1,18 @@
 """Shared pytest fixtures"""
 
+from dataclasses import asdict
+
 import pytest
 
 import shap
+from shap.plots import _style
+
+
+@pytest.fixture(autouse=True)
+def reset_style_to_default():
+    # Protect against any unintended state changes between tests
+    options = asdict(_style.load_default_style())
+    _style.set_style(**options)
 
 
 @pytest.fixture()
