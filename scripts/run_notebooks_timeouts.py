@@ -6,7 +6,7 @@ from jupyter_client import kernelspec
 from jupyter_client.manager import KernelManager
 from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
-TIMEOUT = 20  # seconds
+TIMEOUT = 30  # seconds
 
 allow_to_fail = [
     Path("api_examples/explainers/GPUTree.ipynb"),
@@ -37,7 +37,6 @@ allow_to_fail = [
 allow_to_timeout = [
     Path("api_examples/plots/beeswarm.ipynb"),
     Path("api_examples/plots/image.ipynb"),
-    Path("api_examples/plots/scatter.ipynb"),
     Path("api_examples/plots/text.ipynb"),
     Path("api_examples/plots/waterfall.ipynb"),
     Path("benchmarks/image/Image Multiclass Classification Benchmark Demo.ipynb"),
@@ -52,7 +51,6 @@ allow_to_timeout = [
     Path("image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow)-checkpoint.ipynb"),
     Path("image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow).ipynb"),
     Path("image_examples/image_classification/Multi-input Gradient Explainer MNIST Example.ipynb"),
-    Path("image_examples/image_classification/PyTorch Deep Explainer MNIST example.ipynb"),
     Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
     Path("tabular_examples/tree_based_models/Census income classification with XGBoost.ipynb"),
     Path("tabular_examples/tree_based_models/Fitting a Linear Simulation with XGBoost.ipynb"),
@@ -88,7 +86,7 @@ def main():
             nb = nbformat.read(f, as_version=4)
         start_time = time.time()
         try:
-            ep.preprocess(nb, resources={'metadata': {'path': str(notebook_path.parent)}}, km=km)
+            ep.preprocess(nb, resources={"metadata": {"path": str(notebook_path.parent)}}, km=km)
             print(f"Executed notebook {notebook_path} in {time.time() - start_time:.2f} seconds.")
         except CellExecutionError as e:
             print(f"FAILED: {notebook_path}:\n{e}")
@@ -101,6 +99,7 @@ def main():
         raise RuntimeError("Not all notebooks executed successfully.")
     else:
         print("All notebooks executed successfully.")
+
 
 if __name__ == "__main__":
     main()

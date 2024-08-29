@@ -7,10 +7,11 @@ sign_defaults = {
     "remove positive": -1,
     "remove negative": 1,
     "compute time": -1,
-    "keep absolute": -1, # the absolute signs are defaults that make sense when scoring losses
+    "keep absolute": -1,  # the absolute signs are defaults that make sense when scoring losses
     "remove absolute": 1,
-    "explanation error": -1
+    "explanation error": -1,
 }
+
 
 class BenchmarkResult:
     """The result of a benchmark run."""

@@ -8,7 +8,7 @@ from ..utils._exceptions import ExplainerError
 from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ._kernel import KernelExplainer
 
-log = logging.getLogger('shap')
+log = logging.getLogger("shap")
 
 
 class SamplingExplainer(KernelExplainer):
@@ -52,16 +52,15 @@ class SamplingExplainer(KernelExplainer):
             raise ValueError(emsg)
 
     def __call__(self, X, y=None, nsamples=2000):
-
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
             X = X.values
         else:
-            feature_names = None # we can make self.feature_names from background data eventually if we have it
+            feature_names = None  # we can make self.feature_names from background data eventually if we have it
 
         v = self.shap_values(X, nsamples=nsamples)
         if isinstance(v, list):
-            v = np.stack(v, axis=-1) # put outputs at the end
+            v = np.stack(v, axis=-1)  # put outputs at the end
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)
         return e
 
@@ -77,7 +76,7 @@ class SamplingExplainer(KernelExplainer):
         # find the feature groups we will test. If a feature does not change from its
         # current value then we know it doesn't impact the model
         self.varyingInds = self.varying_groups(instance.x)
-        #self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
+        # self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
         self.M = len(self.varyingInds)
 
         # find f(x)
@@ -103,11 +102,10 @@ class SamplingExplainer(KernelExplainer):
             phi_var = np.zeros((len(self.data.groups), self.D))
             diff = self.fx - self.fnull
             for d in range(self.D):
-                phi[self.varyingInds[0],d] = diff[d]
+                phi[self.varyingInds[0], d] = diff[d]
 
         # if more than one feature varies then we have to do real work
         else:
-
             # pick a reasonable number of samples if the user didn't specify how many they wanted
             self.nsamples = kwargs.get("nsamples", "auto")
             if self.nsamples == "auto":
@@ -129,14 +127,16 @@ class SamplingExplainer(KernelExplainer):
             phi = np.zeros((self.P, self.D))
             phi_var = np.zeros((self.P, self.D))
             self.X_masked = np.zeros((nsamples_each1.max() * 2, self.data.data.shape[1]))
-            for i,ind in enumerate(self.varyingInds):
-                phi[ind,:],phi_var[ind,:] = self.sampling_estimate(ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i])
+            for i, ind in enumerate(self.varyingInds):
+                phi[ind, :], phi_var[ind, :] = self.sampling_estimate(
+                    ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i]
+                )
 
             # optimally allocate samples according to the variance
             if phi_var.sum() == 0:
-                phi_var += 1 # spread samples uniformally if we found no variability
+                phi_var += 1  # spread samples uniformally if we found no variability
             phi_var /= phi_var.sum(0)[np.newaxis, :]
-            nsamples_each2 = (phi_var[self.varyingInds,:].mean(1) * round2_samples).astype(int)
+            nsamples_each2 = (phi_var[self.varyingInds, :].mean(1) * round2_samples).astype(int)
             for i in range(len(nsamples_each2)):
                 if nsamples_each2[i] % 2 == 1:
                     nsamples_each2[i] += 1
@@ -149,17 +149,19 @@ class SamplingExplainer(KernelExplainer):
                     break
 
             self.X_masked = np.zeros((nsamples_each2.max() * 2, self.data.data.shape[1]))
-            for i,ind in enumerate(self.varyingInds):
+            for i, ind in enumerate(self.varyingInds):
                 if nsamples_each2[i] > 0:
-                    val,var = self.sampling_estimate(ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each2[i])
+                    val, var = self.sampling_estimate(
+                        ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each2[i]
+                    )
 
                     total_samples = nsamples_each1[i] + nsamples_each2[i]
-                    phi[ind,:] = (phi[ind,:] * nsamples_each1[i] + val * nsamples_each2[i]) / total_samples
-                    phi_var[ind,:] = (phi_var[ind,:] * nsamples_each1[i] + var * nsamples_each2[i]) / total_samples
+                    phi[ind, :] = (phi[ind, :] * nsamples_each1[i] + val * nsamples_each2[i]) / total_samples
+                    phi_var[ind, :] = (phi_var[ind, :] * nsamples_each1[i] + var * nsamples_each2[i]) / total_samples
 
             # convert from the variance of the differences to the variance of the mean (phi)
-            for i,ind in enumerate(self.varyingInds):
-                phi_var[ind,:] /= np.sqrt(nsamples_each1[i] + nsamples_each2[i])
+            for i, ind in enumerate(self.varyingInds):
+                phi_var[ind, :] /= np.sqrt(nsamples_each1[i] + nsamples_each2[i])
 
             # correct the sum of the SHAP values to equal the output of the model using a linear
             # regression model with priors of the coefficients equal to the estimated variances for each
@@ -170,17 +172,17 @@ class SamplingExplainer(KernelExplainer):
                 # this is a ridge regression with one sample of all ones with sum_error[i] as the label
                 # and 1/v as the ridge penalties. This simplified (and stable) form comes from the
                 # Sherman-Morrison formula
-                v = (phi_var[:,i] / phi_var[:,i].max()) * 1e6
+                v = (phi_var[:, i] / phi_var[:, i].max()) * 1e6
                 adj = sum_error[i] * (v - (v * v.sum()) / (1 + v.sum()))
-                phi[:,i] += adj
+                phi[:, i] += adj
 
         if phi.shape[1] == 1:
-            phi = phi[:,0]
+            phi = phi[:, 0]
 
         return phi
 
     def sampling_estimate(self, j, f, x, X, nsamples=10):
-        X_masked = self.X_masked[:nsamples * 2,:]
+        X_masked = self.X_masked[: nsamples * 2, :]
         inds = np.arange(X.shape[1])
 
         for i in range(nsamples):
@@ -188,9 +190,9 @@ class SamplingExplainer(KernelExplainer):
             pos = np.where(inds == j)[0][0]
             rind = np.random.randint(X.shape[0])
             X_masked[i, :] = x
-            X_masked[i, inds[pos+1:]] = X[rind, inds[pos+1:]]
-            X_masked[-(i+1), :] = x
-            X_masked[-(i+1), inds[pos:]] = X[rind, inds[pos:]]
+            X_masked[i, inds[pos + 1 :]] = X[rind, inds[pos + 1 :]]
+            X_masked[-(i + 1), :] = x
+            X_masked[-(i + 1), inds[pos:]] = X[rind, inds[pos:]]
 
         evals = f(X_masked)
         evals_on = evals[:nsamples]

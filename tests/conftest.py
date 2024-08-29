@@ -8,6 +8,7 @@ try:
 except ImportError:
     pass
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -63,3 +64,12 @@ def global_random_seed():
     `np.random.RandomState` rather than use the global numpy random state.
     """
     np.random.seed(0)
+
+
+@pytest.fixture(autouse=True)
+def mpl_test_cleanup():
+    """Run tests in a mpl context manager and close figures after each test."""
+    plt.switch_backend("Agg")  # Non-interactive backend
+    with plt.rc_context():
+        yield
+    plt.close("all")

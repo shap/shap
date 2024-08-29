@@ -64,24 +64,24 @@ class GradientExplainer(Explainer):
             a, b = model
             try:
                 a.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except Exception:
-                framework = 'tensorflow'
+                framework = "tensorflow"
         else:
             try:
                 model.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except Exception:
-                framework = 'tensorflow'
+                framework = "tensorflow"
 
         if isinstance(data, pd.DataFrame):
             self.features = data.columns.values
         else:
             self.features = None
 
-        if framework == 'tensorflow':
+        if framework == "tensorflow":
             self.explainer = _TFGradient(model, data, session, batch_size, local_smoothing)
-        elif framework == 'pytorch':
+        elif framework == "pytorch":
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
     def __call__(self, X, nsamples=200):
@@ -105,7 +105,9 @@ class GradientExplainer(Explainer):
         shap_values = self.shap_values(X, nsamples)
         return Explanation(values=shap_values, data=X, feature_names=self.features)
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
+    def shap_values(
+        self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False
+    ):
         """Return the values for the model applied to X.
 
         Parameters
@@ -159,25 +161,31 @@ class GradientExplainer(Explainer):
 
 
 class _TFGradient(Explainer):
-
     def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
-
         # try and import keras and tensorflow
         global tf, keras
         if tf is None:
             import tensorflow as tf
+
             if version.parse(tf.__version__) < version.parse("1.4.0"):
                 warnings.warn("Your TensorFlow version is older than 1.4.0 and not supported.")
         if keras is None:
             try:
                 from tensorflow import keras
+
                 if version.parse(keras.__version__) < version.parse("2.1.0"):
                     warnings.warn("Your Keras version is older than 2.1.0 and not supported.")
             except Exception:
                 pass
+        if tf.executing_eagerly():
+            if isinstance(model, (list, tuple)):
+                assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
+                from tensorflow.keras import Model
 
-        # determine the model inputs and outputs
-        self.model = model
+                self.model = Model(model[0], model[1])
+            else:
+                self.model = model
+
         self.model_inputs = _get_model_inputs(model)
         self.model_output = _get_model_output(model)
         assert not isinstance(self.model_output, list), "The model output to be explained must be a single tensor!"
@@ -207,7 +215,7 @@ class _TFGradient(Explainer):
             # see if there is a keras operation we need to save
             self.keras_phase_placeholder = None
             for op in self.graph.get_operations():
-                if 'keras_learning_phase' in op.name:
+                if "keras_learning_phase" in op.name:
                     self.keras_phase_placeholder = op.outputs[0]
 
         # save the expected output of the model (commented out because self.data could be huge for GradientExplainer)
@@ -223,31 +231,47 @@ class _TFGradient(Explainer):
 
         if self.gradients[i] is None:
             if not tf.executing_eagerly():
-                out = self.model_output[:,i] if self.multi_output else self.model_output
+                out = self.model_output[:, i] if self.multi_output else self.model_output
                 self.gradients[i] = tf.gradients(out, self.model_inputs)
             else:
-                @tf.function
-                def grad_graph(x):
-                    phase = tf.keras.backend.learning_phase()
-                    tf.keras.backend.set_learning_phase(0)
+                if version.parse(tf.__version__) < version.parse("2.16.0"):
+                    # todo: add legacy warning here.
+                    @tf.function
+                    def grad_graph(x):
+                        phase = tf.keras.backend.learning_phase()
+                        tf.keras.backend.set_learning_phase(0)
 
-                    with tf.GradientTape(watch_accessed_variables=False) as tape:
-                        tape.watch(x)
-                        out = self.model(x)
-                        if self.multi_output:
-                            out = out[:,i]
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(x)
+                            out = self.model(x)
+                            if self.multi_output:
+                                out = out[:, i]
 
-                    x_grad = tape.gradient(out, x)
+                        x_grad = tape.gradient(out, x)
 
-                    tf.keras.backend.set_learning_phase(phase)
+                        tf.keras.backend.set_learning_phase(phase)
 
-                    return x_grad
+                        return x_grad
+                else:
+
+                    @tf.function
+                    def grad_graph(x):
+                        with tf.GradientTape(watch_accessed_variables=False) as tape:
+                            tape.watch(x)
+                            out = self.model(x, training=False)
+                            if self.multi_output:
+                                out = out[:, i]
+
+                        x_grad = tape.gradient(out, x)
+                        return x_grad
 
                 self.gradients[i] = grad_graph
 
         return self.gradients[i]
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
+    def shap_values(
+        self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False
+    ):
         global tf, keras
 
         import tensorflow as tf
@@ -280,7 +304,7 @@ class _TFGradient(Explainer):
                 raise ValueError(emsg)
 
             if output_rank_order in ["max", "min", "max_abs"]:
-                model_output_ranks = model_output_ranks[:,:ranked_outputs]
+                model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
             model_output_ranks = np.tile(np.arange(len(self.gradients)), (X[0].shape[0], 1))
 
@@ -294,14 +318,13 @@ class _TFGradient(Explainer):
             rseed = np.random.randint(0, 1e6)
 
         for i in range(model_output_ranks.shape[1]):
-            np.random.seed(rseed) # so we get the same noise patterns for each output class
+            np.random.seed(rseed)  # so we get the same noise patterns for each output class
             phis = []
             phi_vars = []
             for k in range(len(X)):
                 phis.append(np.zeros(X[k].shape))
                 phi_vars.append(np.zeros(X[k].shape))
             for j in range(X[0].shape[0]):
-
                 # fill in the samples arrays
                 for k in range(nsamples):
                     rind = np.random.choice(self.data[0].shape[0])
@@ -315,10 +338,10 @@ class _TFGradient(Explainer):
                         samples_delta[u][k] = x - self.data[u][rind]
 
                 # compute the gradients at all the sample points
-                find = model_output_ranks[j,i]
+                find = model_output_ranks[j, i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [samples_input[a][b:min(b+self.batch_size,nsamples)] for a in range(len(X))]
+                    batch = [samples_input[a][b : min(b + self.batch_size, nsamples)] for a in range(len(X))]
                     grads.append(self.run(self.gradient(find), self.model_inputs, batch))
                 grad = [np.concatenate([g[a] for g in grads], 0) for a in range(len(X))]
 
@@ -326,7 +349,7 @@ class _TFGradient(Explainer):
                 for a in range(len(X)):
                     samples = grad[a] * samples_delta[a]
                     phis[a][j] = samples.mean(0)
-                    phi_vars[a][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
+                    phi_vars[a][j] = samples.var(0) / np.sqrt(samples.shape[0])  # estimate variance of means
 
                 # TODO: this could be avoided by integrating between endpoints if no local smoothing is used
                 # correct the sum of the values to equal the output of the model using a linear
@@ -360,8 +383,7 @@ class _TFGradient(Explainer):
         if isinstance(output_phis, list):
             # in this case we have multiple inputs and potentially multiple outputs
             if isinstance(output_phis[0], list):
-                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
-                               for i in range(len(output_phis[0]))]
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1) for i in range(len(output_phis[0]))]
             # multiple outputs case
             else:
                 output_phis = np.stack(output_phis, axis=-1)
@@ -396,10 +418,9 @@ class _TFGradient(Explainer):
 
 
 class _PyTorchGradient(Explainer):
-
     def __init__(self, model, data, batch_size=50, local_smoothing=0):
-
         import torch
+
         if version.parse(torch.__version__) < version.parse("0.4"):
             warnings.warn("Your PyTorch version is older than 0.4 and not supported.")
 
@@ -421,7 +442,7 @@ class _PyTorchGradient(Explainer):
         self.layer = None
         self.input_handle = None
         self.interim = False
-        if type(model) == tuple:
+        if isinstance(model, tuple):
             self.interim = True
             model, layer = model
             model = model.eval()
@@ -455,20 +476,25 @@ class _PyTorchGradient(Explainer):
 
     def gradient(self, idx, inputs):
         import torch
+
         self.model.zero_grad()
         X = [x.requires_grad_() for x in inputs]
         outputs = self.model(*X)
         selected = [val for val in outputs[:, idx]]
         if self.input_handle is not None:
             interim_inputs = self.layer.target_input
-            grads = [torch.autograd.grad(selected, input,
-                                         retain_graph=True if idx + 1 < len(interim_inputs) else None)[0].cpu().numpy()
-                     for idx, input in enumerate(interim_inputs)]
+            grads = [
+                torch.autograd.grad(selected, input, retain_graph=True if idx + 1 < len(interim_inputs) else None)[0]
+                .cpu()
+                .numpy()
+                for idx, input in enumerate(interim_inputs)
+            ]
             del self.layer.target_input
         else:
-            grads = [torch.autograd.grad(selected, x,
-                                         retain_graph=True if idx + 1 < len(X) else None)[0].cpu().numpy()
-                     for idx, x in enumerate(X)]
+            grads = [
+                torch.autograd.grad(selected, x, retain_graph=True if idx + 1 < len(X) else None)[0].cpu().numpy()
+                for idx, x in enumerate(X)
+            ]
         return grads
 
     @staticmethod
@@ -477,14 +503,15 @@ class _PyTorchGradient(Explainer):
             del self.target_input
         except AttributeError:
             pass
-        setattr(self, 'target_input', input)
+        self.target_input = input
 
     def add_handles(self, layer):
         input_handle = layer.register_forward_hook(self.get_interim_input)
         self.input_handle = input_handle
 
-    def shap_values(self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False):
-
+    def shap_values(
+        self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False
+    ):
         import torch
         # X ~ self.model_input
         # X_data ~ self.data
@@ -511,8 +538,9 @@ class _PyTorchGradient(Explainer):
                 raise ValueError(emsg)
             model_output_ranks = model_output_ranks[:, :ranked_outputs]
         else:
-            model_output_ranks = (torch.ones((X[0].shape[0], len(self.gradients))).int() *
-                                  torch.arange(0, len(self.gradients)).int())
+            model_output_ranks = (
+                torch.ones((X[0].shape[0], len(self.gradients))).int() * torch.arange(0, len(self.gradients)).int()
+            )
         # self.expected_value = model_output_values.mean(axis=(i for i in range(len(model_output_values.shape) - 1)))
 
         # if a cleanup happened, we need to add the handles back
@@ -528,7 +556,7 @@ class _PyTorchGradient(Explainer):
         # samples_input = input to the model
         # samples_delta = (x - x') for the input being explained - may be an interim input
         samples_input = [torch.zeros((nsamples,) + X[t].shape[1:], device=X[t].device) for t in range(len(X))]
-        samples_delta = [np.zeros((nsamples, ) + self.data[t].shape[1:]) for t in range(len(self.data))]
+        samples_delta = [np.zeros((nsamples,) + self.data[t].shape[1:]) for t in range(len(self.data))]
 
         # use random seed if no argument given
         if rseed is None:
@@ -541,7 +569,7 @@ class _PyTorchGradient(Explainer):
             for k in range(len(self.data)):
                 # for each of the inputs being explained - may be an interim input
                 phis.append(np.zeros((X_batches,) + self.data[k].shape[1:]))
-                phi_vars.append(np.zeros((X_batches, ) + self.data[k].shape[1:]))
+                phi_vars.append(np.zeros((X_batches,) + self.data[k].shape[1:]))
             for j in range(X[0].shape[0]):
                 # fill in the samples arrays
                 for k in range(nsamples):
@@ -550,12 +578,15 @@ class _PyTorchGradient(Explainer):
                     for a in range(len(X)):
                         if self.local_smoothing > 0:
                             # local smoothing is added to the base input, unlike in the TF gradient explainer
-                            x = X[a][j].clone().detach() + torch.empty(X[a][j].shape, device=X[a].device).normal_() \
-                                * self.local_smoothing
+                            x = (
+                                X[a][j].clone().detach()
+                                + torch.empty(X[a][j].shape, device=X[a].device).normal_() * self.local_smoothing
+                            )
                         else:
                             x = X[a][j].clone().detach()
-                        samples_input[a][k] = (t * x + (1 - t) * (self.model_inputs[a][rind]).clone().detach()).\
-                            clone().detach()
+                        samples_input[a][k] = (
+                            (t * x + (1 - t) * (self.model_inputs[a][rind]).clone().detach()).clone().detach()
+                        )
                         if self.input_handle is None:
                             samples_delta[a][k] = (x - (self.data[a][rind]).clone().detach()).cpu().numpy()
 
@@ -576,14 +607,16 @@ class _PyTorchGradient(Explainer):
                 find = model_output_ranks[j, i]
                 grads = []
                 for b in range(0, nsamples, self.batch_size):
-                    batch = [samples_input[c][b:min(b+self.batch_size,nsamples)].clone().detach() for c in range(len(X))]
+                    batch = [
+                        samples_input[c][b : min(b + self.batch_size, nsamples)].clone().detach() for c in range(len(X))
+                    ]
                     grads.append(self.gradient(find, batch))
                 grad = [np.concatenate([g[z] for g in grads], 0) for z in range(len(self.data))]
                 # assign the attributions to the right part of the output arrays
                 for t in range(len(self.data)):
                     samples = grad[t] * samples_delta[t]
                     phis[t][j] = samples.mean(0)
-                    phi_vars[t][j] = samples.var(0) / np.sqrt(samples.shape[0]) # estimate variance of means
+                    phi_vars[t][j] = samples.var(0) / np.sqrt(samples.shape[0])  # estimate variance of means
 
             output_phis.append(phis[0] if len(self.data) == 1 else phis)
             output_phi_vars.append(phi_vars[0] if not self.multi_input else phi_vars)
@@ -596,8 +629,7 @@ class _PyTorchGradient(Explainer):
         if isinstance(output_phis, list):
             # in this case we have multiple inputs and potentially multiple outputs
             if isinstance(output_phis[0], list):
-                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1)
-                               for i in range(len(output_phis[0]))]
+                output_phis = [np.stack([phi[i] for phi in output_phis], axis=-1) for i in range(len(output_phis[0]))]
             # multiple outputs case
             else:
                 output_phis = np.stack(output_phis, axis=-1)

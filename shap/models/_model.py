@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 
 from .._serializable import Deserializer, Serializable, Serializer
@@ -10,7 +12,7 @@ class Model(Serializable):
     def __init__(self, model=None):
         """Wrap a callable model as a SHAP Model object."""
         if isinstance(model, Model):
-            self.inner_model = model.inner_model
+            self.inner_model: Any = model.inner_model
         else:
             self.inner_model = model
 

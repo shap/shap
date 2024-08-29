@@ -29,7 +29,7 @@ def test_waterfall(explainer):
     """Test the new waterfall plot."""
     fig = plt.figure()
     shap_values = explainer(explainer.data)
-    shap.plots.waterfall(shap_values[0])
+    shap.plots.waterfall(shap_values[0], show=False)
     plt.tight_layout()
     return fig
 
@@ -39,7 +39,7 @@ def test_waterfall_legacy(explainer):
     """Test the old waterfall plot."""
     shap_values = explainer.shap_values(explainer.data)
     fig = plt.figure()
-    shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0])
+    shap.plots._waterfall.waterfall_legacy(explainer.expected_value, shap_values[0], show=False)
     plt.tight_layout()
     return fig
 

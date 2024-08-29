@@ -12,7 +12,7 @@ def test_beeswarm_input_is_explanation():
         TypeError,
         match="beeswarm plot requires an `Explanation` object",
     ):
-        _ = shap.plots.beeswarm(np.random.randn(20, 5), show=False)
+        _ = shap.plots.beeswarm(np.random.randn(20, 5), show=False)  # type: ignore
 
 
 def test_beeswarm_wrong_features_shape():
@@ -32,10 +32,7 @@ def test_beeswarm_wrong_features_shape():
         )
         shap.plots.beeswarm(expln, show=False)
 
-    emsg = (
-        "The shape of the shap_values matrix does not match the shape of "
-        "the provided data matrix."
-    )
+    emsg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
     with pytest.raises(DimensionError, match=emsg):
         expln = shap.Explanation(
             values=rs.randn(20, 5),
@@ -45,12 +42,22 @@ def test_beeswarm_wrong_features_shape():
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_beeswarm(explainer):
+def test_beeswarm(explainer):
     """Check a beeswarm chart renders correctly with shap_values as an Explanation
     object (default settings).
     """
     fig = plt.figure()
     shap_values = explainer(explainer.data)
-    shap.plots.beeswarm(shap_values)
+    shap.plots.beeswarm(shap_values, show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_beeswarm_no_group_remaining(explainer):
+    """Beeswarm with group_remaining_features=False."""
+    fig = plt.figure()
+    shap_values = explainer(explainer.data)
+    shap.plots.beeswarm(shap_values, show=False, group_remaining_features=False)
     plt.tight_layout()
     return fig
