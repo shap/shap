@@ -1,19 +1,32 @@
-import matplotlib.pyplot as pl
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal, overload
+
+import matplotlib.pyplot as plt
 import numpy as np
 
 from .. import Explanation
 from ..utils import OpChain
 from . import colors
 
+if TYPE_CHECKING:
+    from matplotlib.colors import Colormap
 
-def convert_color(color):
+
+@overload
+def convert_color(color: Literal["shap_red", "shap_blue"]) -> np.ndarray: ...
+@overload
+def convert_color(color: str) -> np.ndarray | str | Colormap: ...
+
+
+def convert_color(color: str) -> np.ndarray | Colormap | str:
     if color == "shap_red":
         return colors.red_rgb
     if color == "shap_blue":
         return colors.blue_rgb
 
     try:
-        return pl.get_cmap(color)
+        return plt.get_cmap(color)
     except ValueError:
         return color
 
