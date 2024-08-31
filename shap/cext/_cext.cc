@@ -538,10 +538,6 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
 
-    printf("Calling dense_tree_saabas with\n");
-    // printf(out_pred);
-    // printf(trees);
-    // printf(data);
     dense_tree_saabas(out_pred, trees, data);
 
     // clean up the created python objects
