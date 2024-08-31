@@ -573,9 +573,7 @@ def summary_legacy(
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
-    if (shap_exp is not None
-            and len(shap_exp.base_values.shape) == 2
-            and shap_exp.base_values.shape[1] > 2):
+    if shap_exp is not None and len(shap_exp.base_values.shape) == 2 and shap_exp.base_values.shape[1] > 2:
         shap_values = [shap_values[:, :, i] for i in range(shap_exp.base_values.shape[1])]
 
     multi_class = False
