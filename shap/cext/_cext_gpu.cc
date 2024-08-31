@@ -158,6 +158,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, R, R_missing, num_X, M, num_R);
 
+    printf("C: Calling dense_tree_shap_gpu with\n");
     dense_tree_shap_gpu(trees, data, out_contribs, feature_dependence, model_output, interactions);
 
 

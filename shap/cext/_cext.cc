@@ -217,6 +217,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, R, R_missing, num_X, M, num_R);
 
+    printf("C: Calling dense_tree_shap with\n");
     dense_tree_shap(trees, data, out_contribs, feature_dependence, model_output, interactions);
 
     // retrieve return value before python cleanup of objects
@@ -510,6 +511,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
         return NULL;
     }
 
+    printf("In _cext_dense_tree_saabas\n");
     const unsigned num_X = PyArray_DIM(X_array, 0);
     const unsigned M = PyArray_DIM(X_array, 1);
     const unsigned max_nodes = PyArray_DIM(values_array, 1);
@@ -538,6 +540,10 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     );
     ExplanationDataset data = ExplanationDataset(X, X_missing, y, NULL, NULL, num_X, M, 0);
 
+    printf("Calling dense_tree_saabas with\n");
+    // printf(out_pred);
+    // printf(trees);
+    // printf(data);
     dense_tree_saabas(out_pred, trees, data);
 
     // clean up the created python objects

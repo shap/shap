@@ -389,10 +389,8 @@ class TreeExplainer(Explainer):
             is used (``None``). ``-1`` means no limit.
 
         approximate : bool
-            Run fast, but only roughly approximate the Tree SHAP values. This runs a method
-            previously proposed by Saabas which only considers a single feature ordering. Take care
-            since this does not have the consistency guarantees of Shapley values and places too
-            much weight on lower splits in the tree.
+            Deprecated, will be removed in a future version. Please use the approximate argument in the
+            TreeExplainer constructor instead.
 
         check_additivity : bool
             Run a validation check that the sum of the SHAP values equals the output of the model. This
@@ -418,6 +416,12 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
+        if approximate is not False:
+            warnings.warn(
+                "The approximate argument has been deprecated and will be removed in a future version. "
+                "Please use the approximate argument in the TreeExplainer constructor instead.",
+                DeprecationWarning,
+            )
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -442,7 +446,7 @@ class TreeExplainer(Explainer):
                     X,
                     iteration_range=(0, n_iterations),
                     pred_contribs=True,
-                    approx_contribs=approximate,
+                    approx_contribs=self.approximate,
                     validate_features=False,
                 )
                 if check_additivity and self.model.model_output == "raw":
@@ -451,7 +455,7 @@ class TreeExplainer(Explainer):
                     )
 
             elif self.model.model_type == "lightgbm":
-                assert not approximate, "approximate=True is not supported for LightGBM models!"
+                assert not self.approximate, "approximate=True is not supported for LightGBM models!"
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 # Note: the data must be joined on the last axis
                 if self.model.original_model.params["objective"] == "binary":
@@ -470,7 +474,7 @@ class TreeExplainer(Explainer):
                         raise ValueError(emsg) from e
 
             elif self.model.model_type == "catboost":  # thanks to the CatBoost team for implementing this...
-                assert not approximate, "approximate=True is not supported for CatBoost models!"
+                assert not self.approximate, "approximate=True is not supported for CatBoost models!"
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
 
@@ -503,7 +507,8 @@ class TreeExplainer(Explainer):
         assert_import("cext")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, self.model.num_outputs))
 
-        if not approximate:
+        if not self.approximate:
+            print("PYTHON: Calling tree shap with approximate False")
             _cext.dense_tree_shap(
                 self.model.children_left,
                 self.model.children_right,
@@ -526,6 +531,7 @@ class TreeExplainer(Explainer):
                 False,
             )
         else:
+            print("PYTHON: Calling tree shap with approximate True")
             _cext.dense_tree_saabas(
                 self.model.children_left,
                 self.model.children_right,

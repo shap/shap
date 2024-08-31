@@ -1841,3 +1841,34 @@ def test_xgboost_dart_regression():
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X), atol=1e-4)
+
+
+def test_consistency_approximate():
+    """GH 3764. Test that the call interface and shap_values interface are consistent when called with `approximate=True`."""
+
+    import numpy as np
+
+    import shap
+
+    dtc = sklearn.tree.DecisionTreeRegressor(max_depth=2)
+    arr = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    target = np.array([0, 0, 0, 80])
+
+    dtc.fit(arr, target)
+    # these explanations can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
+    # https://arxiv.org/abs/1802.03888
+    expected_approx_explanations = np.array([[0.0, -20.0], [-40.0, 20.0], [0.0, -20.0], [40.0, 20.0]])
+
+    exp = shap.explainers.TreeExplainer(dtc, approximate=True)
+    explanations_call_approx = exp(arr)
+    explanations_shap_values_approx = exp.shap_values(arr)
+    assert (explanations_call_approx.values == explanations_shap_values_approx).all()
+    assert (explanations_call_approx.values == expected_approx_explanations).all()
+
+    expected_explanations = np.array([[-10.0, -10.0], [-30.0, 10.0], [10.0, -30.0], [30.0, 30.0]])
+
+    exp = shap.explainers.TreeExplainer(dtc, approximate=False)
+    explanations_call = exp(arr)
+    explanations_shap_values = exp.shap_values(arr)
+    assert (explanations_call.values == explanations_shap_values).all()
+    assert (explanations_call.values == expected_explanations).all()
