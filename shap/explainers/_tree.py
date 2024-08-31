@@ -508,7 +508,6 @@ class TreeExplainer(Explainer):
         phi = np.zeros((X.shape[0], X.shape[1] + 1, self.model.num_outputs))
 
         if not self.approximate:
-            print("PYTHON: Calling tree shap with approximate False")
             _cext.dense_tree_shap(
                 self.model.children_left,
                 self.model.children_right,
@@ -531,7 +530,6 @@ class TreeExplainer(Explainer):
                 False,
             )
         else:
-            print("PYTHON: Calling tree shap with approximate True")
             _cext.dense_tree_saabas(
                 self.model.children_left,
                 self.model.children_right,
