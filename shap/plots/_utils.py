@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union, overload
+from typing import TYPE_CHECKING, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+from typing_extensions import TypeAlias
 
 from .. import Explanation
 from ..utils import OpChain
@@ -13,13 +14,8 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
 
 
-@overload
-def convert_color(color: Literal["shap_red", "shap_blue"]) -> np.ndarray: ...
-@overload
-def convert_color(color: str) -> np.ndarray | str | Colormap: ...
-
-
 def convert_color(color: str) -> np.ndarray | Colormap | str:
+    """Converts a color specification alias into its actual representation"""
     if color == "shap_red":
         return colors.red_rgb
     if color == "shap_blue":
