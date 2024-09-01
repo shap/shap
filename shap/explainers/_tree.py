@@ -5,6 +5,7 @@ import json
 import os
 import time
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -35,6 +36,8 @@ try:
     import pyspark  # noqa
 except ImportError as e:
     record_import_error("pyspark", "PySpark could not be imported!", e)
+
+DEPRECATED_APPROX = object()
 
 output_transform_codes = {
     "identity": 0,
@@ -92,7 +95,7 @@ class TreeExplainer(Explainer):
         model_output="raw",
         feature_perturbation="interventional",
         feature_names=None,
-        approximate=False,
+        approximate=DEPRECATED_APPROX,
         # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
         link=None,
         linearize_link=None,
@@ -155,7 +158,17 @@ class TreeExplainer(Explainer):
             Currently the "probability" and "log_loss" options are only
             supported when ``feature_perturbation="interventional"``.
 
+        approximate : bool
+            Deprecated, will be removed in a version v.0.48.0. Please use the approximate argument in the
+            ``shap_values`` or ```__call__`` methods instead.
+
         """
+        if approximate is not DEPRECATED_APPROX:
+            warnings.warn(
+                "The approximate argument has been deprecated and will be removed in a future version. "
+                "Please use the approximate argument in the TreeExplainer constructor instead.",
+                DeprecationWarning,
+            )
         if feature_names is not None:
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
@@ -196,7 +209,6 @@ class TreeExplainer(Explainer):
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
 
-        self.approximate = approximate
         if feature_perturbation not in feature_perturbation_codes:
             raise InvalidFeaturePerturbationError("Invalid feature_perturbation option!")
 
@@ -254,7 +266,35 @@ class TreeExplainer(Explainer):
         """This computes the expected value conditioned on the given label value."""
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
-    def __call__(self, X, y=None, interactions=False, check_additivity=True):
+    def __call__(
+        self,
+        X: Any,
+        y: np.ndarray | pd.Series | None = None,
+        interactions: bool = False,
+        check_additivity: bool = True,
+        approximate: bool = False,
+    ) -> Explanation:
+        """Calculate the SHAP values for the model applied to the data.
+
+        Parameters
+        ----------
+        X : Any
+            Can be a dataframe like object e.g. numpy.array, pandas.DataFrame or catboost.Pool (for catboost).
+            A matrix of samples (# samples x # features) on which to explain the model's output.
+
+        y : numpy.array
+            An array of label values for each sample. Used when explaining loss functions.
+
+        approximate : bool
+            Run fast, but only roughly approximate the Tree SHAP values. This runs a method
+            previously proposed by Saabas which only considers a single feature ordering. Take care
+            since this does not have the consistency guarantees of Shapley values and places too
+            much weight on lower splits in the tree.
+
+        Returns
+        -------
+            shap.Explanation object containing the given data and the SHAP values.
+        """
         start_time = time.time()
 
         if isinstance(X, pd.DataFrame):
@@ -263,13 +303,11 @@ class TreeExplainer(Explainer):
             feature_names = getattr(self, "data_feature_names", None)
 
         if not interactions:
-            v = self.shap_values(
-                X, y=y, from_call=True, check_additivity=check_additivity, approximate=self.approximate
-            )
+            v = self.shap_values(X, y=y, from_call=True, check_additivity=check_additivity, approximate=approximate)
             if isinstance(v, list):
                 v = np.stack(v, axis=-1)  # put outputs at the end
         else:
-            assert not self.approximate, "Approximate computation not yet supported for interaction effects!"
+            assert not approximate, "Approximate computation not yet supported for interaction effects!"
             v = self.shap_interaction_values(X)
 
         # the Explanation object expects an `expected_value` for each row
@@ -373,12 +411,21 @@ class TreeExplainer(Explainer):
 
         return X, y, X_missing, flat_output, tree_limit, check_additivity
 
-    def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
+    def shap_values(
+        self,
+        X: Any,
+        y: np.ndarray | pd.Series | None = None,
+        tree_limit: int | None = None,
+        approximate: bool = False,
+        check_additivity: bool = True,
+        from_call: bool = False,
+    ):
         """Estimate the SHAP values for a set of samples.
 
         Parameters
         ----------
-        X : numpy.array, pandas.DataFrame or catboost.Pool (for catboost)
+        X : Any
+            Can be a dataframe like object, e.g. numpy.array, pandas.DataFrame or catboost.Pool (for catboost).
             A matrix of samples (# samples x # features) on which to explain the model's output.
 
         y : numpy.array
@@ -389,8 +436,10 @@ class TreeExplainer(Explainer):
             is used (``None``). ``-1`` means no limit.
 
         approximate : bool
-            Deprecated, will be removed in a future version. Please use the approximate argument in the
-            TreeExplainer constructor instead.
+            Run fast, but only roughly approximate the Tree SHAP values. This runs a method
+            previously proposed by Saabas which only considers a single feature ordering. Take care
+            since this does not have the consistency guarantees of Shapley values and places too
+            much weight on lower splits in the tree.
 
         check_additivity : bool
             Run a validation check that the sum of the SHAP values equals the output of the model. This
@@ -416,12 +465,6 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        if approximate is not False:
-            warnings.warn(
-                "The approximate argument has been deprecated and will be removed in a future version. "
-                "Please use the approximate argument in the TreeExplainer constructor instead.",
-                DeprecationWarning,
-            )
         # see if we have a default tree_limit in place.
         if tree_limit is None:
             tree_limit = -1 if self.model.tree_limit is None else self.model.tree_limit
@@ -446,7 +489,7 @@ class TreeExplainer(Explainer):
                     X,
                     iteration_range=(0, n_iterations),
                     pred_contribs=True,
-                    approx_contribs=self.approximate,
+                    approx_contribs=approximate,
                     validate_features=False,
                 )
                 if check_additivity and self.model.model_output == "raw":
@@ -455,7 +498,7 @@ class TreeExplainer(Explainer):
                     )
 
             elif self.model.model_type == "lightgbm":
-                assert not self.approximate, "approximate=True is not supported for LightGBM models!"
+                assert not approximate, "approximate=True is not supported for LightGBM models!"
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 # Note: the data must be joined on the last axis
                 if self.model.original_model.params["objective"] == "binary":
@@ -474,7 +517,7 @@ class TreeExplainer(Explainer):
                         raise ValueError(emsg) from e
 
             elif self.model.model_type == "catboost":  # thanks to the CatBoost team for implementing this...
-                assert not self.approximate, "approximate=True is not supported for CatBoost models!"
+                assert not approximate, "approximate=True is not supported for CatBoost models!"
                 assert tree_limit == -1, "tree_limit is not yet supported for CatBoost models!"
                 import catboost
 
@@ -507,7 +550,7 @@ class TreeExplainer(Explainer):
         assert_import("cext")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, self.model.num_outputs))
 
-        if not self.approximate:
+        if not approximate:
             _cext.dense_tree_shap(
                 self.model.children_left,
                 self.model.children_right,

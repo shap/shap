@@ -1830,7 +1830,7 @@ def test_xgboost_tweedie_regression():
 
 
 def test_xgboost_dart_regression():
-    """GH 3665"""
+    """GH #3665"""
     xgboost = pytest.importorskip("xgboost")
 
     model = xgboost.XGBRegressor(booster="dart")
@@ -1843,8 +1843,18 @@ def test_xgboost_dart_regression():
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X), atol=1e-4)
 
 
-def test_consistency_approximate():
-    """GH 3764. Test that the call interface and shap_values interface are consistent when called with `approximate=True`."""
+# the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
+# https://arxiv.org/abs/1802.03888
+@pytest.mark.parametrize(
+    "expected_result, approximate",
+    [
+        (np.array([[0.0, -20.0], [-40.0, 20.0], [0.0, -20.0], [40.0, 20.0]]), True),
+        (np.array([[-10.0, -10.0], [-30.0, 10.0], [10.0, -30.0], [30.0, 30.0]]), False),
+    ],
+)
+def test_consistency_approximate(expected_result, approximate):
+    """GH #3764.
+    Test that the call interface and shap_values interface are consistent when called with `approximate=True`."""
 
     import numpy as np
 
@@ -1855,20 +1865,9 @@ def test_consistency_approximate():
     target = np.array([0, 0, 0, 80])
 
     dtc.fit(arr, target)
-    # these explanations can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
-    # https://arxiv.org/abs/1802.03888
-    expected_approx_explanations = np.array([[0.0, -20.0], [-40.0, 20.0], [0.0, -20.0], [40.0, 20.0]])
 
-    exp = shap.explainers.TreeExplainer(dtc, approximate=True)
-    explanations_call_approx = exp(arr)
-    explanations_shap_values_approx = exp.shap_values(arr)
+    exp = shap.explainers.TreeExplainer(dtc)
+    explanations_call_approx = exp(arr, approximate=approximate)
+    explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
     assert (explanations_call_approx.values == explanations_shap_values_approx).all()
-    assert (explanations_call_approx.values == expected_approx_explanations).all()
-
-    expected_explanations = np.array([[-10.0, -10.0], [-30.0, 10.0], [10.0, -30.0], [30.0, 30.0]])
-
-    exp = shap.explainers.TreeExplainer(dtc, approximate=False)
-    explanations_call = exp(arr)
-    explanations_shap_values = exp.shap_values(arr)
-    assert (explanations_call.values == explanations_shap_values).all()
-    assert (explanations_call.values == expected_explanations).all()
+    assert (explanations_call_approx.values == expected_result).all()
