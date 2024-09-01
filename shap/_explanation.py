@@ -122,7 +122,7 @@ class Explanation(metaclass=MetaExplanation):
         self.compute_time = compute_time
 
         # TODO: better cloning :)
-        if issubclass(type(values), Explanation):
+        if isinstance(values, Explanation):
             e = values
             values = e.values
             base_values = e.base_values
@@ -224,7 +224,7 @@ class Explanation(metaclass=MetaExplanation):
 
     @display_data.setter
     def display_data(self, new_display_data):
-        if issubclass(type(new_display_data), pd.DataFrame):
+        if isinstance(new_display_data, pd.DataFrame):
             new_display_data = new_display_data.values
         self._s.display_data = new_display_data
 
@@ -326,13 +326,13 @@ class Explanation(metaclass=MetaExplanation):
                 continue
 
             orig_t = t
-            if issubclass(type(t), OpChain):
+            if isinstance(t, OpChain):
                 t = t.apply(self)
-                if issubclass(type(t), (np.int64, np.int32)):  # because slicer does not like numpy indexes
+                if isinstance(t, (np.int64, np.int32)):  # because slicer does not like numpy indexes
                     t = int(t)
-                elif issubclass(type(t), np.ndarray):
+                elif isinstance(t, np.ndarray):
                     t = [int(v) for v in t]  # slicer wants lists not numpy arrays for indexing
-            elif issubclass(type(t), Explanation):
+            elif isinstance(t, Explanation):
                 t = t.values
             elif isinstance(t, str):
                 # work around for 2D output_names since they are not yet slicer supported
@@ -400,7 +400,7 @@ class Explanation(metaclass=MetaExplanation):
                     new_self.clustering = None
                     # return new_self
 
-            if issubclass(type(t), (np.int8, np.int16, np.int32, np.int64)):
+            if isinstance(t, (np.int8, np.int16, np.int32, np.int64)):
                 t = int(t)
 
             if t is not orig_t:
@@ -518,9 +518,9 @@ class Explanation(metaclass=MetaExplanation):
                     new_self.data = getattr(np, fname)(np.array(self.data), **kwargs)
                 except Exception:
                     new_self.data = None
-            if new_self.base_values is not None and issubclass(type(axis), int) and len(self.base_values.shape) > axis:
+            if new_self.base_values is not None and isinstance(axis, int) and len(self.base_values.shape) > axis:
                 new_self.base_values = getattr(np, fname)(self.base_values, **kwargs)
-            elif issubclass(type(axis), int):
+            elif isinstance(axis, int):
                 new_self.base_values = None
 
         if axis == 0 and self.clustering is not None and len(self.clustering.shape) == 3:
