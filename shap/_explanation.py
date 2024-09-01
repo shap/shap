@@ -455,8 +455,8 @@ class Explanation(metaclass=MetaExplanation):
 
     def _apply_binary_operator(self, other, binary_op, op_name):
         new_exp = self.__copy__()
-        new_exp.op_history = copy.copy(self.op_history)
         new_exp.op_history.append(OpHistoryItem(name=op_name, args=(other,), prev_shape=self.shape))
+
         if isinstance(other, Explanation):
             new_exp.values = binary_op(new_exp.values, other.values)
             if new_exp.data is not None:
