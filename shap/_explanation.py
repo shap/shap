@@ -358,19 +358,19 @@ class Explanation(metaclass=MetaExplanation):
 
                         new_self = Explanation(
                             np.array(new_values),
-                            np.array(new_base_values),
-                            np.array(new_data),
-                            self.display_data,
-                            self.instance_names,
-                            np.array(new_data),
-                            t,  # output_names
-                            self.output_indexes,
-                            self.lower_bounds,
-                            self.upper_bounds,
-                            self.error_std,
-                            self.main_effects,
-                            self.hierarchical_values,
-                            self.clustering,
+                            base_values=np.array(new_base_values),
+                            data=np.array(new_data),
+                            display_data=self.display_data,
+                            instance_names=self.instance_names,
+                            feature_names=np.array(new_data),  # FIXME: this is probably a bug
+                            output_names=t,
+                            output_indexes=self.output_indexes,
+                            lower_bounds=self.lower_bounds,
+                            upper_bounds=self.upper_bounds,
+                            error_std=self.error_std,
+                            main_effects=self.main_effects,
+                            hierarchical_values=self.hierarchical_values,
+                            clustering=self.clustering,
                         )
                         new_self.op_history = copy.copy(self.op_history)
                         # new_self = copy.deepcopy(self)
@@ -433,19 +433,19 @@ class Explanation(metaclass=MetaExplanation):
     def __copy__(self) -> Explanation:
         new_exp = Explanation(
             self.values,
-            self.base_values,
-            self.data,
-            self.display_data,
-            self.instance_names,
-            self.feature_names,
-            self.output_names,
-            self.output_indexes,
-            self.lower_bounds,
-            self.upper_bounds,
-            self.error_std,
-            self.main_effects,
-            self.hierarchical_values,
-            self.clustering,
+            base_values=self.base_values,
+            data=self.data,
+            display_data=self.display_data,
+            instance_names=self.instance_names,
+            feature_names=self.feature_names,
+            output_names=self.output_names,
+            output_indexes=self.output_indexes,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+            error_std=self.error_std,
+            main_effects=self.main_effects,
+            hierarchical_values=self.hierarchical_values,
+            clustering=self.clustering,
         )
         new_exp.op_history = copy.copy(self.op_history)
         return new_exp
