@@ -803,18 +803,6 @@ def is_1d(val):
     return not (isinstance(val[0], (list, np.ndarray)))
 
 
-class Op:
-    pass
-
-
-class Percentile(Op):
-    def __init__(self, percentile):
-        self.percentile = percentile
-
-    def add_repr(self, s, verbose=False):
-        return "percentile(" + s + ", " + str(self.percentile) + ")"
-
-
 def _compute_shape(x) -> tuple[int | None, ...]:
     def _first_item(iterable):
         for item in iterable:
