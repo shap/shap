@@ -116,7 +116,7 @@ class Explanation(metaclass=MetaExplanation):
 
         self.compute_time = compute_time
 
-        # cloning. TODOsomeday: better cloning :)
+        # TODO: better cloning :)
         if issubclass(type(values), Explanation):
             e = values
             values = e.values
@@ -715,8 +715,8 @@ class Explanation(metaclass=MetaExplanation):
         return new_self
 
 
-def group_features(shap_values, feature_map):
-    # TODOsomeday: support and deal with clusterings
+def group_features(shap_values, feature_map) -> Explanation:
+    # TODO: support and deal with clusterings
     reverse_map: dict[Any, list[Any]] = {}
     for name in feature_map:
         reverse_map[feature_map[name]] = reverse_map.get(feature_map[name], []) + [name]
