@@ -266,7 +266,7 @@ class TreeExplainer(Explainer):
         """This computes the expected value conditioned on the given label value."""
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
-    def __call__(
+    def __call__(  # type: ignore  # noqa: F821
         self,
         X: Any,
         y: np.ndarray | pd.Series | None = None,
@@ -297,6 +297,7 @@ class TreeExplainer(Explainer):
         """
         start_time = time.time()
 
+        feature_names: Any | list[Any] | None
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
@@ -324,10 +325,11 @@ class TreeExplainer(Explainer):
             # ev_tiled.shape == (N,)
             ev_tiled = np.tile(self.expected_value, v.shape[0])
 
+        X_data: np.ndarray | None | scipy.sparse.csr_matrix
         # cf. GH dsgibbons#66, this conversion to numpy array should be done AFTER
         # calculation of shap values
         if isinstance(X, pd.DataFrame):
-            X = X.values
+            X_data = X.values
         elif safe_isinstance(X, "xgboost.core.DMatrix"):
             import xgboost
 
@@ -341,14 +343,16 @@ class TreeExplainer(Explainer):
                     "`X` is a numpy or scipy array."
                 )
                 warnings.warn(wmsg)
-                X = None
+                X_data = None
             else:
-                X: scipy.sparse.csr_matrix = X.get_data()
+                X_data = X.get_data()
+        else:
+            X_data = X
 
         return Explanation(
             v,
             base_values=ev_tiled,
-            data=X,
+            data=X_data,
             feature_names=feature_names,
             compute_time=time.time() - start_time,
         )
