@@ -13,6 +13,7 @@ import scipy.spatial
 import sklearn
 from slicer import Alias, Obj, Slicer
 
+from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
@@ -641,11 +642,7 @@ class Explanation(metaclass=MetaExplanation):
         if axis == 1:
             values = values.T
 
-        # compute a hierarchical clustering and return the optimal leaf ordering
-        D = scipy.spatial.distance.pdist(values, metric)
-        cluster_matrix = scipy.cluster.hierarchy.complete(D)
-        inds = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
-        return inds
+        return hclust_ordering(X=values, metric=metric)
 
     # =================== Utilities ===================
 
