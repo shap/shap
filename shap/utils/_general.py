@@ -319,12 +319,12 @@ class OpChain:
 
     def __repr__(self):
         out = self._root_name
-        for o in self._ops:
-            op, args, kwargs = o
+        for op in self._ops:
+            op_name, args, kwargs = op
             args = args or tuple()
             kwargs = kwargs or {}
 
-            out += f".{op}"
+            out += f".{op_name}"
             has_args = len(args) > 0
             has_kwargs = len(kwargs) > 0
             if has_args or has_kwargs:
