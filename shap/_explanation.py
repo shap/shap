@@ -597,7 +597,7 @@ class Explanation(metaclass=MetaExplanation):
         )
         return new_self
 
-    def sample(self, max_samples, replace=False, random_state=0) -> Explanation:
+    def sample(self, max_samples: int, replace: bool = False, random_state: int = 0) -> Explanation:
         """Randomly samples the instances (rows) of the Explanation object.
 
         Parameters
@@ -613,11 +613,10 @@ class Explanation(metaclass=MetaExplanation):
             Random seed to use for sampling, defaults to 0.
 
         """
-        prev_seed = np.random.seed(random_state)
+        rng = np.random.RandomState(random_state)
         length = self.shape[0]
         assert length is not None
-        inds = np.random.choice(length, min(max_samples, length), replace=replace)
-        np.random.seed(prev_seed)
+        inds = rng.choice(length, size=min(max_samples, length), replace=replace)
         return self[list(inds)]
 
     def hclust(self, metric: str = "sqeuclidean", axis: int = 0):
