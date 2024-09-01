@@ -815,44 +815,40 @@ class Percentile(Op):
         return "percentile(" + s + ", " + str(self.percentile) + ")"
 
 
-def _first_item(x):
-    for item in x:
-        return item
-    return None
-
-
 def _compute_shape(x) -> tuple[int | None, ...]:
+    def _first_item(iterable):
+        for item in iterable:
+            return item
+        return None
+
     if not hasattr(x, "__len__") or isinstance(x, str):
         return tuple()
-    elif not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
+    if not scipy.sparse.issparse(x) and len(x) > 0 and isinstance(_first_item(x), str):
         return (None,)
-    else:
-        if isinstance(x, dict):
-            return (len(x),) + _compute_shape(x[next(iter(x))])
+    if isinstance(x, dict):
+        return (len(x),) + _compute_shape(x[next(iter(x))])
 
-        # 2D arrays we just take their shape as-is
-        if len(getattr(x, "shape", tuple())) > 1:
-            return x.shape
+    # 2D arrays: we just take their shape as-is
+    if len(getattr(x, "shape", tuple())) > 1:
+        return x.shape
 
-        # 1D arrays we need to look inside
-        if len(x) == 0:
-            return (0,)
-        elif len(x) == 1:
-            return (1,) + _compute_shape(_first_item(x))
-        else:
-            first_shape = _compute_shape(_first_item(x))
-            if first_shape == tuple():
-                return (len(x),)
-            else:  # we have an array of arrays...
-                matches = np.ones(len(first_shape), dtype=bool)
-                for i in range(1, len(x)):
-                    shape = _compute_shape(x[i])
-                    assert len(shape) == len(
-                        first_shape
-                    ), "Arrays in Explanation objects must have consistent inner dimensions!"
-                    for j in range(len(shape)):
-                        matches[j] &= shape[j] == first_shape[j]
-                return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
+    # 1D arrays: we need to look inside
+    if len(x) == 0:
+        return (0,)
+    if len(x) == 1:
+        return (1,) + _compute_shape(_first_item(x))
+    first_shape = _compute_shape(_first_item(x))
+    if first_shape == tuple():
+        return (len(x),)
+
+    # Else we have an array of arrays...
+    matches = np.ones(len(first_shape), dtype=bool)
+    for i in range(1, len(x)):
+        shape = _compute_shape(x[i])
+        assert len(shape) == len(first_shape), "Arrays in Explanation objects must have consistent inner dimensions!"
+        for j in range(len(shape)):
+            matches[j] &= shape[j] == first_shape[j]
+    return (len(x),) + tuple(first_shape[j] if match else None for j, match in enumerate(matches))
 
 
 class Cohorts:
