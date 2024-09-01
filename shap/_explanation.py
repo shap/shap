@@ -498,13 +498,8 @@ class Explanation(metaclass=MetaExplanation):
         axis = kwargs.get("axis", None)
 
         # collapse the slicer to right shape
-        if axis == 0:
-            new_self = new_self[0]
-        elif axis == 1:
-            new_self = new_self[1]
-        elif axis == 2:
-            new_self = new_self[2]
         if axis in [0, 1, 2]:
+            new_self = new_self[axis]
             new_self.op_history = new_self.op_history[:-1]  # pop off the slicing operation we just used
 
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
