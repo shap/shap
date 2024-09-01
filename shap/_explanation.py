@@ -804,6 +804,8 @@ def is_1d(val):
 
 
 def _compute_shape(x) -> tuple[int | None, ...]:
+    """Computes the shape of a generic object ``x``."""
+
     def _first_item(iterable):
         for item in iterable:
             return item
