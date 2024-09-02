@@ -303,11 +303,11 @@ class Explanation(metaclass=MetaExplanation):
 
     def __repr__(self):
         """Display some basic printable info, but not everything."""
-        out = ".values =\n" + self.values.__repr__()
+        out = f".values =\n{self.values!r}"
         if self.base_values is not None:
-            out += "\n\n.base_values =\n" + self.base_values.__repr__()
+            out += f"\n\n.base_values =\n{self.base_values!r}"
         if self.data is not None:
-            out += "\n\n.data =\n" + self.data.__repr__()
+            out += f"\n\n.data =\n{self.data!r}"
         return out
 
     def __getitem__(self, item) -> Explanation:
