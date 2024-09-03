@@ -165,8 +165,8 @@ class TreeExplainer(Explainer):
         """
         if approximate is not DEPRECATED_APPROX:
             warnings.warn(
-                "The approximate argument has been deprecated and will be removed in a future version. "
-                "Please use the approximate argument in the TreeExplainer constructor instead.",
+                "The approximate argument has been deprecated and will be removed in version v0.48.0. "
+                "Please use the approximate argument in the shap_values or the __call__ method instead.",
                 DeprecationWarning,
             )
         if feature_names is not None:
