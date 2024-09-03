@@ -159,8 +159,8 @@ class TreeExplainer(Explainer):
             supported when ``feature_perturbation="interventional"``.
 
         approximate : bool
-            Deprecated, will be removed in a version v.0.48.0. Please use the approximate argument in the
-            ``shap_values`` or ```__call__`` methods instead.
+            Deprecated, will be removed in version v0.48.0. Please use the ``approximate`` argument in the
+            :meth:`.shap_values` or ``__call__`` methods instead.
 
         """
         if approximate is not DEPRECATED_APPROX:
