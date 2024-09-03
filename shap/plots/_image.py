@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
+import cv2
+import keras
 
 try:
     from IPython.display import HTML, display
@@ -195,6 +197,103 @@ def image(
     if show:
         pl.show()
 
+def saliency_map(
+    shap_values: Explanation | np.ndarray | list[np.ndarray], 
+    X: np.ndarray | None = None,
+    labels: list[str] | np.ndarray | None = None,
+    cmap: str | Colormap | None = 'jet'
+):
+    """
+    Create a combined visualization of the original image and saliency maps for one or more samples.
+    
+    Parameters:
+    shap_values (np.ndarray): SHAP values for the image(s)
+    X (np.ndarray): Original image(s)
+    """
+
+    # Handle Explanation object
+    if isinstance(shap_values, Explanation):
+        shap_exp = shap_values
+        if X is None:
+            X = shap_exp.data
+        if labels is None and shap_exp.output_names is not None:
+            labels = shap_exp.output_names
+        if len(shap_exp.output_dims) == 1:
+            shap_values = [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])]
+        elif len(shap_exp.output_dims) == 0:
+            shap_values = [shap_exp.values]
+        else:
+            raise Exception("Number of outputs needs to have support added!")
+    else:
+        assert X is not None, "X must be provided if shap_values is not an Explanation object"
+
+    # Ensure shap_values is a list of arrays
+    if not isinstance(shap_values, list):
+        shap_values = [shap_values]
+
+     # Get shapes and dimensions
+    rows = X.shape[0]
+    cols = len(shap_values) + 1  # +1 for the original image
+    print(rows)
+    print(cols)
+    input_shape = X.shape[1:3]
+
+    #input_shape = shap_values.shape[1:3]
+    #rows = shap_values.shape[0]
+    #cols = shap_values.shape[-1] + 1
+
+    # Calculate figsize dynamically based on rows and cols
+    figsize = (4 * cols, 4 * rows + 0.5)  # Added extra height for colorbar
+    
+    fig, axes = pl.subplots(rows, cols, figsize=figsize, squeeze=False)
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+
+    '''   # Get label names from shap_values
+    if shap_values.output_names is not None:
+        labels = shap_values.output_names
+    else:
+        labels = [f"Class {i}" for i in range(shap_values.shape[-1])]
+    ''' 
+    for sample in range(rows):
+        # Plot original image
+        axes[sample, 0].imshow(X[sample], cmap='gray')
+        axes[sample, 0].axis('off')
+        axes[sample, 0].set_title("Original", fontsize=10)
+
+        # Generate and plot saliency maps
+        for i in range(len(shap_values)):
+            extracted_values = shap_exp.values
+            class_name = labels[i] if isinstance(labels, list) else labels[sample, i]
+            heat_map = extracted_values[sample, ..., i]
+
+            # Normalize the heat map
+            normalized_heat_map = (heat_map - np.min(heat_map)) / (np.max(heat_map) - np.min(heat_map))
+
+            # Resize the heat map for visualization
+            heatmap = cv2.resize(normalized_heat_map, (10, 10), interpolation=cv2.INTER_AREA)
+
+            # Rescale heatmap to a range 0-255
+            saliency = np.uint8(255 * heatmap)
+
+            saliency = keras.utils.array_to_img(saliency)
+            saliency = saliency.resize(input_shape)
+            saliency = keras.utils.img_to_array(saliency)
+            
+            ax = axes[sample, i+1]
+            # get a grayscale version of the image
+            if len(X[sample].shape) == 3 and X[sample].shape[2] == 3:
+                img_gray = 0.2989 * X[sample][:, :, 0] + 0.5870 * X[sample][:, :, 1] + 0.1140 * X[sample][:, :, 2]  # rgb to gray
+            elif len(X[sample].shape) == 3:
+                img_gray = X[sample].mean(2)
+            else:
+                img_gray = X[sample]
+            # Plotting Saliency Map superimposing on the Grayscale Image
+            ax.imshow(img_gray, cmap='gray', alpha = 0.8)
+            ax.imshow(saliency[:,:,0], cmap=cmap, alpha=0.5)
+            ax.set_title(f"{class_name}", fontsize=10)
+            ax.axis('off')
+    pl.tight_layout()
+    pl.show()
 
 def image_to_text(shap_values):
     """Plots SHAP values for image inputs with test outputs.
