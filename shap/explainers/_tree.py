@@ -297,7 +297,7 @@ class TreeExplainer(Explainer):
         """
         start_time = time.time()
 
-        feature_names: Any | list[Any] | None
+        feature_names: Any
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
