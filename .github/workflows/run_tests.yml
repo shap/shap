@@ -113,7 +113,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
-          uv pip install --dry-run --system '.[test-core]'
           uv pip install --system '.[test-core]'
       - name: Run mypy
         run: mypy shap tests
