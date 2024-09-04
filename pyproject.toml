@@ -21,7 +21,7 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba>0.52',
+  'numba>=0.54',
   'cloudpickle',
   'typing-extensions',
 ]
