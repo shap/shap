@@ -205,7 +205,7 @@ def imdb(n_points: int | None = None) -> tuple[list[str], np.ndarray]:
 
 
 def communitiesandcrime(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
-    """Predict the total number of non-violent crimes per 100K population.
+    """Predict the total number of violent crimes per 100K population.
 
     This dataset is from the classic UCI Machine Learning repository:
     https://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
