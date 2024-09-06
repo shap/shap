@@ -1856,10 +1856,6 @@ def test_consistency_approximate(expected_result, approximate):
     """GH #3764.
     Test that the call interface and shap_values interface are consistent when called with `approximate=True`."""
 
-    import numpy as np
-
-    import shap
-
     dtc = sklearn.tree.DecisionTreeRegressor(max_depth=2)
     arr = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     target = np.array([0, 0, 0, 80])
