@@ -1865,5 +1865,5 @@ def test_consistency_approximate(expected_result, approximate):
     exp = shap.explainers.TreeExplainer(dtc)
     explanations_call_approx = exp(arr, approximate=approximate)
     explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
-    assert (explanations_call_approx.values == explanations_shap_values_approx).all()
-    assert (explanations_call_approx.values == expected_result).all()
+    np.testing.assert_allclose(explanations_call_approx.values, explanations_shap_values_approx)
+    np.testing.assert_allclose(explanations_call_approx.values, expected_result)

@@ -159,13 +159,13 @@ class TreeExplainer(Explainer):
             supported when ``feature_perturbation="interventional"``.
 
         approximate : bool
-            Deprecated, will be removed in version v0.48.0. Please use the ``approximate`` argument in the
-            :meth:`.shap_values` or ``__call__`` methods instead.
+            Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
+            Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
 
         """
         if approximate is not DEPRECATED_APPROX:
             warnings.warn(
-                "The approximate argument has been deprecated and will be removed in version v0.48.0. "
+                "The approximate argument has been deprecated in version v0.47.0 and will be removed in version v0.48.0. "
                 "Please use the approximate argument in the shap_values or the __call__ method instead.",
                 DeprecationWarning,
             )
@@ -266,7 +266,7 @@ class TreeExplainer(Explainer):
         """This computes the expected value conditioned on the given label value."""
         return self.model.predict(self.data, np.ones(self.data.shape[0]) * y).mean(0)
 
-    def __call__(  # type: ignore  # noqa: F821
+    def __call__(  # type: ignore
         self,
         X: Any,
         y: np.ndarray | pd.Series | None = None,
@@ -290,6 +290,12 @@ class TreeExplainer(Explainer):
             previously proposed by Saabas which only considers a single feature ordering. Take care
             since this does not have the consistency guarantees of Shapley values and places too
             much weight on lower splits in the tree.
+
+        interactions: bool
+            Whether to compute the SHAP interaction values.
+
+        check_additivity: bool
+            Check if the sum of the SHAP values equals the output of the model.
 
         Returns
         -------
