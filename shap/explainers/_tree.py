@@ -308,7 +308,8 @@ class TreeExplainer(Explainer):
             if isinstance(v, list):
                 v = np.stack(v, axis=-1)  # put outputs at the end
         else:
-            assert not approximate, "Approximate computation not yet supported for interaction effects!"
+            if approximate:
+                raise NotImplementedError("Approximate computation not yet supported for interaction effects!")
             v = self.shap_interaction_values(X)
 
         # the Explanation object expects an `expected_value` for each row
