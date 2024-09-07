@@ -91,8 +91,8 @@ class MetaExplanation(type):
 class Explanation(metaclass=MetaExplanation):
     """A sliceable set of parallel arrays representing a SHAP explanation.
 
-    Note
-    ----
+    Notes
+    -----
     The *instance* methods such as `.max()` return new Explanation objects with the
     operation applied.
 
