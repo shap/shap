@@ -569,6 +569,11 @@ def summary_legacy(
             features = shap_exp.data
         if feature_names is None:
             feature_names = shap_exp.feature_names
+
+        # Revert back to list for multi-output explanations.
+        if len(shap_exp.base_values.shape) == 2 and shap_exp.base_values.shape[1] > 2:
+            shap_values = [shap_values[:, :, i] for i in range(shap_exp.base_values.shape[1])]
+
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
