@@ -95,7 +95,7 @@ def california(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
 
     References
     ----------
-    California housing dataset: :func:`scikit-learn:sklearn.datasets.fetch_california_housing`
+    California housing dataset: :external+scikit-learn:func:`sklearn.datasets.fetch_california_housing`
 
     Examples
     --------
@@ -137,7 +137,7 @@ def linnerud(n_points: int | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     - The feature matrix ``X`` includes three exercise variables: ``Chins``, ``Situps``, ``Jumps``.
     - The target variables ``y`` include three physiological measurements: ``Weight``, ``Waist``, ``Pulse``.
 
-    More details: :func:`scikit-learn:sklearn.datasets.load_linnerud`
+    More details: :external+scikit-learn:func:`sklearn.datasets.load_linnerud`
 
     Examples
     --------
@@ -286,7 +286,7 @@ def diabetes(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     - Progression of diabetes one year after baseline (float)
 
     The diabetes dataset is a subset of the larger diabetes dataset from scikit-learn.
-    More details: :func:`scikit-learn:sklearn.datasets.load_diabetes`
+    More details: :external+scikit-learn:func:`sklearn.datasets.load_diabetes`
 
     Examples
     --------
@@ -627,7 +627,7 @@ def a1a(n_points: int | None = None) -> tuple[ssp.csr_matrix, np.ndarray]:
     """
     Return a sparse dataset in scipy csr matrix format.
 
-    Data Source: :func:`scikit-learn:sklearn.datasets.load_svmlight_file`
+    Data Source: :external+scikit-learn:func:`sklearn.datasets.load_svmlight_file`
 
     Parameters
     ----------
