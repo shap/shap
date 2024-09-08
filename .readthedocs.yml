@@ -5,11 +5,13 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
-
-# Optionally declare the Python requirements required to build your docs
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
+  commands:
+    # cf. https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
+    - asdf plugin add uv
+    - asdf install uv latest
+    - asdf global uv latest
+    - uv venv
+    - uv pip install .[docs]
+    - >-
+      .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees
+      -D language=en docs $READTHEDOCS_OUTPUT/html
