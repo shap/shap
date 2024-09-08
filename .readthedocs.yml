@@ -13,5 +13,8 @@ build:
     - uv venv
     - uv pip install .[docs]
     - >-
-      .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees
-      -D language=en docs $READTHEDOCS_OUTPUT/html
+      .venv/bin/python -m sphinx -b linkcheck -D linkcheck_timeout=1
+      docs/ $READTHEDOCS_OUTPUT/linkcheck
+    - >-
+      .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en
+      docs $READTHEDOCS_OUTPUT/html
