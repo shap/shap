@@ -57,7 +57,7 @@ def bar(
 
         By default, take the absolute value.
     clustering: np.ndarray or None
-        A partition tree, as returned by ``shap.utils.hclust``
+        A partition tree, as returned by :func:`shap.utils.hclust`
     clustering_cutoff: float
         Controls how much of the clustering structure is displayed.
     show_data: bool or str
@@ -66,14 +66,15 @@ def bar(
     ax: matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
     Returns
     -------
     ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it. Only returned if ``show=False``.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------
