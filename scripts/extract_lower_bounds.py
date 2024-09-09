@@ -1,4 +1,4 @@
-# Utility script to print lowest supported versions of dependencies
+# Utility script to print dependency pins representing lowest supported versions
 # Run with `uv run scripts/extract_lower_bounds.py`
 #
 # /// script
