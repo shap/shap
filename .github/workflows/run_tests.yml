@@ -102,8 +102,9 @@ jobs:
       - name: Extract lower bounds
         run: |
           python -m pip install --upgrade uv
-          uv run scripts/extract_lower_bounds.py > lower_bounds.txt
-          cat lower_bounds.txt
+          uv run scripts/extract_lower_bounds.py > oldest_supported.txt
+          echo "Oldest supported versions to test against:"
+          cat oldest_supported.txt
       - name: Install dependencies
         run: |
           echo "**Dry run install"
