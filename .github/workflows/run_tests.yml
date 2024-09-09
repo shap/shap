@@ -106,11 +106,7 @@ jobs:
           echo "Oldest supported versions to test against:"
           cat oldest_supported.txt
       - name: Install dependencies
-        run: |
-          echo "**Dry run install"
-          uv pip install --system  --dry-run -r oldest_supported.txt '.[test-core,plots]'
-          echo "**Actual install"
-          uv pip install --system -r oldest_supported.txt '.[test-core,plots]'
+        run: uv pip install --system -r oldest_supported.txt '.[test-core,plots]'
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
