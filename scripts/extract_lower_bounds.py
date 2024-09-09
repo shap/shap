@@ -1,6 +1,12 @@
 """Utility script to print lowest supported versions of dependencies"""
 
-import tomllib
+try:
+    # Available in the standard library in python 3.11 onwards
+    import tomllib as toml
+except ImportError:
+    # Else use 3rd party package
+    import tomli as toml  # noqa
+
 from packaging.requirements import Requirement
 
 
@@ -18,7 +24,7 @@ def parse_lower_bounds(dependencies: list[str]) -> dict[str, str]:
 def main():
     # Parse all declared lower bound dependencies from pyproject.toml
     with open("pyproject.toml", "rb") as f:
-        data = tomllib.load(f)
+        data = toml.load(f)
 
     # Core dependencies
     bounds = parse_lower_bounds(data["project"]["dependencies"])

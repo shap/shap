@@ -98,7 +98,7 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade uv
-          pip install packaing
+          uv pip install --system packaing tomli
       - name: Extract lower bounds
         run: |
           python scripts/extract_lower_bounds.py > lower_bounds.txt
