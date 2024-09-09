@@ -81,12 +81,16 @@ jobs:
 
 
   test_oldest_supported:
-    # Use uv's "--resolution=lowest-direct" flag to install the lowest compatible versions for all direct dependencies,
-    # while using the latest compatible versions for all transitive dependencies.
+    # Test against the lowest supported versions of key dependencies,
+    # according to any lower bound constraints (like `foo>=x.y`) in pyproject.toml.
+
+    # We only bump the minimum supported version of a package when we need to, to avoid
+    # breaking users' environments unnecessarily. We aim to support versions of core dependencies
+    # for at least 2 years after their initial release, as per SPEC 0:
+    # https://scientific-python.org/specs/spec-0000/
+
     # For numpy specifically: this package is built with numpy 2.X, and tested against numpy 1.X.
     # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
-    # The "oldest supported numpy" is determined by SPEC 0:
-    # https://scientific-python.org/specs/spec-0000/
     name: run tests (oldest supported)
     runs-on: ubuntu-latest
     steps:
