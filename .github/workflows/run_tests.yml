@@ -102,15 +102,15 @@ jobs:
       - name: Extract lower bounds
         run: |
           python -m pip install --upgrade uv
-          uv run scripts/extract_lower_bounds.py > oldest_supported.txt
+          uv run scripts/extract_oldest_supported.py > oldest_supported.txt
           echo "Oldest supported versions to test against:"
           cat oldest_supported.txt
       - name: Install dependencies
         run: |
           echo "**Dry run install"
-          uv pip install --system  --dry-run -r lower_bounds.txt '.[test-core,plots]'
+          uv pip install --system  --dry-run -r oldest_supported.txt '.[test-core,plots]'
           echo "**Actual install"
-          uv pip install --system -r lower_bounds.txt '.[test-core,plots]'
+          uv pip install --system -r oldest_supported.txt '.[test-core,plots]'
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 

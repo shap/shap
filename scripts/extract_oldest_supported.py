@@ -1,5 +1,5 @@
 # Utility script to print dependency pins representing lowest supported versions
-# Run with `uv run scripts/extract_lower_bounds.py`
+# Run with `uv run scripts/extract_oldest_supported.py`
 #
 # /// script
 # requires-python = ">=3.9"
@@ -33,12 +33,13 @@ def main():
     with open("pyproject.toml", "rb") as f:
         data = tomli.load(f)
 
-    # Core dependencies
-    bounds = parse_lower_bounds(data["project"]["dependencies"])
-    # Optional dependencies
-    optional_deps = data["project"]["optional-dependencies"]
-    for group in ["test", "plots"]:
-        bounds.update(parse_lower_bounds(optional_deps[group]))
+    bounds = {}
+    for dependencies in [
+        data["project"]["dependencies"],
+        data["project"]["optional-dependencies"]["test"],
+        data["project"]["optional-dependencies"]["plots"],
+    ]:
+        bounds.update(parse_lower_bounds(dependencies))
 
     # Print out these dependencies as a list of pinned versions
     for dep, version in bounds.items():
