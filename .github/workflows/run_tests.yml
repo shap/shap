@@ -95,13 +95,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.9
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system packaing tomli
       - name: Extract lower bounds
         run: |
-          python scripts/extract_lower_bounds.py > lower_bounds.txt
+          python -m pip install --upgrade uv
+          uv run scripts/extract_lower_bounds.py > lower_bounds.txt
           cat lower_bounds.txt
       - name: Install dependencies
         run: |
