@@ -12,6 +12,10 @@
 import tomli
 from packaging.requirements import Requirement
 
+EXTRA_CONSTRAINTS = [
+    "Pillow==9.0.1",  # For compatibility with older numpy
+]
+
 
 def parse_lower_bounds(dependencies: list[str]) -> dict[str, str]:
     """Extract any declared ">=" lower bounds from a list of dependencies."""
@@ -39,6 +43,10 @@ def main():
     # Print out these dependencies as a list of pinned versions
     for dep, version in bounds.items():
         print(f"{dep}=={version}")
+
+    # Some overrides
+    for dep in EXTRA_CONSTRAINTS:
+        print(dep)
 
 
 if __name__ == "__main__":
