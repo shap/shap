@@ -64,11 +64,12 @@ test-core = [
   "pytest-cov",
   "mypy",
 ]
+#Nb. Lower bound constraints here determine the oldest version that we test against.
 test = [
   "pytest",
   "pytest-mpl",
   "pytest-cov",
-  "xgboost",
+  "xgboost>=1.6",
   "lightgbm",
   "catboost",
   "gpboost",
