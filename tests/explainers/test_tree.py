@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from packaging import version
 from sklearn.utils import check_array
 
 import shap
@@ -1340,6 +1341,9 @@ class TestExplainerXGBoost:
         """
         xgboost = pytest.importorskip("xgboost")
 
+        if version.parse(xgboost.__version__) < version.parse("1.7.0"):
+            pytest.skip("Conversion of XGBoost DMatrix to array only supported in XGB 1.7 onwards.")
+
         rs = np.random.RandomState(random_seed)
         X = rs.normal(size=(100, 7))
         y = np.matmul(X, [-2, 1, 3, 5, 2, 20, -5])
@@ -1351,6 +1355,7 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(model)
         explanation = explainer(Xd)
 
+        breakpoint()
         assert not isinstance(explanation.data, xgboost.core.DMatrix)
         assert hasattr(explanation.data, "shape")
 
