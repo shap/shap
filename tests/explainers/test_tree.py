@@ -1162,7 +1162,8 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        # Nb this check passes within an rtol of ~1.15e-5 on xgboost 1.6
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), rtol=2e-5, atol=1e-6)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
