@@ -1355,7 +1355,6 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(model)
         explanation = explainer(Xd)
 
-        breakpoint()
         assert not isinstance(explanation.data, xgboost.core.DMatrix)
         assert hasattr(explanation.data, "shape")
 
