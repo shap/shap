@@ -1,5 +1,4 @@
 """GPU accelerated tree explanations"""
-
 import numpy as np
 
 from ..utils import assert_import, record_import_error
@@ -11,7 +10,7 @@ from ._tree import (
 )
 
 try:
-    from .. import _cext_gpu  # type: ignore
+    from .. import _cext_gpu
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
 
@@ -26,7 +25,8 @@ class GPUTreeExplainer(TreeExplainer):
 
     """
 
-    def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True, from_call=False):
+    def shap_values(self, X, y=None, tree_limit=None, approximate=False, check_additivity=True,
+                    from_call=False):
         """Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -65,9 +65,8 @@ class GPUTreeExplainer(TreeExplainer):
         """
         assert not approximate, "approximate not supported"
 
-        X, y, X_missing, flat_output, tree_limit, check_additivity = self._validate_inputs(
-            X, y, tree_limit, check_additivity
-        )
+        X, y, X_missing, flat_output, tree_limit, check_additivity = \
+            self._validate_inputs(X, y, tree_limit, check_additivity)
 
         model = self.model
         _xgboost_cat_unsupported(model)
@@ -77,25 +76,12 @@ class GPUTreeExplainer(TreeExplainer):
         assert_import("cext_gpu")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, self.model.num_outputs))
         _cext_gpu.dense_tree_shap(
-            self.model.children_left,
-            self.model.children_right,
-            self.model.children_default,
-            self.model.features,
-            self.model.thresholds,
-            self.model.values,
+            self.model.children_left, self.model.children_right, self.model.children_default,
+            self.model.features, self.model.thresholds, self.model.values,
             self.model.node_sample_weight,
-            self.model.max_depth,
-            X,
-            X_missing,
-            y,
-            self.data,
-            self.data_missing,
-            tree_limit,
-            self.model.base_offset,
-            phi,
-            feature_perturbation_codes[self.feature_perturbation],
-            output_transform_codes[transform],
-            False,
+            self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
+            self.model.base_offset, phi, feature_perturbation_codes[self.feature_perturbation],
+            output_transform_codes[transform], False
         )
 
         out = self._get_shap_output(phi, flat_output)
@@ -140,39 +126,24 @@ class GPUTreeExplainer(TreeExplainer):
             this returns a list of tensors, one for each output.
 
         """
-        if self.model.model_output != "raw":
-            raise ValueError('Only model_output = "raw" is supported for SHAP interaction values right now!')
-        if self.feature_perturbation == "interventional":
-            raise ValueError(
-                'feature_perturbation="interventional" is not yet supported for interaction values. '
-                'Use feature_perturbation="tree_path_dependent" instead.'
-            )
+        assert self.model.model_output == "raw", "Only model_output = \"raw\" is supported for " \
+                                                 "SHAP interaction values right now!"
+        assert self.feature_perturbation != "interventional", 'feature_perturbation="interventional" is not yet supported for ' + \
+                                                              'interaction values. Use feature_perturbation="tree_path_dependent" instead.'
         transform = "identity"
 
-        X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)
+        X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit,
+                                                                            False)
         # run the core algorithm using the C extension
         assert_import("cext_gpu")
         phi = np.zeros((X.shape[0], X.shape[1] + 1, X.shape[1] + 1, self.model.num_outputs))
         _cext_gpu.dense_tree_shap(
-            self.model.children_left,
-            self.model.children_right,
-            self.model.children_default,
-            self.model.features,
-            self.model.thresholds,
-            self.model.values,
+            self.model.children_left, self.model.children_right, self.model.children_default,
+            self.model.features, self.model.thresholds, self.model.values,
             self.model.node_sample_weight,
-            self.model.max_depth,
-            X,
-            X_missing,
-            y,
-            self.data,
-            self.data_missing,
-            tree_limit,
-            self.model.base_offset,
-            phi,
-            feature_perturbation_codes[self.feature_perturbation],
-            output_transform_codes[transform],
-            True,
+            self.model.max_depth, X, X_missing, y, self.data, self.data_missing, tree_limit,
+            self.model.base_offset, phi, feature_perturbation_codes[self.feature_perturbation],
+            output_transform_codes[transform], True
         )
 
         return self._get_shap_interactions_output(phi, flat_output)
