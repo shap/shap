@@ -113,7 +113,11 @@ def _conditional_expectation(tree, S, x):
         lc = tree.children_left[tree_ind, node_ind]
         rc = tree.children_right[tree_ind, node_ind]
         if lc < 0:
-            return tree.values[tree_ind, node_ind]
+            result = tree.values[tree_ind, node_ind]
+            # Previously the result was an array of one element, which was then implicity converted to a float
+            # Make this conversion explicit:
+            assert len(result) == 1
+            return result[0]
         if f in S:
             if x[f] <= tree.thresholds[tree_ind, node_ind]:
                 return R(lc)
@@ -133,7 +137,7 @@ def _conditional_expectation(tree, S, x):
 def _brute_force_tree_shap(tree, x):
     m = len(x)
     phi = np.zeros(m)
-    for p in itertools.permutations(list(range(m))):
+    for p in itertools.permutations(range(m)):
         for i in range(m):
             phi[p[i]] += _conditional_expectation(tree, p[: i + 1], x) - _conditional_expectation(tree, p[:i], x)
     return phi / math.factorial(m)
