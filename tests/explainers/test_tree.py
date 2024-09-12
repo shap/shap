@@ -1830,7 +1830,7 @@ def test_xgboost_tweedie_regression():
 
 
 def test_xgboost_dart_regression():
-    """GH 3665"""
+    """GH #3665"""
     xgboost = pytest.importorskip("xgboost")
 
     model = xgboost.XGBRegressor(booster="dart")
@@ -1867,3 +1867,29 @@ def test_feature_perturbation_refactoring():
     err_msg = "feature_perturbation must be"
     with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
         explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+
+
+# the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
+# https://arxiv.org/abs/1802.03888
+@pytest.mark.parametrize(
+    "expected_result, approximate",
+    [
+        (np.array([[0.0, -20.0], [-40.0, 20.0], [0.0, -20.0], [40.0, 20.0]]), True),
+        (np.array([[-10.0, -10.0], [-30.0, 10.0], [10.0, -30.0], [30.0, 30.0]]), False),
+    ],
+)
+def test_consistency_approximate(expected_result, approximate):
+    """GH #3764.
+    Test that the call interface and shap_values interface are consistent when called with `approximate=True`."""
+
+    dtc = sklearn.tree.DecisionTreeRegressor(max_depth=2)
+    arr = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    target = np.array([0, 0, 0, 80])
+
+    dtc.fit(arr, target)
+
+    exp = shap.explainers.TreeExplainer(dtc)
+    explanations_call_approx = exp(arr, approximate=approximate)
+    explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
+    np.testing.assert_allclose(explanations_call_approx.values, explanations_shap_values_approx)
+    np.testing.assert_allclose(explanations_call_approx.values, expected_result)

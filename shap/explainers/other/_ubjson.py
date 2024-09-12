@@ -6,6 +6,7 @@ Things that are not implemented:
 """
 
 import struct
+from typing import Any
 
 import numpy as np
 
@@ -126,7 +127,7 @@ def _decode_array_optimized(fp):
 
 
 def _decode_object(tag, fp):
-    result_dict = dict()
+    result_dict: dict[str, Any] = dict()
     if tag == OBJECT_OPEN:
         key_type = None
         while key_type != OBJECT_CLOSE:
@@ -167,7 +168,7 @@ def _decode_simple_key_value_pair(fp, key_type):
     if key_type in type_sizes:
         length_of_key = __decode_element(key_type, fp)
         key_to_decode = fp.read(length_of_key)
-        key = key_to_decode.decode("utf-8")
+        key: str = key_to_decode.decode("utf-8")
         value_type_byte = fp.read(1)
         if value_type_byte in type_sizes:
             value = __decode_element(value_type_byte, fp)

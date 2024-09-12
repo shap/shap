@@ -503,7 +503,7 @@ class _PyTorchGradient(Explainer):
             del self.target_input
         except AttributeError:
             pass
-        setattr(self, "target_input", input)
+        self.target_input = input
 
     def add_handles(self, layer):
         input_handle = layer.register_forward_hook(self.get_interim_input)

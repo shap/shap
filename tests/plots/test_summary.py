@@ -138,3 +138,23 @@ def test_summary_binary_multiclass(background):
     explainer = shap.TreeExplainer(model, data=data)
     shap_values = explainer.shap_values(X)
     shap.summary_plot(shap_values, X, feature_names=["foo", "bar", "baz"], show=False)
+
+
+@pytest.mark.mpl_image_compare
+def test_summary_multiclass_explanation():
+    """Check summary plot with multiclass model with explanation as input."""
+    xgboost = pytest.importorskip("xgboost")
+    n_samples = 100
+    n_features = 5
+    n_classes = 3
+    np.random.seed(0)  # for reproducibility
+    X = np.random.randn(n_samples, n_features)
+    y = np.random.randint(0, n_classes, n_samples)
+    feature_names = [f"Feature {i + 1}" for i in range(n_features)]
+    model = xgboost.XGBClassifier(n_estimators=10, random_state=0, tree_method="exact", base_score=0.5).fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer(X)
+    fig = plt.figure()
+    shap.summary_plot(shap_values, X, feature_names=feature_names, show=False)
+    fig.set_layout_engine("tight")
+    return fig
