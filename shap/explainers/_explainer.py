@@ -284,7 +284,7 @@ class Explainer(Serializable):
 
         # split the values up according to each input
         arg_values = [[] for a in args]
-        for i, v in enumerate(values):
+        for i in range(len(values)):
             pos = 0
             for j in range(len(args)):
                 mask_length = np.prod(mask_shapes[i][j])

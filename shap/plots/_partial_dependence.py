@@ -1,3 +1,5 @@
+import typing
+
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
@@ -92,6 +94,7 @@ def partial_dependence(ind, model, data, xmin="percentile(0)", xmax="percentile(
 
         #fig, ax1 = pl.subplots(figsize)
         ax2 = ax1.twinx()
+        ax2 = typing.cast(pl.Axes, ax2)  # fix for matplotlib typing
 
         # the histogram of the data
         if hist:

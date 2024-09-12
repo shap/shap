@@ -659,7 +659,7 @@ class KernelExplainer(Explainer):
                 nonzero_inds = lars_path(mask_aug, eyAdj_aug, max_iter=r)[1]
 
             # use an adaptive regularization method
-            elif self.l1_reg == "auto" or self.l1_reg == "bic" or self.l1_reg == "aic":
+            elif self.l1_reg in ("auto", "bic", "aic"):
                 c = "aic" if self.l1_reg == "auto" else self.l1_reg
 
                 # "Normalize" parameter of LassoLarsIC was deprecated in sklearn version 1.2

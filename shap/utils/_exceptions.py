@@ -31,3 +31,7 @@ class InvalidModelError(ValueError):
 
 class InvalidClusteringError(ValueError):
     pass
+
+
+class InvalidStyleOptionError(ValueError):
+    pass
