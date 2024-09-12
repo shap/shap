@@ -43,6 +43,7 @@ class PartitionExplainer(Explainer):
         )
         if not safe_isinstance(self.model, "shap.models.Model"):
             self.model = Model(self.model)
+            
         self.expected_value = None
         self._curr_base_value = None
 
@@ -54,16 +55,10 @@ class PartitionExplainer(Explainer):
             self._reshaped_model = self.model
 
         self.partition_tree = partition_tree
-        if partition_tree is not None:
-            self._clustering = None
-        else:
-            if not hasattr(masker, "clustering"):
-                raise ValueError(
-                    "The passed masker does not have masker.clustering, so the partition_tree must be passed!"
-                )
-            self._clustering = masker.clustering
-            if not callable(masker.clustering):
-                self._mask_matrix = make_masks(self._clustering)
+
+        if not callable(self.masker.clustering):
+            self._clustering = self.masker.clustering
+            self._mask_matrix = make_masks(self._clustering)
 
         if len(call_args) > 0:
             class PartitionExplainer(self.__class__):
