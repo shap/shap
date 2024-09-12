@@ -43,7 +43,7 @@ class PartitionExplainer(Explainer):
         )
         if not safe_isinstance(self.model, "shap.models.Model"):
             self.model = Model(self.model)
-            
+
         self.expected_value = None
         self._curr_base_value = None
 
