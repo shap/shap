@@ -227,9 +227,6 @@ class TreeExplainer(Explainer):
                 f"Got {feature_perturbation} instead."
             )
 
-        if self.data is None:
-            feature_perturbation = "tree_path_dependent"
-            # warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
             wmsg = (
                 f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
