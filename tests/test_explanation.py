@@ -50,7 +50,7 @@ def test_explanation_hstack_errors(random_seed):
         _ = base_exp.hstack(exp2)
 
     with pytest.raises(
-        AssertionError,
+        ValueError,
         match="Can't hstack explanations with different base values",
     ):
         exp2 = shap.Explanation(
