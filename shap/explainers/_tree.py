@@ -93,7 +93,7 @@ class TreeExplainer(Explainer):
         model,
         data=None,
         model_output="raw",
-        feature_perturbation="interventional",
+        feature_perturbation="auto",
         feature_names=None,
         approximate=DEPRECATED_APPROX,
         # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
@@ -118,23 +118,32 @@ class TreeExplainer(Explainer):
             path as our background dataset (this is recorded in the ``model``
             object).
 
-        feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
+        feature_perturbation : "auto" (default), "interventional" or "tree_path_dependent"
             Since SHAP values rely on conditional expectations, we need to
             decide how to handle correlated (or otherwise dependent) input
             features.
 
-            The "interventional" approach breaks the dependencies between
-            features according to the rules dictated by causal inference
-            (Janzing et al. 2019). Note that the "interventional" option
-            requires a background dataset ``data``, and its runtime scales
-            linearly with the size of the background dataset you use. Anywhere
-            from 100 to 1000 random background samples are good sizes to use.
+            - if ``"interventional"``, a background dataset ``data`` is required. The
+              dependencies between features are handled according to the rules dictated
+              by causal inference [1]_. The runtime scales linearly with the size of the
+              background dataset you use: anywhere from 100 to 1000 random background
+              samples are good sizes to use.
+            - if ``"tree_path_dependent"``, no background dataset is required and the
+              approach is to just follow the trees and use the number of training
+              examples that went down each leaf to represent the background
+              distribution.
+            - if ``"auto"``, the "interventional" approach will be used when a
+              background is provided, otherwise the "tree_path_dependent" approach will
+              be used.
 
-            The "tree_path_dependent" approach is to just follow the trees and
-            use the number of training examples that went down each leaf to
-            represent the background distribution. This approach does not
-            require a background dataset, and so is used by default when no
-            background dataset is provided.
+            .. versionadded:: 0.47
+               The `"auto"` option was added.
+
+            .. versionchanged:: 0.47
+               The default behaviour will change from `"interventional"` to `"auto"` in 0.47.
+               In the future, passing `feature_pertubation="interventional"` without providing
+               a background dataset will raise an error.
+
 
         model_output : "raw", "probability", "log_loss", or model method name
             What output of the model should be explained.
@@ -161,6 +170,12 @@ class TreeExplainer(Explainer):
         approximate : bool
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
             Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
+
+        References
+        ----------
+        .. [1] Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum.
+               "Feature relevance quantification in explainable AI: A causal problem."
+               International Conference on artificial intelligence and statistics. PMLR, 2020.
 
         """
         if approximate is not DEPRECATED_APPROX:
@@ -193,9 +208,25 @@ class TreeExplainer(Explainer):
             self.data = data.data
         else:
             self.data = data
-        if self.data is None:
-            feature_perturbation = "tree_path_dependent"
-            # warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
+
+        if feature_perturbation == "auto":
+            feature_perturbation = "interventional" if self.data is not None else "tree_path_dependent"
+        elif feature_perturbation == "interventional":
+            if self.data is None:
+                # TODO: raise an error in 0.48
+                warnings.warn(
+                    "In the future, passing feature_perturbation='interventional' without providing a background dataset "
+                    "will raise an error. Please provide a background dataset to continue using the interventional "
+                    "approach or set feature_perturbation='auto' to automatically switch approaches.",
+                    FutureWarning,
+                )
+                feature_perturbation = "tree_path_dependent"
+        elif feature_perturbation != "tree_path_dependent":
+            raise InvalidFeaturePerturbationError(
+                "feature_perturbation must be 'auto', 'interventional', or 'tree_path_dependent'. "
+                f"Got {feature_perturbation} instead."
+            )
+
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
             wmsg = (
                 f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
@@ -208,9 +239,6 @@ class TreeExplainer(Explainer):
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
-
-        if feature_perturbation not in feature_perturbation_codes:
-            raise InvalidFeaturePerturbationError("Invalid feature_perturbation option!")
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":
