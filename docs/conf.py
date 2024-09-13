@@ -73,7 +73,7 @@ autosummary_generate = True
 
 # [intersphinx]
 intersphinx_mapping = {
-    "stdlib": ("https://docs.python.org/3", None),
+    # "stdlib": ("https://docs.python.org/3", None),
     "mpl": (
         "https://matplotlib.org/stable/",
         "https://matplotlib.org/stable/objects.inv",

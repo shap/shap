@@ -80,7 +80,7 @@ def beeswarm(
         each row to be that many inches high. Passing a pair of floats will scale the
         plot by that number of inches. If ``None`` is passed, then the size of the
         current figure will be left unchanged. If ``ax`` is not ``None``, then passing
-        ``plot_size`` will raise a :external+stdlib:exc:`ValueError`.
+        ``plot_size`` will raise a :exc:`ValueError`.
 
     group_remaining_features: bool
         If there are more features than ``max_display``, then plot a row representing
