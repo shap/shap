@@ -656,9 +656,8 @@ class Explanation(metaclass=MetaExplanation):
 
         """
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
-        assert np.allclose(
-            self.base_values, other.base_values, atol=1e-6
-        ), "Can't hstack explanations with different base values!"
+        if not np.allclose(self.base_values, other.base_values, atol=1e-6):
+            raise ValueError("Can't hstack explanations with different base values!")
 
         new_exp = Explanation(
             values=np.hstack([self.values, other.values]),
