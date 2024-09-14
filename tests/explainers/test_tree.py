@@ -1144,8 +1144,8 @@ class TestExplainerXGBoost:
     )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
-        """Test that xgboost sklearn attributues are properly passed to the DMatrix
-        initiated during shap value calculation. see GH #3313
+        """Test that xgboost sklearn attributes are properly passed to the DMatrix
+        initiated during shap value calculation. See GH #3313
         """
         X, y = shap.datasets.adult(n_points=100)
 

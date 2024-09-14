@@ -106,13 +106,13 @@ def scatter(
         there is one pair for each feature to be plotted.
 
     ax : matplotlib Axes, optional
-        Optionally specify an existing matplotlib ``Axes`` object, into which
+        Optionally specify an existing :external+mpl:class:`matplotlib.axes.Axes` object, into which
         the plot will be placed.
 
         Only supported when plotting a single feature.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
 
         Setting this to ``False`` allows the plot to be customized further after it
         has been created.
@@ -120,7 +120,8 @@ def scatter(
     Returns
     -------
     ax : matplotlib Axes object
-        Only returned if ``show=False``.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------

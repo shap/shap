@@ -62,23 +62,25 @@ def beeswarm(
         Axes object to draw the plot onto, otherwise uses the current Axes.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot to be customized further
-        after it has been created, returning the current axis via plt.gca().
+        after it has been created, returning the current axis via
+        :external+mpl:func:`matplotlib.pyplot.gca()`.
 
     color_bar : bool
         Whether to draw the color bar (legend).
 
     s : float
-        What size to make the markers. For further information see `s` in ``matplotlib.pyplot.scatter``.
+        What size to make the markers. For further information, see ``s`` in
+        :external+mpl:func:`matplotlib.pyplot.scatter`.
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default, the size is auto-scaled based on the
         number of features that are being displayed. Passing a single float will cause
         each row to be that many inches high. Passing a pair of floats will scale the
         plot by that number of inches. If ``None`` is passed, then the size of the
-        current figure will be left unchanged. If ax is not ``None``, then passing
-        plot_size will raise a Value Error.
+        current figure will be left unchanged. If ``ax`` is not ``None``, then passing
+        ``plot_size`` will raise a :exc:`ValueError`.
 
     group_remaining_features: bool
         If there are more features than ``max_display``, then plot a row representing
@@ -87,7 +89,8 @@ def beeswarm(
     Returns
     -------
     ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it. Only returned if ``show=False``.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------
