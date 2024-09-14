@@ -27,7 +27,6 @@ explainers
     :toctree: generated/
 
     shap.Explainer
-    shap.Explainer.__call__
 
 Tree Model Explainers
 ^^^^^^^^^^^^^^^^^^^^^
@@ -35,9 +34,7 @@ Tree Model Explainers
     :toctree: generated/
 
     shap.TreeExplainer
-    shap.TreeExplainer.__call__
     shap.GPUTreeExplainer
-    shap.GPUTreeExplainer.__call__
 
 Linear Model Explainers
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -45,9 +42,7 @@ Linear Model Explainers
     :toctree: generated/
 
     shap.LinearExplainer
-    shap.LinearExplainer.__call__
     shap.AdditiveExplainer
-    shap.AdditiveExplainer.__call__
 
 Deep Learning Model Explainers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -55,7 +50,6 @@ Deep Learning Model Explainers
     :toctree: generated/
 
     shap.DeepExplainer
-    shap.DeepExplainer.__call__
 
 Model Agnostic Explainers
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -63,17 +57,11 @@ Model Agnostic Explainers
     :toctree: generated/
 
     shap.ExactExplainer
-    shap.ExactExplainer.__call__
     shap.KernelExplainer
-    shap.KernelExplainer.__call__
     shap.PermutationExplainer
-    shap.PermutationExplainer.__call__
     shap.PartitionExplainer
-    shap.PartitionExplainer.__call__
     shap.SamplingExplainer
-    shap.SamplingExplainer.__call__
     shap.GradientExplainer
-    shap.GradientExplainer.__call__
 
 Other Model Explainers
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -81,17 +69,11 @@ Other Model Explainers
     :toctree: generated/
 
     shap.explainers.other.Coefficient
-    shap.explainers.other.Coefficient.__call__
     shap.explainers.other.Random
-    shap.explainers.other.Random.__call__
     shap.explainers.other.LimeTabular
-    shap.explainers.other.LimeTabular.__call__
     shap.explainers.other.Maple
-    shap.explainers.other.Maple.__call__
     shap.explainers.other.TreeMaple
-    shap.explainers.other.TreeMaple.__call__
     shap.explainers.other.TreeGain
-    shap.explainers.other.TreeGain.__call__
 
 
 .. _plots_api:
