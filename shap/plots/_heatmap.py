@@ -168,7 +168,6 @@ def heatmap(
         align="center",
         color="#000000",
         left=values.shape[0] * 1.0 - 0.5,
-        # color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
     )
     for b in bar_container:
         b.set_clip_on(False)
