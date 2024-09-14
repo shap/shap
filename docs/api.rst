@@ -15,7 +15,6 @@ Explanation
     :toctree: generated/
 
     shap.Explanation
-    shap.Explanation.__getitem__
     shap.Cohorts
 
 

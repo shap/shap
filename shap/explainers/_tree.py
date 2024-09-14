@@ -169,7 +169,7 @@ class TreeExplainer(Explainer):
 
         approximate : bool
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
-            Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
+            Please use the ``approximate`` argument in the :meth:`.shap_values` or :meth:`__call__` methods instead.
 
         References
         ----------
@@ -313,17 +313,17 @@ class TreeExplainer(Explainer):
         y : numpy.array, optional
             An array of label values for each sample. Used when explaining loss functions.
 
-        approximate : bool
-            Run fast, but only roughly approximate the Tree SHAP values. This runs a method
-            previously proposed by Saabas which only considers a single feature ordering. Take care
-            since this does not have the consistency guarantees of Shapley values and places too
-            much weight on lower splits in the tree.
-
         interactions: bool
             Whether to compute the SHAP interaction values.
 
         check_additivity: bool
             Check if the sum of the SHAP values equals the output of the model.
+
+        approximate : bool
+            Run fast, but only roughly approximate the Tree SHAP values. This runs a method
+            previously proposed by Saabas which only considers a single feature ordering. Take care
+            since this does not have the consistency guarantees of Shapley values and places too
+            much weight on lower splits in the tree. Defaults to False.
 
         Returns
         -------
