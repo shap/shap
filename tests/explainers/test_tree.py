@@ -1150,7 +1150,8 @@ class TestExplainerXGBoost:
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8
-        X_nan = X.copy()
+        # Cast all columns to float to allow imputing a float value
+        X_nan = X.copy().astype(float)
         X_nan.loc[
             X_nan.sample(frac=0.3, random_state=42).index,
             X_nan.columns.to_series().sample(frac=0.5, random_state=42),
