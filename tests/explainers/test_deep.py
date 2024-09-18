@@ -124,10 +124,6 @@ def test_tf_keras_activations(activation):
 
     tf = pytest.importorskip("tensorflow")
 
-    from tensorflow.keras.layers import Dense, Input
-    from tensorflow.keras.models import Model
-    from tensorflow.keras.optimizers import SGD
-
     tf.compat.v1.random.set_random_seed(random_seed)
     rs = np.random.RandomState(random_seed)
 
@@ -139,11 +135,11 @@ def test_tf_keras_activations(activation):
     y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
 
     # create a linear model
-    inputs = Input(shape=(2,))
-    preds = Dense(1, activation=activation)(inputs)
+    inputs = tf.keras.layers.Input(shape=(2,))
+    preds = tf.keras.layers.Dense(1, activation=activation)(inputs)
 
-    model = Model(inputs=inputs, outputs=preds)
-    model.compile(optimizer=SGD(), loss="mse", metrics=["mse"])
+    model = tf.keras.models.Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=tf.keras.optimizers.SGD(), loss="mse", metrics=["mse"])
     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     # explain
@@ -162,12 +158,6 @@ def test_tf_keras_linear():
 
     tf = pytest.importorskip("tensorflow")
 
-    from tensorflow.keras.layers import Dense, Input
-    from tensorflow.keras.models import Model
-
-    # from tensorflow.keras.optimizers.legacy import SGD
-    from tensorflow.keras.optimizers import SGD
-
     # tf.compat.v1.disable_eager_execution()
 
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -181,11 +171,11 @@ def test_tf_keras_linear():
     y = np.dot(x, coef) + 1 + rs.normal(scale=0.1, size=1000)
 
     # create a linear model
-    inputs = Input(shape=(2,))
-    preds = Dense(1, activation="linear")(inputs)
+    inputs = tf.keras.layers.Input(shape=(2,))
+    preds = tf.keras.layers.Dense(1, activation="linear")(inputs)
 
-    model = Model(inputs=inputs, outputs=preds)
-    model.compile(optimizer=SGD(), loss="mse", metrics=["mse"])
+    model = tf.keras.models.Model(inputs=inputs, outputs=preds)
+    model.compile(optimizer=tf.keras.optimizers.SGD(), loss="mse", metrics=["mse"])
     model.fit(x, y, epochs=30, shuffle=False, verbose=0)
 
     fit_coef = model.layers[1].get_weights()[0].T[0]
@@ -211,28 +201,23 @@ def test_tf_keras_imdb_lstm(random_seed):
     if version.parse(tf.__version__) >= version.parse("2.5.0"):
         pytest.skip()
 
-    from tensorflow.keras.datasets import imdb
-    from tensorflow.keras.layers import LSTM, Dense, Embedding
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.preprocessing import sequence
-
     tf.compat.v1.disable_eager_execution()
 
     # load the data from keras
     max_features = 1000
     try:
-        (X_train, _), (X_test, _) = imdb.load_data(num_words=max_features)
+        (X_train, _), (X_test, _) = tf.keras.datasets.imdb.load_data(num_words=max_features)
     except Exception:
         return  # this hides a bug in the most recent version of keras that prevents data loading
-    X_train = sequence.pad_sequences(X_train, maxlen=100)
-    X_test = sequence.pad_sequences(X_test, maxlen=100)
+    X_train = tf.keras.preprocessing.sequence.pad_sequences(X_train, maxlen=100)
+    X_test = tf.keras.preprocessing.sequence.pad_sequences(X_test, maxlen=100)
 
     # create the model. note that this is model is very small to make the test
     # run quick and we don't care about accuracy here
-    mod = Sequential()
-    mod.add(Embedding(max_features, 8))
-    mod.add(LSTM(10, dropout=0.2, recurrent_dropout=0.2))
-    mod.add(Dense(1, activation="sigmoid"))
+    mod = tf.keras.models.Sequential()
+    mod.add(tf.keras.layers.Embedding(max_features, 8))
+    mod.add(tf.keras.layers.LSTM(10, dropout=0.2, recurrent_dropout=0.2))
+    mod.add(tf.keras.layers.Dense(1, activation="sigmoid"))
     mod.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
 
     # select the background and test samples
