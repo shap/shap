@@ -26,10 +26,10 @@ class ShowProgress:
             self.unshown_count += 1
         try:
             return next(self.iter)
-        except StopIteration as e:
+        except StopIteration:
             if self.pbar is not None:
                 self.pbar.close()
-            raise e
+            raise
 
     def __iter__(self):
         return self

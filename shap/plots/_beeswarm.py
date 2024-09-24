@@ -1,6 +1,9 @@
 """Summary plots of SHAP values across a whole dataset."""
 
+from __future__ import annotations
+
 import warnings
+from typing import Literal
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -26,22 +29,22 @@ from ._utils import (
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def beeswarm(
-    shap_values,
-    max_display=10,
-    order=Explanation.abs.mean(0),
+    shap_values: Explanation,
+    max_display: int | None = 10,
+    order=Explanation.abs.mean(0),  # type: ignore
     clustering=None,
     cluster_threshold=0.5,
     color=None,
     axis_color="#333333",
-    alpha=1,
-    ax=None,
-    show=True,
-    log_scale=False,
-    color_bar=True,
-    s=16,
-    plot_size="auto",
-    color_bar_label=labels["FEATURE_VALUE"],
-    group_remaining_features=True,
+    alpha: float = 1.0,
+    ax: pl.Axes | None = None,
+    show: bool = True,
+    log_scale: bool = False,
+    color_bar: bool = True,
+    s: float = 16,
+    plot_size: Literal["auto"] | float | tuple[float, float] | None = "auto",
+    color_bar_label: str = labels["FEATURE_VALUE"],
+    group_remaining_features: bool = True,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -59,23 +62,25 @@ def beeswarm(
         Axes object to draw the plot onto, otherwise uses the current Axes.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot to be customized further
-        after it has been created, returning the current axis via plt.gca().
+        after it has been created, returning the current axis via
+        :external+mpl:func:`matplotlib.pyplot.gca()`.
 
     color_bar : bool
         Whether to draw the color bar (legend).
 
     s : float
-        What size to make the markers. For further information see `s` in ``matplotlib.pyplot.scatter``.
+        What size to make the markers. For further information, see ``s`` in
+        :external+mpl:func:`matplotlib.pyplot.scatter`.
 
     plot_size : "auto" (default), float, (float, float), or None
         What size to make the plot. By default, the size is auto-scaled based on the
         number of features that are being displayed. Passing a single float will cause
         each row to be that many inches high. Passing a pair of floats will scale the
         plot by that number of inches. If ``None`` is passed, then the size of the
-        current figure will be left unchanged. If ax is not ``None``, then passing
-        plot_size will raise a Value Error.
+        current figure will be left unchanged. If ``ax`` is not ``None``, then passing
+        ``plot_size`` will raise a :exc:`ValueError`.
 
     group_remaining_features: bool
         If there are more features than ``max_display``, then plot a row representing
@@ -84,7 +89,8 @@ def beeswarm(
     Returns
     -------
     ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it. Only returned if ``show=False``.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------
@@ -315,7 +321,7 @@ def beeswarm(
             ):
                 # values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values), partition_tree)
-                for i in range(len(values)):
+                for _ in range(len(values)):
                     values[:, ind1] += values[:, ind2]
                     values = np.delete(values, ind2, 1)
                     orig_inds[ind1] += orig_inds[ind2]
@@ -328,7 +334,7 @@ def beeswarm(
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
     feature_names_new = []
-    for pos, inds in enumerate(orig_inds):
+    for inds in orig_inds:
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
         elif len(inds) <= 2:
@@ -354,7 +360,7 @@ def beeswarm(
     row_height = 0.4
     if plot_size == "auto":
         fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
-    elif type(plot_size) in (list, tuple):
+    elif isinstance(plot_size, (list, tuple)):
         fig.set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
         fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
@@ -365,11 +371,11 @@ def beeswarm(
         ax.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
         shaps = values[:, i]
         fvalues = None if features is None else features[:, i]
-        inds = np.arange(len(shaps))
-        np.random.shuffle(inds)
+        f_inds = np.arange(len(shaps))
+        np.random.shuffle(f_inds)
         if fvalues is not None:
-            fvalues = fvalues[inds]
-        shaps = shaps[inds]
+            fvalues = fvalues[f_inds]
+        shaps = shaps[f_inds]
         colored_feature = True
         try:
             if idx2cat is not None and idx2cat[i]:  # check categorical feature
@@ -383,11 +389,11 @@ def beeswarm(
         # curr_bin = []
         nbins = 100
         quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-        inds = np.argsort(quant + np.random.randn(N) * 1e-6)
+        inds_ = np.argsort(quant + np.random.randn(N) * 1e-6)
         layer = 0
         last_bin = -1
         ys = np.zeros(N)
-        for ind in inds:
+        for ind in inds_:
             if quant[ind] != last_bin:
                 layer = 0
             ys[ind] = np.ceil(layer / 2) * ((layer % 2) * 2 - 1)
@@ -467,7 +473,7 @@ def beeswarm(
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
     #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
     # cb.draw_all()
@@ -478,7 +484,7 @@ def beeswarm(
     ax.spines["top"].set_visible(False)
     ax.spines["left"].set_visible(False)
     ax.tick_params(color=axis_color, labelcolor=axis_color)
-    ax.set_yticks(range(len(feature_inds)), reversed(yticklabels), fontsize=13)
+    ax.set_yticks(range(len(feature_inds)), list(reversed(yticklabels)), fontsize=13)
     ax.tick_params("y", length=20, width=0.5, which="major")
     ax.tick_params("x", labelsize=11)
     ax.set_ylim(-1, len(feature_inds))
@@ -566,6 +572,11 @@ def summary_legacy(
             features = shap_exp.data
         if feature_names is None:
             feature_names = shap_exp.feature_names
+
+        # Revert back to list for multi-output explanations.
+        if len(shap_exp.base_values.shape) == 2 and shap_exp.base_values.shape[1] > 2:
+            shap_values = [shap_values[:, :, i] for i in range(shap_exp.base_values.shape[1])]
+
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
@@ -612,7 +623,7 @@ def summary_legacy(
     if features is not None:
         shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
-            assert False, (
+            raise ValueError(
                 shape_msg + " Perhaps the extra column in the shap_values matrix is the "
                 "constant offset? Of so just pass shap_values[:,:-1]."
             )
@@ -834,7 +845,7 @@ def summary_legacy(
                 )
 
     elif plot_type == "violin":
-        for pos, i in enumerate(feature_order):
+        for pos in range(len(feature_order)):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:
@@ -938,7 +949,7 @@ def summary_legacy(
                 showmedians=False,
             )
 
-            for pc in parts["bodies"]:
+            for pc in parts["bodies"]:  # type:ignore
                 pc.set_facecolor(color)
                 pc.set_edgecolor("none")
                 pc.set_alpha(alpha)
@@ -1068,7 +1079,7 @@ def summary_legacy(
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
     #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
     # cb.draw_all()

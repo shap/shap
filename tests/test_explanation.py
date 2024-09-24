@@ -1,5 +1,7 @@
 """This file contains tests for the `shap._explanation` module."""
 
+from textwrap import dedent
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,6 +11,36 @@ from sklearn.ensemble import RandomForestClassifier
 
 import shap
 from shap._explanation import OpHistoryItem
+
+
+def test_explanation_repr():
+    exp = shap.Explanation(values=np.arange(5))
+    assert (
+        exp.__repr__()
+        == dedent(
+            """
+            .values =
+            array([0, 1, 2, 3, 4])
+            """
+        ).strip()
+    )
+
+    exp = shap.Explanation(values=np.arange(5), base_values=0.5, data=np.ones(5))
+    assert (
+        exp.__repr__()
+        == dedent(
+            """
+            .values =
+            array([0, 1, 2, 3, 4])
+
+            .base_values =
+            0.5
+
+            .data =
+            array([1., 1., 1., 1., 1.])
+            """
+        ).strip()
+    )
 
 
 def test_explanation_hstack(random_seed):
@@ -53,7 +85,7 @@ def test_explanation_hstack_errors(random_seed):
         _ = base_exp.hstack(exp2)
 
     with pytest.raises(
-        AssertionError,
+        ValueError,
         match="Can't hstack explanations with different base values",
     ):
         exp2 = shap.Explanation(

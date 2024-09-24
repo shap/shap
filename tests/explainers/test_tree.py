@@ -1144,13 +1144,14 @@ class TestExplainerXGBoost:
     )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
-        """Test that xgboost sklearn attributues are properly passed to the DMatrix
-        initiated during shap value calculation. see GH #3313
+        """Test that xgboost sklearn attributes are properly passed to the DMatrix
+        initiated during shap value calculation. See GH #3313
         """
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8
-        X_nan = X.copy()
+        # Cast all columns to float to allow imputing a float value
+        X_nan = X.copy().astype(float)
         X_nan.loc[
             X_nan.sample(frac=0.3, random_state=42).index,
             X_nan.columns.to_series().sample(frac=0.5, random_state=42),
@@ -1830,7 +1831,7 @@ def test_xgboost_tweedie_regression():
 
 
 def test_xgboost_dart_regression():
-    """GH 3665"""
+    """GH #3665"""
     xgboost = pytest.importorskip("xgboost")
 
     model = xgboost.XGBRegressor(booster="dart")
@@ -1841,3 +1842,55 @@ def test_xgboost_dart_regression():
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X), atol=1e-4)
+
+
+def test_feature_perturbation_refactoring():
+    X, y = sklearn.datasets.make_regression(n_samples=100, n_features=10, random_state=0)
+    model = sklearn.ensemble.RandomForestRegressor().fit(X, y)
+
+    # check the behaviour of "auto" and the switch from "interventional" to "tree_path_dependent"
+    feature_perturbation = "auto"
+    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "tree_path_dependent"
+
+    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "interventional"
+
+    # check that we raise a FutureWarning when switching "interventional" to "tree_path_dependent"
+    feature_perturbation = "interventional"
+    warn_msg = "In the future, passing feature_perturbation='interventional'"
+    with pytest.warns(FutureWarning, match=warn_msg):
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "tree_path_dependent"
+
+    # raise an error if the option is unknown
+    feature_perturbation = "random"
+    err_msg = "feature_perturbation must be"
+    with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+
+
+# the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
+# https://arxiv.org/abs/1802.03888
+@pytest.mark.parametrize(
+    "expected_result, approximate",
+    [
+        (np.array([[0.0, -20.0], [-40.0, 20.0], [0.0, -20.0], [40.0, 20.0]]), True),
+        (np.array([[-10.0, -10.0], [-30.0, 10.0], [10.0, -30.0], [30.0, 30.0]]), False),
+    ],
+)
+def test_consistency_approximate(expected_result, approximate):
+    """GH #3764.
+    Test that the call interface and shap_values interface are consistent when called with `approximate=True`."""
+
+    dtc = sklearn.tree.DecisionTreeRegressor(max_depth=2)
+    arr = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    target = np.array([0, 0, 0, 80])
+
+    dtc.fit(arr, target)
+
+    exp = shap.explainers.TreeExplainer(dtc)
+    explanations_call_approx = exp(arr, approximate=approximate)
+    explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
+    np.testing.assert_allclose(explanations_call_approx.values, explanations_shap_values_approx)
+    np.testing.assert_allclose(explanations_call_approx.values, expected_result)

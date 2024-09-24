@@ -12,7 +12,7 @@ def test_beeswarm_input_is_explanation():
         TypeError,
         match="beeswarm plot requires an `Explanation` object",
     ):
-        _ = shap.plots.beeswarm(np.random.randn(20, 5), show=False)
+        _ = shap.plots.beeswarm(np.random.randn(20, 5), show=False)  # type: ignore
 
 
 def test_beeswarm_wrong_features_shape():
