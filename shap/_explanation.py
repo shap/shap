@@ -299,7 +299,7 @@ class Explanation(metaclass=MetaExplanation):
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
 
-    def cohorts(self, cohorts) -> Cohorts:
+    def cohorts(self, cohorts: int | list[int] | tuple[int] | np.ndarray) -> Cohorts:
         """Split this explanation into several cohorts.
 
         Parameters
@@ -313,6 +313,12 @@ class Explanation(metaclass=MetaExplanation):
         Cohorts object
 
         """
+        if self.values.ndim > 2:
+            raise ValueError(
+                "Cohorts cannot be calculated on multiple outputs at once. "
+                "Please make sure to specify the output index on which cohorts should be build, e.g. for a multi-class output "
+                "shap_values[..., cohort_class].cohorts(2)."
+            )
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         if isinstance(cohorts, (list, tuple, np.ndarray)):
