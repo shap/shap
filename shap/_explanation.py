@@ -299,33 +299,7 @@ class Explanation(metaclass=MetaExplanation):
     def clustering(self, new_clustering):
         self._s.clustering = new_clustering
 
-    def cohorts(self, cohorts: int | list[int] | tuple[int] | np.ndarray) -> Cohorts:
-        """Split this explanation into several cohorts.
-
-        Parameters
-        ----------
-        cohorts : int or array
-            If this is an integer then we auto build that many cohorts using a decision tree. If this is
-            an array then we treat that as an array of cohort names/ids for each instance.
-
-        Returns
-        -------
-        Cohorts object
-
-        """
-        if self.values.ndim > 2:
-            raise ValueError(
-                "Cohorts cannot be calculated on multiple outputs at once. "
-                "Please make sure to specify the output index on which cohorts should be build, e.g. for a multi-class output "
-                "shap_values[..., cohort_class].cohorts(2)."
-            )
-        if isinstance(cohorts, int):
-            return _auto_cohorts(self, max_cohorts=cohorts)
-        if isinstance(cohorts, (list, tuple, np.ndarray)):
-            cohorts = np.array(cohorts)
-            return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
-        raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
-
+    # =================== Data model ===================
     def __repr__(self):
         """Display some basic printable info, but not everything."""
         out = f".values =\n{self.values!r}"
@@ -701,6 +675,33 @@ class Explanation(metaclass=MetaExplanation):
             clustering=self.clustering,
         )
         return new_exp
+
+    def cohorts(self, cohorts: int | list[int] | tuple[int] | np.ndarray) -> Cohorts:
+        """Split this explanation into several cohorts.
+
+        Parameters
+        ----------
+        cohorts : int or array
+            If this is an integer then we auto build that many cohorts using a decision tree. If this is
+            an array then we treat that as an array of cohort names/ids for each instance.
+
+        Returns
+        -------
+        Cohorts object
+
+        """
+        if self.values.ndim > 2:
+            raise ValueError(
+                "Cohorts cannot be calculated on multiple outputs at once. "
+                "Please make sure to specify the output index on which cohorts should be build, e.g. for a multi-class output "
+                "shap_values[..., cohort_class].cohorts(2)."
+            )
+        if isinstance(cohorts, int):
+            return _auto_cohorts(self, max_cohorts=cohorts)
+        if isinstance(cohorts, (list, tuple, np.ndarray)):
+            cohorts = np.array(cohorts)
+            return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
+        raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
 
     def _flatten_feature_names(self) -> dict:
         new_values: dict[Any, Any] = {}
