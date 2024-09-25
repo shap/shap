@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING, Final, Literal, overload
 from urllib.request import urlretrieve
 
 import numpy as np
@@ -7,22 +10,28 @@ import sklearn.datasets
 
 import shap
 
-github_data_url = "https://github.com/shap/shap/raw/master/data/"
+if TYPE_CHECKING:  # pragma: no cover
+    import scipy.sparse as ssp
+
+github_data_url: Final[str] = "https://github.com/shap/shap/raw/master/data/"
 
 
-def imagenet50(resolution=224, n_points=None):
+def imagenet50(resolution: int = 224, n_points: int | None = None) -> tuple[np.ndarray, np.ndarray]:
     """Return a set of 50 images representative of ImageNet images.
 
     Parameters
     ----------
     resolution : int
-        The resolution of the images. At present the only supported value is 224.
+        The resolution of the images. At present, the only supported value is 224.
     n_points : int, optional
         Number of data points to sample. If None, the entire dataset is used.
 
     Returns
     -------
-    Tuple of numpy array representing images and numpy array representing the labels.
+    X : np.ndarray
+        Represents images from ImageNet of a certain resolution.
+    y : np.ndarray
+        The target variables, that is, the ImageNet classes.
 
     Notes
     -----
@@ -39,10 +48,11 @@ def imagenet50(resolution=224, n_points=None):
     To get the processed images and labels::
 
         images, labels = shap.datasets.imagenet50()
+
     """
     prefix = github_data_url + "imagenet50_"
-    X = np.load(cache(f"{prefix}{resolution}x{resolution}.npy")).astype(np.float32)
-    y = np.loadtxt(cache(f"{prefix}labels.csv"))
+    X: np.ndarray = np.load(cache(f"{prefix}{resolution}x{resolution}.npy")).astype(np.float32)
+    y: np.ndarray = np.loadtxt(cache(f"{prefix}labels.csv"))
 
     if n_points is not None:
         X = shap.utils.sample(X, n_points, random_state=0)
@@ -51,8 +61,10 @@ def imagenet50(resolution=224, n_points=None):
     return X, y
 
 
-def california(n_points=None):
-    """Return the California housing data in a structured format.
+def california(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+    """Return the California housing data in a tabular format.
+
+    Used in predictive regression tasks.
 
     Parameters
     ----------
@@ -61,33 +73,40 @@ def california(n_points=None):
 
     Returns
     -------
-    Tuple of pandas DataFrame containing the data and a numpy array representing the target.
-        The data include the following features:
+    X : pd.DataFrame
+        The feature data.
+    y : np.ndarray
+        The target variable.
 
-        * ``MedInc`` : Median income in block
-        * ``HouseAge`` : Median house age in block
-        * ``AveRooms`` : Average rooms in dwelling
-        * ``AveBedrms`` : Average bedrooms in dwelling
-        * ``Population`` : Block population
-        * ``AveOccup`` : Average house occupancy
-        * ``Latitude`` : House block latitude
-        * ``Longitude`` : House block longitude
+    Notes
+    -----
+    The returned feature matrix ``X`` includes the following features:
 
-        The target column represents the median house value for California districts.
+    - ``MedInc`` (float): Median income in block
+    - ``HouseAge`` (float): Median house age in block
+    - ``AveRooms`` (float): Average rooms in dwelling
+    - ``AveBedrms`` (float): Average bedrooms in dwelling
+    - ``Population`` (float): Block population
+    - ``AveOccup`` (float): Average house occupancy
+    - ``Latitude`` (float): House block latitude
+    - ``Longitude`` (float): House block longitude
+
+    The target column represents the median house value for California districts.
 
     References
     ----------
-    California housing dataset: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html
+    California housing dataset: :external+scikit-learn:func:`sklearn.datasets.fetch_california_housing`
 
     Examples
     --------
     To get the processed data and target labels::
 
         data, target = shap.datasets.california()
+
     """
     d = sklearn.datasets.fetch_california_housing()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
-    target = d.target
+    target: np.ndarray = d.target
 
     if n_points is not None:
         df = shap.utils.sample(df, n_points, random_state=0)
@@ -96,25 +115,29 @@ def california(n_points=None):
     return df, target
 
 
-def linnerud(n_points=None):
+def linnerud(n_points: int | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return the Linnerud dataset in a convenient package for multi-target regression.
 
     Parameters
     ----------
     n_points : int, optional
-        Number of data points to include. Default is None, including all data points.
+        Number of data points to sample. If provided, randomly samples the specified number
+        of points.
 
     Returns
     -------
-    Tuple of pandas DataFrames containing the feature matrix and the target variables.
+    X : pd.DataFrame
+        The feature data.
+    y : pd.DataFrame
+        The multiclass target variables.
 
     Notes
     -----
-    - The Linnerud dataset contains physiological and exercise data for 20 individuals.0
-    - The feature matrix includes three exercise variables: Chins, Situps, Jumps.
-    - The target variables include three physiological measurements: Weight, Waist, Pulse.
+    - The Linnerud dataset contains physiological and exercise data for 20 individuals.
+    - The feature matrix ``X`` includes three exercise variables: ``Chins``, ``Situps``, ``Jumps``.
+    - The target variables ``y`` include three physiological measurements: ``Weight``, ``Waist``, ``Pulse``.
 
-    More details: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_linnerud.html
+    More details: :external+scikit-learn:func:`sklearn.datasets.load_linnerud`
 
     Examples
     --------
@@ -138,17 +161,23 @@ def linnerud(n_points=None):
     return X, y
 
 
-def imdb(n_points=None):
+def imdb(n_points: int | None = None) -> tuple[list[str], np.ndarray]:
     """Return the classic IMDB sentiment analysis training data in a nice package.
+
+    Used in binary text classification tasks.
 
     Parameters
     ----------
     n_points : int, optional
-        Number of data points to sample. If None, the entire dataset is used.
+        Number of data points to sample. If provided, randomly samples the specified number of points.
 
     Returns
     -------
-    Tuple of list containing text data and numpy array representing the labels.
+    X : list of strings
+        Text data, where each string is a movie review.
+    y : np.ndarray
+        The target variable. Contains booleans, where True indicates a positive sentiment and False
+        indicates a negative sentiment.
 
     Notes
     -----
@@ -175,11 +204,13 @@ def imdb(n_points=None):
     return data, y
 
 
-def communitiesandcrime(n_points=None):
-    """Predict the total number of non-violent crimes per 100K population.
+def communitiesandcrime(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
+    """Predict the total number of violent crimes per 100K population.
 
     This dataset is from the classic UCI Machine Learning repository:
     https://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
+
+    Used in predictive regression tasks.
 
     Parameters
     ----------
@@ -188,7 +219,10 @@ def communitiesandcrime(n_points=None):
 
     Returns
     -------
-    Tuple of pandas DataFrame containing the predictive features and a numpy array representing the target.
+    X : pd.DataFrame
+        The feature data.
+    y : np.ndarray
+        The target variable.
 
     Examples
     --------
@@ -215,45 +249,50 @@ def communitiesandcrime(n_points=None):
     return X, y
 
 
-def diabetes(n_points=None):
+def diabetes(n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the diabetes data in a nice package.
+
+    Used in predictive regression tasks.
 
     Parameters
     ----------
     n_points : int, optional
-        Number of data points to sample. If None, the entire dataset is used.
+        Number of data points to sample. If provided, randomly samples the specified number of points.
 
     Returns
     -------
-    Tuple of pandas DataFrame containing the features and a numpy array representing the target.
-
-        Feature Columns:
-
-        - ``age`` (float): Age in years
-        - ``sex`` (float): Sex
-        - ``bmi`` (float): Body mass index
-        - ``bp`` (float): Average blood pressure
-        - ``s1`` (float): Total serum cholesterol
-        - ``s2`` (float): Low-density lipoproteins (LDL cholesterol)
-        - ``s3`` (float): High-density lipoproteins (HDL cholesterol)
-        - ``s4`` (float): Total cholesterol / HDL cholesterol ratio
-        - ``s5`` (float): Log of serum triglycerides level
-        - ``s6`` (float): Blood sugar level
-
-        Target:
-        - Progression of diabetes one year after baseline (float)
+    X : pd.DataFrame
+        The feature data.
+    y : np.ndarray
+        The target variable.
 
     Notes
     -----
+    Feature Columns in ``X``:
+
+    - ``age`` (float): Age in years
+    - ``sex`` (float): Sex
+    - ``bmi`` (float): Body mass index
+    - ``bp`` (float): Average blood pressure
+    - ``s1`` (float): Total serum cholesterol
+    - ``s2`` (float): Low-density lipoproteins (LDL cholesterol)
+    - ``s3`` (float): High-density lipoproteins (HDL cholesterol)
+    - ``s4`` (float): Total cholesterol / HDL cholesterol ratio
+    - ``s5`` (float): Log of serum triglycerides level
+    - ``s6`` (float): Blood sugar level
+
+    Target ``y``:
+
+    - Progression of diabetes one year after baseline (float)
+
     The diabetes dataset is a subset of the larger diabetes dataset from scikit-learn.
-    More details: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_diabetes.html
+    More details: :external+scikit-learn:func:`sklearn.datasets.load_diabetes`
 
     Examples
     --------
     To get the processed data and target labels::
 
         data, target = shap.datasets.diabetes()
-
 
     """
     d = sklearn.datasets.load_diabetes()
@@ -267,25 +306,36 @@ def diabetes(n_points=None):
     return df, target
 
 
-def iris(display=False, n_points=None):
+@overload
+def iris(display: Literal[False] = ..., n_points: int | None = ...) -> tuple[pd.DataFrame, np.ndarray]: ...
+@overload
+def iris(display: Literal[True] = ..., n_points: int | None = ...) -> tuple[pd.DataFrame, list[str]]: ...
+
+
+def iris(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray | list[str]]:
     """Return the classic Iris dataset in a convenient package.
 
     Parameters
     ----------
     display : bool
         If True, return the original feature matrix along with class labels (as strings). Default is False.
-    - n_points : int, optional
-        Number of data points to include. Default is None, including all data points.
+    n_points : int, optional
+        Number of data points to sample. If provided, randomly samples the specified number of points.
 
     Returns
     -------
-    Tuple of pandas DataFrame containing the feature matrix and either a numpy array representing the class labels or a list of class labels (if display is True).
+    X : pd.DataFrame
+        The feature matrix.
+    y : np.ndarray or a list of strings
+        If ``display`` is False, a numpy array representing the class labels encoded as integers is returned.
+        If ``display`` is True, then a list of class labels is returned.
 
     Notes
     -----
-    - The dataset includes measurements of sepal length, sepal width, petal length, and petal width for three species of iris flowers.
+    - The dataset includes measurements of sepal length, sepal width, petal length, and petal width for three
+      species of iris flowers.
     - Class labels are encoded as integers (0, 1, 2) representing the species (setosa, versicolor, virginica).
-    - If display is True, class labels are returned as strings.
+    - If ``display`` is True, class labels are returned as strings.
 
     Examples
     --------
@@ -300,19 +350,21 @@ def iris(display=False, n_points=None):
     """
     d = sklearn.datasets.load_iris()
     df = pd.DataFrame(data=d.data, columns=d.feature_names)
-    target = d.target
+    target: np.ndarray = d.target
 
     if n_points is not None:
         df = shap.utils.sample(df, n_points, random_state=0)
         target = shap.utils.sample(target, n_points, random_state=0)
 
     if display:
-        return df, [d.target_names[v] for v in target]
+        return df, [str(d.target_names[v]) for v in target]
     return df, target
 
 
-def adult(display=False, n_points=None):
+def adult(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     """Return the Adult census data in a structured format.
+
+    Used in binary classification tasks.
 
     Parameters
     ----------
@@ -323,33 +375,33 @@ def adult(display=False, n_points=None):
 
     Returns
     -------
-    If display is True:
-        Tuple of pandas DataFrame containing the raw data without the 'Education', 'Target', and 'fnlwgt' columns,
-        and a numpy array representing the 'Target' column.
-    If display is False:
-        Tuple of pandas DataFrame containing the processed data without the 'Target' and 'fnlwgt' columns,
-        and a numpy array representing the 'Target' column.
-
-    The data includes the following columns:
-    - ``Age`` (float) : Age in years.
-    - ``Workclass`` (category) : Type of employment.
-    - ``fnlwgt`` (float) : Final weight; the number of units in the target population that the record represents.
-    - ``Education`` (category) : Highest level of education achieved.
-    - ``Education-Num`` (float) : Numeric representation of education level.
-    - ``Marital Status`` (category) : Marital status of the individual.
-    - ``Occupation`` (category) : Type of occupation.
-    - ``Relationship`` (category) : Relationship status.
-    - ``Race`` (category) : Ethnicity of the individual.
-    - ``Sex`` (category) : Gender of the individual.
-    - ``Capital Gain`` (float) : Capital gains recorded.
-    - ``Capital Loss`` (float) : Capital losses recorded.
-    - ``Hours per week`` (float) : Number of hours worked per week.
-    - ``Country`` (category) : Country of origin.
-    - ``Target`` (category) : Binary target variable indicating whether the individual earns more than 50K.
+    X : pd.DataFrame
+        If ``display`` is True, ``X`` contains the raw data without the 'Education', 'Target', and 'fnlwgt' columns.
+        Otherwise, ``X`` contains the processed data without the 'Target' and 'fnlwgt' columns.
+    y : np.ndarray
+        The 'Target' column returned as an array.
 
     Notes
     -----
-    - The 'Education' column is redundant with 'Education-Num' and is dropped for simplicity.
+    - The original data includes the following columns:
+
+        - ``Age`` (float) : Age in years.
+        - ``Workclass`` (category) : Type of employment.
+        - ``fnlwgt`` (float) : Final weight; the number of units in the target population that the record represents.
+        - ``Education`` (category) : Highest level of education achieved.
+        - ``Education-Num`` (float) : Numeric representation of education level.
+        - ``Marital Status`` (category) : Marital status of the individual.
+        - ``Occupation`` (category) : Type of occupation.
+        - ``Relationship`` (category) : Relationship status.
+        - ``Race`` (category) : Ethnicity of the individual.
+        - ``Sex`` (category) : Gender of the individual.
+        - ``Capital Gain`` (float) : Capital gains recorded.
+        - ``Capital Loss`` (float) : Capital losses recorded.
+        - ``Hours per week`` (float) : Number of hours worked per week.
+        - ``Country`` (category) : Country of origin.
+        - ``Target`` (category) : Binary target variable indicating whether the individual earns more than 50K.
+
+    - The Education' column is redundant with 'Education-Num' and is dropped for simplicity.
     - The 'Target' column is converted to binary (True/False) where '>50K' is True and '<=50K' is False.
     - Certain categorical columns are encoded for numerical representation.
 
@@ -404,8 +456,10 @@ def adult(display=False, n_points=None):
     return data.drop(["Target", "fnlwgt"], axis=1), data["Target"].values
 
 
-def nhanesi(display=False, n_points=None):
+def nhanesi(display: bool = False, n_points: int | None = None) -> tuple[pd.DataFrame, np.ndarray]:
     """Return a nicely packaged version of NHANES I data with survival times as labels.
+
+    Used in survival analysis tasks.
 
     Parameters
     ----------
@@ -416,8 +470,11 @@ def nhanesi(display=False, n_points=None):
 
     Returns
     -------
-    If display is True, returns a modified version of the features for display along with survival times.
-    If display is False, returns the original features along with survival times.
+    X : pd.DataFrame
+        The feature data matrix. If ``display`` is True, a modified version of the features for display
+        is returned as ``X`` instead.
+    y : np.ndarray
+        The target variables representing survival times.
 
     Examples
     --------
@@ -440,10 +497,10 @@ def nhanesi(display=False, n_points=None):
     return X, np.array(y)
 
 
-def corrgroups60(n_points=1_000):
-    """Correlated Groups 60
+def corrgroups60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
+    """Correlated Groups (60 features)
 
-    A simulated dataset with tight correlations among distinct groups of features.
+    A synthetic dataset consisting of 60 features with tight correlations among distinct groups of features.
 
     Parameters
     ----------
@@ -452,7 +509,16 @@ def corrgroups60(n_points=1_000):
 
     Returns
     -------
-    Tuple of pandas DataFrame containing the features and a numpy array representing the target.
+    X : pd.DataFrame
+        The feature data matrix
+    y : np.ndarray
+        The target variables
+
+    Notes
+    -----
+    - The dataset is generated with known correlations among distinct groups of features.
+    - Each feature is a unit variance Gaussian random variable centred around 0.
+    - The labels are generated based on a linear function of the features with added random noise.
 
     Examples
     --------
@@ -503,8 +569,10 @@ def corrgroups60(n_points=1_000):
     return pd.DataFrame(X), y
 
 
-def independentlinear60(n_points=1_000):
-    """A simulated dataset with tight correlations among distinct groups of features.
+def independentlinear60(n_points: int = 1_000) -> tuple[pd.DataFrame, np.ndarray]:
+    """Independent Linear (60 features)
+
+    A synthetic dataset consisting of 60 features.
 
     Parameters
     ----------
@@ -513,11 +581,14 @@ def independentlinear60(n_points=1_000):
 
     Returns
     -------
-    Tuple of pandas DataFrame containing the feature matrix and a numpy array representing the labels.
+    X : pd.DataFrame
+        The feature data matrix
+    y : np.ndarray
+        The target variables
 
     Notes
     -----
-    - The dataset is generated with known correlations among distinct groups of features.
+    - Each feature is a unit variance Gaussian random variable centred around 0.
     - The labels are generated based on a linear function of the features with added random noise.
 
     Examples
@@ -525,6 +596,7 @@ def independentlinear60(n_points=1_000):
     .. code-block:: python
 
         features, labels = shap.datasets.independentlinear60()
+
     """
     # set a constant seed
     old_seed = np.random.seed()
@@ -551,32 +623,33 @@ def independentlinear60(n_points=1_000):
     return pd.DataFrame(X), y
 
 
-def a1a(n_points=None):
+def a1a(n_points: int | None = None) -> tuple[ssp.csr_matrix, np.ndarray]:
     """
     Return a sparse dataset in scipy csr matrix format.
-    Data Source: Scikit-learn datasets https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_svmlight_file.html
+
+    Data Source: :external+scikit-learn:func:`sklearn.datasets.load_svmlight_file`
 
     Parameters
     ----------
-    n_points : int or None, optional
+    n_points : int, optional
         Number of data points to sample. If None, returns the entire dataset. Default is None.
-
 
     Returns
     -------
-    - data : scipy.sparse.csr_matrix
+    X : scipy.sparse.csr_matrix
         Sparse feature matrix.
-    - target : numpy.ndarray
+    y : np.ndarray
         Target labels.
 
     Examples
     --------
     .. code-block:: python
 
-        # Usage example
         data, target = shap.datasets.a1a()
 
     """
+    data: ssp.csr_matrix
+    target: np.ndarray
     data, target = sklearn.datasets.load_svmlight_file(cache(github_data_url + "a1a.svmlight"))
 
     if n_points is not None:
@@ -586,22 +659,24 @@ def a1a(n_points=None):
     return data, target
 
 
-def rank():
+def rank() -> tuple[ssp.csr_matrix, np.ndarray, ssp.csr_matrix, np.ndarray, np.ndarray, np.ndarray]:
     """Return ranking datasets from the LightGBM repository.
+
+    Used in ranking tasks.
 
     Returns
     -------
-    - x_train : scipy.sparse.csr_matrix
+    x_train : scipy.sparse.csr_matrix
         Training feature matrix.
-    - y_train : numpy.ndarray
+    y_train : numpy.ndarray
         Training labels.
-    - x_test : scipy.sparse.csr_matrix
+    x_test : scipy.sparse.csr_matrix
         Testing feature matrix.
-    - y_test : numpy.ndarray
+    y_test : numpy.ndarray
         Testing labels.
-    - q_train : numpy.ndarray
+    q_train : numpy.ndarray
         Training query information.
-    - q_test : numpy.ndarray
+    q_test : numpy.ndarray
         Testing query information.
 
     Notes
@@ -612,9 +687,7 @@ def rank():
     --------
     .. code-block:: python
 
-        # Usage example
         x_train, y_train, x_test, y_test, q_train, q_test = shap.datasets.rank()
-
 
     """
     rank_data_url = "https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/"
@@ -626,14 +699,14 @@ def rank():
     return x_train, y_train, x_test, y_test, q_train, q_test
 
 
-def cache(url, file_name=None):
+def cache(url: str, file_name: str | None = None) -> str:
     """Loads a file from the URL and caches it locally."""
     if file_name is None:
         file_name = os.path.basename(url)
     data_dir = os.path.join(os.path.dirname(__file__), "cached_data")
     os.makedirs(data_dir, exist_ok=True)
 
-    file_path = os.path.join(data_dir, file_name)
+    file_path: str = os.path.join(data_dir, file_name)
     if not os.path.isfile(file_path):
         urlretrieve(url, file_path)
 

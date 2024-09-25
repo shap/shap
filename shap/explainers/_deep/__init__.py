@@ -32,13 +32,14 @@ class DeepExplainer(Explainer):
 
         Parameters
         ----------
-        model : if framework == 'tensorflow', (input : [tf.Tensor], output : tf.Tensor)
-             A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
+        model :
+            if framework == 'tensorflow', (input : [tf.Tensor], output : tf.Tensor)
+            A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
             output of the model to be explained. Note that SHAP values are specific to a single
             output value, so the output tf.Tensor should be a single dimensional output (,1).
 
             if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
-                where both are nn.Module objects
+            where both are nn.Module objects.
             The model is an nn.Module object which takes as input a tensor (or list of tensors) of
             shape data, and returns a single dimensional output.
             If the input is a tuple, the returned shap values will be for the input of the
@@ -47,6 +48,7 @@ class DeepExplainer(Explainer):
         data :
             if framework == 'tensorflow': [np.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
+
             The background dataset to use for integrating out features. Deep integrates
             over these samples. The data passed here must match the input tensors given in the
             first argument. Note that since these samples are integrated over for each sample you
@@ -84,6 +86,7 @@ class DeepExplainer(Explainer):
         masker = data
         super().__init__(model, masker)
 
+        self.explainer: TFDeep | PyTorchDeep
         if framework == "tensorflow":
             from .deep_tf import TFDeep
 
@@ -94,7 +97,7 @@ class DeepExplainer(Explainer):
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
-        self.explainer.framework = framework
+        self.explainer.framework = framework  # type: ignore
 
     def __call__(self, X: list | np.ndarray | pd.DataFrame | torch.tensor) -> Explanation:  # type: ignore  # noqa: F821
         """Return an explanation object for the model applied to X.

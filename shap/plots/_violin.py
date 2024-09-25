@@ -61,7 +61,7 @@ def violin(
         Whether to draw the color bar (legend).
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
@@ -161,7 +161,7 @@ def violin(
     pl.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "violin":
-        for pos, i in enumerate(feature_order):
+        for pos in range(len(feature_order)):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:
