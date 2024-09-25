@@ -345,13 +345,21 @@ automatically. At build time, the version number is determined from the git tag.
 ### Minimum supported dependencies
 
 We aim to follow the [SPEC 0](https://scientific-python.org/specs/spec-0000/) convention
-on minimum supported dependencies.
+on minimum supported dependencies:
 
 - Support for Python versions are dropped 3 years after their initial release.
 - Support for core package dependencies are dropped 2 years after their initial release.
 
-We may support python versions for slightly longer than this window where it does
-not add any extra maintenance burden.
+We may support python versions for slightly longer than this window where it does not
+add any extra maintenance burden.
+
+We maintain a set of lower version bounds for some core and optional dependencies in
+`pyproject.toml`, and test the package against these versions to protect against
+unexpected compatibility issues. We bump these lower bounds as needed, generally
+retaining support for at least 2 years of versions as per the SPEC 0 convention.
+
+We do not include upper version bounds, for reasons described by Henry Schreiner
+[here](https://iscinumpy.dev/post/bound-version-constraints/).
 
 ### Making releases
 
