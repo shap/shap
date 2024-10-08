@@ -96,7 +96,64 @@ def compile_cuda_module(host_args):
     return "build", "_cext_gpu"
 
 
-def run_setup(*, with_binary, with_cuda):
+def get_hip_path():
+    """Return a tuple with (base_hip_directory, full_path_to_hipcc_compiler)."""
+    hipcc_bin="hipcc"
+
+    if "ROCMHOME" in os.environ:
+        hip_home = os.environ["ROCMHOME"]
+    elif "ROCM_PATH" in os.environ:
+        hip_home = os.environ["ROCM_PATH"]
+    else:
+        # otherwise, search the PATH for HIPCC
+        found_hipcc = find_in_path(hipcc_bin, "/opt/rocm/bin")
+        if found_hipcc is None:
+            print(
+                "The hipcc binary could not be located in your $PATH. Either " +
+                " add it to your path, or set $ROCM_PATH to enable ROCM"
+            )
+            return None
+        hip_home = os.path.dirname(os.path.dirname(found_hipcc))
+    if not os.path.exists(os.path.join(hip_home, "include")):
+        print("Failed to find hip include directory, using /opt/rocm/")
+        hip_home = "/opt/rocm/"
+
+    hipcc = os.path.join(hip_home, "bin", hipcc_bin)
+    if not os.path.exists(hipcc):
+        print("Failed to find hipcc compiler in %s, trying /opt/rocm" % hipcc)
+        hip_home = "/opt/rocm/"
+        hipcc = os.path.join(hip_home, "bin", hipcc_bin)
+
+    return (hip_home, hipcc)
+
+
+def compile_hip_module(host_args):
+    libname = '_cext_gpu.lib' if sys.platform == 'win32' else 'lib_cext_gpu.a'
+    lib_out = 'build/' + libname
+    if not os.path.exists('build/'):
+        os.makedirs('build/')
+
+    hip_home, hipcc = get_hip_path()
+
+    print("HIPCC ==> ", hipcc)
+    arch_flags = " "
+    #hipcc_command = "shap/cext/_cext_gpu.hip -o {} {} -I{} -c -O3 " \
+    #              "--std=c++14 ".format(
+    #                  lib_out,
+    #                  ','.join(host_args),
+    #                  get_python_inc(), arch_flags)
+    hipcc_command = (
+        f"shap/cext/_cext_gpu.hip -c -O3 -o {lib_out} "
+        f"{','.join(host_args)} "
+        f"-I{sysconfig.get_path('include')} "
+        "--std=c++14"
+    )
+    print("Compiling hip extension, calling hipcc with arguments:")
+    print([hipcc] + hipcc_command.split(' '))
+    subprocess.run([hipcc] + hipcc_command.split(' '), check=True)
+    return 'build', '_cext_gpu'
+
+def run_setup(*, with_binary, with_cuda, with_hip):
     ext_modules = []
     if with_binary:
         compile_args = []
@@ -138,17 +195,37 @@ def run_setup(*, with_binary, with_cuda):
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
 
+    if with_hip:
+        try:
+            hip_home, hipcc = get_hip_path()
+            hiprt_path = hip_home + '/lib'
+            compile_args.append('-fPIC')
+
+            lib_dir, lib = compile_hip_module(compile_args)
+
+            ext_modules.append(
+                Extension('shap._cext_gpu', sources=['shap/cext/_cext_gpu.cc'],
+                          extra_compile_args=compile_args,
+                          include_dirs=[np.get_include()],
+                          library_dirs=[lib_dir, hiprt_path],
+                          libraries=[lib, 'amdhip64'],
+                          depends=['shap/cext/_cext_gpu.hip', 'shap/cext/rocgpu_treeshap.h', 
+                              'shap/cext/amd_warp_primitives.h', 'setup.py'])
+            )
+        except Exception as e:
+            raise Exception("Error building hip module: " + repr(e))
+
     setup(ext_modules=ext_modules)
 
 
-def try_run_setup(*, with_binary, with_cuda):
+def try_run_setup(*, with_binary, with_cuda, with_hip):
     """Fails gracefully when various install steps don't work."""
     global _BUILD_ATTEMPTS
     _BUILD_ATTEMPTS += 1
 
     try:
-        print(f"Attempting to build SHAP: {with_binary=}, {with_cuda=} (Attempt {_BUILD_ATTEMPTS})")
-        run_setup(with_binary=with_binary, with_cuda=with_cuda)
+        print(f"Attempting to build SHAP: {with_binary=}, {with_cuda=}, {with_hip=}, (Attempt {_BUILD_ATTEMPTS})")
+        run_setup(with_binary=with_binary, with_cuda=with_cuda, with_hip=with_hip)
     except Exception as e:
         print("Exception occurred during setup,", str(e))
 
@@ -156,6 +233,10 @@ def try_run_setup(*, with_binary, with_cuda):
             with_cuda = False
             print("WARNING: Could not compile cuda extensions.")
             print("Retrying SHAP build without cuda extension...")
+        elif with_hip:
+            with_hip= False
+            print("WARNING: Could not compile hip extensions.")
+            print("Retrying SHAP build without hip extension...")
         elif with_binary:
             with_binary = False
             print("WARNING: The C extension could not be compiled, sklearn tree models not supported.")
@@ -164,9 +245,9 @@ def try_run_setup(*, with_binary, with_cuda):
             print("ERROR: Failed to build!")
             raise
 
-        try_run_setup(with_binary=with_binary, with_cuda=with_cuda)
+        try_run_setup(with_binary=with_binary, with_cuda=with_cuda, with_hip=with_hip)
 
 
 # we seem to need this import guard for appveyor
 if __name__ == "__main__":
-    try_run_setup(with_binary=True, with_cuda=True)
+    try_run_setup(with_binary=True, with_cuda=True, with_hip=True)
