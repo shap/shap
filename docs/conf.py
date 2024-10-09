@@ -53,6 +53,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
     "numpydoc",
     "nbsphinx",  # Allows parsing Jupyter notebooks
@@ -92,8 +93,6 @@ intersphinx_mapping = {
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#confval-intersphinx_disabled_reftypes
 intersphinx_disabled_reftypes = ["*"]
 
-# [numpydoc]
-numpydoc_show_class_members = False
 # ---
 
 # Do not create toctree entries for each class/function
