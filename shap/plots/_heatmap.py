@@ -9,9 +9,9 @@ from ._utils import convert_ordering
 
 
 def heatmap(
-    shap_values,
-    instance_order=Explanation.hclust(),
-    feature_values=Explanation.abs.mean(0),
+    shap_values: Explanation,
+    instance_order=Explanation.hclust(),  # type: ignore
+    feature_values=Explanation.abs.mean(0),  # type: ignore
     feature_order=None,
     max_display=10,
     cmap=colors.red_white_blue,
@@ -50,7 +50,7 @@ def heatmap(
         The maximum number of features to display (default is 10).
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
@@ -63,7 +63,7 @@ def heatmap(
     Returns
     -------
     ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it.
 
     Examples
     --------
@@ -168,7 +168,6 @@ def heatmap(
         align="center",
         color="#000000",
         left=values.shape[0] * 1.0 - 0.5,
-        # color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))]
     )
     for b in bar_container:
         b.set_clip_on(False)
@@ -189,7 +188,7 @@ def heatmap(
     cb.set_label(labels["VALUE"], size=12, labelpad=-10)
     cb.ax.tick_params(labelsize=11, length=0)
     cb.set_alpha(1)
-    cb.outline.set_visible(False)
+    cb.outline.set_visible(False)  # type: ignore
     # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     # cb.ax.set_aspect((bbox.height - 0.9) * 15)
     # cb.draw_all()

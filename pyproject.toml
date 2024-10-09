@@ -21,8 +21,9 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba>0.52',
-  'cloudpickle'
+  'numba>=0.54',
+  'cloudpickle',
+  'typing-extensions',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
@@ -116,14 +117,31 @@ plugins = ["numpy.typing.mypy_plugin"]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
 module = [
-  "shap.explainers.*",
-  "shap.maskers.*",
-  "shap.plots._beeswarm",
+  "shap.explainers._additive",
+  "shap.explainers._deep.deep_pytorch",
+  "shap.explainers._deep.deep_tf",
+  "shap.explainers._exact",
+  "shap.explainers._explainer",
+  "shap.explainers._gradient",
+  "shap.explainers._kernel",
+  "shap.explainers._linear",
+  "shap.explainers._partition",
+  "shap.explainers._partition",
+  "shap.explainers._permutation",
+  "shap.explainers._sampling",
+  "shap.explainers._tree",
+  "shap.explainers.other._random",
+  "shap.explainers.pytree",
+  "shap.explainers.tf_utils",
+  "shap.maskers._composite",
+  "shap.maskers._fixed",
+  "shap.maskers._image",
+  "shap.maskers._masker",
+  "shap.maskers._tabular",
+  "shap.maskers._text",
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
   "shap.plots._force",
-  "shap.plots._heatmap",
-  "shap.plots._scatter.*",
   "shap.plots._text",
   "shap.plots._waterfall",
 ]

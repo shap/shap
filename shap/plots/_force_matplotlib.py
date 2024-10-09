@@ -13,9 +13,9 @@ def draw_bars(out_value, features, feature_type, width_separators, width_bar):
     separator_list = []
 
     pre_val = out_value
-    for index, features in zip(range(len(features)), features):
+    for index, feature_values in enumerate(features):
         if feature_type == "positive":
-            left_bound = float(features[0])
+            left_bound = float(feature_values[0])
             right_bound = pre_val
             pre_val = left_bound
 
@@ -24,7 +24,7 @@ def draw_bars(out_value, features, feature_type, width_separators, width_bar):
             colors = ["#FF0D57", "#FFC3D5"]
         else:
             left_bound = pre_val
-            right_bound = float(features[0])
+            right_bound = float(feature_values[0])
             pre_val = right_bound
 
             separator_indent = -np.abs(width_separators)

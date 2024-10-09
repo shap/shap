@@ -757,7 +757,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
     warnings.warn(
         "This function is not used within the shap library and will therefore be removed in an upcoming release. "
         "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
-        DeprecationWarning,
+        FutureWarning,
     )
     M = len(tokens)
     if len(shap_values) != M:
