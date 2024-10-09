@@ -49,7 +49,6 @@ others = ["lime"]
 docs = [
   "matplotlib",
   "ipython",
-  "numpydoc",
   "sphinx_rtd_theme",
   "sphinx",
   "nbsphinx",
