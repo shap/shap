@@ -55,7 +55,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
-    "numpydoc",
     "nbsphinx",  # Allows parsing Jupyter notebooks
     "myst_parser",  # Allows parsing Markdown, such as CONTRIBUTING.md
     "sphinx_github_changelog",
