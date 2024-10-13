@@ -6,6 +6,8 @@ from packaging import version
 from .._explainer import Explainer
 from .deep_utils import _check_additivity
 
+PYTORCH_STABILITY_FACTOR = 1e-6
+
 
 class PyTorchDeep(Explainer):
     def __init__(self, model, data):
@@ -199,11 +201,13 @@ class PyTorchDeep(Explainer):
                         phis[t][j] = (sample_phis[t][self.data[t].shape[0] :] * (x[t] - data[t])).mean(0)
                 else:
                     for t in range(len(X)):
+                        x_diff_stable = torch.where(
+                            torch.abs(X[t][j : j + 1] - self.data[t]) < PYTORCH_STABILITY_FACTOR,
+                            PYTORCH_STABILITY_FACTOR,
+                            X[t][j : j + 1] - self.data[t],
+                        )
                         phis[t][j] = (
-                            (
-                                torch.from_numpy(sample_phis[t][self.data[t].shape[0] :]).to(self.device)
-                                * (X[t][j : j + 1] - self.data[t])
-                            )
+                            (torch.from_numpy(sample_phis[t][self.data[t].shape[0] :]).to(self.device) * x_diff_stable)
                             .cpu()
                             .detach()
                             .numpy()
@@ -366,9 +370,8 @@ def nonlinear_1d(module, grad_input, grad_output):
     # handles numerical instabilities where delta_in is very small by
     # just taking the gradient in those cases
     grads = [None for _ in grad_input]
-    grads[0] = torch.where(
-        torch.abs(delta_in.repeat(dup0)) < 1e-6, grad_input[0], grad_output[0] * (delta_out / delta_in).repeat(dup0)
-    )
+    delta_in_stable = torch.where(torch.abs(delta_in) < PYTORCH_STABILITY_FACTOR, PYTORCH_STABILITY_FACTOR, delta_in)
+    grads[0] = grad_output[0] * (delta_out / delta_in_stable).repeat(dup0)
     return tuple(grads)
 
 
