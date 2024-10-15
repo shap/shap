@@ -757,3 +757,123 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
         np.testing.assert_allclose(sums + e.expected_value, outputs, atol=1e-3),
         "Sum of SHAP values does not match difference!",
     )
+
+
+@pytest.mark.parametrize("layernorm_first_layer", [True, False])
+@pytest.mark.parametrize("torch_device", TORCH_DEVICES)
+@pytest.mark.parametrize("baseline_equal_test", [True, False])
+def test_pytorch_layernorm(layernorm_first_layer, torch_device, baseline_equal_test):
+    """Test LayerNorm layer"""
+    torch = pytest.importorskip("torch")
+
+    from sklearn.datasets import fetch_california_housing
+    from torch import nn
+    from torch.nn import functional as F
+    from torch.utils.data import DataLoader, TensorDataset
+
+    class LayerNormNet(nn.Module):
+        """Test model."""
+
+        def __init__(self, num_features, layernorm_first_layer):
+            super().__init__()
+            if layernorm_first_layer:
+                self.layernorm_first_layer = nn.LayerNorm(num_features)
+            else:
+                self.layernorm_first_layer = nn.Identity()
+            self.linear = nn.Linear(num_features, num_features // 2)
+            self.layernorm = nn.LayerNorm(num_features // 2)
+            self.final_linear = nn.Linear(num_features // 2, 1)
+
+        def forward(self, X):
+            """Run the model."""
+            x = self.layernorm_first_layer(X)
+            x = self.linear(x)
+            x = self.layernorm(x)
+            x = self.final_linear(x)
+            return x
+
+    def train(model, device, train_loader, optimizer, epoch):
+        model.train()
+        num_examples = 0
+        for batch_idx, (data, target) in enumerate(train_loader):
+            num_examples += target.shape[0]
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.mse_loss(output.squeeze(1), target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 2 == 0:
+                print(
+                    f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
+                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f"\tLoss: {loss.item():.6f}"
+                )
+
+    random_seed = 42
+    torch.manual_seed(random_seed)
+    rs = np.random.RandomState(random_seed)
+
+    X, y = fetch_california_housing(return_X_y=True)
+
+    num_features = X.shape[1]
+
+    data = TensorDataset(
+        torch.tensor(X).float(),
+        torch.tensor(y).float(),
+    )
+
+    loader = DataLoader(data, batch_size=128)
+
+    model = LayerNormNet(num_features, layernorm_first_layer)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+
+    device = torch.device(torch_device)
+
+    model.to(device)
+
+    train(model, device, loader, optimizer, 1)
+
+    if not baseline_equal_test:
+        next_x, _ = next(iter(loader))
+        inds = rs.choice(next_x.shape[0], 20, replace=False)
+
+        next_x_random_choices = next_x[inds, :].to(device)
+
+        e = shap.DeepExplainer(model, next_x_random_choices)
+        test_x_tmp, _ = next(iter(loader))
+        test_x = test_x_tmp[:1].to(device)
+
+    else:
+        next_x, _ = next(iter(loader))
+        first_x = next_x[:1].to(device)
+
+        e = shap.DeepExplainer(model, first_x)
+
+        # Use second as test
+        test_x = next_x[1:2].to(device)
+
+        # Make the first feature the same as first_x
+        test_x[0, 0] = first_x[0, 0]
+
+    shap_values = e.shap_values(test_x, check_additivity=False)
+
+    model.eval()
+    model.zero_grad()
+
+    with torch.no_grad():
+        outputs = model(test_x).detach().cpu().numpy()
+
+    sums = shap_values.sum(axis=(1))
+
+    shap_out = sums + e.expected_value
+
+    np.testing.assert_allclose(
+        shap_out,
+        outputs,
+        atol=1e-3,
+        err_msg=(
+            f"Sum of SHAP values does not match difference! Got {shap_out} expected {outputs}. "
+            f"Difference {shap_out - outputs}"
+        ),
+    )
