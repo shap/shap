@@ -458,6 +458,7 @@ def beeswarm(
                 alpha=alpha,
                 linewidth=0,
                 zorder=3,
+                cmap=color,
                 color=color if colored_feature else "#777777",
                 rasterized=len(shaps) > 500,
             )
