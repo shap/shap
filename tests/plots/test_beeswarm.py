@@ -84,10 +84,9 @@ def test_beeswarm_basic_explanation_works():
     shap.plots.beeswarm(explanation, show=False)
 
 
-def test_beeswarm_works_with_colors():
-    # GH 3901
-    explanation = shap.Explanation([[1.0, 2.0, 3.0]])
-    for color in [
+@pytest.mark.parametrize(
+    "color",
+    [
         blue_rgb,
         gray_rgb,
         light_blue_rgb,
@@ -101,5 +100,9 @@ def test_beeswarm_works_with_colors():
         red_white_blue,
         transparent_blue,
         transparent_red,
-    ]:
-        shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)
+    ],
+)
+def test_beeswarm_works_with_colors(color):
+    # GH 3901
+    explanation = shap.Explanation([[1.0, 2.0, 3.0]])
+    shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)
