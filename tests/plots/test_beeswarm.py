@@ -84,7 +84,6 @@ def test_beeswarm_basic_explanation_works():
     shap.plots.beeswarm(explanation, show=False)
 
 
-@pytest.mark.xfail
 def test_beeswarm_works_with_colors():
     # GH 3901
     explanation = shap.Explanation([[1.0, 2.0, 3.0]])
