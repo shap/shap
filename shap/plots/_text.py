@@ -16,6 +16,11 @@ except ImportError:
     have_ipython = False
 
 
+def scale_color_to_255(color: tuple) -> tuple[int, int, int, float]:
+    color = color.tolist() if isinstance(color, np.ndarray) else color
+    return tuple(int(c * 255) if i < 3 else c for i, c in enumerate(color))
+
+
 # TODO: we should support text output explanations (from models that output text not numbers), this would require the force
 # the force plot and the coloring to update based on mouseovers (or clicks to make it fixed) of the output text
 def text(
@@ -140,7 +145,11 @@ def text(
         for i in range(shap_values.shape[-1]):
             values, clustering = unpack_shap_explanation_contents(shap_values[:, i])
             tokens, values, group_sizes = process_shap_values(
-                shap_values[:, i].data, values, grouping_threshold, separator, clustering
+                shap_values[:, i].data,
+                values,
+                grouping_threshold,
+                separator,
+                clustering,
             )
 
             # if i == 0:
@@ -205,7 +214,7 @@ def text(
         for i, name in enumerate(shap_values.output_names):
             scaled_value = 0.5 + 0.5 * output_values[i] / (output_max + 1e-8)
             color = colors.red_transparent_blue(scaled_value)
-            color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+            color = scale_color_to_255(color)
             # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
 <div style="display: inline; border-bottom: {'3px solid #000000' if i == 0 else 'none'}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
@@ -252,7 +261,11 @@ def text(
             for j in range(shap_values.shape[0]):
                 values, clustering = unpack_shap_explanation_contents(shap_values[j, :, i])
                 tokens, values, group_sizes = process_shap_values(
-                    shap_values[j, :, i].data, values, grouping_threshold, separator, clustering
+                    shap_values[j, :, i].data,
+                    values,
+                    grouping_threshold,
+                    separator,
+                    clustering,
                 )
 
                 xmin_i, xmax_i, cmax_i = values_min_max(values, shap_values[j, :, i].base_values)
@@ -334,7 +347,7 @@ def text(
     for i, token in enumerate(tokens):
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
-        color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        color = scale_color_to_255(color)
 
         # display the labels for the most important words
         label_display = "none"
@@ -375,7 +388,14 @@ def text(
         return out
 
 
-def process_shap_values(tokens, values, grouping_threshold, separator, clustering=None, return_meta_data=False):
+def process_shap_values(
+    tokens,
+    values,
+    grouping_threshold,
+    separator,
+    clustering=None,
+    return_meta_data=False,
+):
     # See if we got hierarchical input data. If we did then we need to reprocess the
     # shap_values and tokens to get the groups we want to display
     M = len(tokens)
@@ -490,7 +510,13 @@ def process_shap_values(tokens, values, grouping_threshold, separator, clusterin
         collapsed_node_ids = np.arange(M)
 
     if return_meta_data:
-        return tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids
+        return (
+            tokens,
+            values,
+            group_sizes,
+            token_id_to_node_id_mapping,
+            collapsed_node_ids,
+        )
     else:
         return tokens, values, group_sizes
 
@@ -543,7 +569,10 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         s += draw_tick_mark(pos)
     s += draw_tick_mark(base_values, label="base value", backing=True)
     s += draw_tick_mark(
-        fx, bold=True, label=f'f<tspan baseline-shift="sub" font-size="8px">{output_name}</tspan>(inputs)', backing=True
+        fx,
+        bold=True,
+        label=f'f<tspan baseline-shift="sub" font-size="8px">{output_name}</tspan>(inputs)',
+        backing=True,
     )
 
     ### Positive value marks ###
@@ -746,7 +775,14 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     return s
 
 
-def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, grouping_threshold=1, separator=""):
+def text_old(
+    shap_values,
+    tokens,
+    partition_tree=None,
+    num_starting_labels=0,
+    grouping_threshold=1,
+    separator="",
+):
     """Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
@@ -780,7 +816,11 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
             ri = partition_tree[i, 1]
             groups.append(groups[li] + groups[ri])
             lower_values[M + i] = lower_values[li] + lower_values[ri] + shap_values[M + i]
-            max_values[i + M] = max(abs(shap_values[M + i]) / len(groups[M + i]), max_values[li], max_values[ri])
+            max_values[i + M] = max(
+                abs(shap_values[M + i]) / len(groups[M + i]),
+                max_values[li],
+                max_values[ri],
+            )
 
         # compute the upper_values
         upper_values = np.zeros(len(shap_values))
@@ -851,7 +891,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
     for i in range(M):
         scaled_value = 0.5 + 0.5 * shap_values[i] / max(abs(maxv), abs(minv))
         color = colors.red_transparent_blue(scaled_value)
-        color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        color = scale_color_to_255(color)
 
         # display the labels for the most important words
         label_display = "none"
@@ -982,7 +1022,8 @@ def saliency_plot(shap_values):
             for col_index in range(compressed_shap_matrix.shape[1]):
                 scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index, col_index] / cmax
                 color = colors.red_transparent_blue(scaled_value)
-                color = "rgba" + str((color[0] * 255, color[1] * 255, color[2] * 255, color[3]))
+                color = scale_color_to_255(color)
+                color = "rgba" + str(color)
                 input_colors_row.append(color)
             input_colors.append(input_colors_row)
 
@@ -1056,7 +1097,7 @@ def heatmap(shap_values):
     def get_color(shap_value, cmax):
         scaled_value = 0.5 + 0.5 * shap_value / cmax
         color = colors.red_transparent_blue(scaled_value)
-        color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+        color = scale_color_to_255(color)
         return color
 
     def process_text_to_text_shap_values(shap_values):
@@ -1066,9 +1107,13 @@ def heatmap(shap_values):
         max_val = 0
 
         for index, output_token in enumerate(shap_values.output_names):
-            tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(
-                shap_values.data, unpacked_values[:, index], 1, "", clustering, True
-            )
+            (
+                tokens,
+                values,
+                group_sizes,
+                token_id_to_node_id_mapping,
+                collapsed_node_ids,
+            ) = process_shap_values(shap_values.data, unpacked_values[:, index], 1, "", clustering, True)
             processed_value = {
                 "tokens": tokens,
                 "values": values,
@@ -1206,7 +1251,9 @@ def heatmap(shap_values):
             input_text_html += f'<div id="{uuid}_input_node_{input_index}_content" style="display:inline;">'
             for child_index, child_content in token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN].items():
                 input_text_html = populate_input_tree(
-                    child_index, token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN], input_text_html
+                    child_index,
+                    token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN],
+                    input_text_html,
                 )
             input_text_html += "</div>"
         else:
