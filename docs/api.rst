@@ -26,17 +26,47 @@ explainers
     :toctree: generated/
 
     shap.Explainer
+
+Tree Model Explainers
+^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+    :toctree: generated/
+
     shap.TreeExplainer
     shap.GPUTreeExplainer
+
+Linear Model Explainers
+^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+    :toctree: generated/
+
     shap.LinearExplainer
+    shap.AdditiveExplainer
+
+Deep Learning Model Explainers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+    :toctree: generated/
+
+    shap.DeepExplainer
+
+Model Agnostic Explainers
+^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+    :toctree: generated/
+
+    shap.ExactExplainer
+    shap.KernelExplainer
     shap.PermutationExplainer
     shap.PartitionExplainer
     shap.SamplingExplainer
-    shap.AdditiveExplainer
-    shap.DeepExplainer
-    shap.KernelExplainer
     shap.GradientExplainer
-    shap.ExactExplainer
+
+Other Model Explainers
+^^^^^^^^^^^^^^^^^^^^^^
+.. autosummary::
+    :toctree: generated/
+
     shap.explainers.other.Coefficient
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
