@@ -14,17 +14,19 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
 
 
-def convert_color(color: str) -> np.ndarray | Colormap | str:
+def convert_color(color: str | np.ndarray) -> np.ndarray | Colormap | str:
     """Converts a color specification alias into its actual representation"""
-    if color == "shap_red":
-        return colors.red_rgb
-    if color == "shap_blue":
-        return colors.blue_rgb
-
-    try:
-        return plt.get_cmap(color)
-    except ValueError:
+    if isinstance(color, np.ndarray):
         return color
+    elif isinstance(color, str) and color == "shap_red":
+        return colors.red_rgb
+    elif isinstance(color, str) and color == "shap_blue":
+        return colors.blue_rgb
+    else:
+        try:
+            return plt.get_cmap(color)
+        except ValueError:
+            return color
 
 
 def convert_ordering(ordering, shap_values):
