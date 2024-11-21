@@ -5,6 +5,8 @@ import random
 import string
 from typing import TYPE_CHECKING, Literal, cast
 
+import cv2
+import keras
 import matplotlib.pyplot as pl
 import numpy as np
 
@@ -194,6 +196,112 @@ def image(
     cb.outline.set_visible(False)  # type: ignore
     if show:
         pl.show()
+
+
+def saliency_map(
+    shap_values: Explanation | np.ndarray | list[np.ndarray],
+    pixel_values: np.ndarray | None = None,
+    labels: list[str] | np.ndarray | None = None,
+    cmap: str | Colormap | None = "jet",
+):
+    """Plots Saliency Map using SHAP values.
+
+    Parameters
+    ----------
+    shap_values : [numpy.array]
+        List of arrays of SHAP values. Each array has the shape
+        (# samples x width x height x channels), and the
+        length of the list is equal to the number of model outputs that are being
+        explained.
+
+    pixel_values : numpy.array
+        Matrix of pixel values (# samples x width x height x channels) for each image.
+        It should be the same
+        shape as each array in the ``shap_values`` list of arrays.
+
+    labels : list or np.ndarray
+        List or ``np.ndarray`` (# samples x top_k classes) of names for each of the
+        model outputs that are being explained.
+
+    cmap: str or matplotlib.colors.Colormap
+        Colormap to use when plotting the SHAP values.
+
+    """
+    # Handle Explanation object
+    if isinstance(shap_values, Explanation):
+        shap_exp = shap_values
+        if pixel_values is None:
+            pixel_values = shap_exp.data
+        if labels is None and shap_exp.output_names is not None:
+            labels = shap_exp.output_names
+        if len(shap_exp.output_dims) == 1:
+            shap_values = [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])]
+        elif len(shap_exp.output_dims) == 0:
+            shap_values = [shap_exp.values]
+        else:
+            raise Exception("Number of outputs needs to have support added!")
+    else:
+        assert pixel_values is not None, "pixel_values must be provided if shap_values is not an Explanation object"
+
+    # Ensure shap_values is a list of arrays
+    if not isinstance(shap_values, list):
+        shap_values = [shap_values]
+
+    # Get shapes and dimensions
+    rows = pixel_values.shape[0]
+    cols = len(shap_values) + 1  # +1 for the original image
+    input_shape = pixel_values.shape[1:3]
+
+    # Calculate figsize dynamically based on rows and cols
+    figsize = (4 * cols, 4 * rows + 0.5)  # Added extra height for colorbar
+
+    fig, axes = pl.subplots(rows, cols, figsize=figsize, squeeze=False)
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+
+    for sample in range(rows):
+        # Plot original image
+        axes[sample, 0].imshow(pixel_values[sample], cmap="gray")
+        axes[sample, 0].axis("off")
+        axes[sample, 0].set_title("Original", fontsize=10)
+
+        # Generate and plot saliency maps
+        for i in range(len(shap_values)):
+            extracted_values = shap_exp.values
+            class_name = labels[i] if isinstance(labels, list) else labels[sample, i]
+            heat_map = extracted_values[sample, ..., i]
+
+            # Normalize the heat map
+            normalized_heat_map = (heat_map - np.min(heat_map)) / (np.max(heat_map) - np.min(heat_map))
+
+            # Resize the heat map for visualization
+            heatmap = cv2.resize(normalized_heat_map, (10, 10), interpolation=cv2.INTER_AREA)
+
+            # Rescale heatmap to a range 0-255
+            saliency = np.uint8(255 * heatmap)
+            # Convert array to image, resize and convert back to array. If not, the saliency map won't be displayed correctly.
+            saliency = keras.utils.array_to_img(saliency)
+            saliency = saliency.resize(input_shape)
+            saliency = keras.utils.img_to_array(saliency)
+
+            ax = axes[sample, i + 1]
+            # Get a grayscale version of the image
+            if len(pixel_values[sample].shape) == 3 and pixel_values[sample].shape[2] == 3:
+                img_gray = (
+                    0.2989 * pixel_values[sample][:, :, 0]
+                    + 0.5870 * pixel_values[sample][:, :, 1]
+                    + 0.1140 * pixel_values[sample][:, :, 2]
+                )  # rgb to gray
+            elif len(pixel_values[sample].shape) == 3:
+                img_gray = pixel_values[sample].mean(2)
+            else:
+                img_gray = pixel_values[sample]
+            # Plotting Saliency Map superimposing on the Grayscale Image
+            ax.imshow(img_gray, cmap="gray", alpha=0.8)
+            ax.imshow(saliency[:, :, 0], cmap=cmap, alpha=0.5)
+            ax.set_title(f"{class_name}", fontsize=10)
+            ax.axis("off")
+    pl.tight_layout()
+    pl.show()
 
 
 def image_to_text(shap_values):
