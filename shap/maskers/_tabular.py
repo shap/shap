@@ -14,7 +14,7 @@ log = logging.getLogger("shap")
 
 
 class Tabular(Masker):
-    """A common base class for Independent and Partition."""
+    """A common base class for tabular data maskers, such as Independent and Partition."""
 
     def __init__(self, data, max_samples=100, clustering=None):
         """This masks out tabular features by integrating over the given background dataset.
@@ -335,3 +335,182 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
 
         self.data = data
         self.method = method
+
+
+class Causal(Tabular):
+    """This masks out tabular features by integrating over the given background dataset.
+
+    The Causal Masker samples from the interventional distribution, which allows for computing causal Shapley values. As proposed in [1]
+    """
+
+    def __init__(self, data, ordering=None, confounding=None, max_samples=100):
+        """Build a Causal Masker with the given background data and causal ordering.
+
+        Parameters
+        ----------
+        data : np.array, pandas.DataFrame
+            The background dataset that is used for masking.
+
+        ordering : numpy.ndarray, pandas.DataFrame
+            The (partial) causal ordering of the features in the form of a partial chain graph.
+            Example: [[1, 2], [3], [4, 5, 6]]
+
+        confounding : list, numpy.array
+            A 1-dimensional boolean array that specifies which causal groups contain confounding factors.
+            Example: [True, False, False]
+
+        max_samples : int
+            The maximum number of samples to use from the passed background data. If data has more
+            than max_samples then shap.utils.sample is used to subsample the dataset. The number of
+            samples coming out of the masker (to be integrated over) matches the number of samples in
+            the background dataset. This means larger background dataset cause longer runtimes. Normally
+            about 1, 10, 100, or 1000 background samples are reasonable choices.
+        """
+        super().__init__(data, max_samples=max_samples, clustering=None)
+
+        self.n_features = data.shape[0]
+        self.n_samples = max_samples
+
+        if ordering is None:
+            self.ordering = list(range(self.n_features))
+            log.warning(
+                "No causal ordering provided. Consider using the Independent Masker if your goal is to compute marginal Shapley values."
+            )
+        else:
+            # TODO: Enable features names
+
+            # if ordering.shape == None:
+            #     raise DimensionError('Ordering has to be a 2d list.')
+
+            n_features_in_ordering = sum(len(group) for group in ordering)
+            if n_features_in_ordering != self.n_features:
+                raise DimensionError(
+                    f"{n_features_in_ordering} features were provided in the ordering, while {self.n_features} were expected."
+                )
+
+            # if pass:
+            #     Exception("Feature {} occurs multiple times in the provided ordering.")
+
+            if max(*ordering) > self.n_features or min(*ordering) < 0:
+                raise Exception()
+
+            self.ordering = ordering
+
+        if confounding is None:
+            self.confounding = self.n_features * [False]
+            log.warning("No confounding provided. Assuming there are no confounders present.")
+        else:
+            confounding = confounding.to_numpy()
+            if confounding.shape != ordering.shape[0]:
+                raise DimensionError(
+                    f"Provided confounding shape is {confounding.shape}, which does not match the number of causal groups {len(self.ordering)}. Please specify confounding for each group."
+                )
+
+            if confounding.dtype != bool:
+                raise TypeError("Confounding has to be a boolean array.")
+
+            self.confounding = confounding
+
+        self.mean = data.mean().values
+        self.covariance_matrix = data.cov().to_numpy()
+
+        # Ensure that the covariance matrix is positive-definite, as required by numpy multivariate_normal
+        if self._is_positive_definitive(self.covariance_matrix.values):
+            raise Exception("Covariance matrix is not positive-definite, not yet implemented")
+
+    def __call__(self, mask, x):
+        # Standardize
+        mask = self._standardize_mask(mask, x)
+        x = x.to_numpy()
+
+        # make sure we are given a single sample
+        if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
+            raise DimensionError("The input passed for tabular masking does not match the background data shape!")
+
+        assert mask.shape == x.shape[0], "mask must have the same shape as features"
+        assert mask.dtype == bool, "mask must be of Boolean dtype"
+
+        # TODO What do delta masks look like, can we support, or at least map them here?
+
+        # Identify indices of variables not intervened upon (dependent variables)
+        out_of_coalition_indices = np.setdiff1d(np.arange(self.n_features), mask)
+
+        # Initialize array to store sampled data and fix values for intervened variables (do-operator)
+        samples = np.empty([self.n_samples, self.n_features])
+        samples[:, mask] = np.repeat(x[mask], self.n_samples, axis=0)
+
+        n_causal_groups = len(self.ordering)
+        for group_idx in range(n_causal_groups):
+            # Identify features to sample in the current causal component
+            to_be_sampled = np.intersect1d(self.ordering[group_idx], out_of_coalition_indices)
+            if len(to_be_sampled) == 0:
+                continue
+
+            # Condition upon all ancestors in causal ordering
+            to_be_conditioned = np.concatenate(self.ordering[:group_idx])
+            if not self.confounding[group_idx]:
+                # also condition on the in-coalition features from the current causal group
+                in_coalition = np.intersect1d(self.ordering[group_idx], mask)  # does this work?
+                to_be_conditioned = np.union1d(to_be_conditioned, in_coalition).astype(int)
+
+            # Retrieve samples for the features not intervened upon (apply DO-operator)
+            new_samples = self._sample_gaussian(samples, to_be_conditioned, to_be_sampled)
+            samples[:, to_be_sampled] = new_samples
+
+        self._masked_data = samples
+        self._last_mask[:] = mask
+
+        if self.output_dataframe:
+            return pd.DataFrame(self._masked_data, columns=self.feature_names)
+
+        return (self._masked_data,)
+
+    def _sample_gaussian(self, samples, to_be_conditioned, to_be_sampled):
+        # Case 1: No conditioning required (sample marginal distribution)
+        if len(to_be_conditioned) == 0:
+            new_samples = np.random.multivariate_normal(
+                mean=self.mean[to_be_sampled],
+                cov=self.covariance_matrix[np.ix_(to_be_sampled, to_be_sampled)],
+                size=self.n_samples,
+            )
+
+        # Case 2: Conditional sampling (Gaussian conditional distribution)
+        else:
+            # Compute covariance components for conditional Gaussian sampling
+            c = self.covariance_matrix[np.ix_(to_be_sampled, to_be_conditioned)]
+            d = self.covariance_matrix[np.ix_(to_be_conditioned, to_be_conditioned)]
+            cd_inv = c.dot(np.linalg.inv(d))
+            conditional_covariance = self.covariance_matrix[np.ix_(to_be_sampled, to_be_sampled)] - cd_inv.dot(c.T)
+
+            # Ensure covariance matrix symmetry, as required by numpy multivariate_normal
+            if not self._is_symmetric(conditional_covariance):
+                conditional_covariance = self._symmetric_part(conditional_covariance)
+
+            # Compute conditional mean
+            to_sample_means = np.repeat(np.array([self.mean[to_be_sampled]]), self.n_samples, axis=0)
+            to_condition_means = np.repeat(np.array([self.mean[to_be_conditioned]]), self.n_samples, axis=0)
+            conditional_mean = to_sample_means + cd_inv.dot((samples[:, to_be_conditioned] - to_condition_means).T).T
+
+            # Sample
+            new_samples = np.random.multivariate_normal(
+                mean=np.zeros(len(to_be_sampled)), cov=conditional_covariance, size=self.n_samples
+            )
+            new_samples += conditional_mean
+
+        return new_samples
+
+    @staticmethod
+    def _is_positive_definitive(matrix):
+        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal
+        eigen_values = np.linalg.eigvals(matrix)
+        return np.any(eigen_values > 1e-06)
+
+    @staticmethod
+    def _is_symmetric(matrix, rtol=1e-05, atol=1e-08):
+        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal
+        return np.allclose(matrix, matrix.T, rtol=rtol, atol=atol)
+
+    @staticmethod
+    def _symmetric_part(matrix):
+        # Retrieve the symmetric part from a covariance matrix
+        return (matrix + matrix.T) / 2
