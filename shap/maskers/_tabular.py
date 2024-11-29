@@ -7,7 +7,7 @@ from numba import njit
 from .. import utils
 from .._serializable import Deserializer, Serializer
 from ..utils import MaskedModel
-from ..utils._exceptions import DimensionError, InvalidClusteringError
+from ..utils._exceptions import DimensionError, InvalidClusteringError, TypeError
 from ._masker import Masker
 
 log = logging.getLogger("shap")
@@ -340,7 +340,7 @@ class Impute(Masker):  # we should inherit from Tabular once we add support for 
 class Causal(Tabular):
     """This masks out tabular features by integrating over the given background dataset.
 
-    The Causal Masker samples from the interventional distribution, which allows for computing causal Shapley values. As proposed in [1]
+    The Causal Masker samples from the interventional distribution, which allows for computing causal Shapley values.
     """
 
     def __init__(self, data, ordering=None, confounding=None, max_samples=100):
@@ -353,7 +353,7 @@ class Causal(Tabular):
 
         ordering : numpy.ndarray, pandas.DataFrame
             The (partial) causal ordering of the features in the form of a partial chain graph.
-            Example: [[1, 2], [3], [4, 5, 6]]
+            Example: [[1, 2], [3], [4, 5, 6]], or when feature names are enabled: [['age'], ['Income', 'Marital status']]
 
         confounding : list, numpy.array
             A 1-dimensional boolean array that specifies which causal groups contain confounding factors.
@@ -368,66 +368,118 @@ class Causal(Tabular):
         """
         super().__init__(data, max_samples=max_samples, clustering=None)
 
-        self.n_features = data.shape[0]
+        self.n_features = data.shape[1]
         self.n_samples = max_samples
 
         if ordering is None:
-            self.ordering = list(range(self.n_features))
+            self.ordering = []
             log.warning(
                 "No causal ordering provided. Consider using the Independent Masker if your goal is to compute marginal Shapley values."
             )
         else:
-            # TODO: Enable features names
+            # Ordering must be a list
+            if not isinstance(ordering, list):
+                raise TypeError("Ordering must be a list.")
 
-            # if ordering.shape == None:
-            #     raise DimensionError('Ordering has to be a 2d list.')
+            # Ordering must be a (ragged) 2d list
+            if any(
+                not isinstance(sublist, list) or any(isinstance(item, list) for item in sublist) for sublist in ordering
+            ):
+                raise DimensionError("Ordering must be a 2d list.")
 
-            n_features_in_ordering = sum(len(group) for group in ordering)
-            if n_features_in_ordering != self.n_features:
-                raise DimensionError(
-                    f"{n_features_in_ordering} features were provided in the ordering, while {self.n_features} were expected."
-                )
+            # Features may only occur in ordering once
+            seen_features = set()
+            for group in ordering:
+                for feature in group:
+                    if feature in seen_features:
+                        raise DimensionError(f"Feature {feature} occurs multiple times in the provided ordering.")
+                    seen_features.add(feature)
 
-            # if pass:
-            #     Exception("Feature {} occurs multiple times in the provided ordering.")
+            # Features must be all names, or all indices
 
-            if max(*ordering) > self.n_features or min(*ordering) < 0:
-                raise Exception()
+            presumed_type = type(ordering[0][0])
+            if presumed_type not in [str, int]:
+                raise TypeError("Ordering features must either be feature names or feature indices.")
+            if any(type(item) is not presumed_type for causal_group in ordering for item in causal_group):
+                raise TypeError("Mixing feature names and features indices is not supported.")
+
+            # When ordering contains feature names, the dataset must support named features
+            ordering_contains_feature_names = isinstance(ordering[0][0], str)
+            if ordering_contains_feature_names:
+                if not hasattr(self, "feature_names") or self.feature_names is None:
+                    raise Exception(
+                        "Provided ordering contained feature names, but the given dataset does not have any."
+                    )
+
+            # Features must exist
+            if isinstance(ordering[0][0], str):
+                # Case 1: named features
+                for causal_group in ordering:
+                    for feature in causal_group:
+                        if feature not in self.feature_names:
+                            raise Exception(f"Feature {feature} does not appear in the provided dataset.")
+            else:
+                # Case 2: feature indices
+                for causal_group in ordering:
+                    for feature in causal_group:
+                        if feature >= self.n_features:
+                            raise Exception(f"Feature {feature} does not appear in the provided dataset.")
+                        if feature < 0:
+                            raise Exception(f"Feature {feature} does not appear in the provided dataset.")
 
             self.ordering = ordering
 
         if confounding is None:
-            self.confounding = self.n_features * [False]
-            log.warning("No confounding provided. Assuming there are no confounders present.")
+            self.confounding = len(self.ordering) * [True]
+            log.warning("No confounding provided. Assuming that all causal groups contain have confounders present.")
         else:
-            confounding = confounding.to_numpy()
-            if confounding.shape != ordering.shape[0]:
+            # Confounding must be list or numpy array
+            if not isinstance(confounding, list) and not isinstance(confounding, np.ndarray):
+                raise TypeError("Confounding must be a list or a numpy.array.")
+
+            if isinstance(confounding, list):
+                # Ordering must be a 1d list
+                if any(isinstance(sublist, list) for sublist in confounding):
+                    raise DimensionError("Confounding must be a 1d array.")
+
+                # Normalise to numpy array
+                confounding = np.array(confounding)
+            else:
+                # Ordering must be a 1d list
+                if len(confounding.shape) != 1:
+                    raise DimensionError("Confounding must be a 1d array.")
+
+            # Confounding length must match causal ordering groups
+            if confounding.shape[0] != len(self.ordering):
                 raise DimensionError(
                     f"Provided confounding shape is {confounding.shape}, which does not match the number of causal groups {len(self.ordering)}. Please specify confounding for each group."
                 )
 
+            # Confounding must be a boolean array
             if confounding.dtype != bool:
-                raise TypeError("Confounding has to be a boolean array.")
+                raise TypeError("Confounding must be a boolean array.")
 
             self.confounding = confounding
 
-        self.mean = data.mean().values
-        self.covariance_matrix = data.cov().to_numpy()
+        # Mean and covariance matrix are for the gaussian sampling approach and will be (re)moved later
+        self.mean = data.mean()
+        self.covariance_matrix = data.cov()
 
         # Ensure that the covariance matrix is positive-definite, as required by numpy multivariate_normal
-        if self._is_positive_definitive(self.covariance_matrix.values):
-            raise Exception("Covariance matrix is not positive-definite, not yet implemented")
+        # if self._is_positive_definitive(self.covariance_matrix.values):
+        #     raise Exception("Covariance matrix is not positive-definite, not yet implemented")
 
     def __call__(self, mask, x):
         # Standardize
         mask = self._standardize_mask(mask, x)
-        x = x.to_numpy()
 
         # make sure we are given a single sample
         if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
             raise DimensionError("The input passed for tabular masking does not match the background data shape!")
 
-        assert mask.shape == x.shape[0], "mask must have the same shape as features"
+        assert (
+            mask.shape == x.shape[0]
+        ), f"mask must have the same shape as features. expected {self.n_features}, received {mask.shape}."
         assert mask.dtype == bool, "mask must be of Boolean dtype"
 
         # TODO What do delta masks look like, can we support, or at least map them here?
