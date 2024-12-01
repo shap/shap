@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 import copy
 import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import scipy.special
 import sklearn
 
-from ._types import _ArrayT
+if TYPE_CHECKING:
+    from ._types import _ArrayT
 
 import_errors: dict[str, tuple[str, Exception]] = {}
 
@@ -201,7 +204,7 @@ def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 
-def safe_isinstance(obj: Any, class_path_str: Union[str, list[str]]) -> bool:
+def safe_isinstance(obj: Any, class_path_str: str | list[str]) -> bool:
     """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
@@ -291,7 +294,7 @@ class OpChain:
                 obj = getattr(obj, op)
         return obj
 
-    def __call__(self, *args, **kwargs) -> "OpChain":
+    def __call__(self, *args, **kwargs) -> OpChain:
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -305,7 +308,7 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name: str) -> "OpChain":
+    def __getattr__(self, name: str) -> OpChain:
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
             return None  # type: ignore
@@ -316,17 +319,16 @@ class OpChain:
 
     def __repr__(self):
         out = self._root_name
-        for o in self._ops:
-            op, args, kwargs = o
-            out += "."
-            out += op
-            if (args is not None and len(args) > 0) or (kwargs is not None and len(kwargs) > 0):
-                out += "("
-                if args is not None and len(args) > 0:
-                    out += ", ".join([str(v) for v in args])
-                if kwargs is not None and len(kwargs) > 0:
-                    out += ", " + ", ".join([str(k) + "=" + str(kwargs[k]) for k in kwargs.keys()])
-                out += ")"
+        for op in self._ops:
+            op_name, args, kwargs = op
+            args = args or tuple()
+            kwargs = kwargs or {}
+
+            out += f".{op_name}"
+            has_args = len(args) > 0
+            has_kwargs = len(kwargs) > 0
+            if has_args or has_kwargs:
+                out += "(" + ", ".join([repr(v) for v in args] + [f"{k}={v!r}" for k, v in kwargs.items()]) + ")"
         return out
 
 

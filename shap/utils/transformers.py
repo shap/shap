@@ -1,80 +1,5 @@
 from ._general import safe_isinstance
 
-MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM = [
-    "transformers.T5ForConditionalGeneration",
-    "transformers.PegasusForConditionalGeneration",
-    "transformers.MarianMTModel",
-    "transformers.MBartForConditionalGeneration",
-    "transformers.BlenderbotForConditionalGeneration",
-    "transformers.BartForConditionalGeneration",
-    "transformers.FSMTForConditionalGeneration",
-    "transformers.EncoderDecoderModel",
-    "transformers.XLMProphetNetForConditionalGeneration",
-    "transformers.ProphetNetForConditionalGeneration",
-    "transformers.TFMT5ForConditionalGeneration",
-    "transformers.TFT5ForConditionalGeneration",
-    "transformers.TFMarianMTModel",
-    "transformers.TFMBartForConditionalGeneration",
-    "transformers.TFPegasusForConditionalGeneration",
-    "transformers.TFBlenderbotForConditionalGeneration",
-    "transformers.TFBartForConditionalGeneration",
-]
-
-MODELS_FOR_CAUSAL_LM = [
-    "transformers.CamembertForCausalLM",
-    "transformers.XLMRobertaForCausalLM",
-    "transformers.RobertaForCausalLM",
-    "transformers.BertLMHeadModel",
-    "transformers.OpenAIGPTLMHeadModel",
-    "transformers.GPT2LMHeadModel",
-    "transformers.TransfoXLLMHeadModel",
-    "transformers.XLNetLMHeadModel",
-    "transformers.XLMWithLMHeadModel",
-    "transformers.CTRLLMHeadModel",
-    "transformers.ReformerModelWithLMHead",
-    "transformers.BertGenerationDecoder",
-    "transformers.XLMProphetNetForCausalLM",
-    "transformers.ProphetNetForCausalLM",
-    "transformers.TFBertLMHeadModel",
-    "transformers.TFOpenAIGPTLMHeadModel",
-    "transformers.TFGPT2LMHeadModel",
-    "transformers.TFTransfoXLLMHeadModel",
-    "transformers.TFXLNetLMHeadModel",
-    "transformers.TFXLMWithLMHeadModel",
-    "transformers.TFCTRLLMHeadModel",
-]
-
-MODELS_FOR_MASKED_LM = [
-    "transformers.LayoutLMForMaskedLM",
-    "transformers.DistilBertForMaskedLM",
-    "transformers.AlbertForMaskedLM",
-    "transformers.BartForConditionalGeneration",
-    "transformers.CamembertForMaskedLM",
-    "transformers.XLMRobertaForMaskedLM",
-    "transformers.LongformerForMaskedLM",
-    "transformers.RobertaForMaskedLM",
-    "transformers.SqueezeBertForMaskedLM",
-    "transformers.BertForMaskedLM",
-    "transformers.MobileBertForMaskedLM",
-    "transformers.FlaubertWithLMHeadModel",
-    "transformers.XLMWithLMHeadModel",
-    "transformers.ElectraForMaskedLM",
-    "transformers.ReformerForMaskedLM",
-    "transformers.FunnelForMaskedLM",
-    "transformers.TFDistilBertForMaskedLM",
-    "transformers.TFAlbertForMaskedLM",
-    "transformers.TFCamembertForMaskedLM",
-    "transformers.TFXLMRobertaForMaskedLM",
-    "transformers.TFLongformerForMaskedLM",
-    "transformers.TFRobertaForMaskedLM",
-    "transformers.TFBertForMaskedLM",
-    "transformers.TFMobileBertForMaskedLM",
-    "transformers.TFFlaubertWithLMHeadModel",
-    "transformers.TFXLMWithLMHeadModel",
-    "transformers.TFElectraForMaskedLM",
-    "transformers.TFFunnelForMaskedLM",
-]
-
 SENTENCEPIECE_TOKENIZERS = [
     "transformers.MarianTokenizer",
     "transformers.T5Tokenizer",
@@ -85,10 +10,19 @@ SENTENCEPIECE_TOKENIZERS = [
 
 def is_transformers_lm(model):
     """Check if the given model object is a huggingface transformers language model."""
-    return (
-        safe_isinstance(model, "transformers.PreTrainedModel")
-        or safe_isinstance(model, "transformers.TFPreTrainedModel")
-    ) and safe_isinstance(model, MODELS_FOR_SEQ_TO_SEQ_CAUSAL_LM + MODELS_FOR_CAUSAL_LM)
+    if safe_isinstance(model, "transformers.PreTrainedModel") or safe_isinstance(
+        model, "transformers.TFPreTrainedModel"
+    ):
+        from transformers import (
+            MODEL_FOR_CAUSAL_LM_MAPPING,
+            MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING,
+        )
+
+        return (
+            type(model) in MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING.values()
+            or type(model) in MODEL_FOR_CAUSAL_LM_MAPPING.values()
+        )
+    return False
 
 
 def parse_prefix_suffix_for_tokenizer(tokenizer):
@@ -118,8 +52,8 @@ def parse_prefix_suffix_for_tokenizer(tokenizer):
         else:
             raise Exception(
                 "The given tokenizer produces one token when applied to the empty string, but "
-                + "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] "
-                + "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!"
+                "does not have a .special_tokens_map['eos_token'] or .special_tokens_map['bos_token'] "
+                "property (and .decode) to specify if it is an eos (end) of bos (beginning) token!"
             )
     else:
         assert len(null_tokens) % 2 == 0, "An odd number of boundary tokens are added to the null string!"

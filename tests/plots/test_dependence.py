@@ -1,10 +1,10 @@
-import matplotlib
 import numpy as np
 import pytest
 
 import shap
 
-matplotlib.use("Agg")
+# The following tests use shap.dependence_plot,
+# which currently points to shap.plots._scatter.dependence_legacy
 
 
 def test_random_dependence():
@@ -39,4 +39,5 @@ def test_dependence_use_line_collection_bug():
         feature_expected_value=True,
         ice=False,
         shap_values=shap_values[:1, :],
+        show=False,
     )

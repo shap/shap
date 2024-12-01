@@ -1,9 +1,46 @@
-import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 
 import shap
 
-matplotlib.use("Agg")
+
+@pytest.fixture
+def imagenet50_example() -> tuple[np.ndarray, np.ndarray]:
+    # Return a subset of the imagenet50 dataset, normalised for plotting
+    images, labels = shap.datasets.imagenet50()
+    images = images / 255
+    return images, labels
+
+
+@pytest.mark.mpl_image_compare
+def test_image_single(imagenet50_example):
+    images, _ = imagenet50_example
+    images = images[0]
+    shap_values = (images - images.mean()) / images.max(keepdims=True)
+    explanation = shap.Explanation(values=shap_values, data=images)
+    shap.image_plot(explanation, show=False)
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_image_multi(imagenet50_example):
+    images, _ = imagenet50_example
+    n_images = 2
+    n_classes = 4
+
+    images = images[:n_images]
+    shap_values_single = (images - images.mean()) / images.max(keepdims=True)
+    assert shap_values_single.shape == images.shape
+
+    # Just repeat the same SHAP values for each class
+    shap_values_multi = np.stack([shap_values_single for _ in range(n_classes)], axis=-1)
+    assert shap_values_multi.shape[-1] == n_classes
+
+    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[1 for _ in range(n_images)])
+    labels = [f"Class {x+1}" for x in range(n_classes)]
+    shap.image_plot(explanation, labels=labels, show=False)
+    return plt.gcf()
 
 
 def test_random_single_image():

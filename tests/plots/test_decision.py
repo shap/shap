@@ -1,12 +1,9 @@
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import sklearn
 
 import shap
-
-matplotlib.use("Agg")
 
 
 @pytest.fixture
@@ -79,17 +76,12 @@ def test_decision_plot_interactions():
 
 
 @pytest.mark.mpl_image_compare
-def test_multioutput_decision(values_features):
+def test_decision_multioutput(values_features):
     adult_rfc_shap_values, X = values_features
     fig = plt.figure()
     adult_rfc_shap_values_list = [adult_rfc_shap_values.values[:, :, i] for i in range(adult_rfc_shap_values.shape[2])]
     base_values_list = list(adult_rfc_shap_values.base_values[0, :])
-    shap.multioutput_decision_plot(
-        base_values_list,
-        adult_rfc_shap_values_list,
-        row_index=0,
-        features=X,
-    )
+    shap.multioutput_decision_plot(base_values_list, adult_rfc_shap_values_list, row_index=0, features=X, show=False)
     plt.tight_layout()
     return fig
 
