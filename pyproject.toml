@@ -21,8 +21,9 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba',
-  'cloudpickle'
+  'numba>=0.54',
+  'cloudpickle',
+  'typing-extensions',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
@@ -57,7 +58,12 @@ docs = [
   "requests",
   "ipywidgets",  # For tqdm in notebooks
 ]
-test-core = ["pytest", "pytest-mpl", "pytest-cov", "mypy"]
+test-core = [
+  "pytest",
+  "pytest-mpl",
+  "pytest-cov",
+  "mypy",
+]
 test = [
   "pytest",
   "pytest-mpl",
@@ -111,9 +117,33 @@ plugins = ["numpy.typing.mypy_plugin"]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
 module = [
-  "shap.explainers.*",
-  "shap.maskers.*",
-  "shap.plots.*",
+  "shap.explainers._additive",
+  "shap.explainers._deep.deep_pytorch",
+  "shap.explainers._deep.deep_tf",
+  "shap.explainers._exact",
+  "shap.explainers._explainer",
+  "shap.explainers._gradient",
+  "shap.explainers._kernel",
+  "shap.explainers._linear",
+  "shap.explainers._partition",
+  "shap.explainers._partition",
+  "shap.explainers._permutation",
+  "shap.explainers._sampling",
+  "shap.explainers._tree",
+  "shap.explainers.other._random",
+  "shap.explainers.pytree",
+  "shap.explainers.tf_utils",
+  "shap.maskers._composite",
+  "shap.maskers._fixed",
+  "shap.maskers._image",
+  "shap.maskers._masker",
+  "shap.maskers._tabular",
+  "shap.maskers._text",
+  "shap.plots._benchmark",
+  "shap.plots._force_matplotlib",
+  "shap.plots._force",
+  "shap.plots._text",
+  "shap.plots._waterfall",
 ]
 check_untyped_defs = false
 
@@ -134,6 +164,7 @@ module = [
   "sklearn.*",
   "slicer",
   "tensorflow.*",
+  "transformers.*",
   "torch.*",
   "tqdm.*",
   "xgboost.*",
@@ -184,12 +215,15 @@ line-length = 120
 select = [
   "F",  # pyflakes
   "I",  # isort
+  "ISC",  # string literal concatenation.
   "UP",  # pyupgrade
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
   "NPY",  # Numpy
   "SIM101",  # flake8-simplify
+  "FA",  # future annotations
+  "TCH",  # Move type only imports to type-checking condition.
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
@@ -217,7 +251,6 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
-"shap/plots/colors/_colorconv.py" = ["ALL"]
 
 # Ignore notebooks in user_studies, which are not maintained
 "docs/user_studies/*.ipynb" = ["ALL"]
