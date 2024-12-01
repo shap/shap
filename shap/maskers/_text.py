@@ -286,7 +286,7 @@ class Text(Masker):
     #     recursive_mark(M+len(clustering)-1)
 
     def _update_s_cache(self, s):
-        if not np.array_equal(self._s, s): # self._s != s: ######################MODIFICATION HERE
+        if not np.array_equal(self._s, s):  # self._s != s: ######################MODIFICATION HERE
             self._s = s
             tokens, token_ids = self.token_segments(s)
             self._tokenized_s = np.array(token_ids)

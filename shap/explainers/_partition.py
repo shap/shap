@@ -1,12 +1,11 @@
+import math
 import queue
 import time
+from itertools import chain, combinations, product
 
 import numpy as np
 from numba import njit
 from tqdm.auto import tqdm
-
-import math
-from itertools import chain, combinations, product
 
 from .. import Explanation, links
 from ..models import Model
