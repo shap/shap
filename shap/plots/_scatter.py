@@ -82,14 +82,32 @@ def scatter(
         Represents the upper bound of the plot's x-axis. It can be a string of the format
         "percentile(float)" to denote that percentile of the feature's value used on the x-axis.
 
-    ax : matplotlib Axes object
-        Optionally specify an existing matplotlib ``Axes`` object, into which the plot will be placed.
-        In this case, we do not create a ``Figure``, otherwise we do.
+        It can also be an aggregated column of a single column of an :class:`.Explanation`,
+        such as ``explanation[:, "feature_name"].percentile(20)``.
+
+    overlay: dict, optional
+        Optional dictionary of up to three additional curves to overlay as line plots.
+
+        The dictionary maps a curve name to a list of (xvalues, yvalues) pairs, where
+        there is one pair for each feature to be plotted.
+
+    ax : matplotlib Axes, optional
+        Optionally specify an existing :external+mpl:class:`matplotlib.axes.Axes` object, into which
+        the plot will be placed.
+
+        Only supported when plotting a single feature.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
+
+        Setting this to ``False`` allows the plot to be customized further after it
+        has been created.
+
+    Returns
+    -------
+    ax : matplotlib Axes object
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------

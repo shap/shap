@@ -77,7 +77,7 @@ def california(n_points=None):
 
     References
     ----------
-    California housing dataset: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html
+    California housing dataset: :external+scikit-learn:func:`sklearn.datasets.fetch_california_housing`
 
     Examples
     --------
@@ -114,7 +114,7 @@ def linnerud(n_points=None):
     - The feature matrix includes three exercise variables: Chins, Situps, Jumps.
     - The target variables include three physiological measurements: Weight, Waist, Pulse.
 
-    More details: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_linnerud.html
+    More details: :external+scikit-learn:func:`sklearn.datasets.load_linnerud`
 
     Examples
     --------
@@ -246,7 +246,7 @@ def diabetes(n_points=None):
     Notes
     -----
     The diabetes dataset is a subset of the larger diabetes dataset from scikit-learn.
-    More details: https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_diabetes.html
+    More details: :external+scikit-learn:func:`sklearn.datasets.load_diabetes`
 
     Examples
     --------
@@ -554,7 +554,8 @@ def independentlinear60(n_points=1_000):
 def a1a(n_points=None):
     """
     Return a sparse dataset in scipy csr matrix format.
-    Data Source: Scikit-learn datasets https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_svmlight_file.html
+
+    Data Source: :external+scikit-learn:func:`sklearn.datasets.load_svmlight_file`
 
     Parameters
     ----------

@@ -113,7 +113,11 @@ def _conditional_expectation(tree, S, x):
         lc = tree.children_left[tree_ind, node_ind]
         rc = tree.children_right[tree_ind, node_ind]
         if lc < 0:
-            return tree.values[tree_ind, node_ind]
+            result = tree.values[tree_ind, node_ind]
+            # Previously the result was an array of one element, which was then implicity converted to a float
+            # Make this conversion explicit:
+            assert len(result) == 1
+            return result[0]
         if f in S:
             if x[f] <= tree.thresholds[tree_ind, node_ind]:
                 return R(lc)
@@ -133,7 +137,7 @@ def _conditional_expectation(tree, S, x):
 def _brute_force_tree_shap(tree, x):
     m = len(x)
     phi = np.zeros(m)
-    for p in itertools.permutations(list(range(m))):
+    for p in itertools.permutations(range(m)):
         for i in range(m):
             phi[p[i]] += _conditional_expectation(tree, p[: i + 1], x) - _conditional_expectation(tree, p[:i], x)
     return phi / math.factorial(m)
@@ -1144,13 +1148,14 @@ class TestExplainerXGBoost:
     )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
-        """Test that xgboost sklearn attributues are properly passed to the DMatrix
-        initiated during shap value calculation. see GH #3313
+        """Test that xgboost sklearn attributes are properly passed to the DMatrix
+        initiated during shap value calculation. See GH #3313
         """
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8
-        X_nan = X.copy()
+        # Cast all columns to float to allow imputing a float value
+        X_nan = X.copy().astype(float)
         X_nan.loc[
             X_nan.sample(frac=0.3, random_state=42).index,
             X_nan.columns.to_series().sample(frac=0.5, random_state=42),

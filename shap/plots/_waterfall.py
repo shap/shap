@@ -34,7 +34,7 @@ def waterfall(shap_values, max_display=10, show=True):
         The maximum number of features to display (default is 10).
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot to be customized further after it
         has been created, returning the current axis via plt.gca().
 

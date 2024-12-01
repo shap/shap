@@ -282,7 +282,7 @@ class OpChain:
         self._root_name = root_name
 
     def apply(self, obj):
-        """Applies all our ops to the given object."""
+        """Applies all our ops to the given object, usually an :class:`.Explanation` instance."""
         for o in self._ops:
             op, args, kwargs = o
             if args is not None:

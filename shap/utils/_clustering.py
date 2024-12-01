@@ -200,11 +200,9 @@ def hclust(
 ) -> np.ndarray:
     """Fit a hierarchical clustering model for features X relative to target variable y.
 
-    For more information on clustering methods, see:
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+    For more information on clustering methods, see :external+scipy:func:`scipy.cluster.hierarchy.linkage`.
 
-    For more information on scipy distance metrics, see:
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
+    For more information on scipy distance metrics, see :external+scipy:func:`scipy.spatial.distance.pdist`.
 
     Parameters
     ----------

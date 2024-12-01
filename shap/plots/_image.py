@@ -60,8 +60,14 @@ def image(
     labelpad : float
         How much padding to use around the model output labels.
 
+    cmap: str or matplotlib.colors.Colormap
+        Colormap to use when plotting the SHAP values.
+
+    vmax: Optional float
+        Sets the colormap scale for SHAP values from ``-vmax`` to ``+vmax``.
+
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 

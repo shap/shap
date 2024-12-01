@@ -49,11 +49,11 @@ docs = [
   "matplotlib",
   "ipython",
   "numpydoc",
-  "sphinx_rtd_theme==2.0.0",
-  "sphinx==7.2.6",
-  "nbsphinx==0.9.3",
-  "sphinx_github_changelog==1.2.1",
-  "myst-parser==2.0.0",
+  "sphinx_rtd_theme",
+  "sphinx",
+  "nbsphinx",
+  "sphinx_github_changelog",
+  "myst-parser",
   "requests",
   "ipywidgets",  # For tqdm in notebooks
 ]
@@ -169,6 +169,7 @@ filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
 ]
 
 [tool.ruff]

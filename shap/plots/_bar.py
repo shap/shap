@@ -8,15 +8,9 @@ import scipy
 from .. import Cohorts, Explanation
 from ..utils import format_value, ordinal_str
 from ..utils._exceptions import DimensionError
-from . import colors
 from ._labels import labels
-from ._utils import (
-    convert_ordering,
-    dendrogram_coords,
-    get_sort_order,
-    merge_nodes,
-    sort_inds,
-)
+from ._style import get_style
+from ._utils import convert_ordering, dendrogram_coords, get_sort_order, merge_nodes, sort_inds
 
 
 # TODO: improve the bar chart to look better like the waterfall plot with numbers inside the bars when they fit
@@ -53,7 +47,7 @@ def bar(
 
         By default, take the absolute value.
     clustering: np.ndarray or None
-        A partition tree, as returned by ``shap.utils.hclust``
+        A partition tree, as returned by :func:`shap.utils.hclust`
     clustering_cutoff: float
         Controls how much of the clustering structure is displayed.
     show_data: bool or str
@@ -62,20 +56,22 @@ def bar(
     ax: matplotlib Axes
         Axes object to draw the plot onto, otherwise uses the current Axes.
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
     Returns
     -------
     ax: matplotlib Axes
-        Returns the Axes object with the plot drawn onto it. Only returned if ``show=False``.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------
     See `bar plot examples <https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/plots/bar.html>`_.
 
     """
+    style = get_style()
     # convert Explanation objects to dictionaries
     if isinstance(shap_values, Explanation):
         cohorts = {"": shap_values}
@@ -264,7 +260,10 @@ def bar(
             values[i, feature_inds],
             bar_width,
             align="center",
-            color=[colors.blue_rgb if values[i, feature_inds[j]] <= 0 else colors.red_rgb for j in range(len(y_pos))],
+            color=[
+                style.primary_color_negative if values[i, feature_inds[j]] <= 0 else style.primary_color_positive
+                for j in range(len(y_pos))
+            ],
             hatch=patterns[i],
             edgecolor=(1, 1, 1, 0.8),
             label=f"{cohort_labels[i]} [{cohort_sizes[i] if i < len(cohort_sizes) else None}]",
@@ -290,7 +289,7 @@ def bar(
                     format_value(values[i, ind], "%+0.02f"),
                     horizontalalignment="right",
                     verticalalignment="center",
-                    color=colors.blue_rgb,
+                    color=style.primary_color_negative,
                     fontsize=12,
                 )
             else:
@@ -300,7 +299,7 @@ def bar(
                     format_value(values[i, ind], "%+0.02f"),
                     horizontalalignment="left",
                     verticalalignment="center",
-                    color=colors.red_rgb,
+                    color=style.primary_color_positive,
                     fontsize=12,
                 )
 
@@ -348,7 +347,7 @@ def bar(
     # (these fall behind the black ones with just the feature name)
     tick_labels = ax.yaxis.get_majorticklabels()
     for i in range(num_features):
-        tick_labels[i].set_color("#999999")
+        tick_labels[i].set_color(style.tick_labels_color)
 
     # draw a dendrogram if we are given a partition tree
     if partition_tree is not None:
@@ -399,6 +398,7 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
         "https://shap.readthedocs.io/en/latest/example_notebooks/api_examples/migrating-to-new-api.html",
         DeprecationWarning,
     )
+    style = get_style()
     # unwrap pandas series
     if isinstance(features, pd.Series):
         if feature_names is None:
@@ -423,7 +423,10 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
         shap_values[feature_inds],
         0.7,
         align="center",
-        color=[colors.red_rgb if shap_values[feature_inds[i]] > 0 else colors.blue_rgb for i in range(len(y_pos))],
+        color=[
+            style.primary_color_positive if shap_values[feature_inds[i]] > 0 else style.primary_color_negative
+            for i in range(len(y_pos))
+        ],
     )
     pl.yticks(y_pos, fontsize=13)
     if features is not None:

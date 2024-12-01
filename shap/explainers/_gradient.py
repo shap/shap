@@ -180,9 +180,9 @@ class _TFGradient(Explainer):
         if tf.executing_eagerly():
             if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
-                from tensorflow.keras import Model
+                from tensorflow import keras
 
-                self.model = Model(model[0], model[1])
+                self.model = keras.Model(model[0], model[1])
             else:
                 self.model = model
 
