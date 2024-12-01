@@ -1,4 +1,5 @@
 """This file contains tests for the bar plot."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -29,10 +30,7 @@ def test_input_shap_values_type(unsupported_inputs):
 def test_input_shap_values_type_2():
     """Check that a DimensionError is raised if the cohort Explanation objects have different shape."""
     rs = np.random.RandomState(42)
-    emsg = (
-        "When passing several Explanation objects, they must all have "
-        "the same number of feature columns!"
-    )
+    emsg = "When passing several Explanation objects, they must all have " "the same number of feature columns!"
     with pytest.raises(DimensionError, match=emsg):
         shap.plots.bar(
             {
@@ -104,7 +102,7 @@ def test_simple_bar_with_clustering(explainer):
 
 def test_bar_raises_error_for_invalid_clustering(explainer):
     shap_values = explainer(explainer.data)
-    clustering = np.array([1,2,3])
+    clustering = np.array([1, 2, 3])
     with pytest.raises(TypeError, match="does not seem to be a partition tree"):
         shap.plots.bar(shap_values, clustering=clustering, show=False)
 

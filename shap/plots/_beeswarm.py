@@ -25,10 +25,22 @@ from ._utils import (
 
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
-def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
-             clustering=None, cluster_threshold=0.5, color=None,
-             axis_color="#333333", alpha=1, show=True, log_scale=False,
-             color_bar=True, s=16, plot_size="auto", color_bar_label=labels["FEATURE_VALUE"]):
+def beeswarm(
+    shap_values,
+    max_display=10,
+    order=Explanation.abs.mean(0),
+    clustering=None,
+    cluster_threshold=0.5,
+    color=None,
+    axis_color="#333333",
+    alpha=1,
+    show=True,
+    log_scale=False,
+    color_bar=True,
+    s=16,
+    plot_size="auto",
+    color_bar_label=labels["FEATURE_VALUE"],
+):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -65,10 +77,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
     """
     if not isinstance(shap_values, Explanation):
-        emsg = (
-            "The beeswarm plot requires an `Explanation` object as the "
-            "`shap_values` argument."
-        )
+        emsg = "The beeswarm plot requires an `Explanation` object as the `shap_values` argument."
         raise TypeError(emsg)
 
     sv_shape = shap_values.shape
@@ -96,10 +105,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     #     out_names = shap_exp.output_names
 
     order = convert_ordering(order, values)
-
-    # # deprecation warnings
-    # if auto_size_plot is not None:
-    #     warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead.")
 
     # multi_class = False
     # if isinstance(values, list):
@@ -139,10 +144,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     num_features = values.shape[1]
 
     if features is not None:
-        shape_msg = (
-            "The shape of the shap_values matrix does not match the shape "
-            "of the provided data matrix."
-        )
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
             shape_msg += (
                 " Perhaps the extra column in the shap_values matrix is the "
@@ -153,10 +155,10 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             raise DimensionError(shape_msg)
 
     if feature_names is None:
-        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+        feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
     if log_scale:
-        pl.xscale('symlog')
+        pl.xscale("symlog")
 
     if clustering is None:
         partition_tree = getattr(shap_values, "clustering", None)
@@ -271,7 +273,6 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     while True:
         feature_order = convert_ordering(order, Explanation(np.abs(values)))
         if partition_tree is not None:
-
             # compute the leaf order if we were to show (and so have the ordering respect) the whole partition tree
             clust_order = sort_inds(partition_tree, np.abs(values))
 
@@ -281,11 +282,14 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
             # if the last feature we can display is connected in a tree the next feature then we can't just cut
             # off the feature ordering, so we need to merge some tree nodes and then try again.
-            if max_display < len(feature_order) and dist[feature_order[max_display-1],feature_order[max_display-2]] <= cluster_threshold:
-                #values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
+            if (
+                max_display < len(feature_order)
+                and dist[feature_order[max_display - 1], feature_order[max_display - 2]] <= cluster_threshold
+            ):
+                # values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values), partition_tree)
                 for i in range(len(values)):
-                    values[:,ind1] += values[:,ind2]
+                    values[:, ind1] += values[:, ind2]
                     values = np.delete(values, ind2, 1)
                     orig_inds[ind1] += orig_inds[ind2]
                     del orig_inds[ind2]
@@ -297,20 +301,22 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
     feature_names_new = []
-    for pos,inds in enumerate(orig_inds):
+    for pos, inds in enumerate(orig_inds):
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
         elif len(inds) <= 2:
             feature_names_new.append(" + ".join([feature_names[i] for i in inds]))
         else:
             max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-            feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds)-1))
+            feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds) - 1))
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
     if num_features < len(values[0]):
-        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features-1, len(values[0]))])
-        values[:,feature_order[num_features-1]] = np.sum([values[:,feature_order[i]] for i in range(num_features-1, len(values[0]))], 0)
+        num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features - 1, len(values[0]))])
+        values[:, feature_order[num_features - 1]] = np.sum(
+            [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))], 0
+        )
 
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
@@ -338,7 +344,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
         shaps = shaps[inds]
         colored_feature = True
         try:
-            if idx2cat is not None and idx2cat[i]: # check categorical feature
+            if idx2cat is not None and idx2cat[i]:  # check categorical feature
                 colored_feature = False
             else:
                 fvalues = np.array(fvalues, dtype=np.float64)  # make sure this can be numeric
@@ -371,7 +377,7 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
                 if vmin == vmax:
                     vmin = np.min(fvalues)
                     vmax = np.max(fvalues)
-            if vmin > vmax: # fixes rare numerical precision issues
+            if vmin > vmax:  # fixes rare numerical precision issues
                 vmin = vmax
 
             if features.shape[0] != len(shaps):
@@ -380,9 +386,16 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
-            pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
-                        s=s, alpha=alpha, linewidth=0,
-                        zorder=3, rasterized=len(shaps) > 500)
+            pl.scatter(
+                shaps[nan_mask],
+                pos + ys[nan_mask],
+                color="#777777",
+                s=s,
+                alpha=alpha,
+                linewidth=0,
+                zorder=3,
+                rasterized=len(shaps) > 500,
+            )
 
             # plot the non-nan fvalues colored by the trimmed feature value
             cvals = fvalues[np.invert(nan_mask)].astype(np.float64)
@@ -390,53 +403,69 @@ def beeswarm(shap_values, max_display=10, order=Explanation.abs.mean(0),
             cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
             cvals[cvals_imp > vmax] = vmax
             cvals[cvals_imp < vmin] = vmin
-            pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                        cmap=color, vmin=vmin, vmax=vmax, s=s,
-                        c=cvals, alpha=alpha, linewidth=0,
-                        zorder=3, rasterized=len(shaps) > 500)
+            pl.scatter(
+                shaps[np.invert(nan_mask)],
+                pos + ys[np.invert(nan_mask)],
+                cmap=color,
+                vmin=vmin,
+                vmax=vmax,
+                s=s,
+                c=cvals,
+                alpha=alpha,
+                linewidth=0,
+                zorder=3,
+                rasterized=len(shaps) > 500,
+            )
         else:
-
-            pl.scatter(shaps, pos + ys, s=s, alpha=alpha, linewidth=0, zorder=3,
-                        color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
-
+            pl.scatter(
+                shaps,
+                pos + ys,
+                s=s,
+                alpha=alpha,
+                linewidth=0,
+                zorder=3,
+                color=color if colored_feature else "#777777",
+                rasterized=len(shaps) > 500,
+            )
 
     # draw the color bar
     if safe_isinstance(color, "matplotlib.colors.Colormap") and color_bar and features is not None:
         import matplotlib.cm as cm
+
         m = cm.ScalarMappable(cmap=color)
         m.set_array([0, 1])
         cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
-        cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
+        cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-#         cb.ax.set_aspect((bbox.height - 0.9) * 20)
-        # cb.draw_all()
+    #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
+    # cb.draw_all()
 
-    pl.gca().xaxis.set_ticks_position('bottom')
-    pl.gca().yaxis.set_ticks_position('none')
-    pl.gca().spines['right'].set_visible(False)
-    pl.gca().spines['top'].set_visible(False)
-    pl.gca().spines['left'].set_visible(False)
+    pl.gca().xaxis.set_ticks_position("bottom")
+    pl.gca().yaxis.set_ticks_position("none")
+    pl.gca().spines["right"].set_visible(False)
+    pl.gca().spines["top"].set_visible(False)
+    pl.gca().spines["left"].set_visible(False)
     pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
     pl.yticks(range(len(feature_inds)), reversed(yticklabels), fontsize=13)
-    pl.gca().tick_params('y', length=20, width=0.5, which='major')
-    pl.gca().tick_params('x', labelsize=11)
+    pl.gca().tick_params("y", length=20, width=0.5, which="major")
+    pl.gca().tick_params("x", labelsize=11)
     pl.ylim(-1, len(feature_inds))
-    pl.xlabel(labels['VALUE'], fontsize=13)
+    pl.xlabel(labels["VALUE"], fontsize=13)
     if show:
         pl.show()
     else:
         return pl.gca()
 
+
 def shorten_text(text, length_limit):
     if len(text) > length_limit:
-        return text[:length_limit - 3] + "..."
+        return text[: length_limit - 3] + "..."
     else:
         return text
-
 
 
 def is_color_map(color):
@@ -445,16 +474,28 @@ def is_color_map(color):
 
 # TODO: remove unused title argument / use title argument
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
-def summary_legacy(shap_values, features=None, feature_names=None, max_display=None, plot_type=None,
-                 color=None, axis_color="#333333", title=None, alpha=1, show=True, sort=True,
-                 color_bar=True, plot_size="auto", layered_violin_max_num_bins=20, class_names=None,
-                 class_inds=None,
-                 color_bar_label=labels["FEATURE_VALUE"],
-                 cmap=colors.red_blue,
-                 show_values_in_legend=False,
-                 # depreciated
-                 auto_size_plot=None,
-                 use_log_scale=False):
+def summary_legacy(
+    shap_values,
+    features=None,
+    feature_names=None,
+    max_display=None,
+    plot_type=None,
+    color=None,
+    axis_color="#333333",
+    title=None,
+    alpha=1,
+    show=True,
+    sort=True,
+    color_bar=True,
+    plot_size="auto",
+    layered_violin_max_num_bins=20,
+    class_names=None,
+    class_inds=None,
+    color_bar_label=labels["FEATURE_VALUE"],
+    cmap=colors.red_blue,
+    show_values_in_legend=False,
+    use_log_scale=False,
+):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
     Parameters
@@ -500,28 +541,23 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
-    # deprecation warnings
-    if auto_size_plot is not None:
-        warnings.warn("auto_size_plot=False is deprecated and is now ignored! Use plot_size=None instead. "
-                      "The parameter auto_size_plot will be removed in the next release 0.46.0.",
-                      DeprecationWarning)
-
     multi_class = False
     if isinstance(shap_values, list):
         multi_class = True
         if plot_type is None:
-            plot_type = "bar" # default for multi-output explanations
+            plot_type = "bar"  # default for multi-output explanations
         assert plot_type == "bar", "Only plot_type = 'bar' is supported for multi-output explanations!"
     else:
         if plot_type is None:
-            plot_type = "dot" # default for single output explanations
+            plot_type = "dot"  # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
 
     # default color:
     if color is None:
-        if plot_type == 'layered_violin':
+        if plot_type == "layered_violin":
             color = "coolwarm"
         elif multi_class:
+
             def color(i):
                 return colors.red_blue_circle(i / len(shap_values))
         else:
@@ -543,26 +579,26 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         feature_names = features
         features = None
 
-    num_features = (shap_values[0].shape[1] if multi_class else shap_values.shape[1])
+    num_features = shap_values[0].shape[1] if multi_class else shap_values.shape[1]
 
     if features is not None:
-        shape_msg = "The shape of the shap_values matrix does not match the shape of the " \
-                    "provided data matrix."
+        shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
-            assert False, shape_msg + " Perhaps the extra column in the shap_values matrix is the " \
-                          "constant offset? Of so just pass shap_values[:,:-1]."
+            assert False, (
+                shape_msg + " Perhaps the extra column in the shap_values matrix is the "
+                "constant offset? Of so just pass shap_values[:,:-1]."
+            )
         else:
             assert num_features == features.shape[1], shape_msg
 
     if feature_names is None:
-        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(num_features)])
+        feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
     if use_log_scale:
-        pl.xscale('symlog')
+        pl.xscale("symlog")
 
     # plotting SHAP interaction values
     if not multi_class and len(shap_values.shape) == 3:
-
         if plot_type == "compact_dot":
             new_shap_values = shap_values.reshape(shap_values.shape[0], -1)
             new_features = np.tile(features, (1, 1, features.shape[1])).reshape(features.shape[0], -1)
@@ -576,11 +612,21 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                         new_feature_names.append(c1 + "* - " + c2)
 
             return summary_legacy(
-                new_shap_values, new_features, new_feature_names,
-                max_display=max_display, plot_type="dot", color=color, axis_color=axis_color,
-                title=title, alpha=alpha, show=show, sort=sort,
-                color_bar=color_bar, plot_size=plot_size, class_names=class_names,
-                color_bar_label="*" + color_bar_label
+                new_shap_values,
+                new_features,
+                new_feature_names,
+                max_display=max_display,
+                plot_type="dot",
+                color=color,
+                axis_color=axis_color,
+                title=title,
+                alpha=alpha,
+                show=show,
+                sort=sort,
+                color_bar=color_bar,
+                plot_size=plot_size,
+                class_names=class_names,
+                color_bar_label="*" + color_bar_label,
             )
 
         if max_display is None:
@@ -603,11 +649,14 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
         summary_legacy(
-            proj_shap_values, features[:, sort_inds] if features is not None else None,
-            feature_names=feature_names[sort_inds],
-            sort=False, show=False, color_bar=False,
+            proj_shap_values,
+            features[:, sort_inds] if features is not None else None,
+            feature_names=np.array(feature_names)[sort_inds].tolist(),
+            sort=False,
+            show=False,
+            color_bar=False,
             plot_size=None,
-            max_display=max_display
+            max_display=max_display,
         )
         pl.xlim((slow, shigh))
         pl.xlabel("")
@@ -620,18 +669,19 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
             summary_legacy(
-                proj_shap_values, features[:, sort_inds] if features is not None else None,
+                proj_shap_values,
+                features[:, sort_inds] if features is not None else None,
                 sort=False,
                 feature_names=["" for i in range(len(feature_names))],
                 show=False,
                 color_bar=False,
                 plot_size=None,
-                max_display=max_display
+                max_display=max_display,
             )
             pl.xlim((slow, shigh))
             pl.xlabel("")
             if i == min(len(sort_inds), max_display) // 2:
-                pl.xlabel(labels['INTERACTION_VALUE'])
+                pl.xlabel(labels["INTERACTION_VALUE"])
             pl.title(shorten_text(feature_names[ind], title_length_limit))
         pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
         pl.subplots_adjust(hspace=0, wspace=0.1)
@@ -648,7 +698,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             feature_order = np.argsort(np.sum(np.mean(np.abs(shap_values), axis=1), axis=0))
         else:
             feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))
-        feature_order = feature_order[-min(max_display, len(feature_order)):]
+        feature_order = feature_order[-min(max_display, len(feature_order)) :]
     else:
         feature_order = np.flip(np.arange(min(max_display, num_features)), 0)
 
@@ -673,7 +723,7 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             shaps = shaps[inds]
             colored_feature = True
             try:
-                if idx2cat is not None and idx2cat[i]: # check categorical feature
+                if idx2cat is not None and idx2cat[i]:  # check categorical feature
                     colored_feature = False
                 else:
                     values = np.array(values, dtype=np.float64)  # make sure this can be numeric
@@ -706,16 +756,23 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     if vmin == vmax:
                         vmin = np.min(values)
                         vmax = np.max(values)
-                if vmin > vmax: # fixes rare numerical precision issues
+                if vmin > vmax:  # fixes rare numerical precision issues
                     vmin = vmax
 
                 assert features.shape[0] == len(shaps), "Feature and SHAP matrices must have the same number of rows!"
 
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
-                pl.scatter(shaps[nan_mask], pos + ys[nan_mask], color="#777777",
-                           s=16, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
+                pl.scatter(
+                    shaps[nan_mask],
+                    pos + ys[nan_mask],
+                    color="#777777",
+                    s=16,
+                    alpha=alpha,
+                    linewidth=0,
+                    zorder=3,
+                    rasterized=len(shaps) > 500,
+                )
 
                 # plot the non-nan values colored by the trimmed feature value
                 cvals = values[np.invert(nan_mask)].astype(np.float64)
@@ -723,22 +780,38 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
                 cvals[cvals_imp > vmax] = vmax
                 cvals[cvals_imp < vmin] = vmin
-                pl.scatter(shaps[np.invert(nan_mask)], pos + ys[np.invert(nan_mask)],
-                           cmap=cmap, vmin=vmin, vmax=vmax, s=16,
-                           c=cvals, alpha=alpha, linewidth=0,
-                           zorder=3, rasterized=len(shaps) > 500)
+                pl.scatter(
+                    shaps[np.invert(nan_mask)],
+                    pos + ys[np.invert(nan_mask)],
+                    cmap=cmap,
+                    vmin=vmin,
+                    vmax=vmax,
+                    s=16,
+                    c=cvals,
+                    alpha=alpha,
+                    linewidth=0,
+                    zorder=3,
+                    rasterized=len(shaps) > 500,
+                )
             else:
-
-                pl.scatter(shaps, pos + ys, s=16, alpha=alpha, linewidth=0, zorder=3,
-                           color=color if colored_feature else "#777777", rasterized=len(shaps) > 500)
+                pl.scatter(
+                    shaps,
+                    pos + ys,
+                    s=16,
+                    alpha=alpha,
+                    linewidth=0,
+                    zorder=3,
+                    color=color if colored_feature else "#777777",
+                    rasterized=len(shaps) > 500,
+                )
 
     elif plot_type == "violin":
         for pos, i in enumerate(feature_order):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:
-            global_low = np.nanpercentile(shap_values[:, :len(feature_names)].flatten(), 1)
-            global_high = np.nanpercentile(shap_values[:, :len(feature_names)].flatten(), 99)
+            global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
+            global_high = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 99)
             for pos, i in enumerate(feature_order):
                 shaps = shap_values[:, i]
                 shap_min, shap_max = np.min(shaps), np.max(shaps)
@@ -759,7 +832,6 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                 running_sum = 0
                 back_fill = 0
                 for j in range(len(xs) - 1):
-
                     while leading_pos < len(shaps) and xs[j] >= shaps[sort_inds[leading_pos]]:
                         running_sum += values[sort_inds[leading_pos]]
                         leading_pos += 1
@@ -784,18 +856,33 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
 
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
-                pl.scatter(shaps[nan_mask], np.ones(shap_values[nan_mask].shape[0]) * pos,
-                           color="#777777", s=9,
-                           alpha=alpha, linewidth=0, zorder=1)
+                pl.scatter(
+                    shaps[nan_mask],
+                    np.ones(shap_values[nan_mask].shape[0]) * pos,
+                    color="#777777",
+                    s=9,
+                    alpha=alpha,
+                    linewidth=0,
+                    zorder=1,
+                )
                 # plot the non-nan values colored by the trimmed feature value
                 cvals = values[np.invert(nan_mask)].astype(np.float64)
                 cvals_imp = cvals.copy()
                 cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
                 cvals[cvals_imp > vmax] = vmax
                 cvals[cvals_imp < vmin] = vmin
-                pl.scatter(shaps[np.invert(nan_mask)], np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
-                           cmap=cmap, vmin=vmin, vmax=vmax, s=9,
-                           c=cvals, alpha=alpha, linewidth=0, zorder=1)
+                pl.scatter(
+                    shaps[np.invert(nan_mask)],
+                    np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
+                    cmap=cmap,
+                    vmin=vmin,
+                    vmax=vmax,
+                    s=9,
+                    c=cvals,
+                    alpha=alpha,
+                    linewidth=0,
+                    zorder=1,
+                )
                 # smooth_values -= nxp.nanpercentile(smooth_values, 5)
                 # smooth_values /= np.nanpercentile(smooth_values, 95)
                 smooth_values -= vmin
@@ -803,24 +890,36 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
                     smooth_values /= vmax - vmin
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
-                        pl.fill_between([xs[i], xs[i + 1]], [pos + ds[i], pos + ds[i + 1]],
-                                        [pos - ds[i], pos - ds[i + 1]], color=colors.red_blue_no_bounds(smooth_values[i]),
-                                        zorder=2)
+                        pl.fill_between(
+                            [xs[i], xs[i + 1]],
+                            [pos + ds[i], pos + ds[i + 1]],
+                            [pos - ds[i], pos - ds[i + 1]],
+                            color=colors.red_blue_no_bounds(smooth_values[i]),
+                            zorder=2,
+                        )
 
         else:
-            parts = pl.violinplot(shap_values[:, feature_order], range(len(feature_order)), points=200, vert=False,
-                                  widths=0.7,
-                                  showmeans=False, showextrema=False, showmedians=False)
+            parts = pl.violinplot(
+                shap_values[:, feature_order],
+                range(len(feature_order)),
+                points=200,
+                vert=False,
+                widths=0.7,
+                showmeans=False,
+                showextrema=False,
+                showmedians=False,
+            )
 
-            for pc in parts['bodies']:
+            for pc in parts["bodies"]:
                 pc.set_facecolor(color)
-                pc.set_edgecolor('none')
+                pc.set_edgecolor("none")
                 pc.set_alpha(alpha)
 
     elif plot_type == "layered_violin":  # courtesy of @kodonnell
         num_x_points = 200
-        bins = np.linspace(0, features.shape[0], layered_violin_max_num_bins + 1).round(0).astype(
-            'int')  # the indices of the feature data corresponding to each bin
+        bins = (
+            np.linspace(0, features.shape[0], layered_violin_max_num_bins + 1).round(0).astype("int")
+        )  # the indices of the feature data corresponding to each bin
         shap_min, shap_max = np.min(shap_values), np.max(shap_values)
         x_points = np.linspace(shap_min, shap_max, num_x_points)
 
@@ -845,12 +944,13 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             ys = np.zeros((nbins, num_x_points))
             for i in range(nbins):
                 # get shap values in this bin:
-                shaps = shap_values[order[thesebins[i]:thesebins[i + 1]], ind]
+                shaps = shap_values[order[thesebins[i] : thesebins[i + 1]], ind]
                 # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
                         "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
-                        % (i, feature_names[ind]))
+                        % (i, feature_names[ind])
+                    )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0
                     if i > 0:
@@ -873,8 +973,9 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             scale = ys.max() * 2 / width  # 2 is here as we plot both sides of x axis
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
-                c = pl.get_cmap(color)(i / (
-                        nbins - 1)) if color in pl.cm.datad else color  # if color is a cmap, use it, otherwise use a color
+                c = (
+                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.cm.datad else color
+                )  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
 
@@ -882,13 +983,13 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         global_shap_values = np.abs(shap_values).mean(0)
-        pl.barh(y_pos, global_shap_values[feature_inds], 0.7, align='center', color=color)
+        pl.barh(y_pos, global_shap_values[feature_inds], 0.7, align="center", color=color)
         pl.yticks(y_pos, fontsize=13)
         pl.gca().set_yticklabels([feature_names[i] for i in feature_inds])
 
     elif multi_class and plot_type == "bar":
         if class_names is None:
-            class_names = ["Class "+str(i) for i in range(len(shap_values))]
+            class_names = ["Class " + str(i) for i in range(len(shap_values))]
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         left_pos = np.zeros(len(feature_inds))
@@ -907,21 +1008,16 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
             if smallest_shap > 1:
                 n_decimals = 1
             else:
-                n_decimals = int(-np.floor(
-                    np.log10(
-                        smallest_shap
-                    )
-                ))
+                n_decimals = int(-np.floor(np.log10(smallest_shap)))
 
         for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
             if show_values_in_legend:
-                label = f'{class_names[ind]} ({np.round(np.mean(global_shap_values),(n_decimals+1))})'
+                label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values),(n_decimals+1))})"
             else:
                 label = class_names[ind]
             pl.barh(
-                y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align='center',
-                color=color(i), label=label
+                y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align="center", color=color(i), label=label
             )
             left_pos += global_shap_values[feature_inds]
         pl.yticks(y_pos, fontsize=13)
@@ -929,36 +1025,41 @@ def summary_legacy(shap_values, features=None, feature_names=None, max_display=N
         pl.legend(frameon=False, fontsize=12)
 
     # draw the color bar
-    if color_bar and features is not None and plot_type != "bar" and \
-            (plot_type != "layered_violin" or color in pl.cm.datad):
+    if (
+        color_bar
+        and features is not None
+        and plot_type != "bar"
+        and (plot_type != "layered_violin" or color in pl.cm.datad)
+    ):
         import matplotlib.cm as cm
+
         m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
         m.set_array([0, 1])
         cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
-        cb.set_ticklabels([labels['FEATURE_VALUE_LOW'], labels['FEATURE_VALUE_HIGH']])
+        cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)
-#         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
-#         cb.ax.set_aspect((bbox.height - 0.9) * 20)
-        # cb.draw_all()
+    #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
+    # cb.draw_all()
 
-    pl.gca().xaxis.set_ticks_position('bottom')
-    pl.gca().yaxis.set_ticks_position('none')
-    pl.gca().spines['right'].set_visible(False)
-    pl.gca().spines['top'].set_visible(False)
-    pl.gca().spines['left'].set_visible(False)
+    pl.gca().xaxis.set_ticks_position("bottom")
+    pl.gca().yaxis.set_ticks_position("none")
+    pl.gca().spines["right"].set_visible(False)
+    pl.gca().spines["top"].set_visible(False)
+    pl.gca().spines["left"].set_visible(False)
     pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
     pl.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
     if plot_type != "bar":
-        pl.gca().tick_params('y', length=20, width=0.5, which='major')
-    pl.gca().tick_params('x', labelsize=11)
+        pl.gca().tick_params("y", length=20, width=0.5, which="major")
+    pl.gca().tick_params("x", labelsize=11)
     pl.ylim(-1, len(feature_order))
     if plot_type == "bar":
-        pl.xlabel(labels['GLOBAL_VALUE'], fontsize=13)
+        pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
     else:
-        pl.xlabel(labels['VALUE'], fontsize=13)
+        pl.xlabel(labels["VALUE"], fontsize=13)
     pl.tight_layout()
     if show:
         pl.show()

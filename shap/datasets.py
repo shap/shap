@@ -50,6 +50,7 @@ def imagenet50(resolution=224, n_points=None):
 
     return X, y
 
+
 def california(n_points=None):
     """Return the California housing data in a structured format.
 
@@ -93,7 +94,6 @@ def california(n_points=None):
         target = shap.utils.sample(target, n_points, random_state=0)
 
     return df, target
-
 
 
 def linnerud(n_points=None):
@@ -197,23 +197,20 @@ def communitiesandcrime(n_points=None):
         data, target = shap.datasets.communitiesandcrime()
 
     """
-    raw_data = pd.read_csv(
-        cache(github_data_url + "CommViolPredUnnormalizedData.txt"),
-        na_values="?"
-    )
+    raw_data = pd.read_csv(cache(github_data_url + "CommViolPredUnnormalizedData.txt"), na_values="?")
 
     # find the indices where the total violent crimes are known
-    valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:,-2])))[0]
+    valid_inds = np.where(np.invert(np.isnan(raw_data.iloc[:, -2])))[0]
 
     if n_points is not None:
         valid_inds = shap.utils.sample(valid_inds, n_points, random_state=0)
 
-    y = np.array(raw_data.iloc[valid_inds,-2], dtype=float)
+    y = np.array(raw_data.iloc[valid_inds, -2], dtype=float)
 
     # extract the predictive features and remove columns with missing values
-    X = raw_data.iloc[valid_inds,5:-18]
+    X = raw_data.iloc[valid_inds, 5:-18]
     valid_cols = np.where(np.isnan(X.values).sum(0) == 0)[0]
-    X = X.iloc[:,valid_cols]
+    X = X.iloc[:, valid_cols]
 
     return X, y
 
@@ -368,17 +365,24 @@ def adult(display=False, n_points=None):
 
     """
     dtypes = [
-        ("Age", "float32"), ("Workclass", "category"), ("fnlwgt", "float32"),
-        ("Education", "category"), ("Education-Num", "float32"), ("Marital Status", "category"),
-        ("Occupation", "category"), ("Relationship", "category"), ("Race", "category"),
-        ("Sex", "category"), ("Capital Gain", "float32"), ("Capital Loss", "float32"),
-        ("Hours per week", "float32"), ("Country", "category"), ("Target", "category")
+        ("Age", "float32"),
+        ("Workclass", "category"),
+        ("fnlwgt", "float32"),
+        ("Education", "category"),
+        ("Education-Num", "float32"),
+        ("Marital Status", "category"),
+        ("Occupation", "category"),
+        ("Relationship", "category"),
+        ("Race", "category"),
+        ("Sex", "category"),
+        ("Capital Gain", "float32"),
+        ("Capital Loss", "float32"),
+        ("Hours per week", "float32"),
+        ("Country", "category"),
+        ("Target", "category"),
     ]
     raw_data = pd.read_csv(
-        cache(github_data_url + "adult.data"),
-        names=[d[0] for d in dtypes],
-        na_values="?",
-        dtype=dict(dtypes)
+        cache(github_data_url + "adult.data"), names=[d[0] for d in dtypes], na_values="?", dtype=dict(dtypes)
     )
 
     if n_points is not None:
@@ -387,14 +391,7 @@ def adult(display=False, n_points=None):
     data = raw_data.drop(["Education"], axis=1)  # redundant with Education-Num
     filt_dtypes = list(filter(lambda x: x[0] not in ["Target", "Education"], dtypes))
     data["Target"] = data["Target"] == " >50K"
-    rcode = {
-        "Not-in-family": 0,
-        "Unmarried": 1,
-        "Other-relative": 2,
-        "Own-child": 3,
-        "Husband": 4,
-        "Wife": 5
-    }
+    rcode = {"Not-in-family": 0, "Unmarried": 1, "Other-relative": 2, "Own-child": 3, "Husband": 4, "Wife": 5}
     for k, dtype in filt_dtypes:
         if dtype == "category":
             if k == "Relationship":
@@ -477,10 +474,11 @@ def corrgroups60(n_points=1_000):
 
     # build a correlation matrix with groups of 3 tightly correlated features
     C = np.eye(M)
-    for i in range(0,30,3):
-        C[i,i+1] = C[i+1,i] = 0.99
-        C[i,i+2] = C[i+2,i] = 0.99
-        C[i+1,i+2] = C[i+2,i+1] = 0.99
+    for i in range(0, 30, 3):
+        C[i, i + 1] = C[i + 1, i] = 0.99
+        C[i, i + 2] = C[i + 2, i] = 0.99
+        C[i + 1, i + 2] = C[i + 2, i + 1] = 0.99
+
     def f(X):
         return np.matmul(X, beta)
 
@@ -490,7 +488,9 @@ def corrgroups60(n_points=1_000):
     Sigma = np.matmul(X_centered.T, X_centered) / X_centered.shape[0]
     W = np.linalg.cholesky(np.linalg.inv(Sigma)).T
     X_white = np.matmul(X_centered, W.T)
-    assert np.linalg.norm(np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6 # ensure this decorrelates the data
+    assert (
+        np.linalg.norm(np.corrcoef(np.matmul(X_centered, W.T).T) - np.eye(M)) < 1e-6
+    )  # ensure this decorrelates the data
 
     # create the final data
     X_final = np.matmul(X_white, np.linalg.cholesky(C).T)
@@ -536,6 +536,7 @@ def independentlinear60(n_points=1_000):
     # set one coefficient from each group of 3 to 1
     beta = np.zeros(M)
     beta[0:30:3] = 1
+
     def f(X):
         return np.matmul(X, beta)
 
@@ -576,13 +577,14 @@ def a1a(n_points=None):
         data, target = shap.datasets.a1a()
 
     """
-    data, target = sklearn.datasets.load_svmlight_file(cache(github_data_url + 'a1a.svmlight'))
+    data, target = sklearn.datasets.load_svmlight_file(cache(github_data_url + "a1a.svmlight"))
 
     if n_points is not None:
         data = shap.utils.sample(data, n_points, random_state=0)
         target = shap.utils.sample(target, n_points, random_state=0)
 
     return data, target
+
 
 def rank():
     """Return ranking datasets from the LightGBM repository.
@@ -615,11 +617,11 @@ def rank():
 
 
     """
-    rank_data_url = 'https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/'
-    x_train, y_train = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.train'))
-    x_test, y_test = sklearn.datasets.load_svmlight_file(cache(rank_data_url + 'rank.test'))
-    q_train = np.loadtxt(cache(rank_data_url + 'rank.train.query'))
-    q_test = np.loadtxt(cache(rank_data_url + 'rank.test.query'))
+    rank_data_url = "https://raw.githubusercontent.com/Microsoft/LightGBM/master/examples/lambdarank/"
+    x_train, y_train = sklearn.datasets.load_svmlight_file(cache(rank_data_url + "rank.train"))
+    x_test, y_test = sklearn.datasets.load_svmlight_file(cache(rank_data_url + "rank.test"))
+    q_train = np.loadtxt(cache(rank_data_url + "rank.train.query"))
+    q_test = np.loadtxt(cache(rank_data_url + "rank.test.query"))
 
     return x_train, y_train, x_test, y_test, q_train, q_test
 

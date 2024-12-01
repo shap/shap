@@ -35,10 +35,7 @@ def test_violin_wrong_features_shape():
             show=False,
         )
 
-    emsg = (
-        "The shape of the shap_values matrix does not match the shape of "
-        "the provided data matrix."
-    )
+    emsg = "The shape of the shap_values matrix does not match the shape of " "the provided data matrix."
     with pytest.raises(DimensionError, match=emsg):
         expln = shap.Explanation(
             values=rs.randn(20, 5),

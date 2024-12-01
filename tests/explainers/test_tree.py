@@ -1,4 +1,5 @@
 """Test tree functions."""
+
 import itertools
 import math
 import pickle
@@ -19,8 +20,7 @@ from shap.utils._exceptions import InvalidModelError
 def test_unsupported_model_raises_error():
     """Unsupported model inputs to TreeExplainer should raise an Exception."""
 
-    class CustomEstimator:
-        ...
+    class CustomEstimator: ...
 
     emsg = "Model type not yet supported by TreeExplainer:"
     with pytest.raises(InvalidModelError, match=emsg):
@@ -35,9 +35,7 @@ def test_front_page_xgboost():
 
     # train XGBoost model
     X, y = shap.datasets.california(n_points=500)
-    model = xgboost.train(
-        {"learning_rate": 0.01, "verbosity": 0}, xgboost.DMatrix(X, label=y), 100
-    )
+    model = xgboost.train({"learning_rate": 0.01, "verbosity": 0}, xgboost.DMatrix(X, label=y), 100)
 
     # explain the model's predictions using SHAP values
     explainer = shap.TreeExplainer(model)
@@ -111,7 +109,6 @@ def _conditional_expectation(tree, S, x):
     tree_ind = 0
 
     def R(node_ind):
-
         f = tree.features[tree_ind, node_ind]
         lc = tree.children_left[tree_ind, node_ind]
         rc = tree.children_right[tree_ind, node_ind]
@@ -138,8 +135,7 @@ def _brute_force_tree_shap(tree, x):
     phi = np.zeros(m)
     for p in itertools.permutations(list(range(m))):
         for i in range(m):
-            phi[p[i]] += _conditional_expectation(tree, p[:i + 1], x) - _conditional_expectation(
-                tree, p[:i], x)
+            phi[p[i]] += _conditional_expectation(tree, p[: i + 1], x) - _conditional_expectation(tree, p[:i], x)
     return phi / math.factorial(m)
 
 
@@ -168,11 +164,12 @@ def test_ngboost_models_prediction_equal(col_sample):
 
     model = ngboost.NGBRegressor(n_estimators=2, col_sample=col_sample).fit(X, y)
 
-    tree_ensemble = TreeEnsemble(model=model,
-                                data=X,
-                                data_missing=None,
-                                model_output=0,
-                                )
+    tree_ensemble = TreeEnsemble(
+        model=model,
+        data=X,
+        data_missing=None,
+        model_output=0,
+    )
     y_pred = model.predict(X)
     y_pred_tree_ensemble = tree_ensemble.predict(X)
     assert (y_pred == y_pred_tree_ensemble).all()
@@ -195,10 +192,7 @@ def test_ngboost_sum_of_shap_values(col_sample):
     assert explanation.base_values.shape == (len(X),)
 
     # check that SHAP values sum to model output
-    assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-5
-    )
+    assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-5
 
 
 @pytest.fixture
@@ -212,24 +206,25 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     pytest.importorskip("pyspark.ml")
     try:
         spark = pyspark.sql.SparkSession.builder.config(
-            conf=pyspark.SparkConf().set("spark.master", "local[*]")).getOrCreate()
+            conf=pyspark.SparkConf().set("spark.master", "local[*]")
+        ).getOrCreate()
     except Exception:
         pytest.skip("Could not create pyspark context")
 
     iris_sk = sklearn.datasets.load_iris()
-    iris = pd.DataFrame(data=np.c_[iris_sk['data'], iris_sk['target']],
-                        columns=iris_sk['feature_names'] + ['target'])[:100]
+    iris = pd.DataFrame(data=np.c_[iris_sk["data"], iris_sk["target"]], columns=iris_sk["feature_names"] + ["target"])[
+        :100
+    ]
     col = ["sepal_length", "sepal_width", "petal_length", "petal_width", "type"]
     iris = spark.createDataFrame(iris, col)
-    iris = pyspark.ml.feature.VectorAssembler(inputCols=col[:-1], outputCol="features").transform(
-        iris)
-    iris = pyspark.ml.feature.StringIndexer(inputCol="type", outputCol="label").fit(iris).transform(
-        iris)
+    iris = pyspark.ml.feature.VectorAssembler(inputCols=col[:-1], outputCol="features").transform(iris)
+    iris = pyspark.ml.feature.StringIndexer(inputCol="type", outputCol="label").fit(iris).transform(iris)
 
     classifiers = [
         pyspark.ml.classification.GBTClassifier(labelCol="label", featuresCol="features"),
         pyspark.ml.classification.RandomForestClassifier(labelCol="label", featuresCol="features"),
-        pyspark.ml.classification.DecisionTreeClassifier(labelCol="label", featuresCol="features")]
+        pyspark.ml.classification.DecisionTreeClassifier(labelCol="label", featuresCol="features"),
+    ]
     for classifier in classifiers:
         model = classifier.fit(iris)
         explainer = shap.TreeExplainer(model)
@@ -240,8 +235,13 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
 
-        predictions = model.transform(iris).select("rawPrediction").rdd.map(
-            lambda x: [float(y) for y in x['rawPrediction']]).toDF(['class0', 'class1']).toPandas()
+        predictions = (
+            model.transform(iris)
+            .select("rawPrediction")
+            .rdd.map(lambda x: [float(y) for y in x["rawPrediction"]])
+            .toDF(["class0", "class1"])
+            .toPandas()
+        )
 
         if str(type(model)).endswith("GBTClassificationModel'>"):
             diffs = expected_values + shap_values.sum(1) - predictions.class1
@@ -249,14 +249,10 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
         else:
             normalizedPredictions = (predictions.T / predictions.sum(1)).T
             diffs = expected_values[0] + shap_values[:, :, 0].sum(1) - normalizedPredictions.class0
-            assert np.max(
-                np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!" + model
+            assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class0!" + model
             diffs = expected_values[1] + shap_values[:, :, 1].sum(1) - normalizedPredictions.class1
-            assert np.max(
-                np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class1!" + model
-            assert (np.abs(
-                expected_values - normalizedPredictions.mean()) < 1e-1).all(), \
-                "Bad expected_value!" + model
+            assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output for class1!" + model
+            assert (np.abs(expected_values - normalizedPredictions.mean()) < 1e-1).all(), "Bad expected_value!" + model
     spark.stop()
 
 
@@ -265,29 +261,30 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
     pytest.importorskip("pyspark.ml")
     try:
         spark = pyspark.sql.SparkSession.builder.config(
-            conf=pyspark.SparkConf().set("spark.master", "local[*]")).getOrCreate()
+            conf=pyspark.SparkConf().set("spark.master", "local[*]")
+        ).getOrCreate()
     except Exception:
         pytest.skip("Could not create pyspark context")
 
     iris_sk = sklearn.datasets.load_iris()
-    iris = pd.DataFrame(data=np.c_[iris_sk['data'], iris_sk['target']],
-                        columns=iris_sk['feature_names'] + ['target'])[:100]
+    iris = pd.DataFrame(data=np.c_[iris_sk["data"], iris_sk["target"]], columns=iris_sk["feature_names"] + ["target"])[
+        :100
+    ]
 
     # Simple regressor: try to predict sepal length based on the other features
     col = ["sepal_length", "sepal_width", "petal_length", "petal_width", "type"]
     iris = spark.createDataFrame(iris, col).drop("type")
-    iris = pyspark.ml.feature.VectorAssembler(inputCols=col[1:-1], outputCol="features").transform(
-        iris)
+    iris = pyspark.ml.feature.VectorAssembler(inputCols=col[1:-1], outputCol="features").transform(iris)
 
     regressors = [
         pyspark.ml.regression.GBTRegressor(labelCol="sepal_length", featuresCol="features"),
         pyspark.ml.regression.RandomForestRegressor(labelCol="sepal_length", featuresCol="features"),
-        pyspark.ml.regression.DecisionTreeRegressor(labelCol="sepal_length", featuresCol="features")
+        pyspark.ml.regression.DecisionTreeRegressor(labelCol="sepal_length", featuresCol="features"),
     ]
     for regressor in regressors:
         model = regressor.fit(iris)
         explainer = shap.TreeExplainer(model)
-        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop('sepal length (cm)', axis=1)[:100]
+        X = pd.DataFrame(data=iris_sk.data, columns=iris_sk.feature_names).drop("sepal length (cm)", axis=1)[:100]
 
         shap_values = explainer.shap_values(X, check_additivity=False)
         expected_values = explainer.expected_value
@@ -301,10 +298,10 @@ def test_pyspark_regression_decision_tree(configure_pyspark_python):
 
 
 def create_binary_newsgroups_data():
-    categories = ['alt.atheism', 'soc.religion.christian']
-    newsgroups_train = sklearn.datasets.fetch_20newsgroups(subset='train', categories=categories)
-    newsgroups_test = sklearn.datasets.fetch_20newsgroups(subset='test', categories=categories)
-    class_names = ['atheism', 'christian']
+    categories = ["alt.atheism", "soc.religion.christian"]
+    newsgroups_train = sklearn.datasets.fetch_20newsgroups(subset="train", categories=categories)
+    newsgroups_test = sklearn.datasets.fetch_20newsgroups(subset="test", categories=categories)
+    class_names = ["atheism", "christian"]
     return newsgroups_train, newsgroups_test, class_names
 
 
@@ -329,10 +326,7 @@ def test_gpboost():
     assert explanation.base_values.shape == (len(X),)
 
     # check that SHAP values sum to model output
-    assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
-    )
+    assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
 
 def test_catboost():
@@ -354,10 +348,7 @@ def test_catboost():
     assert explanation.base_values.shape == (len(X),)
 
     # check that SHAP values sum to model output
-    assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
-    )
+    assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
     model = catboost.CatBoostClassifier(iterations=10, learning_rate=0.5, random_seed=12)
@@ -373,9 +364,7 @@ def test_catboost():
     assert explanation.base_values.shape == (len(X),)
 
     # check that SHAP values sum to model output
-    assert np.allclose(
-        explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4
-    )
+    assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
 
 
 def test_catboost_categorical():
@@ -383,7 +372,7 @@ def test_catboost_categorical():
     X, y = shap.datasets.california(n_points=500)
     X["IsOld"] = (X["HouseAge"] > 30).astype(str)
 
-    model = catboost.CatBoostRegressor(100, cat_features=['IsOld'], verbose=False)
+    model = catboost.CatBoostRegressor(100, cat_features=["IsOld"], verbose=False)
     model.fit(X, y)
     predicted = model.predict(X)
 
@@ -396,10 +385,7 @@ def test_catboost_categorical():
     assert explanation.base_values.shape == (len(X),)
 
     # check that SHAP values sum to model output
-    assert (
-        np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-        < 1e-4
-    )
+    assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
 
 def test_catboost_interactions():
@@ -459,7 +445,7 @@ def test_isolation_forest():
         assert explanation.base_values.shape == (len(X),)
 
         path_length = _average_path_length(np.array([iso.max_samples_]))[0]
-        score_from_shap = -2 ** (-(explanation.values.sum(1) + explanation.base_values) / path_length)
+        score_from_shap = -(2 ** (-(explanation.values.sum(1) + explanation.base_values) / path_length))
         assert np.allclose(iso.score_samples(X), score_from_shap, atol=1e-7)
 
 
@@ -481,7 +467,7 @@ def test_pyod_isolation_forest():
         assert explanation.base_values.shape == (len(X),)
 
         path_length = _average_path_length(np.array([iso.max_samples_]))[0]
-        score_from_shap = -2 ** (-(explanation.values.sum(1) + explanation.base_values) / path_length)
+        score_from_shap = -(2 ** (-(explanation.values.sum(1) + explanation.base_values) / path_length))
         assert np.allclose(iso.detector_.score_samples(X), score_from_shap, atol=1e-7)
 
 
@@ -524,22 +510,21 @@ def test_provided_background_independent():
     dtest = xgboost.DMatrix(test_x, feature_names=feature_names)
 
     params = {
-        'booster': 'gbtree',
-        'objective': 'binary:logistic',
-        'max_depth': 4,
-        'eta': 0.1,
-        'nthread': -1,
+        "booster": "gbtree",
+        "objective": "binary:logistic",
+        "max_depth": 4,
+        "eta": 0.1,
+        "nthread": -1,
     }
 
     bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
     explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="interventional")
-    diffs = explainer.expected_value + \
-            explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
+    diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert np.abs(explainer.expected_value - bst.predict(dtest,
-                                                         output_margin=True).mean()) < 1e-4, \
-        "Bad expected_value!"
+    assert (
+        np.abs(explainer.expected_value - bst.predict(dtest, output_margin=True).mean()) < 1e-4
+    ), "Bad expected_value!"
 
 
 def test_provided_background_independent_prob_output():
@@ -556,21 +541,19 @@ def test_provided_background_independent_prob_output():
 
     for objective in ["reg:logistic", "binary:logistic"]:
         params = {
-            'booster': 'gbtree',
-            'objective': objective,
-            'max_depth': 4,
-            'eta': 0.1,
-            'nthread': -1,
+            "booster": "gbtree",
+            "objective": objective,
+            "max_depth": 4,
+            "eta": 0.1,
+            "nthread": -1,
         }
 
         bst = xgboost.train(params=params, dtrain=dtrain, num_boost_round=100)
 
-        explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="interventional",
-                                       model_output="probability")
+        explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="interventional", model_output="probability")
         diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest)
         assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-        assert np.abs(
-            explainer.expected_value - bst.predict(dtest).mean()) < 1e-4, "Bad expected_value!"
+        assert np.abs(explainer.expected_value - bst.predict(dtest).mean()) < 1e-4, "Bad expected_value!"
 
 
 def test_single_tree_compare_with_kernel_shap():
@@ -590,29 +573,25 @@ def test_single_tree_compare_with_kernel_shap():
 
     # train a model with single tree
     Xd = xgboost.DMatrix(X, label=y)
-    model = xgboost.train({'eta': 1,
-                           'max_depth': 6,
-                           'base_score': 0,
-                           "lambda": 0},
-                          Xd, 1)
+    model = xgboost.train({"eta": 1, "max_depth": 6, "base_score": 0, "lambda": 0}, Xd, 1)
     ypred = model.predict(Xd)
 
     # Compare for five random samples
     for _ in range(5):
         x_ind = rs.choice(X.shape[1])
-        x = X[x_ind:x_ind + 1, :]
+        x = X[x_ind : x_ind + 1, :]
 
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
+
         def f(inp):
             return model.predict(xgboost.DMatrix(inp))
+
         expl_kern = shap.KernelExplainer(f, X)
 
         itshap = expl.shap_values(x)
         kshap = expl_kern.shap_values(x, nsamples=150)
-        assert np.allclose(itshap, kshap), \
-            "Kernel SHAP doesn't match Independent Tree SHAP!"
-        assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
-            "SHAP values don't sum to model output!"
+        assert np.allclose(itshap, kshap), "Kernel SHAP doesn't match Independent Tree SHAP!"
+        assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), "SHAP values don't sum to model output!"
 
 
 def test_several_trees():
@@ -632,21 +611,16 @@ def test_several_trees():
 
     # train a model with single tree
     Xd = xgboost.DMatrix(X, label=y)
-    model = xgboost.train({'eta': 1,
-                           'max_depth': max_depth,
-                           'base_score': 0,
-                           "lambda": 0},
-                          Xd, 20)
+    model = xgboost.train({"eta": 1, "max_depth": max_depth, "base_score": 0, "lambda": 0}, Xd, 20)
     ypred = model.predict(Xd)
 
     # Compare for five random samples
     for _ in range(5):
         x_ind = rs.choice(X.shape[1])
-        x = X[x_ind:x_ind + 1, :]
+        x = X[x_ind : x_ind + 1, :]
         expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
         itshap = expl.shap_values(x)
-        assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), \
-            "SHAP values don't sum to model output!"
+        assert np.allclose(itshap.sum() + expl.expected_value, ypred[x_ind]), "SHAP values don't sum to model output!"
 
 
 def test_single_tree_nonlinear_transformations():
@@ -677,35 +651,34 @@ def test_single_tree_nonlinear_transformations():
 
     # train a model with single tree
     Xd = xgboost.DMatrix(X, label=y)
-    model = xgboost.train({'eta': 1,
-                           'max_depth': 6,
-                           'base_score': y.mean(),
-                           "lambda": 0,
-                           "objective": "binary:logistic"},
-                          Xd, 1)
+    model = xgboost.train(
+        {"eta": 1, "max_depth": 6, "base_score": y.mean(), "lambda": 0, "objective": "binary:logistic"}, Xd, 1
+    )
     pred = model.predict(Xd, output_margin=True)  # In margin space (log odds)
     trans_pred = model.predict(Xd)  # In probability space
 
     expl = shap.TreeExplainer(model, X, feature_perturbation="interventional")
+
     def f(inp):
         return model.predict(xgboost.DMatrix(inp), output_margin=True)
+
     expl_kern = shap.KernelExplainer(f, X)
 
     x_ind = 0
-    x = X[x_ind:x_ind + 1, :]
+    x = X[x_ind : x_ind + 1, :]
     itshap = expl.shap_values(x)
     kshap = expl_kern.shap_values(x, nsamples=300)
-    assert np.allclose(itshap.sum() + expl.expected_value, pred[x_ind]), \
-        "SHAP values don't sum to model output on explaining margin!"
-    assert np.allclose(itshap, kshap), \
-        "Independent Tree SHAP doesn't match Kernel SHAP on explaining margin!"
+    assert np.allclose(
+        itshap.sum() + expl.expected_value, pred[x_ind]
+    ), "SHAP values don't sum to model output on explaining margin!"
+    assert np.allclose(itshap, kshap), "Independent Tree SHAP doesn't match Kernel SHAP on explaining margin!"
 
     model.set_attr(objective="binary:logistic")
-    expl = shap.TreeExplainer(model, X, feature_perturbation="interventional",
-                              model_output="probability")
+    expl = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="probability")
     itshap = expl.shap_values(x)
-    assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), \
-        "SHAP values don't sum to model output on explaining logistic!"
+    assert np.allclose(
+        itshap.sum() + expl.expected_value, trans_pred[x_ind]
+    ), "SHAP values don't sum to model output on explaining logistic!"
 
     # expl = shap.TreeExplainer(model, X, feature_perturbation="interventional",
     # model_output="logloss")
@@ -727,10 +700,8 @@ def test_skopt_rf_et():
     problem_bounds = [(-1e6, 3e6), (-1e6, 3e6)]
 
     # Don't worry about "objective has been evaluated" warnings.
-    result_et = skopt.forest_minimize(objective_function, problem_bounds, n_calls=100,
-                                      base_estimator="ET")
-    result_rf = skopt.forest_minimize(objective_function, problem_bounds, n_calls=100,
-                                      base_estimator="RF")
+    result_et = skopt.forest_minimize(objective_function, problem_bounds, n_calls=100, base_estimator="ET")
+    result_rf = skopt.forest_minimize(objective_function, problem_bounds, n_calls=100, base_estimator="RF")
 
     et_df = pd.DataFrame(result_et.x_iters, columns=["X0", "X1"])
 
@@ -744,10 +715,8 @@ def test_skopt_rf_et():
     explainer_rf = shap.TreeExplainer(result_rf.models[-1], rf_df)
     shap_values_rf = explainer_rf.shap_values(rf_df)
 
-    assert np.allclose(shap_values_et.sum(1) + explainer_et.expected_value,
-                       result_et.models[-1].predict(et_df))
-    assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value,
-                       result_rf.models[-1].predict(rf_df))
+    assert np.allclose(shap_values_et.sum(1) + explainer_et.expected_value, result_et.models[-1].predict(et_df))
+    assert np.allclose(shap_values_rf.sum(1) + explainer_rf.expected_value, result_rf.models[-1].predict(rf_df))
 
 
 class TestSingleTree:
@@ -819,9 +788,7 @@ class TestExplainerSklearn:
     def test_sklearn_decision_tree_multiclass(self):
         X, y = shap.datasets.iris()
         y[y == 2] = 1
-        model = sklearn.tree.DecisionTreeClassifier(
-            max_depth=None, min_samples_split=2, random_state=0
-        )
+        model = sklearn.tree.DecisionTreeClassifier(max_depth=None, min_samples_split=2, random_state=0)
         model.fit(X, y)
 
         explainer = shap.TreeExplainer(model)
@@ -833,9 +800,7 @@ class TestExplainerSklearn:
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
             *shap.datasets.adult(), test_size=0.2, random_state=0
         )
-        clf = sklearn.ensemble.RandomForestClassifier(
-            random_state=202, n_estimators=10, max_depth=10
-        )
+        clf = sklearn.ensemble.RandomForestClassifier(random_state=202, n_estimators=10, max_depth=10)
         clf.fit(X_train, Y_train)
         predicted = clf.predict_proba(X_test)
         explainer = shap.TreeExplainer(clf)
@@ -848,10 +813,7 @@ class TestExplainerSklearn:
 
         # check that SHAP values sum to model output
         class0_exp = explanation[..., 0]
-        assert (
-            np.abs(class0_exp.values.sum(1) + class0_exp.base_values - predicted[:, 0]).max()
-            < 1e-4
-        )
+        assert np.abs(class0_exp.values.sum(1) + class0_exp.base_values - predicted[:, 0]).max() < 1e-4
 
     def test_sklearn_random_forest_multiclass(self):
         X, y = shap.datasets.iris()
@@ -869,7 +831,6 @@ class TestExplainerSklearn:
 
         assert np.abs(shap_values[0, 0, 0] - 0.05) < 1e-3
         assert np.abs(shap_values[0, 0, 1] + 0.05) < 1e-3
-
 
     def test_sklearn_interaction_values(self):
         X, _ = shap.datasets.iris()
@@ -904,9 +865,7 @@ class TestExplainerSklearn:
 
     def _create_vectorizer_for_randomforestclassifier(self):
         """Helper setup function"""
-        vectorizer = sklearn.feature_extraction.text.CountVectorizer(
-            lowercase=False, min_df=0.0, binary=True
-        )
+        vectorizer = sklearn.feature_extraction.text.CountVectorizer(lowercase=False, min_df=0.0, binary=True)
 
         class DenseTransformer(sklearn.base.TransformerMixin):
             def fit(self, X, y=None, **fit_params):
@@ -916,16 +875,14 @@ class TestExplainerSklearn:
                 return X.toarray()
 
         rf = sklearn.ensemble.RandomForestClassifier(n_estimators=10, random_state=777)
-        return sklearn.pipeline.Pipeline(
-            [('vectorizer', vectorizer), ('to_dense', DenseTransformer()), ('rf', rf)]
-        )
+        return sklearn.pipeline.Pipeline([("vectorizer", vectorizer), ("to_dense", DenseTransformer()), ("rf", rf)])
 
     def test_sklearn_random_forest_newsgroups(self):
         """note: this test used to fail in native TreeExplainer code due to memory corruption"""
         newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
         pipeline = self._create_vectorizer_for_randomforestclassifier()
         pipeline.fit(newsgroups_train.data, newsgroups_train.target)
-        rf = pipeline.named_steps['rf']
+        rf = pipeline.named_steps["rf"]
         vectorizer = pipeline.named_steps["vectorizer"]
         densifier = pipeline.named_steps["to_dense"]
 
@@ -943,17 +900,13 @@ class TestExplainerSklearn:
             test_size=0.2,
             random_state=0,
         )
-        est = sklearn.ensemble.RandomForestRegressor(
-            random_state=202, n_estimators=10, max_depth=10
-        )
+        est = sklearn.ensemble.RandomForestRegressor(random_state=202, n_estimators=10, max_depth=10)
         est.fit(X_train, Y_train)
         predicted = est.predict(X_test)
 
         explainer = shap.TreeExplainer(est)
         expected_values = np.asarray(explainer.expected_value)
-        assert (
-            len(expected_values) == est.n_outputs_
-        ), "Length of expected_values doesn't match n_outputs_"
+        assert len(expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
 
         explanation = explainer(X_test)
         # check the properties of Explanation object
@@ -961,18 +914,13 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X_test), est.n_outputs_)
 
         # check that SHAP values sum to model output for all multioutputs
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_sum_match_extra_trees(self):
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
             *shap.datasets.adult(), test_size=0.2, random_state=0
         )
-        clf = sklearn.ensemble.ExtraTreesRegressor(
-            random_state=202, n_estimators=10, max_depth=10
-        )
+        clf = sklearn.ensemble.ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
         clf.fit(X_train, Y_train)
         predicted = clf.predict(X_test)
         ex = shap.TreeExplainer(clf)
@@ -989,17 +937,13 @@ class TestExplainerSklearn:
             test_size=0.2,
             random_state=0,
         )
-        est = sklearn.ensemble.ExtraTreesRegressor(
-            random_state=202, n_estimators=10, max_depth=10
-        )
+        est = sklearn.ensemble.ExtraTreesRegressor(random_state=202, n_estimators=10, max_depth=10)
         est.fit(X_train, Y_train)
         predicted = est.predict(X_test)
 
         explainer = shap.TreeExplainer(est)
         expected_values = np.asarray(explainer.expected_value)
-        assert (
-            len(expected_values) == est.n_outputs_
-        ), "Length of expected_values doesn't match n_outputs_"
+        assert len(expected_values) == est.n_outputs_, "Length of expected_values doesn't match n_outputs_"
 
         explanation = explainer(X_test)
         # check the properties of Explanation object
@@ -1007,10 +951,7 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X_test), est.n_outputs_)
 
         # check that SHAP values sum to model output for all multioutputs
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_gradient_boosting_classifier_invalid_init_estimator(self):
         """Currently only the logodds estimators are supported, so this test checks that
@@ -1019,7 +960,8 @@ class TestExplainerSklearn:
         Remove/modify this test if we support other init estimator types in the future.
         """
         clf = sklearn.ensemble.GradientBoostingClassifier(
-            n_estimators=10, init="zero",
+            n_estimators=10,
+            init="zero",
         )
         clf.fit(*shap.datasets.adult())
         with pytest.raises(InvalidModelError):
@@ -1086,9 +1028,7 @@ class TestExplainerSklearn:
             test_size=0.2,
             random_state=0,
         )
-        clf = sklearn.ensemble.GradientBoostingRegressor(
-            random_state=202, n_estimators=10, max_depth=10
-        )
+        clf = sklearn.ensemble.GradientBoostingRegressor(random_state=202, n_estimators=10, max_depth=10)
         clf.fit(X_train, Y_train)
 
         predicted = clf.predict(X_test)
@@ -1104,9 +1044,7 @@ class TestExplainerSklearn:
             test_size=0.2,
             random_state=0,
         )
-        clf = sklearn.ensemble.GradientBoostingRegressor(
-            random_state=202, n_estimators=10, max_depth=10
-        )
+        clf = sklearn.ensemble.GradientBoostingRegressor(random_state=202, n_estimators=10, max_depth=10)
         clf.fit(X_train, Y_train)
 
         predicted = clf.predict(X_test)
@@ -1118,20 +1056,13 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X_test),)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_HistGradientBoostingClassifier_proba(self):
         X, y = shap.datasets.adult()
-        model = sklearn.ensemble.HistGradientBoostingClassifier(
-            max_iter=10, max_depth=6
-        ).fit(X, y)
+        model = sklearn.ensemble.HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
         predicted = model.predict_proba(X)
-        explainer = shap.TreeExplainer(
-            model, shap.sample(X, 10), model_output="predict_proba"
-        )
+        explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="predict_proba")
 
         explanation = explainer(X)
         # check the properties of Explanation object
@@ -1140,18 +1071,13 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X), num_classes)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_HistGradientBoostingClassifier_multidim(self, random_seed):
         X, y = shap.datasets.adult(n_points=400)
         rs = np.random.RandomState(random_seed)
         y = rs.randint(0, 3, len(y))
-        model = sklearn.ensemble.HistGradientBoostingClassifier(
-            max_iter=10, max_depth=6
-        ).fit(X, y)
+        model = sklearn.ensemble.HistGradientBoostingClassifier(max_iter=10, max_depth=6).fit(X, y)
         predicted = model.decision_function(X)
         explainer = shap.TreeExplainer(model, shap.sample(X, 10), model_output="raw")
 
@@ -1162,16 +1088,11 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X), num_classes)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_HistGradientBoostingRegressor(self):
         X, y = shap.datasets.diabetes()
-        model = sklearn.ensemble.HistGradientBoostingRegressor(
-            max_iter=500, max_depth=6
-        ).fit(X, y)
+        model = sklearn.ensemble.HistGradientBoostingRegressor(max_iter=500, max_depth=6).fit(X, y)
         predicted = model.predict(X)
         explainer = shap.TreeExplainer(model)
 
@@ -1181,10 +1102,7 @@ class TestExplainerSklearn:
         assert explanation.base_values.shape == (len(X),)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
 
 class TestExplainerXGBoost:
@@ -1200,12 +1118,11 @@ class TestExplainerXGBoost:
 
     xgboost = pytest.importorskip("xgboost")
 
-    regressors =  [xgboost.XGBRegressor, xgboost.XGBRFRegressor]
+    regressors = [xgboost.XGBRegressor, xgboost.XGBRFRegressor]
     classifiers = [xgboost.XGBClassifier, xgboost.XGBRFClassifier]
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_regression(self, Reg):
-
         # train xgboost model
         X, y = shap.datasets.california(n_points=500)
         model = Reg().fit(X, y)
@@ -1222,7 +1139,9 @@ class TestExplainerXGBoost:
         expected_diff = np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
         assert expected_diff < 1e-4, "SHAP values don't sum to model output!"
 
-    @pytest.mark.skipif(sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709.")
+    @pytest.mark.skipif(
+        sys.platform == "darwin", reason="Test currently not working on mac. Investigating is a todo, see GH #3709."
+    )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
         """Test that xgboost sklearn attributues are properly passed to the DMatrix
@@ -1247,7 +1166,6 @@ class TestExplainerXGBoost:
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
-
         random_seed = 0
         rs = np.random.RandomState(random_seed)
         N = 100
@@ -1283,16 +1201,10 @@ class TestExplainerXGBoost:
         assert explanation.base_values.shape == (len(X), num_classes)
 
         # check that SHAP values sum to model output
-        np.testing.assert_allclose(
-            explanation.values.sum(1) + explanation.base_values,
-            predicted, atol=1e-4
-        )
+        np.testing.assert_allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
 
         int_explanation = explainer(X, interactions=True)
-        np.testing.assert_allclose(
-            int_explanation.values.sum((1, 2)) + explanation.base_values,
-            predicted, atol=1e-4
-        )
+        np.testing.assert_allclose(int_explanation.values.sum((1, 2)) + explanation.base_values, predicted, atol=1e-4)
 
         # ensure plot works for first class
         shap.dependence_plot(0, explanation[..., 0].values, X, show=False)
@@ -1329,7 +1241,7 @@ class TestExplainerXGBoost:
 
         X, y = shap.datasets.california(n_points=500)
         X["HouseAge"] = X["HouseAge"].astype(np.int64)
-        X['IsOld'] = (X['HouseAge'] > 30)
+        X["IsOld"] = X["HouseAge"] > 30
         bst = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 1000)
         shap_values = shap.TreeExplainer(bst).shap_values(X)
         shap.dependence_plot(0, shap_values, X, show=False)
@@ -1346,9 +1258,7 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = self.xgboost.XGBClassifier(
-            n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact"
-        )
+        model = self.xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed, tree_method="exact")
         model.fit(X, y)
         predicted = model.predict(X, output_margin=True)
 
@@ -1381,9 +1291,7 @@ class TestExplainerXGBoost:
         y = y + abs(min(y))
         y = rs.binomial(n=1, p=y / max(y))
 
-        model = self.xgboost.XGBClassifier(
-            n_estimators=10, max_depth=5, random_state=random_seed
-        )
+        model = self.xgboost.XGBClassifier(n_estimators=10, max_depth=5, random_state=random_seed)
         model.fit(X, y)
         predicted = model.predict_proba(X)
 
@@ -1492,17 +1400,13 @@ class TestExplainerXGBoost:
         assert explainer.model.tree_limit == clf.n_estimators * len(np.unique(y)) * 3
 
         # - multiclass, forest, early stop
-        clf = xgboost.XGBClassifier(
-            n_estimators=1000, num_parallel_tree=3, early_stopping_rounds=1
-        )
+        clf = xgboost.XGBClassifier(n_estimators=1000, num_parallel_tree=3, early_stopping_rounds=1)
         clf.fit(X_train, y_train, eval_set=[(X_test, y_test)])
         # make sure we don't waste too much time on this test
         assert clf.best_iteration < 15
 
         explainer = shap.TreeExplainer(clf)
-        assert (
-            explainer.model.tree_limit == (clf.best_iteration + 1) * len(np.unique(y)) * 3
-        )
+        assert explainer.model.tree_limit == (clf.best_iteration + 1) * len(np.unique(y)) * 3
 
         # - binary classification, forest
         X, y = load_digits(return_X_y=True, n_class=2)
@@ -1556,10 +1460,7 @@ class TestExplainerLightGBM:
         assert explanation.base_values.shape == (len(X),)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_lightgbm_constant_prediction(self):
         # note: this test used to fail with lightgbm 2.2.1 with error:
@@ -1574,9 +1475,9 @@ class TestExplainerLightGBM:
         # use the mean for all values
         y.fill(np.mean(y))
         dataset = lightgbm.Dataset(data=X, label=y, categorical_feature=[8])
-        model = lightgbm.train({"objective": "regression", "verbosity": -1,
-                                "num_threads": 1},
-                               train_set=dataset, num_boost_round=1000)
+        model = lightgbm.train(
+            {"objective": "regression", "verbosity": -1, "num_threads": 1}, train_set=dataset, num_boost_round=1000
+        )
 
         # explain the model's predictions using SHAP values
         shap.TreeExplainer(model).shap_values(X)
@@ -1662,10 +1563,7 @@ class TestExplainerLightGBM:
         assert explanation.base_values.shape == (len(X), num_classes)
 
         # check that SHAP values sum to model output
-        assert (
-            np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max()
-            < 1e-4
-        )
+        assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     # def test_lightgbm_ranking(self):
     #     try:
@@ -1706,7 +1604,9 @@ class TestExplainerLightGBM:
 
         interaction_vals = ex(X.iloc[0, :], interactions=True)
         prediction = model.predict(X.iloc[[0], :], raw_score=True)
-        np.testing.assert_allclose(interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0], prediction[0], atol=1e-4)
+        np.testing.assert_allclose(
+            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0], prediction[0], atol=1e-4
+        )
 
     def test_lightgbm_call_explanation(self):
         """Checks that __call__ runs without error and returns a valid Explanation object.
@@ -1775,7 +1675,6 @@ def test_check_consistent_outputs_binary_classification():
     e_cat = ex_cat(X, interactions=True)
     cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
 
-
     for output in [e_lgbm_bin, e_xgb_bin, e_cat_bin]:
         assert output.shape == X.shape
     # Since random forest classifiers have one dimension for each class, we have one output dimension per class
@@ -1791,11 +1690,18 @@ def test_check_consistent_outputs_binary_classification():
         assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted, atol=1e-4)
 
     # Sum binary values
-    for explanation, predicted in [(e_xgb_bin, xgb_pred), (e_cat_bin, cat_pred), (e_rfc_bin, rfc_pred), (e_lgbm_bin, lgbm_pred)]:
+    for explanation, predicted in [
+        (e_xgb_bin, xgb_pred),
+        (e_cat_bin, cat_pred),
+        (e_rfc_bin, rfc_pred),
+        (e_lgbm_bin, lgbm_pred),
+    ]:
         assert np.allclose(explanation.values.sum(1) + explanation.base_values, predicted, atol=1e-4)
+
 
 # todo: multi class classification + multi class regression tests
 # todo: test binary classification with model_output="predict_proba"
+
 
 def test_check_consistent_outputs_for_regression():
     lightgbm = pytest.importorskip("lightgbm")
@@ -1834,10 +1740,12 @@ def test_check_consistent_outputs_for_regression():
     e_cat = ex_cat(X, interactions=True)
     cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
 
-    assert (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape, \
-        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, RandomForest: {e_rfc_bin.shape}"
-    assert (50, 8, 8) == e_lgbm.shape == e_xgb.shape == e_rfc.shape, \
-        f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
+    assert (
+        (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape
+    ), f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, RandomForest: {e_rfc_bin.shape}"
+    assert (
+        (50, 8, 8) == e_lgbm.shape == e_xgb.shape == e_rfc.shape
+    ), f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
     for outputs, pred in [(e_lgbm_bin, lgbm_pred), (e_xgb_bin, xgb_pred), (e_rfc_bin, rfc_pred), (e_cat_bin, cat_pred)]:
         assert np.allclose(outputs.values.sum(1) + outputs.base_values, pred, atol=1e-4)
     for outputs, pred in [(e_lgbm, lgbm_pred), (e_xgb, xgb_pred), (e_rfc, rfc_pred), (e_cat, cat_pred)]:
@@ -1876,8 +1784,9 @@ def test_lightgbm_interactions():
     explanation_flat = explainer(X[0, :], interactions=True)
     predicted_flat = model.predict(X[[0], :], raw_score=True)
 
-    np.testing.assert_allclose(explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4)
-
+    np.testing.assert_allclose(
+        explanation_flat.values.sum((0, 1)) + explanation_flat.base_values[0], predicted_flat[0], atol=1e-4
+    )
 
 
 def test_catboost_column_names_with_special_characters():
@@ -1887,22 +1796,21 @@ def test_catboost_column_names_with_special_characters():
     np.random.seed(42)
 
     # Simulate a dataset
-    x_train = pd.DataFrame({
-            'x5=ROMÁNIA': np.random.choice([0, 1], size=10),
-        })
+    x_train = pd.DataFrame(
+        {
+            "x5=ROMÁNIA": np.random.choice([0, 1], size=10),
+        }
+    )
 
-    y_train =np.random.choice([0, 1], size=10)
+    y_train = np.random.choice([0, 1], size=10)
     # Fit a CatBoostClassifier
     cb_best = catboost.CatBoostClassifier(random_state=42, allow_writing_files=False, iterations=3, depth=1)
     cb_best.fit(x_train, y_train)
 
     # Create a SHAP TreeExplainer
     explainer = shap.TreeExplainer(
-            cb_best,
-            data=x_train,
-            model_output='probability',
-            feature_perturbation='interventional'
-        )
+        cb_best, data=x_train, model_output="probability", feature_perturbation="interventional"
+    )
     shap_values = explainer.shap_values(x_train)
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, cb_best.predict_proba(x_train)[:, 1])
 
@@ -1920,13 +1828,14 @@ def test_xgboost_tweedie_regression():
 
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, np.log(model.predict(X)), atol=1e-4)
 
+
 def test_xgboost_dart_regression():
     """GH #3665"""
     xgboost = pytest.importorskip("xgboost")
 
     model = xgboost.XGBRegressor(booster="dart")
     X = np.random.rand(10, 5)
-    label = np.array([0]*5 + [1]*5)
+    label = np.array([0] * 5 + [1] * 5)
     model.fit(X, label)
 
     explainer = shap.TreeExplainer(model)
