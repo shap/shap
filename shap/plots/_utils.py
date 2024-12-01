@@ -1,19 +1,28 @@
-import matplotlib.pyplot as pl
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+
+import matplotlib.pyplot as plt
 import numpy as np
+from typing_extensions import TypeAlias
 
 from .. import Explanation
 from ..utils import OpChain
 from . import colors
 
+if TYPE_CHECKING:
+    from matplotlib.colors import Colormap
 
-def convert_color(color):
+
+def convert_color(color: str) -> np.ndarray | Colormap | str:
+    """Converts a color specification alias into its actual representation"""
     if color == "shap_red":
         return colors.red_rgb
     if color == "shap_blue":
         return colors.blue_rgb
 
     try:
-        return pl.get_cmap(color)
+        return plt.get_cmap(color)
     except ValueError:
         return color
 
@@ -22,7 +31,7 @@ def convert_ordering(ordering, shap_values):
     if issubclass(type(ordering), OpChain):
         ordering = ordering.apply(Explanation(shap_values))
     if issubclass(type(ordering), Explanation):
-        if "argsort" in [op["name"] for op in ordering.op_history]:
+        if any(op.name == "argsort" for op in ordering.op_history):
             ordering = ordering.values
         else:
             ordering = ordering.argsort.flip.values
@@ -128,8 +137,8 @@ def dendrogram_coords(leaf_positions, partition_tree):
     Note that scipy can compute these coords as well, but it does not allow you to easily specify
     a specific leaf order, hence this reimplementation.
     """
-    xout = []
-    yout = []
+    xout: list[list[float]] = []
+    yout: list[list[float]] = []
     _dendrogram_coords_rec(partition_tree.shape[0] - 1, leaf_positions, partition_tree, xout, yout)
 
     return np.array(xout), np.array(yout)
@@ -226,3 +235,40 @@ def sort_inds(partition_tree, leaf_values, pos=None, inds=None):
     sort_inds(partition_tree, leaf_values, right, inds)
 
     return inds
+
+
+# Various ways to specify a desired axis limit in plots
+AxisLimitSpec: TypeAlias = Union[Explanation, str, float, None]
+
+
+def parse_axis_limit(ax_limit: AxisLimitSpec, ax_values: np.ndarray, *, is_shap_axis: bool) -> float | None:
+    """Handle axis limits in "percentile(float)" format or from Explanation objects.
+
+    Parameters
+    ----------
+    ax_limit : LimitSpec
+        Represents one of the lower or upper bounds of an xlim / ylim of a plot.
+        Can be in "percentile(float)" format, a float or an :class:`.Explanation` object that has been aggregated
+        into a single value, e.g. ``explanation[:, "feature_name"].percentile(20)``.
+
+    ax_values : np.ndarray
+        The values represented by the axis in question. Usually the SHAP values or the feature values. Only used if
+        ``ax_limit`` is a string of the "percentile(float)" form.
+
+    is_shap_axis : bool
+        Whether the ``ax_limit`` is describing the axis representing SHAP values, or not. Only relevant when
+        ``ax_limit`` is an :class:`.Explanation` object. It is assumed that when False, the axis is representing
+        the feature values instead of the SHAP values.
+
+    """
+    if isinstance(ax_limit, str):
+        try:
+            percentage = float(ax_limit.removeprefix("percentile(").removesuffix(")"))
+        except ValueError as e:
+            raise ValueError("Only strings of the format `percentile(x)` are supported.") from e
+        return np.nanpercentile(ax_values, percentage)
+    if isinstance(ax_limit, Explanation):
+        # Extract relevant attributes, depending on whether the axis is a SHAP-value axis or not
+        return float(ax_limit.values) if is_shap_axis else float(ax_limit.data)
+    # Else, should be float or None
+    return ax_limit

@@ -59,7 +59,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
         _, pval = scipy.stats.ttest_ind(ys[:i], ys[i:])
         pvals.append(pval)
     min_pval = np.min(pvals)
-    min_pval_ind = np.argmin(pvals) * inc + inc
+    min_pval_ind = float(np.argmin(pvals) * inc + inc)
 
     if min_pval < 0.05 / shap_values.shape[1]:
         pl.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
@@ -73,7 +73,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     pl.gca().spines["right"].set_visible(False)
     pl.gca().spines["top"].set_visible(False)
     cb = pl.colorbar()
-    cb.outline.set_visible(False)
+    cb.outline.set_visible(False)  # type: ignore
     bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 20)
     cb.set_label(truncate_text(feature_names[ind], 30), size=13)

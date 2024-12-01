@@ -119,12 +119,12 @@ class Deserializer:
         if serializer_version < self.serializer_min_version:
             raise ValueError(
                 f"The file being loaded was saved with a serializer version of {serializer_version}, "
-                + f"but the current deserializer in SHAP requires at least version {self.serializer_min_version}."
+                f"but the current deserializer in SHAP requires at least version {self.serializer_min_version}."
             )
         if serializer_version > self.serializer_max_version:
             raise ValueError(
                 f"The file being loaded was saved with a serializer version of {serializer_version}, "
-                + f"but the current deserializer in SHAP only support up to version {self.serializer_max_version}."
+                f"but the current deserializer in SHAP only support up to version {self.serializer_max_version}."
             )
 
         # confirm the block name
@@ -133,7 +133,7 @@ class Deserializer:
         if block_name != self.block_name:
             raise ValueError(
                 f"The next data block in the file being loaded was supposed to be {self.block_name}, "
-                + f"but the next block found was {block_name}."
+                f"but the next block found was {block_name}."
             )
 
         # confirm the block version
@@ -142,12 +142,12 @@ class Deserializer:
         if block_version < self.block_min_version:
             raise ValueError(
                 f"The file being loaded was saved with a block version of {block_version}, "
-                + f"but the current deserializer in SHAP requires at least version {self.block_min_version}."
+                f"but the current deserializer in SHAP requires at least version {self.block_min_version}."
             )
         if block_version > self.block_max_version:
             raise ValueError(
                 f"The file being loaded was saved with a block version of {block_version}, "
-                + f"but the current deserializer in SHAP only support up to version {self.block_max_version}."
+                f"but the current deserializer in SHAP only support up to version {self.block_max_version}."
             )
         return self
 
@@ -170,7 +170,7 @@ class Deserializer:
         if loaded_name != name:
             raise ValueError(
                 f"The next data item in the file being loaded was supposed to be {name}, "
-                + f"but the next block found was {loaded_name}."
+                f"but the next block found was {loaded_name}."
             )  # We should eventually add support for skipping over unused data items in old formats...
 
         value = self._load_data_value(decoder)

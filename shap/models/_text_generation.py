@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 import numpy as np
 
@@ -48,7 +48,7 @@ class TextGeneration(Model):
         self.device = device
         if self.device is None:
             self.device = getattr(self.inner_model, "device", None)
-        self.model_type: Optional[str]  # Type hint for mypy
+        self.model_type: str | None  # Type hint for mypy
         if safe_isinstance(model, "transformers.PreTrainedModel"):
             self.model_agnostic = False
             self.model_type = "pt"

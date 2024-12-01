@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import json
 import random
 import string
-from typing import Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import matplotlib.pyplot as pl
 import numpy as np
-from matplotlib.colors import Colormap
 
 try:
     from IPython.display import HTML, display
@@ -19,18 +20,22 @@ from ..utils import ordinal_str
 from ..utils._legacy import kmeans
 from . import colors
 
+if TYPE_CHECKING:
+    from matplotlib.colors import Colormap
+
 
 def image(
-    shap_values: Union[Explanation, np.ndarray, list[np.ndarray]],
-    pixel_values: Optional[np.ndarray] = None,
-    labels: Optional[Union[list[str], np.ndarray]] = None,
-    true_labels: Optional[list] = None,
-    width: Optional[int] = 20,
-    aspect: Optional[float] = 0.2,
-    hspace: Union[Optional[float], Literal["auto"]] = 0.2,
-    labelpad: Optional[float] = None,
-    cmap: Optional[Union[str, Colormap]] = colors.red_transparent_blue,
-    show: Optional[bool] = True,
+    shap_values: Explanation | np.ndarray | list[np.ndarray],
+    pixel_values: np.ndarray | None = None,
+    labels: list[str] | np.ndarray | None = None,
+    true_labels: list | None = None,
+    width: int | None = 20,
+    aspect: float | None = 0.2,
+    hspace: float | Literal["auto"] | None = 0.2,
+    labelpad: float | None = None,
+    cmap: str | Colormap | None = colors.red_transparent_blue,
+    vmax: float | None = None,
+    show: bool | None = True,
 ):
     """Plots SHAP values for image inputs.
 
@@ -166,10 +171,13 @@ def image(
             abs_vals = np.stack([np.abs(shap_values[i]) for i in range(len(shap_values))], 0).flatten()
         else:
             abs_vals = np.stack([np.abs(shap_values[i].sum(-1)) for i in range(len(shap_values))], 0).flatten()
-        max_val = np.nanpercentile(abs_vals, 99.9)
+
+        max_val = np.nanpercentile(abs_vals, 99.9) if vmax is None else vmax
+
         for i in range(len(shap_values)):
             if labels is not None:
-                axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
+                if row == 0:
+                    axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(
                 x_curr_gray, cmap=pl.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
@@ -220,19 +228,15 @@ def image_to_text(shap_values):
     for i in range(model_output.shape[0]):
         output_text_html += (
             "<div style='display:inline; text-align:center;'>"
-            + f"<div id='{uuid}_output_flat_value_label_"
-            + str(i)
-            + "'"
-            + "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>"
-            + "</div>"
-            + f"<div id='{uuid}_output_flat_token_"
-            + str(i)
-            + "'"
-            + "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'"
-            + f'onmouseover="onMouseHoverFlat_{uuid}(this.id)" '
-            + f'onmouseout="onMouseOutFlat_{uuid}(this.id)" '
-            + f'onclick="onMouseClickFlat_{uuid}(this.id)" '
-            + ">"
+            f"<div id='{uuid}_output_flat_value_label_{i}'"
+            "style='display:none;color: #999; padding-top: 0px; font-size:12px;'>"
+            "</div>"
+            f"<div id='{uuid}_output_flat_token_{i}'"
+            "style='display: inline; background:transparent; border-radius: 3px; padding: 0px;cursor: default;cursor: pointer;'"
+            f'onmouseover="onMouseHoverFlat_{uuid}(this.id)" '
+            f'onmouseout="onMouseOutFlat_{uuid}(this.id)" '
+            f'onclick="onMouseClickFlat_{uuid}(this.id)" '
+            ">"
             + model_output[i]
             .replace("<", "&lt;")
             .replace(">", "&gt;")

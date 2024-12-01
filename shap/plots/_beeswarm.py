@@ -1,6 +1,9 @@
 """Summary plots of SHAP values across a whole dataset."""
 
+from __future__ import annotations
+
 import warnings
+from typing import Literal
 
 import matplotlib.pyplot as pl
 import numpy as np
@@ -26,20 +29,22 @@ from ._utils import (
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
 def beeswarm(
-    shap_values,
-    max_display=10,
-    order=Explanation.abs.mean(0),
+    shap_values: Explanation,
+    max_display: int | None = 10,
+    order=Explanation.abs.mean(0),  # type: ignore
     clustering=None,
     cluster_threshold=0.5,
     color=None,
     axis_color="#333333",
-    alpha=1,
-    show=True,
-    log_scale=False,
-    color_bar=True,
-    s=16,
-    plot_size="auto",
-    color_bar_label=labels["FEATURE_VALUE"],
+    alpha: float = 1.0,
+    ax: pl.Axes | None = None,
+    show: bool = True,
+    log_scale: bool = False,
+    color_bar: bool = True,
+    s: float = 16,
+    plot_size: Literal["auto"] | float | tuple[float, float] | None = "auto",
+    color_bar_label: str = labels["FEATURE_VALUE"],
+    group_remaining_features: bool = True,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -52,6 +57,9 @@ def beeswarm(
     max_display : int
         How many top features to include in the plot (default is 10, or 7 for
         interaction plots).
+
+    ax: matplotlib Axes
+        Axes object to draw the plot onto, otherwise uses the current Axes.
 
     show : bool
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
@@ -104,6 +112,13 @@ def beeswarm(
         emsg = (
             "The beeswarm plot does not support plotting explanations with instances that have more "
             "than one dimension!"
+        )
+        raise ValueError(emsg)
+
+    if ax and plot_size:
+        emsg = (
+            "The beeswarm plot does not support passing an axis and adjusting the plot size. "
+            "To adjust the size of the plot, set plot_size to None and adjust the size on the original figure the axes was part of"
         )
         raise ValueError(emsg)
 
@@ -170,8 +185,13 @@ def beeswarm(
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
+    if ax is None:
+        ax = pl.gca()
+    fig = ax.get_figure()
+    assert fig is not None  # type narrowing for mypy
+
     if log_scale:
-        pl.xscale("symlog")
+        ax.set_xscale("symlog")
 
     if clustering is None:
         partition_tree = getattr(shap_values, "clustering", None)
@@ -301,7 +321,7 @@ def beeswarm(
             ):
                 # values, partition_tree, orig_inds = merge_nodes(values, partition_tree, orig_inds)
                 partition_tree, ind1, ind2 = merge_nodes(np.abs(values), partition_tree)
-                for i in range(len(values)):
+                for _ in range(len(values)):
                     values[:, ind1] += values[:, ind2]
                     values = np.delete(values, ind2, 1)
                     orig_inds[ind1] += orig_inds[ind2]
@@ -314,7 +334,7 @@ def beeswarm(
     # here we build our feature names, accounting for the fact that some features might be merged together
     feature_inds = feature_order[:max_display]
     feature_names_new = []
-    for pos, inds in enumerate(orig_inds):
+    for inds in orig_inds:
         if len(inds) == 1:
             feature_names_new.append(feature_names[inds[0]])
         elif len(inds) <= 2:
@@ -325,7 +345,8 @@ def beeswarm(
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
-    if num_features < len(values[0]):
+    include_grouped_remaining = num_features < len(values[0]) and group_remaining_features
+    if include_grouped_remaining:
         num_cut = np.sum([len(orig_inds[feature_order[i]]) for i in range(num_features - 1, len(values[0]))])
         values[:, feature_order[num_features - 1]] = np.sum(
             [values[:, feature_order[i]] for i in range(num_features - 1, len(values[0]))], 0
@@ -333,28 +354,28 @@ def beeswarm(
 
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
-    if num_features < len(values[0]):
+    if include_grouped_remaining:
         yticklabels[-1] = "Sum of %d other features" % num_cut
 
     row_height = 0.4
     if plot_size == "auto":
-        pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
-    elif type(plot_size) in (list, tuple):
-        pl.gcf().set_size_inches(plot_size[0], plot_size[1])
+        fig.set_size_inches(8, min(len(feature_order), max_display) * row_height + 1.5)
+    elif isinstance(plot_size, (list, tuple)):
+        fig.set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
-        pl.gcf().set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
-    pl.axvline(x=0, color="#999999", zorder=-1)
+        fig.set_size_inches(8, min(len(feature_order), max_display) * plot_size + 1.5)
+    ax.axvline(x=0, color="#999999", zorder=-1)
 
     # make the beeswarm dots
     for pos, i in enumerate(reversed(feature_inds)):
-        pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+        ax.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
         shaps = values[:, i]
         fvalues = None if features is None else features[:, i]
-        inds = np.arange(len(shaps))
-        np.random.shuffle(inds)
+        f_inds = np.arange(len(shaps))
+        np.random.shuffle(f_inds)
         if fvalues is not None:
-            fvalues = fvalues[inds]
-        shaps = shaps[inds]
+            fvalues = fvalues[f_inds]
+        shaps = shaps[f_inds]
         colored_feature = True
         try:
             if idx2cat is not None and idx2cat[i]:  # check categorical feature
@@ -368,11 +389,11 @@ def beeswarm(
         # curr_bin = []
         nbins = 100
         quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-        inds = np.argsort(quant + np.random.randn(N) * 1e-6)
+        inds_ = np.argsort(quant + np.random.randn(N) * 1e-6)
         layer = 0
         last_bin = -1
         ys = np.zeros(N)
-        for ind in inds:
+        for ind in inds_:
             if quant[ind] != last_bin:
                 layer = 0
             ys[ind] = np.ceil(layer / 2) * ((layer % 2) * 2 - 1)
@@ -399,7 +420,7 @@ def beeswarm(
 
             # plot the nan fvalues in the interaction feature as grey
             nan_mask = np.isnan(fvalues)
-            pl.scatter(
+            ax.scatter(
                 shaps[nan_mask],
                 pos + ys[nan_mask],
                 color="#777777",
@@ -416,7 +437,7 @@ def beeswarm(
             cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
             cvals[cvals_imp > vmax] = vmax
             cvals[cvals_imp < vmin] = vmin
-            pl.scatter(
+            ax.scatter(
                 shaps[np.invert(nan_mask)],
                 pos + ys[np.invert(nan_mask)],
                 cmap=color,
@@ -430,7 +451,7 @@ def beeswarm(
                 rasterized=len(shaps) > 500,
             )
         else:
-            pl.scatter(
+            ax.scatter(
                 shaps,
                 pos + ys,
                 s=s,
@@ -447,31 +468,31 @@ def beeswarm(
 
         m = cm.ScalarMappable(cmap=color)
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
+        cb = fig.colorbar(m, ax=ax, ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
     #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
     # cb.draw_all()
 
-    pl.gca().xaxis.set_ticks_position("bottom")
-    pl.gca().yaxis.set_ticks_position("none")
-    pl.gca().spines["right"].set_visible(False)
-    pl.gca().spines["top"].set_visible(False)
-    pl.gca().spines["left"].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    pl.yticks(range(len(feature_inds)), reversed(yticklabels), fontsize=13)
-    pl.gca().tick_params("y", length=20, width=0.5, which="major")
-    pl.gca().tick_params("x", labelsize=11)
-    pl.ylim(-1, len(feature_inds))
-    pl.xlabel(labels["VALUE"], fontsize=13)
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("none")
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(color=axis_color, labelcolor=axis_color)
+    ax.set_yticks(range(len(feature_inds)), list(reversed(yticklabels)), fontsize=13)
+    ax.tick_params("y", length=20, width=0.5, which="major")
+    ax.tick_params("x", labelsize=11)
+    ax.set_ylim(-1, len(feature_inds))
+    ax.set_xlabel(labels["VALUE"], fontsize=13)
     if show:
         pl.show()
     else:
-        return pl.gca()
+        return ax
 
 
 def shorten_text(text, length_limit):
@@ -551,6 +572,11 @@ def summary_legacy(
             features = shap_exp.data
         if feature_names is None:
             feature_names = shap_exp.feature_names
+
+        # Revert back to list for multi-output explanations.
+        if len(shap_exp.base_values.shape) == 2 and shap_exp.base_values.shape[1] > 2:
+            shap_values = [shap_values[:, :, i] for i in range(shap_exp.base_values.shape[1])]
+
         # if out_names is None: # TODO: waiting for slicer support of this
         #     out_names = shap_exp.output_names
 
@@ -597,7 +623,7 @@ def summary_legacy(
     if features is not None:
         shape_msg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
         if num_features - 1 == features.shape[1]:
-            assert False, (
+            raise ValueError(
                 shape_msg + " Perhaps the extra column in the shap_values matrix is the "
                 "constant offset? Of so just pass shap_values[:,:-1]."
             )
@@ -819,7 +845,7 @@ def summary_legacy(
                 )
 
     elif plot_type == "violin":
-        for pos, i in enumerate(feature_order):
+        for pos in range(len(feature_order)):
             pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:
@@ -923,7 +949,7 @@ def summary_legacy(
                 showmedians=False,
             )
 
-            for pc in parts["bodies"]:
+            for pc in parts["bodies"]:  # type:ignore
                 pc.set_facecolor(color)
                 pc.set_edgecolor("none")
                 pc.set_alpha(alpha)
@@ -987,7 +1013,7 @@ def summary_legacy(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.cm.datad else color
+                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
                 pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
         pl.xlim(shap_min, shap_max)
@@ -1042,7 +1068,7 @@ def summary_legacy(
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.cm.datad)
+        and (plot_type != "layered_violin" or color in pl.colormaps)
     ):
         import matplotlib.cm as cm
 
@@ -1053,7 +1079,7 @@ def summary_legacy(
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
     #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
     # cb.draw_all()

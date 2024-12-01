@@ -9,9 +9,9 @@ from ._utils import convert_ordering
 
 
 def heatmap(
-    shap_values,
-    instance_order=Explanation.hclust(),
-    feature_values=Explanation.abs.mean(0),
+    shap_values: Explanation,
+    instance_order=Explanation.hclust(),  # type: ignore
+    feature_values=Explanation.abs.mean(0),  # type: ignore
     feature_order=None,
     max_display=10,
     cmap=colors.red_white_blue,
@@ -188,7 +188,7 @@ def heatmap(
     cb.set_label(labels["VALUE"], size=12, labelpad=-10)
     cb.ax.tick_params(labelsize=11, length=0)
     cb.set_alpha(1)
-    cb.outline.set_visible(False)
+    cb.outline.set_visible(False)  # type: ignore
     # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
     # cb.ax.set_aspect((bbox.height - 0.9) * 15)
     # cb.draw_all()
