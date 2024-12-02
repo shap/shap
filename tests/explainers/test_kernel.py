@@ -6,6 +6,8 @@ import sklearn
 
 import shap
 
+def sigm(x):
+    return np.exp(x) / (1 + np.exp(x))  # noqa: E731
 
 def test_null_model_small():
     """Test a small null model."""
@@ -82,7 +84,6 @@ def test_kernel_shap_with_call_method():
     shap.force_plot(shap_values[0, :, 1])
 
     outputs = svm.predict_proba(X_test)
-    sigm = lambda x: np.exp(x) / (1 + np.exp(x))  # noqa: E731
     # Call sigm since we use logit link
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
@@ -331,3 +332,26 @@ def test_kernel_multiclass_multiple_rows():
     explainer = shap.KernelExplainer(lr.predict_proba, X)
     shap_values = explainer(X.iloc[[0, 1], :])
     np.testing.assert_allclose(shap_values.values.sum(1) + explainer.expected_value, pred, atol=1e-04)
+
+
+@pytest.mark.parametrize("nsamples", [3, 5, 10, 100])
+def test_kernel_logits_zeros_ones_probs(nsamples):
+    iris = sklearn.datasets.load_iris(as_frame=True)
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(iris.data, iris.target, test_size=0.1, random_state=42)
+    background_data = X_train.sample(10, random_state=42)
+
+    rf = sklearn.ensemble.RandomForestClassifier(random_state=42)
+    rf.fit(X_train, y_train)
+
+    X_test_sampled = X_test[:nsamples]
+
+    explainer = shap.KernelExplainer(
+        model=rf.predict_proba,
+        data=background_data,
+        keep_index=True,
+        link="logit",
+    )
+    shap_values = explainer(X_test_sampled)
+    pred = rf.predict_proba(X_test_sampled)
+
+    np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), pred, atol=1e-04)
