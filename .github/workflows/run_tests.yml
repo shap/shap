@@ -58,6 +58,12 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[${{ matrix.extras }},plots]'
+
+      # See GH 3922: catboost is not compatible with Python 3.2
+      - name: Uninstall catboost if Python 3.12
+        if: matrix.python-version == '3.12'
+        run: pip uninstall -y catboost
+
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
