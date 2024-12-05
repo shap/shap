@@ -169,10 +169,9 @@ def test_summary_bar_multiclass():
     model.fit(X, y)
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
-    # fig = plt.figure()
     shap.summary_plot(
         shap_values, X, plot_type="bar", class_names=[0, 1, 2], feature_names=np.array(X.columns), show=False
-    )  # a list worked in 0.43.0 but not in 0.44.0 or newer!
+    )
     fig = plt.gcf()
     fig.set_layout_engine("tight")
     return fig
