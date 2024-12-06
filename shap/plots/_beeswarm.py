@@ -591,7 +591,7 @@ def summary_legacy(
             plot_type = "dot"  # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
         # revert the shape of the shap_values matrix for multi-output explanations to list of matrices
-        if len(shap_values.shape) == 3 and shap_values.shape[2] > 2:
+        if len(shap_values.shape) == 3 and shap_values.shape[2] > 2 and plot_type == "bar":
             shap_values = [shap_values[:, :, i] for i in range(shap_values.shape[2])]
             multi_class = True
 
