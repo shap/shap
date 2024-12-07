@@ -16,7 +16,7 @@ except ImportError:
     have_ipython = False
 
 
-def scale_color_to_255(color: tuple) -> tuple[int, int, int, float]:
+def scale_color_to_255(color: tuple):
     color = np.array(color).tolist() if isinstance(color[0], (np.float64, np.float32)) else color
     return tuple(int(c * 255) if i < 3 else c for i, c in enumerate(color))
 
