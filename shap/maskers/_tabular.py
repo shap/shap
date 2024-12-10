@@ -343,7 +343,7 @@ class Causal(Tabular):
     The Causal Masker samples from the interventional distribution, which allows for computing causal Shapley values.
     """
 
-    def __init__(self, data, ordering=None, confounding=None, max_samples=100):
+    def __init__(self, data, ordering=None, confounding=None, max_samples=100, seed=None):
         """Build a Causal Masker with the given background data and causal ordering.
 
         Parameters
@@ -365,6 +365,9 @@ class Causal(Tabular):
             samples coming out of the masker (to be integrated over) matches the number of samples in
             the background dataset. This means larger background dataset cause longer runtimes. Normally
             about 1, 10, 100, or 1000 background samples are reasonable choices.
+
+        seed: int
+            The random seed to be used by numpy.
         """
         super().__init__(data, max_samples=max_samples, clustering=None)
 
@@ -373,7 +376,7 @@ class Causal(Tabular):
         self.n_features = data.shape[1]
         self.n_samples = max_samples
 
-        self.rng = np.random.default_rng()  # Numpy generator used for sampling
+        self.rng = np.random.default_rng(seed)  # Numpy generator used for sampling
 
         self.ordering = CausalOrdering(
             ordering=ordering,
@@ -382,7 +385,8 @@ class Causal(Tabular):
             feature_names=getattr(self, "feature_names", None),
         )
 
-        # Mean and covariance matrix are for the gaussian sampling approach and should be moved to a subclass, making this class abstract
+        # TODO make Causal masker abstract and create GaussianCausalMasker that inherits from Causal masker
+        # Mean and covariance matrix are for the gaussian sampling approach and should be moved to a subclass in the future, making this class abstract
         if isinstance(data, pd.DataFrame):
             # Case 1. Pandas DataFrame
             self.mean = data.mean().values
@@ -451,8 +455,7 @@ class Causal(Tabular):
 
         if self.output_dataframe:
             return pd.DataFrame(self._masked_data, columns=self.feature_names)
-
-        return (self._masked_data,)
+        return (self._masked_data,), None
 
     def _sample_gaussian(self, samples, to_be_conditioned, to_be_sampled):
         # Case 1: No conditioning required (sample marginal distribution)
@@ -552,6 +555,9 @@ class CausalOrdering:
             ):
                 raise DimensionError("Ordering must be a 2d list.")
 
+            # Remove any empty causal groups
+            ordering = [causal_group for causal_group in ordering if causal_group]
+
             # Features may only occur in ordering once
             seen_features = set()
             for group in ordering:
@@ -597,11 +603,9 @@ class CausalOrdering:
             else:
                 self.ordering = ordering
 
-            # TODO filter empty groups
-
         if confounding is None:
             self.confounding = len(self.ordering) * [True]
-            log.warning("No confounding provided. Assuming that all causal groups contain have confounders present.")
+            log.warning("No confounding provided. Assuming that all causal groups have confounding variables present.")
         else:
             # Confounding must be list or numpy array
             if not isinstance(confounding, list) and not isinstance(confounding, np.ndarray):
