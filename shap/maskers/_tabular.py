@@ -351,7 +351,7 @@ class Causal(Tabular):
         data : np.array, pandas.DataFrame
             The background dataset that is used for masking.
 
-        ordering : numpy.ndarray, pandas.DataFrame
+        ordering : list
             The (partial) causal ordering of the features in the form of a partial chain graph.
             Example: [[1, 2], [3], [4, 5, 6]], or when feature names are enabled: [['age'], ['Income', 'Marital status']]
 
@@ -368,9 +368,174 @@ class Causal(Tabular):
         """
         super().__init__(data, max_samples=max_samples, clustering=None)
 
+        self.supports_delta_masking = False
+
         self.n_features = data.shape[1]
         self.n_samples = max_samples
 
+        self.rng = np.random.default_rng()  # Numpy generator used for sampling
+
+        self.ordering = CausalOrdering(
+            ordering=ordering,
+            confounding=confounding,
+            n_features=self.n_features,
+            feature_names=getattr(self, "feature_names", None),
+        )
+
+        # Mean and covariance matrix are for the gaussian sampling approach and should be moved to a subclass, making this class abstract
+        if isinstance(data, pd.DataFrame):
+            # Case 1. Pandas DataFrame
+            self.mean = data.mean().values
+            self.covariance_matrix = data.cov().values
+        else:
+            # Case 2. Numpy array
+            self.mean = data.mean(axis=0)
+            self.covariance_matrix = self._calculate_covariance_matrix(data)
+
+        # Ensure that the covariance matrix is positive-definite, as required by numpy multivariate_normal
+        if self._is_positive_definite(self.covariance_matrix):
+            raise Exception("Covariance matrix is not positive-definite, not yet implemented")
+
+    def __call__(self, mask, x):
+        # Standardize
+        mask = self._standardize_mask(mask, x)
+
+        mask = np.array(mask, dtype=bool)
+        x = np.array(x)
+
+        # make sure we are given a single sample
+        if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
+            raise DimensionError("The input passed for tabular masking does not match the background data shape!")
+
+        assert (
+            mask.shape == x.shape
+        ), f"mask must have the same shape as features. expected {self.n_features}, received {mask.shape}."
+        assert mask.dtype == bool, "mask must be of Boolean dtype"
+
+        # TODO Map delta masks to full masks for compatibility like in masked_model
+
+        # Identify indices of features not intervened upon (dependent variables)
+        out_of_coalition_indices = np.arange(self.n_features)[~mask]
+        in_coalition_indices = np.arange(self.n_features)[mask]
+
+        # Initialize array to store sampled data and fix values for intervened variables (do-operator)
+        samples = np.empty([self.n_samples, self.n_features])
+        samples[:, mask] = np.tile(x[mask], (self.n_samples, 1))
+
+        n_causal_groups = len(self.ordering)
+        for group_idx in range(n_causal_groups):
+            # Identify features to sample in the current causal component (those not in the coalition)
+            to_be_sampled = np.intersect1d(self.ordering[group_idx], out_of_coalition_indices)
+            if len(to_be_sampled) == 0:
+                continue
+
+            # Condition upon all ancestors in causal ordering
+            to_be_conditioned = self.ordering.get_ancestors(group_idx)
+            if not self.ordering.is_group_confounding(group_idx):
+                # Also condition on the in-coalition features from the current causal group
+                in_coalition = np.intersect1d(self.ordering[group_idx], in_coalition_indices)
+                to_be_conditioned = np.union1d(to_be_conditioned, in_coalition).astype(int)
+
+            # Retrieve samples for the features not intervened upon (apply DO-operator)
+            new_samples = self._sample_gaussian(samples, to_be_conditioned, to_be_sampled)
+            samples[:, to_be_sampled] = new_samples
+
+        # Also sample features that were not included in ordering (independent features)
+        to_be_sampled = np.setdiff1d(out_of_coalition_indices, self.ordering.features)
+        if len(to_be_sampled) > 0:
+            new_samples = self._sample_gaussian(samples, [], to_be_sampled)
+            samples[:, to_be_sampled] = new_samples
+
+        self._masked_data = samples
+        self._last_mask[:] = mask
+
+        if self.output_dataframe:
+            return pd.DataFrame(self._masked_data, columns=self.feature_names)
+
+        return (self._masked_data,)
+
+    def _sample_gaussian(self, samples, to_be_conditioned, to_be_sampled):
+        # Case 1: No conditioning required (sample marginal distribution)
+        if len(to_be_conditioned) == 0:
+            new_samples = self.rng.multivariate_normal(
+                mean=self.mean[to_be_sampled],
+                cov=self.covariance_matrix[np.ix_(to_be_sampled, to_be_sampled)],
+                size=self.n_samples,
+            )
+
+        # Case 2: Conditional sampling (Gaussian conditional distribution)
+        else:
+            # Compute covariance components for conditional Gaussian sampling
+            c = self.covariance_matrix[np.ix_(to_be_sampled, to_be_conditioned)]
+            d = self.covariance_matrix[np.ix_(to_be_conditioned, to_be_conditioned)]
+            cd_inv = c.dot(np.linalg.inv(d))
+            conditional_covariance = self.covariance_matrix[np.ix_(to_be_sampled, to_be_sampled)] - cd_inv.dot(c.T)
+
+            # Ensure covariance matrix symmetry, as required by numpy multivariate_normal
+            if not self._is_symmetric(conditional_covariance):
+                conditional_covariance = self._symmetric_part(conditional_covariance)
+
+            # Compute conditional mean
+            to_sample_means = np.repeat(np.array([self.mean[to_be_sampled]]), self.n_samples, axis=0)
+            to_condition_means = np.repeat(np.array([self.mean[to_be_conditioned]]), self.n_samples, axis=0)
+            conditional_mean = to_sample_means + cd_inv.dot((samples[:, to_be_conditioned] - to_condition_means).T).T
+
+            # Sample
+            new_samples = self.rng.multivariate_normal(
+                mean=np.zeros(len(to_be_sampled)), cov=conditional_covariance, size=self.n_samples
+            )
+            new_samples += conditional_mean
+
+        return new_samples
+
+    @staticmethod
+    def _is_positive_definite(matrix):
+        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal
+        eigenvalues = np.linalg.eigvals(matrix)
+        return np.any(eigenvalues < 0)
+
+    @staticmethod
+    def _is_symmetric(matrix, rtol=1e-05, atol=1e-08):
+        # Checks if covariance matrix is symmetric, which is required for numpy multivariate_normal
+        return np.allclose(matrix, matrix.T, rtol=rtol, atol=atol)
+
+    @staticmethod
+    def _symmetric_part(matrix):
+        # Retrieve the symmetric part from a covariance matrix
+        return (matrix + matrix.T) / 2
+
+    @staticmethod
+    def _calculate_covariance_matrix(data):
+        """Calculate the covariance matrix for a numpy array."""
+        n_samples = data.shape[0]
+        mean_centered = data - data.mean(axis=0)
+        return (mean_centered.T @ mean_centered) / (n_samples - 1)
+
+
+class CausalOrdering:
+    """Holds a causal ordering in the form of a partial chain graph."""
+
+    def __init__(self, ordering=None, confounding=None, n_features=None, feature_names=None):
+        """Verifies the specified ordering based on the dataset's number of features and optionally feature names.
+
+        Parameters
+        ----------
+        ordering : list
+            The (partial) causal ordering of the features in the form of a partial chain graph.
+            Example: [[1, 2], [3], [4, 5, 6]], or when feature names are enabled: [['age'], ['Income', 'Marital status']]
+
+        confounding : list, numpy.array
+            A 1-dimensional boolean array that specifies which causal groups contain confounding factors.
+            Example: [True, False, False]
+
+        n_features : int
+            The number of features present in the dataset, used for evaluating if the ordering is valid.
+            Required if ordering is specified.
+
+        feature_names : Index
+            An index containing the feature names present in the dataset. Used for evaluating if the ordering is valid.
+             Leave this blank if the dataset does not support named features.
+        """
         if ordering is None:
             self.ordering = []
             log.warning(
@@ -396,17 +561,16 @@ class Causal(Tabular):
                     seen_features.add(feature)
 
             # Features must be all names, or all indices
-
             presumed_type = type(ordering[0][0])
             if presumed_type not in [str, int]:
-                raise TypeError("Ordering features must either be feature names or feature indices.")
+                raise TypeError("The ordering must consist of either feature names or feature indices.")
             if any(type(item) is not presumed_type for causal_group in ordering for item in causal_group):
                 raise TypeError("Mixing feature names and features indices is not supported.")
 
             # When ordering contains feature names, the dataset must support named features
             ordering_contains_feature_names = isinstance(ordering[0][0], str)
             if ordering_contains_feature_names:
-                if not hasattr(self, "feature_names") or self.feature_names is None:
+                if feature_names is None:
                     raise Exception(
                         "Provided ordering contained feature names, but the given dataset does not have any."
                     )
@@ -416,18 +580,24 @@ class Causal(Tabular):
                 # Case 1: named features
                 for causal_group in ordering:
                     for feature in causal_group:
-                        if feature not in self.feature_names:
+                        if feature not in feature_names:
                             raise Exception(f"Feature {feature} does not appear in the provided dataset.")
             else:
                 # Case 2: feature indices
                 for causal_group in ordering:
                     for feature in causal_group:
-                        if feature >= self.n_features:
+                        if feature >= n_features:
                             raise Exception(f"Feature {feature} does not appear in the provided dataset.")
                         if feature < 0:
                             raise Exception(f"Feature {feature} does not appear in the provided dataset.")
 
-            self.ordering = ordering
+            # Map ordering to integers
+            if presumed_type is str:
+                self.ordering = [[feature_names.get_loc(item) for item in sublist] for sublist in ordering]
+            else:
+                self.ordering = ordering
+
+            # TODO filter empty groups
 
         if confounding is None:
             self.confounding = len(self.ordering) * [True]
@@ -461,108 +631,23 @@ class Causal(Tabular):
 
             self.confounding = confounding
 
-        # Mean and covariance matrix are for the gaussian sampling approach and will be (re)moved later
-        self.mean = data.mean()
-        self.covariance_matrix = data.cov()
+        # A flattened version of ordering containing all features present in the ordering
+        self.features = np.concatenate(self.ordering) if self.ordering else []
 
-        # Ensure that the covariance matrix is positive-definite, as required by numpy multivariate_normal
-        # if self._is_positive_definitive(self.covariance_matrix.values):
-        #     raise Exception("Covariance matrix is not positive-definite, not yet implemented")
+    def __len__(self):
+        """Returns the number of causal groups in the ordering."""
+        return len(self.ordering)
 
-    def __call__(self, mask, x):
-        # Standardize
-        mask = self._standardize_mask(mask, x)
+    def __getitem__(self, group_idx):
+        """Returns one or multiple causal groups."""
+        return self.ordering[group_idx]
 
-        # make sure we are given a single sample
-        if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
-            raise DimensionError("The input passed for tabular masking does not match the background data shape!")
+    def get_ancestors(self, group_idx):
+        """Returns a flattened list of all causal groups that precede (are parents of)
+        the specified index in the ordering.
+        """
+        return np.concatenate(self[:group_idx]) if self.ordering[:group_idx] else []
 
-        assert (
-            mask.shape == x.shape[0]
-        ), f"mask must have the same shape as features. expected {self.n_features}, received {mask.shape}."
-        assert mask.dtype == bool, "mask must be of Boolean dtype"
-
-        # TODO What do delta masks look like, can we support, or at least map them here?
-
-        # Identify indices of variables not intervened upon (dependent variables)
-        out_of_coalition_indices = np.setdiff1d(np.arange(self.n_features), mask)
-
-        # Initialize array to store sampled data and fix values for intervened variables (do-operator)
-        samples = np.empty([self.n_samples, self.n_features])
-        samples[:, mask] = np.repeat(x[mask], self.n_samples, axis=0)
-
-        n_causal_groups = len(self.ordering)
-        for group_idx in range(n_causal_groups):
-            # Identify features to sample in the current causal component
-            to_be_sampled = np.intersect1d(self.ordering[group_idx], out_of_coalition_indices)
-            if len(to_be_sampled) == 0:
-                continue
-
-            # Condition upon all ancestors in causal ordering
-            to_be_conditioned = np.concatenate(self.ordering[:group_idx])
-            if not self.confounding[group_idx]:
-                # also condition on the in-coalition features from the current causal group
-                in_coalition = np.intersect1d(self.ordering[group_idx], mask)  # does this work?
-                to_be_conditioned = np.union1d(to_be_conditioned, in_coalition).astype(int)
-
-            # Retrieve samples for the features not intervened upon (apply DO-operator)
-            new_samples = self._sample_gaussian(samples, to_be_conditioned, to_be_sampled)
-            samples[:, to_be_sampled] = new_samples
-
-        self._masked_data = samples
-        self._last_mask[:] = mask
-
-        if self.output_dataframe:
-            return pd.DataFrame(self._masked_data, columns=self.feature_names)
-
-        return (self._masked_data,)
-
-    def _sample_gaussian(self, samples, to_be_conditioned, to_be_sampled):
-        # Case 1: No conditioning required (sample marginal distribution)
-        if len(to_be_conditioned) == 0:
-            new_samples = np.random.multivariate_normal(
-                mean=self.mean[to_be_sampled],
-                cov=self.covariance_matrix[np.ix_(to_be_sampled, to_be_sampled)],
-                size=self.n_samples,
-            )
-
-        # Case 2: Conditional sampling (Gaussian conditional distribution)
-        else:
-            # Compute covariance components for conditional Gaussian sampling
-            c = self.covariance_matrix[np.ix_(to_be_sampled, to_be_conditioned)]
-            d = self.covariance_matrix[np.ix_(to_be_conditioned, to_be_conditioned)]
-            cd_inv = c.dot(np.linalg.inv(d))
-            conditional_covariance = self.covariance_matrix[np.ix_(to_be_sampled, to_be_sampled)] - cd_inv.dot(c.T)
-
-            # Ensure covariance matrix symmetry, as required by numpy multivariate_normal
-            if not self._is_symmetric(conditional_covariance):
-                conditional_covariance = self._symmetric_part(conditional_covariance)
-
-            # Compute conditional mean
-            to_sample_means = np.repeat(np.array([self.mean[to_be_sampled]]), self.n_samples, axis=0)
-            to_condition_means = np.repeat(np.array([self.mean[to_be_conditioned]]), self.n_samples, axis=0)
-            conditional_mean = to_sample_means + cd_inv.dot((samples[:, to_be_conditioned] - to_condition_means).T).T
-
-            # Sample
-            new_samples = np.random.multivariate_normal(
-                mean=np.zeros(len(to_be_sampled)), cov=conditional_covariance, size=self.n_samples
-            )
-            new_samples += conditional_mean
-
-        return new_samples
-
-    @staticmethod
-    def _is_positive_definitive(matrix):
-        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal
-        eigen_values = np.linalg.eigvals(matrix)
-        return np.any(eigen_values > 1e-06)
-
-    @staticmethod
-    def _is_symmetric(matrix, rtol=1e-05, atol=1e-08):
-        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal
-        return np.allclose(matrix, matrix.T, rtol=rtol, atol=atol)
-
-    @staticmethod
-    def _symmetric_part(matrix):
-        # Retrieve the symmetric part from a covariance matrix
-        return (matrix + matrix.T) / 2
+    def is_group_confounding(self, group_idx):
+        """Returns a boolean indicating if the specified causal group contains a confounding variable."""
+        return self.confounding[group_idx]
