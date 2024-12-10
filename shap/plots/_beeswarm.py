@@ -342,7 +342,7 @@ def beeswarm(
             feature_names_new.append(" + ".join([feature_names[i] for i in inds]))
         else:
             max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-            feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds) - 1))
+            feature_names_new.append(f"{feature_names[inds[max_ind]]} + {len(inds) - 1} other features")
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
@@ -356,7 +356,7 @@ def beeswarm(
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
     if include_grouped_remaining:
-        yticklabels[-1] = "Sum of %d other features" % num_cut
+        yticklabels[-1] = f"Sum of {num_cut} other features"
 
     row_height = 0.4
     if plot_size == "auto":
@@ -997,8 +997,8 @@ def summary_legacy(
                 # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
-                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
-                        % (i, feature_names[ind])
+                        f"Not enough data in bin #{i} for feature {feature_names[ind]}, so it'll be ignored."
+                        " Try increasing the number of records to plot."
                     )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0
