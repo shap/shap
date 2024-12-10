@@ -382,7 +382,8 @@ class Causal(Tabular):
             feature_names=getattr(self, "feature_names", None),
         )
 
-        # Mean and covariance matrix are for the gaussian sampling approach and should be moved to a subclass, making this class abstract
+        # TODO make Causal masker abstract and create GaussianCausalMasker that inherits from Causal masker
+        # Mean and covariance matrix are for the gaussian sampling approach and should be moved to a subclass in the future, making this class abstract
         if isinstance(data, pd.DataFrame):
             # Case 1. Pandas DataFrame
             self.mean = data.mean().values
@@ -451,8 +452,7 @@ class Causal(Tabular):
 
         if self.output_dataframe:
             return pd.DataFrame(self._masked_data, columns=self.feature_names)
-
-        return (self._masked_data,)
+        return (self._masked_data,), None
 
     def _sample_gaussian(self, samples, to_be_conditioned, to_be_sampled):
         # Case 1: No conditioning required (sample marginal distribution)

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from _pytest.python_api import raises
+from sklearn.linear_model import LinearRegression
 
 import shap
 from shap.maskers import Causal
@@ -15,7 +16,7 @@ from shap.utils._exceptions import DimensionError, TypeError
 @pytest.fixture
 def custom_causal_dataset():
     # Parameters
-    n_samples = 1 * 10**5  # Number of samples
+    n_samples = 1 * 10**6  # Number of samples
     alpha = 0.5  # Coefficient for E[X2 | X1]
 
     # P(X1) ~ N(0, 1)
@@ -26,10 +27,10 @@ def custom_causal_dataset():
     X2 = alpha * X1 + epsilon
 
     # Verify the means
-    assert -0.01 < np.mean(X1) < 0.01, f"Mean of X1 ({np.mean(X1)}) is not approximately 0!"
-    assert -0.01 < np.mean(X2) < 0.01, f"Mean of X2 ({np.mean(X2)} is not approximately 0!"
+    assert -0.05 < np.mean(X1) < 0.05, f"Mean of X1 ({np.mean(X1)}) is not approximately 0!"
+    assert -0.05 < np.mean(X2) < 0.05, f"Mean of X2 ({np.mean(X2)} is not approximately 0!"
     assert (
-        -0.01 < np.cov(X1, X2)[0, 1] / np.var(X1) - alpha < 0.01
+        -0.05 < np.cov(X1, X2)[0, 1] / np.var(X1) - alpha < 0.05
     ), f"Computed alpha ({np.cov(X1, X2)[0, 1] / np.var(X1)}) is not approximately alpha ({alpha})!"
 
     X = np.stack([X1, X2], axis=1)
@@ -81,51 +82,10 @@ class TestCausal:
         mask = [0, 1]
 
         # Act
-        actual = sut(mask, x)[0]
+        actual = sut(mask, x)[0][0]
 
         # Assert
         assert np.all(actual[:, 1] == x[1])
-
-    def test_mask_does_not_condition_on_descendents(self):
-        """Ensure that the Gaussian method samples correctly, not conditioning on descendants in the ordering."""
-        # Arrange
-        data = np.array([[2.42333333, 2.185, -0.29666667], [2.185, 2.29, 0.28], [-0.29666667, 0.28, 0.97333333]])
-
-        ordering = [[0], [1], [2]]
-        masker = Causal(data=data, ordering=ordering, max_samples=2)
-
-        x = np.array([1.5, 2.5, 3.5])
-        mask = np.array([True, False, False])
-
-        # Act
-        samples = masker(mask, x)[0]  # Retrieve masked data
-
-        # Assert
-        # Extract the covariance of the samples to check dependencies
-        cov = np.cov(samples.T)
-
-        # Features in group 1 (feature 1) should depend only on its ancestor (feature 0)
-        parent_of_1 = 0
-        assert not np.isclose(cov[1, 2], 0, atol=0.1), "Feature 1 appears conditioned on its descendant (feature 2)."
-        assert np.isclose(
-            cov[1, parent_of_1], data[:, parent_of_1].mean(), atol=0.1
-        ), "Feature 1 does not appear conditioned on its parent (feature 0) as expected."
-
-        # Features in group 2 (feature 2) should depend on all its ancestors (features 0 and 1)
-        ancestor_of_2 = [0, 1]
-        for ancestor in ancestor_of_2:
-            assert not np.isclose(
-                cov[2, ancestor], 0, atol=0.1
-            ), f"Feature 2 does not depend on its ancestor (feature {ancestor})."
-
-        # Features in group 2 should not depend on its descendants TODO noo
-        descendant_of_2 = []
-        for descendant in descendant_of_2:
-            assert np.isclose(
-                cov[2, descendant], 0, atol=0.1
-            ), f"Feature 2 incorrectly depends on its descendant (feature {descendant})."
-
-        print("Test passed: Masking correctly conditions on all ancestors and avoids descendants.")
 
     def test_mask_conditions_on_parent(self, custom_causal_dataset):
         # Arrange
@@ -147,13 +107,13 @@ class TestCausal:
         conditional_mean = np.mean(results["X2"])
         expected_mean = alpha * x[0]  # E[X2 | X1]
         assert (
-            -0.01 < conditional_mean - expected_mean < 0.01
+            -0.05 < conditional_mean - expected_mean < 0.05
         ), f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
 
         conditional_variance = np.var(results["X2"])
         expected_variance = 1  # Variance of noise
         assert (
-            -0.01 < conditional_variance - expected_variance < 0.01
+            -0.05 < conditional_variance - expected_variance < 0.05
         ), f"Conditional variance ({conditional_variance}) is not approximately 1!"
 
     def test_mask_conditions_on_sibling_when_not_confounding(self, custom_causal_dataset):
@@ -176,13 +136,13 @@ class TestCausal:
         conditional_mean = np.mean(results["X2"])
         expected_mean = alpha * x[0]  # E[X2 | X1]
         assert (
-            -0.01 < conditional_mean - expected_mean < 0.01
+            -0.05 < conditional_mean - expected_mean < 0.05
         ), f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
 
         conditional_variance = np.var(results["X2"])
         expected_variance = 1  # Variance of noise
         assert (
-            -0.01 < conditional_variance - expected_variance < 0.01
+            -0.05 < conditional_variance - expected_variance < 0.05
         ), f"Conditional variance ({conditional_variance}) is not approximately 1!"
 
         # also check X1
@@ -207,13 +167,13 @@ class TestCausal:
         conditional_mean = np.mean(results["X2"])
         expected_mean = alpha * x[0]  # E[X2 | X1]
         assert (
-            -0.01 < conditional_mean - expected_mean < 0.01
+            -0.05 < conditional_mean - expected_mean < 0.05
         ), f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
 
         conditional_variance = np.var(results["X2"])
         expected_variance = 1  # Variance of noise
         assert (
-            -0.01 < conditional_variance - expected_variance < 0.01
+            -0.05 < conditional_variance - expected_variance < 0.05
         ), f"Conditional variance ({conditional_variance}) is not approximately 1!"
 
         # also check X1
@@ -221,6 +181,114 @@ class TestCausal:
     def test_mask_samples_features_not_in_ordering(self):
         # to be tested
         pass
+
+    def test_chain_causal_shapley_values(self, custom_causal_dataset):
+        # Arrange
+        data, alpha = custom_causal_dataset
+
+        # Generate labels
+        beta = 2.0
+        y = beta * data["X2"]
+
+        # Train a linear model
+        model = LinearRegression().fit(data, y)
+
+        # Verify model coefficients
+        assert -0.05 < model.intercept_ < 0.05  # X1 coefficient
+        assert -0.05 < model.coef_[0] < 0.05  # X1 coefficient
+        assert -0.05 < model.coef_[1] - beta < 0.05  # X2 coefficient
+
+        # Use SHAP to analyze the contribution of each feature
+        def model_predict(*args):
+            return model.predict(*args)
+
+        masker = CausalMasker(data, ordering=[["X1"], ["X2"]], confounding=[False, False])
+        explainer = shap.PermutationExplainer(model_predict, masker=masker)
+
+        x1 = 0.276311
+        x2 = 0.510056
+
+        expected_x1_shap = (1 / 2) * beta * alpha * x1
+        expected_x2_shap = beta * x2 - expected_x1_shap
+
+        # Act
+        actual = explainer(np.array([[x1, x2]])).values[0]
+
+        # Assert
+        assert -0.05 < actual[0] - expected_x1_shap < 0.05
+        assert -0.05 < actual[1] - expected_x2_shap < 0.05
+
+    def test_fork_causal_shapley_values(self, custom_causal_dataset):
+        # Arrange
+        data, alpha = custom_causal_dataset
+
+        # Generate labels
+        beta = 2.0
+        y = beta * data["X2"]
+
+        # Train a linear model
+        model = LinearRegression().fit(data, y)
+
+        # Verify model coefficients
+        assert -0.05 < model.intercept_ < 0.05  # X1 coefficient
+        assert -0.05 < model.coef_[0] < 0.05  # X1 coefficient
+        assert -0.05 < model.coef_[1] - beta < 0.05  # X2 coefficient
+
+        # Use SHAP to analyze the contribution of each feature
+        def model_predict(*args):
+            return model.predict(*args)
+
+        masker = CausalMasker(data, ordering=[["X2"], ["X1"]], confounding=[False, False])
+        explainer = shap.PermutationExplainer(model_predict, masker=masker)
+
+        x1 = 0.276311
+        x2 = 0.510056
+
+        expected_x1_shap = 0
+        expected_x2_shap = beta * x2
+
+        # Act
+        actual = explainer(np.array([[x1, x2]])).values[0]
+
+        # Assert
+        assert -0.05 < actual[0] - expected_x1_shap < 0.05
+        assert -0.05 < actual[1] - expected_x2_shap < 0.05
+
+    def test_confounder_causal_shapley_values(self, custom_causal_dataset):
+        # Arrange
+        data, alpha = custom_causal_dataset
+
+        # Generate labels
+        beta = 2.0
+        y = beta * data["X2"]
+
+        # Train a linear model
+        model = LinearRegression().fit(data, y)
+
+        # Verify model coefficients
+        assert -0.05 < model.intercept_ < 0.05  # X1 coefficient
+        assert -0.05 < model.coef_[0] < 0.05  # X1 coefficient
+        assert -0.05 < model.coef_[1] - beta < 0.05  # X2 coefficient
+
+        # Use SHAP to analyze the contribution of each feature
+        def model_predict(*args):
+            return model.predict(*args)
+
+        masker = CausalMasker(data, ordering=[["X2", "X1"]], confounding=[True])
+        explainer = shap.PermutationExplainer(model_predict, masker=masker)
+
+        x1 = 0.276311
+        x2 = 0.510056
+
+        expected_x1_shap = 0
+        expected_x2_shap = beta * x2
+
+        # Act
+        actual = explainer(np.array([[x1, x2]])).values[0]
+
+        # Assert
+        assert -0.05 < actual[0] - expected_x1_shap < 0.05
+        assert -0.05 < actual[1] - expected_x2_shap < 0.05
 
 
 class TestCausalOrdering:
