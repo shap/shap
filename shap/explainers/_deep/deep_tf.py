@@ -277,11 +277,12 @@ class TFDeep(Explainer):
             elif not isinstance(X, list):
                 X = [X]
         else:
-            assert isinstance(X, list), "Expected a list of model inputs!"
-        assert len(self.model_inputs) == len(X), "Number of model inputs (%d) does not match the number given (%d)!" % (
-            len(self.model_inputs),
-            len(X),
-        )
+            if not isinstance(X, list):
+                raise TypeError("Expected a list of model inputs!")
+        if not len(self.model_inputs) == len(X):
+            raise ValueError(
+                f"Number of model inputs ({len(self.model_inputs)}) does not match the number given ({len(X)})!"
+            )
 
         # rank and determine the model outputs that we will explain
         if ranked_outputs is not None and self.multi_output:
