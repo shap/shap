@@ -279,7 +279,7 @@ class TFDeep(Explainer):
         else:
             if not isinstance(X, list):
                 raise TypeError("Expected a list of model inputs!")
-        if not len(self.model_inputs) == len(X):
+        if len(self.model_inputs) != len(X):
             raise ValueError(
                 f"Number of model inputs ({len(self.model_inputs)}) does not match the number given ({len(X)})!"
             )
