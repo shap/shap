@@ -8,7 +8,7 @@ import shap
 
 
 def sigm(x):
-    return np.exp(x) / (1 + np.exp(x))  # noqa: E731
+    return np.exp(x) / (1 + np.exp(x))
 
 
 def test_null_model_small():
