@@ -147,7 +147,7 @@ def waterfall(shap_values, max_display=10, show=True):
 
     # add a last grouped feature to represent the impact of all the features we didn't show
     if num_features < len(values):
-        yticklabels[0] = "%d other features" % (len(values) - num_features + 1)
+        yticklabels[0] = f"{len(shap_values) - num_features + 1} other features"
         remaining_impact = base_values - loc
         if remaining_impact < 0:
             pos_inds.append(0)
@@ -503,7 +503,7 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
 
     # add a last grouped feature to represent the impact of all the features we didn't show
     if num_features < len(shap_values):
-        yticklabels[0] = "%d other features" % (len(shap_values) - num_features + 1)
+        yticklabels[0] = f"{len(shap_values) - num_features + 1} other features"
         remaining_impact = expected_value - loc
         if remaining_impact < 0:
             pos_inds.append(0)

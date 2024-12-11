@@ -65,7 +65,7 @@ def partial_dependence(
         use_dataframe = True
 
     if feature_names is None:
-        feature_names = ["Feature %d" % i for i in range(features.shape[1])]
+        feature_names = [f"Feature {i}" for i in range(features.shape[1])]
 
     # this is for a 1D partial dependence plot
     if type(ind) is not tuple:

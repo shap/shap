@@ -220,7 +220,7 @@ def bar(
                 feature_names_new.append(full_print)
             else:
                 max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-                feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds) - 1))
+                feature_names_new.append(f"{feature_names[inds[max_ind]]} + {len(inds) - 1} other features")
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
@@ -238,7 +238,7 @@ def bar(
         else:
             yticklabels.append(feature_names[i])
     if num_features < len(values[0]):
-        yticklabels[-1] = "Sum of %d other features" % num_cut
+        yticklabels[-1] = f"Sum of {num_cut} other features"
 
     if ax is None:
         ax = pl.gca()

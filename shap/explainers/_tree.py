@@ -1564,12 +1564,16 @@ class TreeEnsemble:
             tree_limit = self.values.shape[0]
 
         if output == "logloss":
-            assert (
-                y is not None
-            ), "Both samples and labels must be provided when explaining the loss (i.e. `explainer.shap_values(X, y)`)!"
-            assert X.shape[0] == len(y), (
-                "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
-            )
+            if y is None:
+                raise ValueError(
+                    "Both samples and labels must be provided when explaining the loss"
+                    " (i.e. `explainer.shap_values(X, y)`)!"
+                )
+            if X.shape[0] != len(y):
+                raise ValueError(
+                    f"The number of labels ({len(y)}) does not match the number of samples to explain ({X.shape[0]})!"
+                )
+
         transform = self.get_transform()
         assert_import("cext")
         output = np.zeros((X.shape[0], self.num_outputs))
