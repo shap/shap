@@ -566,6 +566,9 @@ def summary_legacy(
         by default.
 
     """
+    # initialize the plot
+    pl.clf()
+
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
