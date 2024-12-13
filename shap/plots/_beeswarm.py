@@ -401,7 +401,7 @@ def beeswarm(
             last_bin = quant[ind]
         ys *= 0.9 * (row_height / np.max(ys + 1))
 
-        if safe_isinstance(color, "matplotlib.colors.Colormap") and features is not None and colored_feature:
+        if safe_isinstance(color, "matplotlib.colors.Colormap") and fvalues is not None and colored_feature is True:
             # trim the color range, but prevent the color range from collapsing
             vmin = np.nanpercentile(fvalues, 5)
             vmax = np.nanpercentile(fvalues, 95)
@@ -414,7 +414,7 @@ def beeswarm(
             if vmin > vmax:  # fixes rare numerical precision issues
                 vmin = vmax
 
-            if features.shape[0] != len(shaps):
+            if features is not None and features.shape[0] != len(shaps):
                 emsg = "Feature and SHAP matrices must have the same number of rows!"
                 raise DimensionError(emsg)
 
@@ -451,6 +451,8 @@ def beeswarm(
                 rasterized=len(shaps) > 500,
             )
         else:
+            if safe_isinstance(color, "matplotlib.colors.Colormap"):
+                color = color.colors
             ax.scatter(
                 shaps,
                 pos + ys,
@@ -593,6 +595,10 @@ def summary_legacy(
         if plot_type is None:
             plot_type = "dot"  # default for single output explanations
         assert len(shap_values.shape) != 1, "Summary plots need a matrix of shap_values, not a vector."
+        # revert the shape of the shap_values matrix for multi-output explanations to list of matrices
+        if len(shap_values.shape) == 3 and shap_values.shape[2] > 2 and plot_type == "bar":
+            shap_values = [shap_values[:, :, i] for i in range(shap_values.shape[2])]
+            multi_class = True
 
     # default color:
     if color is None:
