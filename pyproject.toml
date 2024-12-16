@@ -85,8 +85,8 @@ test = [
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
-  # See GH #3707 and #3768
-  "numpy<2.0; python_version < '3.12'",
+  # See GH #3707, #3768, 3922
+  "numpy<2.0",
 ]
 
 test_notebooks = [
