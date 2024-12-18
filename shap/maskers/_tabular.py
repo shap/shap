@@ -352,11 +352,15 @@ class Causal(Tabular):
             The background dataset that is used for masking.
 
         ordering : list
-            The (partial) causal ordering of the features in the form of a partial chain graph.
+            The partial causal ordering of features, represented as a list of lists (a partial chain graph). Features within
+            each causal group (sublist) is considered causally dependent on the features in the preceding groups.
+            Features not included in the ordering are currently assumed to be independent.
             Example: [[1, 2], [3], [4, 5, 6]], or when feature names are enabled: [['age'], ['Income', 'Marital status']]
 
         confounding : list, numpy.array
-            A 1-dimensional boolean array that specifies which causal groups contain confounding factors.
+            A 1-dimensional boolean array or list that indicates which causal groups contain confounding factors. For causal
+            groups containing confounding factors (i.e., where the value is `True`), features within the group are
+            not conditioned on each other, but only on the preceding groups.
             Example: [True, False, False]
 
         max_samples : int
