@@ -326,8 +326,7 @@ def __thread_worker(q, host):
 
 def __print_status():
     print(
-        "Benchmark task %d of %d done (%d failed, %d running)"
-        % (total_done, nexperiments, total_failed, total_sent - total_done),
+        f"Benchmark task {total_done} of {nexperiments} done ({total_failed} failed, {total_sent - total_done} running)",
         end="\r",
     )
     sys.stdout.flush()
