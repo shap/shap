@@ -13,32 +13,6 @@ from shap.maskers._tabular import CausalOrdering
 from shap.utils._exceptions import DimensionError, TypeError
 
 
-@pytest.fixture
-def custom_causal_dataset():
-    # Parameters
-    n_samples = 1 * 10**6  # Number of samples
-    alpha = 0.5  # Coefficient for E[X2 | X1]
-
-    # P(X1) ~ N(0, 1)
-    X1 = np.random.normal(loc=0, scale=1, size=n_samples)
-
-    # Generate P(X_2 | X_1) using E[X2 | X1] = alpha * X1 (+ noise)
-    epsilon = np.random.normal(loc=0, scale=1, size=n_samples)  # Noise
-    X2 = alpha * X1 + epsilon
-
-    # Verify the means
-    assert -0.05 < np.mean(X1) < 0.05, f"Mean of X1 ({np.mean(X1)}) is not approximately 0!"
-    assert -0.05 < np.mean(X2) < 0.05, f"Mean of X2 ({np.mean(X2)} is not approximately 0!"
-    assert (
-        -0.05 < np.cov(X1, X2)[0, 1] / np.var(X1) - alpha < 0.05
-    ), f"Computed alpha ({np.cov(X1, X2)[0, 1] / np.var(X1)}) is not approximately alpha ({alpha})!"
-
-    X = np.stack([X1, X2], axis=1)
-    df = pd.DataFrame(X, columns=["X1", "X2"])
-
-    return df, alpha
-
-
 # ========================================== #
 # === Causal =============================== #
 # ========================================== #
@@ -46,6 +20,31 @@ class TestCausal:
     tiny_X, _ = shap.datasets.california(n_points=10)
 
     seed = 42
+
+    @pytest.fixture
+    def custom_causal_dataset(self):
+        # Parameters
+        n_samples = 1 * 10**6  # Number of samples
+        alpha = 0.5  # Coefficient for E[X2 | X1]
+
+        # P(X1) ~ N(0, 1)
+        X1 = np.random.normal(loc=0, scale=1, size=n_samples)
+
+        # Generate P(X_2 | X_1) using E[X2 | X1] = alpha * X1 (+ noise)
+        epsilon = np.random.normal(loc=0, scale=1, size=n_samples)  # Noise
+        X2 = alpha * X1 + epsilon
+
+        # Verify the means
+        assert -0.05 < np.mean(X1) < 0.05, f"Mean of X1 ({np.mean(X1)}) is not approximately 0!"
+        assert -0.05 < np.mean(X2) < 0.05, f"Mean of X2 ({np.mean(X2)} is not approximately 0!"
+        assert (
+            -0.05 < np.cov(X1, X2)[0, 1] / np.var(X1) - alpha < 0.05
+        ), f"Computed alpha ({np.cov(X1, X2)[0, 1] / np.var(X1)}) is not approximately alpha ({alpha})!"
+
+        X = np.stack([X1, X2], axis=1)
+        df = pd.DataFrame(X, columns=["X1", "X2"])
+
+        return df, alpha
 
     def test_should_correctly_count_the_number_of_features(self):
         """Check that n_features is equal to the data's number of features."""
@@ -368,7 +367,7 @@ class TestCausalOrdering:
     def test_should_default_to_empty_ordering_when_none_is_provided(self):
         """Check that the default ordering is an empty list when none is provided."""
         # Arrange
-        expected = []
+        expected: list[list[int]] = []
         sut = CausalOrdering()
 
         # Act
@@ -538,7 +537,7 @@ class TestCausalOrdering:
         ordering = [[1], [2, 3], [4, 5]]
         sut = CausalOrdering(ordering=ordering, n_features=self.tiny_X_n_features)
 
-        expected_1 = []
+        expected_1: list[int] = []
         expected_2 = [1]
         expected_3 = [1, 2, 3]
 
