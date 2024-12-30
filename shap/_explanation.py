@@ -436,9 +436,6 @@ class Explanation(metaclass=MetaExplanation):
             return new_self  # type: ignore
         if new_self is None:
             new_self = copy.copy(self)
-        import pdb
-
-        pdb.set_trace()
         new_self._s = new_self._s.__getitem__(item)
         new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
 
