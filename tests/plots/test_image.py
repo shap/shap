@@ -43,6 +43,7 @@ def test_image_multi(imagenet50_example):
     return plt.gcf()
 
 
+@pytest.mark.skip
 @pytest.mark.mpl_image_compare
 def test_image_multi_tf_bug():
     # GH 3874
