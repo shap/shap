@@ -87,10 +87,8 @@ def image(
         # feature_names = [shap_exp.feature_names]
         # ind = 0
         if len(shap_exp.output_dims) == 1:
-            print("output_dims == 1")
             shap_values = cast(list[np.ndarray], [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
         elif len(shap_exp.output_dims) == 0:
-            print("output_dims == 1")
             shap_values = cast(list[np.ndarray], [shap_exp.values])
         else:
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
@@ -105,19 +103,16 @@ def image(
 
     # multi_output = True
     if not isinstance(shap_values, list):
-        print("shap_values is not a list")
         # multi_output = False
         shap_values = cast(list[np.ndarray], [shap_values])
 
     if len(shap_values[0].shape) == 3:
-        print("shap_values[0].shape == 3")
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
         pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
     # labels: (rows (images) x columns (top_k classes) )
     if labels is not None:
         if isinstance(labels, list):
-            print("labels is a list")
             labels = np.array(labels).reshape(1, -1)
 
     # if labels is not None:
