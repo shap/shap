@@ -183,6 +183,9 @@ def test_tf_keras_linear():
     # explain
     e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
+    shap_values_call = e(x)
+    assert shap_values_call.output_dims == (2,) == (len(shap_values_call.values.shape[1:]),)
+    assert shap_values_call.interaction_order == 0
 
     assert shap_values.shape == (1000, 2, 1)
 
@@ -241,7 +244,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.assert_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_tf_deep_imbdb_transformers():
+def test_tf_deep_imdb_transformers():
     # GH 3522
     transformers = pytest.importorskip("transformers")
 
@@ -253,7 +256,11 @@ def test_tf_deep_imbdb_transformers():
     pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
     explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
     shap_values3 = explainer3(short_data[:10])
-    shap.plots.text(shap_values3[:, :, 1])
+    import pdb; pdb.set_trace()
+    # base_values = shap_values3.base_values
+    # shap_values3.base_values = None
+    t = shap_values3[:, :, 1]
+    shap.plots.text(t)
     shap.plots.bar(shap_values3[:, :, 1].mean(0))
 
 

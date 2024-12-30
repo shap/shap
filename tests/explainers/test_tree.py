@@ -797,8 +797,15 @@ class TestExplainerSklearn:
 
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(X)
-        assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-1
-        assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
+        assert np.abs(shap_values[0, 0, 0] - 0.05) < 1e-1
+        assert np.abs(shap_values[1, 0, 0] + 0.05) < 1e-1
+
+        shap_values_call = explainer(X)
+        pred = model.predict_proba(X)
+        class0_exp = shap_values_call[..., 0]
+        assert np.abs(class0_exp.values.sum(1) + class0_exp.base_values - pred[:, 0]).max() < 1e-4
+
+        assert shap_values_call.output_dims == (2,) == (len(shap_values_call.values.shape[1:]),)
 
     def test_sum_match_random_forest_classifier(self):
         X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
@@ -852,7 +859,12 @@ class TestExplainerSklearn:
         # verify symmetry of the interaction values (this typically breaks if anything is wrong)
         explainer = shap.TreeExplainer(model)
         interaction_vals = explainer.shap_interaction_values(X)
+
         assert np.allclose(interaction_vals, np.swapaxes(interaction_vals, 1, 2))
+
+        interaction_vals_call = explainer(X, interactions=True)
+        assert interaction_vals_call.interaction_order == 1
+        assert np.allclose(interaction_vals_call.values, np.swapaxes(interaction_vals_call.values, 1, 2))
 
         # ensure the interaction plot works
         shap.summary_plot(interaction_vals[:, :, :, 0], X, show=False)
@@ -864,6 +876,8 @@ class TestExplainerSklearn:
         predicted = rfc.predict_proba(X)
         ex_rfc = shap.TreeExplainer(rfc)
         explanation = ex_rfc(X, interactions=True)
+
+        assert explanation.interaction_order == 1
         assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted)
         assert np.allclose(explanation.values.sum(axis=(1, 2)) + explanation.base_values, predicted)
 

@@ -42,6 +42,26 @@ def test_image_multi(imagenet50_example):
     shap.image_plot(explanation, labels=labels, show=False)
     return plt.gcf()
 
+@pytest.mark.mpl_image_compare
+def test_image_multi_bug(imagenet50_example):
+    # GH 3874, todo: implement
+    images, _ = imagenet50_example
+    n_images = 2
+    n_classes = 4
+
+    images = images[:n_images]
+    shap_values_single = (images - images.mean()) / images.max(keepdims=True)
+    assert shap_values_single.shape == images.shape
+
+    # Just repeat the same SHAP values for each class
+    shap_values_multi = np.stack([shap_values_single for _ in range(n_classes)], axis=-1)
+    assert shap_values_multi.shape[-1] == n_classes
+
+    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[1 for _ in range(n_images)])
+    labels = [f"Class {x+1}" for x in range(n_classes)]
+    shap.image_plot(explanation, labels=labels, show=False)
+    return plt.gcf()
+
 
 def test_random_single_image():
     """Just make sure the image_plot function doesn't crash."""
