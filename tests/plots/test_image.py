@@ -44,23 +44,57 @@ def test_image_multi(imagenet50_example):
 
 
 @pytest.mark.mpl_image_compare
-def test_image_multi_bug(imagenet50_example):
-    # GH 3874, todo: implement
-    images, _ = imagenet50_example
-    n_images = 2
-    n_classes = 4
+def test_image_multi_tf_bug():
+    # GH 3874
+    tf = pytest.importorskip("tensorflow")
+    ssl = pytest.importorskip("ssl")
 
-    images = images[:n_images]
-    shap_values_single = (images - images.mean()) / images.max(keepdims=True)
-    assert shap_values_single.shape == images.shape
+    ssl._create_default_https_context = ssl._create_unverified_context
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    # reshape and normalize data
+    subset_size = 200
+    x_train_subset = x_train[:subset_size]
+    y_train_subset = y_train[:subset_size]
+    x_test_subset = x_test[:subset_size]
+    y_test_subset = y_test[:subset_size]
 
-    # Just repeat the same SHAP values for each class
-    shap_values_multi = np.stack([shap_values_single for _ in range(n_classes)], axis=-1)
-    assert shap_values_multi.shape[-1] == n_classes
+    # Normalize the data
+    x_train_subset = x_train_subset.astype("float32") / 255
+    x_test_subset = x_test_subset.astype("float32") / 255
 
-    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[1 for _ in range(n_images)])
-    labels = [f"Class {x+1}" for x in range(n_classes)]
-    shap.image_plot(explanation, labels=labels, show=False)
+    # Reshape the labels
+    y_train_subset = y_train_subset.reshape(
+        subset_size,
+    )
+    y_test_subset = y_test_subset.reshape(
+        subset_size,
+    )
+
+    # define the model architecture
+    inputs = tf.keras.Input(shape=(32, 32, 3))
+    x = tf.keras.layers.Conv2D(32, (3, 3), activation="relu")(inputs)
+    x = tf.keras.layers.MaxPooling2D((2, 2))(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Dense(64, activation="relu")(x)
+    outputs = tf.keras.layers.Dense(10, activation="softmax")(x)
+    # inputs and outputs
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="test_for_shap")
+    # compile the model
+    model.compile(
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(),
+        metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+    )
+    model.fit(x_train_subset, y_train_subset, epochs=1)
+
+    explainer = shap.DeepExplainer(model, x_test_subset[10:20])
+    shap_values = explainer(x_test_subset[:4])
+
+    shap.image_plot(
+        shap_values,
+        labels=["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"],
+        show=False,
+    )
     return plt.gcf()
 
 
