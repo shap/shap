@@ -280,9 +280,9 @@ class TreeExplainer(Explainer):
                 self.expected_value = self.expected_value[0]
         elif hasattr(self.model, "node_sample_weight"):
             self.expected_value = self.model.values[:, 0].sum(0)
+            self.expected_value += self.model.base_offset
             if self.expected_value.size == 1:
                 self.expected_value = self.expected_value[0]
-            self.expected_value += self.model.base_offset
             if self.model.model_output != "raw":
                 self.expected_value = None  # we don't handle transforms in this case right now...
 
@@ -630,6 +630,7 @@ class TreeExplainer(Explainer):
             )
 
         out = self._get_shap_output(phi, flat_output)
+        print(f"Expected value after update: {self.expected_value}")
         if check_additivity and self.model.model_output == "raw":
             self.assert_additivity(out, self.model.predict(X))
 
@@ -640,17 +641,17 @@ class TreeExplainer(Explainer):
             out = np.stack(out, axis=-1)
         return out
 
-    def _get_shap_output(self, phi, flat_output, update_exp_val: bool = False):
+    def _get_shap_output(self, phi, flat_output):
         """Pull off the last column of ``phi`` and keep it as our expected_value."""
         if self.model.num_outputs == 1:
-            if update_exp_val or (self.expected_value is None and self.model.model_output != "log_loss"):
+            if self.model.model_output != "log_loss":
                 self.expected_value = phi[0, -1, 0]
             if flat_output:
                 out = phi[0, :-1, 0]
             else:
                 out = phi[:, :-1, 0]
         else:
-            if update_exp_val or (self.expected_value is None and self.model.model_output != "log_loss"):
+            if self.model.model_output != "log_loss":
                 self.expected_value = [phi[0, -1, i] for i in range(phi.shape[2])]
             if flat_output:
                 out = [phi[0, :-1, i] for i in range(self.model.num_outputs)]
