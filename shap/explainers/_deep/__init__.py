@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import numpy as np
+
 from ..._explanation import Explanation
 from .._explainer import Explainer
-import numpy as np
 
 
 class DeepExplainer(Explainer):
@@ -116,18 +117,17 @@ class DeepExplainer(Explainer):
         shap.Explanation:
         """
         shap_values = self.shap_values(X)
-        # if self.expected_value is not None:
-        #     if isinstance(self.expected_value, list):
-        #         expected_value = np.array(self.expected_value)
-        #     if hasattr(self.expected_value, "numpy"):
-        #         expected_value = self.expected_value.numpy()
-        #     else:
-        #         expected_value = self.expected_value
-        #     base_values = np.tile(expected_value, (shap_values.shape[0], 1))
-        # else:
-        #     base_values = None
-        return Explanation(values=shap_values, data=X) # , base_values=base_values, interaction_order=0)
-        # return Explanation(values=shap_values, data=X, base_values=base_values, interaction_order=0)
+        if self.expected_value is not None:
+            if isinstance(self.expected_value, list):
+                expected_value = np.array(self.expected_value)
+            if hasattr(self.expected_value, "numpy"):
+                expected_value = self.expected_value.numpy()
+            else:
+                expected_value = self.expected_value
+            base_values = np.tile(expected_value, (shap_values.shape[0], 1))
+        else:
+            base_values = None
+        return Explanation(values=shap_values, data=X, base_values=base_values, interaction_order=0)
 
     def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         """Return approximate SHAP values for the model applied to the data given by X.

@@ -42,6 +42,7 @@ def test_image_multi(imagenet50_example):
     shap.image_plot(explanation, labels=labels, show=False)
     return plt.gcf()
 
+
 @pytest.mark.mpl_image_compare
 def test_image_multi_bug(imagenet50_example):
     # GH 3874, todo: implement

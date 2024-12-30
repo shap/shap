@@ -149,7 +149,9 @@ class Explanation(metaclass=MetaExplanation):
             base_values = e.base_values
             data = e.data
 
-        self.output_dims, self.interaction_order = compute_output_dims(values, base_values, data, output_names, interaction_order)
+        self.output_dims, self.interaction_order = compute_output_dims(
+            values, base_values, data, output_names, interaction_order
+        )
         values_shape = _compute_shape(values)
 
         if output_names is None and len(self.output_dims) == 1:
@@ -434,7 +436,9 @@ class Explanation(metaclass=MetaExplanation):
             return new_self  # type: ignore
         if new_self is None:
             new_self = copy.copy(self)
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
         new_self._s = new_self._s.__getitem__(item)
         new_self.op_history.append(OpHistoryItem(name="__getitem__", args=(item,), prev_shape=self.shape))
 
@@ -793,7 +797,9 @@ def group_features(shap_values, feature_map) -> Explanation:
     )
 
 
-def compute_output_dims(values, base_values, data, output_names, interaction_order: int | None = None) -> tuple[tuple[int, ...], int]:
+def compute_output_dims(
+    values, base_values, data, output_names, interaction_order: int | None = None
+) -> tuple[tuple[int, ...], int]:
     """Uses the passed data to infer which dimensions correspond to the model's output.
     Args:
         values: The SHAP values for each feature in the input data.
@@ -801,7 +807,8 @@ def compute_output_dims(values, base_values, data, output_names, interaction_ord
         data: The input data for the explanation.
         output_names: The names of the model outputs.
         interaction_order: The order of interactions in the SHAP values. Can be either 0 (for no interactions) or 1 (for interactions).
-                           Can be set to None if no information is provided, can then be infered. We need this information in cases where no base_values or output_names are provided to correctly calculate the output dimensions."""
+                           Can be set to None if no information is provided, can then be infered. We need this information in cases where no base_values or output_names are provided to correctly calculate the output dimensions.
+    """
     values_shape = _compute_shape(values)
 
     # input shape matches the data shape
@@ -833,7 +840,6 @@ def compute_output_dims(values, base_values, data, output_names, interaction_ord
         output_shape = _compute_shape(base_values)[1:]
     else:
         output_shape = tuple()
-
 
     if interaction_order is None:
         interaction_order = len(values_shape) - len(data_shape) - len(output_shape)

@@ -256,11 +256,7 @@ def test_tf_deep_imdb_transformers():
     pmodel = models.TransformersPipeline(classifier, rescale_to_logits=True)
     explainer3 = shap.Explainer(pmodel, classifier.tokenizer)
     shap_values3 = explainer3(short_data[:10])
-    import pdb; pdb.set_trace()
-    # base_values = shap_values3.base_values
-    # shap_values3.base_values = None
-    t = shap_values3[:, :, 1]
-    shap.plots.text(t)
+    shap.plots.text(shap_values3[:, :, 1])
     shap.plots.bar(shap_values3[:, :, 1].mean(0))
 
 

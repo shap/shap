@@ -82,7 +82,6 @@ def image(
 
     """
     # support passing an explanation object
-    import pdb; pdb.set_trace()
     if isinstance(shap_values, Explanation):
         shap_exp: Explanation = shap_values
         # feature_names = [shap_exp.feature_names]
