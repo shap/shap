@@ -31,6 +31,7 @@ from ..utils._legacy import (
     match_model_to_data,
 )
 from ._explainer import Explainer
+from _kernel_lib import _exp_val
 
 log = logging.getLogger("shap")
 
@@ -624,13 +625,14 @@ class KernelExplainer(Explainer):
         self.y[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
-        for i in range(self.nsamplesRun, self.nsamplesAdded):
-            eyVal = np.zeros(self.D)
-            for j in range(self.N):
-                eyVal += self.y[i * self.N + j, :] * self.data.weights[j]
+        self.ey, self.nsamplesRun = _exp_val(self.nsamplesRun,
+                                             self.nsamplesAdded,
+                                             self.D,
+                                             self.N,
+                                             self.data.weights,
+                                             self.y,
+                                             self.ey)
 
-            self.ey[i, :] = eyVal
-            self.nsamplesRun += 1
 
     def solve(self, fraction_evaluated, dim):
         eyAdj = self.linkfv(self.ey[:, dim]) - self.link.f(self.fnull[dim])
