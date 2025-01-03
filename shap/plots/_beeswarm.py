@@ -531,6 +531,7 @@ def summary_legacy(
     cmap=colors.red_blue,
     show_values_in_legend=False,
     use_log_scale=False,
+    rng=None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -765,7 +766,10 @@ def summary_legacy(
             shaps = shap_values[:, i]
             values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
-            np.random.shuffle(inds)
+            if rng is None:
+                np.random.shuffle(inds)
+            else:
+                rng.shuffle(inds)
             if values is not None:
                 values = values[inds]
             shaps = shaps[inds]
@@ -782,7 +786,11 @@ def summary_legacy(
             # curr_bin = []
             nbins = 100
             quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-            inds = np.argsort(quant + np.random.randn(N) * 1e-6)
+            if rng is None:
+                tmp_x = np.random.randn(N)
+            else:
+                tmp_x = rng.standard_normal(N)
+            inds = np.argsort(quant + tmp_x * 1e-6)
             layer = 0
             last_bin = -1
             ys = np.zeros(N)
@@ -866,7 +874,11 @@ def summary_legacy(
                 rng = shap_max - shap_min
                 xs = np.linspace(np.min(shaps) - rng * 0.2, np.max(shaps) + rng * 0.2, 100)
                 if np.std(shaps) < (global_high - global_low) / 100:
-                    ds = gaussian_kde(shaps + np.random.randn(len(shaps)) * (global_high - global_low) / 100)(xs)
+                    if rng is None:
+                        tmp_y = np.random.randn(len(shaps))
+                    else:
+                        tmp_y = rng.standard_normal(len(shaps))
+                    ds = gaussian_kde(shaps + tmp_y * (global_high - global_low) / 100)(xs)
                 else:
                     ds = gaussian_kde(shaps)(xs)
                 ds /= np.max(ds) * 3
@@ -1005,7 +1017,11 @@ def summary_legacy(
                         ys[i, :] = ys[i - 1, :]
                     continue
                 # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
-                ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
+                if rng is None:
+                    tmp_z = np.random.normal(loc=0, scale=0.001, size=shaps.shape[0])
+                else:
+                    tmp_z = rng.normal(loc=0, scale=0.001, size=shaps.shape[0])
+                ys[i, :] = gaussian_kde(shaps + tmp_z)(x_points)
                 # scale it up so that the 'size' of each y represents the size of the bin. For continuous data this will
                 # do nothing, but when we've gone with the unqique option, this will matter - e.g. if 99% are male and 1%
                 # female, we want the 1% to appear a lot smaller.
