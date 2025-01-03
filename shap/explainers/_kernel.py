@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import sklearn
+from _kernel_lib import _exp_val
 from packaging import version
 from scipy.special import binom
 from sklearn.linear_model import Lasso, LassoLarsIC, lars_path
@@ -31,7 +32,6 @@ from ..utils._legacy import (
     match_model_to_data,
 )
 from ._explainer import Explainer
-from _kernel_lib import _exp_val
 
 log = logging.getLogger("shap")
 
@@ -625,14 +625,9 @@ class KernelExplainer(Explainer):
         self.y[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
-        self.ey, self.nsamplesRun = _exp_val(self.nsamplesRun,
-                                             self.nsamplesAdded,
-                                             self.D,
-                                             self.N,
-                                             self.data.weights,
-                                             self.y,
-                                             self.ey)
-
+        self.ey, self.nsamplesRun = _exp_val(
+            self.nsamplesRun, self.nsamplesAdded, self.D, self.N, self.data.weights, self.y, self.ey
+        )
 
     def solve(self, fraction_evaluated, dim):
         eyAdj = self.linkfv(self.ey[:, dim]) - self.link.f(self.fnull[dim])
