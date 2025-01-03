@@ -43,7 +43,6 @@ def test_image_multi(imagenet50_example):
     return plt.gcf()
 
 
-@pytest.mark.skip
 @pytest.mark.mpl_image_compare
 def test_image_multi_tf_bug():
     # GH 3874
@@ -71,25 +70,62 @@ def test_image_multi_tf_bug():
         subset_size,
     )
 
-    # define the model architecture
-    inputs = tf.keras.Input(shape=(32, 32, 3))
-    x = tf.keras.layers.Conv2D(32, (3, 3), activation="relu")(inputs)
-    x = tf.keras.layers.MaxPooling2D((2, 2))(x)
-    x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(64, activation="relu")(x)
-    outputs = tf.keras.layers.Dense(10, activation="softmax")(x)
-    # inputs and outputs
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="test_for_shap")
-    # compile the model
-    model.compile(
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(),
-        metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+    values = np.zeros((4, 32, 32, 3, 10))
+    values[:, :, 1, :, :] = 1
+    base_values = np.array(
+        [
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+        ],
+        dtype=np.float32,
     )
-    model.fit(x_train_subset, y_train_subset, epochs=1)
-
-    explainer = shap.DeepExplainer(model, x_test_subset[10:20])
-    shap_values = explainer(x_test_subset[:4])
+    shap_values = shap.Explanation(values=values, data=x_test_subset[:4], base_values=base_values, interaction_order=0)
 
     shap.image_plot(
         shap_values,
