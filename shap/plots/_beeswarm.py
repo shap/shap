@@ -11,6 +11,7 @@ import pandas as pd
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
+from matplotlib.figure import Figure
 from scipy.stats import gaussian_kde
 
 from .. import Explanation
@@ -188,7 +189,7 @@ def beeswarm(
     if ax is None:
         ax = pl.gca()
     fig = ax.get_figure()
-    assert fig is not None  # type narrowing for mypy
+    assert isinstance(fig, Figure)  # type narrowing for mypy
 
     if log_scale:
         ax.set_xscale("symlog")
