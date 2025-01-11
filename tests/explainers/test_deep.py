@@ -243,7 +243,7 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.assert_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-@pytest.mark.skipif(platform.system() == "Darwin", reason="Skipping on MacOS due to memory error on GH runners")
+@pytest.mark.skipif(platform.system() == "Darwin", reason="Skipping on MacOS due to memory error, see GH #3929")
 def test_tf_deep_imbdb_transformers():
     # GH 3522
     transformers = pytest.importorskip("transformers")
