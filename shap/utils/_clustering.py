@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import itertools as it
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -13,9 +11,7 @@ from numba import njit
 
 from ..utils._exceptions import DimensionError
 from ._show_progress import show_progress
-
-if TYPE_CHECKING:
-    from ._types import _ArrayLike
+from ._types import _ArrayLike
 
 
 def partition_tree(X, metric="correlation"):
@@ -110,10 +106,10 @@ def xgboost_distances_r2(
     X,
     y,
     learning_rate: float = 0.6,
-    early_stopping_rounds: int | None = 2,
-    subsample: float | None = 1.0,
-    max_estimators: int | None = 10_000,
-    random_state: int | np.random.RandomState = 0,
+    early_stopping_rounds: Optional[int] = 2,
+    subsample: Optional[float] = 1.0,
+    max_estimators: Optional[int] = 10_000,
+    random_state: Union[int, np.random.RandomState] = 0,
 ) -> np.ndarray:
     """Compute redundancy distances scaled from 0-1 among all the features in X relative to the label y.
 
@@ -197,10 +193,10 @@ def xgboost_distances_r2(
 
 def hclust(
     X: _ArrayLike,
-    y: _ArrayLike | None = None,
+    y: Optional[_ArrayLike] = None,
     linkage: Literal["single", "complete", "average"] = "single",
     metric: str = "auto",
-    random_state: int | np.random.RandomState = 0,
+    random_state: Union[int, np.random.RandomState] = 0,
 ) -> np.ndarray:
     """Fit a hierarchical clustering model for features X relative to target variable y.
 
@@ -259,7 +255,9 @@ def hclust(
 
         # build a condensed upper triangular version by taking the max distance from either direction
         dist_list: list[float] = []
-        for i, j in it.combinations(range(len(dist_full)), 2):
+        for i, j in it.combinations_with_replacement(range(len(dist_full)), 2):
+            if i == j:
+                continue
             if linkage == "single":
                 dist_list.append(min(dist_full[i, j], dist_full[j, i]))
             elif linkage == "complete":
