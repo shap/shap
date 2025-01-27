@@ -111,7 +111,7 @@ class SequentialPerturbation:
         ), "The explanation passed must have the same number of rows as the model_args that were passed!"
 
         if label is None:
-            label = "Score %d" % len(self.score_values)
+            label = f"Score {len(self.score_values)}"
 
         # convert dataframes
         # if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -222,7 +222,7 @@ class SequentialPerturbation:
             attributions = explanation.values
 
         if label is None:
-            label = "Score %d" % len(self.score_values)
+            label = f"Score {len(self.score_values)}"
 
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):

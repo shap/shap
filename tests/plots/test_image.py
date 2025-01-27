@@ -5,6 +5,19 @@ import pytest
 import shap
 
 
+def set_reproducible_mpl_rcparams() -> None:
+    """Set some matplotlib rcParams to ensure consistency between versions.
+
+    In matplotlib 3.10, the default value of "image.interpolation_stage" changed from "data" to "auto"
+    which can lead to slighly different results.
+
+    Careful: the @pytest.mark.mpl_image_compare decorator will override rcParams,
+    so this change must be done *after* the fixtures are called.
+    """
+    plt.rcParams["image.interpolation"] = "bilinear"
+    plt.rcParams["image.interpolation_stage"] = "data"
+
+
 @pytest.fixture
 def imagenet50_example() -> tuple[np.ndarray, np.ndarray]:
     # Return a subset of the imagenet50 dataset, normalised for plotting
@@ -15,6 +28,7 @@ def imagenet50_example() -> tuple[np.ndarray, np.ndarray]:
 
 @pytest.mark.mpl_image_compare
 def test_image_single(imagenet50_example):
+    set_reproducible_mpl_rcparams()
     images, _ = imagenet50_example
     images = images[0]
     shap_values = (images - images.mean()) / images.max(keepdims=True)
@@ -25,6 +39,7 @@ def test_image_single(imagenet50_example):
 
 @pytest.mark.mpl_image_compare
 def test_image_multi(imagenet50_example):
+    set_reproducible_mpl_rcparams()
     images, _ = imagenet50_example
     n_images = 2
     n_classes = 4
