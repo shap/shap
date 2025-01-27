@@ -111,8 +111,7 @@ def beeswarm(
         raise ValueError(emsg)
     elif len(sv_shape) > 2:
         emsg = (
-            "The beeswarm plot does not support plotting explanations with instances that have more "
-            "than one dimension!"
+            "The beeswarm plot does not support plotting explanations with instances that have more than one dimension!"
         )
         raise ValueError(emsg)
 
@@ -1062,7 +1061,7 @@ def summary_legacy(
         for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
             if show_values_in_legend:
-                label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values),(n_decimals+1))})"
+                label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values), (n_decimals + 1))})"
             else:
                 label = class_names[ind]
             pl.barh(
