@@ -499,7 +499,7 @@ def test_pytorch_custom_nested_models(torch_device):
             if batch_idx % 2 == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
-                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f" ({100.0 * batch_idx / len(train_loader):.0f}%)]"
                     f"\tLoss: {loss.item():.6f}"
                 )
 
@@ -594,7 +594,7 @@ def test_pytorch_single_output(torch_device):
             if batch_idx % 2 == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
-                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f" ({100.0 * batch_idx / len(train_loader):.0f}%)]"
                     f"\tLoss: {loss.item():.6f}"
                 )
 
@@ -694,7 +694,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
             if batch_idx % 2 == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
-                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f" ({100.0 * batch_idx / len(train_loader):.0f}%)]"
                     f"\tLoss: {loss.item():.6f}"
                 )
 

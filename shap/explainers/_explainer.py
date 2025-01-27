@@ -421,9 +421,9 @@ class Explainer(Serializable):
             else:
                 sliced_labels = None
         else:
-            assert (
-                output_indices is not None
-            ), "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            assert output_indices is not None, (
+                "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            )
             labels = np.array(self.output_names)
             sliced_labels = [labels[index_list] for index_list in output_indices]
             if not ragged_outputs:

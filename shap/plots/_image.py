@@ -97,9 +97,9 @@ def image(
         if labels is None:
             labels = cast(list[str], shap_exp.output_names)
     else:
-        assert isinstance(
-            pixel_values, np.ndarray
-        ), "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+        assert isinstance(pixel_values, np.ndarray), (
+            "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+        )
 
     # multi_output = True
     if not isinstance(shap_values, list):

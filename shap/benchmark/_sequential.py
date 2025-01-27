@@ -106,9 +106,9 @@ class SequentialPerturbation:
         else:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
-        assert len(attributions) == len(
-            model_args[0]
-        ), "The explanation passed must have the same number of rows as the model_args that were passed!"
+        assert len(attributions) == len(model_args[0]), (
+            "The explanation passed must have the same number of rows as the model_args that were passed!"
+        )
 
         if label is None:
             label = f"Score {len(self.score_values)}"
