@@ -44,7 +44,7 @@ def test_summary_plot_seed_insulated(explainer):
     # see i.e., https://scientific-python.org/specs/spec-0007/
     shap_values = explainer(explainer.data)
     rng = np.random.default_rng(167089660)
-    state_before = np.random.get_state()[1] # type: ignore[index]
+    state_before = np.random.get_state()[1]  # type: ignore[index]
     shap.summary_plot(shap_values, show=False, seed=rng)
-    state_after = np.random.get_state()[1] # type: ignore[index]
+    state_after = np.random.get_state()[1]  # type: ignore[index]
     assert_array_equal(state_after, state_before)
