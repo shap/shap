@@ -565,13 +565,18 @@ def summary_legacy(
     show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
+    rng : `numpy.random.Generator`, optional
+        Pseudorandom number generator state. When `rng` is None,
+        the legacy behavior of using global NumPy random state will be
+        used. Types other than `numpy.random.Generator` are
+        passed to `numpy.random.default_rng` to instantiate a ``Generator``.
 
     """
     # handle randomization machinery in conformance with SPEC 7
     if rng is not None:
         rng = np.random.default_rng(rng)
     else:
-        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None
+        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None  # type: ignore
         if global_seed_set:
             msg = (
                 "The NumPy global RNG was seeded by calling `np.random.seed`. "
