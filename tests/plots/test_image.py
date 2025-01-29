@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
+import sys
 import shap
 
 
@@ -13,6 +14,7 @@ def imagenet50_example() -> tuple[np.ndarray, np.ndarray]:
     return images, labels
 
 
+@pytest.mark.skipif(sys.version_info[:2] == (3, 9), reason="Changes in matplotlib 3.10 changed the underlying image. Comparison no longer matching.")
 @pytest.mark.mpl_image_compare
 def test_image_single(imagenet50_example):
     images, _ = imagenet50_example
@@ -23,6 +25,7 @@ def test_image_single(imagenet50_example):
     return plt.gcf()
 
 
+@pytest.mark.skipif(sys.version_info[:2] == (3, 9), reason="Changes in matplotlib 3.10 changed the underlying image. Comparison no longer matching.")
 @pytest.mark.mpl_image_compare
 def test_image_multi(imagenet50_example):
     images, _ = imagenet50_example
