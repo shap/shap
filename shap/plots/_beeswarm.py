@@ -531,7 +531,7 @@ def summary_legacy(
     cmap=colors.red_blue,
     show_values_in_legend=False,
     use_log_scale=False,
-    seed=None,
+    rng=None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -567,6 +567,19 @@ def summary_legacy(
         by default.
 
     """
+    # handle randomization machinery in conformance with SPEC 7
+    if rng is not None:
+        rng = np.random.default_rng(rng)
+    else:
+        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None
+        if global_seed_set:
+            msg = (
+                "The NumPy global RNG was seeded by calling `np.random.seed`. "
+                "In a future version this function will no longer use the global RNG. "
+                "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+
     # initialize the plot
     pl.clf()
 
@@ -766,10 +779,10 @@ def summary_legacy(
             shaps = shap_values[:, i]
             values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
-            if seed is None:
+            if rng is None:
                 np.random.shuffle(inds)
             else:
-                seed.shuffle(inds)
+                rng.shuffle(inds)
             if values is not None:
                 values = values[inds]
             shaps = shaps[inds]
@@ -786,10 +799,10 @@ def summary_legacy(
             # curr_bin = []
             nbins = 100
             quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-            if seed is None:
+            if rng is None:
                 tmp_x = np.random.randn(N)
             else:
-                tmp_x = seed.standard_normal(N)
+                tmp_x = rng.standard_normal(N)
             inds = np.argsort(quant + tmp_x * 1e-6)
             layer = 0
             last_bin = -1
@@ -874,10 +887,10 @@ def summary_legacy(
                 rng = shap_max - shap_min
                 xs = np.linspace(np.min(shaps) - rng * 0.2, np.max(shaps) + rng * 0.2, 100)
                 if np.std(shaps) < (global_high - global_low) / 100:
-                    if seed is None:
+                    if rng is None:
                         tmp_y = np.random.randn(len(shaps))
                     else:
-                        tmp_y = seed.standard_normal(len(shaps))
+                        tmp_y = rng.standard_normal(len(shaps))
                     ds = gaussian_kde(shaps + tmp_y * (global_high - global_low) / 100)(xs)
                 else:
                     ds = gaussian_kde(shaps)(xs)
@@ -1017,10 +1030,10 @@ def summary_legacy(
                         ys[i, :] = ys[i - 1, :]
                     continue
                 # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
-                if seed is None:
+                if rng is None:
                     tmp_z = np.random.normal(loc=0, scale=0.001, size=shaps.shape[0])
                 else:
-                    tmp_z = seed.normal(loc=0, scale=0.001, size=shaps.shape[0])
+                    tmp_z = rng.normal(loc=0, scale=0.001, size=shaps.shape[0])
                 ys[i, :] = gaussian_kde(shaps + tmp_z)(x_points)
                 # scale it up so that the 'size' of each y represents the size of the bin. For continuous data this will
                 # do nothing, but when we've gone with the unqique option, this will matter - e.g. if 99% are male and 1%
