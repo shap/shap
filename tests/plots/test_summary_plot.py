@@ -37,11 +37,14 @@ def test_summary_plot(explainer):
     return fig
 
 
-@pytest.mark.parametrize("rng", [
-    np.random.default_rng(167089660),
-    17,
-    np.random.SeedSequence(entropy=60767),
-])
+@pytest.mark.parametrize(
+    "rng",
+    [
+        np.random.default_rng(167089660),
+        17,
+        np.random.SeedSequence(entropy=60767),
+    ],
+)
 def test_summary_plot_seed_insulated(explainer, rng):
     # ensure that it is possible for downstream
     # projects to avoid mutating global NumPy
