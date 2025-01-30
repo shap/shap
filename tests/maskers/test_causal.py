@@ -37,9 +37,9 @@ class TestCausal:
         # Verify the means
         assert -0.05 < np.mean(X1) < 0.05, f"Mean of X1 ({np.mean(X1)}) is not approximately 0!"
         assert -0.05 < np.mean(X2) < 0.05, f"Mean of X2 ({np.mean(X2)} is not approximately 0!"
-        assert (
-            -0.05 < np.cov(X1, X2)[0, 1] / np.var(X1) - alpha < 0.05
-        ), f"Computed alpha ({np.cov(X1, X2)[0, 1] / np.var(X1)}) is not approximately alpha ({alpha})!"
+        assert -0.05 < np.cov(X1, X2)[0, 1] / np.var(X1) - alpha < 0.05, (
+            f"Computed alpha ({np.cov(X1, X2)[0, 1] / np.var(X1)}) is not approximately alpha ({alpha})!"
+        )
 
         X = np.stack([X1, X2], axis=1)
         df = pd.DataFrame(X, columns=["X1", "X2"])
@@ -108,15 +108,15 @@ class TestCausal:
         # Assert
         conditional_mean = np.mean(results["X2"])
         expected_mean = alpha * x[0]  # E[X2 | X1]
-        assert np.isclose(
-            conditional_mean, expected_mean, atol=0.001
-        ), f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
+        assert np.isclose(conditional_mean, expected_mean, atol=0.001), (
+            f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
+        )
 
         conditional_variance = np.var(results["X2"])
         expected_variance = 1  # Variance of noise
-        assert np.isclose(
-            conditional_variance, expected_variance, atol=0.005
-        ), f"Conditional variance ({conditional_variance}) is not approximately 1!"
+        assert np.isclose(conditional_variance, expected_variance, atol=0.005), (
+            f"Conditional variance ({conditional_variance}) is not approximately 1!"
+        )
 
     def test_mask_conditions_on_sibling_when_not_confounding(self, custom_causal_dataset):
         # Arrange
@@ -137,15 +137,15 @@ class TestCausal:
         # Assert
         conditional_mean = np.mean(results["X2"])
         expected_mean = alpha * x[0]  # E[X2 | X1]
-        assert np.isclose(
-            conditional_mean, expected_mean, atol=0.005
-        ), f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
+        assert np.isclose(conditional_mean, expected_mean, atol=0.005), (
+            f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
+        )
 
         conditional_variance = np.var(results["X2"])
         expected_variance = 1  # Variance of noise
-        assert np.isclose(
-            conditional_variance, expected_variance, atol=0.005
-        ), f"Conditional variance ({conditional_variance}) is not approximately 1!"
+        assert np.isclose(conditional_variance, expected_variance, atol=0.005), (
+            f"Conditional variance ({conditional_variance}) is not approximately 1!"
+        )
 
         # also check X1
 
@@ -168,15 +168,15 @@ class TestCausal:
         # Assert
         conditional_mean = np.mean(results["X2"])
         expected_mean = alpha * x[0]  # E[X2 | X1]
-        assert np.isclose(
-            conditional_mean, expected_mean, atol=0.005
-        ), f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
+        assert np.isclose(conditional_mean, expected_mean, atol=0.005), (
+            f"Conditional mean ({conditional_mean}) is not approximately alpha * X1 ({expected_mean})!"
+        )
 
         conditional_variance = np.var(results["X2"])
         expected_variance = 1  # Variance of noise
-        assert np.isclose(
-            conditional_variance, expected_variance, atol=0.005
-        ), f"Conditional variance ({conditional_variance}) is not approximately 1!"
+        assert np.isclose(conditional_variance, expected_variance, atol=0.005), (
+            f"Conditional variance ({conditional_variance}) is not approximately 1!"
+        )
 
         # also check X1
 

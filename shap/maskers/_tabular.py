@@ -415,9 +415,9 @@ class Causal(Tabular):
         if len(x.shape) != 1 or x.shape[0] != self.data.shape[1]:
             raise DimensionError("The input passed for tabular masking does not match the background data shape!")
 
-        assert (
-            mask.shape == x.shape
-        ), f"mask must have the same shape as features. expected {self.n_features}, received {mask.shape}."
+        assert mask.shape == x.shape, (
+            f"mask must have the same shape as features. expected {self.n_features}, received {mask.shape}."
+        )
         assert mask.dtype == bool, "mask must be of Boolean dtype"
 
         # TODO Map delta masks to full masks for compatibility like in masked_model
