@@ -497,7 +497,7 @@ class KernelExplainer(Explainer):
         if isinstance(i, number_types) and isinstance(j, number_types):
             return 0 if np.isclose(i, j, equal_nan=True) else 1
         else:
-            return 0 if i == j else 1
+            return 0 if np.array_equal(i, j) else 1
 
     def varying_groups(self, x):
         if not scipy.sparse.issparse(x):
