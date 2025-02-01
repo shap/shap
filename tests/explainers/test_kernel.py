@@ -291,6 +291,8 @@ def test_non_numeric():
     assert shap.KernelExplainer.not_equal(pd.Timestamp("2017-01-01T12"), pd.Timestamp("2017-01-01T13"))
     assert shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("3Q2005"))
     assert not shap.KernelExplainer.not_equal(pd.Period("4Q2005"), pd.Period("4Q2005"))
+    assert shap.KernelExplainer.not_equal(np.array([1, 2]), np.array([2, 1]))
+    assert not shap.KernelExplainer.not_equal(np.array([1, 2]), np.array([1, 2]))
 
 
 def test_kernel_explainer_with_tensors():
