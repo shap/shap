@@ -1898,3 +1898,15 @@ def test_consistency_approximate(expected_result, approximate):
     explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
     np.testing.assert_allclose(explanations_call_approx.values, explanations_shap_values_approx)
     np.testing.assert_allclose(explanations_call_approx.values, expected_result)
+
+
+@pytest.mark.parametrize("n_rows", [3, 5])
+def test_gh_3948(n_rows):
+    rng = np.random.default_rng(0)
+    X = rng.integers(low=0, high=2, size=(n_rows, 90_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=1, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    exp.shap_values(X)
