@@ -51,9 +51,9 @@ class AdditiveExplainer(Explainer):
                 return
 
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
-        assert safe_isinstance(
-            self.masker, "shap.maskers.Independent"
-        ), "The Additive explainer only supports the Tabular masker at the moment!"
+        assert safe_isinstance(self.masker, "shap.maskers.Independent"), (
+            "The Additive explainer only supports the Tabular masker at the moment!"
+        )
 
         # pre-compute per-feature offsets
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, np.zeros(self.masker.shape[1]))

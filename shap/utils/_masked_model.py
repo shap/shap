@@ -279,9 +279,9 @@ class MaskedModel:
 
 
 def _assert_output_input_match(inputs, outputs):
-    assert (
-        len(outputs) == len(inputs[0])
-    ), f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
+    assert len(outputs) == len(inputs[0]), (
+        f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
+    )
 
 
 def _convert_delta_mask_to_full(masks, full_masks):
