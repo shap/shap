@@ -11,6 +11,7 @@ import pandas as pd
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
+from matplotlib.figure import Figure
 from scipy.stats import gaussian_kde
 
 from .. import Explanation
@@ -110,8 +111,7 @@ def beeswarm(
         raise ValueError(emsg)
     elif len(sv_shape) > 2:
         emsg = (
-            "The beeswarm plot does not support plotting explanations with instances that have more "
-            "than one dimension!"
+            "The beeswarm plot does not support plotting explanations with instances that have more than one dimension!"
         )
         raise ValueError(emsg)
 
@@ -188,7 +188,7 @@ def beeswarm(
     if ax is None:
         ax = pl.gca()
     fig = ax.get_figure()
-    assert fig is not None  # type narrowing for mypy
+    assert isinstance(fig, Figure)  # type narrowing for mypy
 
     if log_scale:
         ax.set_xscale("symlog")
@@ -341,7 +341,7 @@ def beeswarm(
             feature_names_new.append(" + ".join([feature_names[i] for i in inds]))
         else:
             max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-            feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds) - 1))
+            feature_names_new.append(f"{feature_names[inds[max_ind]]} + {len(inds) - 1} other features")
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
@@ -355,7 +355,7 @@ def beeswarm(
     # build our y-tick labels
     yticklabels = [feature_names[i] for i in feature_inds]
     if include_grouped_remaining:
-        yticklabels[-1] = "Sum of %d other features" % num_cut
+        yticklabels[-1] = f"Sum of {num_cut} other features"
 
     row_height = 0.4
     if plot_size == "auto":
@@ -531,6 +531,7 @@ def summary_legacy(
     cmap=colors.red_blue,
     show_values_in_legend=False,
     use_log_scale=False,
+    rng=None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -564,8 +565,26 @@ def summary_legacy(
     show_values_in_legend: bool
         Flag to print the mean of the SHAP values in the multi-output bar plot. Set to False
         by default.
+    rng : `numpy.random.Generator`, optional
+        Pseudorandom number generator state. When `rng` is None,
+        the legacy behavior of using global NumPy random state will be
+        used. Types other than `numpy.random.Generator` are
+        passed to `numpy.random.default_rng` to instantiate a ``Generator``.
 
     """
+    # handle randomization machinery in conformance with SPEC 7
+    if rng is not None:
+        rng = np.random.default_rng(rng)
+    else:
+        global_seed_set = np.random.mtrand._rand._bit_generator._seed_seq is None  # type: ignore
+        if global_seed_set:
+            msg = (
+                "The NumPy global RNG was seeded by calling `np.random.seed`. "
+                "In a future version this function will no longer use the global RNG. "
+                "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+
     # initialize the plot
     pl.clf()
 
@@ -765,7 +784,10 @@ def summary_legacy(
             shaps = shap_values[:, i]
             values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
-            np.random.shuffle(inds)
+            if rng is None:
+                np.random.shuffle(inds)
+            else:
+                rng.shuffle(inds)
             if values is not None:
                 values = values[inds]
             shaps = shaps[inds]
@@ -782,7 +804,11 @@ def summary_legacy(
             # curr_bin = []
             nbins = 100
             quant = np.round(nbins * (shaps - np.min(shaps)) / (np.max(shaps) - np.min(shaps) + 1e-8))
-            inds = np.argsort(quant + np.random.randn(N) * 1e-6)
+            if rng is None:
+                tmp_x = np.random.randn(N)
+            else:
+                tmp_x = rng.standard_normal(N)
+            inds = np.argsort(quant + tmp_x * 1e-6)
             layer = 0
             last_bin = -1
             ys = np.zeros(N)
@@ -866,7 +892,11 @@ def summary_legacy(
                 rng = shap_max - shap_min
                 xs = np.linspace(np.min(shaps) - rng * 0.2, np.max(shaps) + rng * 0.2, 100)
                 if np.std(shaps) < (global_high - global_low) / 100:
-                    ds = gaussian_kde(shaps + np.random.randn(len(shaps)) * (global_high - global_low) / 100)(xs)
+                    if rng is None:
+                        tmp_y = np.random.randn(len(shaps))
+                    else:
+                        tmp_y = rng.standard_normal(len(shaps))
+                    ds = gaussian_kde(shaps + tmp_y * (global_high - global_low) / 100)(xs)
                 else:
                     ds = gaussian_kde(shaps)(xs)
                 ds /= np.max(ds) * 3
@@ -996,8 +1026,8 @@ def summary_legacy(
                 # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
-                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
-                        % (i, feature_names[ind])
+                        f"Not enough data in bin #{i} for feature {feature_names[ind]}, so it'll be ignored."
+                        " Try increasing the number of records to plot."
                     )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0
@@ -1005,7 +1035,11 @@ def summary_legacy(
                         ys[i, :] = ys[i - 1, :]
                     continue
                 # save kde of them: note that we add a tiny bit of gaussian noise to avoid singular matrix errors
-                ys[i, :] = gaussian_kde(shaps + np.random.normal(loc=0, scale=0.001, size=shaps.shape[0]))(x_points)
+                if rng is None:
+                    tmp_z = np.random.normal(loc=0, scale=0.001, size=shaps.shape[0])
+                else:
+                    tmp_z = rng.normal(loc=0, scale=0.001, size=shaps.shape[0])
+                ys[i, :] = gaussian_kde(shaps + tmp_z)(x_points)
                 # scale it up so that the 'size' of each y represents the size of the bin. For continuous data this will
                 # do nothing, but when we've gone with the unqique option, this will matter - e.g. if 99% are male and 1%
                 # female, we want the 1% to appear a lot smaller.
@@ -1061,7 +1095,7 @@ def summary_legacy(
         for i, ind in enumerate(class_inds):
             global_shap_values = np.abs(shap_values[ind]).mean(0)
             if show_values_in_legend:
-                label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values),(n_decimals+1))})"
+                label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values), (n_decimals + 1))})"
             else:
                 label = class_names[ind]
             pl.barh(

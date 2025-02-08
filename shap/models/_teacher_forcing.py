@@ -95,9 +95,9 @@ class TeacherForcing(Model):
                 self.device is not None
             ):  # = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
                 d = self.similarity_model.device
-                assert (
-                    d == self.device or str(d) == self.device
-                ), "The passed similarity_model must be on the same device!"
+                assert d == self.device or str(d) == self.device, (
+                    "The passed similarity_model must be on the same device!"
+                )
                 # self.similarity_model = self.similarity_model.to(self.device)
         elif safe_isinstance(self.similarity_model, "transformers.TFPreTrainedModel"):
             self.similarity_model_type = "tf"
