@@ -111,6 +111,7 @@ disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
+mypy_path = "stubs"
 
 plugins = ["numpy.typing.mypy_plugin"]
 
