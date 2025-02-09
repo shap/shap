@@ -360,3 +360,19 @@ def test_kernel_logits_zeros_ones_probs(nsamples):
     pred = rf.predict_proba(X_test_sampled)
 
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), pred, atol=1e-04)
+
+
+@pytest.mark.parametrize("dt", [np.bool_, np.object_])
+def test_explainer_non_number_dtype(dt):
+    seed = 45479
+    rng = np.random.default_rng(seed)
+    X = rng.choice([True, False], size=(15, 8)).astype(dt)
+    y = rng.choice([True, False], size=(15,)).astype(float)
+    rf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
+    rf.fit(X, y)
+    explainer = shap.KernelExplainer(
+        model=rf.predict_proba,
+        data=X,
+        random_state=seed)
+    shap_values = explainer(X)
+    np.testing.assert_allclose(shap_values.values.max(), 0.26547777777777753)

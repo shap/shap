@@ -499,6 +499,9 @@ class KernelExplainer(Explainer):
         elif hasattr(i, "dtype") and hasattr(j, "dtype"):
             if np.issubdtype(i.dtype, np.number) and np.issubdtype(j.dtype, np.number):
                 return 0 if np.allclose(i, j, equal_nan=True) else 1
+            if np.issubdtype(i.dtype, np.bool_) and np.issubdtype(j.dtype, np.bool_):
+                return 0 if np.allclose(i, j, equal_nan=True) else 1
+            return 0 if all(i == j) else 1
         else:
             return 0 if i == j else 1
 
