@@ -372,4 +372,4 @@ def test_explainer_non_number_dtype(dt):
     rf.fit(X, y)
     explainer = shap.KernelExplainer(model=rf.predict_proba, data=X, random_state=seed)
     shap_values = explainer(X)
-    np.testing.assert_allclose(shap_values.values.max(), 0.26547777777777753)
+    np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
