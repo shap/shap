@@ -370,9 +370,6 @@ def test_explainer_non_number_dtype(dt):
     y = rng.choice([True, False], size=(15,)).astype(float)
     rf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
     rf.fit(X, y)
-    explainer = shap.KernelExplainer(
-        model=rf.predict_proba,
-        data=X,
-        random_state=seed)
+    explainer = shap.KernelExplainer(model=rf.predict_proba, data=X, random_state=seed)
     shap_values = explainer(X)
     np.testing.assert_allclose(shap_values.values.max(), 0.26547777777777753)
