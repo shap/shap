@@ -495,7 +495,13 @@ class KernelExplainer(Explainer):
     def not_equal(i, j):
         number_types = (int, float, np.number)
         if isinstance(i, number_types) and isinstance(j, number_types):
-            return 0 if np.isclose(i, j, equal_nan=True) else 1
+            return 0 if np.allclose(i, j, equal_nan=True) else 1
+        elif hasattr(i, "dtype") and hasattr(j, "dtype"):
+            if np.issubdtype(i.dtype, np.number) and np.issubdtype(j.dtype, np.number):
+                return 0 if np.allclose(i, j, equal_nan=True) else 1
+            if np.issubdtype(i.dtype, np.bool_) and np.issubdtype(j.dtype, np.bool_):
+                return 0 if np.allclose(i, j, equal_nan=True) else 1
+            return 0 if all(i == j) else 1
         else:
             return 0 if i == j else 1
 
@@ -510,8 +516,7 @@ class KernelExplainer(Explainer):
                         varying[i] = False
                         continue
                     x_group = x_group.todense()
-                num_mismatches = np.sum(np.frompyfunc(self.not_equal, 2, 1)(x_group, self.data.data[:, inds]))
-                varying[i] = num_mismatches > 0
+                varying[i] = self.not_equal(x_group, self.data.data[:, inds])
             varying_indices = np.nonzero(varying)[0]
             return varying_indices
         else:
