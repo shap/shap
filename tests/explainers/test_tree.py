@@ -1901,11 +1901,12 @@ def test_consistency_approximate(expected_result, approximate):
 
 
 @pytest.mark.parametrize("n_rows", [3, 5])
-def test_gh_3948(n_rows):
+@pytest.mark.parametrize("n_estimators", [1, 100])
+def test_gh_3948(n_rows, n_estimators):
     rng = np.random.default_rng(0)
     X = rng.integers(low=0, high=2, size=(n_rows, 90_000)).astype(np.float64)
     y = rng.integers(low=0, high=2, size=n_rows)
-    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=1, random_state=0)
+    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=n_estimators, random_state=0)
     clf.fit(X, y)
     clf.predict_proba(X)
     exp = shap.TreeExplainer(clf, X)
