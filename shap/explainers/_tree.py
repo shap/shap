@@ -457,6 +457,8 @@ class TreeExplainer(Explainer):
         approximate: bool = False,
         check_additivity: bool = True,
         from_call: bool = False,
+        abs_tol: float = 1e-2,
+        rel_tol: float = 1e-2,
     ):
         """Estimate the SHAP values for a set of samples.
 
@@ -483,6 +485,13 @@ class TreeExplainer(Explainer):
             Run a validation check that the sum of the SHAP values equals the output of the model. This
             check takes only a small amount of time, and will catch potential unforeseen errors.
             Note that this check only runs right now when explaining the margin of the model.
+
+        abs_tol : float
+            absolute tolerance value for checking the difference between shap calculations and model
+            output when calling `check_additivity=True`
+
+        rel_tol : float
+            relative tolerance value for handling very small numbers when calling `check_sum`
 
         Returns
         -------
@@ -573,7 +582,7 @@ class TreeExplainer(Explainer):
                     out = phi[:, :-1]
 
                 if check_additivity and model_output_vals is not None:
-                    self.assert_additivity(out, model_output_vals)
+                    self.assert_additivity(out, model_output_vals, abs_tol, rel_tol)
                 if isinstance(out, list):
                     out = np.stack(out, axis=-1)
                 return out
@@ -630,7 +639,7 @@ class TreeExplainer(Explainer):
 
         out = self._get_shap_output(phi, flat_output)
         if check_additivity and self.model.model_output == "raw":
-            self.assert_additivity(out, self.model.predict(X))
+            self.assert_additivity(out, self.model.predict(X), abs_tol, rel_tol)
 
         # This statements handles the case of multiple outputs
         # e.g. a multi-class classification problem, multi-target regression problem
@@ -791,10 +800,10 @@ class TreeExplainer(Explainer):
                 out = np.stack([phi[:, :-1, :-1, i] for i in range(self.model.num_outputs)], axis=-1)
         return out
 
-    def assert_additivity(self, phi, model_output):
-        def check_sum(sum_val, model_output):
+    def assert_additivity(self, phi, model_output, abs_tol, rel_tol):
+        def check_sum(sum_val, model_output, abs_tol, rel_tol):
             diff = np.abs(sum_val - model_output)
-            if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
+            if not np.allclose(sum_val, model_output, atol=abs_tol, rtol=rel_tol):
                 ind = np.argmax(diff)
                 err_msg = (
                     "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the "
@@ -812,9 +821,9 @@ class TreeExplainer(Explainer):
 
         if isinstance(phi, list):
             for i in range(len(phi)):
-                check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:, i])
+                check_sum(self.expected_value[i] + phi[i].sum(-1), model_output[:, i], abs_tol, rel_tol)
         else:
-            check_sum(self.expected_value + phi.sum(-1), model_output)
+            check_sum(self.expected_value + phi.sum(-1), model_output, abs_tol, rel_tol)
 
     @staticmethod
     def supports_model_with_masker(model, masker):
