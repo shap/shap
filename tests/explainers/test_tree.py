@@ -5,11 +5,14 @@ import math
 import pickle
 import sys
 
+import hypothesis.extra.numpy as npst
 import numpy as np
 import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from hypothesis import example, given
+from hypothesis import strategies as st
 from sklearn.utils import check_array
 
 import shap
@@ -1907,6 +1910,27 @@ def test_gh_3948(n_rows, n_estimators):
     X = rng.integers(low=0, high=2, size=(n_rows, 90_000)).astype(np.float64)
     y = rng.integers(low=0, high=2, size=n_rows)
     clf = sklearn.ensemble.RandomForestClassifier(n_estimators=n_estimators, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    exp.shap_values(X)
+
+
+@pytest.mark.slow
+@given(
+    npst.arrays(
+        dtype=np.float32,
+        shape=(st.tuples(st.integers(min_value=3, max_value=10), st.integers(min_value=3, max_value=10))),
+        elements=st.floats(min_value=0, max_value=1, allow_subnormal=False, width=16),
+    )
+)
+@example(
+    np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], dtype=np.float32),
+)
+def test_tight_sensitivity_extra(X):
+    rng = np.random.default_rng(0)
+    y = rng.integers(low=0, high=2, size=len(X))
+    clf = sklearn.ensemble.ExtraTreesClassifier(n_estimators=100, random_state=0)
     clf.fit(X, y)
     clf.predict_proba(X)
     exp = shap.TreeExplainer(clf, X)
