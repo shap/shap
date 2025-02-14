@@ -20,99 +20,16 @@ concurrency:
   # Cancel only PR intermediate builds
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
+# Temporary simpler job for debugging purposes
 jobs:
   run_tests:
-    strategy:
-      matrix:
-        os: ["ubuntu-latest"]
-        # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-        extras: ["test"]
-        include:
-          # Test on windows/mac, just one job each
-          - os: windows-latest
-            python-version: "3.11"
-            extras: "test"
-          - os: macos-latest
-            python-version: "3.11"
-            extras: "test"
-          # Run tests with only the core dependencies, to ensure we
-          # cover the latest version of numpy/pandas. See GH dsgibbons#46
-          - os: ubuntu-latest
-            python-version: "3.12"
-            extras: "test-core"
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install libomp (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install libomp
-      - name: Install dependencies
-        # Do regular install NOT editable install: see GH #3020
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system '.[${{ matrix.extras }},plots]'
-      - name: Test with pytest
-        # Ensure we avoid adding current working directory to sys.path:
-        # - Use "pytest" over "python -m pytest"
-        # - Use "append" import mode rather than default "prepend"
-        run: >
-          pytest --durations=20
-          --cov --cov-report=xml
-          --mpl-generate-summary=html --mpl-results-path=./mpl-results
-          --import-mode=append
-      - name: Upload mpl test report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
-          path: mpl-results/
-          if-no-files-found: ignore
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-
-  test_oldest_supported_numpy:
-    # Package is built with numpy 2.X, and tested against numpy 1.X.
-    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
-    # The "oldest supported numpy" is determined by SPEC 0:
-    # https://scientific-python.org/specs/spec-0000/
-    name: run tests (oldest supported numpy)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system numpy==1.24.0 '.[test-core,plots]'
-      - name: Test with pytest
-        run: pytest --durations=20 --import-mode=append
-
-  run_mypy:
-    # Run mypy on the latest Python version
-    name: run mypy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system '.[test-core]'
-      - name: Run mypy
-        run: mypy shap tests
+          python-version: 3.11
+      - run: brew install libomp
+      - run: pip install pytest torch scikit-learn lightgbm
+      - run: pip list
+      - run: pytest --noconftest tests/test_bug121101.py
