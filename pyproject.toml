@@ -34,6 +34,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
@@ -70,18 +71,18 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  "catboost",
+  "catboost; python_version < '3.13'",  # TODO: pending 3.13 support
   "gpboost",
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers",
-  "tf-keras",
+  "transformers; python_version < '3.13'",  # TODO: pending 3.13 support
+  "tf-keras; python_version < '3.13'",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
-  "torch; sys_platform != 'darwin'",
-  "torchvision",
-  "tensorflow",
+  "torch==2.2.0; sys_platform == 'darwin' and python_version < '3.13'",  # see GH #3524
+  "torch; sys_platform != 'darwin' and python_version < '3.13'",  # TODO: pending 3.13 support
+  "torchvision; python_version < '3.13'",  # TODO: pending 3.13 support
+  "tensorflow; python_version < '3.13'",  # TODO: pending 3.13 support
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
