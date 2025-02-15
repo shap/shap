@@ -138,6 +138,10 @@ def run_setup(*, with_binary, with_cuda):
         except Exception as e:
             raise Exception("Error building cuda module: " + repr(e)) from e
 
+    ext_modules.append(
+        Extension("_kernel_lib", sources=["shap/explainers/_kernel_lib.pyx"], include_dirs=[np.get_include()])
+    )
+
     setup(ext_modules=ext_modules)
 
 

@@ -12,6 +12,8 @@ build:
     - asdf global uv latest
     - uv venv
     - uv pip install -r docs/requirements-docs.txt
+    - uv pip install setuptools cython
+    - .venv/bin/python setup.py build_ext --inplace
     - >-
       .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en
       docs $READTHEDOCS_OUTPUT/html

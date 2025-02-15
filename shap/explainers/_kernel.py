@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import sklearn
+from _kernel_lib import _exp_val
 from packaging import version
 from scipy.special import binom
 from sklearn.linear_model import Lasso, LassoLarsIC, lars_path
@@ -629,13 +630,9 @@ class KernelExplainer(Explainer):
         self.y[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
-        for i in range(self.nsamplesRun, self.nsamplesAdded):
-            eyVal = np.zeros(self.D)
-            for j in range(self.N):
-                eyVal += self.y[i * self.N + j, :] * self.data.weights[j]
-
-            self.ey[i, :] = eyVal
-            self.nsamplesRun += 1
+        self.ey, self.nsamplesRun = _exp_val(
+            self.nsamplesRun, self.nsamplesAdded, self.D, self.N, self.data.weights, self.y, self.ey
+        )
 
     def solve(self, fraction_evaluated, dim):
         eyAdj = self.linkfv(self.ey[:, dim]) - self.link.f(self.fnull[dim])
