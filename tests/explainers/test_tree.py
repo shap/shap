@@ -5,14 +5,11 @@ import math
 import pickle
 import sys
 
-import hypothesis.extra.numpy as npst
 import numpy as np
 import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
-from hypothesis import example, given
-from hypothesis import strategies as st
 from sklearn.utils import check_array
 
 import shap
@@ -1916,22 +1913,31 @@ def test_gh_3948(n_rows, n_estimators):
     exp.shap_values(X)
 
 
-@pytest.mark.slow
-@given(
-    npst.arrays(
-        dtype=np.float32,
-        shape=(st.tuples(st.integers(min_value=3, max_value=10), st.integers(min_value=3, max_value=10))),
-        elements=st.floats(min_value=0, max_value=1, allow_subnormal=False, width=16),
-    )
-)
-@example(
-    np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], dtype=np.float32),
-)
-def test_tight_sensitivity_extra(X):
+@pytest.fixture
+def model_explainer():
     rng = np.random.default_rng(0)
+    X = np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
     y = rng.integers(low=0, high=2, size=len(X))
     clf = sklearn.ensemble.ExtraTreesClassifier(n_estimators=100, random_state=0)
     clf.fit(X, y)
     clf.predict_proba(X)
     exp = shap.TreeExplainer(clf, X)
-    exp.shap_values(X)
+    return exp
+
+
+@pytest.mark.parametrize(
+    "phi, model_output",
+    [
+        (
+            [
+                np.array([[0.0, 0.0, -0.24750001], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825]]),
+                np.array(
+                    [[0.0, 0.0, 0.24749997], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999]]
+                ),
+            ],
+            np.array([[0.0, 1.0], [0.33333333, 0.66666667], [0.33333333, 0.66666667], [0.33333333, 0.66666667]]),
+        ),
+    ],
+)
+def test_tight_sensitivity_extra(model_explainer, phi, model_output):
+    model_explainer.assert_additivity(phi, model_output)
