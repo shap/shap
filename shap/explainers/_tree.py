@@ -794,7 +794,9 @@ class TreeExplainer(Explainer):
     def assert_additivity(self, phi, model_output):
         def check_sum(sum_val, model_output):
             diff = np.abs(sum_val - model_output)
-            if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
+            # TODO: add arguments for passing custom 'atol' and 'rtol' values to 'np.allclose'
+            # would require change to interface i.e. '__call__' methods
+            if not np.allclose(sum_val, model_output, atol=1e-2, rtol=1e-2):
                 ind = np.argmax(diff)
                 err_msg = (
                     "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the "
