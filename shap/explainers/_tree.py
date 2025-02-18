@@ -1657,7 +1657,7 @@ class SingleTree:
         if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree"]):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
-            if hasattr(tree, 'missing_go_to_left'):
+            if hasattr(tree, "missing_go_to_left"):
                 self.children_default = np.where(tree.missing_go_to_left, self.children_left, self.children_right)
             else:
                 self.children_default = self.children_left
