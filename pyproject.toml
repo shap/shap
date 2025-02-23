@@ -70,6 +70,7 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
+  "causalml",
   "catboost",
   "gpboost",
   "ngboost",
@@ -151,6 +152,7 @@ check_untyped_defs = false
 # Ignore missing types for 3rd party libraries
 module = [
   "catboost.*",
+  "causalml.*",
   "cloudpickle",
   "cv2",
   "IPython.*",
