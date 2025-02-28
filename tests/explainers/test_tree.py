@@ -1991,5 +1991,5 @@ def test_overflow_tree_path_dependent():
     clf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
     clf.fit(X, y)
     clf.predict_proba(X)
-    exp = shap.Explainer(clf, algorithm='tree', feature_perturbation='tree_path_dependent')
+    exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
     exp(X)
