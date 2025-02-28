@@ -1912,6 +1912,7 @@ def test_gh_3948(n_rows, n_estimators):
     exp = shap.TreeExplainer(clf, X)
     exp.shap_values(X)
 
+
 def test_overflow_tree_path_dependent():
     """GH #4002
     Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
@@ -1924,5 +1925,5 @@ def test_overflow_tree_path_dependent():
     clf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
     clf.fit(X, y)
     clf.predict_proba(X)
-    exp = shap.Explainer(clf, algorithm='tree', feature_perturbation='tree_path_dependent')
+    exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
     exp(X)
