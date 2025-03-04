@@ -647,7 +647,7 @@ def test_pytorch_single_output(torch_device):
     )
 
 
-@pytest.mark.parametrize("activation", ["relu", "selu"])
+@pytest.mark.parametrize("activation", ["relu", "selu", "gelu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
 def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
@@ -659,7 +659,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
 
-    activation_func = {"relu": nn.ReLU(), "selu": nn.SELU()}[activation]
+    activation_func = {"relu": nn.ReLU(), "selu": nn.SELU(), "gelu": nn.GELU()}[activation]
 
     class Net(nn.Module):
         """Testing model."""
