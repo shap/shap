@@ -1979,6 +1979,7 @@ def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
     np.testing.assert_allclose(shap_values, expected_shap_values)
 
 
+@pytest.mark.xslow
 def test_overflow_tree_path_dependent():
     """GH #4002
     Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
