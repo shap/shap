@@ -1913,6 +1913,7 @@ def test_gh_3948(n_rows, n_estimators):
     exp.shap_values(X)
 
 
+@pytest.mark.xslow
 def test_overflow_tree_path_dependent():
     """GH #4002
     Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
