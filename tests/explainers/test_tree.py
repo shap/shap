@@ -1911,3 +1911,33 @@ def test_gh_3948(n_rows, n_estimators):
     clf.predict_proba(X)
     exp = shap.TreeExplainer(clf, X)
     exp.shap_values(X)
+
+
+@pytest.fixture
+def model_explainer():
+    rng = np.random.default_rng(0)
+    X = np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+    y = rng.integers(low=0, high=2, size=len(X))
+    clf = sklearn.ensemble.ExtraTreesClassifier(n_estimators=100, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    return exp
+
+
+@pytest.mark.parametrize(
+    "phi, model_output",
+    [
+        (
+            [
+                np.array([[0.0, 0.0, -0.24750001], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825]]),
+                np.array(
+                    [[0.0, 0.0, 0.24749997], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999]]
+                ),
+            ],
+            np.array([[0.0, 1.0], [0.33333333, 0.66666667], [0.33333333, 0.66666667], [0.33333333, 0.66666667]]),
+        ),
+    ],
+)
+def test_tight_sensitivity_extra(model_explainer, phi, model_output):
+    model_explainer.assert_additivity(phi, model_output)
