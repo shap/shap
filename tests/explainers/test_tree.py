@@ -1110,7 +1110,9 @@ class TestExplainerSklearn:
         assert np.abs(explanation.values.sum(1) + explanation.base_values - predicted).max() < 1e-4
 
     def test_sum_match_adaboost_classifier(self) -> None:
-        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(*shap.datasets.adult(), test_size=0.2, random_state=0)
+        X_train, X_test, Y_train, _ = sklearn.model_selection.train_test_split(
+            *shap.datasets.adult(), test_size=0.2, random_state=0
+        )
         clf = sklearn.ensemble.AdaBoostClassifier(random_state=202, n_estimators=1)
         clf.fit(X_train, Y_train)
         predicted = clf.predict_proba(X_test)
@@ -1118,8 +1120,10 @@ class TestExplainerSklearn:
 
         shap_values = ex.shap_values(X_test)
 
-        assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:,0]).max() < 1e-4, \
+        assert np.abs(shap_values[0].sum(1) + ex.expected_value[0] - predicted[:, 0]).max() < 1e-4, (
             "SHAP values don't sum to model output!"
+        )
+
 
 class TestExplainerXGBoost:
     """Tests for the TreeExplainer with XGBoost models.
