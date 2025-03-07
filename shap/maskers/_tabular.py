@@ -10,7 +10,7 @@ from ..utils import MaskedModel
 from ..utils._exceptions import DimensionError, InvalidClusteringError
 from ._masker import Masker
 
-log = logging.getLogger('shap')
+log = logging.getLogger("shap")
 
 
 class Tabular(Masker):
@@ -98,7 +98,6 @@ class Tabular(Masker):
 
         # if mask is an array of integers then we are doing delta masking
         if np.issubdtype(mask.dtype, np.integer):
-
             variants = ~self.invariants(x)
             curr_delta_inds = np.zeros(len(mask), dtype=int)
             num_masks = (mask >= 0).sum()
@@ -107,9 +106,16 @@ class Tabular(Masker):
             self._last_mask[:] = False
             self._masked_data[:] = self.data
             _delta_masking(
-                mask, x, curr_delta_inds,
-                varying_rows_out, self._masked_data, self._last_mask, self. data, variants,
-                masked_inputs_out, MaskedModel.delta_mask_noop_value
+                mask,
+                x,
+                curr_delta_inds,
+                varying_rows_out,
+                self._masked_data,
+                self._last_mask,
+                self.data,
+                variants,
+                masked_inputs_out,
+                MaskedModel.delta_mask_noop_value,
             )
             if self.output_dataframe:
                 return (pd.DataFrame(masked_inputs_out, columns=self.feature_names),), varying_rows_out
@@ -133,7 +139,6 @@ class Tabular(Masker):
     #     self._masked_data[:] = self.data
     #     self._last_mask[:] = False
 
-
     def invariants(self, x):
         """This returns a mask of which features change when we mask them.
 
@@ -143,8 +148,11 @@ class Tabular(Masker):
         # make sure we got valid data
         if x.shape != self.data.shape[1:]:
             raise DimensionError(
-                "The passed data does not match the background shape expected by the masker! The data of shape " + \
-                str(x.shape) + " was passed while the masker expected data of shape " + str(self.data.shape[1:]) + "."
+                "The passed data does not match the background shape expected by the masker! The data of shape "
+                + str(x.shape)
+                + " was passed while the masker expected data of shape "
+                + str(self.data.shape[1:])
+                + "."
             )
 
         return np.isclose(x, self.data)
@@ -155,7 +163,6 @@ class Tabular(Masker):
 
         # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.maskers.Tabular", version=0) as s:
-
             # save the data in the format it was given to us
             if self.output_dataframe:
                 s.save("data", pd.DataFrame(self.data, columns=self.feature_names))
@@ -180,6 +187,7 @@ class Tabular(Masker):
             kwargs["clustering"] = s.load("clustering")
         return kwargs
 
+
 @njit
 def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
     if dind == noop_code:
@@ -191,9 +199,20 @@ def _single_delta_mask(dind, masked_inputs, last_mask, data, x, noop_code):
         masked_inputs[:, dind] = x[dind]
         last_mask[dind] = True
 
+
 @njit
-def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
-                   masked_inputs_tmp, last_mask, data, variants, masked_inputs_out, noop_code):
+def _delta_masking(
+    masks,
+    x,
+    curr_delta_inds,
+    varying_rows_out,
+    masked_inputs_tmp,
+    last_mask,
+    data,
+    variants,
+    masked_inputs_out,
+    noop_code,
+):
     """Implements the special (high speed) delta masking API that only flips the positions we need to.
 
     Note that we attempt to avoid doing any allocation inside this function for speed reasons.
@@ -209,15 +228,15 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
         # update the tmp masked inputs array
         dpos = 0
         curr_delta_inds[0] = masks[masks_pos]
-        while curr_delta_inds[dpos] < 0: # negative values mean keep going
-            curr_delta_inds[dpos] = -curr_delta_inds[dpos] - 1 # -value + 1 is the original index that needs flipped
+        while curr_delta_inds[dpos] < 0:  # negative values mean keep going
+            curr_delta_inds[dpos] = -curr_delta_inds[dpos] - 1  # -value + 1 is the original index that needs flipped
             _single_delta_mask(curr_delta_inds[dpos], masked_inputs_tmp, last_mask, data, x, noop_code)
             dpos += 1
             curr_delta_inds[dpos] = masks[masks_pos + dpos]
         _single_delta_mask(curr_delta_inds[dpos], masked_inputs_tmp, last_mask, data, x, noop_code)
 
         # copy the tmp masked inputs array to the output
-        masked_inputs_out[output_pos:output_pos+N] = masked_inputs_tmp
+        masked_inputs_out[output_pos : output_pos + N] = masked_inputs_tmp
         masks_pos += dpos + 1
 
         # mark which rows have been updated, so we can only evaluate the model on the rows we need to
@@ -231,10 +250,9 @@ def _delta_masking(masks, x, curr_delta_inds, varying_rows_out,
 
             # more than one column was changed
             else:
-                varying_rows_out[i, :] = np.sum(variants[:, curr_delta_inds[:dpos+1]], axis=1) > 0
+                varying_rows_out[i, :] = np.sum(variants[:, curr_delta_inds[: dpos + 1]], axis=1) > 0
 
         output_pos += N
-
 
 
 class Independent(Tabular):
@@ -295,7 +313,7 @@ class Partition(Tabular):
         super().__init__(data, max_samples=max_samples, clustering=clustering)
 
 
-class Impute(Masker): # we should inherit from Tabular once we add support for arbitrary masking
+class Impute(Masker):  # we should inherit from Tabular once we add support for arbitrary masking
     """This imputes the values of missing features using the values of the observed features.
 
     Unlike Independent, Gaussian imputes missing values based on correlations with observed data points.

@@ -1,5 +1,8 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "oldest-supported-numpy", "packaging>20.9"]
+# Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
+# https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9",
+            "cython>=3.0.11"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -19,8 +22,9 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba',
-  'cloudpickle'
+  'numba>=0.54',
+  'cloudpickle',
+  'typing-extensions',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
@@ -47,14 +51,20 @@ docs = [
   "matplotlib",
   "ipython",
   "numpydoc",
-  "sphinx_rtd_theme==2.0.0",
-  "sphinx==7.2.6",
-  "nbsphinx==0.9.3",
-  "sphinx_github_changelog==1.2.1",
-  "myst-parser==2.0.0",
+  "sphinx_rtd_theme",
+  "sphinx",
+  "nbsphinx",
+  "sphinx_github_changelog",
+  "myst-parser",
   "requests",
+  "ipywidgets",  # For tqdm in notebooks
 ]
-test-core = ["pytest", "pytest-mpl", "pytest-cov"]
+test-core = [
+  "pytest",
+  "pytest-mpl",
+  "pytest-cov",
+  "mypy",
+]
 test = [
   "pytest",
   "pytest-mpl",
@@ -75,6 +85,9 @@ test = [
   "tensorflow",
   "sentencepiece",
   "opencv-python",
+  # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
+  # See GH #3707, #3768, 3922
+  "numpy<2.0",
 ]
 
 test_notebooks = [
@@ -91,6 +104,74 @@ test_notebooks = [
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
 "Release Notes" = 'https://shap.readthedocs.io/en/latest/release_notes.html'
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+exclude = ["shap/benchmark/*", "tests/benchmark/*"]
+mypy_path = "stubs"
+
+plugins = ["numpy.typing.mypy_plugin"]
+
+[[tool.mypy.overrides]]
+# Disable some checks from certain shap modules
+# TODO: get these passing!
+module = [
+  "shap.explainers._additive",
+  "shap.explainers._deep.deep_pytorch",
+  "shap.explainers._deep.deep_tf",
+  "shap.explainers._exact",
+  "shap.explainers._explainer",
+  "shap.explainers._gradient",
+  "shap.explainers._kernel",
+  "shap.explainers._linear",
+  "shap.explainers._partition",
+  "shap.explainers._partition",
+  "shap.explainers._permutation",
+  "shap.explainers._sampling",
+  "shap.explainers._tree",
+  "shap.explainers.other._random",
+  "shap.explainers.pytree",
+  "shap.explainers.tf_utils",
+  "shap.maskers._composite",
+  "shap.maskers._fixed",
+  "shap.maskers._image",
+  "shap.maskers._masker",
+  "shap.maskers._tabular",
+  "shap.maskers._text",
+  "shap.plots._benchmark",
+  "shap.plots._force_matplotlib",
+  "shap.plots._force",
+  "shap.plots._text",
+  "shap.plots._waterfall",
+]
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+# Ignore missing types for 3rd party libraries
+module = [
+  "catboost.*",
+  "cloudpickle",
+  "cv2",
+  "IPython.*",
+  "lightgbm.*",
+  "lime.*",
+  "numba",
+  "pandas",
+  "pyod.*",
+  "pyspark.*",
+  "scipy.*",
+  "sklearn.*",
+  "slicer",
+  "tensorflow.*",
+  "transformers.*",
+  "torch.*",
+  "tqdm.*",
+  "xgboost.*",
+]
+ignore_missing_imports = true
 
 [tool.setuptools]
 packages = [
@@ -121,6 +202,8 @@ filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
 
 [tool.ruff]
@@ -129,21 +212,33 @@ filterwarnings = [
 # config to always disable linting for specific files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 extend-exclude = ["**/tree_shap_paper/**", "docs/user_studies/*"]
+line-length = 120
 
 [tool.ruff.lint]
 select = [
   "F",  # pyflakes
   "I",  # isort
+  "ISC",  # string literal concatenation.
   "UP",  # pyupgrade
   "E",  # pycodestyle
   "W",  # warning
   "D",  # pydocstyle
+  "NPY",  # Numpy
+  "SIM101",  # flake8-simplify
+  "FA",  # future annotations
+  "TCH",  # Move type only imports to type-checking condition.
   # D417  # undocumented parameter. FIXME: get this passing
 ]
 ignore = [
   # Recommended rules to disable when using ruff formatter:
-  "E117",  # Over-indented
-  "E501",  # Line too long
+  # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "D206",
+  "D300",
+  "E111",
+  "E114",
+  "E117",
+  "E501",
+  "W191",
 
   # pydocstyle issues not yet fixed
   "D100",  # Missing docstring in public module
@@ -156,6 +251,7 @@ ignore = [
   "D400",  # First line should end with a period
   "D401",  # First line of docstring should be in imperative mood: "A basic partial dependence plot function."
   "D404",  # First word of the docstring should not be "This"
+  "NPY002",  # Allow numpy RandomState objects in tests
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -164,7 +260,6 @@ convention = "numpy"
 [tool.ruff.lint.per-file-ignores]
 # Don't apply linting/formatting to vendored code
 "shap/explainers/other/_maple.py" = ["ALL"]
-"shap/plots/colors/_colorconv.py" = ["ALL"]
 
 # Ignore notebooks in user_studies, which are not maintained
 "docs/user_studies/*.ipynb" = ["ALL"]
@@ -177,10 +272,6 @@ convention = "numpy"
 
 # Ignore pycodestyle in tests
 "tests/*py" = ["D"]
-
-[tool.ruff.format]
-# For now, only Jupyter notebooks are autoformatted.
-exclude = ["**.py"]
 
 [tool.coverage.run]
 source_pkgs = ["shap"]

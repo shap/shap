@@ -15,7 +15,6 @@ from ._result import BenchmarkResult
 
 class SequentialMasker:
     def __init__(self, mask_type, sort_order, masker, model, *model_args, batch_size=500):
-
         for arg in model_args:
             if isinstance(arg, pd.DataFrame):
                 raise TypeError("DataFrame arguments dont iterate correctly, pass numpy arrays instead!")
@@ -45,14 +44,13 @@ class SequentialMasker:
         #         return given_model(*df_args)
         #     model = new_model
 
-        self.inner = SequentialPerturbation(
-            model, masker, sort_order, mask_type
-        )
+        self.inner = SequentialPerturbation(model, masker, sort_order, mask_type)
         self.model_args = model_args
         self.batch_size = batch_size
 
     def __call__(self, explanation, name, **kwargs):
         return self.inner(name, explanation, *self.model_args, batch_size=self.batch_size, **kwargs)
+
 
 class SequentialPerturbation:
     def __init__(self, model, masker, sort_order, perturbation, linearize_link=False):
@@ -71,7 +69,7 @@ class SequentialPerturbation:
         elif self.sort_order == "absolute":
             self.sort_order_map = lambda x: np.argsort(-abs(x))
         else:
-            raise ValueError("sort_order must be either \"positive\", \"negative\", or \"absolute\"!")
+            raise ValueError('sort_order must be either "positive", "negative", or "absolute"!')
 
         # user must give valid masker
         underlying_masker = masker.masker if isinstance(masker, FixedComposite) else masker
@@ -81,13 +79,25 @@ class SequentialPerturbation:
             self.data_type = "image"
         else:
             self.data_type = "tabular"
-            #raise ValueError("masker must be for \"tabular\", \"text\", or \"image\"!")
+            # raise ValueError("masker must be for \"tabular\", \"text\", or \"image\"!")
 
         self.score_values = []
         self.score_aucs = []
         self.labels = []
 
-    def __call__(self, name, explanation, *model_args, percent=0.01, indices=[], y=None, label=None, silent=False, debug_mode=False, batch_size=10):
+    def __call__(
+        self,
+        name,
+        explanation,
+        *model_args,
+        percent=0.01,
+        indices=[],
+        y=None,
+        label=None,
+        silent=False,
+        debug_mode=False,
+        batch_size=10,
+    ):
         # if explainer is already the attributions
         if isinstance(explanation, np.ndarray):
             attributions = explanation
@@ -96,10 +106,12 @@ class SequentialPerturbation:
         else:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
-        assert len(attributions) == len(model_args[0]), "The explanation passed must have the same number of rows as the model_args that were passed!"
+        assert len(attributions) == len(model_args[0]), (
+            "The explanation passed must have the same number of rows as the model_args that were passed!"
+        )
 
         if label is None:
-            label = "Score %d" % len(self.score_values)
+            label = f"Score {len(self.score_values)}"
 
         # convert dataframes
         # if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -137,13 +149,15 @@ class SequentialPerturbation:
             masks.append(mask.copy())
 
             ordered_inds = self.sort_order_map(sample_attributions)
-            increment = max(1,int(feature_size*percent))
+            increment = max(1, int(feature_size * percent))
             for j in range(0, feature_size, increment):
-                oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j+increment))]
+                oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j + increment))]
 
                 for oind in oind_list:
-                    if not ((self.sort_order == "positive" and sample_attributions[oind] <= 0) or \
-                            (self.sort_order == "negative" and sample_attributions[oind] >= 0)):
+                    if not (
+                        (self.sort_order == "positive" and sample_attributions[oind] <= 0)
+                        or (self.sort_order == "negative" and sample_attributions[oind] >= 0)
+                    ):
                         mask[oind] = self.perturbation == "keep"
 
                 masks.append(mask.copy())
@@ -154,14 +168,14 @@ class SequentialPerturbation:
             values = []
             masks_arr = np.array(masks)
             for j in range(0, len(masks_arr), batch_size):
-                values.append(self.masked_model(masks_arr[j:j + batch_size]))
+                values.append(self.masked_model(masks_arr[j : j + batch_size]))
             values = np.concatenate(values)
 
             svals.append(values)
 
             if pbar is None and time.time() - start_time > 5:
                 pbar = tqdm(total=len(model_args[0]), disable=silent, leave=False, desc="SequentialMasker")
-                pbar.update(i+1)
+                pbar.update(i + 1)
             if pbar is not None:
                 pbar.update(1)
 
@@ -182,18 +196,20 @@ class SequentialPerturbation:
         for j in range(len(self.score_values[-1])):
             xp = np.linspace(0, 1, len(self.score_values[-1][j]))
             yp = self.score_values[-1][j]
-            curves[j,:] = np.interp(xs, xp, yp)
+            curves[j, :] = np.interp(xs, xp, yp)
         ys = curves.mean(0)
         std = curves.std(0) / np.sqrt(curves.shape[0])
-        auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign*(ys-ys[0]))
+        auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign * (ys - ys[0]))
 
         if not debug_mode:
-            return BenchmarkResult(self.perturbation + " " + self.sort_order, name, curve_x=xs, curve_y=ys, curve_y_std=std)
+            return BenchmarkResult(
+                self.perturbation + " " + self.sort_order, name, curve_x=xs, curve_y=ys, curve_y_std=std
+            )
         else:
             aucs = []
             for j in range(len(self.score_values[-1])):
-                curve = curves[j,:]
-                auc = sklearn.metrics.auc(np.linspace(0, 1, len(curve)), curve_sign*(curve-curve[0]))
+                curve = curves[j, :]
+                auc = sklearn.metrics.auc(np.linspace(0, 1, len(curve)), curve_sign * (curve - curve[0]))
                 aucs.append(auc)
             return mask_vals, curves, aucs
 
@@ -206,7 +222,7 @@ class SequentialPerturbation:
             attributions = explanation.values
 
         if label is None:
-            label = "Score %d" % len(self.score_values)
+            label = f"Score {len(self.score_values)}"
 
         # convert dataframes
         if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -246,7 +262,7 @@ class SequentialPerturbation:
                 mask = np.ones(mask_shape, dtype=bool) * (self.perturbation == "remove")
                 masks = [mask.copy()]
 
-                values = np.zeros(feature_size+1)
+                values = np.zeros(feature_size + 1)
                 # masked, data = self.masker(mask, X[i])
                 masked = self.masker(mask, X[i])
                 data = None
@@ -255,18 +271,20 @@ class SequentialPerturbation:
                 values[0] = curr_val
 
                 if output_size != 1:
-                    test_attributions = sample_attributions[:,k]
+                    test_attributions = sample_attributions[:, k]
                 else:
                     test_attributions = sample_attributions
 
                 ordered_inds = self.sort_order_map(test_attributions)
-                increment = max(1,int(feature_size*percent))
+                increment = max(1, int(feature_size * percent))
                 for j in range(0, feature_size, increment):
-                    oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j+increment))]
+                    oind_list = [ordered_inds[t] for t in range(j, min(feature_size, j + increment))]
 
                     for oind in oind_list:
-                        if not ((self.sort_order == "positive" and test_attributions[oind] <= 0) or \
-                                (self.sort_order == "negative" and test_attributions[oind] >= 0)):
+                        if not (
+                            (self.sort_order == "positive" and test_attributions[oind] <= 0)
+                            or (self.sort_order == "negative" and test_attributions[oind] >= 0)
+                        ):
                             if self.data_type == "image":
                                 xoind, yoind = oind // attributions[i].shape[1], oind % attributions[i].shape[1]
                                 mask[xoind][yoind] = self.perturbation == "keep"
@@ -278,15 +296,15 @@ class SequentialPerturbation:
                     masked = self.masker(mask, X[i])
                     curr_val = self.f(masked, data, k).mean(0)
 
-                    for t in range(j, min(feature_size, j+increment)):
-                        values[t+1] = curr_val
+                    for t in range(j, min(feature_size, j + increment)):
+                        values[t + 1] = curr_val
 
                 svals.append(values)
                 mask_vals.append(masks)
 
             if pbar is None and time.time() - start_time > 5:
                 pbar = tqdm(total=len(X), disable=silent, leave=False)
-                pbar.update(i+1)
+                pbar.update(i + 1)
             if pbar is not None:
                 pbar.update(1)
 
@@ -307,18 +325,18 @@ class SequentialPerturbation:
         for j in range(len(self.score_values[-1])):
             xp = np.linspace(0, 1, len(self.score_values[-1][j]))
             yp = self.score_values[-1][j]
-            curves[j,:] = np.interp(xs, xp, yp)
+            curves[j, :] = np.interp(xs, xp, yp)
         ys = curves.mean(0)
 
         if debug_mode:
             aucs = []
             for j in range(len(self.score_values[-1])):
-                curve = curves[j,:]
-                auc = sklearn.metrics.auc(np.linspace(0, 1, len(curve)), curve_sign*(curve-curve[0]))
+                curve = curves[j, :]
+                auc = sklearn.metrics.auc(np.linspace(0, 1, len(curve)), curve_sign * (curve - curve[0]))
                 aucs.append(auc)
             return mask_vals, curves, aucs
         else:
-            auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign*(ys-ys[0]))
+            auc = sklearn.metrics.auc(np.linspace(0, 1, len(ys)), curve_sign * (ys - ys[0]))
             return xs, ys, auc
 
     def plot(self, xs, ys, auc):

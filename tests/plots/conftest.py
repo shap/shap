@@ -1,20 +1,24 @@
 """Shared pytest fixtures"""
 
-import matplotlib.pyplot as plt
+from dataclasses import asdict
+
 import pytest
 
 import shap
+from shap.plots import _style
 
 
 @pytest.fixture(autouse=True)
-def close_matplotlib_plots_after_tests():
-    plt.close("all")
+def reset_style_to_default():
+    # Protect against any unintended state changes between tests
+    options = asdict(_style.load_default_style())
+    _style.set_style(**options)
 
 
 @pytest.fixture()
 def explainer():
     """A simple explainer to be used as a test fixture."""
-    xgboost = pytest.importorskip('xgboost')
+    xgboost = pytest.importorskip("xgboost")
     # get a dataset on income prediction
     X, y = shap.datasets.adult()
     X = X.iloc[:100]

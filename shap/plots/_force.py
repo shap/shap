@@ -15,6 +15,7 @@ import scipy.sparse
 
 try:
     from IPython.display import HTML, display
+
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -80,7 +81,7 @@ def force(
         is inconvenient. Defaults to False.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
         Only applicable when ``matplotlib`` is set to True.
@@ -134,7 +135,7 @@ def force(
 
     link = convert_to_link(link)
 
-    if type(shap_values) != np.ndarray:
+    if not isinstance(shap_values, np.ndarray):
         return visualize(shap_values)
 
     # convert from a DataFrame or other types
@@ -164,10 +165,10 @@ def force(
 
     if shap_values.shape[0] == 1:
         if feature_names is None:
-            feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
+            feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
         if features is None:
             features = ["" for _ in range(len(feature_names))]
-        if type(features) == np.ndarray:
+        if isinstance(features, np.ndarray):
             features = features.flatten()
 
         # check that the shape of the shap_values and features match
@@ -189,16 +190,18 @@ def force(
             instance,
             link,
             Model(None, out_names),
-            DenseData(np.zeros((1, len(feature_names))), list(feature_names))
+            DenseData(np.zeros((1, len(feature_names))), list(feature_names)),
         )
 
-        return visualize(e,
-                         plot_cmap,
-                         matplotlib,
-                         figsize=figsize,
-                         show=show,
-                         text_rotation=text_rotation,
-                         min_perc=contribution_threshold)
+        return visualize(
+            e,
+            plot_cmap,
+            matplotlib,
+            figsize=figsize,
+            show=show,
+            text_rotation=text_rotation,
+            min_perc=contribution_threshold,
+        )
 
     else:
         if matplotlib:
@@ -210,7 +213,7 @@ def force(
         exps = []
         for k in range(shap_values.shape[0]):
             if feature_names is None:
-                feature_names = [labels['FEATURE'] % str(i) for i in range(shap_values.shape[1])]
+                feature_names = [labels["FEATURE"] % str(i) for i in range(shap_values.shape[1])]
             if features is None:
                 display_features = ["" for i in range(len(feature_names))]
             else:
@@ -225,17 +228,17 @@ def force(
                 instance,
                 link,
                 Model(None, out_names),
-                DenseData(np.ones((1, len(feature_names))), list(feature_names))
+                DenseData(np.ones((1, len(feature_names))), list(feature_names)),
             )
             exps.append(e)
 
         return visualize(
-                    exps,
-                    plot_cmap=plot_cmap,
-                    ordering_keys=ordering_keys,
-                    ordering_keys_time_format=ordering_keys_time_format,
-                    text_rotation=text_rotation
-                )
+            exps,
+            plot_cmap=plot_cmap,
+            ordering_keys=ordering_keys,
+            ordering_keys_time_format=ordering_keys_time_format,
+            text_rotation=text_rotation,
+        )
 
 
 class Explanation:
@@ -271,6 +274,7 @@ class AdditiveExplanation(Explanation):
         assert isinstance(data, Data)
         self.data = data
 
+
 err_msg = """
 <div style='color: #900; text-align: center;'>
   <b>Visualization omitted, Javascript library not loaded!</b><br>
@@ -299,10 +303,7 @@ def initjs():
     with open(logo_path, "rb") as f:
         logo_data = f.read()
     logo_data = base64.b64encode(logo_data).decode("utf-8")
-    display(HTML(
-        f"<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>" +
-        getjs()
-    ))
+    display(HTML(f"<div align='center'><img src='data:image/png;base64,{logo_data}' /></div>" + getjs()))
 
 
 def save_html(out_file, plot, full_html=True):
@@ -349,7 +350,7 @@ def save_html(out_file, plot, full_html=True):
 
 
 def id_generator(size=20, chars=string.ascii_uppercase + string.digits):
-    return "i"+''.join(random.choice(chars) for _ in range(size))
+    return "i" + "".join(random.choice(chars) for _ in range(size))
 
 
 def ensure_not_numpy(x):
@@ -372,7 +373,7 @@ def verify_valid_cmap(cmap):
     if isinstance(cmap, list):
         if len(cmap) < 2:
             raise ValueError("Color map must be at least two colors.")
-        _rgbstring = re.compile(r'#[a-fA-F0-9]{6}$')
+        _rgbstring = re.compile(r"#[a-fA-F0-9]{6}$")
         for color in cmap:
             if not _rgbstring.match(color):
                 raise ValueError(f"Invalid color {color} found in cmap.")
@@ -431,6 +432,7 @@ def visualize(
 class BaseVisualizer:
     pass
 
+
 class SimpleListVisualizer(BaseVisualizer):
     def __init__(self, e):
         if not isinstance(e, Explanation):
@@ -440,17 +442,14 @@ class SimpleListVisualizer(BaseVisualizer):
         # build the json data
         features = {}
         for i in filter(lambda j: e.effects[j] != 0, range(len(e.data.group_names))):
-            features[i] = {
-                "effect": e.effects[i],
-                "value": e.instance.group_display_values[i]
-            }
+            features[i] = {"effect": e.effects[i], "value": e.instance.group_display_values[i]}
         self.data = {
             "outNames": e.model.out_names,
             "base_value": e.base_value,
             "link": str(e.link),
             "featureNames": e.data.group_names,
             "features": features,
-            "plot_cmap":e.plot_cmap.plot_cmap
+            "plot_cmap": e.plot_cmap.plot_cmap,
         }
 
     def html(self):
@@ -491,7 +490,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
         for i in filter(lambda j: e.effects[j] != 0, range(len(e.data.group_names))):
             features[i] = {
                 "effect": ensure_not_numpy(e.effects[i]),
-                "value": ensure_not_numpy(e.instance.group_display_values[i])
+                "value": ensure_not_numpy(e.instance.group_display_values[i]),
             }
         self.data = {
             "outNames": e.model.out_names,
@@ -517,11 +516,7 @@ class AdditiveForceVisualizer(BaseVisualizer):
 </script>"""
 
     def matplotlib(self, figsize, show, text_rotation, min_perc=0.05):
-        fig = draw_additive_plot(self.data,
-                                 figsize=figsize,
-                                 show=show,
-                                 text_rotation=text_rotation,
-                                 min_perc=min_perc)
+        fig = draw_additive_plot(self.data, figsize=figsize, show=show, text_rotation=text_rotation, min_perc=min_perc)
 
         return fig
 
@@ -534,10 +529,7 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
     def __init__(self, arr, plot_cmap="RdBu", ordering_keys=None, ordering_keys_time_format=None):
         if not isinstance(arr[0], AdditiveExplanation):
-            emsg = (
-                "AdditiveForceArrayVisualizer can only visualize arrays of "
-                "AdditiveExplanation objects!"
-            )
+            emsg = "AdditiveForceArrayVisualizer can only visualize arrays of AdditiveExplanation objects!"
             raise TypeError(emsg)
 
         # order the samples by their position in a hierarchical clustering
@@ -549,10 +541,10 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
 
         # make sure that we put the higher predictions first...just for consistency
         if sum(arr[clustOrder[0]].effects) < sum(arr[clustOrder[-1]].effects):
-            np.flipud(clustOrder) # reverse
+            np.flipud(clustOrder)  # reverse
 
         # build the json data
-        clustOrder = np.argsort(clustOrder) # inverse permutation
+        clustOrder = np.argsort(clustOrder)  # inverse permutation
         self.data = {
             "outNames": arr[0].model.out_names,
             "baseValue": ensure_not_numpy(arr[0].base_value),
@@ -560,19 +552,21 @@ class AdditiveForceArrayVisualizer(BaseVisualizer):
             "featureNames": arr[0].data.group_names,
             "explanations": [],
             "plot_cmap": plot_cmap,
-            "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, '__iter__') else None,
+            "ordering_keys": list(ordering_keys) if hasattr(ordering_keys, "__iter__") else None,
             "ordering_keys_time_format": ordering_keys_time_format,
         }
         for ind, e in enumerate(arr):
-            self.data["explanations"].append({
-                "outValue": ensure_not_numpy(e.out_value),
-                "simIndex": ensure_not_numpy(clustOrder[ind])+1,
-                "features": {}
-            })
-            for i in filter(lambda j: e.effects[j] != 0 or e.instance.x[0,j] != 0, range(len(e.data.group_names))):
+            self.data["explanations"].append(
+                {
+                    "outValue": ensure_not_numpy(e.out_value),
+                    "simIndex": ensure_not_numpy(clustOrder[ind]) + 1,
+                    "features": {},
+                }
+            )
+            for i in filter(lambda j: e.effects[j] != 0 or e.instance.x[0, j] != 0, range(len(e.data.group_names))):
                 self.data["explanations"][-1]["features"][i] = {
                     "effect": ensure_not_numpy(e.effects[i]),
-                    "value": ensure_not_numpy(e.instance.group_display_values[i])
+                    "value": ensure_not_numpy(e.instance.group_display_values[i]),
                 }
 
     def html(self):

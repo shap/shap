@@ -30,9 +30,11 @@ __pycache__
 /notebooks/local_scratch
 /shap.egg-info
 /shap/_cext*
+shap/explainers/_kernel_lib.c
 /shap/_version.py
 /shap/cached_data
 /tests/local_scratch.py
 /tests/mnist_data
 catboost_info
 node_modules
+mpl-results

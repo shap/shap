@@ -1,4 +1,5 @@
 """This file contains tests for the bar plot."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -19,8 +20,7 @@ from shap.utils._exceptions import DimensionError
 def test_input_shap_values_type(unsupported_inputs):
     """Check that a TypeError is raised when shap_values is not a valid input type."""
     emsg = (
-        "The shap_values argument must be an Explanation object, Cohorts "
-        "object, or dictionary of Explanation objects!"
+        "The shap_values argument must be an Explanation object, Cohorts object, or dictionary of Explanation objects!"
     )
     with pytest.raises(TypeError, match=emsg):
         shap.plots.bar(unsupported_inputs, show=False)
@@ -29,10 +29,7 @@ def test_input_shap_values_type(unsupported_inputs):
 def test_input_shap_values_type_2():
     """Check that a DimensionError is raised if the cohort Explanation objects have different shape."""
     rs = np.random.RandomState(42)
-    emsg = (
-        "When passing several Explanation objects, they must all have "
-        "the same number of feature columns!"
-    )
+    emsg = "When passing several Explanation objects, they must all have the same number of feature columns!"
     with pytest.raises(DimensionError, match=emsg):
         shap.plots.bar(
             {
@@ -50,7 +47,7 @@ def test_input_shap_values_type_2():
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar(explainer):
+def test_bar(explainer):
     """Check that the bar plot is unchanged."""
     shap_values = explainer(explainer.data)
     fig = plt.figure()
@@ -60,7 +57,7 @@ def test_simple_bar(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar_with_cohorts_dict():
+def test_bar_with_cohorts_dict():
     """Ensure that bar plots supports dictionary of Explanations as input."""
     rs = np.random.RandomState(42)
     fig = plt.figure()
@@ -82,7 +79,7 @@ def test_simple_bar_with_cohorts_dict():
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar_local_feature_importance(explainer):
+def test_bar_local_feature_importance(explainer):
     """Bar plot with single row of SHAP values"""
     shap_values = explainer(explainer.data)
     fig = plt.figure()
@@ -92,7 +89,7 @@ def test_simple_bar_local_feature_importance(explainer):
 
 
 @pytest.mark.mpl_image_compare
-def test_simple_bar_with_clustering(explainer):
+def test_bar_with_clustering(explainer):
     """Bar plot with clustering"""
     shap_values = explainer(explainer.data)
     clustering = shap.utils.hclust(explainer.data, metric="cosine")
@@ -104,7 +101,7 @@ def test_simple_bar_with_clustering(explainer):
 
 def test_bar_raises_error_for_invalid_clustering(explainer):
     shap_values = explainer(explainer.data)
-    clustering = np.array([1,2,3])
+    clustering = np.array([1, 2, 3])
     with pytest.raises(TypeError, match="does not seem to be a partition tree"):
         shap.plots.bar(shap_values, clustering=clustering, show=False)
 

@@ -1,6 +1,6 @@
 """Visualize cumulative SHAP values."""
 
-from typing import Union
+from __future__ import annotations
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as pl
@@ -82,11 +82,7 @@ def __decision_plot_matplotlib(
     lines = []
     for i in range(cumsum.shape[0]):
         o = pl.plot(
-            cumsum[i, :],
-            y_pos,
-            color=m.to_rgba(cumsum[i, -1], alpha),
-            linewidth=linewidth[i],
-            linestyle=linestyle[i]
+            cumsum[i, :], y_pos, color=m.to_rgba(cumsum[i, -1], alpha), linewidth=linewidth[i], linestyle=linestyle[i]
         )
         lines.append(o[0])
 
@@ -98,7 +94,7 @@ def __decision_plot_matplotlib(
 
     # if there is a single observation and feature values are supplied, print them.
     if (cumsum.shape[0] == 1) and (features is not None):
-        renderer = pl.gcf().canvas.get_renderer()
+        renderer = pl.gcf().canvas.get_renderer()  # type: ignore
         inverter = pl.gca().transData.inverted()
         y_pos = y_pos + 0.5
         for i in range(feature_display_count):
@@ -107,12 +103,19 @@ def __decision_plot_matplotlib(
                 v = f"({str(v).strip()})"
             else:
                 v = "({})".format(f"{v:,.3f}".rstrip("0").rstrip("."))
-            t = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
-                    horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
+            t = ax.text(
+                np.max(cumsum[0, i : (i + 2)]),
+                y_pos[i],
+                "  " + v,
+                fontsize=fontsize,
+                horizontalalignment="left",
+                verticalalignment="center_baseline",
+                color="#666666",
+            )
             bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
             if bb.xmax > xlim[1]:
                 t.set_text(v + "  ")
-                t.set_x(np.min(cumsum[0, i:(i + 2)]))
+                t.set_x(np.min(cumsum[0, i : (i + 2)]))
                 t.set_horizontalalignment("right")
                 bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
                 if bb.xmin < xlim[0]:
@@ -138,12 +141,12 @@ def __decision_plot_matplotlib(
 
         # place the colorbar
         pl.ylim(0, feature_display_count + 0.25)
-        ax_cb = ax.inset_axes([xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25], transform=ax.transData)
+        ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
         cb = pl.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(alpha)
-        cb.outline.set_visible(False)
+        cb.outline.set_visible(False)  # type: ignore
 
         # re-activate the main axis for drawing.
         pl.sca(ax)
@@ -207,9 +210,9 @@ class DecisionPlotResult:
 
 
 def decision(
-    base_value,
-    shap_values,
-    features=None,
+    base_value: float | np.ndarray,
+    shap_values: np.ndarray,
+    features: np.ndarray | pd.Series | pd.DataFrame | list | None = None,
     feature_names=None,
     feature_order="importance",
     feature_display_range=None,
@@ -229,7 +232,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> Union[DecisionPlotResult, None]:
+) -> DecisionPlotResult | None:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -307,7 +310,7 @@ def decision(
         same scale for comparison.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
@@ -350,12 +353,13 @@ def decision(
 
     """
     # code taken from force_plot. auto unwrap the base_value
-    if type(base_value) == np.ndarray and len(base_value) == 1:
+    if isinstance(base_value, np.ndarray) and len(base_value) == 1:
         base_value = base_value[0]
 
     if isinstance(base_value, list) or isinstance(shap_values, list):
-        raise TypeError("Looks like multi output. Try base_value[i] and shap_values[i], "
-                        "or use shap.multioutput_decision_plot().")
+        raise TypeError(
+            "Looks like multi output. Try base_value[i] and shap_values[i], or use shap.multioutput_decision_plot()."
+        )
 
     # validate shap_values
     if not isinstance(shap_values, np.ndarray):
@@ -393,7 +397,7 @@ def decision(
 
     # validate/generate feature_names. at this point, feature_names does not include interactions.
     if feature_names is None:
-        feature_names = [labels['FEATURE'] % str(i) for i in range(feature_count)]
+        feature_names = [labels["FEATURE"] % str(i) for i in range(feature_count)]
     elif len(feature_names) != feature_count:
         raise ValueError("The feature_names arg must include all features represented in shap_values.")
     elif not isinstance(feature_names, (list, np.ndarray)):
@@ -405,16 +409,16 @@ def decision(
         triu_count = feature_count * (feature_count - 1) // 2
         idx_diag = np.diag_indices_from(shap_values[0])
         idx_triu = np.triu_indices_from(shap_values[0], 1)
-        a = np.ndarray((observation_count, feature_count + triu_count), shap_values.dtype)
+        a: np.ndarray = np.ndarray((observation_count, feature_count + triu_count), shap_values.dtype)
         a[:, :feature_count] = shap_values[:, idx_diag[0], idx_diag[1]]
         a[:, feature_count:] = shap_values[:, idx_triu[0], idx_triu[1]] * 2
         shap_values = a
         # names
-        a = [None] * shap_values.shape[1]
-        a[:feature_count] = feature_names
+        b: list[str | None] = [None] * shap_values.shape[1]
+        b[:feature_count] = feature_names
         for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
-            a[i] = f"{feature_names[row]} *\n{feature_names[col]}"
-        feature_names = a
+            b[i] = f"{feature_names[row]} *\n{feature_names[col]}"
+        feature_names = b
         feature_count = shap_values.shape[1]
         features = None  # Can't use feature values for interactions...
 
@@ -430,12 +434,16 @@ def decision(
     elif feature_order == "hclust":
         feature_idx = np.array(hclust_ordering(shap_values.transpose()))
     else:
-        raise ValueError("The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
-                         "of feature indices.")
+        raise ValueError(
+            "The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
+            "of feature indices."
+        )
 
-    if (feature_idx.shape != (feature_count, )) or (not np.issubdtype(feature_idx.dtype, np.integer)):
-        raise ValueError("A list or array has been specified for the feature_order arg. The length must match the "
-                         "feature count and the data type must be integer.")
+    if (feature_idx.shape != (feature_count,)) or (not np.issubdtype(feature_idx.dtype, np.integer)):
+        raise ValueError(
+            "A list or array has been specified for the feature_order arg. The length must match the "
+            "feature count and the data type must be integer."
+        )
 
     # validate and convert feature_display_range to a slice. prevents out of range errors later.
     if feature_display_range is None:
@@ -448,11 +456,11 @@ def decision(
         # Negative values in a range are not the same as negs in a slice. Consider range(2, -1, -1) == [2, 1, 0],
         # but slice(2, -1, -1) == [] when len(features) > 2. However, range(2, -1, -1) == slice(2, -inf, -1) after
         # clipping.
-        a = np.iinfo(np.integer).min
+        c = np.iinfo(np.integer).min
         feature_display_range = slice(
-            feature_display_range.start if feature_display_range.start >= 0 else a,  # should never happen, but...
-            feature_display_range.stop if feature_display_range.stop >= 0 else a,
-            feature_display_range.step
+            feature_display_range.start if feature_display_range.start >= 0 else c,  # should never happen, but...
+            feature_display_range.stop if feature_display_range.stop >= 0 else c,
+            feature_display_range.step,
         )
 
     # apply new_base_value
@@ -464,39 +472,45 @@ def decision(
     # ascending indices and expand by one in the negative direction. why? we are plotting the change in prediction
     # for every feature. this requires that we include the value previous to the first displayed feature
     # (i.e. i_0 - 1 to i_n).
-    a = feature_display_range.indices(feature_count)
+    d = feature_display_range.indices(feature_count)
     ascending = True
-    if a[2] == -1:  # The step
+    if d[2] == -1:  # The step
         ascending = False
-        a = (a[1] + 1, a[0] + 1, 1)
-    feature_display_count = a[1] - a[0]
+        d = (d[1] + 1, d[0] + 1, 1)
+    feature_display_count = d[1] - d[0]
     shap_values = shap_values[:, feature_idx]
-    if a[0] == 0:
-        cumsum = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
+    if d[0] == 0:
+        cumsum: np.ndarray = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
         cumsum[:, 0] = base_value
-        cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0:a[1]], axis=1)
+        cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0 : d[1]], axis=1)
     else:
-        cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (a[0] - 1):a[1]]
+        cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (d[0] - 1) : d[1]]
 
     # Select and sort feature names and features according to the range selected above
     feature_names = np.array(feature_names)
-    feature_names_display = feature_names[feature_idx[a[0]:a[1]]].tolist()
+    feature_names_display = feature_names[feature_idx[d[0] : d[1]]].tolist()
     feature_names = feature_names[feature_idx].tolist()
-    features_display = None if features is None else features[:, feature_idx[a[0]:a[1]]]
+    features_display = None if features is None else features[:, feature_idx[d[0] : d[1]]]
 
     # throw large data errors
     if not ignore_warnings:
         if observation_count > 2000:
-            raise RuntimeError(f"Plotting {observation_count} observations may be slow. Consider subsampling or set "
-                               "ignore_warnings=True to ignore this message.")
+            raise RuntimeError(
+                f"Plotting {observation_count} observations may be slow. Consider subsampling or set "
+                "ignore_warnings=True to ignore this message."
+            )
         if feature_display_count > 200:
-            raise RuntimeError(f"Plotting {feature_display_count} features may create a very large plot. Set "
-                               "ignore_warnings=True to ignore this "
-                               "message.")
+            raise RuntimeError(
+                f"Plotting {feature_display_count} features may create a very large plot. Set "
+                "ignore_warnings=True to ignore this "
+                "message."
+            )
         if feature_count * observation_count > 100000000:
-            raise RuntimeError(f"Processing SHAP values for {feature_count} features over {observation_count} observations may be slow. Set "
-                               "ignore_warnings=True to ignore this "
-                               "message.")
+            raise RuntimeError(
+                f"Processing SHAP values for {feature_count} features over {observation_count} observations may be slow. Set "
+                "ignore_warnings=True to ignore this "
+                "message."
+            )
 
     # convert values based on link and update x-axis extents
     create_xlim = xlim is None
@@ -509,17 +523,17 @@ def decision(
             # Expand [0, 1] limits a little for a visual margin
             xlim = (-0.02, 1.02)
     elif create_xlim:
-        xmin = np.min((cumsum.min(), base_value))
-        xmax = np.max((cumsum.max(), base_value))
+        xmin: float = min((cumsum.min(), base_value))
+        xmax: float = max((cumsum.max(), base_value))
         # create a symmetric axis around base_value
-        a, b = (base_value - xmin), (xmax - base_value)
-        if a > b:
-            xlim = (base_value - a, base_value + a)
+        n, m = (base_value - xmin), (xmax - base_value)
+        if n > m:
+            xlim = (base_value - n, base_value + m)
         else:
-            xlim = (base_value - b, base_value + b)
+            xlim = (base_value - m, base_value + m)
         # Adjust xlim to include a little visual margin.
-        a = (xlim[1] - xlim[0]) * 0.02
-        xlim = (xlim[0] - a, xlim[1] + a)
+        e = (xlim[1] - xlim[0]) * 0.02
+        xlim = (xlim[0] - e, xlim[1] + e)
 
     # Initialize style arguments
     if alpha is None:
@@ -555,7 +569,7 @@ def decision(
     return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
 
 
-def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union[DecisionPlotResult, None]:
+def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | None:
     """Decision plot for multioutput models.
 
     Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values
@@ -582,6 +596,7 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Union
         Returns a DecisionPlotResult object if `return_objects=True`. Returns `None` otherwise (the default).
 
     """
+    # todo: adjust to breaking changes made in #3318
     if not (isinstance(base_values, list) and isinstance(shap_values, list)):
         raise ValueError("The base_values and shap_values args expect lists.")
 

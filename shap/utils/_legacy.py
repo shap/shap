@@ -34,7 +34,7 @@ def kmeans(X, k, round_values=True):
         X = X.values
 
     # in case there are any missing values in data impute them
-    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    imp = SimpleImputer(missing_values=np.nan, strategy="mean")
     X = imp.fit_transform(X)
 
     # Specify `n_init` for consistent behaviour between sklearn versions
@@ -43,10 +43,12 @@ def kmeans(X, k, round_values=True):
     if round_values:
         for i in range(k):
             for j in range(X.shape[1]):
-                xj = X[:,j].toarray().flatten() if scipy.sparse.issparse(X) else X[:, j] # sparse support courtesy of @PrimozGodec
-                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i,j]))
-                kmeans.cluster_centers_[i,j] = X[ind,j]
-    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
+                xj = (
+                    X[:, j].toarray().flatten() if scipy.sparse.issparse(X) else X[:, j]
+                )  # sparse support courtesy of @PrimozGodec
+                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i, j]))
+                kmeans.cluster_centers_[i, j] = X[ind, j]
+    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0 * np.bincount(kmeans.labels_))
 
 
 class Instance:
@@ -87,9 +89,10 @@ def match_instance_to_data(instance, data):
 
     if isinstance(data, DenseData):
         if instance.group_display_values is None:
-            instance.group_display_values = [instance.x[0, group[0]] if len(group) == 1 else "" for group in data.groups]
+            instance.group_display_values = [
+                instance.x[0, group[0]] if len(group) == 1 else "" for group in data.groups
+            ]
         assert len(instance.group_display_values) == len(data.groups)
-        instance.groups = data.groups
 
 
 class Model:
@@ -118,7 +121,7 @@ def convert_to_model(val, keep_index=False):
 
     # Fix for the sklearn warning
     # 'X does not have valid feature names, but <model> was fitted with feature names'
-    if not keep_index: # when using keep index, a dataframe with expected features names is expected to be passed
+    if not keep_index:  # when using keep index, a dataframe with expected features names is expected to be passed
         f_self = getattr(out.f, "__self__", None)
         if f_self and hasattr(f_self, "feature_names_in_"):
             # Make a copy so that the feature names are not removed from the original model
@@ -145,7 +148,7 @@ def match_model_to_data(model, data):
         if len(out_val.shape) == 1:
             model.out_names = ["output value"]
         else:
-            model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
+            model.out_names = ["output value " + str(i) for i in range(out_val.shape[0])]
 
     return out_val
 
@@ -169,7 +172,9 @@ class SparseData(Data):
 
 class DenseData(Data):
     def __init__(self, data, group_names, *args):
-        self.groups = args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
+        self.groups = (
+            args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
+        )
 
         j = sum(len(g) for g in self.groups)
         num_samples = data.shape[0]
@@ -215,7 +220,7 @@ def convert_to_data(val, keep_index=False):
     if isinstance(val, np.ndarray):
         return DenseData(val, [str(i) for i in range(val.shape[1])])
     if isinstance(val, pd.Series):
-        return DenseData(val.values.reshape((1,len(val))), list(val.index))
+        return DenseData(val.values.reshape((1, len(val))), list(val.index))
     if isinstance(val, pd.DataFrame):
         if keep_index:
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
@@ -253,12 +258,13 @@ class LogitLink(Link):
         return "logit"
 
     @staticmethod
-    def f(x):
-        return np.log(x/(1-x))
+    def f(x, epsilon=1e-15):
+        x_clipped = np.clip(x, epsilon, 1 - epsilon)
+        return np.log(x_clipped / (1 - x_clipped))
 
     @staticmethod
     def finv(x):
-        return 1/(1+np.exp(-x))
+        return 1 / (1 + np.exp(-x))
 
 
 def convert_to_link(val):

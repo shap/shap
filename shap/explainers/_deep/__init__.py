@@ -1,9 +1,7 @@
-from typing import Union
+from __future__ import annotations
 
 from ..._explanation import Explanation
 from .._explainer import Explainer
-from .deep_pytorch import PyTorchDeep
-from .deep_tf import TFDeep
 
 
 class DeepExplainer(Explainer):
@@ -13,7 +11,7 @@ class DeepExplainer(Explainer):
     approximate the conditional expectations of SHAP values using a selection of background samples.
     Lundberg and Lee, NIPS 2017 showed that the per node attribution rules in DeepLIFT (Shrikumar,
     Greenside, and Kundaje, arXiv 2017) can be chosen to approximate Shapley values. By integrating
-    over many background samples Deep estimates approximate SHAP values such that they sum
+    over many background samples, Deep estimates approximate SHAP values such that they sum
     up to the difference between the expected model output on the passed background samples and the
     current model output (f(x) - E[f(x)]).
 
@@ -28,19 +26,20 @@ class DeepExplainer(Explainer):
 
         Note that the complexity of the method scales linearly with the number of background data
         samples. Passing the entire training dataset as `data` will give very accurate expected
-        values, but be unreasonably expensive. The variance of the expectation estimates scale by
+        values, but will be unreasonably expensive. The variance of the expectation estimates scales by
         roughly 1/sqrt(N) for N background data samples. So 100 samples will give a good estimate,
         and 1000 samples a very good estimate of the expected values.
 
         Parameters
         ----------
-        model : if framework == 'tensorflow', (input : [tf.Tensor], output : tf.Tensor)
-             A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
+        model :
+            if framework == 'tensorflow', (input : [tf.Tensor], output : tf.Tensor)
+            A pair of TensorFlow tensors (or a list and a tensor) that specifies the input and
             output of the model to be explained. Note that SHAP values are specific to a single
             output value, so the output tf.Tensor should be a single dimensional output (,1).
 
             if framework == 'pytorch', an nn.Module object (model), or a tuple (model, layer),
-                where both are nn.Module objects
+            where both are nn.Module objects.
             The model is an nn.Module object which takes as input a tensor (or list of tensors) of
             shape data, and returns a single dimensional output.
             If the input is a tuple, the returned shap values will be for the input of the
@@ -49,11 +48,12 @@ class DeepExplainer(Explainer):
         data :
             if framework == 'tensorflow': [np.array] or [pandas.DataFrame]
             if framework == 'pytorch': [torch.tensor]
+
             The background dataset to use for integrating out features. Deep integrates
             over these samples. The data passed here must match the input tensors given in the
-            first argument. Note that since these samples are integrated over for each sample you
-            should only something like 100 or 1000 random background samples, not the whole training
-            dataset.
+            first argument. Note that, since these samples are integrated over for each sample, you
+            should only use something like 100 or 1000 random background samples, not the whole
+            training dataset.
 
         session : None or tensorflow.Session
             The TensorFlow session that has the model we are explaining. If None is passed then
@@ -61,7 +61,7 @@ class DeepExplainer(Explainer):
             falling back to the default TensorFlow session.
 
         learning_phase_flags : None or list of tensors
-            If you have your own custom learning phase flags pass them here. When explaining a prediction
+            If you have your own custom learning phase flags, pass them here. When explaining a prediction
             we need to ensure we are not in training mode, since this changes the behavior of ops like
             batch norm or dropout. If None is passed then we look for tensors in the graph that look like
             learning phase flags (this works for Keras models). Note that we assume all the flags should
@@ -73,28 +73,33 @@ class DeepExplainer(Explainer):
             a, b = model
             try:
                 a.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except Exception:
-                framework = 'tensorflow'
+                framework = "tensorflow"
         else:
             try:
                 model.named_parameters()
-                framework = 'pytorch'
+                framework = "pytorch"
             except Exception:
-                framework = 'tensorflow'
+                framework = "tensorflow"
 
         masker = data
         super().__init__(model, masker)
 
-        if framework == 'tensorflow':
+        self.explainer: TFDeep | PyTorchDeep
+        if framework == "tensorflow":
+            from .deep_tf import TFDeep
+
             self.explainer = TFDeep(model, data, session, learning_phase_flags)
-        elif framework == 'pytorch':
+        elif framework == "pytorch":
+            from .deep_pytorch import PyTorchDeep
+
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
-        self.explainer.framework = framework
+        self.explainer.framework = framework  # type: ignore
 
-    def __call__(self, X: Union[list, 'np.ndarray', 'pd.DataFrame', 'torch.tensor']) -> Explanation:  # noqa: F821
+    def __call__(self, X: list | np.ndarray | pd.DataFrame | torch.tensor) -> Explanation:  # type: ignore  # noqa: F821
         """Return an explanation object for the model applied to X.
 
         Parameters
@@ -112,7 +117,7 @@ class DeepExplainer(Explainer):
         shap_values = self.shap_values(X)
         return Explanation(values=shap_values, data=X)
 
-    def shap_values(self, X, ranked_outputs=None, output_rank_order='max', check_additivity=True):
+    def shap_values(self, X, ranked_outputs=None, output_rank_order="max", check_additivity=True):
         """Return approximate SHAP values for the model applied to the data given by X.
 
         Parameters

@@ -10,6 +10,12 @@ corresponding example notebook here that demonstrates its API usage. The source 
 are `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/api_examples>`_.
 
 
+.. toctree::
+    :glob:
+    :maxdepth: 1
+
+    example_notebooks/api_examples/migrating-to-new-api.ipynb
+
 .. _explainers_examples:
 
 explainers

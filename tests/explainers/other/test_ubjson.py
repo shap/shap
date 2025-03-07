@@ -1,4 +1,5 @@
 from io import BytesIO
+from typing import Any
 
 import numpy as np
 
@@ -33,17 +34,14 @@ def test_decode_simple_key_value_pair():
     assert key == "num_class" and value == "0"
 
 
-
-
 def test_decode_object():
+    expected_value: dict[str, Any]
     regression_loss = b"L\x00\x00\x00\x00\x00\x00\x00\x0ereg_loss_param{L\x00\x00\x00\x00\x00\x00\x00\x10scale_pos_weightSL\x00\x00\x00\x00\x00\x00\x00\x011}"
     fp = BytesIO(regression_loss)
     key_type = fp.read(1)
     key, value = _decode_simple_key_value_pair(fp, key_type)
     expected_key = "reg_loss_param"
-    expected_value = {
-                "scale_pos_weight": "1"
-            }
+    expected_value = {"scale_pos_weight": "1"}
     assert expected_key == key and value == expected_value
 
     objective_dict = b"L\x00\x00\x00\x00\x00\x00\x00\tobjective{L\x00\x00\x00\x00\x00\x00\x00\x04nameSL\x00\x00\x00\x00\x00\x00\x00\x0fbinary:logisticL\x00\x00\x00\x00\x00\x00\x00\x0ereg_loss_param{L\x00\x00\x00\x00\x00\x00\x00\x10scale_pos_weightSL\x00\x00\x00\x00\x00\x00\x00\x011}}"
@@ -51,12 +49,7 @@ def test_decode_object():
     key_type = fp.read(1)
     key, value = _decode_simple_key_value_pair(fp, key_type)
     expected_key = "objective"
-    expected_value = {
-            "name": "binary:logistic",
-            "reg_loss_param": {
-                "scale_pos_weight": "1"
-            }
-        }
+    expected_value = {"name": "binary:logistic", "reg_loss_param": {"scale_pos_weight": "1"}}
     assert expected_key == key and value == expected_value
 
     objective_reversed_dict = b"L\x00\x00\x00\x00\x00\x00\x00\tobjective{L\x00\x00\x00\x00\x00\x00\x00\x0ereg_loss_param{L\x00\x00\x00\x00\x00\x00\x00\x10scale_pos_weightSL\x00\x00\x00\x00\x00\x00\x00\x011}L\x00\x00\x00\x00\x00\x00\x00\x04nameSL\x00\x00\x00\x00\x00\x00\x00\x0fbinary:logisticL\x00\x00\x00\x00\x00\x00\x00\x0e}"
@@ -65,11 +58,9 @@ def test_decode_object():
     key, value = _decode_simple_key_value_pair(fp, key_type)
     expected_key = "objective"
     expected_value = {
-            "reg_loss_param": {
-                "scale_pos_weight": "1"
-            },
-            "name": "binary:logistic",
-        }
+        "reg_loss_param": {"scale_pos_weight": "1"},
+        "name": "binary:logistic",
+    }
     assert expected_key == key and value == expected_value
 
     empty_object_dict = b"L\x00\x00\x00\x00\x00\x00\x00\nattributes{}"
@@ -77,6 +68,7 @@ def test_decode_object():
     key_type = fp.read(1)
     key, value = _decode_simple_key_value_pair(fp, key_type)
     assert key == "attributes" and value == {}
+
 
 def test_decode_array():
     left_children = b"L\x00\x00\x00\x00\x00\x00\x00\rleft_children[$l#L\x00\x00\x00\x00\x00\x00\x00\x01\xff\xff\xff\xffL\x00\x00\x00\x00\x00\x00\x00\x0c"

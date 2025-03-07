@@ -3,7 +3,7 @@ import scipy.special
 
 from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
-from ..utils.transformers import MODELS_FOR_CAUSAL_LM, getattr_silent
+from ..utils.transformers import getattr_silent
 from ._model import Model
 
 
@@ -55,11 +55,13 @@ class TopKLM(Model):
         if safe_isinstance(self.inner_model, "transformers.PreTrainedModel"):
             self.model_type = "pt"
             import torch
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
+
+            self.device = (
+                torch.device("cuda" if torch.cuda.is_available() else "cpu") if self.device is None else self.device
+            )
             self.inner_model = self.inner_model.to(self.device)
         elif safe_isinstance(self.inner_model, "transformers.TFPreTrainedModel"):
             self.model_type = "tf"
-
 
     def __call__(self, masked_X, X):
         """Computes log odds scores for a given batch of masked inputs for the top-k tokens for Causal/Masked LM.
@@ -82,7 +84,7 @@ class TopKLM(Model):
         self.update_cache_X(X[:1])
         start_batch_idx, end_batch_idx = 0, len(masked_X)
         while start_batch_idx < end_batch_idx:
-            logits = self.get_lm_logits(masked_X[start_batch_idx:start_batch_idx+self.batch_size])
+            logits = self.get_lm_logits(masked_X[start_batch_idx : start_batch_idx + self.batch_size])
             logodds = self.get_logodds(logits)
             if output_batch is None:
                 output_batch = logodds
@@ -147,6 +149,8 @@ class TopKLM(Model):
             Computes log odds for corresponding top-k token ids.
 
         """
+        assert self.topk_token_ids is not None
+
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
             probs = np.exp(arr) / np.exp(arr).sum(-1)
@@ -158,7 +162,7 @@ class TopKLM(Model):
         logodds_for_topk_token_ids = np.take(logodds, self.topk_token_ids, axis=-1)
         return logodds_for_topk_token_ids
 
-    def get_inputs(self, X, padding_side='right'):
+    def get_inputs(self, X, padding_side="right"):
         """The function tokenizes source sentence.
 
         Parameters
@@ -175,10 +179,10 @@ class TopKLM(Model):
         self.tokenizer.padding_side = padding_side
         inputs = self.tokenizer(X.tolist(), return_tensors=self.model_type, padding=True)
         # set tokenizer padding to default
-        self.tokenizer.padding_side = 'right'
+        self.tokenizer.padding_side = "right"
         return inputs
 
-    def generate_topk_token_ids(self, X):
+    def generate_topk_token_ids(self, X) -> np.ndarray:
         """Generates top-k token ids for Causal/Masked LM.
 
         Parameters
@@ -193,7 +197,7 @@ class TopKLM(Model):
 
         """
         logits = self.get_lm_logits(X)
-        topk_tokens_ids = (-logits).argsort()[0, :self.k]
+        topk_tokens_ids = (-logits).argsort()[0, : self.k]
         return topk_tokens_ids
 
     def get_lm_logits(self, X):
@@ -210,20 +214,28 @@ class TopKLM(Model):
             Logits corresponding to next word/masked word.
 
         """
-        if safe_isinstance(self.inner_model, MODELS_FOR_CAUSAL_LM):
+        if self.model_type not in ["pt", "tf"]:
+            raise NotImplementedError("Only PyTorch and TensorFlow models are supported!")
+
+        from transformers import MODEL_FOR_CAUSAL_LM_MAPPING
+
+        if type(self.inner_model) in MODEL_FOR_CAUSAL_LM_MAPPING.values():
             inputs = self.get_inputs(X, padding_side="left")
             if self.model_type == "pt":
                 import torch
-                inputs["position_ids"] = (inputs["attention_mask"].long().cumsum(-1) - 1)
+
+                inputs["position_ids"] = inputs["attention_mask"].long().cumsum(-1) - 1
                 inputs["position_ids"].masked_fill_(inputs["attention_mask"] == 0, 0)
                 inputs = inputs.to(self.device)
                 # generate outputs and logits
                 with torch.no_grad():
                     outputs = self.inner_model(**inputs, return_dict=True)
                 # extract only logits corresponding to target sentence ids
-                logits = outputs.logits.detach().cpu().numpy().astype('float64')[:, -1, :]
-            elif self.model_type == "tf":
+                logits = outputs.logits.detach().cpu().numpy().astype("float64")[:, -1, :]
+            else:
+                assert self.model_type == "tf"
                 import tensorflow as tf
+
                 inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
                 inputs["position_ids"] = tf.where(inputs["attention_mask"] == 0, 0, inputs["position_ids"])
                 if self.device is None:
@@ -234,7 +246,9 @@ class TopKLM(Model):
                             outputs = self.inner_model(inputs, return_dict=True)
                     except RuntimeError as err:
                         print(err)
-                logits = outputs.logits.numpy().astype('float64')[:, -1, :]
+                logits = outputs.logits.numpy().astype("float64")[:, -1, :]
+        else:
+            raise NotImplementedError(f"Model type '{type(self.inner_model)}' not supported!")
         return logits
 
     def save(self, out_file):

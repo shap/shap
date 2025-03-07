@@ -14,7 +14,6 @@ def test_group_difference(explainer):
     group_mask = np.random.randint(2, size=shap_values.shape[0])
     feature_names = explainer.data_feature_names
     fig, ax = plt.subplots()
-    shap.plots.group_difference(shap_values, group_mask, feature_names,
-                                show=False, ax=ax)
+    shap.plots.group_difference(shap_values, group_mask, feature_names, show=False, ax=ax)
     plt.tight_layout()
     return fig

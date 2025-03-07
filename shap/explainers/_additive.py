@@ -45,22 +45,26 @@ class AdditiveExplainer(Explainer):
                 # self.model(np.zeros(num_features))
                 # self._zero_offset = self.model(np.zeros(num_features))#model.intercept_#outputs[0]
                 # self._input_offsets = np.zeros(num_features) #* self._zero_offset
-                raise NotImplementedError("Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!")
+                raise NotImplementedError(
+                    "Masker not given and we don't yet support pulling the distribution centering directly from the EBM model!"
+                )
                 return
 
         # here we need to compute the offsets ourselves because we can't pull them directly from a model we know about
-        assert safe_isinstance(self.masker, "shap.maskers.Independent"), "The Additive explainer only supports the Tabular masker at the moment!"
+        assert safe_isinstance(self.masker, "shap.maskers.Independent"), (
+            "The Additive explainer only supports the Tabular masker at the moment!"
+        )
 
         # pre-compute per-feature offsets
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, np.zeros(self.masker.shape[1]))
-        masks = np.ones((self.masker.shape[1]+1, self.masker.shape[1]), dtype=bool)
-        for i in range(1, self.masker.shape[1]+1):
-            masks[i,i-1] = False
+        masks = np.ones((self.masker.shape[1] + 1, self.masker.shape[1]), dtype=bool)
+        for i in range(1, self.masker.shape[1] + 1):
+            masks[i, i - 1] = False
         outputs = fm(masks)
         self._zero_offset = outputs[0]
         self._input_offsets = np.zeros(masker.shape[1])
-        for i in range(1, self.masker.shape[1]+1):
-            self._input_offsets[i-1] = outputs[i] - self._zero_offset
+        for i in range(1, self.masker.shape[1] + 1):
+            self._input_offsets[i - 1] = outputs[i] - self._zero_offset
 
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
@@ -88,7 +92,7 @@ class AdditiveExplainer(Explainer):
         x = row_args[0]
         inputs = np.zeros((len(x), len(x)))
         for i in range(len(x)):
-            inputs[i,i] = x[i]
+            inputs[i, i] = x[i]
 
         phi = self.model(inputs) - self._zero_offset - self._input_offsets
 
@@ -97,8 +101,9 @@ class AdditiveExplainer(Explainer):
             "expected_values": self._expected_value,
             "mask_shapes": [a.shape for a in row_args],
             "main_effects": phi,
-            "clustering": getattr(self.masker, "clustering", None)
+            "clustering": getattr(self.masker, "clustering", None),
         }
+
 
 # class AdditiveExplainer(Explainer):
 #     """ Computes SHAP values for generalized additive models.

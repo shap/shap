@@ -24,7 +24,16 @@ class FixedComposite(Masker):
         self.masker = masker
 
         # copy attributes from the masker we are wrapping
-        masker_attributes = ["shape", "invariants", "clustering", "data_transform", "mask_shapes", "feature_names", "text_data", "image_data"]
+        masker_attributes = [
+            "shape",
+            "invariants",
+            "clustering",
+            "data_transform",
+            "mask_shapes",
+            "feature_names",
+            "text_data",
+            "image_data",
+        ]
         for masker_attribute in masker_attributes:
             if getattr(self.masker, masker_attribute, None) is not None:
                 setattr(self, masker_attribute, getattr(self.masker, masker_attribute))
@@ -32,10 +41,10 @@ class FixedComposite(Masker):
     def __call__(self, mask, *args):
         """Computes mask on the args using the masker data attribute and returns tuple containing masked input with args."""
         masked_X = self.masker(mask, *args)
-        wrapped_args = []
+        wrapped_args_list = []
         for item in args:
-            wrapped_args.append(np.array([item]))
-        wrapped_args = tuple(wrapped_args)
+            wrapped_args_list.append(np.array([item]))
+        wrapped_args = tuple(wrapped_args_list)
         if not isinstance(masked_X, tuple):
             masked_X = (masked_X,)
         return masked_X + wrapped_args

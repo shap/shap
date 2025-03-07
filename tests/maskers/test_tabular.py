@@ -15,7 +15,6 @@ def test_serialization_independent_masker_dataframe():
     original_independent_masker = shap.maskers.Independent(X)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize independent masker
         original_independent_masker.save(temp_serialization_file)
 
@@ -29,7 +28,10 @@ def test_serialization_independent_masker_dataframe():
     mask[4] = 0
 
     # comparing masked values
-    assert np.array_equal(original_independent_masker(mask, X[:1].values[0])[1], new_independent_masker(mask, X[:1].values[0])[1])
+    assert np.array_equal(
+        original_independent_masker(mask, X[:1].values[0])[1], new_independent_masker(mask, X[:1].values[0])[1]
+    )
+
 
 def test_serialization_independent_masker_numpy():
     """Test the serialization of an Independent masker based on a numpy array."""
@@ -40,10 +42,8 @@ def test_serialization_independent_masker_numpy():
     original_independent_masker = shap.maskers.Independent(X)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize independent masker
         original_independent_masker.save(temp_serialization_file)
-
 
         temp_serialization_file.seek(0)
 
@@ -57,6 +57,7 @@ def test_serialization_independent_masker_numpy():
     # comparing masked values
     assert np.array_equal(original_independent_masker(mask, X[0])[0], new_independent_masker(mask, X[0])[0])
 
+
 def test_serialization_partion_masker_dataframe():
     """Test the serialization of a Partition masker based on a DataFrame."""
     X, _ = shap.datasets.california(n_points=500)
@@ -65,7 +66,6 @@ def test_serialization_partion_masker_dataframe():
     original_partition_masker = shap.maskers.Partition(X)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize partition masker
         original_partition_masker.save(temp_serialization_file)
 
@@ -79,7 +79,10 @@ def test_serialization_partion_masker_dataframe():
     mask[4] = 0
 
     # comparing masked values
-    assert np.array_equal(original_partition_masker(mask, X[:1].values[0])[1], new_partition_masker(mask, X[:1].values[0])[1])
+    assert np.array_equal(
+        original_partition_masker(mask, X[:1].values[0])[1], new_partition_masker(mask, X[:1].values[0])[1]
+    )
+
 
 def test_serialization_partion_masker_numpy():
     """Test the serialization of a Partition masker based on a numpy array."""
@@ -90,7 +93,6 @@ def test_serialization_partion_masker_numpy():
     original_partition_masker = shap.maskers.Partition(X)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         # serialize partition masker
         original_partition_masker.save(temp_serialization_file)
 

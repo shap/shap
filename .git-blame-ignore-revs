@@ -7,3 +7,7 @@ b2a60a31edcc22ed41778cbe3ef93a499d76277f
 9438e81732d04f9e9c56d98074e6b35615e21a9a
 # Renormalised file endings
 edb34644a218127437f9e6bb1588bc3246a2c222
+# Bulk update of docstrings with pydocstyle
+56394f1c208e384ad3302d596e90f6818943c840
+# Applied ruff formatter
+fc8a60f9b0854279014ff668db3d84a1d11bbc7e

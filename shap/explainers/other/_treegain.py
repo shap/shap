@@ -24,7 +24,9 @@ class TreeGain(Explainer):
             pass
         else:
             raise NotImplementedError("The passed model is not yet supported by TreeGainExplainer: " + str(type(model)))
-        assert hasattr(model, "feature_importances_"), "The passed model does not have a feature_importances_ attribute!"
+        assert hasattr(model, "feature_importances_"), (
+            "The passed model does not have a feature_importances_ attribute!"
+        )
         self.model = model
 
     def attributions(self, X):
