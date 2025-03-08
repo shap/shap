@@ -19,8 +19,8 @@
   "dependencies": {
     "d3": "^7",
     "lodash": "^4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",
@@ -30,7 +30,7 @@
     "babel-loader": "^10.0.0",
     "jest": "^29.6.1",
     "jest-environment-jsdom": "^29.6.1",
-    "react-test-renderer": "^18.2.0",
+    "react-test-renderer": "^19.0.0",
     "webpack": "^5.88.2",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.0.2"
