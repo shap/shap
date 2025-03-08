@@ -6,7 +6,7 @@ exports[`AdditiveForceVisualizer renders correctly 1`] = `
     style="user-select: none; display: block; font-family: arial;"
   >
     <style>
-
+      
           .force-bar-axis path {
             fill: none;
             opacity: 0.4;
