@@ -245,12 +245,12 @@ def scatter(
         figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
         _, ax = plt.subplots(figsize=figsize)
 
-    assert (
-        shap_values_arr.shape[0] == features.shape[0]
-    ), "'shap_values_arr' and 'features' values must have the same number of rows!"
-    assert (
-        shap_values_arr.shape[1] == features.shape[1]
-    ), "'shap_values_arr' must have the same number of columns as 'features'!"
+    assert shap_values_arr.shape[0] == features.shape[0], (
+        "'shap_values_arr' and 'features' values must have the same number of rows!"
+    )
+    assert shap_values_arr.shape[1] == features.shape[1], (
+        "'shap_values_arr' must have the same number of columns as 'features'!"
+    )
 
     # get both the raw and display feature values
     oinds = np.arange(
@@ -677,12 +677,12 @@ def dependence_legacy(
             plt.show()
         return
 
-    assert (
-        shap_values.shape[0] == features.shape[0]
-    ), "'shap_values' and 'features' values must have the same number of rows!"
-    assert (
-        shap_values.shape[1] == features.shape[1]
-    ), "'shap_values' must have the same number of columns as 'features'!"
+    assert shap_values.shape[0] == features.shape[0], (
+        "'shap_values' and 'features' values must have the same number of rows!"
+    )
+    assert shap_values.shape[1] == features.shape[1], (
+        "'shap_values' must have the same number of columns as 'features'!"
+    )
 
     # get both the raw and display feature values
     oinds = np.arange(

@@ -20,8 +20,7 @@ from shap.utils._exceptions import DimensionError
 def test_input_shap_values_type(unsupported_inputs):
     """Check that a TypeError is raised when shap_values is not a valid input type."""
     emsg = (
-        "The shap_values argument must be an Explanation object, Cohorts "
-        "object, or dictionary of Explanation objects!"
+        "The shap_values argument must be an Explanation object, Cohorts object, or dictionary of Explanation objects!"
     )
     with pytest.raises(TypeError, match=emsg):
         shap.plots.bar(unsupported_inputs, show=False)

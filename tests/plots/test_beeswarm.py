@@ -3,6 +3,21 @@ import numpy as np
 import pytest
 
 import shap
+from shap.plots.colors import (
+    blue_rgb,
+    gray_rgb,
+    light_blue_rgb,
+    light_red_rgb,
+    red_blue,
+    red_blue_circle,
+    red_blue_no_bounds,
+    red_blue_transparent,
+    red_rgb,
+    red_transparent_blue,
+    red_white_blue,
+    transparent_blue,
+    transparent_red,
+)
 from shap.utils._exceptions import DimensionError
 
 
@@ -61,3 +76,33 @@ def test_beeswarm_no_group_remaining(explainer):
     shap.plots.beeswarm(shap_values, show=False, group_remaining_features=False)
     plt.tight_layout()
     return fig
+
+
+def test_beeswarm_basic_explanation_works():
+    # GH 3901
+    explanation = shap.Explanation([[1.0, 2.0, 3.0]])
+    shap.plots.beeswarm(explanation, show=False)
+
+
+@pytest.mark.parametrize(
+    "color",
+    [
+        blue_rgb,
+        gray_rgb,
+        light_blue_rgb,
+        light_red_rgb,
+        red_blue,
+        red_blue_circle,
+        red_blue_no_bounds,
+        red_blue_transparent,
+        red_rgb,
+        red_transparent_blue,
+        red_white_blue,
+        transparent_blue,
+        transparent_red,
+    ],
+)
+def test_beeswarm_works_with_colors(color):
+    # GH 3901
+    explanation = shap.Explanation([[1.0, 2.0, 3.0]])
+    shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)

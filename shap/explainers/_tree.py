@@ -421,8 +421,7 @@ class TreeExplainer(Explainer):
                 raise ExplainerError(emsg)
             if X.shape[0] != len(y):
                 emsg = (
-                    f"The number of labels ({len(y)}) does not match the number of samples "
-                    f"to explain ({X.shape[0]})!"
+                    f"The number of labels ({len(y)}) does not match the number of samples to explain ({X.shape[0]})!"
                 )
                 raise DimensionError(emsg)
 
@@ -697,9 +696,9 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        assert (
-            self.model.model_output == "raw"
-        ), 'Only model_output = "raw" is supported for SHAP interaction values right now!'
+        assert self.model.model_output == "raw", (
+            'Only model_output = "raw" is supported for SHAP interaction values right now!'
+        )
         # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
@@ -795,7 +794,9 @@ class TreeExplainer(Explainer):
     def assert_additivity(self, phi, model_output):
         def check_sum(sum_val, model_output):
             diff = np.abs(sum_val - model_output)
-            if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
+            # TODO: add arguments for passing custom 'atol' and 'rtol' values to 'np.allclose'
+            # would require change to interface i.e. '__call__' methods
+            if not np.allclose(sum_val, model_output, atol=1e-2, rtol=1e-2):
                 ind = np.argmax(diff)
                 err_msg = (
                     "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the "
@@ -1396,9 +1397,9 @@ class TreeEnsemble:
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
             max_nodes = np.max([len(t.values) for t in self.trees])
-            assert (
-                len(np.unique([t.values.shape[1] for t in self.trees])) == 1
-            ), "All trees in the ensemble must have the same output dimension!"
+            assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, (
+                "All trees in the ensemble must have the same output dimension!"
+            )
             num_trees = len(self.trees)
             # important to be -1 in unused sections!! This way we can tell which entries are valid.
             self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
@@ -1498,8 +1499,7 @@ class TreeEnsemble:
                 transform = "identity"
             else:
                 emsg = (
-                    'model_output = "probability" is not yet supported when model.tree_output = '
-                    f'"{self.tree_output}"!'
+                    f'model_output = "probability" is not yet supported when model.tree_output = "{self.tree_output}"!'
                 )
                 raise NotImplementedError(emsg)
         elif self.model_output == "log_loss":
@@ -1564,12 +1564,16 @@ class TreeEnsemble:
             tree_limit = self.values.shape[0]
 
         if output == "logloss":
-            assert (
-                y is not None
-            ), "Both samples and labels must be provided when explaining the loss (i.e. `explainer.shap_values(X, y)`)!"
-            assert X.shape[0] == len(y), (
-                "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
-            )
+            if y is None:
+                raise ValueError(
+                    "Both samples and labels must be provided when explaining the loss"
+                    " (i.e. `explainer.shap_values(X, y)`)!"
+                )
+            if X.shape[0] != len(y):
+                raise ValueError(
+                    f"The number of labels ({len(y)}) does not match the number of samples to explain ({X.shape[0]})!"
+                )
+
         transform = self.get_transform()
         assert_import("cext")
         output = np.zeros((X.shape[0], self.num_outputs))
