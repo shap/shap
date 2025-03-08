@@ -1898,3 +1898,46 @@ def test_consistency_approximate(expected_result, approximate):
     explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
     np.testing.assert_allclose(explanations_call_approx.values, explanations_shap_values_approx)
     np.testing.assert_allclose(explanations_call_approx.values, expected_result)
+
+
+@pytest.mark.parametrize("n_rows", [3, 5])
+@pytest.mark.parametrize("n_estimators", [1, 100])
+def test_gh_3948(n_rows, n_estimators):
+    rng = np.random.default_rng(0)
+    X = rng.integers(low=0, high=2, size=(n_rows, 90_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=n_estimators, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    exp.shap_values(X)
+
+
+@pytest.fixture
+def model_explainer():
+    rng = np.random.default_rng(0)
+    X = np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+    y = rng.integers(low=0, high=2, size=len(X))
+    clf = sklearn.ensemble.ExtraTreesClassifier(n_estimators=100, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    return exp
+
+
+@pytest.mark.parametrize(
+    "phi, model_output",
+    [
+        (
+            [
+                np.array([[0.0, 0.0, -0.24750001], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825]]),
+                np.array(
+                    [[0.0, 0.0, 0.24749997], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999]]
+                ),
+            ],
+            np.array([[0.0, 1.0], [0.33333333, 0.66666667], [0.33333333, 0.66666667], [0.33333333, 0.66666667]]),
+        ),
+    ],
+)
+def test_tight_sensitivity_extra(model_explainer, phi, model_output):
+    model_explainer.assert_additivity(phi, model_output)
