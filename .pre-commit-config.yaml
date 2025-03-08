@@ -1,7 +1,7 @@
 ci:
   autoupdate_schedule: monthly
 
-exclude: '.*tree_shap_paper.*|.*user_studies.*'
+exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit

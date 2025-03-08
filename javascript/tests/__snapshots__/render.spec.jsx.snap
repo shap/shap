@@ -1,20 +1,12 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`renders correctly 1`] = `
-<svg
-  style={
-    {
-      "display": "block",
-      "fontFamily": "arial",
-      "sansSerif": true,
-      "userSelect": "none",
-    }
-  }
->
-  <style
-    dangerouslySetInnerHTML={
-      {
-        "__html": "
+exports[`AdditiveForceVisualizer renders correctly 1`] = `
+<div>
+  <svg
+    style="user-select: none; display: block; font-family: arial;"
+  >
+    <style>
+      
           .force-bar-axis path {
             fill: none;
             opacity: 0.4;
@@ -32,9 +24,113 @@ exports[`renders correctly 1`] = `
             opacity: 0.5;
             font-size: 12px;
             padding: 0px;
-          }",
-      }
-    }
-  />
-</svg>
+          }
+    </style>
+    <g>
+      <g
+        class="force-bar-axis"
+        transform="translate(0,35)"
+      />
+    </g>
+    <g />
+    <text />
+    <line />
+    <text />
+    <text />
+    <text />
+    <text />
+    <text />
+    <text />
+    <text />
+    <text
+      fill="#fff"
+      font-size="12"
+      stroke="#fff"
+      stroke-linejoin="round"
+      stroke-width="4"
+      text-anchor="middle"
+      x="10"
+      y="20"
+    />
+    <text
+      fill="#0f0"
+      font-size="12"
+      text-anchor="middle"
+      x="10"
+      y="20"
+    />
+    <lineargradient
+      id="linear-grad-0"
+      x1="0%"
+      x2="0%"
+      y1="0%"
+      y2="100%"
+    >
+      <stop
+        offset="0%"
+        stop-color="rgb(255, 13, 87)"
+        stop-opacity="0.6"
+      />
+      <stop
+        offset="100%"
+        stop-color="rgb(255, 13, 87)"
+        stop-opacity="0"
+      />
+    </lineargradient>
+    <lineargradient
+      id="linear-backgrad-0"
+      x1="0%"
+      x2="0%"
+      y1="0%"
+      y2="100%"
+    >
+      <stop
+        offset="0%"
+        stop-color="rgb(255, 13, 87)"
+        stop-opacity="0.5"
+      />
+      <stop
+        offset="100%"
+        stop-color="rgb(255, 13, 87)"
+        stop-opacity="0"
+      />
+    </lineargradient>
+    <lineargradient
+      id="linear-grad-1"
+      x1="0%"
+      x2="0%"
+      y1="0%"
+      y2="100%"
+    >
+      <stop
+        offset="0%"
+        stop-color="rgb(30, 136, 229)"
+        stop-opacity="0.6"
+      />
+      <stop
+        offset="100%"
+        stop-color="rgb(30, 136, 229)"
+        stop-opacity="0"
+      />
+    </lineargradient>
+    <lineargradient
+      id="linear-backgrad-1"
+      x1="0%"
+      x2="0%"
+      y1="0%"
+      y2="100%"
+    >
+      <stop
+        offset="0%"
+        stop-color="rgb(30, 136, 229)"
+        stop-opacity="0.5"
+      />
+      <stop
+        offset="100%"
+        stop-color="rgb(30, 136, 229)"
+        stop-opacity="0"
+      />
+    </lineargradient>
+  </svg>
+</div>
 `;
