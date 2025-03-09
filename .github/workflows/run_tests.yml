@@ -26,22 +26,22 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           - os: macos-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
             python-version: "3.12"
             extras: "test-core"
-      fail-fast: false
+      fail-fast: true  # TEMPORARY change to save time whilst getting 3.13 to pass
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
@@ -57,6 +57,7 @@ jobs:
         # Do regular install NOT editable install: see GH #3020
         run: |
           python -m pip install --upgrade uv
+          uv pip install --system --dry-run '.[${{ matrix.extras }},plots]'
           uv pip install --system '.[${{ matrix.extras }},plots]'
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
