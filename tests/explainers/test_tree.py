@@ -1941,3 +1941,39 @@ def model_explainer():
 )
 def test_tight_sensitivity_extra(model_explainer, phi, model_output):
     model_explainer.assert_additivity(phi, model_output)
+
+
+@pytest.mark.parametrize(
+    "X, y, expected_shap_values",
+    [
+        (
+            np.array([[1], [None], [np.nan], [float("nan")], [100]]),
+            np.array(
+                [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            ),
+            np.array([4 / 5, -1 / 5, -1 / 5, -1 / 5, -1 / 5]),
+        ),
+    ],
+)
+def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
+    """Test that TreeExplainer works with scikit-learn trees that handle missing values.
+
+    This test verifies that SHAP values are computed correctly when using scikit-learn
+    trees with missing values (None, NaN), which is supported starting from scikit-learn 1.3.
+    """
+    # Train a simple decision tree classifier
+    clf = sklearn.tree.DecisionTreeClassifier()
+    clf.fit(X, y)
+
+    # Create explainer and get SHAP values
+    explainer = shap.TreeExplainer(clf)
+    shap_values = explainer.shap_values(X)[:, :, 1].flatten()
+
+    # Verify SHAP values match expected values
+    np.testing.assert_allclose(shap_values, expected_shap_values)
