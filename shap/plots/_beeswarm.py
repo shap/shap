@@ -451,7 +451,7 @@ def beeswarm(
                 rasterized=len(shaps) > 500,
             )
         else:
-            if safe_isinstance(color, "matplotlib.colors.Colormap"):
+            if safe_isinstance(color, "matplotlib.colors.Colormap") and hasattr(color, "colors"):
                 color = color.colors
             ax.scatter(
                 shaps,
