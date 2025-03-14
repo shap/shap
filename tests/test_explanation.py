@@ -1,11 +1,46 @@
 """This file contains tests for the `shap._explanation` module."""
 
+from textwrap import dedent
+
 import numpy as np
+import pandas as pd
 import pytest
 from pytest import param
+from sklearn.datasets import load_wine
+from sklearn.ensemble import RandomForestClassifier
 
 import shap
 from shap._explanation import OpHistoryItem
+
+
+def test_explanation_repr():
+    exp = shap.Explanation(values=np.arange(5))
+    assert (
+        exp.__repr__()
+        == dedent(
+            """
+            .values =
+            array([0, 1, 2, 3, 4])
+            """
+        ).strip()
+    )
+
+    exp = shap.Explanation(values=np.arange(5), base_values=0.5, data=np.ones(5))
+    assert (
+        exp.__repr__()
+        == dedent(
+            """
+            .values =
+            array([0, 1, 2, 3, 4])
+
+            .base_values =
+            0.5
+
+            .data =
+            array([1., 1., 1., 1., 1.])
+            """
+        ).strip()
+    )
 
 
 def test_explanation_hstack(random_seed):
@@ -50,7 +85,7 @@ def test_explanation_hstack_errors(random_seed):
         _ = base_exp.hstack(exp2)
 
     with pytest.raises(
-        AssertionError,
+        ValueError,
         match="Can't hstack explanations with different base values",
     ):
         exp2 = shap.Explanation(
@@ -180,3 +215,22 @@ def test_cohorts_magic_methods_errors():
     ch = shap.Cohorts()
     with pytest.raises(ValueError, match=r"No methods"):
         ch(axis=0)
+
+
+def test_cohorts_multi_class():
+    # Load dataset
+    data = load_wine()
+    X = pd.DataFrame(data.data, columns=data.feature_names)
+    Y = data.target
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X, Y)
+
+    explainer = shap.TreeExplainer(model)
+
+    shap_values = explainer(X[:100])
+
+    with pytest.raises(ValueError, match="Cohorts cannot be calculated on multiple outputs at once."):
+        shap_values.cohorts(2)
+
+    cohorts = shap_values[..., 0].cohorts(2)
+    isinstance(cohorts, shap.Cohorts)

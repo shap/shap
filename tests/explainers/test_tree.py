@@ -113,7 +113,11 @@ def _conditional_expectation(tree, S, x):
         lc = tree.children_left[tree_ind, node_ind]
         rc = tree.children_right[tree_ind, node_ind]
         if lc < 0:
-            return tree.values[tree_ind, node_ind]
+            result = tree.values[tree_ind, node_ind]
+            # Previously the result was an array of one element, which was then implicity converted to a float
+            # Make this conversion explicit:
+            assert len(result) == 1
+            return result[0]
         if f in S:
             if x[f] <= tree.thresholds[tree_ind, node_ind]:
                 return R(lc)
@@ -133,7 +137,7 @@ def _conditional_expectation(tree, S, x):
 def _brute_force_tree_shap(tree, x):
     m = len(x)
     phi = np.zeros(m)
-    for p in itertools.permutations(list(range(m))):
+    for p in itertools.permutations(range(m)):
         for i in range(m):
             phi[p[i]] += _conditional_expectation(tree, p[: i + 1], x) - _conditional_expectation(tree, p[:i], x)
     return phi / math.factorial(m)
@@ -522,9 +526,9 @@ def test_provided_background_independent():
     explainer = shap.TreeExplainer(bst, test_x, feature_perturbation="interventional")
     diffs = explainer.expected_value + explainer.shap_values(test_x).sum(1) - bst.predict(dtest, output_margin=True)
     assert np.max(np.abs(diffs)) < 1e-4, "SHAP values don't sum to model output!"
-    assert (
-        np.abs(explainer.expected_value - bst.predict(dtest, output_margin=True).mean()) < 1e-4
-    ), "Bad expected_value!"
+    assert np.abs(explainer.expected_value - bst.predict(dtest, output_margin=True).mean()) < 1e-4, (
+        "Bad expected_value!"
+    )
 
 
 def test_provided_background_independent_prob_output():
@@ -668,17 +672,17 @@ def test_single_tree_nonlinear_transformations():
     x = X[x_ind : x_ind + 1, :]
     itshap = expl.shap_values(x)
     kshap = expl_kern.shap_values(x, nsamples=300)
-    assert np.allclose(
-        itshap.sum() + expl.expected_value, pred[x_ind]
-    ), "SHAP values don't sum to model output on explaining margin!"
+    assert np.allclose(itshap.sum() + expl.expected_value, pred[x_ind]), (
+        "SHAP values don't sum to model output on explaining margin!"
+    )
     assert np.allclose(itshap, kshap), "Independent Tree SHAP doesn't match Kernel SHAP on explaining margin!"
 
     model.set_attr(objective="binary:logistic")
     expl = shap.TreeExplainer(model, X, feature_perturbation="interventional", model_output="probability")
     itshap = expl.shap_values(x)
-    assert np.allclose(
-        itshap.sum() + expl.expected_value, trans_pred[x_ind]
-    ), "SHAP values don't sum to model output on explaining logistic!"
+    assert np.allclose(itshap.sum() + expl.expected_value, trans_pred[x_ind]), (
+        "SHAP values don't sum to model output on explaining logistic!"
+    )
 
     # expl = shap.TreeExplainer(model, X, feature_perturbation="interventional",
     # model_output="logloss")
@@ -1144,13 +1148,14 @@ class TestExplainerXGBoost:
     )
     @pytest.mark.parametrize("Clf", classifiers)
     def test_xgboost_dmatrix_propagation(self, Clf):
-        """Test that xgboost sklearn attributues are properly passed to the DMatrix
-        initiated during shap value calculation. see GH #3313
+        """Test that xgboost sklearn attributes are properly passed to the DMatrix
+        initiated during shap value calculation. See GH #3313
         """
         X, y = shap.datasets.adult(n_points=100)
 
         # Randomly add missing data to the input where missing data is encoded as 1e-8
-        X_nan = X.copy()
+        # Cast all columns to float to allow imputing a float value
+        X_nan = X.copy().astype(float)
         X_nan.loc[
             X_nan.sample(frac=0.3, random_state=42).index,
             X_nan.columns.to_series().sample(frac=0.5, random_state=42),
@@ -1740,12 +1745,12 @@ def test_check_consistent_outputs_for_regression():
     e_cat = ex_cat(X, interactions=True)
     cat_pred = cat.predict(X, prediction_type="RawFormulaVal")
 
-    assert (
-        (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape
-    ), f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, RandomForest: {e_rfc_bin.shape}"
-    assert (
-        (50, 8, 8) == e_lgbm.shape == e_xgb.shape == e_rfc.shape
-    ), f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
+    assert (50, 8) == e_lgbm_bin.shape == e_xgb_bin.shape == e_rfc_bin.shape, (
+        f"LightGBM: {e_lgbm_bin.shape}, XGBoost: {e_xgb_bin.shape}, RandomForest: {e_rfc_bin.shape}"
+    )
+    assert (50, 8, 8) == e_lgbm.shape == e_xgb.shape == e_rfc.shape, (
+        f"Interactions LightGBM: {e_lgbm.shape}, XGBoost: {e_xgb.shape}, RandomForest: {e_rfc.shape}"
+    )
     for outputs, pred in [(e_lgbm_bin, lgbm_pred), (e_xgb_bin, xgb_pred), (e_rfc_bin, rfc_pred), (e_cat_bin, cat_pred)]:
         assert np.allclose(outputs.values.sum(1) + outputs.base_values, pred, atol=1e-4)
     for outputs, pred in [(e_lgbm, lgbm_pred), (e_xgb, xgb_pred), (e_rfc, rfc_pred), (e_cat, cat_pred)]:
@@ -1843,6 +1848,32 @@ def test_xgboost_dart_regression():
     assert np.allclose(shap_values.sum(1) + explainer.expected_value, model.predict(X), atol=1e-4)
 
 
+def test_feature_perturbation_refactoring():
+    X, y = sklearn.datasets.make_regression(n_samples=100, n_features=10, random_state=0)
+    model = sklearn.ensemble.RandomForestRegressor().fit(X, y)
+
+    # check the behaviour of "auto" and the switch from "interventional" to "tree_path_dependent"
+    feature_perturbation = "auto"
+    explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "tree_path_dependent"
+
+    explainer = shap.explainers.Tree(model, data=X, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "interventional"
+
+    # check that we raise a FutureWarning when switching "interventional" to "tree_path_dependent"
+    feature_perturbation = "interventional"
+    warn_msg = "In the future, passing feature_perturbation='interventional'"
+    with pytest.warns(FutureWarning, match=warn_msg):
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+    assert explainer.feature_perturbation == "tree_path_dependent"
+
+    # raise an error if the option is unknown
+    feature_perturbation = "random"
+    err_msg = "feature_perturbation must be"
+    with pytest.raises(shap.utils._exceptions.InvalidFeaturePerturbationError, match=err_msg):
+        explainer = shap.explainers.Tree(model, feature_perturbation=feature_perturbation)
+
+
 # the expected results can be found in the paper "Consistent Individualized Feature Attribution for Tree Ensembles",
 # https://arxiv.org/abs/1802.03888
 @pytest.mark.parametrize(
@@ -1867,3 +1898,82 @@ def test_consistency_approximate(expected_result, approximate):
     explanations_shap_values_approx = exp.shap_values(arr, approximate=approximate)
     np.testing.assert_allclose(explanations_call_approx.values, explanations_shap_values_approx)
     np.testing.assert_allclose(explanations_call_approx.values, expected_result)
+
+
+@pytest.mark.parametrize("n_rows", [3, 5])
+@pytest.mark.parametrize("n_estimators", [1, 100])
+def test_gh_3948(n_rows, n_estimators):
+    rng = np.random.default_rng(0)
+    X = rng.integers(low=0, high=2, size=(n_rows, 90_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=n_estimators, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    exp.shap_values(X)
+
+
+@pytest.fixture
+def model_explainer():
+    rng = np.random.default_rng(0)
+    X = np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+    y = rng.integers(low=0, high=2, size=len(X))
+    clf = sklearn.ensemble.ExtraTreesClassifier(n_estimators=100, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    return exp
+
+
+@pytest.mark.parametrize(
+    "phi, model_output",
+    [
+        (
+            [
+                np.array([[0.0, 0.0, -0.24750001], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825]]),
+                np.array(
+                    [[0.0, 0.0, 0.24749997], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999]]
+                ),
+            ],
+            np.array([[0.0, 1.0], [0.33333333, 0.66666667], [0.33333333, 0.66666667], [0.33333333, 0.66666667]]),
+        ),
+    ],
+)
+def test_tight_sensitivity_extra(model_explainer, phi, model_output):
+    model_explainer.assert_additivity(phi, model_output)
+
+
+@pytest.mark.parametrize(
+    "X, y, expected_shap_values",
+    [
+        (
+            np.array([[1], [None], [np.nan], [float("nan")], [100]]),
+            np.array(
+                [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            ),
+            np.array([4 / 5, -1 / 5, -1 / 5, -1 / 5, -1 / 5]),
+        ),
+    ],
+)
+def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
+    """Test that TreeExplainer works with scikit-learn trees that handle missing values.
+
+    This test verifies that SHAP values are computed correctly when using scikit-learn
+    trees with missing values (None, NaN), which is supported starting from scikit-learn 1.3.
+    """
+    # Train a simple decision tree classifier
+    clf = sklearn.tree.DecisionTreeClassifier()
+    clf.fit(X, y)
+
+    # Create explainer and get SHAP values
+    explainer = shap.TreeExplainer(clf)
+    shap_values = explainer.shap_values(X)[:, :, 1].flatten()
+
+    # Verify SHAP values match expected values
+    np.testing.assert_allclose(shap_values, expected_shap_values)

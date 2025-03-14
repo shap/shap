@@ -1,6 +1,5 @@
 import copy
 import time
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -422,9 +421,9 @@ class Explainer(Serializable):
             else:
                 sliced_labels = None
         else:
-            assert (
-                output_indices is not None
-            ), "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            assert output_indices is not None, (
+                "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            )
             labels = np.array(self.output_names)
             sliced_labels = [labels[index_list] for index_list in output_indices]
             if not ragged_outputs:
@@ -500,34 +499,6 @@ class Explainer(Serializable):
         This is an abstract static method meant to be implemented by each subclass.
         """
         return False
-
-    @staticmethod
-    def _compute_main_effects(fm, expected_value, inds):
-        """A utility method to compute the main effects from a MaskedModel."""
-        warnings.warn(
-            "This function is not used within the shap library and will therefore be removed in an upcoming release. "
-            "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
-            DeprecationWarning,
-        )
-
-        # mask each input on in isolation
-        masks = np.zeros(2 * len(inds) - 1, dtype=int)
-        last_ind = -1
-        for i in range(len(inds)):
-            if i > 0:
-                masks[2 * i - 1] = -last_ind - 1  # turn off the last input
-            masks[2 * i] = inds[i]  # turn on this input
-            last_ind = inds[i]
-
-        # compute the main effects for the given indexes
-        main_effects = fm(masks) - expected_value
-
-        # expand the vector to the full input size
-        expanded_main_effects = np.zeros(len(fm))
-        for i, ind in enumerate(inds):
-            expanded_main_effects[ind] = main_effects[i]
-
-        return expanded_main_effects
 
     def save(self, out_file, model_saver=".save", masker_saver=".save"):
         """Write the explainer to the given file stream."""

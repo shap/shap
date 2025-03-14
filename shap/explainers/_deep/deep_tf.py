@@ -107,9 +107,9 @@ class TFDeep(Explainer):
         if tf.executing_eagerly():
             if isinstance(model, (list, tuple)):
                 assert len(model) == 2, "When a tuple is passed it must be of the form (inputs, outputs)"
-                from tensorflow.keras import Model
+                from tensorflow import keras
 
-                self.model = Model(model[0], model[1])
+                self.model = keras.Model(model[0], model[1])
             else:
                 self.model = model
 
@@ -277,11 +277,12 @@ class TFDeep(Explainer):
             elif not isinstance(X, list):
                 X = [X]
         else:
-            assert isinstance(X, list), "Expected a list of model inputs!"
-        assert len(self.model_inputs) == len(X), "Number of model inputs (%d) does not match the number given (%d)!" % (
-            len(self.model_inputs),
-            len(X),
-        )
+            if not isinstance(X, list):
+                raise TypeError("Expected a list of model inputs!")
+        if len(self.model_inputs) != len(X):
+            raise ValueError(
+                f"Number of model inputs ({len(self.model_inputs)}) does not match the number given ({len(X)})!"
+            )
 
         # rank and determine the model outputs that we will explain
         if ranked_outputs is not None and self.multi_output:
