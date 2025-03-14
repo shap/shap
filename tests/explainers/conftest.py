@@ -1,8 +1,9 @@
 import time
 
-def load_tokenizer_model(
-        name: str, retries: int
-        ) -> tuple:
+import pytest
+
+
+def load_tokenizer_model(name: str, retries: int) -> tuple:
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
