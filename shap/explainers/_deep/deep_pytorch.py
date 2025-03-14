@@ -405,6 +405,7 @@ op_handler["Tanh"] = nonlinear_1d
 op_handler["Softplus"] = nonlinear_1d
 op_handler["Softmax"] = nonlinear_1d
 op_handler["SELU"] = nonlinear_1d
+op_handler["GELU"] = nonlinear_1d
 
 op_handler["MaxPool1d"] = maxpool
 op_handler["MaxPool2d"] = maxpool

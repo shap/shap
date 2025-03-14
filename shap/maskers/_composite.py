@@ -53,9 +53,9 @@ class Composite(Masker):
             if rows is None:
                 rows = shape[0]
             else:
-                assert (
-                    shape[1] == 0 or rows == shape[0]
-                ), "All submaskers of a Composite masker must return the same number of rows!"
+                assert shape[1] == 0 or rows == shape[0], (
+                    "All submaskers of a Composite masker must return the same number of rows!"
+                )
             cols += shape[1]
             pos += self.arg_counts[i]
         return rows, cols
