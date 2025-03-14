@@ -1,8 +1,6 @@
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-from packaging import version
 
 import shap
 
@@ -16,8 +14,9 @@ def set_reproducible_mpl_rcparams() -> None:
     Careful: the @pytest.mark.mpl_image_compare decorator will override rcParams,
     so this change must be done *after* the fixtures are called.
     """
-    if version.parse(matplotlib.__version__) >= version.parse("3.6.0"):  # Adjust version as needed
+    if plt.rcParams.get("image.interpolation") is not None:
         plt.rcParams["image.interpolation"] = "bilinear"
+    if plt.rcParams.get("image.interpolation_stage") is not None:
         plt.rcParams["image.interpolation_stage"] = "data"
 
 
