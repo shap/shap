@@ -13,6 +13,7 @@ import scipy.spatial
 import sklearn
 from slicer import Alias, Obj, Slicer
 
+from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
@@ -90,8 +91,8 @@ class MetaExplanation(type):
 class Explanation(metaclass=MetaExplanation):
     """A sliceable set of parallel arrays representing a SHAP explanation.
 
-    Note
-    ----
+    Notes
+    -----
     The *instance* methods such as `.max()` return new Explanation objects with the
     operation applied.
 
@@ -299,14 +300,13 @@ class Explanation(metaclass=MetaExplanation):
         self._s.clustering = new_clustering
 
     # =================== Data model ===================
-
     def __repr__(self):
         """Display some basic printable info, but not everything."""
-        out = ".values =\n" + self.values.__repr__()
+        out = f".values =\n{self.values!r}"
         if self.base_values is not None:
-            out += "\n\n.base_values =\n" + self.base_values.__repr__()
+            out += f"\n\n.base_values =\n{self.base_values!r}"
         if self.data is not None:
-            out += "\n\n.data =\n" + self.data.__repr__()
+            out += f"\n\n.data =\n{self.data!r}"
         return out
 
     def __getitem__(self, item) -> Explanation:
@@ -454,8 +454,8 @@ class Explanation(metaclass=MetaExplanation):
 
     def _apply_binary_operator(self, other, binary_op, op_name):
         new_exp = self.__copy__()
-        new_exp.op_history = copy.copy(self.op_history)
         new_exp.op_history.append(OpHistoryItem(name=op_name, args=(other,), prev_shape=self.shape))
+
         if isinstance(other, Explanation):
             new_exp.values = binary_op(new_exp.values, other.values)
             if new_exp.data is not None:
@@ -497,13 +497,8 @@ class Explanation(metaclass=MetaExplanation):
         axis = kwargs.get("axis", None)
 
         # collapse the slicer to right shape
-        if axis == 0:
-            new_self = new_self[0]
-        elif axis == 1:
-            new_self = new_self[1]
-        elif axis == 2:
-            new_self = new_self[2]
         if axis in [0, 1, 2]:
+            new_self = new_self[axis]
             new_self.op_history = new_self.op_history[:-1]  # pop off the slicing operation we just used
 
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
@@ -597,7 +592,7 @@ class Explanation(metaclass=MetaExplanation):
         )
         return new_self
 
-    def sample(self, max_samples, replace=False, random_state=0) -> Explanation:
+    def sample(self, max_samples: int, replace: bool = False, random_state: int = 0) -> Explanation:
         """Randomly samples the instances (rows) of the Explanation object.
 
         Parameters
@@ -613,11 +608,10 @@ class Explanation(metaclass=MetaExplanation):
             Random seed to use for sampling, defaults to 0.
 
         """
-        prev_seed = np.random.seed(random_state)
+        rng = np.random.RandomState(random_state)
         length = self.shape[0]
         assert length is not None
-        inds = np.random.choice(length, min(max_samples, length), replace=replace)
-        np.random.seed(prev_seed)
+        inds = rng.choice(length, size=min(max_samples, length), replace=replace)
         return self[list(inds)]
 
     def hclust(self, metric: str = "sqeuclidean", axis: int = 0):
@@ -642,11 +636,7 @@ class Explanation(metaclass=MetaExplanation):
         if axis == 1:
             values = values.T
 
-        # compute a hierarchical clustering and return the optimal leaf ordering
-        D = scipy.spatial.distance.pdist(values, metric)
-        cluster_matrix = scipy.cluster.hierarchy.complete(D)
-        inds = scipy.cluster.hierarchy.leaves_list(scipy.cluster.hierarchy.optimal_leaf_ordering(cluster_matrix, D))
-        return inds
+        return hclust_ordering(X=values, metric=metric)
 
     # =================== Utilities ===================
 
@@ -665,9 +655,8 @@ class Explanation(metaclass=MetaExplanation):
 
         """
         assert self.shape[0] == other.shape[0], "Can't hstack explanations with different numbers of rows!"
-        assert (
-            np.max(np.abs(self.base_values - other.base_values)) < 1e-6
-        ), "Can't hstack explanations with different base values!"
+        if not np.allclose(self.base_values, other.base_values, atol=1e-6):
+            raise ValueError("Can't hstack explanations with different base values!")
 
         new_exp = Explanation(
             values=np.hstack([self.values, other.values]),
@@ -687,7 +676,7 @@ class Explanation(metaclass=MetaExplanation):
         )
         return new_exp
 
-    def cohorts(self, cohorts) -> Cohorts:
+    def cohorts(self, cohorts: int | list[int] | tuple[int] | np.ndarray) -> Cohorts:
         """Split this explanation into several cohorts.
 
         Parameters
@@ -701,6 +690,12 @@ class Explanation(metaclass=MetaExplanation):
         Cohorts object
 
         """
+        if self.values.ndim > 2:
+            raise ValueError(
+                "Cohorts cannot be calculated on multiple outputs at once. "
+                "Please make sure to specify the output index on which cohorts should be build, e.g. for a multi-class output "
+                "shap_values[..., cohort_class].cohorts(2)."
+            )
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         if isinstance(cohorts, (list, tuple, np.ndarray)):

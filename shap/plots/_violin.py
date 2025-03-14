@@ -61,7 +61,7 @@ def violin(
         Whether to draw the color bar (legend).
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
@@ -294,8 +294,8 @@ def violin(
                 # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
-                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
-                        % (i, feature_names[ind])
+                        f"Not enough data in bin #{i} for feature {feature_names[ind]}, so it'll be ignored."
+                        " Try increasing the number of records to plot."
                     )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0

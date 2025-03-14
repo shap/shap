@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse
 import sklearn
+from _kernel_lib import _exp_val
 from packaging import version
 from scipy.special import binom
 from sklearn.linear_model import Lasso, LassoLarsIC, lars_path
@@ -155,7 +156,7 @@ class KernelExplainer(Explainer):
                 tensor_as_np_array = sess.run(symbolic_tensor)
         return tensor_as_np_array
 
-    def __call__(self, X, l1_reg="auto", silent=False):
+    def __call__(self, X, l1_reg="num_features(10)", silent=False):
         start_time = time.time()
 
         if isinstance(X, pd.DataFrame):
@@ -194,7 +195,7 @@ class KernelExplainer(Explainer):
             lead to lower variance estimates of the SHAP values. The "auto" setting uses
             `nsamples = 2 * X.shape[1] + 2048`.
 
-        l1_reg : "num_features(int)", "auto" (default for now, but deprecated), "aic", "bic", or float
+        l1_reg : "num_features(int)", "aic", "bic", or float
             The l1 regularization to use for feature selection. The estimation
             procedure is based on a debiased lasso.
 
@@ -202,12 +203,12 @@ class KernelExplainer(Explainer):
             * "aic" and "bic" options use the AIC and BIC rules for regularization.
             * Passing a float directly sets the "alpha" parameter of the
               ``sklearn.linear_model.Lasso`` model used for feature selection.
-            * "auto" (default for now but deprecated): uses "aic" when less than
+            * "auto" (deprecated): uses "aic" when less than
               20% of the possible sample space is enumerated, otherwise it uses
               no regularization.
 
-            Note: The default behaviour will change in a future version to be ``"num_features(10)"``.
-            Pass this value explicitly to silence the DeprecationWarning.
+            .. versionchanged:: 0.47.0
+                The default value changed from ``"auto"`` to ``"num_features(10)"``.
 
         silent: bool
             If True, hide tqdm progress bar. Default False.
@@ -347,7 +348,7 @@ class KernelExplainer(Explainer):
 
         # if more than one feature varies then we have to do real work
         else:
-            self.l1_reg = kwargs.get("l1_reg", "auto")
+            self.l1_reg = kwargs.get("l1_reg", "num_features(10)")
 
             # pick a reasonable number of samples if the user didn't specify how many they wanted
             self.nsamples = kwargs.get("nsamples", "auto")
@@ -495,7 +496,13 @@ class KernelExplainer(Explainer):
     def not_equal(i, j):
         number_types = (int, float, np.number)
         if isinstance(i, number_types) and isinstance(j, number_types):
-            return 0 if np.isclose(i, j, equal_nan=True) else 1
+            return 0 if np.allclose(i, j, equal_nan=True) else 1
+        elif hasattr(i, "dtype") and hasattr(j, "dtype"):
+            if np.issubdtype(i.dtype, np.number) and np.issubdtype(j.dtype, np.number):
+                return 0 if np.allclose(i, j, equal_nan=True) else 1
+            if np.issubdtype(i.dtype, np.bool_) and np.issubdtype(j.dtype, np.bool_):
+                return 0 if np.allclose(i, j, equal_nan=True) else 1
+            return 0 if all(i == j) else 1
         else:
             return 0 if i == j else 1
 
@@ -510,8 +517,7 @@ class KernelExplainer(Explainer):
                         varying[i] = False
                         continue
                     x_group = x_group.todense()
-                num_mismatches = np.sum(np.frompyfunc(self.not_equal, 2, 1)(x_group, self.data.data[:, inds]))
-                varying[i] = num_mismatches > 0
+                varying[i] = self.not_equal(x_group, self.data.data[:, inds])
             varying_indices = np.nonzero(varying)[0]
             return varying_indices
         else:
@@ -624,13 +630,9 @@ class KernelExplainer(Explainer):
         self.y[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :] = np.reshape(modelOut, (num_to_run, self.D))
 
         # find the expected value of each output
-        for i in range(self.nsamplesRun, self.nsamplesAdded):
-            eyVal = np.zeros(self.D)
-            for j in range(self.N):
-                eyVal += self.y[i * self.N + j, :] * self.data.weights[j]
-
-            self.ey[i, :] = eyVal
-            self.nsamplesRun += 1
+        self.ey, self.nsamplesRun = _exp_val(
+            self.nsamplesRun, self.nsamplesAdded, self.D, self.N, self.data.weights, self.y, self.ey
+        )
 
     def solve(self, fraction_evaluated, dim):
         eyAdj = self.linkfv(self.ey[:, dim]) - self.link.f(self.fnull[dim])
@@ -640,12 +642,7 @@ class KernelExplainer(Explainer):
         nonzero_inds = np.arange(self.M)
         log.debug(f"{fraction_evaluated = }")
         if self.l1_reg == "auto":
-            warnings.warn(
-                "l1_reg='auto' is deprecated and in a future version the behavior will change from a "
-                "conditional use of AIC to simply a fixed number of top features. "
-                "Pass l1_reg='num_features(10)' to opt-in to the new default behaviour.",
-                DeprecationWarning,
-            )
+            warnings.warn("l1_reg='auto' is deprecated and will be removed in a future version.", DeprecationWarning)
         if (self.l1_reg not in ["auto", False, 0]) or (fraction_evaluated < 0.2 and self.l1_reg == "auto"):
             w_aug = np.hstack((self.kernelWeights * (self.M - s), self.kernelWeights * s))
             log.info(f"{np.sum(w_aug) = }")

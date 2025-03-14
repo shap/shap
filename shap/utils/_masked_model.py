@@ -1,5 +1,4 @@
 import copy
-import warnings
 from typing import Any
 
 import numpy as np
@@ -280,9 +279,9 @@ class MaskedModel:
 
 
 def _assert_output_input_match(inputs, outputs):
-    assert (
-        len(outputs) == len(inputs[0])
-    ), f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
+    assert len(outputs) == len(inputs[0]), (
+        f"The model produced {len(outputs)} output rows when given {len(inputs[0])} input rows! Check the implementation of the model you provided for errors."
+    )
 
 
 def _convert_delta_mask_to_full(masks, full_masks):
@@ -304,84 +303,6 @@ def _convert_delta_mask_to_full(masks, full_masks):
         if masks[masks_pos] != MaskedModel.delta_mask_noop_value:
             full_masks[i, masks[masks_pos]] = ~full_masks[i, masks[masks_pos]]
         masks_pos += 1
-
-
-# @njit # TODO: figure out how to jit this function, or most of it
-def _build_delta_masked_inputs(
-    masks,
-    batch_positions,
-    num_mask_samples,
-    num_varying_rows,
-    delta_indexes,
-    varying_rows,
-    args,
-    masker,
-    variants,
-    variants_column_sums,
-):
-    warnings.warn(
-        "This function is not used within the shap library and will therefore be removed in an upcoming release. "
-        "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
-        DeprecationWarning,
-    )
-    all_masked_inputs: list[list[Any]] = [[] for _ in args]
-    dpos = 0
-    i = -1
-    masks_pos = 0
-    while masks_pos < len(masks):
-        i += 1
-
-        dpos = 0
-        delta_indexes[0] = masks[masks_pos]
-
-        # update the masked inputs
-        while delta_indexes[dpos] < 0:  # negative values mean keep going
-            delta_indexes[dpos] = -delta_indexes[dpos] - 1  # -value + 1 is the original index that needs flipped
-            masker(delta_indexes[dpos], *args)
-            dpos += 1
-            delta_indexes[dpos] = masks[masks_pos + dpos]
-        masked_inputs = masker(delta_indexes[dpos], *args).copy()
-
-        masks_pos += dpos + 1
-
-        num_mask_samples[i] = len(masked_inputs)
-        # print(i, dpos, delta_indexes[dpos])
-        # see which rows have been updated, so we can only evaluate the model on the rows we need to
-        if i == 0:
-            varying_rows[i, :] = True
-            # varying_rows.append(np.arange(num_mask_samples[i]))
-            num_varying_rows[i] = num_mask_samples[i]
-
-        else:
-            # only one column was changed
-            if dpos == 0:
-                varying_rows[i, :] = variants[:, delta_indexes[dpos]]
-                # varying_rows.append(_variants_row_inds[delta_indexes[dpos]])
-                num_varying_rows[i] = variants_column_sums[delta_indexes[dpos]]
-
-            # more than one column was changed
-            else:
-                varying_rows[i, :] = np.any(variants[:, delta_indexes[: dpos + 1]], axis=1)
-                # varying_rows.append(np.any(variants[:,delta_indexes[:dpos+1]], axis=1))
-                num_varying_rows[i] = varying_rows[i, :].sum()
-
-        batch_positions[i + 1] = batch_positions[i] + num_varying_rows[i]
-
-        # subset the masked input to only the rows that vary
-        if num_varying_rows[i] != num_mask_samples[i]:
-            if len(args) == 1:
-                masked_inputs = masked_inputs[varying_rows[i, :]]
-            else:
-                masked_inputs = [v[varying_rows[i, :]] for v in zip(*masked_inputs)]
-
-        # wrap the masked inputs if they are not already in a tuple
-        if len(args) == 1:
-            masked_inputs = (masked_inputs,)
-
-        for j in range(len(masked_inputs)):
-            all_masked_inputs[j].append(masked_inputs[j])
-
-    return all_masked_inputs, i + 1  # i + 1 is the number of output rows after averaging
 
 
 def _upcast_array(arr: np.ndarray) -> np.ndarray:
