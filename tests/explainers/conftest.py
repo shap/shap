@@ -1,7 +1,11 @@
-import pytest
 import time
 
-def load_tokenizer_model(name: str, retries: int) -> tuple["transformers.PreTrainedTokenizer", "transformers.PreTrainedModel"]:
+import pytest
+
+
+def load_tokenizer_model(
+    name: str, retries: int
+) -> tuple["transformers.PreTrainedTokenizer", "transformers.PreTrainedModel"]:
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
     AutoModelForSeq2SeqLM = pytest.importorskip("transformers").AutoModelForSeq2SeqLM
 
@@ -12,7 +16,7 @@ def load_tokenizer_model(name: str, retries: int) -> tuple["transformers.PreTrai
             model = AutoModelForSeq2SeqLM.from_pretrained(name)
             return tokenizer, model
         except OSError:
-            time.sleep(2 ** attempt)  # Exponential backoff
+            time.sleep(2**attempt)  # Exponential backoff
     raise OSError(f"Failed to load model and tokenizer after {max_retries} attempts")
 
 
