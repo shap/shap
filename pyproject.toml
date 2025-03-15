@@ -79,8 +79,7 @@ test = [
   "transformers",
   "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
-  "torch; sys_platform != 'darwin'",
+  "torch",
   "torchvision",
   "tensorflow",
   "sentencepiece",
@@ -196,7 +195,7 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+# addopts = "--mpl"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
