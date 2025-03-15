@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from packaging import version
 from sklearn.utils import check_array
 
 import shap
@@ -1167,7 +1168,8 @@ class TestExplainerXGBoost:
         explainer = shap.TreeExplainer(clf)
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
-        assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        # Nb this check passes within an rtol of ~1.15e-5 on xgboost 1.6
+        np.testing.assert_allclose(margin, explainer.expected_value + shap_values.sum(axis=1), rtol=2e-5, atol=1e-6)
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
@@ -1343,6 +1345,9 @@ class TestExplainerXGBoost:
         See GH #3357 for more information.
         """
         xgboost = pytest.importorskip("xgboost")
+
+        if version.parse(xgboost.__version__) < version.parse("1.7.0"):
+            pytest.skip("Conversion of XGBoost DMatrix to array only supported in XGB 1.7 onwards.")
 
         rs = np.random.RandomState(random_seed)
         X = rs.normal(size=(100, 7))
