@@ -2,14 +2,22 @@
 
 import warnings
 
+import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
+from packaging import version
 from scipy.stats import gaussian_kde
 
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+
+# TODO: simplify this when we drop support for matplotlib 3.9
+if version.parse(matplotlib.__version__) >= version.parse("3.10"):
+    ORIENTATION_KWARG = {"orientation": "horizontal"}
+else:
+    ORIENTATION_KWARG = {"vert": False}
 
 
 # TODO: remove unused title argument / use title argument
@@ -249,7 +257,7 @@ def violin(
                 shap_values[:, feature_order],
                 range(len(feature_order)),
                 points=200,
-                vert=False,
+                **ORIENTATION_KWARG,
                 widths=0.7,
                 showmeans=False,
                 showextrema=False,
