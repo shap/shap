@@ -41,7 +41,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.12"
             extras: "test-core"
-      fail-fast: true  # TEMPORARY change to save time whilst getting 3.13 to pass
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
@@ -57,7 +57,6 @@ jobs:
         # Do regular install NOT editable install: see GH #3020
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system --dry-run '.[${{ matrix.extras }},plots]'
           uv pip install --system '.[${{ matrix.extras }},plots]'
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
