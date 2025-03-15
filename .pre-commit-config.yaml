@@ -5,7 +5,7 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.7.2
+  rev: v0.9.9
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
@@ -25,7 +25,7 @@ repos:
   - id: end-of-file-fixer
 
 - repo: https://github.com/stefsmeets/nbcheckorder/
-  rev: v0.2.0
+  rev: v0.3.0
   hooks:
   - id: nbcheckorder
     # TODO: get passing on all notebooks

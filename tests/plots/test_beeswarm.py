@@ -21,6 +21,27 @@ from shap.plots.colors import (
 from shap.utils._exceptions import DimensionError
 
 
+@pytest.fixture(
+    params=[
+        blue_rgb,
+        gray_rgb,
+        light_blue_rgb,
+        light_red_rgb,
+        red_blue,
+        red_blue_circle,
+        red_blue_no_bounds,
+        red_blue_transparent,
+        red_rgb,
+        red_transparent_blue,
+        red_white_blue,
+        transparent_blue,
+        transparent_red,
+    ]
+)
+def color(request):
+    return request.param
+
+
 def test_beeswarm_input_is_explanation():
     """Checks an error is raised if a non-Explanation object is passed as input."""
     with pytest.raises(
@@ -84,25 +105,17 @@ def test_beeswarm_basic_explanation_works():
     shap.plots.beeswarm(explanation, show=False)
 
 
-@pytest.mark.parametrize(
-    "color",
-    [
-        blue_rgb,
-        gray_rgb,
-        light_blue_rgb,
-        light_red_rgb,
-        red_blue,
-        red_blue_circle,
-        red_blue_no_bounds,
-        red_blue_transparent,
-        red_rgb,
-        red_transparent_blue,
-        red_white_blue,
-        transparent_blue,
-        transparent_red,
-    ],
-)
 def test_beeswarm_works_with_colors(color):
     # GH 3901
     explanation = shap.Explanation([[1.0, 2.0, 3.0]])
+    shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)
+
+
+def test_beeswarm_colors_values_with_data(color):
+    np.random.seed(42)
+
+    explanation = shap.Explanation(
+        values=np.random.randn(100, 5),
+        data=np.array([["cat"] * 5] * 100),
+    )
     shap.plots.beeswarm(explanation, show=False, color_bar=True, color=color)

@@ -53,7 +53,7 @@ def test_image_multi(imagenet50_example):
     assert shap_values_multi.shape[-1] == n_classes
 
     explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[1 for _ in range(n_images)])
-    labels = [f"Class {x+1}" for x in range(n_classes)]
+    labels = [f"Class {x + 1}" for x in range(n_classes)]
     shap.image_plot(explanation, labels=labels, show=False)
     return plt.gcf()
 
