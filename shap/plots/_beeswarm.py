@@ -29,6 +29,7 @@ from ._utils import (
     sort_inds,
 )
 
+# TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):
     ORIENTATION_KWARG = {"orientation": "horizontal"}
 else:
