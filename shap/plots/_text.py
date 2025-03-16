@@ -208,7 +208,7 @@ def text(
             color = (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
             # '#dddddd' if i == 0 else '#ffffff' border-bottom: {'3px solid #000000' if i == 0 else 'none'};
             out += f"""
-<div style="display: inline; border-bottom: {'3px solid #000000' if i == 0 else 'none'}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
+<div style="display: inline; border-bottom: {"3px solid #000000" if i == 0 else "none"}; background: rgba{color}; border-radius: 3px; padding: 0px" id="_tp_{uuid}_output_{i}_name"
     onclick="_output_onclick_{uuid}({i})"
     onmouseover="_output_onmouseover_{uuid}({i}, this);">{name}</div>"""
         out += "<br><br>"
@@ -365,7 +365,7 @@ def text(
             }}"
             onmouseover="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 1; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 1;"
             onmouseout="document.getElementById('_fb_{uuid}_ind_{i}').style.opacity = 0; document.getElementById('_fs_{uuid}_ind_{i}').style.opacity = 0;"
-        >{token.replace("<", "&lt;").replace(">", "&gt;").replace(' ##', '')}</div></div>"""
+        >{token.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "")}</div></div>"""
     out += "</div>"
 
     if display:
@@ -568,7 +568,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         s += f'<line x1="{xpos(pos)}%" x2="{xpos(last_pos)}%" y1="60" y2="60" id="_fb_{uuid}_ind_{ind}" style="stroke:rgb{red};stroke-width:2; opacity: 0"/>'
 
         # the text label cropped and centered
-        s += f'<text x="{(xpos(last_pos) + xpos(pos))/2}%" y="71" font-size="12px" id="_fs_{uuid}_ind_{ind}" fill="rgb{red}" style="opacity: 0" dominant-baseline="middle" text-anchor="middle">{values[ind].round(3)}</text>'
+        s += f'<text x="{(xpos(last_pos) + xpos(pos)) / 2}%" y="71" font-size="12px" id="_fs_{uuid}_ind_{ind}" fill="rgb{red}" style="opacity: 0" dominant-baseline="middle" text-anchor="middle">{values[ind].round(3)}</text>'
 
         # the text label cropped and centered
         s += f'<svg x="{xpos(pos)}%" y="40" height="20" width="{xpos(last_pos) - xpos(pos)}%">'
@@ -587,7 +587,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         if i != 0:
             for j in range(4):
-                s += f'<g transform="translate({2*j-8},0)">'
+                s += f'<g transform="translate({2 * j - 8},0)">'
                 s += f'  <svg x="{xpos(last_pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 0 -9 l 6 18 L 0 25" fill="none" style="stroke:rgb{red};stroke-width:2" />'
                 s += "  </svg>"
@@ -595,7 +595,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         if i + 1 != len(inds):
             for j in range(4):
-                s += f'<g transform="translate({2*j-0},0)">'
+                s += f'<g transform="translate({2 * j - 0},0)">'
                 s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 0 -9 l 6 18 L 0 25" fill="none" style="stroke:rgb{red};stroke-width:2" />'
                 s += "  </svg>"
@@ -665,7 +665,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         s += f'<line x1="{xpos(last_pos)}%" x2="{xpos(pos)}%" y1="60" y2="60" id="_fb_{uuid}_ind_{ind}" style="stroke:rgb{blue};stroke-width:2; opacity: 0"/>'
 
         # the value text
-        s += f'<text x="{(xpos(last_pos) + xpos(pos))/2}%" y="71" font-size="12px" fill="rgb{blue}" id="_fs_{uuid}_ind_{ind}" style="opacity: 0" dominant-baseline="middle" text-anchor="middle">{values[ind].round(3)}</text>'
+        s += f'<text x="{(xpos(last_pos) + xpos(pos)) / 2}%" y="71" font-size="12px" fill="rgb{blue}" id="_fs_{uuid}_ind_{ind}" style="opacity: 0" dominant-baseline="middle" text-anchor="middle">{values[ind].round(3)}</text>'
 
         # the text label cropped and centered
         s += f'<svg x="{xpos(last_pos)}%" y="40" height="20" width="{xpos(pos) - xpos(last_pos)}%">'
@@ -684,7 +684,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         if i != 0:
             for j in range(4):
-                s += f'<g transform="translate({-2*j+2},0)">'
+                s += f'<g transform="translate({-2 * j + 2},0)">'
                 s += f'  <svg x="{xpos(last_pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 8 -9 l -6 18 L 8 25" fill="none" style="stroke:rgb{blue};stroke-width:2" />'
                 s += "  </svg>"
@@ -692,7 +692,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
         if i + 1 != len(inds):
             for j in range(4):
-                s += f'<g transform="translate(-{2*j+8},0)">'
+                s += f'<g transform="translate(-{2 * j + 8},0)">'
                 s += f'  <svg x="{xpos(pos)}%" y="40" height="18" overflow="visible" width="30">'
                 s += f'    <path d="M 8 -9 l -6 18 L 8 25" fill="none" style="stroke:rgb{blue};stroke-width:2" />'
                 s += "  </svg>"
@@ -757,7 +757,7 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
     warnings.warn(
         "This function is not used within the shap library and will therefore be removed in an upcoming release. "
         "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
-        DeprecationWarning,
+        FutureWarning,
     )
     M = len(tokens)
     if len(shap_values) != M:

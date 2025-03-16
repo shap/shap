@@ -72,3 +72,17 @@ def test_sample_can_be_zipped():
 
     assert (new_arr1 == new_combined["arr1"]).all()
     assert (new_arr2 == new_combined["arr2"]).all()
+
+
+def test_opchain_repr():
+    """Ensures OpChain repr is working properly"""
+    opchain = (
+        shap.utils.OpChain("shap.DummyExplanation")
+        .foo.foo(0, "big_blue_bear")
+        .foo(0, v1=10)
+        .foo(k1="alpha", k2="beta")
+        .baz
+    )
+    expected_repr = "shap.DummyExplanation.foo.foo(0, 'big_blue_bear').foo(0, v1=10).foo(k1='alpha', k2='beta').baz"
+
+    assert repr(opchain) == expected_repr

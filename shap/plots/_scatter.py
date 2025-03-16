@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 import warnings
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -16,9 +16,7 @@ from ..utils._exceptions import DimensionError
 from ..utils._general import encode_array_if_needed
 from . import colors
 from ._labels import labels
-
-# Various ways to specify a desired axis limit
-LimitSpec = Union[Explanation, str, float, None]
+from ._utils import AxisLimitSpec, parse_axis_limit
 
 
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis
@@ -32,10 +30,10 @@ def scatter(
     x_jitter: float | Literal["auto"] = "auto",
     alpha: float = 1.0,
     title: str | None = None,
-    xmin: LimitSpec = None,
-    xmax: LimitSpec = None,
-    ymin: LimitSpec = None,
-    ymax: LimitSpec = None,
+    xmin: AxisLimitSpec = None,
+    xmax: AxisLimitSpec = None,
+    ymin: AxisLimitSpec = None,
+    ymax: AxisLimitSpec = None,
     overlay: dict[str, Any] | None = None,
     ax: plt.Axes | None = None,
     ylabel: str = "SHAP value",
@@ -108,13 +106,13 @@ def scatter(
         there is one pair for each feature to be plotted.
 
     ax : matplotlib Axes, optional
-        Optionally specify an existing matplotlib ``Axes`` object, into which
+        Optionally specify an existing :external+mpl:class:`matplotlib.axes.Axes` object, into which
         the plot will be placed.
 
         Only supported when plotting a single feature.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
 
         Setting this to ``False`` allows the plot to be customized further after it
         has been created.
@@ -122,7 +120,8 @@ def scatter(
     Returns
     -------
     ax : matplotlib Axes object
-        Only returned if ``show=False``.
+        Returns the :external+mpl:class:`~matplotlib.axes.Axes` object with the plot drawn onto it. Only
+        returned if ``show=False``.
 
     Examples
     --------
@@ -138,8 +137,8 @@ def scatter(
             raise ValueError("The ax parameter is not supported when plotting multiple features")
         # Define order of columns (features) to plot based on average shap value
         inds = np.argsort(np.abs(shap_values.values).mean(0))
-        ymin = _parse_limit(ymin, shap_values.values, is_shap_axis=True)
-        ymax = _parse_limit(ymax, shap_values.values, is_shap_axis=True)
+        ymin = parse_axis_limit(ymin, shap_values.values, is_shap_axis=True)
+        ymax = parse_axis_limit(ymax, shap_values.values, is_shap_axis=True)
         ymin, ymax = _suggest_buffered_limits(ymin, ymax, shap_values.values)
         _ = plt.subplots(1, len(inds), figsize=(min(6 * len(inds), 15), 5))
         for i in inds:
@@ -246,12 +245,12 @@ def scatter(
         figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
         _, ax = plt.subplots(figsize=figsize)
 
-    assert (
-        shap_values_arr.shape[0] == features.shape[0]
-    ), "'shap_values_arr' and 'features' values must have the same number of rows!"
-    assert (
-        shap_values_arr.shape[1] == features.shape[1]
-    ), "'shap_values_arr' must have the same number of columns as 'features'!"
+    assert shap_values_arr.shape[0] == features.shape[0], (
+        "'shap_values_arr' and 'features' values must have the same number of rows!"
+    )
+    assert shap_values_arr.shape[1] == features.shape[1], (
+        "'shap_values_arr' must have the same number of columns as 'features'!"
+    )
 
     # get both the raw and display feature values
     oinds = np.arange(
@@ -370,10 +369,10 @@ def scatter(
     #         bbox = cb.ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.7) * 20)
 
-    xmin = _parse_limit(xmin, xv, is_shap_axis=False)
-    xmax = _parse_limit(xmax, xv, is_shap_axis=False)
-    ymin = _parse_limit(ymin, s, is_shap_axis=True)
-    ymax = _parse_limit(ymax, s, is_shap_axis=True)
+    xmin = parse_axis_limit(xmin, xv, is_shap_axis=False)
+    xmax = parse_axis_limit(xmax, xv, is_shap_axis=False)
+    ymin = parse_axis_limit(ymin, s, is_shap_axis=True)
+    ymax = parse_axis_limit(ymax, s, is_shap_axis=True)
     if xmin is not None or xmax is not None:
         ax.set_xlim(*_suggest_buffered_limits(xmin, xmax, xv))
     if ymin is not None or ymax is not None:
@@ -427,22 +426,6 @@ def scatter(
             plt.show()
     else:
         return ax
-
-
-def _parse_limit(ax_limit: LimitSpec, ax_values: np.ndarray, is_shap_axis: bool) -> float | None:
-    """Handle axis limits in "percentile(float)" format or from Explanation objects"""
-    if isinstance(ax_limit, str):
-        try:
-            percentage = float(ax_limit.removeprefix("percentile(").removesuffix(")"))
-        except ValueError as e:
-            raise ValueError("Only strings of the format `percentile(x)` are supported.") from e
-        return np.nanpercentile(ax_values, percentage)
-    if isinstance(ax_limit, Explanation):
-        # Expect Explanation aggregated to a single value, e.g. `explanation[:, "feature_name"].percentile(20)`
-        # Extract relevant attribute, depending if x- or y-axis
-        return float(ax_limit.values) if is_shap_axis else float(ax_limit.data)
-    # Else, should be float or None
-    return ax_limit
 
 
 def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values: np.ndarray) -> tuple[float, float]:
@@ -694,12 +677,12 @@ def dependence_legacy(
             plt.show()
         return
 
-    assert (
-        shap_values.shape[0] == features.shape[0]
-    ), "'shap_values' and 'features' values must have the same number of rows!"
-    assert (
-        shap_values.shape[1] == features.shape[1]
-    ), "'shap_values' must have the same number of columns as 'features'!"
+    assert shap_values.shape[0] == features.shape[0], (
+        "'shap_values' and 'features' values must have the same number of rows!"
+    )
+    assert shap_values.shape[1] == features.shape[1], (
+        "'shap_values' must have the same number of columns as 'features'!"
+    )
 
     # get both the raw and display feature values
     oinds = np.arange(

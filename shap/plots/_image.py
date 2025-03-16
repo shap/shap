@@ -69,10 +69,10 @@ def image(
         Colormap to use when plotting the SHAP values.
 
     vmax: Optional float
-        Sets the colormap scale for SHAP values from ``-vmax` to ``+vmax``.
+        Sets the colormap scale for SHAP values from ``-vmax`` to ``+vmax``.
 
     show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
         Setting this to ``False`` allows the plot
         to be customized further after it has been created.
 
@@ -97,9 +97,9 @@ def image(
         if labels is None:
             labels = cast(list[str], shap_exp.output_names)
     else:
-        assert isinstance(
-            pixel_values, np.ndarray
-        ), "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+        assert isinstance(pixel_values, np.ndarray), (
+            "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+        )
 
     # multi_output = True
     if not isinstance(shap_values, list):

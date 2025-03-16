@@ -64,14 +64,13 @@ def corrgroups60__gbm():
 
 def corrgroups60__ffnn():
     """4-Layer Neural Network"""
-    from tensorflow.keras.layers import Dense
-    from tensorflow.keras.models import Sequential
+    import tensorflow as tf
 
-    model = Sequential()
-    model.add(Dense(32, activation="relu", input_dim=60))
-    model.add(Dense(20, activation="relu"))
-    model.add(Dense(20, activation="relu"))
-    model.add(Dense(1))
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(32, activation="relu", input_dim=60))
+    model.add(tf.keras.layers.Dense(20, activation="relu"))
+    model.add(tf.keras.layers.Dense(20, activation="relu"))
+    model.add(tf.keras.layers.Dense(1))
 
     model.compile(optimizer="adam", loss="mean_squared_error", metrics=["mean_squared_error"])
 

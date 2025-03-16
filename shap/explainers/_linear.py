@@ -56,25 +56,29 @@ class LinearExplainer(Explainer):
         Number of samples to use when estimating the transformation matrix used
         to account for feature correlations.
 
-    feature_perturbation : "interventional" (default) or "correlation_dependent"
+    feature_perturbation : None (default), "interventional" or "correlation_dependent"
+
+        DEPRECATED: this option is now deprecated in favor of using the appropriate
+        tabular masker and will be removed in a future release.
+
         There are two ways we might want to compute SHAP values, either the full
         conditional SHAP values or the interventional SHAP values.
 
-        For interventional SHAP values we break any dependence structure between
-        features in the model and so uncover how the model would behave if we
-        intervened and changed some of the inputs. For the full conditional SHAP
-        values we respect the correlations among the input features, so if the
-        model depends on one input but that input is correlated with another
-        input, then both get some credit for the model's behavior. The
-        interventional option stays "true to the model" meaning it will only
+        - For interventional SHAP values we break any dependence structure between
+          features in the model and so uncover how the model would behave if we
+          intervened and changed some of the inputs. This approach is used by the
+          Independent and Partition maskers.
+        - For the full conditional SHAP values we respect the correlations among the
+          input features, so if the model depends on one input but that input is
+          correlated with another input, then both get some credit for the model's
+          behavior. This approach is used by the Impute masker.
+
+        The interventional option stays "true to the model" meaning it will only
         give credit to features that are actually used by the model, while the
         correlation option stays "true to the data" in the sense that it only
         considers how the model would behave when respecting the correlations in
         the input data. For sparse case only interventional option is supported.
 
-        Note that the ``feature_perturbation`` option is deprecated and will be
-        removed in a future release. It is recommended to use the appropriate
-        tabular ``masker`` instead.
 
     Examples
     --------
@@ -95,6 +99,7 @@ class LinearExplainer(Explainer):
             warnings.warn(wmsg, FutureWarning)
         else:
             feature_perturbation = "interventional"
+
         if feature_perturbation not in ("interventional", "correlation_dependent"):
             emsg = "feature_perturbation must be one of 'interventional' or 'correlation_dependent'"
             raise InvalidFeaturePerturbationError(emsg)
