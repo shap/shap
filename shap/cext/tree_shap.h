@@ -1275,7 +1275,7 @@ inline void dense_tree_path_dependent(const TreeEnsemble& trees, const Explanati
 
     // build explanation for each sample
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
 
         // aggregate the effect of explaining each tree

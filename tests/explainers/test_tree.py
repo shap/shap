@@ -1911,3 +1911,86 @@ def test_gh_3948(n_rows, n_estimators):
     clf.predict_proba(X)
     exp = shap.TreeExplainer(clf, X)
     exp.shap_values(X)
+
+
+@pytest.fixture
+def model_explainer():
+    rng = np.random.default_rng(0)
+    X = np.array([[1.0, 1.0, 0.99999], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+    y = rng.integers(low=0, high=2, size=len(X))
+    clf = sklearn.ensemble.ExtraTreesClassifier(n_estimators=100, random_state=0)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.TreeExplainer(clf, X)
+    return exp
+
+
+@pytest.mark.parametrize(
+    "phi, model_output",
+    [
+        (
+            [
+                np.array([[0.0, 0.0, -0.24750001], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825], [0.0, 0.0, 0.0825]]),
+                np.array(
+                    [[0.0, 0.0, 0.24749997], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999], [0.0, 0.0, -0.08249999]]
+                ),
+            ],
+            np.array([[0.0, 1.0], [0.33333333, 0.66666667], [0.33333333, 0.66666667], [0.33333333, 0.66666667]]),
+        ),
+    ],
+)
+def test_tight_sensitivity_extra(model_explainer, phi, model_output):
+    model_explainer.assert_additivity(phi, model_output)
+
+
+@pytest.mark.parametrize(
+    "X, y, expected_shap_values",
+    [
+        (
+            np.array([[1], [None], [np.nan], [float("nan")], [100]]),
+            np.array(
+                [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            ),
+            np.array([4 / 5, -1 / 5, -1 / 5, -1 / 5, -1 / 5]),
+        ),
+    ],
+)
+def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
+    """Test that TreeExplainer works with scikit-learn trees that handle missing values.
+
+    This test verifies that SHAP values are computed correctly when using scikit-learn
+    trees with missing values (None, NaN), which is supported starting from scikit-learn 1.3.
+    """
+    # Train a simple decision tree classifier
+    clf = sklearn.tree.DecisionTreeClassifier()
+    clf.fit(X, y)
+
+    # Create explainer and get SHAP values
+    explainer = shap.TreeExplainer(clf)
+    shap_values = explainer.shap_values(X)[:, :, 1].flatten()
+
+    # Verify SHAP values match expected values
+    np.testing.assert_allclose(shap_values, expected_shap_values)
+
+
+@pytest.mark.xslow
+def test_overflow_tree_path_dependent():
+    """GH #4002
+    Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
+    seed = 0
+    n_rows = 2_000
+    rng = np.random.default_rng(seed)
+    X = rng.integers(low=0, high=2, size=(n_rows, 1_100_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+
+    clf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
+    exp(X)

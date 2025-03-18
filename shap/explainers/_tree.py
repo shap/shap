@@ -794,7 +794,9 @@ class TreeExplainer(Explainer):
     def assert_additivity(self, phi, model_output):
         def check_sum(sum_val, model_output):
             diff = np.abs(sum_val - model_output)
-            if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
+            # TODO: add arguments for passing custom 'atol' and 'rtol' values to 'np.allclose'
+            # would require change to interface i.e. '__call__' methods
+            if not np.allclose(sum_val, model_output, atol=1e-2, rtol=1e-2):
                 ind = np.argmax(diff)
                 err_msg = (
                     "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the "
@@ -1657,7 +1659,9 @@ class SingleTree:
         if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree"]):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
-            self.children_default = self.children_left  # missing values not supported in sklearn
+            self.children_default = self.children_left
+            if hasattr(tree, "missing_go_to_left"):
+                self.children_default = np.where(tree.missing_go_to_left, self.children_left, self.children_right)
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
             self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])
