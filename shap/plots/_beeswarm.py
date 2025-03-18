@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
+import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ import scipy.cluster
 import scipy.sparse
 import scipy.spatial
 from matplotlib.figure import Figure
+from packaging import version
 from scipy.stats import gaussian_kde
 
 from .. import Explanation
@@ -26,6 +28,12 @@ from ._utils import (
     merge_nodes,
     sort_inds,
 )
+
+# TODO: simplify this when we drop support for matplotlib 3.9
+if version.parse(matplotlib.__version__) >= version.parse("3.10"):
+    ORIENTATION_KWARG = dict(orientation="horizontal")
+else:
+    ORIENTATION_KWARG = dict(vert=False)  # type: ignore[dict-item]
 
 
 # TODO: Add support for hclustering based explanations where we sort the leaf order by magnitude and then show the dendrogram to the left
@@ -451,7 +459,7 @@ def beeswarm(
                 rasterized=len(shaps) > 500,
             )
         else:
-            if safe_isinstance(color, "matplotlib.colors.Colormap"):
+            if safe_isinstance(color, "matplotlib.colors.Colormap") and hasattr(color, "colors"):
                 color = color.colors
             ax.scatter(
                 shaps,
@@ -981,7 +989,7 @@ def summary_legacy(
                 shap_values[:, feature_order],
                 range(len(feature_order)),
                 points=200,
-                vert=False,
+                **ORIENTATION_KWARG,  # type: ignore[arg-type]
                 widths=0.7,
                 showmeans=False,
                 showextrema=False,
