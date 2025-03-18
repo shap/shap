@@ -1977,3 +1977,20 @@ def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
 
     # Verify SHAP values match expected values
     np.testing.assert_allclose(shap_values, expected_shap_values)
+
+
+@pytest.mark.xslow
+def test_overflow_tree_path_dependent():
+    """GH #4002
+    Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
+    seed = 0
+    n_rows = 2_000
+    rng = np.random.default_rng(seed)
+    X = rng.integers(low=0, high=2, size=(n_rows, 1_100_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+
+    clf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
+    exp(X)
