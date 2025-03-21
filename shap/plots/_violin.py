@@ -2,14 +2,22 @@
 
 import warnings
 
+import matplotlib
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
+from packaging import version
 from scipy.stats import gaussian_kde
 
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+
+# TODO: simplify this when we drop support for matplotlib 3.9
+if version.parse(matplotlib.__version__) >= version.parse("3.10"):
+    ORIENTATION_KWARG = dict(orientation="horizontal")
+else:
+    ORIENTATION_KWARG = dict(vert=False)  # type: ignore[dict-item]
 
 
 # TODO: remove unused title argument / use title argument
@@ -249,7 +257,7 @@ def violin(
                 shap_values[:, feature_order],
                 range(len(feature_order)),
                 points=200,
-                vert=False,
+                **ORIENTATION_KWARG,  # type: ignore[arg-type]
                 widths=0.7,
                 showmeans=False,
                 showextrema=False,
@@ -294,8 +302,8 @@ def violin(
                 # if there's only one element, then we can't
                 if shaps.shape[0] == 1:
                     warnings.warn(
-                        "not enough data in bin #%d for feature %s, so it'll be ignored. Try increasing the number of records to plot."
-                        % (i, feature_names[ind])
+                        f"Not enough data in bin #{i} for feature {feature_names[ind]}, so it'll be ignored."
+                        " Try increasing the number of records to plot."
                     )
                     # to ignore it, just set it to the previous y-values (so the area between them will be zero). Not ys is already 0, so there's
                     # nothing to do if i == 0

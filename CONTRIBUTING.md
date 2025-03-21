@@ -169,6 +169,8 @@ The unit test suite can be run locally with:
 pytest
 ```
 
+For info about matplotlib tests, see `tests/plots/__init__.py`.
+
 ## Pull Requests (PRs)
 
 ### Etiquette for creating PRs

@@ -1,7 +1,8 @@
 [build-system]
 # Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
 # https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9",
+            "cython>=3.0.11"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -85,8 +86,8 @@ test = [
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
-  # See GH #3707 and #3768
-  "numpy<2.0; python_version < '3.12'",
+  # See GH #3707, #3768, 3922
+  "numpy<2.0",
 ]
 
 test_notebooks = [
@@ -110,6 +111,7 @@ disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
+mypy_path = "stubs"
 
 plugins = ["numpy.typing.mypy_plugin"]
 
@@ -194,14 +196,16 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config
@@ -228,8 +232,14 @@ select = [
 ]
 ignore = [
   # Recommended rules to disable when using ruff formatter:
-  "E117",  # Over-indented
-  "E501",  # Line too long
+  # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "D206",
+  "D300",
+  "E111",
+  "E114",
+  "E117",
+  "E501",
+  "W191",
 
   # pydocstyle issues not yet fixed
   "D100",  # Missing docstring in public module
