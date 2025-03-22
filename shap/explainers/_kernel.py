@@ -156,7 +156,7 @@ class KernelExplainer(Explainer):
                 tensor_as_np_array = sess.run(symbolic_tensor)
         return tensor_as_np_array
 
-    def __call__(self, X, l1_reg="num_features(10)", silent=False):
+    def __call__(self, X, l1_reg="num_features(10)", silent=False, nsamples="auto"):
         start_time = time.time()
 
         if isinstance(X, pd.DataFrame):
@@ -164,7 +164,7 @@ class KernelExplainer(Explainer):
         else:
             feature_names = getattr(self, "data_feature_names", None)
 
-        v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
+        v = self.shap_values(X, l1_reg=l1_reg, silent=silent, nsamples=nsamples)
         if isinstance(v, list):
             v = np.stack(v, axis=-1)  # put outputs at the end
 

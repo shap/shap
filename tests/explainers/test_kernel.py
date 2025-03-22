@@ -248,7 +248,8 @@ def test_linear(random_seed):
         return x[:, 0] + 2.0 * x[:, 1]
 
     explainer = shap.KernelExplainer(f, x)
-    explanation = explainer(x, l1_reg="num_features(2)", silent=True)
+    nsamples = nsamples = 2 * x.shape[1] + 128
+    explanation = explainer(x, l1_reg="num_features(2)", silent=True, nsamples=nsamples)
     phi = explanation.values
     assert phi.shape == x.shape
 
