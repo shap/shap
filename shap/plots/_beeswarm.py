@@ -537,9 +537,9 @@ def summary_legacy(
     class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
-    show_values_in_legend=False,
-    use_log_scale=False,
-    rng=None,
+    show_values_in_legend: bool = False,
+    use_log_scale: bool = False,
+    rng: np.random.Generator | None = None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -897,8 +897,8 @@ def summary_legacy(
             for pos, i in enumerate(feature_order):
                 shaps = shap_values[:, i]
                 shap_min, shap_max = np.min(shaps), np.max(shaps)
-                rng = shap_max - shap_min
-                xs = np.linspace(np.min(shaps) - rng * 0.2, np.max(shaps) + rng * 0.2, 100)
+                shap_max_min = shap_max - shap_min
+                xs = np.linspace(np.min(shaps) - shap_max_min * 0.2, np.max(shaps) + shap_max_min * 0.2, 100)
                 if np.std(shaps) < (global_high - global_low) / 100:
                     if rng is None:
                         tmp_y = np.random.randn(len(shaps))
