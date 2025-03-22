@@ -1659,12 +1659,12 @@ class SingleTree:
         assert_import("cext")
 
         if safe_isinstance(
-                tree,
-                [
-                    "sklearn.tree._tree.Tree",
-                    "econml.tree._tree.Tree",
-                    "causalml.inference.tree._tree._tree.Tree",
-                ]
+            tree,
+            [
+                "sklearn.tree._tree.Tree",
+                "econml.tree._tree.Tree",
+                "causalml.inference.tree._tree._tree.Tree",
+            ],
         ):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)

@@ -2060,7 +2060,7 @@ def test_causalml_causal_tree_explanation_output(causalml_synth_data, random_see
     from causalml.inference.tree import CausalTreeRegressor
 
     data, check_shape = causalml_synth_data
-    y, X, treatment, tau, b, e  = data
+    y, X, treatment, tau, b, e = data
 
     ctree = CausalTreeRegressor(random_state=random_seed)
     ctree.fit(X=X, treatment=treatment, y=y)
@@ -2076,13 +2076,18 @@ def test_causalml_causal_tree_explanation_output(causalml_synth_data, random_see
     assert isinstance(shap_values, np.ndarray)
 
 
-@pytest.mark.parametrize("n_estimators", [5,])
+@pytest.mark.parametrize(
+    "n_estimators",
+    [
+        5,
+    ],
+)
 def test_causalml_causal_random_forest_explanation_output(causalml_synth_data, n_estimators, random_seed):
     causalml = pytest.importorskip("causalml")
     from causalml.inference.tree import CausalRandomForestRegressor
 
     data, check_shape = causalml_synth_data
-    y, X, treatment, tau, b, e  = data
+    y, X, treatment, tau, b, e = data
 
     cforest = CausalRandomForestRegressor(n_estimators=n_estimators, random_state=random_seed)
     cforest.fit(X=X, treatment=treatment, y=y)
