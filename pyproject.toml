@@ -77,7 +77,8 @@ test = [
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers",
+  "transformers<=4.49.0; sys_platform == 'darwin'",  # see GH #4036
+  "transformers; sys_platform != 'darwin'",  # No constraint for other platforms
   "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
   "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
@@ -198,7 +199,7 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
@@ -207,6 +208,7 @@ filterwarnings = [
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config
