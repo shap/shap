@@ -58,6 +58,12 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[${{ matrix.extras }},plots]'
+            - name: Setup tmate session
+      - name: Tmate
+        if: matrix.os == 'macos-latest'
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
