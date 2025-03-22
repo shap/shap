@@ -36,3 +36,19 @@ def basic_translation_scenario():
     ]
 
     return model, tokenizer, data
+
+
+@pytest.fixture()
+def causalml_synth_data():
+    causalml = pytest.importorskip("causalml")
+    from causalml.dataset import synthetic_data
+
+    data_mode = 1
+    n_features = 8
+    sigma = 0.1
+    data_size = 100
+    n_outcomes = 2
+
+    data = synthetic_data(mode=data_mode, n=data_size, p=n_features, sigma=sigma)
+    check_shape = (n_features, n_outcomes, data_size)
+    return data, check_shape
