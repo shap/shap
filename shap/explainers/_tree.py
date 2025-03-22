@@ -1663,7 +1663,6 @@ class SingleTree:
                 [
                     "sklearn.tree._tree.Tree",
                     "econml.tree._tree.Tree",
-                    # "causalml.inference.tree.causal._tree.BaseCausalDecisionTree"
                     "causalml.inference.tree._tree._tree.Tree",
                 ]
         ):
