@@ -1,5 +1,8 @@
 """Tests for the Deep explainer."""
 
+import os
+import platform
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -244,7 +247,11 @@ def test_tf_keras_imdb_lstm(random_seed):
     np.testing.assert_allclose(sums, diff, atol=1e-02), "Sum of SHAP values does not match difference!"
 
 
-def test_tf_deep_imdb_transformers():
+@pytest.mark.skipif(
+    platform.system() == "Darwin" and os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Skipping on GH MacOS runners due to memory error, see GH #3929",
+)
+def test_tf_deep_imbdb_transformers():
     # GH 3522
     transformers = pytest.importorskip("transformers")
 
@@ -495,7 +502,7 @@ def test_pytorch_custom_nested_models(torch_device):
             if batch_idx % 2 == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
-                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f" ({100.0 * batch_idx / len(train_loader):.0f}%)]"
                     f"\tLoss: {loss.item():.6f}"
                 )
 
@@ -590,7 +597,7 @@ def test_pytorch_single_output(torch_device):
             if batch_idx % 2 == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
-                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f" ({100.0 * batch_idx / len(train_loader):.0f}%)]"
                     f"\tLoss: {loss.item():.6f}"
                 )
 
@@ -643,7 +650,7 @@ def test_pytorch_single_output(torch_device):
     )
 
 
-@pytest.mark.parametrize("activation", ["relu", "selu"])
+@pytest.mark.parametrize("activation", ["relu", "selu", "gelu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])
 def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
@@ -655,7 +662,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
     from torch.nn import functional as F
     from torch.utils.data import DataLoader, TensorDataset
 
-    activation_func = {"relu": nn.ReLU(), "selu": nn.SELU()}[activation]
+    activation_func = {"relu": nn.ReLU(), "selu": nn.SELU(), "gelu": nn.GELU()}[activation]
 
     class Net(nn.Module):
         """Testing model."""
@@ -690,7 +697,7 @@ def test_pytorch_multiple_inputs(torch_device, disconnected, activation):
             if batch_idx % 2 == 0:
                 print(
                     f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)}"
-                    f" ({100. * batch_idx / len(train_loader):.0f}%)]"
+                    f" ({100.0 * batch_idx / len(train_loader):.0f}%)]"
                     f"\tLoss: {loss.item():.6f}"
                 )
 

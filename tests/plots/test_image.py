@@ -1,9 +1,23 @@
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-import sys
 import shap
+
+
+def set_reproducible_mpl_rcparams() -> None:
+    """Set some matplotlib rcParams to ensure consistency between versions.
+
+    In matplotlib 3.10, the default value of "image.interpolation_stage" changed from "data" to "auto"
+    which can lead to slighly different results.
+
+    Careful: the @pytest.mark.mpl_image_compare decorator will override rcParams,
+    so this change must be done *after* the fixtures are called.
+    """
+    plt.rcParams["image.interpolation"] = "bilinear"
+    plt.rcParams["image.interpolation_stage"] = "data"
 
 
 @pytest.fixture
@@ -14,9 +28,13 @@ def imagenet50_example() -> tuple[np.ndarray, np.ndarray]:
     return images, labels
 
 
-@pytest.mark.skipif(sys.version_info[:2] == (3, 9), reason="Changes in matplotlib 3.10 changed the underlying image. Comparison no longer matching.")
+@pytest.mark.skipif(
+    sys.version_info[:2] == (3, 9),
+    reason="Changes in matplotlib 3.10 changed the underlying image. Comparison no longer matching.",
+)
 @pytest.mark.mpl_image_compare
 def test_image_single(imagenet50_example):
+    set_reproducible_mpl_rcparams()
     images, _ = imagenet50_example
     images = images[0]
     shap_values = (images - images.mean()) / images.max(keepdims=True)
@@ -25,9 +43,13 @@ def test_image_single(imagenet50_example):
     return plt.gcf()
 
 
-@pytest.mark.skipif(sys.version_info[:2] == (3, 9), reason="Changes in matplotlib 3.10 changed the underlying image. Comparison no longer matching.")
+@pytest.mark.skipif(
+    sys.version_info[:2] == (3, 9),
+    reason="Changes in matplotlib 3.10 changed the underlying image. Comparison no longer matching.",
+)
 @pytest.mark.mpl_image_compare
 def test_image_multi(imagenet50_example):
+    set_reproducible_mpl_rcparams()
     images, _ = imagenet50_example
     n_images = 2
     n_classes = 4
@@ -41,7 +63,7 @@ def test_image_multi(imagenet50_example):
     assert shap_values_multi.shape[-1] == n_classes
 
     explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[1 for _ in range(n_images)])
-    labels = [f"Class {x+1}" for x in range(n_classes)]
+    labels = [f"Class {x + 1}" for x in range(n_classes)]
     shap.image_plot(explanation, labels=labels, show=False)
     return plt.gcf()
 
