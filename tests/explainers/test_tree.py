@@ -2053,3 +2053,46 @@ def test_overflow_tree_path_dependent():
     clf.predict_proba(X)
     exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
     exp(X)
+
+
+def test_causalml_causal_tree_explanation_output(causalml_synth_data, random_seed):
+    causalml = pytest.importorskip("causalml")
+    from causalml.inference.tree import CausalTreeRegressor
+
+    data, check_shape = causalml_synth_data
+    y, X, treatment, tau, b, e  = data
+
+    ctree = CausalTreeRegressor(random_state=random_seed)
+    ctree.fit(X=X, treatment=treatment, y=y)
+    ctree_explainer = shap.TreeExplainer(ctree)
+    explanation = ctree_explainer(X)
+
+    shap_values_raw: list[np.ndarray] = ctree_explainer.shap_values(X)
+    shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+    assert shap_values.shape == check_shape
+    assert len(explanation.base_values) == len(y)
+    assert isinstance(explanation.values, np.ndarray)
+    assert isinstance(shap_values, np.ndarray)
+
+
+@pytest.mark.parametrize("n_estimators", [5,])
+def test_causalml_causal_random_forest_explanation_output(causalml_synth_data, n_estimators, random_seed):
+    causalml = pytest.importorskip("causalml")
+    from causalml.inference.tree import CausalRandomForestRegressor
+
+    data, check_shape = causalml_synth_data
+    y, X, treatment, tau, b, e  = data
+
+    cforest = CausalRandomForestRegressor(n_estimators=n_estimators, random_state=random_seed)
+    cforest.fit(X=X, treatment=treatment, y=y)
+    cforest_explainer = shap.TreeExplainer(cforest)
+    explanation = cforest_explainer(X)
+
+    shap_values_raw: list[np.ndarray] = cforest_explainer.shap_values(X)
+    shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+
+    assert shap_values.shape == check_shape
+    assert len(explanation.base_values) == len(y)
+    assert isinstance(explanation.values, np.ndarray)
+    assert isinstance(shap_values, np.ndarray)
