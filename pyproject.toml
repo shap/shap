@@ -76,7 +76,7 @@ test = [
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers<4.49.0; sys_platform == 'darwin'",  # Version constraint for macOS
+  "transformers<=4.49.0; sys_platform == 'darwin'",  # see GH #4036
   "transformers; sys_platform != 'darwin'",  # No constraint for other platforms
   "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
