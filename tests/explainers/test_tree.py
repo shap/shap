@@ -2021,8 +2021,7 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
         base values:  (n_observations, n_outcomes) arrays
     """
     causalml = pytest.importorskip("causalml")
-    from causalml.inference.tree import CausalTreeRegressor
-    from causalml.inference.tree import CausalRandomForestRegressor
+    from causalml.inference.tree import CausalRandomForestRegressor, CausalTreeRegressor
 
     data, n_outcomes = causalml_synth_data
     y, X, treatment, tau, b, e = data
@@ -2038,10 +2037,7 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
     cforest_preds = cforest.predict(X)
     cforest_explainer = shap.TreeExplainer(cforest)
 
-    for explainer, preds in zip(
-            [ctree_explainer, cforest_explainer],
-            [ctree_preds, cforest_preds]
-    ):
+    for explainer, preds in zip([ctree_explainer, cforest_explainer], [ctree_preds, cforest_preds]):
         explanation = explainer(X)
         shap_values = explainer.shap_values(X)
 
