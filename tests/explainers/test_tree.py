@@ -13,6 +13,7 @@ import sklearn.pipeline
 from sklearn.utils import check_array
 
 import shap
+from shap.explainers._explainer import Explanation
 from shap.explainers._tree import SingleTree
 from shap.utils._exceptions import InvalidModelError
 
@@ -2000,21 +2001,28 @@ def test_causalml_causal_tree_explanation_output(causalml_synth_data, random_see
     causalml = pytest.importorskip("causalml")
     from causalml.inference.tree import CausalTreeRegressor
 
-    data, check_shape = causalml_synth_data
+    data, n_outcomes = causalml_synth_data
     y, X, treatment, tau, b, e = data
+    n_observations, n_features = X.shape
 
     ctree = CausalTreeRegressor(random_state=random_seed)
     ctree.fit(X=X, treatment=treatment, y=y)
     ctree_explainer = shap.TreeExplainer(ctree)
+
     explanation = ctree_explainer(X)
+    shap_values = ctree_explainer.shap_values(X)
 
-    shap_values_raw: list[np.ndarray] = ctree_explainer.shap_values(X)
-    shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
-
-    assert shap_values.shape == check_shape
-    assert len(explanation.base_values) == len(y)
+    assert isinstance(explanation.data, np.ndarray)
+    assert isinstance(explanation.base_values, np.ndarray)
     assert isinstance(explanation.values, np.ndarray)
     assert isinstance(shap_values, np.ndarray)
+
+    # Explanation.values attribute and the output of TreeExplainer.shap_values() method are two ways to get shap values
+    np.testing.assert_allclose(explanation.values, shap_values)
+
+    assert explanation.data.shape == (n_observations, n_features)
+    assert explanation.base_values.shape == (n_observations, n_outcomes)
+    assert explanation.values.shape == (n_observations, n_features, n_outcomes)
 
 
 @pytest.mark.parametrize(
@@ -2023,22 +2031,70 @@ def test_causalml_causal_tree_explanation_output(causalml_synth_data, random_see
         5,
     ],
 )
-def test_causalml_causal_random_forest_explanation_output(causalml_synth_data, n_estimators, random_seed):
+def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data, n_estimators, random_seed):
+    """
+    Causal trees predict individual treatment effect based on continuous outcomes Y|X,T
+    where T is the particular type of treatment. In the basic scenario we have T=0 and T=1.
+
+    Thus, causal tree terminal nodes separately contain multiple outcomes as conditioned sample means:
+        Y_hat|X,T=0 and Y_hat|X,T=1
+    in the same manner as sklearn DecisionTreeRegressor with multiple outputs: (n_samples, n_outputs).
+
+    However, unlike standard regression tree the final output of the predict() method in causal trees is
+    the individual treatment effect: Y_hat|X,T=1 - Y_hat|X,T=0 with an option of returning possible outcomes Y_hat|X,T
+
+    During research, it is important to analyze Y_hat|X,T=t, t={0,1,...t} aside from individual effects estimation.
+    That is why we should carefully track the shape of the following arrays:
+    shap values:  (n_observations, n_features, n_outcomes)
+    base values:  (n_observations, n_outcomes) arrays
+    """
     causalml = pytest.importorskip("causalml")
+    from causalml.inference.tree import CausalTreeRegressor
     from causalml.inference.tree import CausalRandomForestRegressor
 
-    data, check_shape = causalml_synth_data
+    data, n_outcomes = causalml_synth_data
     y, X, treatment, tau, b, e = data
+    n_observations, n_features = X.shape
+
+    ctree = CausalTreeRegressor(random_state=random_seed)
+    ctree.fit(X=X, treatment=treatment, y=y)
+    ctree_preds = ctree.predict(X)
+    ctree_explainer = shap.TreeExplainer(ctree)
 
     cforest = CausalRandomForestRegressor(n_estimators=n_estimators, random_state=random_seed)
     cforest.fit(X=X, treatment=treatment, y=y)
+    cforest_preds = cforest.predict(X)
     cforest_explainer = shap.TreeExplainer(cforest)
-    explanation = cforest_explainer(X)
 
-    shap_values_raw: list[np.ndarray] = cforest_explainer.shap_values(X)
-    shap_values: np.ndarray = np.stack(shap_values_raw, axis=-1)
+    cforest_explanation = cforest_explainer(X)
+    cforest_shap_values = cforest_explainer.shap_values(X)
+    ctree_explanation = ctree_explainer(X)
+    ctree_shap_values = ctree_explainer.shap_values(X)
 
-    assert shap_values.shape == check_shape
-    assert len(explanation.base_values) == len(y)
-    assert isinstance(explanation.values, np.ndarray)
-    assert isinstance(shap_values, np.ndarray)
+    for explanation, shap_values, preds in zip(
+            [ctree_explanation, cforest_explanation],
+            [ctree_shap_values, cforest_shap_values],
+            [ctree_preds, cforest_preds]
+    ):
+
+        assert isinstance(explanation, Explanation)
+        assert isinstance(explanation.data, np.ndarray)
+        assert isinstance(explanation.base_values, np.ndarray)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+
+        # Explanation.values and the output of TreeExplainer.shap_values() are two ways to get shap values
+        np.testing.assert_allclose(explanation.values, shap_values)
+        np.testing.assert_allclose(explanation.data, X)
+
+        # Check Explanation class
+        assert explanation.data.shape == (n_observations, n_features)
+        assert explanation.base_values.shape == (n_observations, n_outcomes)
+        assert explanation.values.shape == (n_observations, n_features, n_outcomes)
+
+        # Check that shap values and base values can be collapsed into
+        # model prediction of individual treatment effect
+        y_outcomes = explanation.base_values + explanation.values.sum(axis=1)
+        individual_effects = y_outcomes[:, 1] - y_outcomes[:, 0]
+
+        np.testing.assert_allclose(preds, individual_effects, atol=1e-4)
