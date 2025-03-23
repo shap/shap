@@ -2044,9 +2044,9 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
     the individual treatment effect: Y_hat|X,T=1 - Y_hat|X,T=0 with an option of returning possible outcomes Y_hat|X,T
 
     During research, it is important to analyze Y_hat|X,T=t, t={0,1,...t} aside from individual effects estimation.
-    That is why we should carefully track the shape of the following arrays:
-    shap values:  (n_observations, n_features, n_outcomes)
-    base values:  (n_observations, n_outcomes) arrays
+    That is why we should carefully track the shape of the following arrays along with other checks:
+        shap values:  (n_observations, n_features, n_outcomes)
+        base values:  (n_observations, n_outcomes) arrays
     """
     causalml = pytest.importorskip("causalml")
     from causalml.inference.tree import CausalTreeRegressor
@@ -2066,16 +2066,12 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
     cforest_preds = cforest.predict(X)
     cforest_explainer = shap.TreeExplainer(cforest)
 
-    cforest_explanation = cforest_explainer(X)
-    cforest_shap_values = cforest_explainer.shap_values(X)
-    ctree_explanation = ctree_explainer(X)
-    ctree_shap_values = ctree_explainer.shap_values(X)
-
-    for explanation, shap_values, preds in zip(
-            [ctree_explanation, cforest_explanation],
-            [ctree_shap_values, cforest_shap_values],
+    for explainer, preds in zip(
+            [ctree_explainer, cforest_explainer],
             [ctree_preds, cforest_preds]
     ):
+        explanation = explainer(X)
+        shap_values = explainer.shap_values(X)
 
         assert isinstance(explanation, Explanation)
         assert isinstance(explanation.data, np.ndarray)
@@ -2093,7 +2089,7 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
         assert explanation.values.shape == (n_observations, n_features, n_outcomes)
 
         # Check that shap values and base values can be collapsed into
-        # model prediction of individual treatment effect
+        # model prediction of individual treatment effects
         y_outcomes = explanation.base_values + explanation.values.sum(axis=1)
         individual_effects = y_outcomes[:, 1] - y_outcomes[:, 0]
 
