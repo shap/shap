@@ -79,7 +79,8 @@ def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
         if experimental.get(library):
             warnings.warn(
                 f"You are using experimental integration with {library}. "
-                f"The {library} support is verified for the following versions: {experimental.get(library)}.",
+                f"The {library} support is verified for the following versions: {experimental.get(library)}. "
+                 f"As experimental functionality, this integration may be removed or significantly changed in future releases without following semantic versioning. Use in production systems at your own risk.",
                 ExperimentalWarning,
             )
     else:
