@@ -50,11 +50,11 @@ def causalml_synth_data():
     causalml = pytest.importorskip("causalml")
     from causalml.dataset import synthetic_data
 
-    data_mode = 1        # Basic synthetic data mode with a difficult nuisance components and an easy treatment effect
-    sigma = 0.1          # Synthetic standard deviation of the error term
-    n_observations = 100 # The number of samples to generate
-    n_features = 8       # X in (Y_hat|X, T=0, Y_hat|X, T=1)
-    n_outcomes = 2       # Treatment conditioned outcomes: (Y_hat|X,T=0, Y_hat|X,T=1)
+    data_mode = 1  # Basic synthetic data mode with a difficult nuisance components and an easy treatment effect
+    sigma = 0.1  # Synthetic standard deviation of the error term
+    n_observations = 100  # The number of samples to generate
+    n_features = 8  # X in (Y_hat|X, T=0, Y_hat|X, T=1)
+    n_outcomes = 2  # Treatment conditioned outcomes: (Y_hat|X,T=0, Y_hat|X,T=1)
 
     data = synthetic_data(mode=data_mode, n=n_observations, p=n_features, sigma=sigma)
     return data, n_outcomes
