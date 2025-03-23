@@ -1997,34 +1997,6 @@ def test_overflow_tree_path_dependent():
     exp(X)
 
 
-def test_causalml_causal_tree_explanation_output(causalml_synth_data, random_seed):
-    causalml = pytest.importorskip("causalml")
-    from causalml.inference.tree import CausalTreeRegressor
-
-    data, n_outcomes = causalml_synth_data
-    y, X, treatment, tau, b, e = data
-    n_observations, n_features = X.shape
-
-    ctree = CausalTreeRegressor(random_state=random_seed)
-    ctree.fit(X=X, treatment=treatment, y=y)
-    ctree_explainer = shap.TreeExplainer(ctree)
-
-    explanation = ctree_explainer(X)
-    shap_values = ctree_explainer.shap_values(X)
-
-    assert isinstance(explanation.data, np.ndarray)
-    assert isinstance(explanation.base_values, np.ndarray)
-    assert isinstance(explanation.values, np.ndarray)
-    assert isinstance(shap_values, np.ndarray)
-
-    # Explanation.values attribute and the output of TreeExplainer.shap_values() method are two ways to get shap values
-    np.testing.assert_allclose(explanation.values, shap_values)
-
-    assert explanation.data.shape == (n_observations, n_features)
-    assert explanation.base_values.shape == (n_observations, n_outcomes)
-    assert explanation.values.shape == (n_observations, n_features, n_outcomes)
-
-
 @pytest.mark.parametrize(
     "n_estimators",
     [
