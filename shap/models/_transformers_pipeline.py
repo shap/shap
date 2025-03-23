@@ -25,9 +25,9 @@ class TransformersPipeline(Model):
             self.output_names = [self.id2label.get(i, "Unknown") for i in range(self.output_shape[0])]
 
     def __call__(self, strings):
-        assert not isinstance(
-            strings, str
-        ), "shap.models.TransformersPipeline expects a list of strings not a single string!"
+        assert not isinstance(strings, str), (
+            "shap.models.TransformersPipeline expects a list of strings not a single string!"
+        )
         output = np.zeros([len(strings)] + list(self.output_shape))
         pipeline_dicts = self.inner_model(list(strings))
         for i, val in enumerate(pipeline_dicts):

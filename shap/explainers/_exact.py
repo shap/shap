@@ -110,7 +110,7 @@ class ExactExplainer(Explainer):
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < 2 ** len(inds):
                 raise ValueError(
-                    f"It takes {2**len(inds)} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
+                    f"It takes {2 ** len(inds)} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
                 )
 
             # generate the masks in gray code order (so that we change the inputs as little
@@ -160,7 +160,7 @@ class ExactExplainer(Explainer):
             # make sure we have enough evals
             if max_evals is not None and max_evals != "auto" and max_evals < len(fm) ** 2:
                 raise ValueError(
-                    f"It takes {len(fm)**2} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
+                    f"It takes {len(fm) ** 2} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
                 )
 
             # generate the masks in a hclust order (so that we change the inputs as little

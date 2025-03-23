@@ -169,6 +169,8 @@ The unit test suite can be run locally with:
 pytest
 ```
 
+For info about matplotlib tests, see `tests/plots/__init__.py`.
+
 ## Pull Requests (PRs)
 
 ### Etiquette for creating PRs
@@ -235,6 +237,10 @@ Note that `nbsphinx` currently requires the stand-alone program `pandoc`. If you
 get an error "Pandoc wasn't found", install `pandoc` as described in
 [nbsphinx installation
 guide](https://nbsphinx.readthedocs.io/en/0.9.2/installation.html#pandoc).
+
+The documentation dependencies are pinned in `docs/requirements-docs.txt`. These can be
+updated by running the `uv` command specified in the top of that file, optionally with
+the `--upgrade` flag.
 
 ## Jupyter notebook style guide
 

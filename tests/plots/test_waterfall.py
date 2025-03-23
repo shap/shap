@@ -57,9 +57,15 @@ def test_waterfall_bounds(explainer):
     return fig
 
 
-@pytest.mark.mpl_image_compare(tolerance=3)
+@pytest.mark.mpl_image_compare(tolerance=5)
 def test_waterfall_custom_style(explainer):
     """Test the waterfall plot in the context of custom styles"""
+
+    # Note: the tolerance is set to 5 because matplotlib 3.10 changed the way negative values are displayed
+    # There is now an increased space before the negative sign, which leads to a RMS diff of ~4.4
+    # See: GH #3946
+
+    # TODO: reset tolerance to 3 when python 3.9 is dropped, and all tests use matplotlib 3.10+
     with _style.style_context(
         primary_color_positive="#9ACD32",
         primary_color_negative="#FFA500",

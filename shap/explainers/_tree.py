@@ -24,6 +24,7 @@ from ..utils._exceptions import (
     InvalidModelError,
 )
 from ..utils._legacy import DenseData
+from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
 
@@ -51,6 +52,41 @@ feature_perturbation_codes = {
     "tree_path_dependent": 1,
     "global_path_dependent": 2,
 }
+
+
+def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
+    """
+    This function checks if a tree instance has an experimental integration with shap TreeExplainer class.
+
+    To add experimental message support for your library add package name and its versions
+    verified to be used with shap to the 'experimental' dictionary below.
+
+    Parameters
+    ----------
+    tree_instance: object, tree instance from an external library
+    """
+    experimental = {
+        "causalml": "0.15.3",
+    }
+
+    safe_instance = None
+    if hasattr(tree_instance, "__class__"):
+        if hasattr(tree_instance.__class__, "__module__"):
+            safe_instance = tree_instance
+
+    if safe_instance:
+        library = safe_instance.__class__.__module__.split(".")[0]
+        if experimental.get(library):
+            warnings.warn(
+                f"You are using experimental integration with {library}. "
+                f"The {library} support is verified for the following versions: {experimental.get(library)}. "
+                f"As experimental functionality, this integration may be removed or significantly changed in future releases without following semantic versioning. Use in production systems at your own risk.",
+                ExperimentalWarning,
+            )
+    else:
+        warnings.warn(
+            f"Unable to check experimental integration status for {tree_instance} object", ExperimentalWarning
+        )
 
 
 def _check_xgboost_version(v: str):
@@ -93,7 +129,7 @@ class TreeExplainer(Explainer):
         model,
         data=None,
         model_output="raw",
-        feature_perturbation="interventional",
+        feature_perturbation="auto",
         feature_names=None,
         approximate=DEPRECATED_APPROX,
         # FIXME: The `link` and `linearize_link` arguments are ignored. GH #3513
@@ -118,23 +154,32 @@ class TreeExplainer(Explainer):
             path as our background dataset (this is recorded in the ``model``
             object).
 
-        feature_perturbation : "interventional" (default) or "tree_path_dependent" (default when data=None)
+        feature_perturbation : "auto" (default), "interventional" or "tree_path_dependent"
             Since SHAP values rely on conditional expectations, we need to
             decide how to handle correlated (or otherwise dependent) input
             features.
 
-            The "interventional" approach breaks the dependencies between
-            features according to the rules dictated by causal inference
-            (Janzing et al. 2019). Note that the "interventional" option
-            requires a background dataset ``data``, and its runtime scales
-            linearly with the size of the background dataset you use. Anywhere
-            from 100 to 1000 random background samples are good sizes to use.
+            - if ``"interventional"``, a background dataset ``data`` is required. The
+              dependencies between features are handled according to the rules dictated
+              by causal inference [1]_. The runtime scales linearly with the size of the
+              background dataset you use: anywhere from 100 to 1000 random background
+              samples are good sizes to use.
+            - if ``"tree_path_dependent"``, no background dataset is required and the
+              approach is to just follow the trees and use the number of training
+              examples that went down each leaf to represent the background
+              distribution.
+            - if ``"auto"``, the "interventional" approach will be used when a
+              background is provided, otherwise the "tree_path_dependent" approach will
+              be used.
 
-            The "tree_path_dependent" approach is to just follow the trees and
-            use the number of training examples that went down each leaf to
-            represent the background distribution. This approach does not
-            require a background dataset, and so is used by default when no
-            background dataset is provided.
+            .. versionadded:: 0.47
+               The `"auto"` option was added.
+
+            .. versionchanged:: 0.47
+               The default behaviour will change from `"interventional"` to `"auto"` in 0.47.
+               In the future, passing `feature_pertubation="interventional"` without providing
+               a background dataset will raise an error.
+
 
         model_output : "raw", "probability", "log_loss", or model method name
             What output of the model should be explained.
@@ -161,6 +206,12 @@ class TreeExplainer(Explainer):
         approximate : bool
             Deprecated, will be deprecated in v0.47.0 and removed in version v0.49.0.
             Please use the ``approximate`` argument in the :meth:`.shap_values` or ``__call__`` methods instead.
+
+        References
+        ----------
+        .. [1] Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum.
+               "Feature relevance quantification in explainable AI: A causal problem."
+               International Conference on artificial intelligence and statistics. PMLR, 2020.
 
         """
         if approximate is not DEPRECATED_APPROX:
@@ -193,24 +244,40 @@ class TreeExplainer(Explainer):
             self.data = data.data
         else:
             self.data = data
-        if self.data is None:
-            feature_perturbation = "tree_path_dependent"
-            # warnings.warn("Setting feature_perturbation = \"tree_path_dependent\" because no background data was given.")
+
+        if feature_perturbation == "auto":
+            feature_perturbation = "interventional" if self.data is not None else "tree_path_dependent"
+        elif feature_perturbation == "interventional":
+            if self.data is None:
+                # TODO: raise an error in 0.48
+                warnings.warn(
+                    "In the future, passing feature_perturbation='interventional' without providing a background dataset "
+                    "will raise an error. Please provide a background dataset to continue using the interventional "
+                    "approach or set feature_perturbation='auto' to automatically switch approaches.",
+                    FutureWarning,
+                )
+                feature_perturbation = "tree_path_dependent"
+        elif feature_perturbation != "tree_path_dependent":
+            raise InvalidFeaturePerturbationError(
+                "feature_perturbation must be 'auto', 'interventional', or 'tree_path_dependent'. "
+                f"Got {feature_perturbation} instead."
+            )
+
         elif feature_perturbation == "interventional" and self.data.shape[0] > 1_000:
             wmsg = (
                 f"Passing {self.data.shape[0]} background samples may lead to slow runtimes. Consider "
                 "using shap.sample(data, 100) to create a smaller background data set."
             )
             warnings.warn(wmsg)
+
+        _safe_check_tree_instance_experimental(model)
+
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
         self.model = TreeEnsemble(model, self.data, self.data_missing, model_output)
         self.model_output = model_output
         # self.model_output = self.model.model_output # this allows the TreeEnsemble to translate model outputs types by how it loads the model
-
-        if feature_perturbation not in feature_perturbation_codes:
-            raise InvalidFeaturePerturbationError("Invalid feature_perturbation option!")
 
         # check for unsupported combinations of feature_perturbation and model_outputs
         if feature_perturbation == "tree_path_dependent":
@@ -393,8 +460,7 @@ class TreeExplainer(Explainer):
                 raise ExplainerError(emsg)
             if X.shape[0] != len(y):
                 emsg = (
-                    f"The number of labels ({len(y)}) does not match the number of samples "
-                    f"to explain ({X.shape[0]})!"
+                    f"The number of labels ({len(y)}) does not match the number of samples to explain ({X.shape[0]})!"
                 )
                 raise DimensionError(emsg)
 
@@ -669,9 +735,9 @@ class TreeExplainer(Explainer):
                 Return type for models with multiple outputs changed from list to np.ndarray.
 
         """
-        assert (
-            self.model.model_output == "raw"
-        ), 'Only model_output = "raw" is supported for SHAP interaction values right now!'
+        assert self.model.model_output == "raw", (
+            'Only model_output = "raw" is supported for SHAP interaction values right now!'
+        )
         # assert self.feature_perturbation == "tree_path_dependent", "Only feature_perturbation = \"tree_path_dependent\" is supported for SHAP interaction values right now!"
         transform = "identity"
 
@@ -767,7 +833,9 @@ class TreeExplainer(Explainer):
     def assert_additivity(self, phi, model_output):
         def check_sum(sum_val, model_output):
             diff = np.abs(sum_val - model_output)
-            if np.max(diff / (np.abs(sum_val) + 1e-2)) > 1e-2:
+            # TODO: add arguments for passing custom 'atol' and 'rtol' values to 'np.allclose'
+            # would require change to interface i.e. '__call__' methods
+            if not np.allclose(sum_val, model_output, atol=1e-2, rtol=1e-2):
                 ind = np.argmax(diff)
                 err_msg = (
                     "Additivity check failed in TreeExplainer! Please ensure the data matrix you passed to the "
@@ -883,6 +951,7 @@ class TreeEnsemble:
                 "sklearn.ensemble.RandomForestRegressor",
                 "sklearn.ensemble.forest.RandomForestRegressor",
                 "econml.grf._base_grf.BaseGRF",
+                "causalml.inference.tree.CausalRandomForestRegressor",
             ],
         ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
@@ -940,6 +1009,7 @@ class TreeEnsemble:
                 "sklearn.tree.DecisionTreeRegressor",
                 "sklearn.tree.tree.DecisionTreeRegressor",
                 "econml.grf._base_grftree.GRFTree",
+                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
             ],
         ):
             self.internal_dtype = model.tree_.value.dtype.type
@@ -1368,9 +1438,9 @@ class TreeEnsemble:
         # build a dense numpy version of all the tree objects
         if self.trees is not None and self.trees:
             max_nodes = np.max([len(t.values) for t in self.trees])
-            assert (
-                len(np.unique([t.values.shape[1] for t in self.trees])) == 1
-            ), "All trees in the ensemble must have the same output dimension!"
+            assert len(np.unique([t.values.shape[1] for t in self.trees])) == 1, (
+                "All trees in the ensemble must have the same output dimension!"
+            )
             num_trees = len(self.trees)
             # important to be -1 in unused sections!! This way we can tell which entries are valid.
             self.children_left = -np.ones((num_trees, max_nodes), dtype=np.int32)
@@ -1470,8 +1540,7 @@ class TreeEnsemble:
                 transform = "identity"
             else:
                 emsg = (
-                    'model_output = "probability" is not yet supported when model.tree_output = '
-                    f'"{self.tree_output}"!'
+                    f'model_output = "probability" is not yet supported when model.tree_output = "{self.tree_output}"!'
                 )
                 raise NotImplementedError(emsg)
         elif self.model_output == "log_loss":
@@ -1536,12 +1605,16 @@ class TreeEnsemble:
             tree_limit = self.values.shape[0]
 
         if output == "logloss":
-            assert (
-                y is not None
-            ), "Both samples and labels must be provided when explaining the loss (i.e. `explainer.shap_values(X, y)`)!"
-            assert X.shape[0] == len(y), (
-                "The number of labels (%d) does not match the number of samples to explain (%d)!" % (len(y), X.shape[0])
-            )
+            if y is None:
+                raise ValueError(
+                    "Both samples and labels must be provided when explaining the loss"
+                    " (i.e. `explainer.shap_values(X, y)`)!"
+                )
+            if X.shape[0] != len(y):
+                raise ValueError(
+                    f"The number of labels ({len(y)}) does not match the number of samples to explain ({X.shape[0]})!"
+                )
+
         transform = self.get_transform()
         assert_import("cext")
         output = np.zeros((X.shape[0], self.num_outputs))
@@ -1624,10 +1697,19 @@ class SingleTree:
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
 
-        if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree"]):
+        if safe_isinstance(
+            tree,
+            [
+                "sklearn.tree._tree.Tree",
+                "econml.tree._tree.Tree",
+                "causalml.inference.tree._tree._tree.Tree",
+            ],
+        ):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
-            self.children_default = self.children_left  # missing values not supported in sklearn
+            self.children_default = self.children_left
+            if hasattr(tree, "missing_go_to_left"):
+                self.children_default = np.where(tree.missing_go_to_left, self.children_left, self.children_right)
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
             self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])

@@ -258,8 +258,9 @@ class LogitLink(Link):
         return "logit"
 
     @staticmethod
-    def f(x):
-        return np.log(x / (1 - x))
+    def f(x, epsilon=1e-15):
+        x_clipped = np.clip(x, epsilon, 1 - epsilon)
+        return np.log(x_clipped / (1 - x_clipped))
 
     @staticmethod
     def finv(x):
