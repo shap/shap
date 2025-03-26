@@ -99,9 +99,10 @@ def test_scatter_categorical(categorical_explanation):
     return fig
 
 
+@pytest.mark.mpl_image_compare
 @pytest.mark.parametrize("input", [np.array([[1], [1]]), np.array([[1e-10], [1e-9]]), np.array([[1]])])
 def test_scatter_plot_value_input(input):
-    """Test scatter plot with different input values."""
+    """Test scatter plot with different input values. See GH #4037"""
     explanations = shap.Explanation(
         input,
         data=input,
@@ -109,3 +110,5 @@ def test_scatter_plot_value_input(input):
     )
 
     shap.plots.scatter(explanations, show=False)
+    plt.tight_layout()
+    return plt.gcf()
