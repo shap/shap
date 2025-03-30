@@ -14,8 +14,10 @@ def set_reproducible_mpl_rcparams() -> None:
     Careful: the @pytest.mark.mpl_image_compare decorator will override rcParams,
     so this change must be done *after* the fixtures are called.
     """
-    plt.rcParams["image.interpolation"] = "bilinear"
-    plt.rcParams["image.interpolation_stage"] = "data"
+    if plt.rcParams.get("image.interpolation") is not None:
+        plt.rcParams["image.interpolation"] = "bilinear"
+    if plt.rcParams.get("image.interpolation_stage") is not None:
+        plt.rcParams["image.interpolation_stage"] = "data"
 
 
 @pytest.fixture
