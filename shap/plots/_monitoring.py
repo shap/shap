@@ -1,4 +1,4 @@
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats
@@ -48,7 +48,7 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     if feature_names is None:
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
-    pl.figure(figsize=(10, 3))
+    plt.figure(figsize=(10, 3))
     ys = shap_values[:, ind]
     xs = np.arange(len(ys))  # np.linspace(0, 12*2, len(ys))
 
@@ -62,20 +62,20 @@ def monitoring(ind, shap_values, features, feature_names=None, show=True):
     min_pval_ind = float(np.argmin(pvals) * inc + inc)
 
     if min_pval < 0.05 / shap_values.shape[1]:
-        pl.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
+        plt.axvline(min_pval_ind, linestyle="dashed", color="#666666", alpha=0.2)
 
-    pl.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
+    plt.scatter(xs, ys, s=10, c=features[:, ind], cmap=colors.red_blue)
 
-    pl.xlabel("Sample index")
-    pl.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)
-    pl.gca().xaxis.set_ticks_position("bottom")
-    pl.gca().yaxis.set_ticks_position("left")
-    pl.gca().spines["right"].set_visible(False)
-    pl.gca().spines["top"].set_visible(False)
-    cb = pl.colorbar()
+    plt.xlabel("Sample index")
+    plt.ylabel(truncate_text(feature_names[ind], 30) + "\nSHAP value", size=13)
+    plt.gca().xaxis.set_ticks_position("bottom")
+    plt.gca().yaxis.set_ticks_position("left")
+    plt.gca().spines["right"].set_visible(False)
+    plt.gca().spines["top"].set_visible(False)
+    cb = plt.colorbar()
     cb.outline.set_visible(False)  # type: ignore
-    bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 20)
     cb.set_label(truncate_text(feature_names[ind], 30), size=13)
     if show:
-        pl.show()
+        plt.show()
