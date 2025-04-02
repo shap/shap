@@ -1,6 +1,6 @@
 import typing
 
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -99,15 +99,15 @@ def partial_dependence(
                 vals[i] = model(features_tmp).mean()
 
         if ax is None:
-            fig = pl.figure()
-            ax1 = pl.gca()
+            fig = plt.figure()
+            ax1 = plt.gca()
         else:
-            fig = pl.gcf()
-            ax1 = pl.gca()
+            fig = plt.gcf()
+            ax1 = plt.gca()
 
-        # fig, ax1 = pl.subplots(figsize)
+        # fig, ax1 = plt.subplots(figsize)
         ax2 = ax1.twinx()
-        ax2 = typing.cast(pl.Axes, ax2)  # fix for matplotlib typing
+        ax2 = typing.cast(plt.Axes, ax2)  # fix for matplotlib typing
 
         # the histogram of the data
         if hist:
@@ -196,13 +196,13 @@ def partial_dependence(
                 basefmt=" ",
             )
             stemlines.set_edgecolors([red_rgb if v > 0 else blue_rgb for v in vals])
-            pl.setp(stemlines, "zorder", -1)
-            pl.setp(stemlines, "linewidth", 2)
-            pl.setp(markerline, "color", "black")
-            pl.setp(markerline, "markersize", 4)
+            plt.setp(stemlines, "zorder", -1)
+            plt.setp(stemlines, "linewidth", 2)
+            plt.setp(markerline, "color", "black")
+            plt.setp(markerline, "markersize", 4)
 
         if show:
-            pl.show()
+            plt.show()
         else:
             return fig, ax1
 
@@ -236,7 +236,7 @@ def partial_dependence(
                 x1[i, j] = xs1[j]
                 vals[i, j] = model(features_tmp).mean()
 
-        fig = pl.figure()
+        fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
 
         #         x = y = np.arange(-3.0, 3.0, 0.05)
@@ -251,6 +251,6 @@ def partial_dependence(
         ax.set_zlabel("E[f(x) | " + str(feature_names[ind0]) + ", " + str(feature_names[ind1]) + "]", fontsize=13)
 
         if show:
-            pl.show()
+            plt.show()
         else:
             return fig, ax
