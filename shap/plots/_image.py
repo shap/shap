@@ -87,15 +87,15 @@ def image(
         # feature_names = [shap_exp.feature_names]
         # ind = 0
         if len(shap_exp.output_dims) == 1:
-            shap_values = cast(list[np.ndarray], [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
+            shap_values = cast("list[np.ndarray]", [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
         elif len(shap_exp.output_dims) == 0:
-            shap_values = cast(list[np.ndarray], [shap_exp.values])
+            shap_values = cast("list[np.ndarray]", [shap_exp.values])
         else:
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
-            pixel_values = cast(np.ndarray, shap_exp.data)
+            pixel_values = cast("np.ndarray", shap_exp.data)
         if labels is None:
-            labels = cast(list[str], shap_exp.output_names)
+            labels = cast("list[str]", shap_exp.output_names)
     else:
         assert isinstance(pixel_values, np.ndarray), (
             "The input pixel_values must be a numpy array or an Explanation object must be provided!"
@@ -104,7 +104,7 @@ def image(
     # multi_output = True
     if not isinstance(shap_values, list):
         # multi_output = False
-        shap_values = cast(list[np.ndarray], [shap_values])
+        shap_values = cast("list[np.ndarray]", [shap_values])
 
     if len(shap_values[0].shape) == 3:
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]

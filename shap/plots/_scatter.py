@@ -469,7 +469,7 @@ def _suggest_x_jitter(values: np.ndarray) -> float:
 
 def _plot_histogram(ax: plt.Axes, xv, xv_no_jitter):
     """Add a histogram of the data on a matching secondary axes"""
-    ax2 = typing.cast(plt.Axes, ax.twinx())
+    ax2 = typing.cast("plt.Axes", ax.twinx())
     xlim = ax.get_xlim()
     xvals = np.unique(xv_no_jitter)
 

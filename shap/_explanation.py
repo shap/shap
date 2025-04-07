@@ -425,7 +425,7 @@ class Explanation(metaclass=MetaExplanation):
         shap_values_shape = _compute_shape(self._s.values)
         # impl: `Explanation.values` always corresponds to the shap values, which is a numpy array, so the
         # shape will always be of tuple[int, ...] type, not tuple[int|None, ...].
-        return cast(tuple[int, ...], shap_values_shape)
+        return cast("tuple[int, ...]", shap_values_shape)
 
     def __len__(self):
         return self.shape[0]
