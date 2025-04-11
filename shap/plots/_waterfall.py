@@ -48,8 +48,8 @@ def waterfall(shap_values, max_display=10, show=None):
     # Deprecation warning
     if show is not None:
         warnings.warn(
-            "WARNING: `show` argument is deprecated and will be removed in a future version. Please omit this argument and call plt.show() manually.",
-            category=UserWarning,
+            "`show` argument is deprecated and will be removed in a future version. Please omit this argument and call plt.show() manually.",
+            category=DeprecationWarning,
             stacklevel=2,
         )
 
