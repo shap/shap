@@ -76,7 +76,8 @@ test = [
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers",
+  "transformers<=4.49.0; sys_platform == 'darwin'",  # see GH #4036
+  "transformers; sys_platform != 'darwin'",  # No constraint for other platforms
   "tf-keras",
   "protobuf==3.20.3",  # See GH #3046
   "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
@@ -88,6 +89,7 @@ test = [
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy<2.0",
+  "causalml",
 ]
 
 test_notebooks = [
@@ -170,6 +172,7 @@ module = [
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "causalml.*",
 ]
 ignore_missing_imports = true
 
