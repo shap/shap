@@ -1,0 +1,2 @@
+option('with_cuda', type: 'boolean', value: true, description: 'Build with CUDA support')
+option('with_binary', type: 'boolean', value: true, description: 'Build C extension')

@@ -1,0 +1,38 @@
+name: Test CUDA Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test_cuda_build:
+    runs-on: ubuntu-latest
+    container:
+      image: nvidia/cuda:11.8.0-devel-ubuntu22.04
+      options: --gpus all
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y python3-dev python3-pip
+        python3 -m pip install --upgrade pip
+        python3 -m pip install numpy cython setuptools wheel build meson-python
+    
+    - name: Test CPU build
+      run: |
+        python3 install.py
+        
+    - name: Test wheel building
+      run: |
+        python3 build_wheels.py
+        python3 -m pip install dist/*.whl
+        
+    - name: Verify installation
+      run: |
+        python3 -c "import shap; print('CUDA available:', hasattr(shap, '_cext_gpu'))"
