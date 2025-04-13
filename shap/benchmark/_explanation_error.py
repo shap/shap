@@ -26,7 +26,17 @@ class ExplanationError:
     computations, but of course you could choose to summarize explanation errors in others ways as well.
     """
 
-    def __init__(self, masker, model, *model_args, batch_size=500, num_permutations=10, link=links.identity, linearize_link=True, seed=38923):
+    def __init__(
+        self,
+        masker,
+        model,
+        *model_args,
+        batch_size=500,
+        num_permutations=10,
+        link=links.identity,
+        linearize_link=True,
+        seed=38923,
+    ):
         """Build a new explanation error benchmarker with the given masker, model, and model args.
 
         Parameters
@@ -89,10 +99,7 @@ class ExplanationError:
             raise ValueError("The passed explanation must be either of type numpy.ndarray or shap.Explanation!")
 
         if len(attributions) != len(self.model_args[0]):
-            emsg = (
-                "The explanation passed must have the same number of rows as "
-                "the self.model_args that were passed!"
-            )
+            emsg = "The explanation passed must have the same number of rows as the self.model_args that were passed!"
             raise DimensionError(emsg)
 
         # it is important that we choose the same permutations for the different explanations we are comparing
@@ -106,9 +113,10 @@ class ExplanationError:
         mask_vals = []
 
         for i, args in enumerate(zip(*self.model_args)):
-
             if len(args[0].shape) != len(attributions[i].shape):
-                raise ValueError("The passed explanation must have the same dim as the model_args and must not have a vector output!")
+                raise ValueError(
+                    "The passed explanation must have the same dim as the model_args and must not have a vector output!"
+                )
 
             feature_size = np.prod(attributions[i].shape)
             sample_attributions = attributions[i].flatten()
@@ -121,7 +129,9 @@ class ExplanationError:
                 elif callable(self.masker.clustering):
                     row_clustering = self.masker.clustering(*args)
                 else:
-                    raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!")
+                    raise NotImplementedError(
+                        "The masker passed has a .clustering attribute that is not yet supported by the ExplanationError benchmark!"
+                    )
 
             masked_model = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *args)
 
@@ -141,18 +151,18 @@ class ExplanationError:
 
                 increment = max(1, int(feature_size * step_fraction))
                 for j in range(0, feature_size, increment):
-                    mask[ordered_inds[np.arange(j, min(feature_size, j+increment))]] = True
+                    mask[ordered_inds[np.arange(j, min(feature_size, j + increment))]] = True
                     masks.append(mask.copy())
                 mask_vals.append(masks)
 
                 values = []
                 masks_arr = np.array(masks)
                 for j in range(0, len(masks_arr), self.batch_size):
-                    values.append(masked_model(masks_arr[j:j + self.batch_size]))
+                    values.append(masked_model(masks_arr[j : j + self.batch_size]))
                 values = np.concatenate(values)
                 base_value = values[0]
                 for j, v in enumerate(values):
-                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]])))**2
+                    values[j] = (v - (base_value + np.sum(sample_attributions[masks_arr[j]]))) ** 2
 
                 if total_values is None:
                     total_values = values
@@ -163,8 +173,10 @@ class ExplanationError:
             svals.append(total_values)
 
             if pbar is None and time.time() - start_time > 5:
-                pbar = tqdm(total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}")
-                pbar.update(i+1)
+                pbar = tqdm(
+                    total=len(self.model_args[0]), disable=silent, leave=False, desc=f"ExplanationError for {name}"
+                )
+                pbar.update(i + 1)
             if pbar is not None:
                 pbar.update(1)
 
@@ -176,4 +188,4 @@ class ExplanationError:
         # reset the random seed so we don't mess up the caller
         np.random.seed(old_seed)
 
-        return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values)/len(total_values)))
+        return BenchmarkResult("explanation error", name, value=np.sqrt(np.sum(total_values) / len(total_values)))

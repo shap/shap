@@ -1,21 +1,19 @@
 import math
-import queue  # multi-producer, multi-consumer queues
-import time  # time execution
 from itertools import chain, combinations, product
 
 import numpy as np  # numpy base
-from numba import njit  # just in time compiler
-from tqdm.auto import tqdm  # progress bar
 
-from .. import Explanation, links  # shap modules
+from .. import links  # shap modules
 from ..explainers._explainer import Explainer
 from ..models import Model
-from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
+from ..utils import MaskedModel, make_masks, safe_isinstance
+
 
 class CoalitionExplainer(Explainer):
     """
-    Describe the method 
+    Describe the method
     """
+
     def __init__(
         self,
         model,
@@ -40,11 +38,7 @@ class CoalitionExplainer(Explainer):
             output_names=output_names,
             feature_names=feature_names,
         )
-        self.input_shape = (
-            masker.shape[1:]
-            if hasattr(masker, "shape") and not callable(masker.shape)
-            else None
-        )
+        self.input_shape = masker.shape[1:] if hasattr(masker, "shape") and not callable(masker.shape) else None
         if not safe_isinstance(self.model, "shap.models.Model"):
             self.model = Model(self.model)
 
@@ -52,9 +46,7 @@ class CoalitionExplainer(Explainer):
         self._curr_base_value = None
 
         if self.input_shape is not None and len(self.input_shape) > 1:
-            self._reshaped_model = lambda x: self.model(
-                x.reshape(x.shape[0], *self.input_shape)
-            )
+            self._reshaped_model = lambda x: self.model(x.reshape(x.shape[0], *self.input_shape))
         else:
             self._reshaped_model = self.model
 
@@ -65,6 +57,7 @@ class CoalitionExplainer(Explainer):
             self._mask_matrix = make_masks(self._clustering)
 
         if len(call_args) > 0:
+
             class CoalitionExplainer(self.__class__):
                 def __call__(
                     self,
@@ -114,7 +107,7 @@ class CoalitionExplainer(Explainer):
             outputs=outputs,
             silent=silent,
         )
-        
+
     def explain_row(
         self,
         *row_args,
@@ -129,35 +122,29 @@ class CoalitionExplainer(Explainer):
         if fixed_context == "auto":
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
-            raise ValueError(
-                f"Unknown fixed_context value passed (must be 0, 1 or None): {fixed_context}"
-            )
+            raise ValueError(f"Unknown fixed_context value passed (must be 0, 1 or None): {fixed_context}")
         # build a masked version of the model for the current input sample
-        fm = MaskedModel(
-            self.model, self.masker, self.link, self.linearize_link, *row_args
-        )
+        fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
         # make sure we have the base value and current value outputs
         M = len(fm)
         m00 = np.zeros(M, dtype=bool)
         # if not fixed background or no base value assigned then compute base value for a row
-        if self._curr_base_value is None or not getattr(
-            self.masker, "fixed_background", False
-        ):
-            self._curr_base_value = fm(m00.reshape(1, -1), zero_index=0)[0] 
-            
+        if self._curr_base_value is None or not getattr(self.masker, "fixed_background", False):
+            self._curr_base_value = fm(m00.reshape(1, -1), zero_index=0)[0]
+
         f11 = fm(~m00.reshape(1, -1))[0]
 
         self.root = Node("Root")
         build_tree(self.partition_tree, self.root)
         self.combinations_list = generate_paths_and_combinations(self.root)
-        #print("self.combinations",self.combinations_list)
+        # print("self.combinations",self.combinations_list)
         self.masks, self.keys = create_masks1(self.root, self.masker.feature_names)
         self.masks_dict = dict(zip(self.keys, self.masks))
         self.mask_permutations = create_combined_masks(self.combinations_list, self.masks_dict)
-        #print("mask_permutations", self.mask_permutations, "\n")
+        # print("mask_permutations", self.mask_permutations, "\n")
         self.masks_list = [mask for _, mask, _ in self.mask_permutations]
         self.unique_masks_set = set(map(tuple, self.masks_list))
-        self.unique_masks = [np.array(mask) for mask in self.unique_masks_set]        
+        self.unique_masks = [np.array(mask) for mask in self.unique_masks_set]
 
         # Step 2: Compute model results for all unique masks
         mask_results = {}
@@ -172,7 +159,7 @@ class CoalitionExplainer(Explainer):
         )
 
         feature_name_to_index = {name: idx for idx, name in enumerate(self.masker.feature_names)}
-        #collected_weights = []
+        # collected_weights = []
         # Step 4: Implement Owen values weighting
         for last_key in last_key_to_off_indexes:
             off_indexes = last_key_to_off_indexes[last_key]
@@ -180,18 +167,17 @@ class CoalitionExplainer(Explainer):
             weight_list = weights[last_key]
 
             for off_index, on_index, weight in zip(off_indexes, on_indexes, weight_list):
-                #print(weight)
+                # print(weight)
                 off_result = mask_results[tuple(self.unique_masks[off_index])]
                 on_result = mask_results[tuple(self.unique_masks[on_index])]
-                #print(off_result)
-                #print(on_result)
-               # print("weight before calculation", weight) # this might be interesting to plot
-                #collected_weights.append(weight)
+                # print(off_result)
+                # print(on_result)
+                # print("weight before calculation", weight) # this might be interesting to plot
+                # collected_weights.append(weight)
 
                 marginal_contribution = (on_result - off_result) * weight
-                #print(marginal_contribution)
-                shap_values[feature_name_to_index[last_key]] += marginal_contribution #.item()
-
+                # print(marginal_contribution)
+                shap_values[feature_name_to_index[last_key]] += marginal_contribution  # .item()
 
         # Step 5: Return results
         return {
@@ -208,16 +194,18 @@ class CoalitionExplainer(Explainer):
     def __str__(self):
         return "shap.explainers.CoalitionExplainer()"
 
+
 ####################### HELPER FUNCTIONS THAT PROBABLY CAN STAY####################
 class Node:
     def __init__(self, key):
         self.key = key
         self.child = []
-        self.permutations = [] # this may not be the greatest idea??
+        self.permutations = []  # this may not be the greatest idea??
         self.weights = []
 
     def __repr__(self):
         return f"({self.key}): {self.child} -> {self.permutations} \\ {self.weights}"
+
 
 # This function is to encode the dictionary to our specific structure
 def build_tree(d, root):
@@ -233,6 +221,7 @@ def build_tree(d, root):
     # get all the sibling permutations
     generate_permutations(root)
 
+
 def create_partition_hierarchy(linkage_matrix, columns):
     def build_hierarchy(node, linkage_matrix, columns):
         if node < len(columns):
@@ -242,11 +231,12 @@ def create_partition_hierarchy(linkage_matrix, columns):
             right_child = int(linkage_matrix[node - len(columns), 1])
             left_subtree = build_hierarchy(left_child, linkage_matrix, columns)
             right_subtree = build_hierarchy(right_child, linkage_matrix, columns)
-            return {f'cluster_{node}': {**left_subtree, **right_subtree}}
+            return {f"cluster_{node}": {**left_subtree, **right_subtree}}
 
     root_node = len(linkage_matrix) + len(columns) - 1
     hierarchy = build_hierarchy(root_node, linkage_matrix, columns)
-    return hierarchy[f'cluster_{root_node}']
+    return hierarchy[f"cluster_{root_node}"]
+
 
 def combine_masks(masks):
     combined_mask = np.logical_or.reduce(masks)
@@ -255,6 +245,7 @@ def combine_masks(masks):
 
 def compute_weight(total, selected):
     return 1 / (total * math.comb(total - 1, selected))
+
 
 def all_subsets(iterable):
     return chain.from_iterable(combinations(iterable, n) for n in range(len(iterable) + 1))
@@ -269,9 +260,11 @@ def get_all_leaf_values(node):
             leaves.extend(get_all_leaf_values(child))
     return leaves
 
+
 ##########################################################
 
-#generate all permutations of sibling nodes and assign it to the nodes
+
+# generate all permutations of sibling nodes and assign it to the nodes
 def generate_permutations(node):
     if not node.child:  # Leaf node
         node.permutations = []
@@ -281,15 +274,15 @@ def generate_permutations(node):
     node.permutations = {}
 
     for i, child in enumerate(node.child):
-        excluded = children_keys[:i] + children_keys[i + 1:]
+        excluded = children_keys[:i] + children_keys[i + 1 :]
         generate_permutations(child)
 
         # Generate all unique combinations of permutations for each child
         child.permutations = list(all_subsets(excluded))
-        #print(len(children_keys))
-        #print([len(permutation) for permutation in child.permutations])
+        # print(len(children_keys))
+        # print([len(permutation) for permutation in child.permutations])
         child.weights = [compute_weight(len(children_keys), len(permutation)) for permutation in child.permutations]
-        #print(child.weights)
+        # print(child.weights)
 
 
 def create_masks1(node, columns):
@@ -313,7 +306,6 @@ def create_masks1(node, columns):
     return masks, keys
 
 
-
 def generate_paths_and_combinations(node):
     paths = []
 
@@ -330,29 +322,26 @@ def generate_paths_and_combinations(node):
 
     dfs(node, [])
 
-
     combinations_list = []
-    #print("the paths",paths)
+    # print("the paths",paths)
 
     for path in paths:
         filtered_path = [(key, perms, weight) for key, perms, weight in path if perms]
-        #print("filtered_path", filtered_path, "\n")
+        # print("filtered_path", filtered_path, "\n")
         if filtered_path:
             node_keys, permutations, weights = zip(*filtered_path)
             path_combinations = list(product(*permutations))
             weight_combinations = list(product(*weights))
-            #print("path combos", path_combinations, len(path_combinations))
-            #print("the weight combs", weight_combinations, len(weight_combinations))
+            # print("path combos", path_combinations, len(path_combinations))
+            # print("the weight combs", weight_combinations, len(weight_combinations))
             weight_products = [np.prod(weight_tuple) for weight_tuple in weight_combinations]
-            #print(weight_products)
+            # print(weight_products)
 
             last_key = node_keys[-1]
             for i, combination in enumerate(path_combinations):
                 combinations_list.append((last_key, combination, weight_products[i]))
 
     return combinations_list
-
-
 
 
 def create_combined_masks(combinations, masks_dict):
@@ -405,7 +394,3 @@ def map_combinations_to_unique_masks(combined_masks, unique_masks):
             last_key_to_on_indexes[last_key].append(unique_index)
 
     return last_key_to_off_indexes, last_key_to_on_indexes, weights
-
-
-
-

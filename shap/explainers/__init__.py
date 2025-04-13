@@ -1,4 +1,5 @@
 from ._additive import AdditiveExplainer
+from ._coalition import CoalitionExplainer
 from ._deep import DeepExplainer
 from ._exact import ExactExplainer
 from ._gpu_tree import GPUTreeExplainer
@@ -6,7 +7,6 @@ from ._gradient import GradientExplainer
 from ._kernel import KernelExplainer
 from ._linear import LinearExplainer
 from ._partition import PartitionExplainer
-from ._coalition import CoalitionExplainer
 from ._permutation import PermutationExplainer
 from ._sampling import SamplingExplainer
 from ._tree import TreeExplainer

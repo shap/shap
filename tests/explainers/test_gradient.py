@@ -10,9 +10,11 @@ import shap
 
 def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     """This is the basic mnist cnn example from keras."""
-    tf = pytest.importorskip('tensorflow')
+    tf = pytest.importorskip("tensorflow")
     if version.parse(tf.__version__) < version.parse("2.16.0"):
-        pytest.skip("This test only works with tensorflow==2.16.1 and and above, see the test test_tf_keras_mnist_cnn_tf215_and_lower for lower tensorflow versions.")
+        pytest.skip(
+            "This test only works with tensorflow==2.16.1 and and above, see the test test_tf_keras_mnist_cnn_tf215_and_lower for lower tensorflow versions."
+        )
 
     rs = np.random.RandomState(random_seed)
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -41,13 +43,13 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     img_rows, img_cols = 28, 28
 
     # the data, split between train and test sets
-    #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     x_train = rs.randn(200, 28, 28)
     y_train = rs.randint(0, 9, 200)
     x_test = rs.randn(200, 28, 28)
     y_test = rs.randint(0, 9, 200)
 
-    if K.image_data_format() == 'channels_first':
+    if K.image_data_format() == "channels_first":
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
         x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
         input_shape = (1, img_rows, img_cols)
@@ -56,8 +58,8 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
         input_shape = (img_rows, img_cols, 1)
 
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
+    x_train = x_train.astype("float32")
+    x_test = x_test.astype("float32")
     x_train /= 255
     x_test /= 255
 
@@ -66,21 +68,19 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation="relu", input_shape=input_shape))
+    model.add(Conv2D(64, (3, 3), activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
-    model.add(Dense(32, activation='relu')) # 128
+    model.add(Dense(32, activation="relu"))  # 128
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
-    model.add(Activation('softmax'))
+    model.add(Activation("softmax"))
 
-    model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                  optimizer=tf.keras.optimizers.Adadelta(),
-                  metrics=['accuracy'])
+    model.compile(
+        loss=tf.keras.losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adadelta(), metrics=["accuracy"]
+    )
 
     model.fit(
         x_train[:1000, :],
@@ -88,7 +88,7 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
         batch_size=batch_size,
         epochs=epochs,
         verbose=1,
-        validation_data=(x_test[:1000, :], y_test[:1000, :])
+        validation_data=(x_test[:1000, :], y_test[:1000, :]),
     )
 
     # explain by passing the tensorflow inputs and outputs
@@ -110,9 +110,11 @@ def test_tf_keras_mnist_cnn_tf216_and_above(random_seed):
 
 def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
     """This is the basic mnist cnn example from keras."""
-    tf = pytest.importorskip('tensorflow')
+    tf = pytest.importorskip("tensorflow")
     if version.parse(tf.__version__) >= version.parse("2.16.0"):
-        pytest.skip("This test only works with tensorflow==2.15.1 and lower, see the test test_tf_keras_mnist_cnn_tf216_and_above for higher tensorflow versions.")
+        pytest.skip(
+            "This test only works with tensorflow==2.15.1 and lower, see the test test_tf_keras_mnist_cnn_tf216_and_above for higher tensorflow versions."
+        )
 
     rs = np.random.RandomState(random_seed)
     tf.compat.v1.random.set_random_seed(random_seed)
@@ -143,13 +145,13 @@ def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
     img_rows, img_cols = 28, 28
 
     # the data, split between train and test sets
-    #(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     x_train = rs.randn(200, 28, 28)
     y_train = rs.randint(0, 9, 200)
     x_test = rs.randn(200, 28, 28)
     y_test = rs.randint(0, 9, 200)
 
-    if K.image_data_format() == 'channels_first':
+    if K.image_data_format() == "channels_first":
         x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
         x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
         input_shape = (1, img_rows, img_cols)
@@ -158,8 +160,8 @@ def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
         input_shape = (img_rows, img_cols, 1)
 
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
+    x_train = x_train.astype("float32")
+    x_test = x_test.astype("float32")
     x_train /= 255
     x_test /= 255
 
@@ -168,21 +170,21 @@ def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(32, kernel_size=(3, 3), activation="relu", input_shape=input_shape))
+    model.add(Conv2D(64, (3, 3), activation="relu"))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
-    model.add(Dense(32, activation='relu')) # 128
+    model.add(Dense(32, activation="relu"))  # 128
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
-    model.add(Activation('softmax'))
+    model.add(Activation("softmax"))
 
-    model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                  optimizer=tf.keras.optimizers.legacy.Adadelta(),
-                  metrics=['accuracy'])
+    model.compile(
+        loss=tf.keras.losses.categorical_crossentropy,
+        optimizer=tf.keras.optimizers.legacy.Adadelta(),
+        metrics=["accuracy"],
+    )
 
     model.fit(
         x_train[:1000, :],
@@ -190,7 +192,7 @@ def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
         batch_size=batch_size,
         epochs=epochs,
         verbose=1,
-        validation_data=(x_test[:1000, :], y_test[:1000, :])
+        validation_data=(x_test[:1000, :], y_test[:1000, :]),
     )
 
     # explain by passing the tensorflow inputs and outputs
@@ -208,7 +210,7 @@ def test_tf_keras_mnist_cnn_tf215_and_lower(random_seed):
 
 
 def test_tf_multi_inputs_multi_outputs():
-    tf = pytest.importorskip('tensorflow')
+    tf = pytest.importorskip("tensorflow")
     input1 = tf.keras.layers.Input(shape=(3,))
     input2 = tf.keras.layers.Input(shape=(4,))
 
@@ -216,10 +218,10 @@ def test_tf_multi_inputs_multi_outputs():
     concatenated = tf.keras.layers.concatenate([input1, input2])
 
     # Dense layers
-    x = tf.keras.layers.Dense(16, activation='relu')(concatenated)
+    x = tf.keras.layers.Dense(16, activation="relu")(concatenated)
 
     # Output layer
-    output = tf.keras.layers.Dense(3, activation='softmax')(x)
+    output = tf.keras.layers.Dense(3, activation="softmax")(x)
     model = tf.keras.models.Model(inputs=[input1, input2], outputs=output)
     batch_size = 32
     # Generate random input data for input1 with shape (batch_size, 3)
@@ -234,19 +236,17 @@ def test_tf_multi_inputs_multi_outputs():
     np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
 
 
-
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch"""
     # FIXME: this test should ideally pass with any random seed. See #2960
     random_seed = 0
 
-    torch = pytest.importorskip('torch')
+    torch = pytest.importorskip("torch")
     torch.manual_seed(random_seed)
     rs = np.random.RandomState(random_seed)
 
     from torch import nn
     from torch.nn import functional as F
-
 
     batch_size = 128
 
@@ -287,7 +287,6 @@ def test_pytorch_mnist_cnn():
         pytest.skip()
 
     def run_test(train_loader, test_loader, interim):
-
         class Net(nn.Module):
             """A test model."""
 
@@ -353,15 +352,15 @@ def test_pytorch_mnist_cnn():
             sums = shap_values.sum(axis=(1, 2, 3))
             np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
-    print('Running test from interim layer')
+    print("Running test from interim layer")
     run_test(train_loader, test_loader, True)
-    print('Running test on whole model')
+    print("Running test on whole model")
     run_test(train_loader, test_loader, False)
 
 
 def test_pytorch_multiple_inputs(random_seed):
     """Test multi-input scenarios."""
-    torch = pytest.importorskip('torch')
+    torch = pytest.importorskip("torch")
     from torch import nn
 
     torch.manual_seed(random_seed)
@@ -399,7 +398,7 @@ def test_pytorch_multiple_inputs(random_seed):
 
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
     """Test multi-input scenarios."""
-    torch = pytest.importorskip('torch')
+    torch = pytest.importorskip("torch")
     from torch import nn
 
     torch.manual_seed(random_seed)
@@ -439,7 +438,7 @@ def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
 @pytest.mark.parametrize("input_type", ["numpy", "dataframe"])
 def test_tf_input(random_seed, input_type):
     """Test tabular (batch_size, features) pd.DataFrame and numpy input."""
-    tf = pytest.importorskip('tensorflow')
+    tf = pytest.importorskip("tensorflow")
     tf.random.set_seed(random_seed)
 
     batch_size = 10
@@ -450,11 +449,13 @@ def test_tf_input(random_seed, input_type):
     if input_type == "dataframe":
         background = pd.DataFrame(background, columns=feature_names)
 
-    model = tf.keras.Sequential([
-        tf.keras.layers.Dense(10, input_shape=(num_features,), activation='relu'),
-        tf.keras.layers.Dense(1, activation='linear')
-    ])
-    model.compile(optimizer='adam', loss='mse')
+    model = tf.keras.Sequential(
+        [
+            tf.keras.layers.Dense(10, input_shape=(num_features,), activation="relu"),
+            tf.keras.layers.Dense(1, activation="linear"),
+        ]
+    )
+    model.compile(optimizer="adam", loss="mse")
 
     explainer = shap.GradientExplainer(model, background)
     example = np.ones((1, num_features))
@@ -463,4 +464,6 @@ def test_tf_input(random_seed, input_type):
     diff = (model.predict(example) - model.predict(background)).mean(0)
     sums = np.array([values.sum() for values in explanation.values])
     d = np.abs(sums - diff).sum()
-    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (d / np.abs(diff).sum())
+    assert d / (np.abs(diff).sum() + 0.01) < 0.1, "Sum of SHAP values does not match difference! %f" % (
+        d / np.abs(diff).sum()
+    )

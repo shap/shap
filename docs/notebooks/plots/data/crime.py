@@ -22,5 +22,5 @@ shap_values = explainer.shap_values(X_test.iloc[[idx]], y_test[idx])
 
 # Dump to pickle
 o = (explainer.expected_value, shap_values, X_test.iloc[0])
-with open('./crime.pickle', 'wb') as fl:
+with open("./crime.pickle", "wb") as fl:
     pickle.dump(o, fl)

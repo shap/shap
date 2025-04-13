@@ -9,13 +9,10 @@ from ._action import Action
 class ActionOptimizer:
     def __init__(self, model, actions):
         self.model = model
-        warnings.warn(
-            "Note that ActionOptimizer is still in an alpha state and is subjust to API changes."
-        )
+        warnings.warn("Note that ActionOptimizer is still in an alpha state and is subjust to API changes.")
         # actions go into mutually exclusive groups
         self.action_groups = []
         for group in actions:
-
             if issubclass(type(group), Action):
                 group._group_index = len(self.action_groups)
                 group._grouped_index = 0
@@ -27,12 +24,9 @@ class ActionOptimizer:
                     v._grouped_index = i
                 self.action_groups.append(group)
             else:
-                raise InvalidAction(
-                    "A passed action was not an Action or list of actions!"
-                )
+                raise InvalidAction("A passed action was not an Action or list of actions!")
 
     def __call__(self, *args, max_evals=10000):
-
         # init our queue with all the least costly actions
         q = queue.PriorityQueue()
         for i in range(len(self.action_groups)):
@@ -41,7 +35,6 @@ class ActionOptimizer:
 
         nevals = 0
         while not q.empty():
-
             # see if we have exceeded our runtime budget
             nevals += 1
             if nevals > max_evals:

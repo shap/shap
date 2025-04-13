@@ -18,8 +18,8 @@ class ShowProgress:
 
     def __next__(self):
         if self.pbar is None and time.time() - self.start_time > self.start_delay:
-           self.pbar = tqdm.tqdm(total=self.total, initial=self.unshown_count, desc=self.desc, disable=self.silent)
-           self.pbar.start_t = self.start_time
+            self.pbar = tqdm.tqdm(total=self.total, initial=self.unshown_count, desc=self.desc, disable=self.silent)
+            self.pbar.start_t = self.start_time
         if self.pbar is not None:
             self.pbar.update(1)
         else:
@@ -33,6 +33,7 @@ class ShowProgress:
 
     def __iter__(self):
         return self
+
 
 def show_progress(iterable, total=None, desc=None, silent=False, start_delay=10):
     return ShowProgress(iterable, total, desc, silent, start_delay)

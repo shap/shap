@@ -13,7 +13,7 @@ def test_raw_function():
         return np.sum(X, 1)
 
     def custom_masker(mask, x):
-        return (x * mask).reshape(1, len(x)) # just zero out the features we are masking
+        return (x * mask).reshape(1, len(x))  # just zero out the features we are masking
 
     explainer = shap.Explainer(test, custom_masker)
     shap_values = explainer(X[:100])

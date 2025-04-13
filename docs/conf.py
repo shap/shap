@@ -55,7 +55,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
     "numpydoc",
-    "nbsphinx",     # Allows parsing Jupyter notebooks
+    "nbsphinx",  # Allows parsing Jupyter notebooks
     "myst_parser",  # Allows parsing Markdown, such as CONTRIBUTING.md
     "sphinx_github_changelog",
 ]
@@ -192,12 +192,14 @@ todo_include_todos = False
 
 # Make available a URL that points to the latest unreleased changes
 
+
 def get_latest_tag() -> str:
     """Query GitHub API to get the most recent git tag"""
     url = "https://api.github.com/repos/shap/shap/releases/latest"
     response = requests.get(url)
     response.raise_for_status()
-    return response.json()['tag_name']
+    return response.json()["tag_name"]
+
 
 _latest_tag = get_latest_tag()
 _url = f"https://github.com/shap/shap/compare/{_latest_tag}...master"
@@ -445,6 +447,7 @@ texinfo_documents = [
 
 def setup(app):
     import shap  # noqa: F401
+
     app.connect("build-finished", build_finished)
 
 

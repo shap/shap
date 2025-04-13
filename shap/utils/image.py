@@ -21,8 +21,11 @@ def is_empty(path):
             print("'test_images' folder is empty. Please place images to be tested in this folder.")
     else:
         empty = True
-        print("There is no 'test_images' folder under current directory. Please create one and place images to be tested there.")
+        print(
+            "There is no 'test_images' folder under current directory. Please create one and place images to be tested there."
+        )
     return empty
+
 
 def make_dir(path):
     """Function to create a new directory with given path or empty if it already exists."""
@@ -37,7 +40,8 @@ def make_dir(path):
         if os.listdir(path):
             # if exists, empty directory
             for file in os.listdir(path):
-                os.remove(path+file)
+                os.remove(path + file)
+
 
 def add_sample_images(path):
     """Function to add sample images from imagenet50 SHAP data in the given folder."""
@@ -50,11 +54,13 @@ def add_sample_images(path):
             save_image(image, path_to_image)
             counter += 1
 
+
 def load_image(path_to_image):
     """Function to load image at given path and return numpy array of RGB float values."""
     image = cv2.imread(path_to_image)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    return np.array(image).astype('float')
+    return np.array(image).astype("float")
+
 
 def check_valid_image(path_to_image):
     """Function to check if a file has valid image extensions and return True if it does.
@@ -64,10 +70,11 @@ def check_valid_image(path_to_image):
     if path_to_image.endswith(valid_extensions):
         return True
 
+
 def save_image(array, path_to_image):
     """Function to save image(RGB values array) at given path (filename and location)."""
     # saving array of RGB values as an image
-    image = np.array(array)/255.0
+    image = np.array(array) / 255.0
     plt.imsave(path_to_image, image)
 
 
@@ -89,36 +96,36 @@ def resize_image(path_to_image, reshaped_dir):
     # checking if either of (pixel_size, pixel_size) dimension is greater than 500.
     reshaped_path = None
     _, tail = os.path.split(path_to_image)
-    file_name = tail.split('.')[0]
+    file_name = tail.split(".")[0]
     max_pixels = 500
     reshape = True
 
     if image.shape[0] == image.shape[1] and image.shape[0] > 500:
         new_dim = (max_pixels, max_pixels)
-    elif image.shape[0] > image.shape[1] and  image.shape[0] > 500:
-        new_dim = (max_pixels, int(image.shape[1]*max_pixels/image.shape[0]))
+    elif image.shape[0] > image.shape[1] and image.shape[0] > 500:
+        new_dim = (max_pixels, int(image.shape[1] * max_pixels / image.shape[0]))
     elif image.shape[1] > image.shape[0] and image.shape[1] > 500:
-        new_dim = (int(image.shape[0]*max_pixels/image.shape[1]), max_pixels)
+        new_dim = (int(image.shape[0] * max_pixels / image.shape[1]), max_pixels)
     else:
         reshape = False
 
     # reshape image
     if reshape:
         # flipping axis for cv2 because cv2 uses width x height while numpy uses height x width
-        image = cv2.resize(image, dsize = (new_dim[1], new_dim[0]))
+        image = cv2.resize(image, dsize=(new_dim[1], new_dim[0]))
         reshaped_path = os.path.join(reshaped_dir, file_name + ".png")
         print("Reshaped image size:", image.shape)
         save_image(image, reshaped_path)
-        image = np.array(image).astype('float')
+        image = np.array(image).astype("float")
 
     return image, reshaped_path
 
 
-def display_grid_plot(list_of_captions, list_of_images, max_columns=4, figsize=(20,20)):
+def display_grid_plot(list_of_captions, list_of_images, max_columns=4, figsize=(20, 20)):
     """Function to display grid of images and their titles/captions."""
     # load list of images
     masked_images = []
-    for filename in  list_of_images:
+    for filename in list_of_images:
         image = load_image(filename)
         masked_images.append(image.astype(int))
 
@@ -128,11 +135,11 @@ def display_grid_plot(list_of_captions, list_of_images, max_columns=4, figsize=(
     for i in range(len(masked_images)):
         column += 1
         #  check for end of column and create a new figure
-        if column == max_columns+1:
+        if column == max_columns + 1:
             fig = plt.figure(figsize=figsize)
             column = 1
         fig.add_subplot(1, max_columns, column)
         plt.imshow(masked_images[i])
-        plt.axis('off')
+        plt.axis("off")
         if len(list_of_captions) >= len(masked_images):
-            plt.title("\n".join(wrap(str(list_of_captions[i]), width = 40)))
+            plt.title("\n".join(wrap(str(list_of_captions[i]), width=40)))

@@ -8,7 +8,9 @@ import pytest
 import shap
 
 
-@pytest.mark.skip(reason="fails on travis and I don't know why yet...Ryan might need to take a look since this API will change soon anyway")
+@pytest.mark.skip(
+    reason="fails on travis and I don't know why yet...Ryan might need to take a look since this API will change soon anyway"
+)
 def test_fixed_composite_masker_call():
     """Test to make sure the FixedComposite masker works when masking everything."""
     AutoTokenizer = pytest.importorskip("transformers").AutoTokenizer
@@ -21,10 +23,14 @@ def test_fixed_composite_masker_call():
 
     fixed_composite_masker = shap.maskers.FixedComposite(masker)
 
-    expected_fixed_composite_masked_output = (np.array(['']), np.array(["This is a test statement for fixed composite masker"]))
+    expected_fixed_composite_masked_output = (
+        np.array([""]),
+        np.array(["This is a test statement for fixed composite masker"]),
+    )
     fixed_composite_masked_output = fixed_composite_masker(mask, *args)
 
     assert fixed_composite_masked_output == expected_fixed_composite_masked_output
+
 
 def test_serialization_fixedcomposite_masker():
     """Make sure fixedcomposite serialization works."""
@@ -35,7 +41,6 @@ def test_serialization_fixedcomposite_masker():
     original_masker = shap.maskers.FixedComposite(underlying_masker)
 
     with tempfile.TemporaryFile() as temp_serialization_file:
-
         original_masker.save(temp_serialization_file)
 
         temp_serialization_file.seek(0)

@@ -4,8 +4,18 @@ import numpy as np
 from . import colors
 
 
-def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, xmin=None, xmax=None,
-                     max_display=None, sort=True, show=True, ax=None):
+def group_difference(
+    shap_values,
+    group_mask,
+    feature_names=None,
+    xlabel=None,
+    xmin=None,
+    xmax=None,
+    max_display=None,
+    sort=True,
+    show=True,
+    ax=None,
+):
     """This plots the difference in mean SHAP values between two groups.
 
     It is useful to decompose many group level metrics about the model output among the
@@ -59,23 +69,20 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
         # Draw the figure if no ax has been provided
         figsize = (6.4, 0.2 + 0.9 * len(inds))
         _, ax = pl.subplots(figsize=figsize)
-    ticks = range(len(inds)-1, -1, -1)
+    ticks = range(len(inds) - 1, -1, -1)
     ax.axvline(0, color="#999999", linewidth=0.5)
-    ax.barh(
-        ticks, diff[inds], color=colors.blue_rgb,
-        capsize=3, xerr=np.abs(xerr[:,inds])
-    )
+    ax.barh(ticks, diff[inds], color=colors.blue_rgb, capsize=3, xerr=np.abs(xerr[:, inds]))
 
     for i in range(len(inds)):
         ax.axhline(y=i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('none')
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("none")
     ax.set_yticks(ticks)
     ax.set_yticklabels([feature_names[i] for i in inds], fontsize=13)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["left"].set_visible(False)
     ax.tick_params(labelsize=11)
     if xlabel is None:
         xlabel = "Group SHAP value difference"

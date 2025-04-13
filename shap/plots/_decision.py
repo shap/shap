@@ -82,11 +82,7 @@ def __decision_plot_matplotlib(
     lines = []
     for i in range(cumsum.shape[0]):
         o = pl.plot(
-            cumsum[i, :],
-            y_pos,
-            color=m.to_rgba(cumsum[i, -1], alpha),
-            linewidth=linewidth[i],
-            linestyle=linestyle[i]
+            cumsum[i, :], y_pos, color=m.to_rgba(cumsum[i, -1], alpha), linewidth=linewidth[i], linestyle=linestyle[i]
         )
         lines.append(o[0])
 
@@ -107,12 +103,19 @@ def __decision_plot_matplotlib(
                 v = f"({str(v).strip()})"
             else:
                 v = "({})".format(f"{v:,.3f}".rstrip("0").rstrip("."))
-            t = ax.text(np.max(cumsum[0, i:(i + 2)]), y_pos[i], "  " + v, fontsize=fontsize,
-                    horizontalalignment="left", verticalalignment="center_baseline", color="#666666")
+            t = ax.text(
+                np.max(cumsum[0, i : (i + 2)]),
+                y_pos[i],
+                "  " + v,
+                fontsize=fontsize,
+                horizontalalignment="left",
+                verticalalignment="center_baseline",
+                color="#666666",
+            )
             bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
             if bb.xmax > xlim[1]:
                 t.set_text(v + "  ")
-                t.set_x(np.min(cumsum[0, i:(i + 2)]))
+                t.set_x(np.min(cumsum[0, i : (i + 2)]))
                 t.set_horizontalalignment("right")
                 bb = inverter.transform_bbox(t.get_window_extent(renderer=renderer))
                 if bb.xmin < xlim[0]:
@@ -354,8 +357,9 @@ def decision(
         base_value = base_value[0]
 
     if isinstance(base_value, list) or isinstance(shap_values, list):
-        raise TypeError("Looks like multi output. Try base_value[i] and shap_values[i], "
-                        "or use shap.multioutput_decision_plot().")
+        raise TypeError(
+            "Looks like multi output. Try base_value[i] and shap_values[i], or use shap.multioutput_decision_plot()."
+        )
 
     # validate shap_values
     if not isinstance(shap_values, np.ndarray):
@@ -393,7 +397,7 @@ def decision(
 
     # validate/generate feature_names. at this point, feature_names does not include interactions.
     if feature_names is None:
-        feature_names = [labels['FEATURE'] % str(i) for i in range(feature_count)]
+        feature_names = [labels["FEATURE"] % str(i) for i in range(feature_count)]
     elif len(feature_names) != feature_count:
         raise ValueError("The feature_names arg must include all features represented in shap_values.")
     elif not isinstance(feature_names, (list, np.ndarray)):
@@ -430,12 +434,16 @@ def decision(
     elif feature_order == "hclust":
         feature_idx = np.array(hclust_ordering(shap_values.transpose()))
     else:
-        raise ValueError("The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
-                         "of feature indices.")
+        raise ValueError(
+            "The feature_order arg requires 'importance', 'hclust', 'none', or an integer list/array "
+            "of feature indices."
+        )
 
-    if (feature_idx.shape != (feature_count, )) or (not np.issubdtype(feature_idx.dtype, np.integer)):
-        raise ValueError("A list or array has been specified for the feature_order arg. The length must match the "
-                         "feature count and the data type must be integer.")
+    if (feature_idx.shape != (feature_count,)) or (not np.issubdtype(feature_idx.dtype, np.integer)):
+        raise ValueError(
+            "A list or array has been specified for the feature_order arg. The length must match the "
+            "feature count and the data type must be integer."
+        )
 
     # validate and convert feature_display_range to a slice. prevents out of range errors later.
     if feature_display_range is None:
@@ -452,7 +460,7 @@ def decision(
         feature_display_range = slice(
             feature_display_range.start if feature_display_range.start >= 0 else a,  # should never happen, but...
             feature_display_range.stop if feature_display_range.stop >= 0 else a,
-            feature_display_range.step
+            feature_display_range.step,
         )
 
     # apply new_base_value
@@ -474,29 +482,35 @@ def decision(
     if a[0] == 0:
         cumsum = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
         cumsum[:, 0] = base_value
-        cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0:a[1]], axis=1)
+        cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0 : a[1]], axis=1)
     else:
-        cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (a[0] - 1):a[1]]
+        cumsum = base_value + np.nancumsum(shap_values, axis=1)[:, (a[0] - 1) : a[1]]
 
     # Select and sort feature names and features according to the range selected above
     feature_names = np.array(feature_names)
-    feature_names_display = feature_names[feature_idx[a[0]:a[1]]].tolist()
+    feature_names_display = feature_names[feature_idx[a[0] : a[1]]].tolist()
     feature_names = feature_names[feature_idx].tolist()
-    features_display = None if features is None else features[:, feature_idx[a[0]:a[1]]]
+    features_display = None if features is None else features[:, feature_idx[a[0] : a[1]]]
 
     # throw large data errors
     if not ignore_warnings:
         if observation_count > 2000:
-            raise RuntimeError(f"Plotting {observation_count} observations may be slow. Consider subsampling or set "
-                               "ignore_warnings=True to ignore this message.")
+            raise RuntimeError(
+                f"Plotting {observation_count} observations may be slow. Consider subsampling or set "
+                "ignore_warnings=True to ignore this message."
+            )
         if feature_display_count > 200:
-            raise RuntimeError(f"Plotting {feature_display_count} features may create a very large plot. Set "
-                               "ignore_warnings=True to ignore this "
-                               "message.")
+            raise RuntimeError(
+                f"Plotting {feature_display_count} features may create a very large plot. Set "
+                "ignore_warnings=True to ignore this "
+                "message."
+            )
         if feature_count * observation_count > 100000000:
-            raise RuntimeError(f"Processing SHAP values for {feature_count} features over {observation_count} observations may be slow. Set "
-                               "ignore_warnings=True to ignore this "
-                               "message.")
+            raise RuntimeError(
+                f"Processing SHAP values for {feature_count} features over {observation_count} observations may be slow. Set "
+                "ignore_warnings=True to ignore this "
+                "message."
+            )
 
     # convert values based on link and update x-axis extents
     create_xlim = xlim is None

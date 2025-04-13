@@ -4,6 +4,7 @@ Things that are not implemented:
 - Optimized arrays with type & count
 - nested arrays, so arrays in arrays are not supported, objects in arrays are supported
 """
+
 import struct
 from typing import Any
 
@@ -11,26 +12,27 @@ import numpy as np
 
 
 def b(s):
-    return isinstance(s, str) and s.encode('latin1') or s
+    return isinstance(s, str) and s.encode("latin1") or s
 
-NOOP = b('N')
-NULL = b('Z')
-FALSE = b('F')
-TRUE = b('T')
-INT8 = b('i')
-UINT8 = b('U')
-INT16 = b('I')
-INT32 = b('l')
-INT64 = b('L')
-FLOAT32 = b('d')
-FLOAT64 = b('D')
-CHAR = b('C')
-STRING = b('S')
-HIDEF = b('H')
-ARRAY_OPEN = b('[')
-ARRAY_CLOSE = b(']')
-OBJECT_OPEN = b('{')
-OBJECT_CLOSE = b('}')
+
+NOOP = b("N")
+NULL = b("Z")
+FALSE = b("F")
+TRUE = b("T")
+INT8 = b("i")
+UINT8 = b("U")
+INT16 = b("I")
+INT32 = b("l")
+INT64 = b("L")
+FLOAT32 = b("d")
+FLOAT64 = b("D")
+CHAR = b("C")
+STRING = b("S")
+HIDEF = b("H")
+ARRAY_OPEN = b("[")
+ARRAY_CLOSE = b("]")
+OBJECT_OPEN = b("{")
+OBJECT_CLOSE = b("}")
 
 INTEGERS = [INT8, UINT8, INT16, INT32, INT64]
 FLOATS = [FLOAT32, FLOAT64]
@@ -48,14 +50,14 @@ type_sizes = {
 }
 
 struct_mapping = {
-    INT8: 'b',
-    UINT8: 'B',
-    INT16: 'h',
-    INT32: 'i',
-    INT64: 'q',
-    FLOAT32: 'f',
-    FLOAT64: 'd',
-    CHAR: 's',
+    INT8: "b",
+    UINT8: "B",
+    INT16: "h",
+    INT32: "i",
+    INT64: "q",
+    FLOAT32: "f",
+    FLOAT64: "d",
+    CHAR: "s",
 }
 
 numpy_type_mapping = {
@@ -83,6 +85,7 @@ arrays = [ARRAY_CLOSE, ARRAY_OPEN]
 
 # AND
 
+
 # [[][$][d][#][i][5] // An array of 5 float32 elements.
 #     [29.97] // Value type is known, so type markers are omitted.
 #     [31.13]
@@ -97,7 +100,7 @@ def _decode_array_optimized(fp):
         array_length_indicator = fp.read(1)
         array_length_indicator_type = struct_mapping[array_length_indicator]
         array_length = type_sizes[array_length_indicator]
-        array_length = struct.unpack(f'>{array_length_indicator_type}', fp.read(array_length))[0]
+        array_length = struct.unpack(f">{array_length_indicator_type}", fp.read(array_length))[0]
 
         array = []
         for _ in range(array_length):
@@ -114,13 +117,14 @@ def _decode_array_optimized(fp):
         array_type_length = type_sizes[array_type_byte]
         array_type_prefix = struct_mapping[array_type_byte]
         array_length_bytes = fp.read(array_type_length)
-        array_length = struct.unpack(f'>{array_type_prefix}', array_length_bytes)[0]
+        array_length = struct.unpack(f">{array_type_prefix}", array_length_bytes)[0]
         if array_length == 0:
             return list()
         buffer = fp.read(array_length * value_type_length)
-        return list(struct.unpack('>' + f'{struct_mapping[value_type_byte]}' * array_length, buffer))
+        return list(struct.unpack(">" + f"{struct_mapping[value_type_byte]}" * array_length, buffer))
     else:
         raise ValueError("Expected optimized array but got received bytes of unoptimized array.")
+
 
 def _decode_object(tag, fp):
     result_dict: dict[str, Any] = dict()
@@ -135,17 +139,18 @@ def _decode_object(tag, fp):
             if key_type == OBJECT_OPEN:
                 return _decode_object(key_type, fp)
             key, value = _decode_simple_key_value_pair(fp, key_type)
-            if key == '}':
+            if key == "}":
                 return result_dict
             result_dict[key] = value
             key_type = fp.read(1)
     return result_dict
 
+
 def __decode_element(tag, fp):
     if (element_type_length := type_sizes.get(tag)) is not None:
         value_bytes = fp.read(element_type_length)
         value_struct_prefix = struct_mapping[tag]
-        return struct.unpack(f'>{value_struct_prefix}', value_bytes)[0]
+        return struct.unpack(f">{value_struct_prefix}", value_bytes)[0]
     elif tag == STRING:
         string_length_type = fp.read(1)
         length = __decode_element(string_length_type, fp)
@@ -155,6 +160,7 @@ def __decode_element(tag, fp):
         return _decode_object(tag, fp)
     else:
         raise ValueError(f"Expected type size for {tag} but got {element_type_length}")
+
 
 # Can decode
 # [i][3][lat][d][29.976]
@@ -182,18 +188,19 @@ def _decode_simple_key_value_pair(fp, key_type):
             return key, value
         elif value_type_byte == ARRAY_CLOSE:
             return key, []
-        elif value_type_byte == b'' and key == '}':
+        elif value_type_byte == b"" and key == "}":
             return key, None
         else:
             raise ValueError(f"Unmatched value type for {value_type_byte}.")
     else:
         raise ValueError(f"Expected type size for {key_type} but could not find any.")
 
+
 def decode_ubjson_buffer(fp):
     fp.read(1)
     complete_dict = dict()
     key_type = fp.read(1)
-    while key_type != b'' and key_type != OBJECT_CLOSE:
+    while key_type != b"" and key_type != OBJECT_CLOSE:
         key, value = _decode_simple_key_value_pair(fp, key_type)
         complete_dict[key] = value
         key_type = fp.read(1)
