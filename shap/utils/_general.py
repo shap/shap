@@ -1,24 +1,18 @@
-from __future__ import annotations
-
 import copy
 import os
 import re
 import sys
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import scipy.special
 import sklearn
 
-if TYPE_CHECKING:
-    from ._types import _ArrayT
-
-import_errors: dict[str, tuple[str, Exception]] = {}
+import_errors = {}
 
 
-def assert_import(package_name: str) -> None:
+def assert_import(package_name):
     global import_errors
     if package_name in import_errors:
         msg, e = import_errors[package_name]
@@ -26,12 +20,12 @@ def assert_import(package_name: str) -> None:
         raise e
 
 
-def record_import_error(package_name: str, msg: str, e: ImportError) -> None:
+def record_import_error(package_name, msg, e):
     global import_errors
     import_errors[package_name] = (msg, e)
 
 
-def shapley_coefficients(n: int) -> np.ndarray:
+def shapley_coefficients(n):
     out = np.zeros(n)
     for i in range(n):
         out[i] = 1 / (n * scipy.special.comb(n - 1, i))
@@ -167,7 +161,7 @@ def encode_array_if_needed(arr, dtype=np.float64):
         return encoded_array
 
 
-def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
+def sample(X, nsamples=100, random_state=0):
     """Performs sampling without replacement of the input data ``X``.
 
     This is a simple wrapper over scikit-learn's ``shuffle`` function.
@@ -204,7 +198,7 @@ def sample(X: _ArrayT, nsamples: int = 100, random_state: int = 0) -> _ArrayT:
     return sklearn.utils.shuffle(X, n_samples=nsamples, random_state=random_state)
 
 
-def safe_isinstance(obj: Any, class_path_str: str | list[str]) -> bool:
+def safe_isinstance(obj, class_path_str):
     """Acts as a safe version of isinstance without having to explicitly
     import packages which may not exist in the users environment.
 
@@ -225,7 +219,7 @@ def safe_isinstance(obj: Any, class_path_str: str | list[str]) -> bool:
     """
     if isinstance(class_path_str, str):
         class_path_strs = [class_path_str]
-    elif isinstance(class_path_str, (list, tuple)):
+    elif isinstance(class_path_str, list) or isinstance(class_path_str, tuple):
         class_path_strs = class_path_str
     else:
         class_path_strs = [""]
@@ -280,8 +274,8 @@ def ordinal_str(n):
 class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
-    def __init__(self, root_name: str = "") -> None:
-        self._ops: list[list[Any]] = []
+    def __init__(self, root_name=""):
+        self._ops = []
         self._root_name = root_name
 
     def apply(self, obj):
@@ -294,7 +288,7 @@ class OpChain:
                 obj = getattr(obj, op)
         return obj
 
-    def __call__(self, *args, **kwargs) -> OpChain:
+    def __call__(self, *args, **kwargs):
         """Update the args for the previous operation."""
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
@@ -308,10 +302,10 @@ class OpChain:
         new_self._ops.append(["__getitem__", [item], {}])
         return new_self
 
-    def __getattr__(self, name: str) -> OpChain:
+    def __getattr__(self, name):
         # Don't chain special attributes
         if name.startswith("__") and name.endswith("__"):
-            return None  # type: ignore
+            return None
         new_self = OpChain(self._root_name)
         new_self._ops = copy.copy(self._ops)
         new_self._ops.append([name, None, None])
@@ -319,16 +313,17 @@ class OpChain:
 
     def __repr__(self):
         out = self._root_name
-        for op in self._ops:
-            op_name, args, kwargs = op
-            args = args or tuple()
-            kwargs = kwargs or {}
-
-            out += f".{op_name}"
-            has_args = len(args) > 0
-            has_kwargs = len(kwargs) > 0
-            if has_args or has_kwargs:
-                out += "(" + ", ".join([repr(v) for v in args] + [f"{k}={v!r}" for k, v in kwargs.items()]) + ")"
+        for o in self._ops:
+            op, args, kwargs = o
+            out += "."
+            out += op
+            if (args is not None and len(args) > 0) or (kwargs is not None and len(kwargs) > 0):
+                out += "("
+                if args is not None and len(args) > 0:
+                    out += ", ".join([str(v) for v in args])
+                if kwargs is not None and len(kwargs) > 0:
+                    out += ", " + ", ".join([str(k) + "=" + str(kwargs[k]) for k in kwargs.keys()])
+                out += ")"
         return out
 
 

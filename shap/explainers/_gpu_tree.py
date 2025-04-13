@@ -11,7 +11,7 @@ from ._tree import (
 )
 
 try:
-    from .. import _cext_gpu  # type: ignore
+    from .. import _cext_gpu
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
 
@@ -140,13 +140,13 @@ class GPUTreeExplainer(TreeExplainer):
             this returns a list of tensors, one for each output.
 
         """
-        if self.model.model_output != "raw":
-            raise ValueError('Only model_output = "raw" is supported for SHAP interaction values right now!')
-        if self.feature_perturbation == "interventional":
-            raise ValueError(
-                'feature_perturbation="interventional" is not yet supported for interaction values. '
-                'Use feature_perturbation="tree_path_dependent" instead.'
-            )
+        assert self.model.model_output == "raw", (
+            'Only model_output = "raw" is supported for SHAP interaction values right now!'
+        )
+        assert self.feature_perturbation != "interventional", (
+            'feature_perturbation="interventional" is not yet supported for '
+            + 'interaction values. Use feature_perturbation="tree_path_dependent" instead.'
+        )
         transform = "identity"
 
         X, y, X_missing, flat_output, tree_limit, _ = self._validate_inputs(X, y, tree_limit, False)

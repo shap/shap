@@ -3,7 +3,7 @@ import scipy.special
 
 from .._serializable import Deserializer, Serializer
 from ..utils import safe_isinstance
-from ..utils.transformers import getattr_silent
+from ..utils.transformers import MODELS_FOR_CAUSAL_LM, getattr_silent
 from ._model import Model
 
 
@@ -149,7 +149,6 @@ class TopKLM(Model):
             Computes log odds for corresponding top-k token ids.
 
         """
-        assert self.topk_token_ids is not None
 
         # pass logits through softmax, get the token corresponding score and convert back to log odds (as one vs all)
         def calc_logodds(arr):
@@ -182,7 +181,7 @@ class TopKLM(Model):
         self.tokenizer.padding_side = "right"
         return inputs
 
-    def generate_topk_token_ids(self, X) -> np.ndarray:
+    def generate_topk_token_ids(self, X):
         """Generates top-k token ids for Causal/Masked LM.
 
         Parameters
@@ -214,12 +213,7 @@ class TopKLM(Model):
             Logits corresponding to next word/masked word.
 
         """
-        if self.model_type not in ["pt", "tf"]:
-            raise NotImplementedError("Only PyTorch and TensorFlow models are supported!")
-
-        from transformers import MODEL_FOR_CAUSAL_LM_MAPPING
-
-        if type(self.inner_model) in MODEL_FOR_CAUSAL_LM_MAPPING.values():
+        if safe_isinstance(self.inner_model, MODELS_FOR_CAUSAL_LM):
             inputs = self.get_inputs(X, padding_side="left")
             if self.model_type == "pt":
                 import torch
@@ -232,8 +226,7 @@ class TopKLM(Model):
                     outputs = self.inner_model(**inputs, return_dict=True)
                 # extract only logits corresponding to target sentence ids
                 logits = outputs.logits.detach().cpu().numpy().astype("float64")[:, -1, :]
-            else:
-                assert self.model_type == "tf"
+            elif self.model_type == "tf":
                 import tensorflow as tf
 
                 inputs["position_ids"] = tf.math.cumsum(inputs["attention_mask"], axis=-1) - 1
@@ -247,8 +240,6 @@ class TopKLM(Model):
                     except RuntimeError as err:
                         print(err)
                 logits = outputs.logits.numpy().astype("float64")[:, -1, :]
-        else:
-            raise NotImplementedError(f"Model type '{type(self.inner_model)}' not supported!")
         return logits
 
     def save(self, out_file):

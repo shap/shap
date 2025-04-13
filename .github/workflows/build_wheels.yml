@@ -60,19 +60,19 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v2
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.1
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           only: ${{ matrix.only }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
-          name: bdist_files_${{ matrix.only }}
+          name: bdist_files
 
   build_sdist:
     name: Build source distribution
@@ -100,7 +100,7 @@ jobs:
           python -m pip install build
           python -m build --sdist
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: sdist_files
           path: dist/*.tar.gz
@@ -115,13 +115,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
+          name: bdist_files
           path: dist
-          pattern: bdist_files_*
-          merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: sdist_files
           path: dist
@@ -144,13 +143,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
+          name: bdist_files
           path: dist
-          pattern: bdist_files_*
-          merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: sdist_files
           path: dist

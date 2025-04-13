@@ -1,7 +1,9 @@
-from __future__ import annotations
+from typing import Union
 
 from ..._explanation import Explanation
 from .._explainer import Explainer
+from .deep_pytorch import PyTorchDeep
+from .deep_tf import TFDeep
 
 
 class DeepExplainer(Explainer):
@@ -86,20 +88,15 @@ class DeepExplainer(Explainer):
         masker = data
         super().__init__(model, masker)
 
-        self.explainer: TFDeep | PyTorchDeep
         if framework == "tensorflow":
-            from .deep_tf import TFDeep
-
             self.explainer = TFDeep(model, data, session, learning_phase_flags)
         elif framework == "pytorch":
-            from .deep_pytorch import PyTorchDeep
-
             self.explainer = PyTorchDeep(model, data)
 
         self.expected_value = self.explainer.expected_value
-        self.explainer.framework = framework  # type: ignore
+        self.explainer.framework = framework
 
-    def __call__(self, X: list | np.ndarray | pd.DataFrame | torch.tensor) -> Explanation:  # type: ignore  # noqa: F821
+    def __call__(self, X: Union[list, "np.ndarray", "pd.DataFrame", "torch.tensor"]) -> Explanation:  # noqa: F821
         """Return an explanation object for the model applied to X.
 
         Parameters
