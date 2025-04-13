@@ -1,6 +1,9 @@
 [build-system]
-requires = ["meson-python>=0.15.0", "numpy>=2.0", "packaging>20.9", "cython>=3.0.11"]
-build-backend = "mesonpy"
+# Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
+# https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9",
+            "cython>=3.0.11"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "shap"
@@ -173,6 +176,40 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.setuptools]
+packages = [
+  'shap',
+  'shap.cext',
+  'shap.explainers',
+  'shap.explainers.other',
+  'shap.explainers._deep',
+  'shap.plots',
+  'shap.plots.colors',
+  'shap.plots.resources',
+  'shap.benchmark',
+  'shap.maskers',
+  'shap.utils',
+  'shap.actions',
+  'shap.models'
+]
+
+[tool.setuptools_scm]
+version_file = "shap/_version.py"
+# Use "no-local-version" so dev releases are compatibile with PyPI
+local_scheme = "no-local-version"
+
+[tool.pytest.ini_options]
+addopts = "--mpl -m 'not xslow'"
+testpaths = ["tests"]
+filterwarnings = [
+  # Ignore warnings that are entirely from 3rd party libs outside our control
+  "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
+  "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
+]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
+
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config
 # options are ignored! So, instead of "exclude", use the "per-file-ignores"
@@ -246,27 +283,27 @@ source_pkgs = ["shap"]
 [tool.coverage.paths]
 combine = ["shap", "*/site-packages/shap"]
 
-[tool.pytest.ini_options]
-addopts = "--mpl -m 'not xslow'"
-testpaths = ["tests"]
-filterwarnings = [
-  # Ignore warnings that are entirely from 3rd party libs outside our control
-  "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
-  "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
-  "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
-  "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
-]
-markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
+[tool.cibuildwheel]
+# Restrict the set of builds to mirror the wheels available in scipy. See #3028
+# skip *-musllinux_aarch64 since numpy doesn't provid those wheels
+# skip cp38-musllinux_x86_64 since numpy never provided cp38 musllinux wheels
+#  they introduced musllinux in 1.25 when they already dropped cp38
+skip = ["pp*", "*-musllinux_aarch64", "cp38-musllinux_x86_64"]
+build-verbosity = 2
+# Change import-mode to ensure we test against installed package, not local project
+test-command = "pytest -v {project}/tests --import-mode=append"
+test-extras = ["test-core", "plots"]
+# skip tests on cp38-macosx_x86_64 because of https://github.com/catboost/catboost/issues/2371
+# skip tests on emulated architectures, as they are very slow
+# skip tests on *-macosx_arm64 , as cibuildwheel does not support tests on arm64 (yet)
+# skip tests on *-musllinux*" since llvmlite and numba do not provide musllinux wheels
+test-skip = "cp38-macosx_x86_64 *-*linux_{aarch64,ppc64le,s390x} *-macosx_arm64 *-musllinux*"
 
-[tool.meson]
-package-name = "shap"
-options = ["-Dwith_cuda=true", "-Dwith_binary=true"]
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
 
-[tool.mesonpy]
-# Distribution options
-limited-api = false
-pep621-dev-dependencies = false
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
 
-# CI-specific options
-# For wheel building
-wheel-tag-override = "py39"
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
