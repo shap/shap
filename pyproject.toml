@@ -24,7 +24,7 @@ dependencies = [
   'slicer==0.0.8',
   'numba>=0.54',
   'cloudpickle',
-  'typing-extensions==4.13.0',
+  'typing-extensions',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",
