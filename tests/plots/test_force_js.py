@@ -1,6 +1,7 @@
 """Tests for force plot using JavaScript/React rendering with Selenium."""
 
 import os
+import platform
 import tempfile
 import time
 
@@ -119,6 +120,7 @@ def capture_plot_screenshot(driver, plot, filename=None, wait_time=2):
     return Image.open(io.BytesIO(screenshot))
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Selenium force plot tests have different sizes on windows.")
 def test_force_js_visual(driver):
     """Test that force plot renders correctly."""
     # Create directory for baseline images if it doesn't exist
@@ -154,6 +156,7 @@ def test_force_js_visual(driver):
     assert diff < 10.0, f"Images differ by {diff} average pixel value"
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Selenium force plot tests have different sizes on windows.")
 def test_force_array_js_visual(driver):
     """Test that force array plot renders correctly."""
     # Create directory for baseline images if it doesn't exist
