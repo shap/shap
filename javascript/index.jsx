@@ -1,5 +1,5 @@
 import React from "react";
-import ReactDom from "react-dom";
+import * as ReactDOM from "react-dom/client";
 import {
   SimpleListVisualizer,
   AdditiveForceVisualizer,
@@ -12,5 +12,13 @@ window.SHAP = {
   AdditiveForceVisualizer,
   AdditiveForceArrayVisualizer,
   React: React,
-  ReactDom: ReactDom
+  ReactDOM: ReactDOM,
+  // Provide backward compatibility for render method
+  ReactDom: {
+    render: (element, container) => {
+      const root = ReactDOM.createRoot(container);
+      root.render(element);
+      return root;
+    }
+  }
 };
