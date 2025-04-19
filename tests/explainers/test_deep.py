@@ -450,6 +450,7 @@ def test_pytorch_custom_nested_models(torch_device):
             super().__init__()
             self.net = nn.Sequential(
                 nn.Sequential(
+                    nn.Identity(),
                     nn.Conv1d(1, 1, 1),
                     nn.ConvTranspose1d(1, 1, 1),
                 ),
