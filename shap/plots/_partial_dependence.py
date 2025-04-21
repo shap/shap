@@ -107,7 +107,7 @@ def partial_dependence(
 
         # fig, ax1 = plt.subplots(figsize)
         ax2 = ax1.twinx()
-        ax2 = typing.cast(plt.Axes, ax2)  # fix for matplotlib typing
+        ax2 = typing.cast("plt.Axes", ax2)  # fix for matplotlib typing
 
         # the histogram of the data
         if hist:

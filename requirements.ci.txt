@@ -41,6 +41,7 @@ pytest-cov==6.0.0
 pytest-mpl==0.17.0
 python-dateutil==2.9.0.post0
 pytz==2025.1
+selenium==4.31.0
 scikit-learn==1.6.1
 scipy==1.15.2
 six==1.17.0
