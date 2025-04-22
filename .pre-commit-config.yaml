@@ -1,11 +1,11 @@
 ci:
   autoupdate_schedule: monthly
 
-exclude: '.*tree_shap_paper.*|.*user_studies.*'
+exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.9.9
+  rev: v0.11.4
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
