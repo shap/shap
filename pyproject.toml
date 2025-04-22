@@ -90,6 +90,7 @@ test = [
   # See GH #3707, #3768, 3922
   "numpy<2.0",
   "causalml",
+  "selenium",  # needed to test the javascript based plots
 ]
 
 test_notebooks = [
