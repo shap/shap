@@ -1,22 +1,37 @@
 """This file contains tests for partition explainer."""
 
 import pickle
+import platform
+
+import pytest
 
 import shap
 
 from . import common
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_translation(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     common.test_additivity(shap.explainers.PartitionExplainer, model, tokenizer, data)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_translation_auto(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     common.test_additivity(shap.Explainer, model, tokenizer, data)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_translation_algorithm_arg(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     common.test_additivity(shap.Explainer, model, tokenizer, data, algorithm="partition")
@@ -32,11 +47,19 @@ def test_tabular_multi_output():
     common.test_additivity(shap.explainers.PartitionExplainer, model.predict_proba, shap.maskers.Partition(data), data)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_serialization(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     common.test_serialization(shap.explainers.PartitionExplainer, model, tokenizer, data)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_serialization_no_model_or_masker(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     common.test_serialization(
@@ -51,6 +74,10 @@ def test_serialization_no_model_or_masker(basic_translation_scenario):
     )
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_serialization_custom_model_save(basic_translation_scenario):
     model, tokenizer, data = basic_translation_scenario
     common.test_serialization(
