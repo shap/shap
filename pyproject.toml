@@ -80,8 +80,7 @@ test = [
   "transformers; python_version < '3.13'",  # TODO: pending 3.13 support
   "tf-keras; python_version < '3.13'",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin' and python_version < '3.13'",  # see GH #3524
-  "torch; sys_platform != 'darwin' and python_version < '3.13'",  # TODO: pending 3.13 support
+  "torch; python_version < '3.13'",  # TODO: pending 3.13 support
   "torchvision; python_version < '3.13'",  # TODO: pending 3.13 support
   "tensorflow; python_version < '3.13'",  # TODO: pending 3.13 support
   "sentencepiece",
