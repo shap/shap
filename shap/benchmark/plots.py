@@ -503,10 +503,7 @@ def plot_grids(dataset, model_names, out_dir=None):
             out += "</tr>\n"
             out += "</table></div></div>\n"
             out += "<table style='border-width: 1px; margin-right: 100px; margin-top: 230px;'>\n"
-        out += (
-            "<tr><td style='background: #fff'></td><td colspan='%d' style='background: #fff; font-weight: bold; text-align: center; margin-top: 10px;'>%s</td></tr>\n"
-            % (data.shape[1], model_title)
-        )
+        out += f"<tr><td style='background: #fff'></td><td colspan='{data.shape[1]}' style='background: #fff; font-weight: bold; text-align: center; margin-top: 10px;'>{model_title}</td></tr>\n"
         for i in range(data.shape[0]):
             out += "<tr>"
             #             if i == 0:
@@ -536,7 +533,7 @@ def plot_grids(dataset, model_names, out_dir=None):
                 out += "</td>\n"
             out += "</tr>\n"  #
 
-        out += "<tr><td colspan='%d' style='background: #fff'></td></tr>" % (data.shape[1] + 1)
+        out += f"<tr><td colspan='{data.shape[1] + 1}' style='background: #fff'></td></tr>"
     out += "</table>"
 
     out += "<div style='position: fixed; left: 0px; top: 0px; right: 0px; text-align: left; padding: 20px; text-align: right'>\n"

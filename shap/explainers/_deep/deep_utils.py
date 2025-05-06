@@ -4,9 +4,9 @@ import numpy as np
 def _check_additivity(explainer, model_output_values, output_phis):
     TOLERANCE = 1e-2
 
-    assert (
-        len(explainer.expected_value) == model_output_values.shape[1]
-    ), "Length of expected values and model outputs does not match."
+    assert len(explainer.expected_value) == model_output_values.shape[1], (
+        "Length of expected values and model outputs does not match."
+    )
 
     for t in range(len(explainer.expected_value)):
         if not explainer.multi_input:

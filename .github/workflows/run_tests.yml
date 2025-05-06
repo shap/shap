@@ -1,6 +1,7 @@
 name: tests
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -26,15 +27,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           - os: macos-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
@@ -58,12 +59,6 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[${{ matrix.extras }},plots]'
-
-      # See GH 3922: catboost is not compatible with Python 3.2
-      - name: Uninstall catboost if Python 3.12
-        if: matrix.python-version == '3.12'
-        run: pip uninstall -y catboost ngboost
-
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
@@ -84,7 +79,6 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
 
   test_oldest_supported_numpy:
     # Package is built with numpy 2.X, and tested against numpy 1.X.
@@ -120,5 +114,6 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[test-core]'
+          uv pip install --system --reinstall -r requirements.ci.txt
       - name: Run mypy
         run: mypy shap tests

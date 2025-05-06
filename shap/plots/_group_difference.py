@@ -1,4 +1,4 @@
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 
 from . import colors
@@ -51,7 +51,7 @@ def group_difference(
 
     # Fill in any missing feature names
     if feature_names is None:
-        feature_names = ["Feature %d" % i for i in range(shap_values.shape[1])]
+        feature_names = [f"Feature {i}" for i in range(shap_values.shape[1])]
 
     diff = shap_values[group_mask].mean(0) - shap_values[~group_mask].mean(0)
 
@@ -68,7 +68,7 @@ def group_difference(
     else:
         # Draw the figure if no ax has been provided
         figsize = (6.4, 0.2 + 0.9 * len(inds))
-        _, ax = pl.subplots(figsize=figsize)
+        _, ax = plt.subplots(figsize=figsize)
     ticks = range(len(inds) - 1, -1, -1)
     ax.axvline(0, color="#999999", linewidth=0.5)
     ax.barh(ticks, diff[inds], color=colors.blue_rgb, capsize=3, xerr=np.abs(xerr[:, inds]))
@@ -89,4 +89,4 @@ def group_difference(
     ax.set_xlabel(xlabel, fontsize=13)
     ax.set_xlim(xmin, xmax)
     if show:
-        pl.show()
+        plt.show()

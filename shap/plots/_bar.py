@@ -1,7 +1,7 @@
 import warnings
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
@@ -220,7 +220,7 @@ def bar(
                 feature_names_new.append(full_print)
             else:
                 max_ind = np.argmax(np.abs(orig_values).mean(0)[inds])
-                feature_names_new.append(feature_names[inds[max_ind]] + " + %d other features" % (len(inds) - 1))
+                feature_names_new.append(f"{feature_names[inds[max_ind]]} + {len(inds) - 1} other features")
     feature_names = feature_names_new
 
     # see how many individual (vs. grouped at the end) features we are plotting
@@ -238,13 +238,13 @@ def bar(
         else:
             yticklabels.append(feature_names[i])
     if num_features < len(values[0]):
-        yticklabels[-1] = "Sum of %d other features" % num_cut
+        yticklabels[-1] = f"Sum of {num_cut} other features"
 
     if ax is None:
-        ax = pl.gca()
+        ax = plt.gca()
         # Only modify the figure size if ax was not passed in
         # compute our figure size based on how many features we are showing
-        fig = pl.gcf()
+        fig = plt.gcf()
         row_height = 0.5
         fig.set_size_inches(8, num_features * row_height * np.sqrt(len(values)) + 1.5)
 
@@ -340,7 +340,7 @@ def bar(
         ax.set_xlim(xmin, xmax + x_buffer)
 
     # if features is None:
-    #     pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
+    #     plt.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
     # else:
     ax.set_xlabel(xlabel, fontsize=13)
 
@@ -389,7 +389,7 @@ def bar(
                         line.set_clip_on(False)
 
     if show:
-        pl.show()
+        plt.show()
     else:
         return ax
 
@@ -422,7 +422,7 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
     #
     feature_inds = feature_order[:max_display]
     y_pos = np.arange(len(feature_inds), 0, -1)
-    pl.barh(
+    plt.barh(
         y_pos,
         shap_values[feature_inds],
         0.7,
@@ -432,7 +432,7 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
             for i in range(len(y_pos))
         ],
     )
-    pl.yticks(y_pos, fontsize=13)
+    plt.yticks(y_pos, fontsize=13)
     if features is not None:
         features = list(features)
 
@@ -449,14 +449,14 @@ def bar_legacy(shap_values, features=None, feature_names=None, max_display=None,
             yticklabels.append(feature_names[i] + " = " + str(features[i]))
         else:
             yticklabels.append(feature_names[i])
-    pl.gca().set_yticklabels(yticklabels)
-    pl.gca().xaxis.set_ticks_position("bottom")
-    pl.gca().yaxis.set_ticks_position("none")
-    pl.gca().spines["right"].set_visible(False)
-    pl.gca().spines["top"].set_visible(False)
+    plt.gca().set_yticklabels(yticklabels)
+    plt.gca().xaxis.set_ticks_position("bottom")
+    plt.gca().yaxis.set_ticks_position("none")
+    plt.gca().spines["right"].set_visible(False)
+    plt.gca().spines["top"].set_visible(False)
     # pl.gca().spines['left'].set_visible(False)
 
-    pl.xlabel("SHAP value (impact on model output)")
+    plt.xlabel("SHAP value (impact on model output)")
 
     if show:
-        pl.show()
+        plt.show()
