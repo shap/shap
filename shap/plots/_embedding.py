@@ -1,4 +1,4 @@
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import sklearn
 
 from ..utils import convert_name
@@ -54,16 +54,16 @@ def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, sho
     else:
         print("Unsupported embedding method:", method)
 
-    pl.scatter(embedding_values[:, 0], embedding_values[:, 1], c=cvals, cmap=colors.red_blue, alpha=alpha, linewidth=0)
-    pl.axis("off")
-    # pl.title(feature_names[ind])
-    cb = pl.colorbar()
+    plt.scatter(embedding_values[:, 0], embedding_values[:, 1], c=cvals, cmap=colors.red_blue, alpha=alpha, linewidth=0)
+    plt.axis("off")
+    # plt.title(feature_names[ind])
+    cb = plt.colorbar()
     cb.set_label("SHAP value for\n" + fname, size=13)
     cb.outline.set_visible(False)  # type: ignore
 
-    pl.gcf().set_size_inches(7.5, 5)
-    bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    plt.gcf().set_size_inches(7.5, 5)
+    bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
     cb.ax.set_aspect((bbox.height - 0.7) * 10)
     cb.set_alpha(1)
     if show:
-        pl.show()
+        plt.show()

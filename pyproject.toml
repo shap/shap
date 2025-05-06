@@ -89,6 +89,8 @@ test = [
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy<2.0",
+  "causalml",
+  "selenium",  # needed to test the javascript based plots
 ]
 
 test_notebooks = [
@@ -171,6 +173,7 @@ module = [
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "causalml.*",
 ]
 ignore_missing_imports = true
 
@@ -197,7 +200,7 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
@@ -206,6 +209,7 @@ filterwarnings = [
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config
