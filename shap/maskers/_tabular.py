@@ -16,7 +16,7 @@ log = logging.getLogger("shap")
 class Tabular(Masker):
     """A common base class for Independent and Partition."""
 
-    def __init__(self, data, max_samples=100, clustering=None):
+    def __init__(self, data, max_samples=100, clustering=None, partition=None):
         """This masks out tabular features by integrating over the given background dataset.
 
         Parameters
@@ -58,6 +58,7 @@ class Tabular(Masker):
 
         self.data = data
         self.clustering = clustering
+        self.partition = partition
         self.max_samples = max_samples
 
         # # warn users about large background data sets
@@ -66,7 +67,21 @@ class Tabular(Masker):
         #                 "run times. Consider shap.utils.sample(data, K) to summarize the background using only K samples.")
 
         # compute the clustering of the data
-        if clustering is not None:
+        # if clustering is not None:
+        #     if isinstance(clustering, str):
+        #         self.clustering = utils.hclust(data, metric=clustering)
+        #     elif isinstance(clustering, np.ndarray):
+        #         self.clustering = clustering
+        #     else:
+        #         raise InvalidClusteringError(
+        #             "Unknown clustering given! Make sure you pass a distance metric as a string, or a clustering as a numpy.ndarray."
+        #         )
+        # else:
+        #     self.clustering = None
+
+        if clustering is not None and partition is not None:
+            raise ValueError("You cannot pass both 'clustering' and 'partition'. Please provide only one.")
+        elif clustering is not None:
             if isinstance(clustering, str):
                 self.clustering = utils.hclust(data, metric=clustering)
             elif isinstance(clustering, np.ndarray):
@@ -75,8 +90,13 @@ class Tabular(Masker):
                 raise InvalidClusteringError(
                     "Unknown clustering given! Make sure you pass a distance metric as a string, or a clustering as a numpy.ndarray."
                 )
+            self.partition = None
+        elif partition is not None:
+            self.partition = partition
+            self.clustering = None
         else:
             self.clustering = None
+            self.partition = None
 
         # self._last_mask = np.zeros(self.data.shape[1], dtype=bool)
         self._masked_data = data.copy()
@@ -173,6 +193,7 @@ class Tabular(Masker):
 
             s.save("max_samples", self.max_samples)
             s.save("clustering", self.clustering)
+            s.save("partition", self.partition)
 
     @classmethod
     def load(cls, in_file, instantiate=True):
@@ -185,6 +206,7 @@ class Tabular(Masker):
             kwargs["data"] = s.load("data")
             kwargs["max_samples"] = s.load("max_samples")
             kwargs["clustering"] = s.load("clustering")
+            kwargs["partition"] = s.load("partition")
         return kwargs
 
 
@@ -310,7 +332,7 @@ class Partition(Tabular):
             If an array, then this is assumed to be the clustering of the features.
 
         """
-        super().__init__(data, max_samples=max_samples, clustering=clustering)
+        super().__init__(data, max_samples=max_samples, clustering=clustering, partition=None)
 
 
 class Impute(Masker):  # we should inherit from Tabular once we add support for arbitrary masking
