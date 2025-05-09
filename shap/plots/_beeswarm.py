@@ -21,13 +21,7 @@ from ..utils import safe_isinstance
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
-from ._utils import (
-    convert_color,
-    convert_ordering,
-    get_sort_order,
-    merge_nodes,
-    sort_inds,
-)
+from ._utils import convert_color, convert_ordering, get_sort_order, merge_nodes, sort_inds
 
 # TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):
@@ -592,9 +586,6 @@ def summary_legacy(
                 "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
             )
             warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    # initialize the plot
-    plt.clf()
 
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
