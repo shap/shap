@@ -193,6 +193,7 @@ def test_summary_violin_regression():
     fig.set_layout_engine("tight")
     return fig
 
+
 @pytest.mark.mpl_image_compare
 def test_summary_plot_interaction():
     """Checks the summary plot with interaction effects (GH #4081)."""
@@ -210,6 +211,24 @@ def test_summary_plot_interaction():
     shap_interaction_values = shap.TreeExplainer(model).shap_interaction_values(X.iloc[:number_patients, :])
 
     shap.summary_plot(shap_interaction_values, X.iloc[:number_patients, :])
+    fig = plt.gcf()
+    fig.set_layout_engine("tight")
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_summary_plot_twice():
+    # GH 3920
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.california()
+    model = xgboost.XGBRegressor().fit(X, y)
+
+    explainer = shap.Explainer(model)
+    shapValues = explainer.shap_values(X)
+
+    shap.summary_plot(shapValues, X, show=False)
+    shap.summary_plot(shapValues, X, show=False)
     fig = plt.gcf()
     fig.set_layout_engine("tight")
     return fig
