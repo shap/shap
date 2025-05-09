@@ -192,3 +192,24 @@ def test_summary_violin_regression():
     fig = plt.gcf()
     fig.set_layout_engine("tight")
     return fig
+
+@pytest.mark.mpl_image_compare
+def test_summary_plot_interaction():
+    """Checks the summary plot with interaction effects (GH #4081)."""
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.nhanesi()
+
+    xgb_full = xgboost.DMatrix(X, label=y)
+
+    # train final model on the full data set
+    params = {"eta": 0.002, "max_depth": 3, "objective": "survival:cox", "subsample": 0.5}
+    model = xgboost.train(params, xgb_full, 100)
+
+    number_patients = 300
+    shap_interaction_values = shap.TreeExplainer(model).shap_interaction_values(X.iloc[:number_patients, :])
+
+    shap.summary_plot(shap_interaction_values, X.iloc[:number_patients, :])
+    fig = plt.gcf()
+    fig.set_layout_engine("tight")
+    return fig
