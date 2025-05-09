@@ -193,6 +193,7 @@ def test_summary_violin_regression():
     fig.set_layout_engine("tight")
     return fig
 
+
 @pytest.mark.mpl_image_compare
 def test_summary_plot_interaction():
     """Checks the summary plot with interaction effects (GH #4081)."""
