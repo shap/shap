@@ -1,3 +1,5 @@
+import platform
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -217,6 +219,7 @@ def test_summary_violin_regression():
     return fig
 
 
+@pytest.mark.skipif(platform.system() in ["Windows", "Darwin"], reason="Images not matching on MacOS and Windows.")
 @pytest.mark.mpl_image_compare
 def test_summary_plot_interaction():
     """Checks the summary plot with interaction effects (GH #4081)."""
@@ -250,7 +253,7 @@ def test_summary_plot_twice():
     X, y = shap.datasets.california()
     model = xgboost.XGBRegressor().fit(X, y)
 
-    explainer = shap.Explainer(model)
+    explainer = shap.TreeExplainer(model)
     shapValues = explainer.shap_values(X)
 
     shap.summary_plot(shapValues, X, show=False)
