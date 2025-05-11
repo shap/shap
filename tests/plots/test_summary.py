@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 import sklearn
 import sklearn.ensemble
+from numpy.testing import assert_array_equal
 
 import shap
 
@@ -84,6 +85,28 @@ def test_summary_dot_with_data():
     np.random.seed(0)
     fig = plt.figure()
     shap.summary_plot(np.random.randn(20, 5), np.random.randn(20, 5), plot_type="dot", show=False)
+    fig.set_layout_engine("tight")
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_summary_compact_dot_with_data():
+    """Check a bar chart."""
+    xgboost = pytest.importorskip("xgboost")
+    n_samples = 100
+    n_features = 5
+    n_classes = 3
+    np.random.seed(0)  # for reproducibility
+    X = np.random.randn(n_samples, n_features)
+    y = np.random.randint(0, n_classes, n_samples)
+    feature_names = [f"Feature {i + 1}" for i in range(n_features)]
+    model = xgboost.XGBClassifier(n_estimators=10, random_state=0, tree_method="exact", base_score=0.5).fit(X, y)
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer(X, interactions=True)
+
+    fig = plt.figure()
+
+    shap.summary_plot(shap_values[:, :, :, 0], X, feature_names=feature_names, plot_type="compact_dot", show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -214,3 +237,83 @@ def test_summary_plot_interaction():
     fig = plt.gcf()
     fig.set_layout_engine("tight")
     return fig
+
+
+@pytest.mark.xfail(
+    reason="Currently not supported since this needs an overhaul of the summary plot code. See #3920 for more information."
+)
+@pytest.mark.mpl_image_compare
+def test_summary_plot_twice():
+    # GH 3920
+    xgboost = pytest.importorskip("xgboost")
+
+    X, y = shap.datasets.california()
+    model = xgboost.XGBRegressor().fit(X, y)
+
+    explainer = shap.Explainer(model)
+    shapValues = explainer.shap_values(X)
+
+    shap.summary_plot(shapValues, X, show=False)
+    shap.summary_plot(shapValues, X, show=False)
+    fig = plt.gcf()
+    fig.set_layout_engine("tight")
+    return fig
+
+
+def test_summary_plot_wrong_features_shape():
+    """Checks that ValueError is raised if the features data matrix
+    has an incompatible shape with the shap_values matrix.
+    """
+
+    rs = np.random.RandomState(42)
+
+    emsg = (
+        r"The shape of the shap_values matrix does not match the shape of the provided data matrix\. "
+        r"Perhaps the extra column in the shap_values matrix is the constant offset\? Of so just pass shap_values\[:,:-1\]\."
+    )
+    with pytest.raises(ValueError, match=emsg):
+        shap.summary_plot(rs.randn(20, 5), rs.randn(20, 4), show=False)
+
+    emsg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
+    with pytest.raises(AssertionError, match=emsg):
+        shap.summary_plot(rs.randn(20, 5), rs.randn(20, 1), show=False)
+
+
+@pytest.mark.mpl_image_compare
+def test_summary_plot(explainer):
+    """Check a beeswarm chart renders correctly with shap_values as an Explanation
+    object (default settings).
+    """
+    fig = plt.figure()
+    shap_values = explainer(explainer.data)
+    shap.plots.beeswarm(shap_values, show=False)
+    plt.tight_layout()
+    return fig
+
+
+@pytest.mark.parametrize(
+    "rng",
+    [
+        np.random.default_rng(167089660),
+        17,
+        np.random.SeedSequence(entropy=60767),
+    ],
+)
+def test_summary_plot_seed_insulated(explainer, rng):
+    # ensure that it is possible for downstream
+    # projects to avoid mutating global NumPy
+    # random state
+    # see i.e., https://scientific-python.org/specs/spec-0007/
+    shap_values = explainer(explainer.data)
+    state_before = np.random.get_state()[1]  # type: ignore[index]
+    shap.summary_plot(shap_values, show=False, rng=rng)
+    state_after = np.random.get_state()[1]  # type: ignore[index]
+    assert_array_equal(state_after, state_before)
+
+
+def test_summary_plot_warning(explainer):
+    # enforce FutureWarning for usage of global random
+    # state as we prepare for SPEC 7 adoption
+    shap_values = explainer(explainer.data)
+    with pytest.warns(FutureWarning, match="NumPy global RNG"):
+        shap.summary_plot(shap_values, show=False)
