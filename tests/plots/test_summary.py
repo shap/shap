@@ -91,24 +91,19 @@ def test_summary_dot_with_data():
     return fig
 
 
+@pytest.mark.skipif(platform.system() in ["Windows", "Darwin"], reason="Images not matching on MacOS and Windows.")
 @pytest.mark.mpl_image_compare
 def test_summary_compact_dot_with_data():
     """Check a bar chart."""
-    xgboost = pytest.importorskip("xgboost")
     n_samples = 100
     n_features = 5
-    n_classes = 3
     np.random.seed(0)  # for reproducibility
     X = np.random.randn(n_samples, n_features)
-    y = np.random.randint(0, n_classes, n_samples)
     feature_names = [f"Feature {i + 1}" for i in range(n_features)]
-    model = xgboost.XGBClassifier(n_estimators=10, random_state=0, tree_method="exact", base_score=0.5).fit(X, y)
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer(X, interactions=True)
-
+    shap_values = np.random.randn(n_samples, n_features, n_features)
     fig = plt.figure()
 
-    shap.summary_plot(shap_values[:, :, :, 0], X, feature_names=feature_names, plot_type="compact_dot", show=False)
+    shap.summary_plot(shap_values, X, feature_names=feature_names, plot_type="compact_dot", show=False)
     fig.set_layout_engine("tight")
     return fig
 
@@ -219,7 +214,6 @@ def test_summary_violin_regression():
     return fig
 
 
-@pytest.mark.skipif(platform.system() in ["Windows", "Darwin"], reason="Images not matching on MacOS and Windows.")
 @pytest.mark.mpl_image_compare
 def test_summary_plot_interaction():
     """Checks the summary plot with interaction effects (GH #4081)."""
