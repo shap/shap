@@ -2,6 +2,7 @@ import platform
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
 import sklearn
 import sklearn.ensemble
@@ -218,20 +219,14 @@ def test_summary_violin_regression():
 @pytest.mark.mpl_image_compare
 def test_summary_plot_interaction():
     """Checks the summary plot with interaction effects (GH #4081)."""
-    xgboost = pytest.importorskip("xgboost")
+    n_samples = 100
+    n_features = 5
+    np.random.seed(0)  # for reproducibility
+    shap_values = np.random.randn(n_samples, n_features, n_features)
+    feature_names = [f"Feature {i + 1}" for i in range(n_features)]
+    X = pd.DataFrame(np.random.randn(n_samples, n_features), columns=feature_names)
 
-    X, y = shap.datasets.nhanesi()
-
-    xgb_full = xgboost.DMatrix(X, label=y)
-
-    # train final model on the full data set
-    params = {"eta": 0.002, "max_depth": 3, "objective": "survival:cox", "subsample": 0.5}
-    model = xgboost.train(params, xgb_full, 100)
-
-    number_patients = 300
-    shap_interaction_values = shap.TreeExplainer(model).shap_interaction_values(X.iloc[:number_patients, :])
-
-    shap.summary_plot(shap_interaction_values, X.iloc[:number_patients, :])
+    shap.summary_plot(shap_values, X)
     fig = plt.gcf()
     fig.set_layout_engine("tight")
     return fig
