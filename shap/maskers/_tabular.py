@@ -67,18 +67,6 @@ class Tabular(Masker):
         #                 "run times. Consider shap.utils.sample(data, K) to summarize the background using only K samples.")
 
         # compute the clustering of the data
-        # if clustering is not None:
-        #     if isinstance(clustering, str):
-        #         self.clustering = utils.hclust(data, metric=clustering)
-        #     elif isinstance(clustering, np.ndarray):
-        #         self.clustering = clustering
-        #     else:
-        #         raise InvalidClusteringError(
-        #             "Unknown clustering given! Make sure you pass a distance metric as a string, or a clustering as a numpy.ndarray."
-        #         )
-        # else:
-        #     self.clustering = None
-
         if clustering is not None and partition is not None:
             raise ValueError("You cannot pass both 'clustering' and 'partition'. Please provide only one.")
         elif clustering is not None:
