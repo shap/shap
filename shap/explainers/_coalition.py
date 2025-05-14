@@ -1,4 +1,4 @@
-cimport math
+import math
 from itertools import chain, combinations, product
 
 import numpy as np  # numpy base
@@ -154,6 +154,7 @@ class CoalitionExplainer(Explainer):
         # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
         # has a call function with those new default arguments
         if len(call_args) > 0:
+
             class CoalitionExplainer(self.__class__):
                 def __call__(
                     self,
@@ -241,14 +242,20 @@ class CoalitionExplainer(Explainer):
 
         # Step 1: build the hierarchy
         self.root = Node("Root")
-        _build_tree(self.partition_tree, self.root) # generate partition tree specified
-        self.combinations_list = _generate_paths_and_combinations(self.root) # generate permutations of neighbours consistent with partition tree, and related weights
-        self.masks, self.keys = _create_masks(self.root, self.masker.feature_names) # turn the premutations into valid masks for inference 
+        _build_tree(self.partition_tree, self.root)  # generate partition tree specified
+        self.combinations_list = _generate_paths_and_combinations(
+            self.root
+        )  # generate permutations of neighbours consistent with partition tree, and related weights
+        self.masks, self.keys = _create_masks(
+            self.root, self.masker.feature_names
+        )  # turn the premutations into valid masks for inference
         self.masks_dict = dict(zip(self.keys, self.masks))
-        self.mask_permutations = _create_combined_masks(self.combinations_list, self.masks_dict) # add up masks to leave nodes
+        self.mask_permutations = _create_combined_masks(
+            self.combinations_list, self.masks_dict
+        )  # add up masks to leave nodes
         self.masks_list = [mask for _, mask, _ in self.mask_permutations]
         self.unique_masks_set = set(map(tuple, self.masks_list))
-        self.unique_masks = [np.array(mask) for mask in self.unique_masks_set] # unique masks for inference
+        self.unique_masks = [np.array(mask) for mask in self.unique_masks_set]  # unique masks for inference
 
         # Step 2: Compute model results for all unique masks
         mask_results = {}
@@ -332,7 +339,9 @@ def _build_tree(d, root):
     _generate_permutations(root)
 
 
-def create_partition_hierarchy(linkage_matrix, columns): # this is a helper to turn scipy linkage matrix to partition_tree dict
+def create_partition_hierarchy(
+    linkage_matrix, columns
+):  # this is a helper to turn scipy linkage matrix to partition_tree dict
     def build_hierarchy(node, linkage_matrix, columns):
         if node < len(columns):
             return {columns[node]: columns[node]}
@@ -370,6 +379,7 @@ def _get_all_leaf_values(node):
             leaves.extend(_get_all_leaf_values(child))
     return leaves
 
+
 # generate all permutations of sibling nodes and assign it to the nodes
 def _generate_permutations(node):
     if not node.child:  # Leaf node
@@ -390,7 +400,9 @@ def _generate_permutations(node):
         child.weights = [_compute_weight(len(children_keys), len(permutation)) for permutation in child.permutations]
         # print(child.weights)
 
+
 ##########################################################
+
 
 def _create_masks(node, columns):
     masks = [np.zeros(len(columns), dtype=bool)]
