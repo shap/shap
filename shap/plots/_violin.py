@@ -3,7 +3,7 @@
 import warnings
 
 import matplotlib
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from packaging import version
@@ -147,7 +147,7 @@ def violin(
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
     if use_log_scale:
-        pl.xscale("symlog")
+        plt.xscale("symlog")
 
     if max_display is None:
         max_display = 20
@@ -161,16 +161,16 @@ def violin(
 
     row_height = 0.4
     if plot_size == "auto":
-        pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
     elif type(plot_size) in (list, tuple):
-        pl.gcf().set_size_inches(plot_size[0], plot_size[1])
+        plt.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
-        pl.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    pl.axvline(x=0, color="#999999", zorder=-1)
+        plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+    plt.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "violin":
         for pos in range(len(feature_order)):
-            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:
             global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
@@ -215,7 +215,7 @@ def violin(
                 vmin, vmax, cvals = _trim_crange(values, nan_mask)
 
                 # plot the nan values in the interaction feature as grey
-                pl.scatter(
+                plt.scatter(
                     shaps[nan_mask],
                     np.ones(shap_values[nan_mask].shape[0]) * pos,
                     color="#777777",
@@ -225,7 +225,7 @@ def violin(
                     zorder=1,
                 )
                 # plot the non-nan values colored by the trimmed feature value
-                pl.scatter(
+                plt.scatter(
                     shaps[np.invert(nan_mask)],
                     np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
                     cmap=cmap,
@@ -244,7 +244,7 @@ def violin(
                     smooth_values /= vmax - vmin
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
-                        pl.fill_between(
+                        plt.fill_between(
                             [xs[i], xs[i + 1]],
                             [pos + ds[i], pos + ds[i + 1]],
                             [pos - ds[i], pos - ds[i + 1]],
@@ -253,7 +253,7 @@ def violin(
                         )
 
         else:
-            parts = pl.violinplot(
+            parts = plt.violinplot(
                 shap_values[:, feature_order],
                 range(len(feature_order)),
                 points=200,
@@ -328,46 +328,46 @@ def violin(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
+                    plt.get_cmap(color)(i / (nbins - 1)) if color in plt.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
-                pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
-        pl.xlim(shap_min, shap_max)
+                plt.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
+        plt.xlim(shap_min, shap_max)
 
     # draw the color bar
     if (
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.colormaps)
+        and (plot_type != "layered_violin" or color in plt.colormaps)
     ):
         import matplotlib.cm as cm
 
-        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
+        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
+        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
-        # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+        # bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
         # cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
-    pl.gca().xaxis.set_ticks_position("bottom")
-    pl.gca().yaxis.set_ticks_position("none")
-    pl.gca().spines["right"].set_visible(False)
-    pl.gca().spines["top"].set_visible(False)
-    pl.gca().spines["left"].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    pl.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
-    pl.gca().tick_params("y", length=20, width=0.5, which="major")
-    pl.gca().tick_params("x", labelsize=11)
-    pl.ylim(-1, len(feature_order))
-    pl.xlabel(labels["VALUE"], fontsize=13)
+    plt.gca().xaxis.set_ticks_position("bottom")
+    plt.gca().yaxis.set_ticks_position("none")
+    plt.gca().spines["right"].set_visible(False)
+    plt.gca().spines["top"].set_visible(False)
+    plt.gca().spines["left"].set_visible(False)
+    plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
+    plt.gca().tick_params("y", length=20, width=0.5, which="major")
+    plt.gca().tick_params("x", labelsize=11)
+    plt.ylim(-1, len(feature_order))
+    plt.xlabel(labels["VALUE"], fontsize=13)
 
     if show:
-        pl.show()
+        plt.show()
 
 
 def _trim_crange(values, nan_mask):

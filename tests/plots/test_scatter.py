@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 
 import shap
@@ -96,3 +97,18 @@ def test_scatter_categorical(categorical_explanation):
     shap.plots.scatter(categorical_explanation[:, "sex"], ax=ax, show=False)
     plt.tight_layout()
     return fig
+
+
+@pytest.mark.mpl_image_compare
+@pytest.mark.parametrize("input", [np.array([[1], [1]]), np.array([[1e-10], [1e-9]]), np.array([[1]])])
+def test_scatter_plot_value_input(input):
+    """Test scatter plot with different input values. See GH #4037"""
+    explanations = shap.Explanation(
+        input,
+        data=input,
+        feature_names=["feature1"],
+    )
+
+    shap.plots.scatter(explanations, show=False)
+    plt.tight_layout()
+    return plt.gcf()

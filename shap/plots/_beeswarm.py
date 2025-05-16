@@ -6,7 +6,7 @@ import warnings
 from typing import Literal
 
 import matplotlib
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.cluster
@@ -46,7 +46,7 @@ def beeswarm(
     color=None,
     axis_color="#333333",
     alpha: float = 1.0,
-    ax: pl.Axes | None = None,
+    ax: plt.Axes | None = None,
     show: bool = True,
     log_scale: bool = False,
     color_bar: bool = True,
@@ -194,7 +194,7 @@ def beeswarm(
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
     if ax is None:
-        ax = pl.gca()
+        ax = plt.gca()
     fig = ax.get_figure()
     assert isinstance(fig, Figure)  # type narrowing for mypy
 
@@ -261,8 +261,8 @@ def beeswarm(
     #     slow = -v
     #     shigh = v
     #
-    #     pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
-    #     pl.subplot(1, max_display, 1)
+    #     plt.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
+    #     plt.subplot(1, max_display, 1)
     #     proj_values = values[:, interaction_sort_inds[0], interaction_sort_inds]
     #     proj_values[:, 1:] *= 2  # because off diag effects are split in half
     #     beeswarm(
@@ -272,13 +272,13 @@ def beeswarm(
     #         plot_size=None,
     #         max_display=max_display
     #     )
-    #     pl.xlim((slow, shigh))
-    #     pl.xlabel("")
+    #     plt.xlim((slow, shigh))
+    #     plt.xlabel("")
     #     title_length_limit = 11
-    #     pl.title(shorten_text(feature_names[interaction_sort_inds[0]], title_length_limit))
+    #     plt.title(shorten_text(feature_names[interaction_sort_inds[0]], title_length_limit))
     #     for i in range(1, min(len(interaction_sort_inds), max_display)):
     #         ind = interaction_sort_inds[i]
-    #         pl.subplot(1, max_display, i + 1)
+    #         plt.subplot(1, max_display, i + 1)
     #         proj_values = values[:, ind, interaction_sort_inds]
     #         proj_values *= 2
     #         proj_values[:, i] /= 2  # because only off diag effects are split in half
@@ -291,15 +291,15 @@ def beeswarm(
     #             plot_size=None,
     #             max_display=max_display
     #         )
-    #         pl.xlim((slow, shigh))
-    #         pl.xlabel("")
+    #         plt.xlim((slow, shigh))
+    #         plt.xlabel("")
     #         if i == min(len(interaction_sort_inds), max_display) // 2:
-    #             pl.xlabel(labels['INTERACTION_VALUE'])
-    #         pl.title(shorten_text(feature_names[ind], title_length_limit))
-    #     pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
-    #     pl.subplots_adjust(hspace=0, wspace=0.1)
+    #             plt.xlabel(labels['INTERACTION_VALUE'])
+    #         plt.title(shorten_text(feature_names[ind], title_length_limit))
+    #     plt.tight_layout(pad=0, w_pad=0, h_pad=0.0)
+    #     plt.subplots_adjust(hspace=0, wspace=0.1)
     #     if show:
-    #         pl.show()
+    #         plt.show()
     #     return
 
     # determine how many top features we will plot
@@ -484,7 +484,7 @@ def beeswarm(
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
-    #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    #         bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
     # cb.draw_all()
 
@@ -500,7 +500,7 @@ def beeswarm(
     ax.set_ylim(-1, len(feature_inds))
     ax.set_xlabel(labels["VALUE"], fontsize=13)
     if show:
-        pl.show()
+        plt.show()
     else:
         return ax
 
@@ -537,9 +537,9 @@ def summary_legacy(
     class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
-    show_values_in_legend=False,
-    use_log_scale=False,
-    rng=None,
+    show_values_in_legend: bool = False,
+    use_log_scale: bool = False,
+    rng: np.random.Generator | None = None,
 ):
     """Create a SHAP beeswarm plot, colored by feature values when they are provided.
 
@@ -592,9 +592,6 @@ def summary_legacy(
                 "Pass `rng` explicitly to opt-in to the new behaviour and silence this warning."
             )
             warnings.warn(msg, FutureWarning, stacklevel=2)
-
-    # initialize the plot
-    pl.clf()
 
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
@@ -670,7 +667,7 @@ def summary_legacy(
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
     if use_log_scale:
-        pl.xscale("symlog")
+        plt.xscale("symlog")
 
     # plotting SHAP interaction values
     if not multi_class and len(shap_values.shape) == 3:
@@ -719,8 +716,8 @@ def summary_legacy(
         slow = -v
         shigh = v
 
-        pl.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
-        pl.subplot(1, max_display, 1)
+        plt.figure(figsize=(1.5 * max_display + 1, 0.8 * max_display + 1))
+        plt.subplot(1, max_display, 1)
         proj_shap_values = shap_values[:, sort_inds[0], sort_inds]
         proj_shap_values[:, 1:] *= 2  # because off diag effects are split in half
         summary_legacy(
@@ -733,13 +730,13 @@ def summary_legacy(
             plot_size=None,
             max_display=max_display,
         )
-        pl.xlim((slow, shigh))
-        pl.xlabel("")
+        plt.xlim((slow, shigh))
+        plt.xlabel("")
         title_length_limit = 11
-        pl.title(shorten_text(feature_names[sort_inds[0]], title_length_limit))
+        plt.title(shorten_text(feature_names[sort_inds[0]], title_length_limit))
         for i in range(1, min(len(sort_inds), max_display)):
             ind = sort_inds[i]
-            pl.subplot(1, max_display, i + 1)
+            plt.subplot(1, max_display, i + 1)
             proj_shap_values = shap_values[:, ind, sort_inds]
             proj_shap_values *= 2
             proj_shap_values[:, i] /= 2  # because only off diag effects are split in half
@@ -753,15 +750,15 @@ def summary_legacy(
                 plot_size=None,
                 max_display=max_display,
             )
-            pl.xlim((slow, shigh))
-            pl.xlabel("")
+            plt.xlim((slow, shigh))
+            plt.xlabel("")
             if i == min(len(sort_inds), max_display) // 2:
-                pl.xlabel(labels["INTERACTION_VALUE"])
-            pl.title(shorten_text(feature_names[ind], title_length_limit))
-        pl.tight_layout(pad=0, w_pad=0, h_pad=0.0)
-        pl.subplots_adjust(hspace=0, wspace=0.1)
+                plt.xlabel(labels["INTERACTION_VALUE"])
+            plt.title(shorten_text(feature_names[ind], title_length_limit))
+        plt.tight_layout(pad=0, w_pad=0, h_pad=0.0)
+        plt.subplots_adjust(hspace=0, wspace=0.1)
         if show:
-            pl.show()
+            plt.show()
         return
 
     if max_display is None:
@@ -779,16 +776,16 @@ def summary_legacy(
 
     row_height = 0.4
     if plot_size == "auto":
-        pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
     elif type(plot_size) in (list, tuple):
-        pl.gcf().set_size_inches(plot_size[0], plot_size[1])
+        plt.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
-        pl.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    pl.axvline(x=0, color="#999999", zorder=-1)
+        plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+    plt.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "dot":
         for pos, i in enumerate(feature_order):
-            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
             shaps = shap_values[:, i]
             values = None if features is None else features[:, i]
             inds = np.arange(len(shaps))
@@ -845,7 +842,7 @@ def summary_legacy(
 
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
-                pl.scatter(
+                plt.scatter(
                     shaps[nan_mask],
                     pos + ys[nan_mask],
                     color="#777777",
@@ -862,7 +859,7 @@ def summary_legacy(
                 cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
                 cvals[cvals_imp > vmax] = vmax
                 cvals[cvals_imp < vmin] = vmin
-                pl.scatter(
+                plt.scatter(
                     shaps[np.invert(nan_mask)],
                     pos + ys[np.invert(nan_mask)],
                     cmap=cmap,
@@ -876,7 +873,7 @@ def summary_legacy(
                     rasterized=len(shaps) > 500,
                 )
             else:
-                pl.scatter(
+                plt.scatter(
                     shaps,
                     pos + ys,
                     s=16,
@@ -889,7 +886,7 @@ def summary_legacy(
 
     elif plot_type == "violin":
         for pos in range(len(feature_order)):
-            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
         if features is not None:
             global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
@@ -897,8 +894,8 @@ def summary_legacy(
             for pos, i in enumerate(feature_order):
                 shaps = shap_values[:, i]
                 shap_min, shap_max = np.min(shaps), np.max(shaps)
-                rng = shap_max - shap_min
-                xs = np.linspace(np.min(shaps) - rng * 0.2, np.max(shaps) + rng * 0.2, 100)
+                shap_max_min = shap_max - shap_min
+                xs = np.linspace(np.min(shaps) - shap_max_min * 0.2, np.max(shaps) + shap_max_min * 0.2, 100)
                 if np.std(shaps) < (global_high - global_low) / 100:
                     if rng is None:
                         tmp_y = np.random.randn(len(shaps))
@@ -942,7 +939,7 @@ def summary_legacy(
 
                 # plot the nan values in the interaction feature as grey
                 nan_mask = np.isnan(values)
-                pl.scatter(
+                plt.scatter(
                     shaps[nan_mask],
                     np.ones(shap_values[nan_mask].shape[0]) * pos,
                     color="#777777",
@@ -957,7 +954,7 @@ def summary_legacy(
                 cvals_imp[np.isnan(cvals)] = (vmin + vmax) / 2.0
                 cvals[cvals_imp > vmax] = vmax
                 cvals[cvals_imp < vmin] = vmin
-                pl.scatter(
+                plt.scatter(
                     shaps[np.invert(nan_mask)],
                     np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
                     cmap=cmap,
@@ -976,7 +973,7 @@ def summary_legacy(
                     smooth_values /= vmax - vmin
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
-                        pl.fill_between(
+                        plt.fill_between(
                             [xs[i], xs[i + 1]],
                             [pos + ds[i], pos + ds[i + 1]],
                             [pos - ds[i], pos - ds[i + 1]],
@@ -985,7 +982,7 @@ def summary_legacy(
                         )
 
         else:
-            parts = pl.violinplot(
+            parts = plt.violinplot(
                 shap_values[:, feature_order],
                 range(len(feature_order)),
                 points=200,
@@ -1064,18 +1061,18 @@ def summary_legacy(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
+                    plt.get_cmap(color)(i / (nbins - 1)) if color in plt.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
-                pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
-        pl.xlim(shap_min, shap_max)
+                plt.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
+        plt.xlim(shap_min, shap_max)
 
     elif not multi_class and plot_type == "bar":
         feature_inds = feature_order[:max_display]
         y_pos = np.arange(len(feature_inds))
         global_shap_values = np.abs(shap_values).mean(0)
-        pl.barh(y_pos, global_shap_values[feature_inds], 0.7, align="center", color=color)
-        pl.yticks(y_pos, fontsize=13)
-        pl.gca().set_yticklabels([feature_names[i] for i in feature_inds])
+        plt.barh(y_pos, global_shap_values[feature_inds], 0.7, align="center", color=color)
+        plt.yticks(y_pos, fontsize=13)
+        plt.gca().set_yticklabels([feature_names[i] for i in feature_inds])
 
     elif multi_class and plot_type == "bar":
         if class_names is None:
@@ -1106,50 +1103,50 @@ def summary_legacy(
                 label = f"{class_names[ind]} ({np.round(np.mean(global_shap_values), (n_decimals + 1))})"
             else:
                 label = class_names[ind]
-            pl.barh(
+            plt.barh(
                 y_pos, global_shap_values[feature_inds], 0.7, left=left_pos, align="center", color=color(i), label=label
             )
             left_pos += global_shap_values[feature_inds]
-        pl.yticks(y_pos, fontsize=13)
-        pl.gca().set_yticklabels([feature_names[i] for i in feature_inds])
-        pl.legend(frameon=False, fontsize=12)
+        plt.yticks(y_pos, fontsize=13)
+        plt.gca().set_yticklabels([feature_names[i] for i in feature_inds])
+        plt.legend(frameon=False, fontsize=12)
 
     # draw the color bar
     if (
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.colormaps)
+        and (plot_type != "layered_violin" or color in plt.colormaps)
     ):
         import matplotlib.cm as cm
 
-        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
+        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
+        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
         cb.set_label(color_bar_label, size=12, labelpad=0)
         cb.ax.tick_params(labelsize=11, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
-    #         bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+    #         bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
     #         cb.ax.set_aspect((bbox.height - 0.9) * 20)
     # cb.draw_all()
 
-    pl.gca().xaxis.set_ticks_position("bottom")
-    pl.gca().yaxis.set_ticks_position("none")
-    pl.gca().spines["right"].set_visible(False)
-    pl.gca().spines["top"].set_visible(False)
-    pl.gca().spines["left"].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    pl.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
+    plt.gca().xaxis.set_ticks_position("bottom")
+    plt.gca().yaxis.set_ticks_position("none")
+    plt.gca().spines["right"].set_visible(False)
+    plt.gca().spines["top"].set_visible(False)
+    plt.gca().spines["left"].set_visible(False)
+    plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
     if plot_type != "bar":
-        pl.gca().tick_params("y", length=20, width=0.5, which="major")
-    pl.gca().tick_params("x", labelsize=11)
-    pl.ylim(-1, len(feature_order))
+        plt.gca().tick_params("y", length=20, width=0.5, which="major")
+    plt.gca().tick_params("x", labelsize=11)
+    plt.ylim(-1, len(feature_order))
     if plot_type == "bar":
-        pl.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
+        plt.xlabel(labels["GLOBAL_VALUE"], fontsize=13)
     else:
-        pl.xlabel(labels["VALUE"], fontsize=13)
-    pl.tight_layout()
+        plt.xlabel(labels["VALUE"], fontsize=13)
+    plt.tight_layout()
     if show:
-        pl.show()
+        plt.show()
