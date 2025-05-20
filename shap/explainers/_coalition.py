@@ -1,5 +1,6 @@
 import math
 from itertools import chain, combinations, product
+from typing import Dict, List, Union
 
 import numpy as np  # numpy base
 
@@ -67,7 +68,6 @@ class CoalitionExplainer(Explainer):
         linearize_link=True,
         feature_names=None,
         partition_tree=None,
-        **call_args,
     ):
         """Initialize the coalition explainer with a model and masker.
 
@@ -111,10 +111,6 @@ class CoalitionExplainer(Explainer):
                 }
             }
 
-        **call_args : dict, optional
-            Additional arguments to pass to the model when making predictions.
-            These arguments will be passed through to the model's __call__ method.
-
         Notes
         -----
         - The explainer supports both single and multi-output models.
@@ -151,38 +147,6 @@ class CoalitionExplainer(Explainer):
             self._clustering = self.masker.clustering
             self._mask_matrix = make_masks(self._clustering)
 
-        # if we have gotten default arguments for the call function we need to wrap ourselves in a new class that
-        # has a call function with those new default arguments
-        if len(call_args) > 0:
-
-            class CoalitionExplainer(self.__class__):
-                def __call__(
-                    self,
-                    *args,
-                    max_evals=500,
-                    fixed_context=None,
-                    main_effects=False,
-                    error_bounds=False,
-                    batch_size="auto",
-                    outputs=None,
-                    silent=False,
-                ):
-                    return super().__call__(
-                        *args,
-                        max_evals=max_evals,
-                        fixed_context=fixed_context,
-                        main_effects=main_effects,
-                        error_bounds=error_bounds,
-                        batch_size=batch_size,
-                        outputs=outputs,
-                        silent=silent,
-                    )
-
-            CoalitionExplainer.__call__.__doc__ = self.__class__.__call__.__doc__
-            self.__class__ = CoalitionExplainer
-            for k, v in call_args.items():
-                self.__call__.__kwdefaults__[k] = v
-
     def __call__(
         self,
         *args,
@@ -193,6 +157,7 @@ class CoalitionExplainer(Explainer):
         batch_size="auto",
         outputs=None,
         silent=False,
+        **kwargs,
     ):
         return super().__call__(
             *args,
@@ -203,6 +168,7 @@ class CoalitionExplainer(Explainer):
             batch_size=batch_size,
             outputs=outputs,
             silent=silent,
+            **kwargs
         )
 
     def explain_row(
@@ -215,7 +181,7 @@ class CoalitionExplainer(Explainer):
         outputs=None,
         silent=False,
         fixed_context="auto",
-    ):
+    ):  # type: ignore[override]
         if fixed_context == "auto":
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
@@ -497,9 +463,9 @@ def _create_combined_masks(combinations, masks_dict):
 
 def _map_combinations_to_unique_masks(combined_masks, unique_masks):
     unique_mask_index_map = {tuple(mask): idx for idx, mask in enumerate(unique_masks)}
-    last_key_to_off_indexes = {}
-    last_key_to_on_indexes = {}
-    weights = {}
+    last_key_to_off_indexes: Dict[Union[int, str], List[int]] = {}
+    last_key_to_on_indexes: Dict[Union[int, str], List[int]] = {}
+    weights: Dict[Union[int, str], List[int]] = {}
 
     for i, (last_key, combined_mask, weight) in enumerate(combined_masks):
         mask_tuple = tuple(combined_mask)
