@@ -168,7 +168,7 @@ class CoalitionExplainer(Explainer):
             batch_size=batch_size,
             outputs=outputs,
             silent=silent,
-            **kwargs
+            **kwargs,
         )
 
     def explain_row(
