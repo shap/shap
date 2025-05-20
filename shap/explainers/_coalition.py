@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import math
 from itertools import chain, combinations, product
-from typing import Dict, List, Union
 
 import numpy as np  # numpy base
 
@@ -168,7 +169,7 @@ class CoalitionExplainer(Explainer):
             batch_size=batch_size,
             outputs=outputs,
             silent=silent,
-            **kwargs
+            **kwargs,
         )
 
     def explain_row(
@@ -463,9 +464,9 @@ def _create_combined_masks(combinations, masks_dict):
 
 def _map_combinations_to_unique_masks(combined_masks, unique_masks):
     unique_mask_index_map = {tuple(mask): idx for idx, mask in enumerate(unique_masks)}
-    last_key_to_off_indexes: Dict[Union[int, str], List[int]] = {}
-    last_key_to_on_indexes: Dict[Union[int, str], List[int]] = {}
-    weights: Dict[Union[int, str], List[int]] = {}
+    last_key_to_off_indexes: dict[int | str, list[int]] = {}
+    last_key_to_on_indexes: dict[int | str, list[int]] = {}
+    weights: dict[int | str, list[int]] = {}
 
     for i, (last_key, combined_mask, weight) in enumerate(combined_masks):
         mask_tuple = tuple(combined_mask)
