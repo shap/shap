@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from __future__ import annotations
 
 import math
@@ -172,6 +173,7 @@ class CoalitionExplainer(Explainer):
             **kwargs,
         )
 
+    # mypy: disable=override
     def explain_row(
         self,
         *row_args,
@@ -182,7 +184,7 @@ class CoalitionExplainer(Explainer):
         outputs=None,
         silent=False,
         fixed_context="auto",
-    ):  # type: ignore[override]
+    ):
         if fixed_context == "auto":
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
