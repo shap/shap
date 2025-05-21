@@ -138,8 +138,8 @@ def bar(
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
     if len(feature_names) == 1:
         feature_names = [ordinal_str(i) + " " + feature_names for i in range(len(values[0]))]
-    elif len(feature_names)!=len(values[0]):
-        raise ValueError('Mismatch between the number of features in the feature list and actual features in the SHAP')
+    elif len(feature_names) != len(values[0]):
+        raise ValueError("Mismatch between the number of features in the feature list and actual features in the SHAP")
     else:
         feature_names = list(feature_names)
 
