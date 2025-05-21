@@ -84,7 +84,7 @@ else:
     # If matplotlib is available, then the plots submodule will be directly available.
     # If not, we need to define something that will issue a meaningful warning message
     # (rather than ModuleNotFound).
-    plots = UnsupportedModule()
+    plots = UnsupportedModule()  # type: ignore
 
 
 # other stuff :)

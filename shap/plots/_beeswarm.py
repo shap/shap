@@ -593,9 +593,6 @@ def summary_legacy(
             )
             warnings.warn(msg, FutureWarning, stacklevel=2)
 
-    # initialize the plot
-    plt.clf()
-
     # support passing an explanation object
     if str(type(shap_values)).endswith("Explanation'>"):
         shap_exp = shap_values
