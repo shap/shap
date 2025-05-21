@@ -139,10 +139,10 @@ def bar(
     if len(feature_names) == 1:
         feature_names = [ordinal_str(i) + " " + feature_names for i in range(len(values[0]))]
     elif len(feature_names)!=len(values[0])
-        raise ValueError('Mismatch between the number of features in the feature list and actual features in the SHAP')    
+        raise ValueError('Mismatch between the number of features in the feature list and actual features in the SHAP')
     else:
         feature_names = list(feature_names)
-        
+
     # build our auto xlabel based on the transform history of the Explanation object
     xlabel = "SHAP value"
     for op in op_history:
