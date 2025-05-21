@@ -161,7 +161,11 @@ def encode_array_if_needed(arr, dtype=np.float64):
     try:
         return arr.astype(dtype)
     except ValueError:
-        unique_values = np.unique(arr)
+        # np.unique() sorts the array, which will not work when arr contains both strings and NaN.
+        if arr.dtype == np.object_:
+            unique_values = set(arr)
+        else:
+            unique_values = np.unique(arr)
         encoding_dict = {string: index for index, string in enumerate(unique_values)}
         encoded_array = np.array([encoding_dict[string] for string in arr], dtype=dtype)
         return encoded_array
