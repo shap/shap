@@ -136,9 +136,13 @@ def bar(
         show_data = len(transforms) == 0
 
     # TODO: Rather than just show the "1st token", "2nd token", etc. it would be better to show the "Instance 0's 1st but", etc
-    if issubclass(type(feature_names), str):
+    if len(feature_names) == 1:
         feature_names = [ordinal_str(i) + " " + feature_names for i in range(len(values[0]))]
-
+    elif len(feature_names)!=len(values[0])
+        raise ValueError('Mismatch between the number of features in the feature list and actual features in the SHAP')    
+    else:
+        feature_names = list(feature_names)
+        
     # build our auto xlabel based on the transform history of the Explanation object
     xlabel = "SHAP value"
     for op in op_history:
