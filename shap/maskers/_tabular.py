@@ -373,6 +373,8 @@ class Causal(Tabular):
         seed: int
             The random seed to be used by numpy.
         """
+        if not isinstance(data, (pd.DataFrame, np.ndarray)):
+            raise NotImplementedError("Please provide the data as a pandas.DataFrame or a numpy.ndarray.")
         super().__init__(data, max_samples=max_samples, clustering=None)
 
         self.supports_delta_masking = False
@@ -395,14 +397,16 @@ class Causal(Tabular):
             # Case 1. Pandas DataFrame
             self.mean = data.mean().values
             self.covariance_matrix = data.cov().values
-        else:
+        elif isinstance(data, np.ndarray):
             # Case 2. Numpy array
             self.mean = data.mean(axis=0)
             self.covariance_matrix = self._calculate_covariance_matrix(data)
+        else:
+            raise NotImplementedError("Please provide the data as a pandas.DataFrame or a numpy.ndarray.")
 
         # Ensure that the covariance matrix is positive-definite, as required by numpy multivariate_normal
-        if self._is_positive_definite(self.covariance_matrix):
-            raise Exception("Covariance matrix is not positive-definite, not yet implemented")
+        if self._check_positive_definite(self.covariance_matrix):
+            raise NotImplementedError("Covariance matrix must be positive-definite.")
 
     def __call__(self, mask, x):
         # Standardize
@@ -496,8 +500,9 @@ class Causal(Tabular):
         return new_samples
 
     @staticmethod
-    def _is_positive_definite(matrix):
-        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal
+    def _check_positive_definite(matrix):
+        # Checks if covariance matrix is positive-definite, which is required for numpy multivariate_normal.
+        # True means the check passed and false means the matrix is not positive definite.
         eigenvalues = np.linalg.eigvals(matrix)
         return np.any(eigenvalues < 0)
 

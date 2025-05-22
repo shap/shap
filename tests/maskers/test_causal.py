@@ -58,6 +58,39 @@ class TestCausal:
         # Assert
         assert actual.n_features == expected
 
+    def test_accepts_pd_dataframe_data(self):
+        """Ensure the masker initializes properly with a pandas DataFrame."""
+        # Arrange
+        df = pd.DataFrame(
+            {
+                "Feature1": [1, 2, 3],
+                "Feature2": [4, 5, 6],
+            }
+        )
+
+        # Act & Assert
+        Causal(df)
+
+    def test_accepts_np_array_data(self):
+        """Ensure the masker initializes properly with a NumPy array."""
+        # Arrange
+        array = np.array([[1, 2], [3, 4], [5, 6]])
+
+        # Act & Assert
+        Causal(array)
+
+    def test_declines_different_data_format(self):
+        """Ensure an error is raised when data is not a DataFrame or ndarray."""
+        # Arrange
+        data = [[1, 2], [3, 4], [5, 6]]  # This is a plain list, not supported
+        ordering = [[0], [1]]
+
+        expected_message = "Please provide the data as a pandas.DataFrame or a numpy.ndarray."
+
+        # Act & Assert
+        with pytest.raises(NotImplementedError, match=expected_message):
+            Causal(data, ordering)
+
     def test_mask_applies_coalition_all(self):
         """Check if the mask sets in-coalition features to the value of x"""
         # Arrange
