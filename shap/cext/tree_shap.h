@@ -709,7 +709,8 @@ inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &
 // Independent Tree SHAP functions below here
 // ------------------------------------------
 struct Node {
-    short cl, cr, cd, pnode, feat, pfeat; // uint_16
+    short cl, cr, cd, pnode; // uint_16
+    long feat, pfeat;
     float thres, value;
     char from_flag;
 };
@@ -746,7 +747,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 //     }
     int ns_ctr = 0;
     std::fill_n(feat_hist, num_feats, 0);
-    short node = 0, feat, cl, cr, cd, pnode, pfeat = -1;
+    short node = 0, cl, cr, cd, pnode;
+    long feat, pfeat = -1;
     short next_xnode = -1, next_rnode = -1;
     short next_node = -1, from_child = -1;
     float thres, pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
@@ -1273,7 +1275,7 @@ inline void dense_tree_path_dependent(const TreeEnsemble& trees, const Explanati
 
     // build explanation for each sample
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
 
         // aggregate the effect of explaining each tree

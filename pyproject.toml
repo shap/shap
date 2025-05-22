@@ -1,7 +1,8 @@
 [build-system]
 # Note for maintainers: this numpy constraint is specific to wheels for PyPI. See:
 # https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-abi-handling
-requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8.0", "numpy>=2.0", "packaging>20.9",
+            "cython>=3.0.11"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -34,6 +35,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
@@ -70,23 +72,24 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  "catboost",
+  "catboost; python_version < '3.13'",  # TODO: pending 3.13 support
   "gpboost",
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers",
-  "tf-keras",
+  "transformers; python_version < '3.13'",  # TODO: pending 3.13 support
+  "tf-keras; python_version < '3.13'",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
-  "torch; sys_platform != 'darwin'",
-  "torchvision",
-  "tensorflow",
+  "torch; python_version < '3.13'",  # TODO: pending 3.13 support
+  "torchvision; python_version < '3.13'",  # TODO: pending 3.13 support
+  "tensorflow; python_version < '3.13'",  # TODO: pending 3.13 support
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy<2.0",
+  "causalml",
+  "selenium",  # needed to test the javascript based plots
 ]
 
 test_notebooks = [
@@ -110,6 +113,7 @@ disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
+mypy_path = "stubs"
 
 plugins = ["numpy.typing.mypy_plugin"]
 
@@ -168,6 +172,7 @@ module = [
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "causalml.*",
 ]
 ignore_missing_imports = true
 
@@ -194,14 +199,16 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
   "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:.*pandas.*",
   "ignore:.*typing.io is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
+  "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config

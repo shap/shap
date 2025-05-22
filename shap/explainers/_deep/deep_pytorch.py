@@ -379,6 +379,7 @@ op_handler["Dropout3d"] = passthrough
 op_handler["Dropout2d"] = passthrough
 op_handler["Dropout"] = passthrough
 op_handler["AlphaDropout"] = passthrough
+op_handler["Identity"] = passthrough
 
 op_handler["Conv1d"] = linear_1d
 op_handler["Conv2d"] = linear_1d
@@ -405,6 +406,7 @@ op_handler["Tanh"] = nonlinear_1d
 op_handler["Softplus"] = nonlinear_1d
 op_handler["Softmax"] = nonlinear_1d
 op_handler["SELU"] = nonlinear_1d
+op_handler["GELU"] = nonlinear_1d
 
 op_handler["MaxPool1d"] = maxpool
 op_handler["MaxPool2d"] = maxpool
