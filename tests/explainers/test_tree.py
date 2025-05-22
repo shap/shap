@@ -1171,6 +1171,10 @@ class TestExplainerXGBoost:
         shap_values = explainer.shap_values(X_nan)
         # check that SHAP values sum to model output
         assert np.allclose(margin, explainer.expected_value + shap_values.sum(axis=1))
+        interaction_values = explainer.shap_interaction_values(X_nan)
+        # check that interaction values sum to SHAP values and model output
+        assert np.allclose(shap_values, interaction_values.sum(axis=2))
+        assert np.allclose(margin, explainer.expected_value + interaction_values.sum(axis=(1, 2)))
 
     @pytest.mark.parametrize("Reg", regressors)
     def test_xgboost_direct(self, Reg):
