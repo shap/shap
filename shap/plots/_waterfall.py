@@ -217,7 +217,7 @@ def waterfall(shap_values, max_display=10, ax=None, show=True):
         arrow_obj = ax.arrow(
             pos_lefts[i],
             pos_inds[i],
-            max(dist - hl_scaled, 0.000001),
+            dist - hl_scaled,
             0,
             head_length=min(dist, hl_scaled),
             color=style.primary_color_positive,
@@ -266,7 +266,7 @@ def waterfall(shap_values, max_display=10, ax=None, show=True):
         arrow_obj = ax.arrow(
             neg_lefts[i],
             neg_inds[i],
-            -max(-dist - hl_scaled, 0.000001),
+            -(-dist - hl_scaled),
             0,
             head_length=min(-dist, hl_scaled),
             color=style.primary_color_negative,
@@ -336,8 +336,9 @@ def waterfall(shap_values, max_display=10, ax=None, show=True):
     ax2 = ax.twiny()
     ax2.set_xlim(xmin, xmax)
     ax2.set_xticks(
-        [base_values, base_values + 1e-8]
+        [base_values, base_values + min(1e-8, xmax * 1e-10)]
     )  # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
+    # However, for very small values, 1e-8 is disruptively large, so xmax * 1e-10 is used instead
     ax2.set_xticklabels(["\n$E[f(X)]$", "\n$ = " + format_value(base_values, "%0.03f") + "$"], fontsize=12, ha="left")
     ax2.spines["right"].set_visible(False)
     ax2.spines["top"].set_visible(False)
@@ -346,8 +347,10 @@ def waterfall(shap_values, max_display=10, ax=None, show=True):
     # draw the f(x) tick mark
     ax3 = ax2.twiny()
     ax3.set_xlim(xmin, xmax)
-    # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
-    ax3.set_xticks([base_values + values.sum(), base_values + values.sum() + 1e-8])
+    ax3.set_xticks(
+        [base_values + values.sum(), base_values + values.sum() + min(1e-8, xmax * 1e-10)]
+    )  # The 1e-8 is so matplotlib 3.3 doesn't try and collapse the ticks
+    # However, for very small values, 1e-8 is disruptively large, so xmax * 1e-10 is used instead
     ax3.set_xticklabels(["$f(x)$", "$ = " + format_value(fx, "%0.03f") + "$"], fontsize=12, ha="left")
     tick_labels = ax3.xaxis.get_majorticklabels()
     tick_labels[0].set_transform(

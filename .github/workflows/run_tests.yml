@@ -27,15 +27,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           - os: macos-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
@@ -80,7 +80,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-
   test_oldest_supported_numpy:
     # Package is built with numpy 2.X, and tested against numpy 1.X.
     # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
@@ -115,5 +114,6 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[test-core]'
+          uv pip install --system --reinstall -r requirements.ci.txt
       - name: Run mypy
         run: mypy shap tests
