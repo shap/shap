@@ -1,5 +1,6 @@
 """This file contains tests for the TextGeneration class."""
 
+import platform
 import sys
 
 import pytest
@@ -7,6 +8,10 @@ import pytest
 import shap
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 @pytest.mark.skipif(sys.platform == "win32", reason="Integer division bug in HuggingFace on Windows")
 def test_call_function_text_generation():
     """Tests if target sentence from model and model wrapped in a function (mimics model agnostic scenario)

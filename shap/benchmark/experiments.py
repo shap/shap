@@ -376,7 +376,7 @@ def run_remote_experiments(experiments, thread_hosts, rate_limit=10):
 
     for host in thread_hosts:
         worker = Thread(target=__thread_worker, args=(q, host))
-        worker.setDaemon(True)
+        worker.daemon = True
         worker.start()
 
     for experiment in experiments:

@@ -76,7 +76,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       # Ensure all git tags are present so version number is extracted.
       # https://github.com/actions/checkout/issues/1471

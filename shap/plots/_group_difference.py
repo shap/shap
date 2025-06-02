@@ -1,4 +1,4 @@
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 
 from . import colors
@@ -68,7 +68,7 @@ def group_difference(
     else:
         # Draw the figure if no ax has been provided
         figsize = (6.4, 0.2 + 0.9 * len(inds))
-        _, ax = pl.subplots(figsize=figsize)
+        _, ax = plt.subplots(figsize=figsize)
     ticks = range(len(inds) - 1, -1, -1)
     ax.axvline(0, color="#999999", linewidth=0.5)
     ax.barh(ticks, diff[inds], color=colors.blue_rgb, capsize=3, xerr=np.abs(xerr[:, inds]))
@@ -89,4 +89,4 @@ def group_difference(
     ax.set_xlabel(xlabel, fontsize=13)
     ax.set_xlim(xmin, xmax)
     if show:
-        pl.show()
+        plt.show()

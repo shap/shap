@@ -13,6 +13,7 @@ import sklearn.pipeline
 from sklearn.utils import check_array
 
 import shap
+from shap.explainers._explainer import Explanation
 from shap.explainers._tree import SingleTree
 from shap.utils._exceptions import InvalidModelError
 
@@ -205,6 +206,7 @@ def configure_pyspark_python(monkeypatch):
     monkeypatch.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -260,6 +262,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     spark.stop()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_regression_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -1941,3 +1944,122 @@ def model_explainer():
 )
 def test_tight_sensitivity_extra(model_explainer, phi, model_output):
     model_explainer.assert_additivity(phi, model_output)
+
+
+@pytest.mark.parametrize(
+    "X, y, expected_shap_values",
+    [
+        (
+            np.array([[1], [None], [np.nan], [float("nan")], [100]]),
+            np.array(
+                [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            ),
+            np.array([4 / 5, -1 / 5, -1 / 5, -1 / 5, -1 / 5]),
+        ),
+    ],
+)
+def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
+    """Test that TreeExplainer works with scikit-learn trees that handle missing values.
+
+    This test verifies that SHAP values are computed correctly when using scikit-learn
+    trees with missing values (None, NaN), which is supported starting from scikit-learn 1.3.
+    """
+    # Train a simple decision tree classifier
+    clf = sklearn.tree.DecisionTreeClassifier()
+    clf.fit(X, y)
+
+    # Create explainer and get SHAP values
+    explainer = shap.TreeExplainer(clf)
+    shap_values = explainer.shap_values(X)[:, :, 1].flatten()
+
+    # Verify SHAP values match expected values
+    np.testing.assert_allclose(shap_values, expected_shap_values)
+
+
+@pytest.mark.xslow
+def test_overflow_tree_path_dependent():
+    """GH #4002
+    Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
+    seed = 0
+    n_rows = 2_000
+    rng = np.random.default_rng(seed)
+    X = rng.integers(low=0, high=2, size=(n_rows, 1_100_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+
+    clf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
+    exp(X)
+
+
+@pytest.mark.parametrize(
+    "n_estimators",
+    [
+        5,
+    ],
+)
+def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data, n_estimators, random_seed):
+    """
+    Causal trees predict individual treatment effect based on continuous outcomes Y|X,T
+    where T is the particular type of treatment. In the basic scenario we have T=0 and T=1.
+
+    Thus, causal tree terminal nodes separately contain multiple outcomes as conditioned sample means:
+        Y_hat|X,T=0 and Y_hat|X,T=1
+    in the same manner as sklearn DecisionTreeRegressor with multiple outputs: (n_samples, n_outputs).
+
+    However, unlike standard regression tree the final output of the predict() method in causal trees is
+    the individual treatment effect: Y_hat|X,T=1 - Y_hat|X,T=0 with an option of returning possible outcomes Y_hat|X,T
+
+    During research, it is important to analyze Y_hat|X,T=t, t={0,1,...t} aside from individual effects estimation.
+    That is why we should carefully track the shape of the following arrays along with other checks:
+        shap values:  (n_observations, n_features, n_outcomes)
+        base values:  (n_observations, n_outcomes) arrays
+    """
+    causalml = pytest.importorskip("causalml")
+
+    data, n_outcomes = causalml_synth_data
+    y, X, treatment, tau, b, e = data
+    n_observations, n_features = X.shape
+
+    ctree = causalml.inference.tree.CausalTreeRegressor(random_state=random_seed)
+    ctree.fit(X=X, treatment=treatment, y=y)
+    ctree_preds = ctree.predict(X)
+    ctree_explainer = shap.TreeExplainer(ctree)
+
+    cforest = causalml.inference.tree.CausalRandomForestRegressor(n_estimators=n_estimators, random_state=random_seed)
+    cforest.fit(X=X, treatment=treatment, y=y)
+    cforest_preds = cforest.predict(X)
+    cforest_explainer = shap.TreeExplainer(cforest)
+
+    for explainer, preds in zip([ctree_explainer, cforest_explainer], [ctree_preds, cforest_preds]):
+        explanation = explainer(X)
+        shap_values = explainer.shap_values(X)
+
+        assert isinstance(explanation, Explanation)
+        assert isinstance(explanation.data, np.ndarray)
+        assert isinstance(explanation.base_values, np.ndarray)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+
+        # Explanation.values and the output of TreeExplainer.shap_values() are two ways to get shap values
+        np.testing.assert_allclose(explanation.values, shap_values)
+        np.testing.assert_allclose(explanation.data, X)
+
+        # Check Explanation class
+        assert explanation.data.shape == (n_observations, n_features)
+        assert explanation.base_values.shape == (n_observations, n_outcomes)
+        assert explanation.values.shape == (n_observations, n_features, n_outcomes)
+
+        # Check that shap values and base values can be collapsed into
+        # model prediction of individual treatment effects
+        y_outcomes = explanation.base_values + explanation.values.sum(axis=1)
+        individual_effects = y_outcomes[:, 1] - y_outcomes[:, 0]
+
+        np.testing.assert_allclose(preds, individual_effects, atol=1e-4)
