@@ -206,6 +206,7 @@ def configure_pyspark_python(monkeypatch):
     monkeypatch.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -261,6 +262,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     spark.stop()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_regression_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
