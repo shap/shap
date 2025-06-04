@@ -1,3 +1,4 @@
+import sys
 from contextlib import nullcontext as does_not_raise
 
 import matplotlib.pyplot as plt
@@ -49,6 +50,9 @@ def test_verify_valid_cmap(cmap, exp_ctx):
         verify_valid_cmap(cmap)
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin", reason="Since this test is flaky on MacOS, we skip it for now. See GH #4102."
+)
 def test_random_force_plot_mpl_with_data():
     """Test if force plot with matplotlib works."""
     RandomForestRegressor = pytest.importorskip("sklearn.ensemble").RandomForestRegressor
