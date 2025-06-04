@@ -1186,7 +1186,7 @@ class TestExplainerXGBoost:
         X["Workclass"] = X["Workclass"].astype("category")
         X["Country"] = X["Country"].astype("category")
         # add a few missing values
-        X["Country"].iloc[0:20] = np.nan
+        X.loc[X.sample(frac=0.3, random_state=42).index, "Country"] = np.nan
 
         clf = Clf(random_state=42, enable_categorical=True)
         clf.fit(X, y)
