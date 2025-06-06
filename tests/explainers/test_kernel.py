@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -175,6 +177,17 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
 
 def test_kernel_shap_with_high_dim_sparse():
     """Verifies we can run on very sparse data produced from feature hashing."""
+    # Skip test for Python versions below 3.9.17 and 3.10.12
+    python_version = sys.version_info
+    if python_version.major == 3 and python_version.minor == 9 and (python_version.micro < 17):
+        pytest.skip(
+            "Skipping test for Python 3.9 versions below 3.9.17. Loading the dataset will run into a tarfile error otherwise due to the missing filter keyword. See https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall"
+        )
+    elif python_version.major == 3 and python_version.minor == 10 and (python_version.micro < 12):
+        pytest.skip(
+            "Skipping test for Python 3.10 versions below 3.10.12. Loading the dataset will run into a tarfile error otherwise due to missing filter keyword. See https://docs.python.org/3.10/library/tarfile.html#tarfile.TarFile.extractall"
+        )
+
     remove = ("headers", "footers", "quotes")
     categories = [
         "alt.atheism",
@@ -188,11 +201,6 @@ def test_kernel_shap_with_high_dim_sparse():
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(
         ngroups.data, ngroups.target, test_size=0.01, random_state=42
     )
-    vectorizer = sklearn.feature_extraction.text.HashingVectorizer(
-        stop_words="english", alternate_sign=False, n_features=2**16
-    )
-    x_train = vectorizer.transform(x_train)
-    x_test = vectorizer.transform(x_test)
     # Fit a linear regression model
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)
