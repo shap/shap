@@ -25,6 +25,7 @@ dependencies = [
   'numba>=0.54',
   'cloudpickle',
   'typing-extensions',
+  'lazy_loader==0.4.0',
 ]
 classifiers = [
   "Operating System :: Microsoft :: Windows",

@@ -1,9 +1,7 @@
 import copy
 import time
 
-import numpy as np
-import pandas as pd
-import scipy.sparse
+import lazy_loader as lazy
 
 from .. import explainers, links, maskers, models
 from .._explanation import Explanation
@@ -13,6 +11,10 @@ from ..models import Model
 from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
 from ..utils.transformers import is_transformers_lm
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
+scipy = lazy.load("scipy", error_on_import=True)
 
 
 class Explainer(Serializable):

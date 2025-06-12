@@ -1,9 +1,11 @@
-import numpy as np
+import lazy_loader as lazy
 
 from .. import links
 from ..models import Model
 from ..utils import MaskedModel, partition_tree_shuffle
 from ._explainer import Explainer
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 class PermutationExplainer(Explainer):

@@ -1,22 +1,20 @@
 import warnings
 from typing import Callable
 
-import numpy as np
-import tensorflow as tf
+import lazy_loader as lazy
 from packaging import version
-from tensorflow.python.eager import backprop as tf_backprop
-from tensorflow.python.eager import execute as tf_execute
-from tensorflow.python.framework import (
-    ops as tf_ops,
-)
-from tensorflow.python.ops import (
-    gradients_impl as tf_gradients_impl,
-)
 
 from ...utils._exceptions import DimensionError
 from .._explainer import Explainer
 from ..tf_utils import _get_graph, _get_model_inputs, _get_model_output, _get_session
 from .deep_utils import _check_additivity
+
+tf = lazy.load("tensorflow", error_on_import=True)
+tf_backprop = lazy.load("tensorflow.python.eager.backprop", error_on_import=True)
+tf_execute = lazy.load("tensorflow.python.eager.execute", error_on_import=True)
+tf_ops = lazy.load("tensorflow.python.framework.ops", error_on_import=True)
+tf_gradients_impl = lazy.load("tensorflow.python.ops.gradients_impl", error_on_import=True)
+np = lazy.load("numpy", error_on_import=True)
 
 if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
     from tensorflow.python.ops import gradients_util as tf_gradients_impl

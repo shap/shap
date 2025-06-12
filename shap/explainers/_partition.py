@@ -1,7 +1,7 @@
 import queue
 import time
 
-import numpy as np
+import lazy_loader as lazy
 from numba import njit
 from tqdm.auto import tqdm
 
@@ -9,6 +9,8 @@ from .. import Explanation, links
 from ..models import Model
 from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
 from ._explainer import Explainer
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 class PartitionExplainer(Explainer):

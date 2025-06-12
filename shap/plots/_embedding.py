@@ -1,9 +1,11 @@
+import lazy_loader as lazy
 import matplotlib.pyplot as plt
-import sklearn
 
 from ..utils import convert_name
 from . import colors
 from ._labels import labels
+
+sklearn = lazy.load("sklearn", error_on_import=True)
 
 
 def embedding(ind, shap_values, feature_names=None, method="pca", alpha=1.0, show=True):

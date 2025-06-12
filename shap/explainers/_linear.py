@@ -1,7 +1,6 @@
 import warnings
 
-import numpy as np
-import pandas as pd
+import lazy_loader as lazy
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
 
@@ -12,6 +11,9 @@ from ..utils._exceptions import (
     InvalidModelError,
 )
 from ._explainer import Explainer
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
 
 
 class LinearExplainer(Explainer):

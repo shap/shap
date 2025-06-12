@@ -1,7 +1,9 @@
-import numpy as np
+import lazy_loader as lazy
 import scipy.special
 
 from ._model import Model
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 class TransformersPipeline(Model):

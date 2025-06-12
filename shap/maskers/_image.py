@@ -1,19 +1,16 @@
-# TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
-import heapq
-
+import lazy_loader as lazy
 import numba.typed
-import numpy as np
 from numba import njit
 
 from .._serializable import Deserializer, Serializer
-from ..utils import assert_import, record_import_error, safe_isinstance
+from ..utils import assert_import, safe_isinstance
 from ..utils._exceptions import DimensionError
 from ._masker import Masker
 
-try:
-    import cv2
-except ImportError as e:
-    record_import_error("cv2", "cv2 could not be imported!", e)
+cv2 = lazy.load("cv2", error_on_import=True)
+np = lazy.load("numpy", error_on_import=True)
+# TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
+heapq = lazy.load("heapq", error_on_import=True)
 
 
 class Image(Masker):

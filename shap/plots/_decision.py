@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import lazy_loader as lazy
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 
 from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
 from . import colors
 from ._labels import labels
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:

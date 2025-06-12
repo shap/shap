@@ -1,10 +1,8 @@
 import warnings
 from typing import TYPE_CHECKING
 
+import lazy_loader as lazy
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import scipy
 
 from .. import Cohorts, Explanation
 from ..utils import format_value, ordinal_str
@@ -12,6 +10,10 @@ from ..utils._exceptions import DimensionError
 from ._labels import labels
 from ._style import get_style
 from ._utils import convert_ordering, dendrogram_coords, get_sort_order, merge_nodes, sort_inds
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
+scipy = lazy.load("scipy", error_on_import=True)
 
 if TYPE_CHECKING:
     from .._explanation import OpHistoryItem
