@@ -5,10 +5,8 @@ import logging
 import time
 import warnings
 
-import numpy as np
-import pandas as pd
+import lazy_loader as lazy
 import scipy.sparse
-import sklearn
 from _kernel_lib import _exp_val
 from packaging import version
 from scipy.special import binom
@@ -34,6 +32,10 @@ from ..utils._legacy import (
 from ._explainer import Explainer
 
 log = logging.getLogger("shap")
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
+sklearn = lazy.load("sklearn", error_on_import=True)
 
 
 class KernelExplainer(Explainer):

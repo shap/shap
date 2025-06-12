@@ -3,11 +3,12 @@ It is primarily for illustration since it is slower than the 'tree'
 module which uses a compiled C++ implementation.
 """
 
-import numpy as np
-import pandas as pd
+import lazy_loader as lazy
 
-# import numba
 from ..utils._exceptions import ExplainerError
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
 
 # class TreeExplainer(Explainer):
 #     def __init__(self, model, **kwargs):

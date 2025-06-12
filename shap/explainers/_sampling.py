@@ -1,12 +1,14 @@
 import logging
 
-import numpy as np
-import pandas as pd
+import lazy_loader as lazy
 
 from .._explanation import Explanation
 from ..utils._exceptions import ExplainerError
 from ..utils._legacy import convert_to_instance, match_instance_to_data
 from ._kernel import KernelExplainer
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
 
 log = logging.getLogger("shap")
 

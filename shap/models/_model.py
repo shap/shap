@@ -1,9 +1,11 @@
 from typing import Any
 
-import numpy as np
+import lazy_loader as lazy
 
 from .._serializable import Deserializer, Serializable, Serializer
 from ..utils import safe_isinstance
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 class Model(Serializable):

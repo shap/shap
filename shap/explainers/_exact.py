@@ -1,6 +1,6 @@
 import logging
 
-import numpy as np
+import lazy_loader as lazy
 from numba import njit
 
 from .. import links
@@ -12,6 +12,8 @@ from ..utils import (
     shapley_coefficients,
 )
 from ._explainer import Explainer
+
+np = lazy.load("numpy", error_on_import=True)
 
 log = logging.getLogger("shap")
 

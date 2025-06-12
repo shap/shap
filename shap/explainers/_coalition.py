@@ -1,15 +1,18 @@
 # mypy: ignore-errors
 from __future__ import annotations
 
-import math
 from itertools import chain, combinations, product
 
-import numpy as np  # numpy base
+import lazy_loader as lazy
 
+# import numpy as np  # numpy base
 from .. import links  # shap modules
 from ..explainers._explainer import Explainer
 from ..models import Model
 from ..utils import MaskedModel, make_masks, safe_isinstance
+
+np = lazy.load("numpy", error_on_import=True)
+math = lazy.load("math", error_on_import=True)
 
 
 class CoalitionExplainer(Explainer):

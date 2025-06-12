@@ -1,7 +1,9 @@
-import numpy as np
+import lazy_loader as lazy
 
 from ..utils import MaskedModel, safe_isinstance
 from ._explainer import Explainer
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 class AdditiveExplainer(Explainer):

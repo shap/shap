@@ -1,10 +1,12 @@
-import matplotlib
+import lazy_loader as lazy
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib import lines
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
+
+np = lazy.load("numpy", error_on_import=True)
+matplotlib = lazy.load("matplotlib", error_on_import=True)
 
 
 def draw_bars(out_value, features, feature_type, width_separators, width_bar):

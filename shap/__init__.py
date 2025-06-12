@@ -1,20 +1,80 @@
-from ._explanation import Cohorts, Explanation
+import lazy_loader as lazy
 
-# explainers
-from .explainers import other
-from .explainers._additive import AdditiveExplainer
-from .explainers._coalition import CoalitionExplainer
-from .explainers._deep import DeepExplainer
-from .explainers._exact import ExactExplainer
-from .explainers._explainer import Explainer
-from .explainers._gpu_tree import GPUTreeExplainer
-from .explainers._gradient import GradientExplainer
-from .explainers._kernel import KernelExplainer
-from .explainers._linear import LinearExplainer
-from .explainers._partition import PartitionExplainer
-from .explainers._permutation import PermutationExplainer
-from .explainers._sampling import SamplingExplainer
-from .explainers._tree import TreeExplainer
+#
+from . import datasets, links, utils  # noqa: E402
+
+__getattr__, __dir__, __alllazy__ = lazy.attach(
+    __name__,
+    submodules=["explainers", "plots", "utils", "datasets", "links", "maskers", "models", "actions"],
+    submod_attrs={
+        "actions": ["ActionOptimizer"],
+        "utils": [
+            "approximate_interactions",
+            "sample",
+        ],
+        "utils._legacy": ["kmeans"],
+        "_explanation": ["Cohorts", "Explanation"],
+        "explainers": [
+            "other",
+            "AdditiveExplainer",
+            "CoalitionExplainer",
+            "DeepExplainer",
+            "ExactExplainer",
+            "Explainer",
+            "GPUTreeExplainer",
+            "GradientExplainer",
+            "KernelExplainer",
+            "LinearExplainer",
+            "PartitionExplainer",
+            "PermutationExplainer",
+            "SamplingExplainer",
+            "TreeExplainer",
+            "Explainer",
+        ],
+        "plots": [
+            "bar_plot",
+            "summary_plot",
+            "decision_plot",
+            "multioutput_decision_plot",
+            "embedding_plot",
+            "force_plot",
+            "getjs",
+            "initjs",
+            "save_html",
+            "group_difference_plot",
+            "heatmap_plot",
+            "image_plot",
+            "monitoring_plot",
+            "partial_dependence_plot",
+            "dependence_plot",
+            "text_plot",
+            "violin_plot",
+            "waterfall_plot",
+        ],
+    },
+)
+# from ._explanation import Cohorts, Explanation
+#
+# # explainers
+# from .explainers import other
+# from .explainers._additive import AdditiveExplainer
+# from .explainers._coalition import CoalitionExplainer
+# from .explainers._deep import DeepExplainer
+# from .explainers._exact import ExactExplainer
+# from .explainers._explainer import Explainer
+# from .explainers._gpu_tree import GPUTreeExplainer
+# from .explainers._gradient import GradientExplainer
+# from .explainers._kernel import KernelExplainer
+# from .explainers._linear import LinearExplainer
+# from .explainers._partition import PartitionExplainer
+# from .explainers._permutation import PermutationExplainer
+# from .explainers._sampling import SamplingExplainer
+#
+# # TreeExplainer is lazily loaded through the explainers module
+# from .explainers import TreeExplainer
+# #     __name__,
+# #     submod_attrs={"explainers._tree": ["TreeExplainer"]},
+# # )
 
 try:
     # Version from setuptools-scm
@@ -86,60 +146,53 @@ else:
     # (rather than ModuleNotFound).
     plots = UnsupportedModule()  # type: ignore
 
-
-# other stuff :)
-from . import datasets, links, utils  # noqa: E402
-from .actions._optimizer import ActionOptimizer  # noqa: E402
-from .utils import approximate_interactions, sample  # noqa: E402
-
-# from . import benchmark
-from .utils._legacy import kmeans  # noqa: E402
+__all__ = [*__alllazy__, "datasets", "links", "utils"]
 
 # Use __all__ to let type checkers know what is part of the public API.
-__all__ = [
-    "Cohorts",
-    "Explanation",
-    # Explainers
-    "other",
-    "AdditiveExplainer",
-    "DeepExplainer",
-    "ExactExplainer",
-    "Explainer",
-    "GPUTreeExplainer",
-    "GradientExplainer",
-    "KernelExplainer",
-    "LinearExplainer",
-    "PartitionExplainer",
-    "CoalitionExplainer",
-    "PermutationExplainer",
-    "SamplingExplainer",
-    "TreeExplainer",
-    # Plots
-    "plots",
-    "bar_plot",
-    "summary_plot",
-    "decision_plot",
-    "multioutput_decision_plot",
-    "embedding_plot",
-    "force_plot",
-    "getjs",
-    "initjs",
-    "save_html",
-    "group_difference_plot",
-    "heatmap_plot",
-    "image_plot",
-    "monitoring_plot",
-    "partial_dependence_plot",
-    "dependence_plot",
-    "text_plot",
-    "violin_plot",
-    "waterfall_plot",
-    # Other stuff
-    "datasets",
-    "links",
-    "utils",
-    "ActionOptimizer",
-    "approximate_interactions",
-    "sample",
-    "kmeans",
-]
+# __all__ = [
+#     "Cohorts",
+#     "Explanation",
+#     # Explainers
+#     "other",
+#     "AdditiveExplainer",
+#     "DeepExplainer",
+#     "ExactExplainer",
+#     "Explainer",
+#     "GPUTreeExplainer",
+#     "GradientExplainer",
+#     "KernelExplainer",
+#     "LinearExplainer",
+#     "PartitionExplainer",
+#     "CoalitionExplainer",
+#     "PermutationExplainer",
+#     "SamplingExplainer",
+#     "TreeExplainer",
+#     # Plots
+#     "plots",
+#     "bar_plot",
+#     "summary_plot",
+#     "decision_plot",
+#     "multioutput_decision_plot",
+#     "embedding_plot",
+#     "force_plot",
+#     "getjs",
+#     "initjs",
+#     "save_html",
+#     "group_difference_plot",
+#     "heatmap_plot",
+#     "image_plot",
+#     "monitoring_plot",
+#     "partial_dependence_plot",
+#     "dependence_plot",
+#     "text_plot",
+#     "violin_plot",
+#     "waterfall_plot",
+#     # Other stuff
+#     "datasets",
+#     "links",
+#     "utils",
+#     "ActionOptimizer",
+#     "approximate_interactions",
+#     "sample",
+#     "kmeans",
+# ]

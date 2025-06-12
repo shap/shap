@@ -5,17 +5,17 @@ import operator
 from dataclasses import dataclass, field
 from typing import Any, Callable, cast
 
-import numpy as np
-import pandas as pd
-import scipy.cluster
-import scipy.sparse
-import scipy.spatial
-import sklearn
+import lazy_loader as lazy
 from slicer import Alias, Obj, Slicer
 
 from .utils._clustering import hclust_ordering
 from .utils._exceptions import DimensionError
 from .utils._general import OpChain
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
+scipy = lazy.load("scipy", error_on_import=True)
+sklearn = lazy.load("sklearn", error_on_import=True)
 
 op_chain_root = OpChain("shap.Explanation")
 

@@ -7,8 +7,7 @@ import time
 import warnings
 from typing import Any
 
-import numpy as np
-import pandas as pd
+import lazy_loader as lazy
 import scipy.sparse
 import scipy.special
 from packaging import version
@@ -27,6 +26,9 @@ from ..utils._legacy import DenseData
 from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
+
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
 
 try:
     from .. import _cext  # type: ignore
