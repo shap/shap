@@ -201,6 +201,11 @@ def test_kernel_shap_with_high_dim_sparse():
     x_train, x_test, y_train, _ = sklearn.model_selection.train_test_split(
         ngroups.data, ngroups.target, test_size=0.01, random_state=42
     )
+    vectorizer = sklearn.feature_extraction.text.HashingVectorizer(
+        stop_words="english", alternate_sign=False, n_features=2**16
+    )
+    x_train = vectorizer.transform(x_train)
+    x_test = vectorizer.transform(x_test)
     # Fit a linear regression model
     linear_model = sklearn.linear_model.LinearRegression()
     linear_model.fit(x_train, y_train)
