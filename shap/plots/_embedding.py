@@ -1,9 +1,9 @@
 import lazy_loader as lazy
 import matplotlib.pyplot as plt
 
-from ..utils import convert_name
-from . import colors
-from ._labels import labels
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.utils import convert_name
 
 sklearn = lazy.load("sklearn", error_on_import=True)
 

@@ -12,20 +12,20 @@ import scipy.sparse
 import scipy.special
 from packaging import version
 
-from .. import maskers
-from .._explanation import Explanation
-from ..utils import assert_import, record_import_error, safe_isinstance
-from ..utils._exceptions import (
+from shap import maskers
+from shap._explanation import Explanation
+from shap.explainers._explainer import Explainer
+from shap.explainers.other._ubjson import decode_ubjson_buffer
+from shap.utils import assert_import, record_import_error, safe_isinstance
+from shap.utils._exceptions import (
     DimensionError,
     ExplainerError,
     InvalidFeaturePerturbationError,
     InvalidMaskerError,
     InvalidModelError,
 )
-from ..utils._legacy import DenseData
-from ..utils._warnings import ExperimentalWarning
-from ._explainer import Explainer
-from .other._ubjson import decode_ubjson_buffer
+from shap.utils._legacy import DenseData
+from shap.utils._warnings import ExperimentalWarning
 
 np = lazy.load("numpy", error_on_import=True)
 pd = lazy.load("pandas", error_on_import=True)

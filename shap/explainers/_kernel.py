@@ -15,10 +15,11 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 
-from .._explanation import Explanation
-from ..utils import safe_isinstance
-from ..utils._exceptions import DimensionError
-from ..utils._legacy import (
+from shap._explanation import Explanation
+from shap.explainers._explainer import Explainer
+from shap.utils import safe_isinstance
+from shap.utils._exceptions import DimensionError
+from shap.utils._legacy import (
     DenseData,
     SparseData,
     convert_to_data,
@@ -29,7 +30,6 @@ from ..utils._legacy import (
     match_instance_to_data,
     match_model_to_data,
 )
-from ._explainer import Explainer
 
 log = logging.getLogger("shap")
 

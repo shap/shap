@@ -5,7 +5,7 @@ import warnings
 
 import numpy as np
 
-from . import colors
+from shap.plots import colors
 
 try:
     from IPython.display import HTML

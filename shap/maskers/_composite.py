@@ -1,7 +1,7 @@
 import types
 
-from ..utils._exceptions import InvalidMaskerError
-from ._masker import Masker
+from shap.maskers._masker import Masker
+from shap.utils._exceptions import InvalidMaskerError
 
 
 class Composite(Masker):

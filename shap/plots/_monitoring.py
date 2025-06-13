@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 
-from . import colors
-from ._labels import labels
+from shap.plots import colors
+from shap.plots._labels import labels
 
 
 def truncate_text(text, max_len):

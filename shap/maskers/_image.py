@@ -2,10 +2,10 @@ import lazy_loader as lazy
 import numba.typed
 from numba import njit
 
-from .._serializable import Deserializer, Serializer
-from ..utils import assert_import, safe_isinstance
-from ..utils._exceptions import DimensionError
-from ._masker import Masker
+from shap._serializable import Deserializer, Serializer
+from shap.maskers._masker import Masker
+from shap.utils import assert_import, safe_isinstance
+from shap.utils._exceptions import DimensionError
 
 cv2 = lazy.load("cv2", error_on_import=True)
 np = lazy.load("numpy", error_on_import=True)

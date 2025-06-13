@@ -3,7 +3,7 @@
 import lazy_loader as lazy
 from matplotlib.colors import LinearSegmentedColormap
 
-from ._colorconv import lab2rgb, lch2lab
+from shap.plots.colors._colorconv import lab2rgb, lch2lab
 
 np = lazy.load("numpy", error_on_import=True)
 

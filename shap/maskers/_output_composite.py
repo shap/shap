@@ -1,5 +1,5 @@
-from .._serializable import Deserializer, Serializer
-from ._masker import Masker
+from shap._serializable import Deserializer, Serializer
+from shap.maskers._masker import Masker
 
 
 class OutputComposite(Masker):

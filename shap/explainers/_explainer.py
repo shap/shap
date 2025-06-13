@@ -3,14 +3,14 @@ import time
 
 import lazy_loader as lazy
 
-from .. import explainers, links, maskers, models
-from .._explanation import Explanation
-from .._serializable import Deserializer, Serializable, Serializer
-from ..maskers import Masker
-from ..models import Model
-from ..utils import safe_isinstance, show_progress
-from ..utils._exceptions import InvalidAlgorithmError
-from ..utils.transformers import is_transformers_lm
+from shap import explainers, links, maskers, models
+from shap._explanation import Explanation
+from shap._serializable import Deserializer, Serializable, Serializer
+from shap.maskers import Masker
+from shap.models import Model
+from shap.utils import safe_isinstance, show_progress
+from shap.utils._exceptions import InvalidAlgorithmError
+from shap.utils.transformers import is_transformers_lm
 
 np = lazy.load("numpy", error_on_import=True)
 pd = lazy.load("pandas", error_on_import=True)

@@ -2,8 +2,8 @@ from typing import Any
 
 import lazy_loader as lazy
 
-from .._serializable import Deserializer, Serializable, Serializer
-from ..utils import safe_isinstance
+from shap._serializable import Deserializer, Serializable, Serializer
+from shap.utils import safe_isinstance
 
 np = lazy.load("numpy", error_on_import=True)
 

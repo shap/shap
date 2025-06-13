@@ -2,16 +2,16 @@
 
 import numpy as np
 
-from ..utils import assert_import, record_import_error
-from ._tree import (
+from shap.explainers._tree import (
     TreeExplainer,
     _xgboost_cat_unsupported,
     feature_perturbation_codes,
     output_transform_codes,
 )
+from shap.utils import assert_import, record_import_error
 
 try:
-    from .. import _cext_gpu  # type: ignore
+    from shap import _cext_gpu  # type: ignore
 except ImportError as e:
     record_import_error("cext_gpu", "cuda extension was not built during install!", e)
 

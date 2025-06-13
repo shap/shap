@@ -6,10 +6,10 @@ import lazy_loader as lazy
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-from ..utils import hclust_ordering
-from ..utils._legacy import LogitLink, convert_to_link
-from . import colors
-from ._labels import labels
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.utils._clustering import hclust_ordering
+from shap.utils._legacy import LogitLink, convert_to_link
 
 np = lazy.load("numpy", error_on_import=True)
 pd = lazy.load("pandas", error_on_import=True)

@@ -8,9 +8,9 @@ from typing import Any, Callable, cast
 import lazy_loader as lazy
 from slicer import Alias, Obj, Slicer
 
-from .utils._clustering import hclust_ordering
-from .utils._exceptions import DimensionError
-from .utils._general import OpChain
+from shap.utils._clustering import hclust_ordering
+from shap.utils._exceptions import DimensionError
+from shap.utils._general import OpChain
 
 np = lazy.load("numpy", error_on_import=True)
 pd = lazy.load("pandas", error_on_import=True)

@@ -2,7 +2,7 @@ import lazy_loader as lazy
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 
-from . import colors
+from shap.plots import colors
 
 np = lazy.load("numpy", error_on_import=True)
 

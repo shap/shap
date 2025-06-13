@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .. import Explanation
-from ..utils import format_value
-from ._labels import labels
-from ._style import get_style
+from shap import Explanation
+from shap.plots._labels import labels
+from shap.plots._style import get_style
+from shap.utils._general import format_value
 
 
 # TODO: If we make a JS version of this plot then we could let users click on a bar and then see the dependence

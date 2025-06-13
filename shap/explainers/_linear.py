@@ -4,13 +4,13 @@ import lazy_loader as lazy
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
 
-from .. import links, maskers
-from ..utils._exceptions import (
+from shap import links, maskers
+from shap.explainers._explainer import Explainer
+from shap.utils._exceptions import (
     DimensionError,
     InvalidFeaturePerturbationError,
     InvalidModelError,
 )
-from ._explainer import Explainer
 
 np = lazy.load("numpy", error_on_import=True)
 pd = lazy.load("pandas", error_on_import=True)

@@ -3,15 +3,15 @@ import logging
 import lazy_loader as lazy
 from numba import njit
 
-from .. import links
-from ..models import Model
-from ..utils import (
+from shap import links
+from shap.explainers._explainer import Explainer
+from shap.models import Model
+from shap.utils import (
     MaskedModel,
     delta_minimization_order,
     make_masks,
-    shapley_coefficients,
 )
-from ._explainer import Explainer
+from shap.utils._general import shapley_coefficients
 
 np = lazy.load("numpy", error_on_import=True)
 

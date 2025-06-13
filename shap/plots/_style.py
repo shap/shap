@@ -12,8 +12,8 @@ from typing import TypedDict, Union
 import numpy as np
 from typing_extensions import Unpack
 
-from ..utils._exceptions import InvalidStyleOptionError
-from . import colors
+from shap.plots import colors
+from shap.utils._exceptions import InvalidStyleOptionError
 
 # Type hints, adapted from matplotlib.typing
 RGBColorType = Union[tuple[float, float, float], str]

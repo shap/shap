@@ -1,12 +1,3 @@
-# from ._composite import Composite
-# from ._fixed import Fixed
-# from ._fixed_composite import FixedComposite
-# from ._image import Image
-# from ._masker import Masker
-# from ._output_composite import OutputComposite
-# from ._tabular import Impute, Independent, Partition
-# from ._text import Text
-
 import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(
@@ -23,16 +14,3 @@ __getattr__, __dir__, __all__ = lazy.attach(
         "_text": ["Text"],
     },
 )
-
-# __all__ = [
-#     "Composite",
-#     "Fixed",
-#     "FixedComposite",
-#     "Image",
-#     "Masker",
-#     "OutputComposite",
-#     "Impute",
-#     "Independent",
-#     "Partition",
-#     "Text",
-# ]

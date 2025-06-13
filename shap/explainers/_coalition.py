@@ -6,10 +6,10 @@ from itertools import chain, combinations, product
 import lazy_loader as lazy
 
 # import numpy as np  # numpy base
-from .. import links  # shap modules
-from ..explainers._explainer import Explainer
-from ..models import Model
-from ..utils import MaskedModel, make_masks, safe_isinstance
+from shap import links  # shap modules
+from shap.explainers._explainer import Explainer
+from shap.models import Model
+from shap.utils import MaskedModel, make_masks, safe_isinstance
 
 np = lazy.load("numpy", error_on_import=True)
 math = lazy.load("math", error_on_import=True)

@@ -1,7 +1,7 @@
 import lazy_loader as lazy
 
 #
-from . import datasets, links, utils  # noqa: E402
+from shap import datasets, links, utils  # noqa: E402
 
 __getattr__, __dir__, __alllazy__ = lazy.attach(
     __name__,

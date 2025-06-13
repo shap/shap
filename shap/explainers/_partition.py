@@ -5,10 +5,11 @@ import lazy_loader as lazy
 from numba import njit
 from tqdm.auto import tqdm
 
-from .. import Explanation, links
-from ..models import Model
-from ..utils import MaskedModel, OpChain, make_masks, safe_isinstance
-from ._explainer import Explainer
+from shap import Explanation, links
+from shap.explainers._explainer import Explainer
+from shap.models import Model
+from shap.utils import MaskedModel, make_masks, safe_isinstance
+from shap.utils._general import OpChain
 
 np = lazy.load("numpy", error_on_import=True)
 

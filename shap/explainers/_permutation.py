@@ -1,9 +1,8 @@
 import lazy_loader as lazy
 
-from .. import links
-from ..models import Model
-from ..utils import MaskedModel, partition_tree_shuffle
-from ._explainer import Explainer
+from shap import Explainer, links
+from shap.models import Model
+from shap.utils import MaskedModel, partition_tree_shuffle
 
 np = lazy.load("numpy", error_on_import=True)
 

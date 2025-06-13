@@ -1,8 +1,8 @@
 import lazy_loader as lazy
 import numpy as np
 
-from .._serializable import Deserializer, Serializer
-from ._masker import Masker
+from shap._serializable import Deserializer, Serializer
+from shap.maskers._masker import Masker
 
 lazy.load("numpy", error_on_import=True)
 

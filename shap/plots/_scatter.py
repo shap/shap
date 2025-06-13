@@ -10,13 +10,12 @@ import numpy as np
 import pandas as pd
 from matplotlib.markers import MarkerStyle
 
-from .._explanation import Explanation
-from ..utils import approximate_interactions, convert_name
-from ..utils._exceptions import DimensionError
-from ..utils._general import encode_array_if_needed
-from . import colors
-from ._labels import labels
-from ._utils import AxisLimitSpec, parse_axis_limit
+from shap import Explanation
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.plots._utils import AxisLimitSpec, parse_axis_limit
+from shap.utils._exceptions import DimensionError
+from shap.utils._general import approximate_interactions, convert_name, encode_array_if_needed
 
 
 # TODO: Make the color bar a one-sided beeswarm plot so we can see the density along the color axis

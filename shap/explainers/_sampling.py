@@ -2,10 +2,10 @@ import logging
 
 import lazy_loader as lazy
 
-from .._explanation import Explanation
-from ..utils._exceptions import ExplainerError
-from ..utils._legacy import convert_to_instance, match_instance_to_data
-from ._kernel import KernelExplainer
+from shap._explanation import Explanation
+from shap.explainers._kernel import KernelExplainer
+from shap.utils._exceptions import ExplainerError
+from shap.utils._legacy import convert_to_instance, match_instance_to_data
 
 np = lazy.load("numpy", error_on_import=True)
 pd = lazy.load("pandas", error_on_import=True)

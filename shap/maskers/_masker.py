@@ -1,6 +1,6 @@
 import numpy as np
 
-from .._serializable import Serializable
+from shap._serializable import Serializable
 
 
 class Masker(Serializable):

@@ -14,18 +14,18 @@ from matplotlib.figure import Figure
 from packaging import version
 from scipy.stats import gaussian_kde
 
-from .. import Explanation
-from ..utils import safe_isinstance
-from ..utils._exceptions import DimensionError
-from . import colors
-from ._labels import labels
-from ._utils import (
+from shap import Explanation
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.plots._utils import (
     convert_color,
     convert_ordering,
     get_sort_order,
     merge_nodes,
     sort_inds,
 )
+from shap.utils import safe_isinstance
+from shap.utils._exceptions import DimensionError
 
 matplotlib = lazy.load("matplotlib", error_on_import=True)
 np = lazy.load("numpy", error_on_import=True)

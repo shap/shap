@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing_extensions import TypeAlias
 
-from .. import Explanation
-from ..utils import OpChain
-from . import colors
+from shap import Explanation
+from shap.plots import colors
+from shap.utils._general import OpChain
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap
