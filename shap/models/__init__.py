@@ -5,17 +5,8 @@
 # from ._transformers_pipeline import TransformersPipeline
 import lazy_loader as lazy
 
-__getattr__, __dir__, __all__ = lazy.attach(
-    __name__,
-    submodules=[],
-    submod_attrs={
-        "_model": ["Model"],
-        "_teacher_forcing": ["TeacherForcing"],
-        "_text_generation": ["TextGeneration"],
-        "_topk_lm": ["TopKLM"],
-        "_transformers_pipeline": ["TransformersPipeline"],
-    },
-)
+# Use lazy.attach_stub to enable proper type checking for models
+__getattr__, __dir__, __all__ = lazy.attach_stub(__name__, __file__)
 
 # __all__ = [
 #     "Model",

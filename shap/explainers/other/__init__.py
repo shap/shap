@@ -1,14 +1,4 @@
-from ._coefficient import Coefficient
-from ._lime import LimeTabular
-from ._maple import Maple, TreeMaple
-from ._random import Random
-from ._treegain import TreeGain
+import lazy_loader as lazy
 
-__all__ = [
-    "Coefficient",
-    "LimeTabular",
-    "Maple",
-    "TreeMaple",
-    "Random",
-    "TreeGain",
-]
+# Use lazy.attach_stub to enable proper type checking for other explainers
+__getattr__, __dir__, __all__ = lazy.attach_stub(__name__, __file__)
