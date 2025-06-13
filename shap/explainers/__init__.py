@@ -30,6 +30,7 @@ _lazy_getattr, _lazy_dir, _lazy_all = lazy.attach(
         "_permutation": ["PermutationExplainer"],
         "_sampling": ["SamplingExplainer"],
         "_explainer": ["Explainer"],
+        "_tabular": ["Partition"],
     },
 )
 
