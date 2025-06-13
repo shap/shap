@@ -40,6 +40,32 @@ def __getattr__(name):
     # Handle legacy aliases first
     if name == "Tree":
         return _lazy_getattr("TreeExplainer")
+    elif name == "Additive":
+        return _lazy_getattr("AdditiveExplainer")
+    elif name == "Coalition":
+        return _lazy_getattr("CoalitionExplainer")
+    elif name == "Deep":
+        return _lazy_getattr("DeepExplainer")
+    elif name == "Exact":
+        return _lazy_getattr("ExactExplainer")
+    elif name == "GPUTree":
+        return _lazy_getattr("GPUTreeExplainer")
+    elif name == "Gradient":
+        return _lazy_getattr("GradientExplainer")
+    elif name == "Kernel":
+        return _lazy_getattr("KernelExplainer")
+    elif name == "Linear":
+        return _lazy_getattr("LinearExplainer")
+    elif name == "Partition":
+        return _lazy_getattr("PartitionExplainer")
+    elif name == "Permutation":
+        return _lazy_getattr("PermutationExplainer")
+    elif name == "Sampling":
+        return _lazy_getattr("SamplingExplainer")
+    elif name == "Explainer":
+        return _lazy_getattr("Explainer")
+    elif name == "Partition":
+        return _lazy_getattr("PartitionExplainer")
     # Fall back to lazy loader
     return _lazy_getattr(name)
 
