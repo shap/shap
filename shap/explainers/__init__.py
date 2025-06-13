@@ -10,71 +10,51 @@
 # from ._permutation import PermutationExplainer
 # from ._sampling import SamplingExplainer
 
-# Lazy import for TreeExplainer to improve import performance
+# Lazy import for explainers to improve import performance
 import lazy_loader as lazy
 
-_lazy_getattr, _lazy_dir, _lazy_all = lazy.attach(
-    __name__,
-    submodules=[],
-    submod_attrs={
-        "_tree": ["TreeExplainer"],
-        "_additive": ["AdditiveExplainer"],
-        "_coalition": ["CoalitionExplainer"],
-        "_deep": ["DeepExplainer"],
-        "_exact": ["ExactExplainer"],
-        "_gpu_tree": ["GPUTreeExplainer"],
-        "_gradient": ["GradientExplainer"],
-        "_kernel": ["KernelExplainer"],
-        "_linear": ["LinearExplainer"],
-        "_partition": ["PartitionExplainer"],
-        "_permutation": ["PermutationExplainer"],
-        "_sampling": ["SamplingExplainer"],
-        "_explainer": ["Explainer"],
-        "_tabular": ["Partition"],
-    },
-)
+# Use lazy.attach_stub for all explainers to enable proper type checking
+# attach_stub expects __file__ and will look for adjacent .pyi file
+_stub_getattr, _stub_dir, _stub_all = lazy.attach_stub(__name__, __file__)
 
 
-# Create custom __getattr__ to handle both lazy loading and legacy aliases
+# Legacy aliases for backwards compatibility
 def __getattr__(name):
     # Handle legacy aliases first
     if name == "Tree":
-        return _lazy_getattr("TreeExplainer")
+        return _stub_getattr("TreeExplainer")
     elif name == "Additive":
-        return _lazy_getattr("AdditiveExplainer")
+        return _stub_getattr("AdditiveExplainer")
     elif name == "Coalition":
-        return _lazy_getattr("CoalitionExplainer")
+        return _stub_getattr("CoalitionExplainer")
     elif name == "Deep":
-        return _lazy_getattr("DeepExplainer")
+        return _stub_getattr("DeepExplainer")
     elif name == "Exact":
-        return _lazy_getattr("ExactExplainer")
+        return _stub_getattr("ExactExplainer")
     elif name == "GPUTree":
-        return _lazy_getattr("GPUTreeExplainer")
+        return _stub_getattr("GPUTreeExplainer")
     elif name == "Gradient":
-        return _lazy_getattr("GradientExplainer")
+        return _stub_getattr("GradientExplainer")
     elif name == "Kernel":
-        return _lazy_getattr("KernelExplainer")
+        return _stub_getattr("KernelExplainer")
     elif name == "Linear":
-        return _lazy_getattr("LinearExplainer")
+        return _stub_getattr("LinearExplainer")
     elif name == "Partition":
-        return _lazy_getattr("PartitionExplainer")
+        return _stub_getattr("PartitionExplainer")
     elif name == "Permutation":
-        return _lazy_getattr("PermutationExplainer")
+        return _stub_getattr("PermutationExplainer")
     elif name == "Sampling":
-        return _lazy_getattr("SamplingExplainer")
-    elif name == "Explainer":
-        return _lazy_getattr("Explainer")
-    elif name == "Partition":
-        return _lazy_getattr("PartitionExplainer")
-    # Fall back to lazy loader
-    return _lazy_getattr(name)
+        return _stub_getattr("SamplingExplainer")
+    else:
+        # Fall back to stub-based lazy loader
+        return _stub_getattr(name)
 
 
 def __dir__():
-    return _lazy_dir() + ["Tree"]
+    return list(set(_stub_dir() + ["Tree"]))
 
 
-__all__ = _lazy_all + ["Tree"]
+__all__ = list(set(_stub_all + ["Tree"]))
 
 # Alternative legacy "short-form" aliases, which are kept here for backwards-compatibility
 # Additive = AdditiveExplainer
