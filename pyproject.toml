@@ -115,7 +115,8 @@ disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
-mypy_path = "stubs"
+# mypy_path is not needed when stubs are packaged with the library
+# mypy_path = "stubs"
 
 plugins = ["numpy.typing.mypy_plugin"]
 
@@ -194,6 +195,17 @@ packages = [
   'shap.actions',
   'shap.models'
 ]
+
+# Include type stub files (.pyi) in the package
+[tool.setuptools.package-data]
+shap = ["py.typed", "*.pyi"]
+"shap.explainers" = ["*.pyi"]
+"shap.explainers.other" = ["*.pyi"]
+"shap.maskers" = ["*.pyi"]
+"shap.models" = ["*.pyi"]
+"shap.plots" = ["*.pyi"]
+"shap.utils" = ["*.pyi"]
+"shap.actions" = ["*.pyi"]
 
 [tool.setuptools_scm]
 version_file = "shap/_version.py"

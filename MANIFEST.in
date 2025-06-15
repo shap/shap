@@ -4,6 +4,10 @@
 # so we need to manually exclude things that we don't wish to include.
 # See: https://github.com/pypa/setuptools_scm/issues/190
 
+# Include type information
+include shap/py.typed
+recursive-include shap *.pyi
+
 prune .github
 prune appveyor
 prune data
