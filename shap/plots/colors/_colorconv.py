@@ -35,8 +35,10 @@
 
 from warnings import warn
 
-import numpy as np
+import lazy_loader as lazy
 from scipy import linalg
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 def _prepare_colorarray(arr, *, channel_axis=-1):

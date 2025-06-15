@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .. import Explanation
-from ..utils import OpChain
-from . import colors
-from ._labels import labels
-from ._utils import convert_ordering
+from shap import Explanation
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.plots._utils import convert_ordering
+from shap.utils._general import OpChain
 
 
 def heatmap(

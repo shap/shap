@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
+import lazy_loader as lazy
 
-from .._serializable import Deserializer, Serializer
-from ..utils import safe_isinstance
-from ._model import Model
+from shap._serializable import Deserializer, Serializer
+from shap.models._model import Model
+from shap.utils import safe_isinstance
+
+np = lazy.load("numpy", error_on_import=True)
 
 
 class TextGeneration(Model):

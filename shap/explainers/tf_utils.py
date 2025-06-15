@@ -1,13 +1,8 @@
 import warnings
 
-tf = None
+import lazy_loader as lazy
 
-
-def _import_tf():
-    """Tries to import tensorflow."""
-    global tf
-    if tf is None:
-        import tensorflow as tf
+tf = lazy.load("tensorflow", error_on_import=False)
 
 
 def _get_session(session):
@@ -24,7 +19,6 @@ def _get_session(session):
         An optional existing session.
 
     """
-    _import_tf()
     # if we are not given a session find a default session
     if session is None:
         try:
@@ -44,7 +38,6 @@ def _get_graph(explainer):
         One of the tensorflow-based explainers.
 
     """
-    _import_tf()
     if not tf.executing_eagerly():
         return explainer.session.graph
     else:
@@ -64,7 +57,6 @@ def _get_model_inputs(model):
         The tensorflow model or tuple.
 
     """
-    _import_tf()
     if (
         str(type(model)).endswith("keras.engine.sequential.Sequential'>")
         or str(type(model)).endswith("keras.models.Sequential'>")
@@ -89,7 +81,6 @@ def _get_model_output(model):
         The tensorflow model or tuple.
 
     """
-    _import_tf()
     if (
         str(type(model)).endswith("keras.engine.sequential.Sequential'>")
         or str(type(model)).endswith("keras.models.Sequential'>")

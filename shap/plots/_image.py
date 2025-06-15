@@ -15,10 +15,10 @@ try:
 except ImportError:
     have_ipython = False
 
-from .._explanation import Explanation
-from ..utils import ordinal_str
-from ..utils._legacy import kmeans
-from . import colors
+from shap._explanation import Explanation
+from shap.plots import colors
+from shap.utils._general import ordinal_str
+from shap.utils._legacy import kmeans
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap

@@ -13,7 +13,7 @@ import scipy.special
 import sklearn
 
 if TYPE_CHECKING:
-    from ._types import _ArrayT
+    from shap.utils._types import _ArrayT
 
 import_errors: dict[str, tuple[str, Exception]] = {}
 

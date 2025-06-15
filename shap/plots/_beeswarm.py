@@ -5,10 +5,8 @@ from __future__ import annotations
 import warnings
 from typing import Literal
 
-import matplotlib
+import lazy_loader as lazy
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import scipy.cluster
 import scipy.sparse
 import scipy.spatial
@@ -16,18 +14,22 @@ from matplotlib.figure import Figure
 from packaging import version
 from scipy.stats import gaussian_kde
 
-from .. import Explanation
-from ..utils import safe_isinstance
-from ..utils._exceptions import DimensionError
-from . import colors
-from ._labels import labels
-from ._utils import (
+from shap import Explanation
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.plots._utils import (
     convert_color,
     convert_ordering,
     get_sort_order,
     merge_nodes,
     sort_inds,
 )
+from shap.utils import safe_isinstance
+from shap.utils._exceptions import DimensionError
+
+matplotlib = lazy.load("matplotlib", error_on_import=True)
+np = lazy.load("numpy", error_on_import=True)
+pd = lazy.load("pandas", error_on_import=True)
 
 # TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):
