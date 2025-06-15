@@ -105,14 +105,16 @@ def test_image_plot_with_labels():
     pixel_values = np.stack([pixel_values_single for _ in range(2)], axis=0)
 
     # Just create dummy labels for 2 samples x 3 classes
-    labels = np.array([["a", "b", "c"], ["d", "e", "f"]])
+    dummy_labels = np.array([["a", "b", "c"], ["d", "e", "f"]])
 
-    explanation = shap.Explanation(values=shap_values, data=pixel_values, output_names=labels)
+    explanation = shap.Explanation(values=shap_values, data=pixel_values, output_names=dummy_labels)
 
     # Run plots
 
     # Case when no labels are provided (and the ones from the Explanation are used)
     shap.image_plot(explanation, show=False)
+
+    label_use_cases: list[list[str] | list[list[str]] | np.ndarray]
 
     # Cases where labels are provided for each row
     label_use_cases = [
