@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 def image(
     shap_values: Explanation | np.ndarray | list[np.ndarray],
     pixel_values: np.ndarray | None = None,
-    labels: list[str] | np.ndarray | None = None,
+    labels: list[str] | list[list[str]] | np.ndarray | None = None,
     true_labels: list | None = None,
     width: int | None = 20,
     aspect: float | None = 0.2,
