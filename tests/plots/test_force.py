@@ -1,3 +1,4 @@
+import sys
 from contextlib import nullcontext as does_not_raise
 
 import matplotlib.pyplot as plt
@@ -6,6 +7,20 @@ import pytest
 from pytest import param
 
 import shap
+
+
+@pytest.fixture
+def data_explainer_shap_values():
+    RandomForestRegressor = pytest.importorskip("sklearn.ensemble").RandomForestRegressor
+
+    # train model
+    X, y = shap.datasets.california(n_points=500)
+    model = RandomForestRegressor(n_estimators=100)
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    explainer = shap.TreeExplainer(model)
+    return X, explainer, explainer.shap_values(X)
 
 
 @pytest.mark.parametrize(
@@ -49,18 +64,12 @@ def test_verify_valid_cmap(cmap, exp_ctx):
         verify_valid_cmap(cmap)
 
 
-def test_random_force_plot_mpl_with_data():
+@pytest.mark.skipif(
+    sys.platform == "darwin", reason="Since this test is flaky on MacOS, we skip it for now. See GH #4102."
+)
+def test_random_force_plot_mpl_with_data(data_explainer_shap_values):
     """Test if force plot with matplotlib works."""
-    RandomForestRegressor = pytest.importorskip("sklearn.ensemble").RandomForestRegressor
-
-    # train model
-    X, y = shap.datasets.california(n_points=500)
-    model = RandomForestRegressor(n_estimators=100)
-    model.fit(X, y)
-
-    # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
+    X, explainer, shap_values = data_explainer_shap_values
 
     # visualize the first prediction's explanation
     shap.force_plot(explainer.expected_value, shap_values[0, :], X.iloc[0, :], matplotlib=True, show=False)
@@ -68,18 +77,12 @@ def test_random_force_plot_mpl_with_data():
         shap.force_plot([1, 1], shap_values, X.iloc[0, :], show=False)
 
 
-def test_random_force_plot_mpl_text_rotation_with_data():
+@pytest.mark.skipif(
+    sys.platform == "darwin", reason="Since this test is flaky on MacOS, we skip it for now. See GH #4102."
+)
+def test_random_force_plot_mpl_text_rotation_with_data(data_explainer_shap_values):
     """Test if force plot with matplotlib works when supplied with text_rotation."""
-    RandomForestRegressor = pytest.importorskip("sklearn.ensemble").RandomForestRegressor
-
-    # train model
-    X, y = shap.datasets.california(n_points=500)
-    model = RandomForestRegressor(n_estimators=100)
-    model.fit(X, y)
-
-    # explain the model's predictions using SHAP values
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
+    X, explainer, shap_values = data_explainer_shap_values
 
     # visualize the first prediction's explanation
     shap.force_plot(
