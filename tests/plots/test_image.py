@@ -57,11 +57,39 @@ def test_image_single(imagenet50_example):
 
 
 @pytest.mark.mpl_image_compare
+def test_image_multi_no_labels(explanation_multi_example):
+    """Multiple images, multiple classes, labels taken from explanation object"""
+    set_reproducible_mpl_rcparams()
+    shap.image_plot(explanation_multi_example, show=False)
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
 def test_image_multi(explanation_multi_example):
     """Multiple images, multiple classes, a common set of labels for all rows"""
     set_reproducible_mpl_rcparams()
     *_, n_classes = explanation_multi_example.shape
     labels = [f"Class {x + 1}" for x in range(n_classes)]
+    shap.image_plot(explanation_multi_example, labels=labels, show=False)
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_image_multi_labels_per_row_list(explanation_multi_example):
+    """Multiple images, multiple classes, a set of labels per row as list of lists"""
+    set_reproducible_mpl_rcparams()
+    n_images, *_, n_classes = explanation_multi_example.shape
+    labels = [[f"Class {x + 1 + y * n_classes}" for x in range(n_classes)] for y in range(n_images)]
+    shap.image_plot(explanation_multi_example, labels=labels, show=False)
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_image_multi_labels_per_row_ndarray(explanation_multi_example):
+    """Multiple images, multiple classes, a set of labels per row as np.array"""
+    set_reproducible_mpl_rcparams()
+    n_images, *_, n_classes = explanation_multi_example.shape
+    labels = np.array([[f"Class {x + 1 + y * n_classes}" for x in range(n_classes)] for y in range(n_images)])
     shap.image_plot(explanation_multi_example, labels=labels, show=False)
     return plt.gcf()
 
@@ -97,49 +125,3 @@ def test_image_to_text_single():
 
     shap_values_test = MockImageExplanation(test_data, test_values, test_output_names)
     shap.plots.image_to_text(shap_values_test)
-
-
-def test_image_plot_with_labels():
-    """Just make sure the image_plot function doesn't crash."""
-
-    # Setup
-
-    # Just create fake SHAP values with 3 classes and fake image data
-    shap_values_single = np.stack([np.random.random((20, 20, 3)) for i in range(3)], axis=-1)
-    pixel_values_single = np.random.random((20, 20, 3))
-
-    # Just repeat the same values for two sample
-    shap_values = np.stack([shap_values_single for _ in range(2)], axis=0)
-    pixel_values = np.stack([pixel_values_single for _ in range(2)], axis=0)
-
-    # Just create dummy labels for 2 samples x 3 classes
-    dummy_labels = np.array([["a", "b", "c"], ["d", "e", "f"]])
-
-    explanation = shap.Explanation(values=shap_values, data=pixel_values, output_names=dummy_labels)
-
-    # Run plots
-
-    # Case when no labels are provided (and the ones from the Explanation are used)
-    shap.image_plot(explanation, show=False)
-
-    label_use_cases: list[list[str] | list[list[str]] | np.ndarray]
-
-    # Cases where labels are provided for each row
-    label_use_cases = [
-        [["a", "b", "c"], ["d", "e", "f"]],
-        np.array([["a", "b", "c"], ["d", "e", "f"]]),
-        ["a", "b", "c", "d", "e", "f"],
-        np.array(["a", "b", "c", "d", "e", "f"]),
-    ]
-    for labels in label_use_cases:
-        shap.image_plot(explanation, labels=labels, show=False)
-
-    # Cases where only one set of labels is provided for all rows
-    label_use_cases = [
-        ["a", "b", "c"],
-        np.array(["a", "b", "c"]),
-        [["a", "b", "c"]],
-        np.array([["a", "b", "c"]]),
-    ]
-    for labels in label_use_cases:
-        shap.image_plot(explanation, labels=labels, show=False)
