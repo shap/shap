@@ -26,20 +26,9 @@ def imagenet50_example() -> tuple[np.ndarray, np.ndarray]:
     return images, labels
 
 
-@pytest.mark.mpl_image_compare
-def test_image_single(imagenet50_example):
-    set_reproducible_mpl_rcparams()
-    images, _ = imagenet50_example
-    images = images[0]
-    shap_values = (images - images.mean()) / images.max(keepdims=True)
-    explanation = shap.Explanation(values=shap_values, data=images)
-    shap.image_plot(explanation, show=False)
-    return plt.gcf()
-
-
-@pytest.mark.mpl_image_compare
-def test_image_multi(imagenet50_example):
-    set_reproducible_mpl_rcparams()
+@pytest.fixture
+def explanation_multi_example(imagenet50_example) -> shap.Explanation:
+    # Return an explanation example
     images, _ = imagenet50_example
     n_images = 2
     n_classes = 4
@@ -52,9 +41,28 @@ def test_image_multi(imagenet50_example):
     shap_values_multi = np.stack([shap_values_single for _ in range(n_classes)], axis=-1)
     assert shap_values_multi.shape[-1] == n_classes
 
-    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[1 for _ in range(n_images)])
+    explanation = shap.Explanation(values=shap_values_multi, data=images, output_names=[x for x in range(n_classes)])
+    return explanation
+
+
+@pytest.mark.mpl_image_compare
+def test_image_single(imagenet50_example):
+    set_reproducible_mpl_rcparams()
+    images, _ = imagenet50_example
+    images = images[0]
+    shap_values = (images - images.mean()) / images.max(keepdims=True)
+    explanation = shap.Explanation(values=shap_values, data=images)
+    shap.image_plot(explanation, show=False)
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_image_multi(explanation_multi_example):
+    """Multiple images, multiple classes, a common set of labels for all rows"""
+    set_reproducible_mpl_rcparams()
+    *_, n_classes = explanation_multi_example.shape
     labels = [f"Class {x + 1}" for x in range(n_classes)]
-    shap.image_plot(explanation, labels=labels, show=False)
+    shap.image_plot(explanation_multi_example, labels=labels, show=False)
     return plt.gcf()
 
 
