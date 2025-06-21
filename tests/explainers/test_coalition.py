@@ -80,3 +80,25 @@ def test_tabular_coalition_partition_match():
     binary_winter_values = partition_explainer_b(data)
 
     assert np.allclose(binary_values.values, binary_winter_values.values)
+
+
+def test_auto_partition_tree_generation():
+    """Test that the CoalitionExplainer can auto-generate the partition_tree from the masker's clustering."""
+    model, data = common.basic_xgboost_scenario(50)
+    X, _ = shap.datasets.adult()
+    features = X.columns.tolist()
+    data = pd.DataFrame(data, columns=features)
+
+    partition_masker = shap.maskers.Partition(data, clustering="correlation")
+    partition_masker.feature_names = features
+
+    explainer_auto = shap.CoalitionExplainer(model.predict, partition_masker)
+    shap_values_auto = explainer_auto(data)
+
+    manual_partition_tree = create_partition_hierarchy(partition_masker.clustering, partition_masker.feature_names)
+    explainer_manual = shap.CoalitionExplainer(model.predict, partition_masker, partition_tree=manual_partition_tree)
+    shap_values_manual = explainer_manual(data)
+
+    assert np.allclose(shap_values_auto.values, shap_values_manual.values), (
+        "SHAP values from auto-generated and manually-generated partition trees do not match."
+    )

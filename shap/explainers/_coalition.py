@@ -143,6 +143,22 @@ class CoalitionExplainer(Explainer):
         else:
             self._reshaped_model = self.model
 
+        if partition_tree is None:
+            if getattr(self.masker, "clustering", None) is not None:
+                if callable(self.masker.clustering):
+                    raise NotImplementedError(
+                        "Callable clustering not yet supported for CoalitionExplainer auto-partition tree generation. Please pre-compute the clustering and pass it to the masker."
+                    )
+                if getattr(self.masker, "feature_names", None) is None:
+                    raise ValueError("masker must have feature_names to auto-generate partition_tree from clustering.")
+                self.partition_tree = create_partition_hierarchy(self.masker.clustering, self.masker.feature_names)
+            else:
+                raise ValueError(
+                    "A partition_tree must be provided to CoalitionExplainer, or a masker with a .clustering attribute."
+                )
+        else:
+            self.partition_tree = partition_tree
+
         self.partition_tree = partition_tree
 
         if not callable(self.masker.clustering):
@@ -311,19 +327,51 @@ def _build_tree(d, root):
 def create_partition_hierarchy(
     linkage_matrix, columns
 ):  # this is a helper to turn scipy linkage matrix to partition_tree dict
-    def build_hierarchy(node, linkage_matrix, columns):
-        if node < len(columns):
-            return {columns[node]: columns[node]}
+    """Converts a SciPy linkage matrix into a SHAP partition_tree dictionary."""
+    memo = {}
+
+    def build_tree(i):
+        if i in memo:
+            return memo[i]
+        if i < len(columns):
+            memo[i] = columns[i]
+            return columns[i]
+
+        # A key for the new group. The name is not critical but should be unique.
+        group_name = f"group_{i}"
+        left = int(linkage_matrix[i - len(columns), 0])
+        right = int(linkage_matrix[i - len(columns), 1])
+
+        # The value is a list of children, which can be strings (features) or dicts (sub-groups)
+        left_tree = build_tree(left)
+        right_tree = build_tree(right)
+        children_list = []
+        if isinstance(left_tree, dict):
+            children_list.append(left_tree)
         else:
-            left_child = int(linkage_matrix[node - len(columns), 0])
-            right_child = int(linkage_matrix[node - len(columns), 1])
-            left_subtree = build_hierarchy(left_child, linkage_matrix, columns)
-            right_subtree = build_hierarchy(right_child, linkage_matrix, columns)
-            return {f"cluster_{node}": {**left_subtree, **right_subtree}}
+            children_list.append(left_tree)
+
+        if isinstance(right_tree, dict):
+            children_list.append(right_tree)
+        else:
+            children_list.append(right_tree)
+
+        res = {group_name: children_list}
+        memo[i] = res
+        return res
 
     root_node = len(linkage_matrix) + len(columns) - 1
-    hierarchy = build_hierarchy(root_node, linkage_matrix, columns)
-    return hierarchy[f"cluster_{root_node}"]
+
+    # Build a partition tree that `_build_tree` can parse
+    # The simplest way to implement this is to always create a new group for each merge.
+    def build_final_tree(i):
+        if i < len(columns):
+            return columns[i]
+        left = int(linkage_matrix[i - len(columns), 0])
+        right = int(linkage_matrix[i - len(columns), 1])
+        return {f"group_{i}": [build_final_tree(left), build_final_tree(right)]}
+
+    return build_final_tree(root_node)
 
 
 def _combine_masks(masks):
