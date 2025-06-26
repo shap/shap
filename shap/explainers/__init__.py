@@ -1,15 +1,3 @@
-# from ._additive import AdditiveExplainer
-# from ._coalition import CoalitionExplainer
-# from ._deep import DeepExplainer
-# from ._exact import ExactExplainer
-# from ._gpu_tree import GPUTreeExplainer
-# from ._gradient import GradientExplainer
-# from ._kernel import KernelExplainer
-# from ._linear import LinearExplainer
-# from ._partition import PartitionExplainer
-# from ._permutation import PermutationExplainer
-# from ._sampling import SamplingExplainer
-
 # Lazy import for explainers to improve import performance
 import lazy_loader as lazy
 

@@ -20,6 +20,7 @@ import_errors: dict[str, tuple[str, Exception]] = {}
 
 def assert_import(package_name: str) -> None:
     global import_errors
+    force_import(package_name)
     if package_name in import_errors:
         msg, e = import_errors[package_name]
         print(msg)
@@ -342,3 +343,70 @@ def suppress_stderr():
             yield
         finally:
             sys.stderr = old_stderr
+
+
+def force_import(module_name: str) -> Any:
+    """Force import a module that may be lazily loaded.
+
+    This is useful when working with lazy_loader to ensure a module
+    is actually imported when needed, especially in development environments.
+
+    Parameters
+    ----------
+    module_name : str
+        The name of the module to force import (e.g., 'shap.datasets', 'shap.plots')
+
+    Returns
+    -------
+    module : Any
+        The imported module
+
+    Raises
+    ------
+    ImportError
+        If the module cannot be imported
+    """
+    try:
+        # Handle relative imports within shap
+        if module_name.startswith("shap."):
+            # Import the module directly
+            parts = module_name.split(".")
+            if len(parts) >= 2:
+                # Try importing the submodule
+                import importlib
+
+                module = importlib.import_module(module_name)
+
+                # Also ensure it's available in the parent namespace
+                if len(parts) == 2:  # e.g., 'shap.datasets'
+                    import shap
+
+                    setattr(shap, parts[1], module)
+
+                return module
+        else:
+            # Regular import
+            import importlib
+
+            return importlib.import_module(module_name)
+
+    except ImportError as e:
+        record_import_error(module_name, f"Failed to force import {module_name}: {e}", e)
+        raise
+
+
+def ensure_shap_submodules_loaded():
+    """Ensure all main SHAP submodules are properly loaded.
+
+    This is particularly useful in development environments where
+    lazy loading might not work as expected.
+    """
+    submodules = ["datasets", "utils", "plots", "explainers", "maskers", "models"]
+
+    for submodule in submodules:
+        try:
+            force_import(f"shap.{submodule}")
+        except ImportError as e:
+            # Some modules might not be available (e.g., plots without matplotlib)
+            # Just record the error but don't fail
+            print(f"Warning: Could not load shap.{submodule}: {e}")
