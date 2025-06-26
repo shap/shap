@@ -101,9 +101,11 @@ class CoalitionExplainer(Explainer):
             determined from the masker if possible.
 
         partition_tree : dict, required
-            A dictionary defining the hierarchical grouping of features. Each key
-            represents a group name, and its value is either a list of feature names
-            or another dictionary defining subgroups, note all input features must be included in the leaf nodes.
+            A dictionary defining a custom hierarchical grouping of features. This is for users who want to
+            define partitions based on domain knowledge. For automatic binary clustering, please use the
+            `PartitionExplainer`. Each key represents a group name, and its value is either a list of
+            feature names or another dictionary defining subgroups. Note all input features must be included
+            in the leaf nodes.
             For example:
             {
                 "Demographics": ["Age", "Gender", "Education"],
@@ -144,21 +146,11 @@ class CoalitionExplainer(Explainer):
             self._reshaped_model = self.model
 
         if partition_tree is None:
-            if getattr(self.masker, "clustering", None) is not None:
-                if callable(self.masker.clustering):
-                    raise NotImplementedError(
-                        "Callable clustering not yet supported for CoalitionExplainer auto-partition tree generation. Please pre-compute the clustering and pass it to the masker."
-                    )
-                if getattr(self.masker, "feature_names", None) is None:
-                    raise ValueError("masker must have feature_names to auto-generate partition_tree from clustering.")
-                self.partition_tree = create_partition_hierarchy(self.masker.clustering, self.masker.feature_names)
-            else:
-                raise ValueError(
-                    "A partition_tree must be provided to CoalitionExplainer, or a masker with a .clustering attribute."
-                )
-        else:
-            self.partition_tree = partition_tree
-
+            raise ValueError(
+                "A `partition_tree` must be provided to CoalitionExplainer. "
+                "This explainer is for custom user-defined partitions. "
+                "For automatic hierarchical clustering, please use `shap.PartitionExplainer`."
+            )
         self.partition_tree = partition_tree
 
         if not callable(self.masker.clustering):
@@ -318,8 +310,11 @@ def _build_tree(d, root):
             _build_tree(value, node)
     elif isinstance(d, list):
         for item in d:
-            node = Node(item)
-            root.child.append(node)
+            if isinstance(item, dict):
+                _build_tree(item, root)
+            else:
+                node = Node(item)
+                root.child.append(node)
     # get all the sibling permutations
     _generate_permutations(root)
 
@@ -328,39 +323,6 @@ def create_partition_hierarchy(
     linkage_matrix, columns
 ):  # this is a helper to turn scipy linkage matrix to partition_tree dict
     """Converts a SciPy linkage matrix into a SHAP partition_tree dictionary."""
-    memo = {}
-
-    def build_tree(i):
-        if i in memo:
-            return memo[i]
-        if i < len(columns):
-            memo[i] = columns[i]
-            return columns[i]
-
-        # A key for the new group. The name is not critical but should be unique.
-        group_name = f"group_{i}"
-        left = int(linkage_matrix[i - len(columns), 0])
-        right = int(linkage_matrix[i - len(columns), 1])
-
-        # The value is a list of children, which can be strings (features) or dicts (sub-groups)
-        left_tree = build_tree(left)
-        right_tree = build_tree(right)
-        children_list = []
-        if isinstance(left_tree, dict):
-            children_list.append(left_tree)
-        else:
-            children_list.append(left_tree)
-
-        if isinstance(right_tree, dict):
-            children_list.append(right_tree)
-        else:
-            children_list.append(right_tree)
-
-        res = {group_name: children_list}
-        memo[i] = res
-        return res
-
-    root_node = len(linkage_matrix) + len(columns) - 1
 
     # Build a partition tree that `_build_tree` can parse
     # The simplest way to implement this is to always create a new group for each merge.
@@ -371,6 +333,7 @@ def create_partition_hierarchy(
         right = int(linkage_matrix[i - len(columns), 1])
         return {f"group_{i}": [build_final_tree(left), build_final_tree(right)]}
 
+    root_node = len(linkage_matrix) + len(columns) - 1
     return build_final_tree(root_node)
 
 
