@@ -367,8 +367,23 @@ def force_import(module_name: str) -> Any:
         If the module cannot be imported
     """
     try:
+        # Handle special cases for C extensions
+        if module_name == "cext":
+            # Make the module available in the main shap namespace
+            import shap
+            import shap._cext
+
+            setattr(shap, "_cext", shap._cext)
+            return shap._cext
+        elif module_name == "cext_gpu":
+            # Make the module available in the main shap namespace
+            import shap
+            import shap._cext_gpu
+
+            setattr(shap, "_cext_gpu", shap._cext_gpu)
+            return shap._cext_gpu
         # Handle relative imports within shap
-        if module_name.startswith("shap."):
+        elif module_name.startswith("shap."):
             # Import the module directly
             parts = module_name.split(".")
             if len(parts) >= 2:

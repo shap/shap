@@ -28,8 +28,25 @@ class UnsupportedModule:
 
 
 def __getattr__(name):
+    # Handle C extension modules
+    if name == "_cext":
+        try:
+            import shap._cext
+
+            return shap._cext
+        except ImportError as e:
+            utils.record_import_error("_cext", "C extension was not built during install!", e)
+            raise
+    elif name == "_cext_gpu":
+        try:
+            import shap._cext_gpu
+
+            return shap._cext_gpu
+        except ImportError as e:
+            utils.record_import_error("_cext_gpu", "CUDA extension was not built during install!", e)
+            raise
     # Handle legacy aliases first
-    if name == "summary_plot":
+    elif name == "summary_plot":
         return _stub_getattr("summary_legacy")
     elif name == "image_plot":
         return _stub_getattr("image")
