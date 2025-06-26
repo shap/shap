@@ -15,6 +15,7 @@ from . import explainers as explainers
 from . import links as links
 from . import maskers as maskers
 from . import models as models
+from . import cext as cext
 
 # Plots module and functions (may be UnsupportedModule if matplotlib not available)
 from . import plots as plots
@@ -42,6 +43,7 @@ from .explainers import other as other
 # Plot functions (available through __getattr__ lazy loading)
 from .plots._bar import bar_legacy as bar_legacy
 from .plots._beeswarm import summary_legacy as summary_legacy
+from .plots._beeswarm import summary_legacy as summary_plot
 from .plots._decision import decision as decision
 from .plots._decision import multioutput_decision as multioutput_decision
 from .plots._embedding import embedding as embedding
