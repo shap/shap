@@ -5,6 +5,9 @@
 __version__: str
 
 # Core components from _explanation
+# C extension modules (may not be available if not compiled)
+from . import _cext as _cext
+from . import _cext_gpu as _cext_gpu
 from . import actions as actions
 
 # Submodules
@@ -17,6 +20,7 @@ from . import maskers as maskers
 from . import models as models
 
 # Plots module and functions (may be UnsupportedModule if matplotlib not available)
+from . import plots as plots
 from . import utils as utils
 from ._explanation import Cohorts as Cohorts
 from ._explanation import Explanation as Explanation
@@ -37,9 +41,26 @@ from .explainers import PermutationExplainer as PermutationExplainer
 from .explainers import SamplingExplainer as SamplingExplainer
 from .explainers import TreeExplainer as TreeExplainer
 from .explainers import other as other
+
+# Plot functions (available through __getattr__ lazy loading)
+from .plots._bar import bar_legacy as bar_legacy
+from .plots._beeswarm import summary_legacy as summary_legacy
+from .plots._decision import decision as decision
+from .plots._decision import multioutput_decision as multioutput_decision
+from .plots._embedding import embedding as embedding
+from .plots._force import force as force
 from .plots._force import getjs as getjs
 from .plots._force import initjs as initjs
 from .plots._force import save_html as save_html
+from .plots._group_difference import group_difference as group_difference
+from .plots._heatmap import heatmap as heatmap
+from .plots._image import image as image
+from .plots._monitoring import monitoring as monitoring
+from .plots._partial_dependence import partial_dependence as partial_dependence
+from .plots._scatter import dependence_legacy as dependence_legacy
+from .plots._text import text as text
+from .plots._violin import violin as violin
+from .plots._waterfall import waterfall as waterfall
 
 # From utils
 from .utils import approximate_interactions as approximate_interactions

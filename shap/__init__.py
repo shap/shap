@@ -3,7 +3,7 @@ import lazy_loader as lazy
 #
 from shap import datasets, links, utils  # noqa: E402
 
-__getattr__, __dir__, __alllazy__ = lazy.attach_stub(__name__, __file__)
+_stub_getattr, __dir__, __alllazy__ = lazy.attach_stub(__name__, __file__)
 
 try:
     # Version from setuptools-scm
@@ -27,101 +27,59 @@ class UnsupportedModule:
         raise ImportError(_no_matplotlib_warning)
 
 
-# try:
-#     import matplotlib  # noqa: F401
-#
-#     have_matplotlib = True
-# except ImportError:
-#     have_matplotlib = False
-# if have_matplotlib:
-#     from . import plots
-#     from .plots._bar import bar_legacy as bar_plot
-#     from .plots._beeswarm import summary_legacy as summary_plot
-#     from .plots._decision import decision as decision_plot
-#     from .plots._decision import multioutput_decision as multioutput_decision_plot
-#     from .plots._embedding import embedding as embedding_plot
-#     from .plots._force import force as force_plot
-#     from .plots._force import getjs, initjs, save_html
-#     from .plots._group_difference import group_difference as group_difference_plot
-#     from .plots._heatmap import heatmap as heatmap_plot
-#     from .plots._image import image as image_plot
-#     from .plots._monitoring import monitoring as monitoring_plot
-#     from .plots._partial_dependence import partial_dependence as partial_dependence_plot
-#     from .plots._scatter import dependence_legacy as dependence_plot
-#     from .plots._text import text as text_plot
-#     from .plots._violin import violin as violin_plot
-#     from .plots._waterfall import waterfall as waterfall_plot
-# else:
-#     bar_plot = unsupported
-#     summary_plot = unsupported
-#     decision_plot = unsupported
-#     multioutput_decision_plot = unsupported
-#     embedding_plot = unsupported
-#     force_plot = unsupported
-#     getjs = unsupported
-#     initjs = unsupported
-#     save_html = unsupported
-#     group_difference_plot = unsupported
-#     heatmap_plot = unsupported
-#     image_plot = unsupported
-#     monitoring_plot = unsupported
-#     partial_dependence_plot = unsupported
-#     dependence_plot = unsupported
-#     text_plot = unsupported
-#     violin_plot = unsupported
-#     waterfall_plot = unsupported
-#     # If matplotlib is available, then the plots submodule will be directly available.
-#     # If not, we need to define something that will issue a meaningful warning message
-#     # (rather than ModuleNotFound).
-#     plots = UnsupportedModule()  # type: ignore
+def __getattr__(name):
+    # Handle C extension modules
+    if name == "_cext":
+        try:
+            import shap._cext
+
+            return shap._cext
+        except ImportError as e:
+            utils.record_import_error("_cext", "C extension was not built during install!", e)
+            raise
+    elif name == "_cext_gpu":
+        try:
+            import shap._cext_gpu
+
+            return shap._cext_gpu
+        except ImportError as e:
+            utils.record_import_error("_cext_gpu", "CUDA extension was not built during install!", e)
+            raise
+    # Handle legacy aliases first
+    elif name == "summary_plot":
+        return _stub_getattr("summary_legacy")
+    elif name == "image_plot":
+        return _stub_getattr("image")
+    # Handle plotting function aliases
+    elif name == "bar_plot":
+        return _stub_getattr("bar_legacy")
+    elif name == "decision_plot":
+        return _stub_getattr("decision")
+    elif name == "multioutput_decision_plot":
+        return _stub_getattr("multioutput_decision")
+    elif name == "embedding_plot":
+        return _stub_getattr("embedding")
+    elif name == "force_plot":
+        return _stub_getattr("force")
+    elif name == "group_difference_plot":
+        return _stub_getattr("group_difference")
+    elif name == "heatmap_plot":
+        return _stub_getattr("heatmap")
+    elif name == "monitoring_plot":
+        return _stub_getattr("monitoring")
+    elif name == "partial_dependence_plot":
+        return _stub_getattr("partial_dependence")
+    elif name == "dependence_plot":
+        return _stub_getattr("dependence_legacy")
+    elif name == "text_plot":
+        return _stub_getattr("text")
+    elif name == "violin_plot":
+        return _stub_getattr("violin")
+    elif name == "waterfall_plot":
+        return _stub_getattr("waterfall")
+    else:
+        # Fall back to the lazy loader for all other attributes
+        return _stub_getattr(name)
+
 
 __all__ = [*__alllazy__, "datasets", "links", "utils"]
-
-# Use __all__ to let type checkers know what is part of the public API.
-# __all__ = [
-#     "Cohorts",
-#     "Explanation",
-#     # Explainers
-#     "other",
-#     "AdditiveExplainer",
-#     "DeepExplainer",
-#     "ExactExplainer",
-#     "Explainer",
-#     "GPUTreeExplainer",
-#     "GradientExplainer",
-#     "KernelExplainer",
-#     "LinearExplainer",
-#     "PartitionExplainer",
-#     "CoalitionExplainer",
-#     "PermutationExplainer",
-#     "SamplingExplainer",
-#     "TreeExplainer",
-#     # Plots
-#     "plots",
-#     "bar_plot",
-#     "summary_plot",
-#     "decision_plot",
-#     "multioutput_decision_plot",
-#     "embedding_plot",
-#     "force_plot",
-#     "getjs",
-#     "initjs",
-#     "save_html",
-#     "group_difference_plot",
-#     "heatmap_plot",
-#     "image_plot",
-#     "monitoring_plot",
-#     "partial_dependence_plot",
-#     "dependence_plot",
-#     "text_plot",
-#     "violin_plot",
-#     "waterfall_plot",
-#     # Other stuff
-#     "datasets",
-#     "links",
-#     "utils",
-#     "ActionOptimizer",
-#     "approximate_interactions",
-#     "sample",
-#     "kmeans",
-# ]
