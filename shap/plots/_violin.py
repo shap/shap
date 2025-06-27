@@ -9,9 +9,9 @@ import pandas as pd
 from packaging import version
 from scipy.stats import gaussian_kde
 
-from ..utils._exceptions import DimensionError
-from . import colors
-from ._labels import labels
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.utils._exceptions import DimensionError
 
 # TODO: simplify this when we drop support for matplotlib 3.9
 if version.parse(matplotlib.__version__) >= version.parse("3.10"):

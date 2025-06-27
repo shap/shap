@@ -1,4 +1,7 @@
-import numpy as np
+import lazy_loader as lazy
+
+np = lazy.load("numpy", error_on_import=True)
+# import numpy as np
 
 
 def _check_additivity(explainer, model_output_values, output_phis):
