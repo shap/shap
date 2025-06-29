@@ -48,38 +48,53 @@ def violin(
 
     Parameters
     ----------
-    shap_values : Explanation, or numpy.array
+    shap_values : Explanation or numpy.ndarray
         For single output explanations, this is a matrix of SHAP values (# samples x # features).
-
-    features : numpy.array or pandas.DataFrame or list
-        Matrix of feature values (# samples x # features) or a ``feature_names`` list as
-        shorthand.
-
-    feature_names : list
+    features : numpy.ndarray or pandas.DataFrame or list, optional
+        Matrix of feature values (# samples x # features), or a ``feature_names`` list as shorthand.
+    feature_names : list, optional
         Names of the features (length: # features).
-
-    max_display : int
+    max_display : int, optional
         How many top features to include in the plot (default is 20).
-
-    plot_type : "violin", or "layered_violin".
+    plot_type : {"violin", "layered_violin"}, optional
         What type of summary plot to produce. A "layered_violin" plot shows the
         distribution of the SHAP values of each variable. A "violin" plot is the same,
         except with outliers drawn as scatter points.
-
-    color_bar : bool
-        Whether to draw the color bar (legend).
-
-    show : bool
+    color : str or None, optional
+        Color or colormap to use for the plot. If None, a default is chosen.
+    axis_color : str, optional
+        Color for the plot axes.
+    title : str or None, optional
+        Plot title (currently unused).
+    alpha : float, optional
+        Opacity of the plot elements.
+    show : bool, optional
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
-
-    plot_size : "auto" (default), float, (float, float), or None
+        Setting this to ``False`` allows the plot to be customized further after it has been created.
+    sort : bool, optional
+        Whether to sort features by the sum of their effect magnitudes.
+    color_bar : bool, optional
+        Whether to draw the color bar (legend).
+    plot_size : {"auto", float, (float, float), None}, optional
         What size to make the plot. By default, the size is auto-scaled based on the number of
         features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If ``None`` is passed, then the size of the current figure will be left
         unchanged.
+    layered_violin_max_num_bins : int, optional
+        Maximum number of bins for layered violin plots.
+    color_bar_label : str, optional
+        Label for the color bar.
+    cmap : str or Colormap, optional
+        Colormap to use for coloring points by feature value.
+    color_bar_label_size : int, optional
+        Font size for the color bar label.
+    color_bar_tick_size : int, optional
+        Font size for the color bar ticks.
+    axhline_lw : float, optional
+        Line width for horizontal lines in the plot.
+    use_log_scale : bool, optional
+        Whether to use a symmetric log scale for the x-axis.
 
     Examples
     --------
