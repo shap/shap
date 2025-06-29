@@ -41,6 +41,9 @@ def violin(
     class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
+    color_bar_label_size=12,
+    color_bar_tick_size=12,
+    axhline_lw=0.5,
     use_log_scale=False,
 ):
     """Create a SHAP violin plot, colored by feature values when they are provided.
@@ -170,7 +173,7 @@ def violin(
 
     if plot_type == "violin":
         for pos in range(len(feature_order)):
-            plt.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color="#cccccc", lw=axhline_lw, dashes=(1, 5), zorder=-1)
 
         if features is not None:
             global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
@@ -346,8 +349,8 @@ def violin(
         m.set_array([0, 1])
         cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
-        cb.set_label(color_bar_label, size=12, labelpad=0)
-        cb.ax.tick_params(labelsize=11, length=0)
+        cb.set_label(color_bar_label, size=color_bar_label_size, labelpad=0)
+        cb.ax.tick_params(labelsize=color_bar_tick_size, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
         # bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
