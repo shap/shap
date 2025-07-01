@@ -256,7 +256,7 @@ typing-extensions==4.12.2
     #   ipython
 tzdata==2024.2
     # via pandas
-urllib3==2.2.3
+urllib3==2.5.0
     # via requests
 wcwidth==0.2.13
     # via prompt-toolkit
