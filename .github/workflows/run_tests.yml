@@ -58,16 +58,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: lts/Hydrogen
-      - name: Build JavaScript bundle
+      - name: Check for JavaScript changes
         if: github.event_name == 'pull_request'
+        id: js_changes
+        shell: bash
         run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^javascript/"; then
-            cd javascript
-            npm ci
-            npm run build
-            cp build/bundle.js ../shap/plots/resources/bundle.js
-            cd ..
-          fi
+          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
+          grep -q "^javascript/" changed_files.txt && echo "js_changed=true" >> $GITHUB_OUTPUT || echo "js_changed=false" >> $GITHUB_OUTPUT
+          rm changed_files.txt
+      - name: Build JavaScript bundle
+        if: github.event_name == 'pull_request' && steps.js_changes.outputs.js_changed == 'true'
+        shell: bash
+        run: |
+          cd javascript
+          npm ci
+          npm run build
+          cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
