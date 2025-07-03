@@ -63,7 +63,7 @@ jobs:
         id: js_changes
         shell: bash
         run: |
-          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
+          git diff --name-only ${{ github.base_ref }}...HEAD > changed_files.txt
           grep -q "^javascript/" changed_files.txt && echo "js_changed=true" >> $GITHUB_OUTPUT || echo "js_changed=false" >> $GITHUB_OUTPUT
           rm changed_files.txt
       - name: Build JavaScript bundle
