@@ -1,4 +1,4 @@
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt
 
 from shap.plots import colors

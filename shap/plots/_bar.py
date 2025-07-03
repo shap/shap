@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from shap import Cohorts, Explanation
 from shap.plots._labels import labels
@@ -11,8 +13,6 @@ from shap.plots._utils import convert_ordering, dendrogram_coords, get_sort_orde
 from shap.utils._exceptions import DimensionError
 from shap.utils._general import format_value, ordinal_str
 
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 scipy = lazy.load("scipy", error_on_import=True)
 
 if TYPE_CHECKING:

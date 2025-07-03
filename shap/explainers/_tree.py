@@ -7,7 +7,8 @@ import time
 import warnings
 from typing import Any
 
-import lazy_loader as lazy
+import numpy as np
+import pandas as pd
 import scipy.sparse
 import scipy.special
 from packaging import version
@@ -26,9 +27,6 @@ from shap.utils._exceptions import (
 )
 from shap.utils._legacy import DenseData
 from shap.utils._warnings import ExperimentalWarning
-
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 
 try:
     from .. import _cext  # type: ignore

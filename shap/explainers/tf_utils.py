@@ -1,6 +1,6 @@
 import warnings
 
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 
 tf = lazy.load("tensorflow", error_on_import=False)
 

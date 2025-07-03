@@ -1,7 +1,8 @@
 import warnings
 from typing import Callable
 
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
+import numpy as np
 from packaging import version
 
 from ...utils._exceptions import DimensionError
@@ -14,7 +15,6 @@ tf_backprop = lazy.load("tensorflow.python.eager.backprop", error_on_import=True
 tf_execute = lazy.load("tensorflow.python.eager.execute", error_on_import=True)
 tf_ops = lazy.load("tensorflow.python.framework.ops", error_on_import=True)
 tf_gradients_impl = lazy.load("tensorflow.python.ops.gradients_impl", error_on_import=True)
-np = lazy.load("numpy", error_on_import=True)
 
 if not hasattr(tf_gradients_impl, "_IsBackpropagatable"):
     from tensorflow.python.ops import gradients_util as tf_gradients_impl

@@ -1,7 +1,7 @@
 import math
 import re
 
-import lazy_loader as lazy
+import numpy as np
 
 from shap._serializable import Deserializer, Serializer
 from shap.maskers._masker import Masker
@@ -11,8 +11,6 @@ from shap.utils.transformers import (
     getattr_silent,
     parse_prefix_suffix_for_tokenizer,
 )
-
-np = lazy.load("numpy", error_on_import=True)
 
 
 class Text(Masker):

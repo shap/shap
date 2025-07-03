@@ -1,12 +1,10 @@
-import lazy_loader as lazy
+import numpy as np
 import scipy.special
 
 from shap._serializable import Deserializer, Serializer
 from shap.models._model import Model
 from shap.utils import safe_isinstance
 from shap.utils.transformers import getattr_silent
-
-np = lazy.load("numpy", error_on_import=True)
 
 
 class TopKLM(Model):

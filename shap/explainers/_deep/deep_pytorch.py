@@ -1,13 +1,13 @@
 import warnings
 
 import lazy_loader as lazy
+import numpy as np
 from packaging import version
 
-from .._explainer import Explainer
-from .deep_utils import _check_additivity
+from shap.explainers._deep.deep_utils import _check_additivity
+from shap.explainers._explainer import Explainer
 
 torch = lazy.load("torch", error_on_import=True)
-np = lazy.load("numpy", error_on_import=True)
 
 
 class PyTorchDeep(Explainer):

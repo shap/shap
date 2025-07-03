@@ -1,4 +1,4 @@
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 import numpy as np
 
 from shap._serializable import Deserializer, Serializer

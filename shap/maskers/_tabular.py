@@ -1,6 +1,7 @@
 import logging
 
-import lazy_loader as lazy
+import numpy as np
+import pandas as pd
 from numba import njit
 
 from shap import utils
@@ -8,9 +9,6 @@ from shap._serializable import Deserializer, Serializer
 from shap.maskers._masker import Masker
 from shap.utils import MaskedModel
 from shap.utils._exceptions import DimensionError, InvalidClusteringError
-
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 
 log = logging.getLogger("shap")
 

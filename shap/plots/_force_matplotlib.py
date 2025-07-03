@@ -1,11 +1,11 @@
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import lines
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 
-np = lazy.load("numpy", error_on_import=True)
 matplotlib = lazy.load("matplotlib", error_on_import=True)
 
 

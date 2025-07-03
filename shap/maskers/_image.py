@@ -1,5 +1,6 @@
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 import numba.typed
+import numpy as np
 from numba import njit
 
 from shap._serializable import Deserializer, Serializer
@@ -8,7 +9,7 @@ from shap.utils import assert_import, safe_isinstance
 from shap.utils._exceptions import DimensionError
 
 cv2 = lazy.load("cv2", error_on_import=True)
-np = lazy.load("numpy", error_on_import=True)
+
 # TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
 heapq = lazy.load("heapq", error_on_import=True)
 

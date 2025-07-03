@@ -1,5 +1,5 @@
 # Lazy import for explainers to improve import performance
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 
 # Use lazy.attach_stub for all explainers to enable proper type checking
 # attach_stub expects __file__ and will look for adjacent .pyi file
@@ -39,10 +39,39 @@ def __getattr__(name):
 
 
 def __dir__():
-    return list(set(_stub_dir() + ["Tree"]))
+    legacy_aliases = [
+        "Tree",
+        "Additive",
+        "Coalition",
+        "Deep",
+        "Exact",
+        "GPUTree",
+        "Gradient",
+        "Kernel",
+        "Linear",
+        "Partition",
+        "Permutation",
+        "Sampling",
+    ]
+    return list(set(_stub_dir() + legacy_aliases))
 
 
-__all__ = list(set(_stub_all + ["Tree"]))
+# Define __all__ to include both stub exports and legacy aliases
+_legacy_aliases = [
+    "Tree",
+    "Additive",
+    "Coalition",
+    "Deep",
+    "Exact",
+    "GPUTree",
+    "Gradient",
+    "Kernel",
+    "Linear",
+    "Partition",
+    "Permutation",
+    "Sampling",
+]
+__all__ = list(set(_stub_all + _legacy_aliases))
 
 # Alternative legacy "short-form" aliases, which are kept here for backwards-compatibility
 # Additive = AdditiveExplainer

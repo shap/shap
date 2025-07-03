@@ -1,7 +1,7 @@
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
 
 #
-from shap import datasets, links, utils, cext  # noqa: E402
+from shap import cext, datasets, links, utils  # noqa: E402
 
 _stub_getattr, __dir__, __alllazy__ = lazy.attach_stub(__name__, __file__)
 
@@ -65,4 +65,22 @@ def __getattr__(name):
         return _stub_getattr(name)
 
 
-__all__ = [*__alllazy__, "datasets", "links", "utils", "cext"]
+_legacy_plot_aliases = [
+    "summary_plot",
+    "image_plot",
+    "bar_plot",
+    "decision_plot",
+    "multioutput_decision_plot",
+    "embedding_plot",
+    "force_plot",
+    "group_difference_plot",
+    "heatmap_plot",
+    "monitoring_plot",
+    "partial_dependence_plot",
+    "dependence_plot",
+    "text_plot",
+    "violin_plot",
+    "waterfall_plot",
+]
+
+__all__ = [*__alllazy__, "datasets", "links", "utils", "cext"] + _legacy_plot_aliases

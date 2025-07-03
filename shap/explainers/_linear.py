@@ -1,6 +1,7 @@
 import warnings
 
-import lazy_loader as lazy
+import numpy as np
+import pandas as pd
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
 
@@ -11,9 +12,6 @@ from shap.utils._exceptions import (
     InvalidFeaturePerturbationError,
     InvalidModelError,
 )
-
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 
 
 class LinearExplainer(Explainer):

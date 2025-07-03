@@ -1,6 +1,5 @@
-import lazy_loader as lazy
+import numpy as np
 
-np = lazy.load("numpy", error_on_import=True)
 # import numpy as np
 
 

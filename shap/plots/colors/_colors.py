@@ -1,11 +1,9 @@
 """This defines some common colors."""
 
-import lazy_loader as lazy
+import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 from shap.plots.colors._colorconv import lab2rgb, lch2lab
-
-np = lazy.load("numpy", error_on_import=True)
 
 
 def lch2rgb(x: list[float]) -> np.ndarray:

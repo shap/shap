@@ -6,6 +6,7 @@ __version__: str
 
 # Core components from _explanation
 from . import actions as actions
+from . import cext as cext
 
 # Submodules
 from . import datasets as datasets
@@ -15,7 +16,6 @@ from . import explainers as explainers
 from . import links as links
 from . import maskers as maskers
 from . import models as models
-from . import cext as cext
 
 # Plots module and functions (may be UnsupportedModule if matplotlib not available)
 from . import plots as plots
@@ -43,7 +43,6 @@ from .explainers import other as other
 # Plot functions (available through __getattr__ lazy loading)
 from .plots._bar import bar_legacy as bar_legacy
 from .plots._beeswarm import summary_legacy as summary_legacy
-from .plots._beeswarm import summary_legacy as summary_plot
 from .plots._decision import decision as decision
 from .plots._decision import multioutput_decision as multioutput_decision
 from .plots._embedding import embedding as embedding
@@ -65,6 +64,24 @@ from .plots._waterfall import waterfall as waterfall
 from .utils import approximate_interactions as approximate_interactions
 from .utils import sample as sample
 from .utils._legacy import kmeans as kmeans
+
+# Legacy plotting aliases (handled by __getattr__ in runtime)
+# These match the aliases defined in the main __init__.py __getattr__ method
+summary_plot = summary_legacy
+bar_plot = bar_legacy
+decision_plot = decision
+multioutput_decision_plot = multioutput_decision
+embedding_plot = embedding
+force_plot = force
+group_difference_plot = group_difference
+heatmap_plot = heatmap
+image_plot = image
+monitoring_plot = monitoring
+partial_dependence_plot = partial_dependence
+dependence_plot = dependence_legacy
+text_plot = text
+violin_plot = violin
+waterfall_plot = waterfall
 
 # Note: Some plot functions may be replaced with unsupported() if matplotlib is not available
 # In that case, they would have type: Callable[..., Any] that raises ImportError

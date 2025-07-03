@@ -5,7 +5,9 @@ import logging
 import time
 import warnings
 
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
+import numpy as np
+import pandas as pd
 import scipy.sparse
 from _kernel_lib import _exp_val
 from packaging import version
@@ -33,8 +35,6 @@ from shap.utils._legacy import (
 
 log = logging.getLogger("shap")
 
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 sklearn = lazy.load("sklearn", error_on_import=True)
 
 

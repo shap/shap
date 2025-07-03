@@ -1,7 +1,9 @@
 import copy
 import time
 
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
+import numpy as np
+import pandas as pd
 
 from shap import explainers, links, maskers, models
 from shap._explanation import Explanation
@@ -12,8 +14,6 @@ from shap.utils import safe_isinstance, show_progress
 from shap.utils._exceptions import InvalidAlgorithmError
 from shap.utils.transformers import is_transformers_lm
 
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 scipy = lazy.load("scipy", error_on_import=True)
 
 

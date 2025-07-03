@@ -5,15 +5,15 @@ import operator
 from dataclasses import dataclass, field
 from typing import Any, Callable, cast
 
-import lazy_loader as lazy
+import lazy_loader as lazy  # type: ignore[import-untyped]
+import numpy as np
+import pandas as pd
 from slicer import Alias, Obj, Slicer
 
 from shap.utils._clustering import hclust_ordering
 from shap.utils._exceptions import DimensionError
 from shap.utils._general import OpChain
 
-np = lazy.load("numpy", error_on_import=True)
-pd = lazy.load("pandas", error_on_import=True)
 scipy = lazy.load("scipy", error_on_import=True)
 sklearn = lazy.load("sklearn", error_on_import=True)
 

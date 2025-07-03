@@ -1,8 +1,6 @@
-import lazy_loader as lazy
+import numpy as np
 
 from shap.maskers._masker import Masker
-
-np = lazy.load("numpy", error_on_import=True)
 
 
 class Fixed(Masker):

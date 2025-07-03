@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from typing import Any
 
-import lazy_loader as lazy
+import numpy as np
 import scipy.special
 
 from shap import models
@@ -11,8 +11,6 @@ from shap._serializable import Deserializer, Serializer
 from shap.models._model import Model
 from shap.utils import safe_isinstance
 from shap.utils.transformers import getattr_silent, parse_prefix_suffix_for_tokenizer
-
-np = lazy.load("numpy", error_on_import=True)
 
 
 class TeacherForcing(Model):

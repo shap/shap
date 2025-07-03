@@ -22,3 +22,17 @@ from ._tree import _xgboost_cat_unsupported as _xgboost_cat_unsupported
 from ._tree import _xgboost_n_iterations as _xgboost_n_iterations
 from ._tree import feature_perturbation_codes as feature_perturbation_codes
 from ._tree import output_transform_codes as output_transform_codes
+
+# Legacy aliases for backwards compatibility
+Tree = TreeExplainer
+Additive = AdditiveExplainer
+Coalition = CoalitionExplainer
+Deep = DeepExplainer
+Exact = ExactExplainer
+GPUTree = GPUTreeExplainer
+Gradient = GradientExplainer
+Kernel = KernelExplainer
+Linear = LinearExplainer
+Partition = PartitionExplainer
+Permutation = PermutationExplainer
+Sampling = SamplingExplainer
