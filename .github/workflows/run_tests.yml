@@ -12,6 +12,7 @@ on:
       - "shap/**"
       - "tests/**"
       - "data/**"
+      - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
       - "setup.py"
@@ -47,10 +48,30 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - 'javascript/**'
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # Build JavaScript bundle if JS files have changed
+      - name: Set up Node.js
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/Hydrogen
+      - name: Build JavaScript bundle conditionally
+        if: steps.filter.outputs.js == 'true'
+        shell: bash
+        run: |
+          cd javascript
+          npm ci
+          npm run build
+          cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
