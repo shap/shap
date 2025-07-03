@@ -5,6 +5,9 @@
 __version__: str
 
 # Core components from _explanation
+# C extension modules (may not be available if not compiled)
+from . import _cext as _cext
+from . import _cext_gpu as _cext_gpu
 from . import actions as actions
 from . import cext as cext
 
