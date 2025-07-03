@@ -12,6 +12,7 @@ on:
       - "shap/**"
       - "tests/**"
       - "data/**"
+      - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
       - "setup.py"
@@ -51,6 +52,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # Build JavaScript bundle if JS files have changed
+      - name: Set up Node.js
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/Hydrogen
+      - name: Build JavaScript bundle
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^javascript/"; then
+            cd javascript
+            npm ci
+            npm run build
+            cp build/bundle.js ../shap/plots/resources/bundle.js
+            cd ..
+          fi
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
