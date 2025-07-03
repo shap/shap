@@ -1,6 +1,6 @@
 # Ensure that the javascript package can be built with webpack
 # Runs on any PRs that modify the javascript directory
-# Also runs Python tests if the bundle.js is updated
+# Also verifies that the built bundle matches the committed bundle
 
 name: test_js
 
@@ -28,6 +28,20 @@ jobs:
       working-directory: ./javascript
     - run: npm run test
       working-directory: ./javascript
-    # Copy the bundle to the Python package location
-    - run: cp build/bundle.js ../shap/plots/resources/bundle.js
-      working-directory: ./javascript
+
+    # Check if the built bundle matches the committed bundle (ignoring whitespace)
+    - name: Compare built bundle with committed bundle
+      run: |
+        # Normalize whitespace in both files for comparison
+        # Remove empty lines and all whitespace, then compare
+        sed '/^[[:space:]]*$/d; s/[[:space:]]//g' javascript/build/bundle.js | tr -d '\n' > /tmp/new_bundle_normalized.js
+        sed '/^[[:space:]]*$/d; s/[[:space:]]//g' shap/plots/resources/bundle.js | tr -d '\n' > /tmp/committed_bundle_normalized.js
+
+        if diff -q /tmp/new_bundle_normalized.js /tmp/committed_bundle_normalized.js > /dev/null; then
+          echo "✅ Bundle matches the committed version"
+        else
+          echo "❌ Built bundle differs from committed version"
+          echo "The bundle.js file needs to be updated."
+          echo "Run: cd javascript && npm run build && cp build/bundle.js ../shap/plots/resources/bundle.js"
+          exit 1
+        fi

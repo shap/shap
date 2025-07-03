@@ -60,7 +60,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
-        if: github.event_name == 'pull_request'
+        if: steps.filter.outputs.js == 'true'
         uses: actions/setup-node@v3
         with:
           node-version: lts/Hydrogen
