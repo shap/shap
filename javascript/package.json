@@ -31,7 +31,7 @@
     "babel-jest": "^30.0.2",
     "babel-loader": "^10.0.0",
     "jest": "^30.0.3",
-    "jest-environment-jsdom": "^29.6.1",
+    "jest-environment-jsdom": "^30.0.2",
     "react-test-renderer": "^19.0.0",
     "webpack": "^5.88.2",
     "webpack-cli": "^6.0.1",
