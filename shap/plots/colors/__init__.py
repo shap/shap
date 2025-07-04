@@ -1,4 +1,4 @@
-from ._colors import (
+from shap.plots.colors._colors import (
     blue_rgb,
     gray_rgb,
     light_blue_rgb,

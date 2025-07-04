@@ -1,21 +1,4 @@
-from ._composite import Composite
-from ._fixed import Fixed
-from ._fixed_composite import FixedComposite
-from ._image import Image
-from ._masker import Masker
-from ._output_composite import OutputComposite
-from ._tabular import Impute, Independent, Partition
-from ._text import Text
+import lazy_loader as lazy
 
-__all__ = [
-    "Composite",
-    "Fixed",
-    "FixedComposite",
-    "Image",
-    "Masker",
-    "OutputComposite",
-    "Impute",
-    "Independent",
-    "Partition",
-    "Text",
-]
+# Use lazy.attach_stub to enable proper type checking for maskers
+__getattr__, __dir__, __all__ = lazy.attach_stub(__name__, __file__)

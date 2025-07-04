@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from ..utils import hclust_ordering
-from ..utils._legacy import LogitLink, convert_to_link
-from . import colors
-from ._labels import labels
+from shap.plots import colors
+from shap.plots._labels import labels
+from shap.utils._clustering import hclust_ordering
+from shap.utils._legacy import LogitLink, convert_to_link
 
 
 def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndarray:

@@ -6,7 +6,6 @@ module which uses a compiled C++ implementation.
 import numpy as np
 import pandas as pd
 
-# import numba
 from ..utils._exceptions import ExplainerError
 
 # class TreeExplainer(Explainer):
