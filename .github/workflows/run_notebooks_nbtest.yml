@@ -1,0 +1,47 @@
+name: notebooks
+
+on:
+  push:
+    branches:
+      - master
+      - nbtest
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "shap/**"
+      - "notebooks/**"
+      - ".github/workflows/run_notebooks.yml"
+      - "scripts/**"
+      - "pyproject.toml"
+      - "setup.py"
+      - "notebooks_assert/**"
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel only PR intermediate builds
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  run_notebooks:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade uv
+          uv pip install --system '.[test,plots,test_notebooks,nbtest]'
+      - name: Run notebooks
+        run: |
+          cd notebooks_assert
+          pytest -v --nbtest Understanding_Tree_SHAP_for_Simple_Models_chebyshev_0.95_10.ipynb
