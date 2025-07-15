@@ -39,8 +39,8 @@ def violin(
     layered_violin_max_num_bins=20,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
-    color_bar_label_size=12,
-    color_bar_tick_size=12,
+    color_bar_label_size=11,
+    color_bar_tick_size=11,
     axhline_lw=0.5,
     use_log_scale=False,
 ):
@@ -88,9 +88,9 @@ def violin(
     cmap : str or Colormap, optional
         Colormap to use for coloring points by feature value.
     color_bar_label_size : int, optional
-        Font size for the color bar label.
+        Font size for the color bar label. Default is 11.
     color_bar_tick_size : int, optional
-        Font size for the color bar ticks.
+        Font size for the color bar ticks. Default is 11.
     axhline_lw : float, optional
         Line width for horizontal lines in the plot.
     use_log_scale : bool, optional
