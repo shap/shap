@@ -41,7 +41,7 @@ def violin(
     class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
-    color_bar_label_size=11,
+    color_bar_label_size=12,
     color_bar_tick_size=11,
     axhline_lw=0.5,
     use_log_scale=False,
