@@ -37,6 +37,8 @@ def violin(
     color_bar=True,
     plot_size="auto",
     layered_violin_max_num_bins=20,
+    class_names=None,
+    class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
     color_bar_label_size=11,
