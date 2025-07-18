@@ -44,3 +44,6 @@ jobs:
         run: |
           cd notebooks
           pytest -v --nbtest "tabular_examples/linear_models/Explaining a model that uses standardized features.ipynb"
+          rm ./test_log.csv
+          rm ./test_nblog.ipynb
+          rm -rf ./nbtest_logs
