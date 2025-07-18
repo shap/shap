@@ -15,7 +15,6 @@ on:
       - "scripts/**"
       - "pyproject.toml"
       - "setup.py"
-      - "notebooks_assert/**"
 
   workflow_dispatch:
 
@@ -43,5 +42,5 @@ jobs:
           uv pip install --system '.[test,plots,test_notebooks,nbtest]'
       - name: Run notebooks
         run: |
-          cd notebooks_assert
-          pytest -v --nbtest Understanding_Tree_SHAP_for_Simple_Models_chebyshev_0.95_10.ipynb
+          cd notebooks
+          pytest -v --nbtest "tabular_examples/linear_models/Explaining a model that uses standardized features.ipynb"
