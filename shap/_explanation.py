@@ -93,10 +93,10 @@ class Explanation(metaclass=MetaExplanation):
 
     Notes
     -----
-    The *instance* methods such as `.max()` return new Explanation objects with the
+    The *instance* methods such as ``.max()`` return new Explanation objects with the
     operation applied.
 
-    The *class* methods such as `Explanation.max` return OpChain objects that represent
+    The *class* methods such as ``Explanation.max`` return OpChain objects that represent
     a set of dot chained operations without actually running them.
     """
 
