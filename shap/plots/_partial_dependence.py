@@ -236,7 +236,7 @@ def partial_dependence(
                 x1[i, j] = xs1[j]
                 vals[i, j] = model(features_tmp).mean()
 
-        if ax == None:
+        if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection="3d")
 
