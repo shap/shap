@@ -102,8 +102,8 @@ def partial_dependence(
             fig = plt.figure()
             ax1 = plt.gca()
         else:
-            fig = plt.gcf()
-            ax1 = plt.gca()
+            fig = ax.figure
+            ax1 = ax
 
         # fig, ax1 = plt.subplots(figsize)
         ax2 = ax1.twinx()
@@ -236,8 +236,9 @@ def partial_dependence(
                 x1[i, j] = xs1[j]
                 vals[i, j] = model(features_tmp).mean()
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
+        if ax == None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection="3d")
 
         #         x = y = np.arange(-3.0, 3.0, 0.05)
         #         X, Y = np.meshgrid(x, y)

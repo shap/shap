@@ -1,5 +1,5 @@
 # Requirements for running notebooks
--e .
+# -e .
 
 # For running tests
 # nose
