@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - nbtest
   pull_request:
     branches:
       - master
