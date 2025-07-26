@@ -2,7 +2,7 @@ import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 import numpy as np
 
-from . import colors
+from shap.plots import colors
 
 xlabel_names = {
     "remove absolute": "Fraction removed",

@@ -1,5 +1,7 @@
 import numpy as np
 
+# import numpy as np
+
 
 def _check_additivity(explainer, model_output_values, output_phis):
     TOLERANCE = 1e-2

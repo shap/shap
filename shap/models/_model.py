@@ -2,8 +2,8 @@ from typing import Any
 
 import numpy as np
 
-from .._serializable import Deserializer, Serializable, Serializer
-from ..utils import safe_isinstance
+from shap._serializable import Deserializer, Serializable, Serializer
+from shap.utils import safe_isinstance
 
 
 class Model(Serializable):

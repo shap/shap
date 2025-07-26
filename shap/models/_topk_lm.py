@@ -1,10 +1,10 @@
 import numpy as np
 import scipy.special
 
-from .._serializable import Deserializer, Serializer
-from ..utils import safe_isinstance
-from ..utils.transformers import getattr_silent
-from ._model import Model
+from shap._serializable import Deserializer, Serializer
+from shap.models._model import Model
+from shap.utils import safe_isinstance
+from shap.utils.transformers import getattr_silent
 
 
 class TopKLM(Model):

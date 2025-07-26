@@ -11,8 +11,8 @@ import scipy.spatial
 import sklearn
 from numba import njit
 
-from ..utils._exceptions import DimensionError
-from ._show_progress import show_progress
+from shap.utils._exceptions import DimensionError
+from shap.utils._show_progress import show_progress
 
 if TYPE_CHECKING:
     from ._types import _ArrayLike

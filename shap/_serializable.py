@@ -5,6 +5,8 @@ import pickle
 import cloudpickle
 import numpy as np
 
+# import numpy as np
+
 log = logging.getLogger("shap")
 
 
