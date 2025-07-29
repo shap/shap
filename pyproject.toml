@@ -77,7 +77,7 @@ test = [
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers; python_version < '3.13'",  # TODO: pending 3.13 support
+  "transformers < 4.54.0; python_version < '3.13'",  # TODO: pending 3.13 support, fix once tests pass for 4.54.0
   "tf-keras; python_version < '3.13'",
   "protobuf==3.20.3",  # See GH #3046
   "torch; python_version < '3.13'",  # TODO: pending 3.13 support
