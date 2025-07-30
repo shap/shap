@@ -103,6 +103,12 @@ test_notebooks = [
   "keras",
 ]
 
+nbtest = [
+  "nbtest-plugin",
+  "nbtest-gen",
+  "nbtest-lab-extension"
+]
+
 [project.urls]
 Repository = 'http://github.com/shap/shap'
 Documentation = 'https://shap.readthedocs.io/en/latest/index.html'
