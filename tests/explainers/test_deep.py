@@ -186,6 +186,9 @@ def test_tf_keras_linear():
     # explain
     e = shap.DeepExplainer((model.inputs, model.layers[-1].output), x)
     shap_values = e.shap_values(x)
+    shap_values_call = e(x)
+    assert shap_values_call.output_dims == (2,) == (len(shap_values_call.values.shape[1:]),)
+    assert shap_values_call.interaction_order == 0
 
     assert shap_values.shape == (1000, 2, 1)
 
