@@ -369,7 +369,7 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
         def forward(self, x):
             """Run the model."""
             x = self.conv_layers(x)
-            x = x.view(-1, 320) # Redundant as `Flatten`, left as a test
+            x = x.view(-1, 320)  # Redundant as `Flatten`, left as a test
             x = self.fc_layers(x)
             return x
 
