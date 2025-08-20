@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .. import Explanation
-from ..plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
-from ..utils import convert_name
+from shap import Explanation
+from shap.plots.colors import blue_rgb, light_blue_rgb, red_blue_transparent, red_rgb
+from shap.utils._general import convert_name
 
 
 def compute_bounds(xmin, xmax, xv):

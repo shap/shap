@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from .._serializable import Deserializer, Serializer
-from ..utils import safe_isinstance
-from ._model import Model
+from shap._serializable import Deserializer, Serializer
+from shap.models._model import Model
+from shap.utils import safe_isinstance
 
 
 class TextGeneration(Model):

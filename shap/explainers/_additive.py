@@ -1,7 +1,7 @@
 import numpy as np
 
-from ..utils import MaskedModel, safe_isinstance
-from ._explainer import Explainer
+from shap.explainers._explainer import Explainer
+from shap.utils import MaskedModel, safe_isinstance
 
 
 class AdditiveExplainer(Explainer):

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.special
 
-from ._model import Model
+from shap.models._model import Model
 
 
 class TransformersPipeline(Model):

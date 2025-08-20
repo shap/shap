@@ -20,11 +20,11 @@ try:
 except ImportError:
     have_ipython = False
 
-from ..plots._force_matplotlib import draw_additive_plot
-from ..utils import hclust_ordering
-from ..utils._exceptions import DimensionError
-from ..utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
-from ._labels import labels
+from shap.plots._force_matplotlib import draw_additive_plot
+from shap.plots._labels import labels
+from shap.utils._clustering import hclust_ordering
+from shap.utils._exceptions import DimensionError
+from shap.utils._legacy import Data, DenseData, Instance, Link, Model, convert_to_link
 
 
 def force(

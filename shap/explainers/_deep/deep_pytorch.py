@@ -1,15 +1,18 @@
 import warnings
 
+import lazy_loader as lazy
 import numpy as np
 from packaging import version
 
-from .._explainer import Explainer
-from .deep_utils import _check_additivity
+from shap.explainers._deep.deep_utils import _check_additivity
+from shap.explainers._explainer import Explainer
+
+torch = lazy.load("torch", error_on_import=True)
 
 
 class PyTorchDeep(Explainer):
     def __init__(self, model, data):
-        import torch
+        # import torch
 
         if version.parse(torch.__version__) < version.parse("0.4"):
             warnings.warn("Your PyTorch version is older than 0.4 and not supported.")

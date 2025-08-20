@@ -1,6 +1,6 @@
 import numpy as np
 
-from ._masker import Masker
+from shap.maskers._masker import Masker
 
 
 class Fixed(Masker):

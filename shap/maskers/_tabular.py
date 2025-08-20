@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 from numba import njit
 
-from .. import utils
-from .._serializable import Deserializer, Serializer
-from ..utils import MaskedModel
-from ..utils._exceptions import DimensionError, InvalidClusteringError
-from ._masker import Masker
+from shap import utils
+from shap._serializable import Deserializer, Serializer
+from shap.maskers._masker import Masker
+from shap.utils import MaskedModel
+from shap.utils._exceptions import DimensionError, InvalidClusteringError
 
 log = logging.getLogger("shap")
 
