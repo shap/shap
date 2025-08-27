@@ -79,11 +79,13 @@ class Serializer:
             pickle.dump("custom_encoder", self.out_stream)
             encoder(value, self.out_stream)
         elif encoder == ".save" or (isinstance(value, Serializable) and encoder == "auto"):
-            try:
+            if hasattr(value, "save"):
+                # If it can save, use the original serializable.save logic
                 log.debug("encoder_name = %s", "serializable.save")
                 pickle.dump("serializable.save", self.out_stream)
                 value.save(self.out_stream)
-            except AttributeError:
+            else:
+                # If it can't, use the cloudpickle fallback logic directly
                 log.debug("encoder_name = %s", "cloudpickle.dump (fallback)")
                 pickle.dump("cloudpickle.dump", self.out_stream)
                 cloudpickle.dump(value, self.out_stream)
@@ -93,7 +95,6 @@ class Serializer:
                 pickle.dump("pickle.dump", self.out_stream)
                 pickle.dump(value, self.out_stream)
             else:
-                print(f"Value: {value}")
                 log.debug("encoder_name = %s", "cloudpickle.dump")
                 pickle.dump("cloudpickle.dump", self.out_stream)
                 cloudpickle.dump(value, self.out_stream)
