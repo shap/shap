@@ -505,7 +505,7 @@ class Explainer(Serializable):
         super().save(out_file)
         with Serializer(out_file, "shap.Explainer", version=0) as s:
             s.save("model", self.model, model_saver)
-            if hasattr(self, 'masker'):
+            if hasattr(self, "masker"):
                 s.save("masker", self.masker, masker_saver)
             s.save("link", self.link)
 
