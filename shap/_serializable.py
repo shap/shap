@@ -79,18 +79,21 @@ class Serializer:
             pickle.dump("custom_encoder", self.out_stream)
             encoder(value, self.out_stream)
         elif encoder == ".save" or (isinstance(value, Serializable) and encoder == "auto"):
-            log.debug("encoder_name = %s", "serializable.save")
-            pickle.dump("serializable.save", self.out_stream)
-            if len(inspect.getfullargspec(value.save)[0]) == 3:  # backward compat for MLflow, can remove 4/1/2021
-                value.save(self.out_stream, value)
-            else:
+            try:
+                log.debug("encoder_name = %s", "serializable.save")
+                pickle.dump("serializable.save", self.out_stream)
                 value.save(self.out_stream)
+            except AttributeError:
+                log.debug("encoder_name = %s", "cloudpickle.dump (fallback)")
+                pickle.dump("cloudpickle.dump", self.out_stream)
+                cloudpickle.dump(value, self.out_stream)
         elif encoder == "auto":
             if isinstance(value, (int, float, str)):
                 log.debug("encoder_name = %s", "pickle.dump")
                 pickle.dump("pickle.dump", self.out_stream)
                 pickle.dump(value, self.out_stream)
             else:
+                print(f"Value: {value}")
                 log.debug("encoder_name = %s", "cloudpickle.dump")
                 pickle.dump("cloudpickle.dump", self.out_stream)
                 cloudpickle.dump(value, self.out_stream)
