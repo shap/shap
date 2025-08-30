@@ -73,7 +73,7 @@ test = [
   "xgboost",
   "lightgbm",
   "catboost; python_version < '3.13'",  # TODO: pending 3.13 support
-  "gpboost",
+  "gpboost<=1.6.1",  # TODO: can be relaxed once https://github.com/fabsig/GPBoost/issues/165 is solved
   "ngboost",
   "pyspark",
   "pyod",
