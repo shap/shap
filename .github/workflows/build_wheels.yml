@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install cibuildwheel
       # Nb. keep cibuildwheel version pin consistent with job below
-        run: pipx install cibuildwheel==2.16.5
+        run: pipx install cibuildwheel==2.23.3
       - name: Print all build identifiers
         run: cibuildwheel --print-build-identifiers
       - id: set-matrix
@@ -65,7 +65,7 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.1
+        uses: pypa/cibuildwheel@v2.23.3
         with:
           only: ${{ matrix.only }}
 
@@ -76,7 +76,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       # Ensure all git tags are present so version number is extracted.
       # https://github.com/actions/checkout/issues/1471
@@ -109,6 +109,11 @@ jobs:
     name: Publish wheels to TestPyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/shap
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -124,7 +129,7 @@ jobs:
       - name: Publish package to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.TEST_PYPI_TOKEN  }}
+          verbose: true
           repository-url: https://test.pypi.org/legacy/
 
   publish_pypi:
@@ -133,6 +138,11 @@ jobs:
     runs-on: ubuntu-latest
     # Only publish tagged releases to PyPI
     if: startsWith(github.ref, 'refs/tags')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/shap
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -147,5 +157,3 @@ jobs:
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}

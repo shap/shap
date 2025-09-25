@@ -1,6 +1,5 @@
 import copy
 import time
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,8 +8,6 @@ import scipy.sparse
 from .. import explainers, links, maskers, models
 from .._explanation import Explanation
 from .._serializable import Deserializer, Serializable, Serializer
-from ..maskers import Masker
-from ..models import Model
 from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
 from ..utils.transformers import is_transformers_lm
@@ -422,9 +419,9 @@ class Explainer(Serializable):
             else:
                 sliced_labels = None
         else:
-            assert (
-                output_indices is not None
-            ), "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            assert output_indices is not None, (
+                "You have passed a list for output_names but the model seems to not have multiple outputs!"
+            )
             labels = np.array(self.output_names)
             sliced_labels = [labels[index_list] for index_list in output_indices]
             if not ragged_outputs:
@@ -501,44 +498,19 @@ class Explainer(Serializable):
         """
         return False
 
-    @staticmethod
-    def _compute_main_effects(fm, expected_value, inds):
-        """A utility method to compute the main effects from a MaskedModel."""
-        warnings.warn(
-            "This function is not used within the shap library and will therefore be removed in an upcoming release. "
-            "If you rely on this function, please open an issue: https://github.com/shap/shap/issues.",
-            DeprecationWarning,
-        )
-
-        # mask each input on in isolation
-        masks = np.zeros(2 * len(inds) - 1, dtype=int)
-        last_ind = -1
-        for i in range(len(inds)):
-            if i > 0:
-                masks[2 * i - 1] = -last_ind - 1  # turn off the last input
-            masks[2 * i] = inds[i]  # turn on this input
-            last_ind = inds[i]
-
-        # compute the main effects for the given indexes
-        main_effects = fm(masks) - expected_value
-
-        # expand the vector to the full input size
-        expanded_main_effects = np.zeros(len(fm))
-        for i, ind in enumerate(inds):
-            expanded_main_effects[ind] = main_effects[i]
-
-        return expanded_main_effects
-
     def save(self, out_file, model_saver=".save", masker_saver=".save"):
         """Write the explainer to the given file stream."""
         super().save(out_file)
         with Serializer(out_file, "shap.Explainer", version=0) as s:
             s.save("model", self.model, model_saver)
-            s.save("masker", self.masker, masker_saver)
+            if hasattr(self, "masker"):
+                s.save("masker", self.masker, masker_saver)
+            if hasattr(self, "data"):
+                s.save("data", self.data)
             s.save("link", self.link)
 
     @classmethod
-    def load(cls, in_file, model_loader=Model.load, masker_loader=Masker.load, instantiate=True):
+    def load(cls, in_file, model_loader=None, masker_loader=None, instantiate=True):
         """Load an Explainer from the given file stream.
 
         Parameters
@@ -552,7 +524,10 @@ class Explainer(Serializable):
         kwargs = super().load(in_file, instantiate=False)
         with Deserializer(in_file, "shap.Explainer", min_version=0, max_version=0) as s:
             kwargs["model"] = s.load("model", model_loader)
-            kwargs["masker"] = s.load("masker", masker_loader)
+            if cls.__name__ == "KernelExplainer":
+                kwargs["data"] = s.load("data")
+            else:
+                kwargs["masker"] = s.load("masker", masker_loader)
             kwargs["link"] = s.load("link")
         return kwargs
 

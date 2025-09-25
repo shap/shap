@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,6 +7,12 @@ import scipy.sparse
 import sklearn
 
 import shap
+
+from . import common
+
+
+def sigm(x):
+    return np.exp(x) / (1 + np.exp(x))
 
 
 def test_null_model_small():
@@ -82,7 +90,6 @@ def test_kernel_shap_with_call_method():
     shap.force_plot(shap_values[0, :, 1])
 
     outputs = svm.predict_proba(X_test)
-    sigm = lambda x: np.exp(x) / (1 + np.exp(x))  # noqa: E731
     # Call sigm since we use logit link
     np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), outputs)
 
@@ -172,6 +179,17 @@ def test_kernel_shap_with_a1a_sparse_nonzero_background():
 
 def test_kernel_shap_with_high_dim_sparse():
     """Verifies we can run on very sparse data produced from feature hashing."""
+    # Skip test for Python versions below 3.9.17 and 3.10.12
+    python_version = sys.version_info
+    if python_version.major == 3 and python_version.minor == 9 and (python_version.micro < 17):
+        pytest.skip(
+            "Skipping test for Python 3.9 versions below 3.9.17. Loading the dataset will run into a tarfile error otherwise due to the missing filter keyword. See https://docs.python.org/3.9/library/tarfile.html#tarfile.TarFile.extractall"
+        )
+    elif python_version.major == 3 and python_version.minor == 10 and (python_version.micro < 12):
+        pytest.skip(
+            "Skipping test for Python 3.10 versions below 3.10.12. Loading the dataset will run into a tarfile error otherwise due to missing filter keyword. See https://docs.python.org/3.10/library/tarfile.html#tarfile.TarFile.extractall"
+        )
+
     remove = ("headers", "footers", "quotes")
     categories = [
         "alt.atheism",
@@ -331,3 +349,47 @@ def test_kernel_multiclass_multiple_rows():
     explainer = shap.KernelExplainer(lr.predict_proba, X)
     shap_values = explainer(X.iloc[[0, 1], :])
     np.testing.assert_allclose(shap_values.values.sum(1) + explainer.expected_value, pred, atol=1e-04)
+
+
+@pytest.mark.parametrize("nsamples", [3, 5, 10, 100])
+def test_kernel_logits_zeros_ones_probs(nsamples):
+    # GH 3912
+    iris = sklearn.datasets.load_iris(as_frame=True)
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+        iris.data, iris.target, test_size=0.1, random_state=42
+    )
+    background_data = X_train.sample(10, random_state=42)
+
+    rf = sklearn.ensemble.RandomForestClassifier(random_state=42)
+    rf.fit(X_train, y_train)
+
+    X_test_sampled = X_test[:nsamples]
+
+    explainer = shap.KernelExplainer(
+        model=rf.predict_proba,
+        data=background_data,
+        keep_index=True,
+        link="logit",
+    )
+    shap_values = explainer(X_test_sampled)
+    pred = rf.predict_proba(X_test_sampled)
+
+    np.testing.assert_allclose(sigm(shap_values.values.sum(1) + explainer.expected_value), pred, atol=1e-04)
+
+
+@pytest.mark.parametrize("dt", [np.bool_, np.object_])
+def test_explainer_non_number_dtype(dt):
+    seed = 45479
+    rng = np.random.default_rng(seed)
+    X = rng.choice([True, False], size=(15, 8)).astype(dt)
+    y = rng.choice([True, False], size=(15,)).astype(float)
+    rf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
+    rf.fit(X, y)
+    explainer = shap.KernelExplainer(model=rf.predict_proba, data=X, random_state=seed)
+    shap_values = explainer(X)
+    np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
+
+
+def test_serialization():
+    model, data = common.basic_sklearn_scenario()
+    common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)

@@ -245,12 +245,12 @@ def scatter(
         figsize = (7.5, 5) if interaction_index != ind and interaction_index is not None else (6, 5)
         _, ax = plt.subplots(figsize=figsize)
 
-    assert (
-        shap_values_arr.shape[0] == features.shape[0]
-    ), "'shap_values_arr' and 'features' values must have the same number of rows!"
-    assert (
-        shap_values_arr.shape[1] == features.shape[1]
-    ), "'shap_values_arr' must have the same number of columns as 'features'!"
+    assert shap_values_arr.shape[0] == features.shape[0], (
+        "'shap_values_arr' and 'features' values must have the same number of rows!"
+    )
+    assert shap_values_arr.shape[1] == features.shape[1], (
+        "'shap_values_arr' must have the same number of columns as 'features'!"
+    )
 
     # get both the raw and display feature values
     oinds = np.arange(
@@ -443,12 +443,15 @@ def _suggest_buffered_limits(ax_min: float | None, ax_max: float | None, values:
 def _suggest_x_jitter(values: np.ndarray) -> float:
     """Suggest a suitable x_jitter value based on the unique values in the feature"""
     unique_vals = np.sort(np.unique(values))
+    if len(unique_vals) < 2:
+        # If there is only one unique value, no jitter is needed
+        return 0.0
     try:
         # Identify the smallest difference between unique values
         diffs = np.diff(unique_vals)
         min_dist = np.min(diffs[diffs > 1e-8])
-    except TypeError:
-        # If unique_vals contains non-numeric values, set arbitrarily at 1
+    except (TypeError, ValueError):
+        # If unique_vals contains non-numeric values or all differences are to small, set arbitrarily at 1
         min_dist = 1
 
     num_points_per_value = len(values) / len(unique_vals)
@@ -466,7 +469,7 @@ def _suggest_x_jitter(values: np.ndarray) -> float:
 
 def _plot_histogram(ax: plt.Axes, xv, xv_no_jitter):
     """Add a histogram of the data on a matching secondary axes"""
-    ax2 = typing.cast(plt.Axes, ax.twinx())
+    ax2 = typing.cast("plt.Axes", ax.twinx())
     xlim = ax.get_xlim()
     xvals = np.unique(xv_no_jitter)
 
@@ -677,12 +680,12 @@ def dependence_legacy(
             plt.show()
         return
 
-    assert (
-        shap_values.shape[0] == features.shape[0]
-    ), "'shap_values' and 'features' values must have the same number of rows!"
-    assert (
-        shap_values.shape[1] == features.shape[1]
-    ), "'shap_values' must have the same number of columns as 'features'!"
+    assert shap_values.shape[0] == features.shape[0], (
+        "'shap_values' and 'features' values must have the same number of rows!"
+    )
+    assert shap_values.shape[1] == features.shape[1], (
+        "'shap_values' must have the same number of columns as 'features'!"
+    )
 
     # get both the raw and display feature values
     oinds = np.arange(

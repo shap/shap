@@ -1,6 +1,7 @@
 name: tests
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -11,6 +12,7 @@ on:
       - "shap/**"
       - "tests/**"
       - "data/**"
+      - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
       - "setup.py"
@@ -26,15 +28,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           - os: macos-latest
-            python-version: "3.11"
+            python-version: "3.12"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
@@ -46,10 +48,30 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - 'javascript/**'
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # Build JavaScript bundle if JS files have changed
+      - name: Set up Node.js
+        if: steps.filter.outputs.js == 'true'
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/Hydrogen
+      - name: Build JavaScript bundle conditionally
+        if: steps.filter.outputs.js == 'true'
+        shell: bash
+        run: |
+          cd javascript
+          npm ci
+          npm run build
+          cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
@@ -78,7 +100,6 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
 
   test_oldest_supported_numpy:
     # Package is built with numpy 2.X, and tested against numpy 1.X.
@@ -114,5 +135,6 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[test-core]'
+          uv pip install --system --reinstall -r requirements.ci.txt
       - name: Run mypy
         run: mypy shap tests

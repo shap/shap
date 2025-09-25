@@ -46,8 +46,7 @@ for pos, l, c, h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals):  # n
 red_blue = LinearSegmentedColormap("red_blue", {"red": reds, "green": greens, "blue": blues, "alpha": alphas})
 red_blue.set_bad(gray_rgb.tolist(), 1.0)
 red_blue.set_over(gray_rgb.tolist(), 1.0)
-# "under" is incorrectly used instead of "bad" in the scatter plot
-red_blue.set_under(gray_rgb.tolist(), 1.0)
+red_blue.set_under(gray_rgb.tolist(), 1.0)  # "under" is incorrectly used instead of "bad" in the scatter plot
 
 red_blue_no_bounds = LinearSegmentedColormap(
     "red_blue_no_bounds", {"red": reds, "green": greens, "blue": blues, "alpha": alphas}

@@ -300,7 +300,6 @@ class Explanation(metaclass=MetaExplanation):
         self._s.clustering = new_clustering
 
     # =================== Data model ===================
-
     def __repr__(self):
         """Display some basic printable info, but not everything."""
         out = f".values =\n{self.values!r}"
@@ -426,7 +425,7 @@ class Explanation(metaclass=MetaExplanation):
         shap_values_shape = _compute_shape(self._s.values)
         # impl: `Explanation.values` always corresponds to the shap values, which is a numpy array, so the
         # shape will always be of tuple[int, ...] type, not tuple[int|None, ...].
-        return cast(tuple[int, ...], shap_values_shape)
+        return cast("tuple[int, ...]", shap_values_shape)
 
     def __len__(self):
         return self.shape[0]
@@ -677,7 +676,7 @@ class Explanation(metaclass=MetaExplanation):
         )
         return new_exp
 
-    def cohorts(self, cohorts) -> Cohorts:
+    def cohorts(self, cohorts: int | list[int] | tuple[int] | np.ndarray) -> Cohorts:
         """Split this explanation into several cohorts.
 
         Parameters
@@ -691,6 +690,12 @@ class Explanation(metaclass=MetaExplanation):
         Cohorts object
 
         """
+        if self.values.ndim > 2:
+            raise ValueError(
+                "Cohorts cannot be calculated on multiple outputs at once. "
+                "Please make sure to specify the output index on which cohorts should be build, e.g. for a multi-class output "
+                "shap_values[..., cohort_class].cohorts(2)."
+            )
         if isinstance(cohorts, int):
             return _auto_cohorts(self, max_cohorts=cohorts)
         if isinstance(cohorts, (list, tuple, np.ndarray)):

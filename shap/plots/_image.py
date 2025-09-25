@@ -5,7 +5,7 @@ import random
 import string
 from typing import TYPE_CHECKING, Literal, cast
 
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 
 try:
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 def image(
     shap_values: Explanation | np.ndarray | list[np.ndarray],
     pixel_values: np.ndarray | None = None,
-    labels: list[str] | np.ndarray | None = None,
+    labels: list[str] | list[list[str]] | np.ndarray | None = None,
     true_labels: list | None = None,
     width: int | None = 20,
     aspect: float | None = 0.2,
@@ -87,33 +87,34 @@ def image(
         # feature_names = [shap_exp.feature_names]
         # ind = 0
         if len(shap_exp.output_dims) == 1:
-            shap_values = cast(list[np.ndarray], [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
+            shap_values = cast("list[np.ndarray]", [shap_exp.values[..., i] for i in range(shap_exp.values.shape[-1])])
         elif len(shap_exp.output_dims) == 0:
-            shap_values = cast(list[np.ndarray], [shap_exp.values])
+            shap_values = cast("list[np.ndarray]", [shap_exp.values])
         else:
             raise Exception("Number of outputs needs to have support added!! (probably a simple fix)")
         if pixel_values is None:
-            pixel_values = cast(np.ndarray, shap_exp.data)
+            pixel_values = cast("np.ndarray", shap_exp.data)
         if labels is None:
-            labels = cast(list[str], shap_exp.output_names)
+            labels = cast("list[str]", shap_exp.output_names)
     else:
-        assert isinstance(
-            pixel_values, np.ndarray
-        ), "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+        assert isinstance(pixel_values, np.ndarray), (
+            "The input pixel_values must be a numpy array or an Explanation object must be provided!"
+        )
 
     # multi_output = True
     if not isinstance(shap_values, list):
         # multi_output = False
-        shap_values = cast(list[np.ndarray], [shap_values])
+        shap_values = cast("list[np.ndarray]", [shap_values])
 
     if len(shap_values[0].shape) == 3:
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
         pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
-    # labels: (rows (images) x columns (top_k classes) )
+    # labels: (rows (images), columns (top_k classes) ) or (1, columns (top_k classes) )
     if labels is not None:
         if isinstance(labels, list):
-            labels = np.array(labels).reshape(1, -1)
+            labels = np.array(labels)
+        labels = labels.reshape(-1, len(shap_values))
 
     # if labels is not None:
     #     labels = np.array(labels)
@@ -132,7 +133,7 @@ def image(
     fig_size = np.array([3 * (len(shap_values) + 1), 2.5 * (x.shape[0] + 1)])
     if fig_size[0] > width:
         fig_size *= width / fig_size[0]
-    fig, axes = pl.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size, squeeze=False)
+    fig, axes = plt.subplots(nrows=x.shape[0], ncols=len(shap_values) + 1, figsize=fig_size, squeeze=False)
     for row in range(x.shape[0]):
         x_curr = x[row].copy()
 
@@ -163,7 +164,7 @@ def image(
             x_curr_gray = x_curr
             x_curr_disp = x_curr
 
-        axes[row, 0].imshow(x_curr_disp, cmap=pl.get_cmap("gray"))
+        axes[row, 0].imshow(x_curr_disp, cmap=plt.get_cmap("gray"))
         if true_labels:
             axes[row, 0].set_title(true_labels[row], **label_kwargs)
         axes[row, 0].axis("off")
@@ -176,11 +177,12 @@ def image(
 
         for i in range(len(shap_values)):
             if labels is not None:
-                if row == 0:
+                # Add labels if there are labels for each sample, or if not, only for the first row
+                if labels.shape[0] > 1 or row == 0:
                     axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(
-                x_curr_gray, cmap=pl.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
+                x_curr_gray, cmap=plt.get_cmap("gray"), alpha=0.15, extent=(-1, sv.shape[1], sv.shape[0], -1)
             )
             im = axes[row, i + 1].imshow(sv, cmap=cmap, vmin=-max_val, vmax=max_val)
             axes[row, i + 1].axis("off")
@@ -193,7 +195,7 @@ def image(
     )
     cb.outline.set_visible(False)  # type: ignore
     if show:
-        pl.show()
+        plt.show()
 
 
 def image_to_text(shap_values):

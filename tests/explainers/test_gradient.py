@@ -1,3 +1,4 @@
+import platform
 from urllib.error import HTTPError
 
 import numpy as np
@@ -236,6 +237,10 @@ def test_tf_multi_inputs_multi_outputs():
     np.testing.assert_allclose(shap_values[0].sum(1) + shap_values[1].sum(1) + predicted.mean(0), predicted, atol=1e-1)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_pytorch_mnist_cnn():
     """The same test as above, but for pytorch"""
     # FIXME: this test should ideally pass with any random seed. See #2960
@@ -358,6 +363,10 @@ def test_pytorch_mnist_cnn():
     run_test(train_loader, test_loader, False)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_pytorch_multiple_inputs(random_seed):
     """Test multi-input scenarios."""
     torch = pytest.importorskip("torch")
@@ -396,6 +405,10 @@ def test_pytorch_multiple_inputs(random_seed):
     np.testing.assert_allclose(sums + expected_value, outputs, atol=1e-2)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 def test_pytorch_multiple_inputs_multiple_outputs(random_seed):
     """Test multi-input scenarios."""
     torch = pytest.importorskip("torch")
