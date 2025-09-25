@@ -374,8 +374,8 @@ def _common_lightgbm_regressor_test(create_model):
 
     import shap
 
-    # train lightgbm model on boston housing price regression dataset
-    X, y = shap.datasets.boston()
+    # train lightgbm model on california housing price regression dataset
+    X, y = shap.datasets.california()
     model = create_model()
     model.fit(X, y)
 
@@ -391,11 +391,7 @@ def _common_lightgbm_regressor_test(create_model):
 
 
 def test_lightgbm():
-    try:
-        import lightgbm
-    except:
-        print("Skipping test_lightgbm!")
-        return
+    lightgbm = pytest.importorskip("lightgbm")
 
     def create_model():
         return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
@@ -404,11 +400,7 @@ def test_lightgbm():
 
 
 def test_lightgbm_mse_regressor():
-    try:
-        import lightgbm
-    except:
-        print("Skipping test_lightgbm_mse_regressor!")
-        return
+    lightgbm = pytest.importorskip("lightgbm")
 
     # train the lightgbm model on a dataset with MSE objective
     def create_model():
@@ -428,7 +420,7 @@ def _common_lightgbm_nonsklearn_api(dataset, params, validation):
     lgb_train = lightgbm.Dataset(X_train, y_train)
     lgb_test = lightgbm.Dataset(X_test, y_test, reference=lgb_train)
 
-    booster = lightgbm.train(params, lgb_train, valid_sets=[lgb_train, lgb_test], evals_result={}, verbose_eval=30)
+    booster = lightgbm.train(params, lgb_train, valid_sets=[lgb_train, lgb_test])
     # explain the model's predictions using SHAP values
     ex = shap.TreeExplainer(booster)
     shap_values = ex.shap_values(X_test)
@@ -443,11 +435,6 @@ def test_lightgbm_nonsklearn_api_binary():
 
     import shap
 
-    try:
-        pass
-    except:
-        print("Skipping test_lightgbm_nonsklearn_api_binary!")
-        return
     # train the lightgbm model using non-sklearn API with binary classification dataset
     params = {
         "objective": "binary",
@@ -460,7 +447,7 @@ def test_lightgbm_nonsklearn_api_binary():
     }
 
     def validation(shap_values, expected_value, predicted):
-        assert np.abs(shap_values[1].sum(1) + expected_value[1] - predicted).max() < 1e-4, (
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
             "SHAP values don't sum to model output!"
         )
 
@@ -471,12 +458,6 @@ def test_lightgbm_nonsklearn_api_regressor():
     import numpy as np
 
     import shap
-
-    try:
-        pass
-    except:
-        print("Skipping test_lightgbm_nonsklearn_api_regressor!")
-        return
 
     # train the lightgbm model using non-sklearn API with regression dataset
     params = {
