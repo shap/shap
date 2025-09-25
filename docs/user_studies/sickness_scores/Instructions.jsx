@@ -36,7 +36,7 @@ export default class Instructions extends React.Component {
 
       	<div className="instructions well">
           You will be asked to allocate blame for a person's "sickness score",
-          where 0 is healthy and higher numbers mean more sickness. There are 
+          where 0 is healthy and higher numbers mean more sickness. There are
           <i> 4 different ways</i> to measure sickness (A, B, C and D). There
           are also <i>3 different people</i> for each score. This leads to 12
           total questions. Each question should not take very long to

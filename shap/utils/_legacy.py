@@ -1,13 +1,14 @@
+import copy
+
 import numpy as np
 import pandas as pd
-import scipy as sp
+import scipy.sparse
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
-from scipy.sparse import issparse
 
 
 def kmeans(X, k, round_values=True):
-    """ Summarize a dataset with k mean samples weighted by the number of data points they
+    """Summarize a dataset with k mean samples weighted by the number of data points they
     each represent.
 
     Parameters
@@ -25,26 +26,29 @@ def kmeans(X, k, round_values=True):
     Returns
     -------
     DenseData object.
-    """
 
+    """
     group_names = [str(i) for i in range(X.shape[1])]
-    if str(type(X)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(X, pd.DataFrame):
         group_names = X.columns
         X = X.values
 
     # in case there are any missing values in data impute them
-    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    imp = SimpleImputer(missing_values=np.nan, strategy="mean")
     X = imp.fit_transform(X)
 
-    kmeans = KMeans(n_clusters=k, random_state=0).fit(X)
+    # Specify `n_init` for consistent behaviour between sklearn versions
+    kmeans = KMeans(n_clusters=k, random_state=0, n_init=10).fit(X)
 
     if round_values:
         for i in range(k):
             for j in range(X.shape[1]):
-                xj = X[:,j].toarray().flatten() if issparse(X) else X[:, j] # sparse support courtesy of @PrimozGodec
-                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i,j]))
-                kmeans.cluster_centers_[i,j] = X[ind,j]
-    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0*np.bincount(kmeans.labels_))
+                xj = (
+                    X[:, j].toarray().flatten() if scipy.sparse.issparse(X) else X[:, j]
+                )  # sparse support courtesy of @PrimozGodec
+                ind = np.argmin(np.abs(xj - kmeans.cluster_centers_[i, j]))
+                kmeans.cluster_centers_[i, j] = X[ind, j]
+    return DenseData(kmeans.cluster_centers_, group_names, None, 1.0 * np.bincount(kmeans.labels_))
 
 
 class Instance:
@@ -80,13 +84,15 @@ def convert_to_instance_with_index(val, column_name, index_value, index_name):
 
 
 def match_instance_to_data(instance, data):
-    assert isinstance(instance, Instance), "instance must be of type Instance!"
+    if not isinstance(instance, Instance):
+        raise TypeError("instance must be of type Instance!")
 
     if isinstance(data, DenseData):
         if instance.group_display_values is None:
-            instance.group_display_values = [instance.x[0, group[0]] if len(group) == 1 else "" for group in data.groups]
+            instance.group_display_values = [
+                instance.x[0, group[0]] if len(group) == 1 else "" for group in data.groups
+            ]
         assert len(instance.group_display_values) == len(data.groups)
-        instance.groups = data.groups
 
 
 class Model:
@@ -95,22 +101,46 @@ class Model:
         self.out_names = out_names
 
 
-def convert_to_model(val):
+def convert_to_model(val, keep_index=False):
+    """Convert a model to a Model object.
+
+    Parameters
+    ----------
+    val : function or Model object
+        The model function or a Model object.
+
+    keep_index : bool
+        If True then the index values will be passed to the model function as the first argument.
+        When this is False the feature names will be removed from the model object to avoid unnecessary warnings.
+
+    """
     if isinstance(val, Model):
-        return val
+        out = val
     else:
-        return Model(val, None)
+        out = Model(val, None)
+
+    # Fix for the sklearn warning
+    # 'X does not have valid feature names, but <model> was fitted with feature names'
+    if not keep_index:  # when using keep index, a dataframe with expected features names is expected to be passed
+        f_self = getattr(out.f, "__self__", None)
+        if f_self and hasattr(f_self, "feature_names_in_"):
+            # Make a copy so that the feature names are not removed from the original model
+            out = copy.deepcopy(out)
+            out.f.__self__.feature_names_in_ = None
+
+    return out
 
 
 def match_model_to_data(model, data):
-    assert isinstance(model, Model), "model must be of type Model!"
-    
+    if not isinstance(model, Model):
+        raise TypeError("model must be of type Model!")
+
     try:
         if isinstance(data, DenseDataWithIndex):
             out_val = model.f(data.convert_to_df())
         else:
             out_val = model.f(data.data)
-    except:
+    except Exception:
         print("Provided model function fails when applied to the provided data set.")
         raise
 
@@ -118,10 +148,9 @@ def match_model_to_data(model, data):
         if len(out_val.shape) == 1:
             model.out_names = ["output value"]
         else:
-            model.out_names = ["output value "+str(i) for i in range(out_val.shape[0])]
-    
-    return out_val
+            model.out_names = ["output value " + str(i) for i in range(out_val.shape[0])]
 
+    return out_val
 
 
 class Data:
@@ -143,23 +172,27 @@ class SparseData(Data):
 
 class DenseData(Data):
     def __init__(self, data, group_names, *args):
-        self.groups = args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
+        self.groups = (
+            args[0] if len(args) > 0 and args[0] is not None else [np.array([i]) for i in range(len(group_names))]
+        )
 
-        l = sum(len(g) for g in self.groups)
+        j = sum(len(g) for g in self.groups)
         num_samples = data.shape[0]
         t = False
-        if l != data.shape[1]:
+        if j != data.shape[1]:
             t = True
             num_samples = data.shape[1]
 
-        valid = (not t and l == data.shape[1]) or (t and l == data.shape[0])
-        assert valid, "# of names must match data matrix!"
+        valid = (not t and j == data.shape[1]) or (t and j == data.shape[0])
+        if not valid:
+            raise ValueError("# of names must match data matrix!")
 
         self.weights = args[1] if len(args) > 1 else np.ones(num_samples)
         self.weights /= np.sum(self.weights)
         wl = len(self.weights)
         valid = (not t and wl == data.shape[0]) or (t and wl == data.shape[1])
-        assert valid, "# weights must match data matrix!"
+        if not valid:
+            raise ValueError("# of weights must match data matrix!")
 
         self.transposed = t
         self.group_names = group_names
@@ -184,21 +217,23 @@ class DenseDataWithIndex(DenseData):
 def convert_to_data(val, keep_index=False):
     if isinstance(val, Data):
         return val
-    elif type(val) == np.ndarray:
+    if isinstance(val, np.ndarray):
         return DenseData(val, [str(i) for i in range(val.shape[1])])
-    elif str(type(val)).endswith("'pandas.core.series.Series'>"):
-        return DenseData(val.values.reshape((1,len(val))), list(val.index))
-    elif str(type(val)).endswith("'pandas.core.frame.DataFrame'>"):
+    if isinstance(val, pd.Series):
+        return DenseData(val.values.reshape((1, len(val))), list(val.index))
+    if isinstance(val, pd.DataFrame):
         if keep_index:
             return DenseDataWithIndex(val.values, list(val.columns), val.index.values, val.index.name)
         else:
             return DenseData(val.values, list(val.columns))
-    elif sp.sparse.issparse(val):
-        if not sp.sparse.isspmatrix_csr(val):
+    if scipy.sparse.issparse(val):
+        if not scipy.sparse.isspmatrix_csr(val):
             val = val.tocsr()
         return SparseData(val)
-    else:
-        assert False, "Unknown type passed as data object: "+str(type(val))
+
+    emsg = f"Unknown type passed as data object: {type(val)}"
+    raise TypeError(emsg)
+
 
 class Link:
     def __init__(self):
@@ -218,29 +253,25 @@ class IdentityLink(Link):
         return x
 
 
-
-
-
-
 class LogitLink(Link):
     def __str__(self):
         return "logit"
 
     @staticmethod
-    def f(x):
-        return np.log(x/(1-x))
+    def f(x, epsilon=1e-15):
+        x_clipped = np.clip(x, epsilon, 1 - epsilon)
+        return np.log(x_clipped / (1 - x_clipped))
 
     @staticmethod
     def finv(x):
-        return 1/(1+np.exp(-x))
+        return 1 / (1 + np.exp(-x))
 
 
 def convert_to_link(val):
     if isinstance(val, Link):
         return val
-    elif val == "identity":
+    if val == "identity":
         return IdentityLink()
-    elif val == "logit":
+    if val == "logit":
         return LogitLink()
-    else:
-        assert False, "Passed link object must be a subclass of iml.Link"
+    raise TypeError("Passed link object must be a subclass of iml.Link")

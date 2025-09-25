@@ -30,15 +30,15 @@
    border-color: #666666;
 }
 
-.a {
+a {
    color: #008bfb;
 }
 
-.a:hover {
+a:hover {
    color: #008bfb;
 }
 
-.a:visited {
+a:visited {
    color: #008bfb;
 }
 
@@ -50,4 +50,8 @@ html.writer-html4 .rst-content dl:not(.docutils)>dt, html.writer-html5 .rst-cont
 
 .rst-versions .rst-current-version {
    color: #fcfcfc;
+}
+
+.wy-menu-vertical a {
+   color: #d9d9d9;
 }

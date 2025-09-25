@@ -1,2 +1,1 @@
-import matplotlib
-matplotlib.use('Agg')
+"""This modules tests all the explainer types."""

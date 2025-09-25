@@ -1,10 +1,19 @@
 version: 2
 
-python:
-   version: 3.7
-   install:
-      - method: pip
-        path: .
-        extra_requirements:
-            - docs
-   system_packages: true
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+  commands:
+    # cf. https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
+    - asdf plugin add uv
+    - asdf install uv latest
+    - asdf global uv latest
+    - uv venv
+    - uv pip install -r docs/requirements-docs.txt
+    - uv pip install setuptools cython
+    - .venv/bin/python setup.py build_ext --inplace
+    - >-
+      .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en
+      docs $READTHEDOCS_OUTPUT/html

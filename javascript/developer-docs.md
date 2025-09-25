@@ -10,7 +10,7 @@ npm run dev
 npm run build
 </pre>
 
-## Publishing the package to npm 
+## Publishing the package to npm
 
 A new shapjs version can be published to [npm](https://www.npmjs.com/package/shapjs):
 

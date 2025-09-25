@@ -97,7 +97,7 @@ export default class QuestionA1 extends React.Component {
 
       if (this.state.person < 2) {
         this.state.person++;
-      } else if (this.state.score < 3) {  
+      } else if (this.state.score < 3) {
         this.state.person = 0;
         this.state.score++;
       } else {
@@ -126,7 +126,7 @@ export default class QuestionA1 extends React.Component {
           </td>
         </tr>
       );
-      
+
       if ((fever || cough) && !(fever && cough)) {
         interaction_effect_result = (
           <tr>
@@ -150,7 +150,7 @@ export default class QuestionA1 extends React.Component {
           </td>
         </tr>
       );
-      
+
       if (fever && cough) {
         interaction_effect_result = (
           <tr>
@@ -174,7 +174,7 @@ export default class QuestionA1 extends React.Component {
           </td>
         </tr>
       );
-      
+
       if (fever || cough) {
         interaction_effect_result = (
           <tr>
@@ -223,7 +223,7 @@ export default class QuestionA1 extends React.Component {
             They have neither a fever nor a cough.
           </td>
           <td>
-            
+
           </td>
         </tr>
       );

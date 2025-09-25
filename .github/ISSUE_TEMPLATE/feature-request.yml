@@ -1,0 +1,40 @@
+name: Feature Request
+description: Suggest an idea for shap
+title: "ENH: "
+labels: [enhancement]
+
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out this feature request form!
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: >
+        Please describe what problem the feature would solve (e.g. "I wish I could
+        use shap to ..."), and how the new feature would be used. Use pseudo-code if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Alternative Solutions
+      description: >
+        Please describe any alternative solutions (existing functionality, workarounds,
+        3rd party packages, etc.) that would satisfy the feature request.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: >
+        Please provide any relevant GitHub issues, code examples or references
+        that help describe and support the feature request.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Feature request checklist
+      options:
+        - label: I have checked the issue tracker for duplicate issues.
+          required: true
+        - label: I'd be interested in making a PR to implement this feature

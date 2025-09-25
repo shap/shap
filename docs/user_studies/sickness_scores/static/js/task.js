@@ -34,9 +34,9 @@ var instructionPages = [ // add as a list as many pages as you like
 /********************
 * HTML manipulation
 *
-* All HTML files in the templates directory are requested 
+* All HTML files in the templates directory are requested
 * from the server when the PsiTurk object is created above. We
-* need code to get those pages from the PsiTurk object and 
+* need code to get those pages from the PsiTurk object and
 * insert them into the document.
 *
 ********************/
@@ -76,7 +76,7 @@ var StroopExperiment = function() {
 			d3.select("#query").html('<p id="prompt">Type "R" for Red, "B" for blue, "G" for green.</p>');
 		}
 	};
-	
+
 	var response_handler = function(e) {
 		if (!listening) return;
 
@@ -122,7 +122,7 @@ var StroopExperiment = function() {
 	    $("body").unbind("keydown", response_handler); // Unbind keys
 	    currentview = new Questionnaire();
 	};
-	
+
 	var show_word = function(text, color) {
 		d3.select("#stim")
 			.append("div")
@@ -139,13 +139,13 @@ var StroopExperiment = function() {
 		d3.select("#word").remove();
 	};
 
-	
+
 	// Load the stage.html snippet into the body of the page
 	psiTurk.showPage('stage.html');
 
 	// Register the response handler that is defined above to handle any
 	// key down events.
-	$("body").focus().keydown(response_handler); 
+	$("body").focus().keydown(response_handler);
 
 	// Start the test
 	next();
@@ -168,7 +168,7 @@ var Questionnaire = function() {
 			psiTurk.recordUnstructuredData(this.id, this.value);
 		});
 		$('select').each( function(i, val) {
-			psiTurk.recordUnstructuredData(this.id, this.value);		
+			psiTurk.recordUnstructuredData(this.id, this.value);
 		});
 
 	};
@@ -181,32 +181,32 @@ var Questionnaire = function() {
 	resubmit = function() {
 		document.body.innerHTML = "<h1>Trying to resubmit...</h1>";
 		reprompt = setTimeout(prompt_resubmit, 10000);
-		
+
 		psiTurk.saveData({
 			success: function() {
-			    clearInterval(reprompt); 
-                psiTurk.computeBonus('compute_bonus', function(){finish()}); 
-			}, 
+			    clearInterval(reprompt);
+                psiTurk.computeBonus('compute_bonus', function(){finish()});
+			},
 			error: prompt_resubmit
 		});
 	};
 
-	// Load the questionnaire snippet 
+	// Load the questionnaire snippet
 	psiTurk.showPage('postquestionnaire.html');
 	psiTurk.recordTrialData({'phase':'postquestionnaire', 'status':'begin'});
-	
+
 	$("#next").click(function () {
 	    record_responses();
 	    psiTurk.saveData({
             success: function(){
-                psiTurk.computeBonus('compute_bonus', function() { 
+                psiTurk.computeBonus('compute_bonus', function() {
                 	psiTurk.completeHIT(); // when finished saving compute bonus, the quit
-                }); 
-            }, 
+                });
+            },
             error: prompt_resubmit});
 	});
-    
-	
+
+
 };
 
 // Task object to keep track of the current phase
