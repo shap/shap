@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 def image(
     shap_values: Explanation | np.ndarray | list[np.ndarray],
     pixel_values: np.ndarray | None = None,
-    labels: list[str] | np.ndarray | None = None,
+    labels: list[str] | list[list[str]] | np.ndarray | None = None,
     true_labels: list | None = None,
     width: int | None = 20,
     aspect: float | None = 0.2,
@@ -110,10 +110,11 @@ def image(
         shap_values = [v.reshape(1, *v.shape) for v in shap_values]
         pixel_values = pixel_values.reshape(1, *pixel_values.shape)
 
-    # labels: (rows (images) x columns (top_k classes) )
+    # labels: (rows (images), columns (top_k classes) ) or (1, columns (top_k classes) )
     if labels is not None:
         if isinstance(labels, list):
-            labels = np.array(labels).reshape(1, -1)
+            labels = np.array(labels)
+        labels = labels.reshape(-1, len(shap_values))
 
     # if labels is not None:
     #     labels = np.array(labels)
@@ -176,7 +177,8 @@ def image(
 
         for i in range(len(shap_values)):
             if labels is not None:
-                if row == 0:
+                # Add labels if there are labels for each sample, or if not, only for the first row
+                if labels.shape[0] > 1 or row == 0:
                     axes[row, i + 1].set_title(labels[row, i], **label_kwargs)
             sv = shap_values[i][row] if len(shap_values[i][row].shape) == 2 else shap_values[i][row].sum(-1)
             axes[row, i + 1].imshow(

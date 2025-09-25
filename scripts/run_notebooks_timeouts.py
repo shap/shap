@@ -51,6 +51,7 @@ allow_to_timeout = [
     Path("image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow)-checkpoint.ipynb"),
     Path("image_examples/image_classification/Multi-class ResNet50 on ImageNet (TensorFlow).ipynb"),
     Path("image_examples/image_classification/Multi-input Gradient Explainer MNIST Example.ipynb"),
+    Path("tabular_examples/linear_models/Explaining a model that uses standardized features.ipynb"),
     Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
     Path("tabular_examples/tree_based_models/Census income classification with XGBoost.ipynb"),
     Path("tabular_examples/tree_based_models/Fitting a Linear Simulation with XGBoost.ipynb"),

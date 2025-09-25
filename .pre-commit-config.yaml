@@ -5,7 +5,7 @@ exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
 
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.8
+  rev: v0.12.7
   hooks:
   - id: ruff
     types_or: [python, pyi, jupyter]
