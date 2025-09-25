@@ -313,10 +313,10 @@ def create_binary_newsgroups_data():
 
 
 def create_random_forest_vectorizer():
+    from sklearn.base import TransformerMixin
+    from sklearn.ensemble import RandomForestClassifier
     from sklearn.feature_extraction.text import CountVectorizer
     from sklearn.pipeline import Pipeline
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.base import TransformerMixin
 
     vectorizer = CountVectorizer(lowercase=False, min_df=0.0, binary=True)
 
@@ -333,7 +333,6 @@ def create_random_forest_vectorizer():
 
 def test_sklearn_random_forest_newsgroups():
     import shap
-    import numpy as np
     # from sklearn.ensemble import RandomForestClassifier
 
     # note: this test used to fail in native TreeExplainer code due to memory corruption
@@ -354,9 +353,10 @@ def test_sklearn_random_forest_newsgroups():
 
 
 def test_sklearn_decision_tree_multiclass():
-    import shap
-    from sklearn.tree import DecisionTreeClassifier
     import numpy as np
+    from sklearn.tree import DecisionTreeClassifier
+
+    import shap
 
     X, y = shap.datasets.iris()
     y[y == 2] = 1
@@ -370,8 +370,9 @@ def test_sklearn_decision_tree_multiclass():
 
 
 def _common_lightgbm_regressor_test(create_model):
-    import shap
     import numpy as np
+
+    import shap
 
     # train lightgbm model on boston housing price regression dataset
     X, y = shap.datasets.boston()
@@ -417,10 +418,10 @@ def test_lightgbm_mse_regressor():
 
 
 def _common_lightgbm_nonsklearn_api(dataset, params, validation):
-    import shap
     import lightgbm
-    import numpy as np
     from sklearn.model_selection import train_test_split
+
+    import shap
 
     # train the lightgbm model using non-sklearn API with binary classification dataset
     X_train, X_test, y_train, y_test = train_test_split(*dataset, test_size=0.2, random_state=0)
@@ -438,11 +439,12 @@ def _common_lightgbm_nonsklearn_api(dataset, params, validation):
 
 
 def test_lightgbm_nonsklearn_api_binary():
-    import shap
     import numpy as np
 
+    import shap
+
     try:
-        import lightgbm
+        pass
     except:
         print("Skipping test_lightgbm_nonsklearn_api_binary!")
         return
@@ -466,15 +468,15 @@ def test_lightgbm_nonsklearn_api_binary():
 
 
 def test_lightgbm_nonsklearn_api_regressor():
-    import shap
     import numpy as np
 
+    import shap
+
     try:
-        import lightgbm
+        pass
     except:
         print("Skipping test_lightgbm_nonsklearn_api_regressor!")
         return
-    from sklearn.model_selection import train_test_split
 
     # train the lightgbm model using non-sklearn API with regression dataset
     params = {
