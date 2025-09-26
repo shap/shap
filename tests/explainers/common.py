@@ -2,6 +2,7 @@ import tempfile
 
 import numpy as np
 import pytest
+from sklearn.linear_model import LogisticRegression
 
 import shap
 
@@ -20,6 +21,18 @@ def basic_xgboost_scenario(max_samples=None, dataset=shap.datasets.adult):
     # train an XGBoost model (but any other model type would also work)
     # Specify some hyperparameters for consitency between xgboost v1.X and v2.X
     model = xgboost.XGBClassifier(tree_method="exact", base_score=0.5)
+    model.fit(X, y)
+
+    return model, X
+
+
+def basic_sklearn_scenario():
+    """Creates a basic scikit-learn logistic regression model and data."""
+    X = np.random.randn(20, 5)
+    y = np.zeros(20)
+    y[10:] = 1
+
+    model = LogisticRegression()
     model.fit(X, y)
 
     return model, X
@@ -98,4 +111,5 @@ def test_serialization(explainer_type, model, masker, data, rtol=1e-05, atol=1e-
     assert np.allclose(shap_values_original.base_values, shap_values_new.base_values, rtol=rtol, atol=atol)
     assert np.allclose(shap_values_original[0].values, shap_values_new[0].values, rtol=rtol, atol=atol)
     assert isinstance(explainer_original, type(explainer_new))
-    assert isinstance(explainer_original.masker, type(explainer_new.masker))
+    if hasattr(explainer_original, "masker"):
+        assert isinstance(explainer_original.masker, type(explainer_new.masker))
