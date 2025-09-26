@@ -3,6 +3,7 @@ from ._explanation import Cohorts, Explanation
 # explainers
 from .explainers import other
 from .explainers._additive import AdditiveExplainer
+from .explainers._coalition import CoalitionExplainer
 from .explainers._deep import DeepExplainer
 from .explainers._exact import ExactExplainer
 from .explainers._explainer import Explainer
@@ -109,6 +110,7 @@ __all__ = [
     "KernelExplainer",
     "LinearExplainer",
     "PartitionExplainer",
+    "CoalitionExplainer",
     "PermutationExplainer",
     "SamplingExplainer",
     "TreeExplainer",

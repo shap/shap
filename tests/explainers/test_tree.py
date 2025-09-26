@@ -13,6 +13,7 @@ import sklearn.pipeline
 from sklearn.utils import check_array
 
 import shap
+from shap.explainers._explainer import Explanation
 from shap.explainers._tree import SingleTree
 from shap.utils._exceptions import InvalidModelError
 
@@ -205,6 +206,7 @@ def configure_pyspark_python(monkeypatch):
     monkeypatch.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -260,6 +262,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     spark.stop()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_regression_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -307,6 +310,171 @@ def create_binary_newsgroups_data():
     newsgroups_test = sklearn.datasets.fetch_20newsgroups(subset="test", categories=categories)
     class_names = ["atheism", "christian"]
     return newsgroups_train, newsgroups_test, class_names
+
+
+def create_random_forest_vectorizer():
+    from sklearn.base import TransformerMixin
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.pipeline import Pipeline
+
+    vectorizer = CountVectorizer(lowercase=False, min_df=0.0, binary=True)
+
+    class DenseTransformer(TransformerMixin):
+        def fit(self, X, y=None, **fit_params):
+            return self
+
+        def transform(self, X, y=None, **fit_params):
+            return X.toarray()
+
+    rf = RandomForestClassifier(n_estimators=500, random_state=777)
+    return Pipeline([("vectorizer", vectorizer), ("to_dense", DenseTransformer()), ("rf", rf)])
+
+
+def test_sklearn_random_forest_newsgroups():
+    import shap
+    # from sklearn.ensemble import RandomForestClassifier
+
+    # note: this test used to fail in native TreeExplainer code due to memory corruption
+    newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
+    pipeline = create_random_forest_vectorizer()
+    pipeline.fit(newsgroups_train.data, newsgroups_train.target)
+    rf = pipeline.named_steps["rf"]
+    vectorizer = pipeline.named_steps["vectorizer"]
+    densifier = pipeline.named_steps["to_dense"]
+
+    dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
+
+    test_row = newsgroups_test.data[83:84]
+    explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
+    vec_row = vectorizer.transform(test_row)
+    dense_row = densifier.transform(vec_row)
+    explainer.shap_values(dense_row)
+
+
+def test_sklearn_decision_tree_multiclass():
+    import numpy as np
+    from sklearn.tree import DecisionTreeClassifier
+
+    import shap
+
+    X, y = shap.datasets.iris()
+    y[y == 2] = 1
+    model = DecisionTreeClassifier(max_depth=None, min_samples_split=2, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-1
+    assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
+
+
+def _common_lightgbm_regressor_test(create_model):
+    import numpy as np
+
+    import shap
+
+    # train lightgbm model on california housing price regression dataset
+    X, y = shap.datasets.california()
+    model = create_model()
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(model)
+    shap_values = ex.shap_values(X)
+
+    predicted = model.predict(X, raw_score=True)
+
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, (
+        "SHAP values don't sum to model output!"
+    )
+
+
+def test_lightgbm():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
+
+    _common_lightgbm_regressor_test(create_model)
+
+
+def test_lightgbm_mse_regressor():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    # train the lightgbm model on a dataset with MSE objective
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8], objective="mean_squared_error")
+
+    _common_lightgbm_regressor_test(create_model)
+
+
+def _common_lightgbm_nonsklearn_api(dataset, params, validation):
+    import lightgbm
+    from sklearn.model_selection import train_test_split
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    X_train, X_test, y_train, y_test = train_test_split(*dataset, test_size=0.2, random_state=0)
+    lgb_train = lightgbm.Dataset(X_train, y_train)
+    lgb_test = lightgbm.Dataset(X_test, y_test, reference=lgb_train)
+
+    booster = lightgbm.train(params, lgb_train, valid_sets=[lgb_train, lgb_test])
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(booster)
+    shap_values = ex.shap_values(X_test)
+
+    predicted = booster.predict(X_test, raw_score=True)
+
+    validation(shap_values, ex.expected_value, predicted)
+
+
+def test_lightgbm_nonsklearn_api_binary():
+    import numpy as np
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    params = {
+        "objective": "binary",
+        "num_threads": 4,
+        "n_estimators": 8000,
+        "early_stopping_round": 50,
+        "metric": ["binary_error"],
+        "random_state": 7,
+        "verbose": 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
+            "SHAP values don't sum to model output!"
+        )
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.iris(), params=params, validation=validation)
+
+
+def test_lightgbm_nonsklearn_api_regressor():
+    import numpy as np
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with regression dataset
+    params = {
+        "num_threads": 4,
+        "n_estimators": 8000,
+        "early_stopping_round": 50,
+        "metric": ["rmse"],
+        "random_state": 7,
+        "verbose": 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
+            "SHAP values don't sum to model output!"
+        )
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.adult(), params=params, validation=validation)
 
 
 def test_gpboost():
@@ -1957,3 +2125,122 @@ def model_explainer():
 )
 def test_tight_sensitivity_extra(model_explainer, phi, model_output):
     model_explainer.assert_additivity(phi, model_output)
+
+
+@pytest.mark.parametrize(
+    "X, y, expected_shap_values",
+    [
+        (
+            np.array([[1], [None], [np.nan], [float("nan")], [100]]),
+            np.array(
+                [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            ),
+            np.array([4 / 5, -1 / 5, -1 / 5, -1 / 5, -1 / 5]),
+        ),
+    ],
+)
+def test_sklearn_tree_explainer_with_missing_values(X, y, expected_shap_values):
+    """Test that TreeExplainer works with scikit-learn trees that handle missing values.
+
+    This test verifies that SHAP values are computed correctly when using scikit-learn
+    trees with missing values (None, NaN), which is supported starting from scikit-learn 1.3.
+    """
+    # Train a simple decision tree classifier
+    clf = sklearn.tree.DecisionTreeClassifier()
+    clf.fit(X, y)
+
+    # Create explainer and get SHAP values
+    explainer = shap.TreeExplainer(clf)
+    shap_values = explainer.shap_values(X)[:, :, 1].flatten()
+
+    # Verify SHAP values match expected values
+    np.testing.assert_allclose(shap_values, expected_shap_values)
+
+
+@pytest.mark.xslow
+def test_overflow_tree_path_dependent():
+    """GH #4002
+    Test SHAP values computation for `feature_perturbation='tree_path_dependent'` with large number of features."""
+    seed = 0
+    n_rows = 2_000
+    rng = np.random.default_rng(seed)
+    X = rng.integers(low=0, high=2, size=(n_rows, 1_100_000)).astype(np.float64)
+    y = rng.integers(low=0, high=2, size=n_rows)
+
+    clf = sklearn.ensemble.RandomForestClassifier(random_state=seed)
+    clf.fit(X, y)
+    clf.predict_proba(X)
+    exp = shap.Explainer(clf, algorithm="tree", feature_perturbation="tree_path_dependent")
+    exp(X)
+
+
+@pytest.mark.parametrize(
+    "n_estimators",
+    [
+        5,
+    ],
+)
+def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data, n_estimators, random_seed):
+    """
+    Causal trees predict individual treatment effect based on continuous outcomes Y|X,T
+    where T is the particular type of treatment. In the basic scenario we have T=0 and T=1.
+
+    Thus, causal tree terminal nodes separately contain multiple outcomes as conditioned sample means:
+        Y_hat|X,T=0 and Y_hat|X,T=1
+    in the same manner as sklearn DecisionTreeRegressor with multiple outputs: (n_samples, n_outputs).
+
+    However, unlike standard regression tree the final output of the predict() method in causal trees is
+    the individual treatment effect: Y_hat|X,T=1 - Y_hat|X,T=0 with an option of returning possible outcomes Y_hat|X,T
+
+    During research, it is important to analyze Y_hat|X,T=t, t={0,1,...t} aside from individual effects estimation.
+    That is why we should carefully track the shape of the following arrays along with other checks:
+        shap values:  (n_observations, n_features, n_outcomes)
+        base values:  (n_observations, n_outcomes) arrays
+    """
+    causalml = pytest.importorskip("causalml")
+
+    data, n_outcomes = causalml_synth_data
+    y, X, treatment, tau, b, e = data
+    n_observations, n_features = X.shape
+
+    ctree = causalml.inference.tree.CausalTreeRegressor(random_state=random_seed)
+    ctree.fit(X=X, treatment=treatment, y=y)
+    ctree_preds = ctree.predict(X)
+    ctree_explainer = shap.TreeExplainer(ctree)
+
+    cforest = causalml.inference.tree.CausalRandomForestRegressor(n_estimators=n_estimators, random_state=random_seed)
+    cforest.fit(X=X, treatment=treatment, y=y)
+    cforest_preds = cforest.predict(X)
+    cforest_explainer = shap.TreeExplainer(cforest)
+
+    for explainer, preds in zip([ctree_explainer, cforest_explainer], [ctree_preds, cforest_preds]):
+        explanation = explainer(X)
+        shap_values = explainer.shap_values(X)
+
+        assert isinstance(explanation, Explanation)
+        assert isinstance(explanation.data, np.ndarray)
+        assert isinstance(explanation.base_values, np.ndarray)
+        assert isinstance(explanation.values, np.ndarray)
+        assert isinstance(shap_values, np.ndarray)
+
+        # Explanation.values and the output of TreeExplainer.shap_values() are two ways to get shap values
+        np.testing.assert_allclose(explanation.values, shap_values)
+        np.testing.assert_allclose(explanation.data, X)
+
+        # Check Explanation class
+        assert explanation.data.shape == (n_observations, n_features)
+        assert explanation.base_values.shape == (n_observations, n_outcomes)
+        assert explanation.values.shape == (n_observations, n_features, n_outcomes)
+
+        # Check that shap values and base values can be collapsed into
+        # model prediction of individual treatment effects
+        y_outcomes = explanation.base_values + explanation.values.sum(axis=1)
+        individual_effects = y_outcomes[:, 1] - y_outcomes[:, 0]
+
+        np.testing.assert_allclose(preds, individual_effects, atol=1e-4)

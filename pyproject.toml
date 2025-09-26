@@ -35,6 +35,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
@@ -71,23 +72,25 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  "catboost",
-  "gpboost",
+  "catboost; python_version < '3.13'",  # TODO: pending 3.13 support
+  "gpboost<=1.6.1",  # TODO: can be relaxed once https://github.com/fabsig/GPBoost/issues/165 is solved
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers",
-  "tf-keras",
+  "transformers < 4.54.0; python_version < '3.13'",  # TODO: pending 3.13 support, fix once tests pass for 4.54.0
+  "tf-keras; python_version < '3.13'",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin'",  # see GH #3524
-  "torch; sys_platform != 'darwin'",
-  "torchvision",
-  "tensorflow",
+  "torch; python_version < '3.13'",  # TODO: pending 3.13 support
+  "torchvision; python_version < '3.13'",  # TODO: pending 3.13 support
+  "tensorflow; python_version < '3.13'",  # TODO: pending 3.13 support
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy<2.0",
+  "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
+  "causalml",
+  "selenium",  # needed to test the javascript based plots
 ]
 
 test_notebooks = [
@@ -98,6 +101,12 @@ test_notebooks = [
   "transformers",
   "datasets",
   "keras",
+]
+
+nbtest = [
+  "nbtest-plugin",
+  "nbtest-gen",
+  "nbtest-lab-extension"
 ]
 
 [project.urls]
@@ -170,6 +179,7 @@ module = [
   "torch.*",
   "tqdm.*",
   "xgboost.*",
+  "causalml.*",
 ]
 ignore_missing_imports = true
 
@@ -196,7 +206,7 @@ version_file = "shap/_version.py"
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
-addopts = "--mpl"
+addopts = "--mpl -m 'not xslow'"
 testpaths = ["tests"]
 filterwarnings = [
   # Ignore warnings that are entirely from 3rd party libs outside our control
@@ -205,6 +215,7 @@ filterwarnings = [
   "ignore:.*is_datetime64tz_dtype is deprecated.*:DeprecationWarning:.*pyspark.*",
   "ignore:.*'force_all_finite' was renamed to 'ensure_all_finite' in 1.6.*:FutureWarning:.*sklearn.*",
 ]
+markers = ["xslow: mark test as extremely slow (not run unless explicitly requested)"]
 
 [tool.ruff]
 # Careful: when running on pre-commit, ruff's "include" and "exclude" config

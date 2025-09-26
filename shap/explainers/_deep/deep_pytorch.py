@@ -379,6 +379,8 @@ op_handler["Dropout3d"] = passthrough
 op_handler["Dropout2d"] = passthrough
 op_handler["Dropout"] = passthrough
 op_handler["AlphaDropout"] = passthrough
+op_handler["Identity"] = passthrough
+op_handler["Flatten"] = passthrough
 
 op_handler["Conv1d"] = linear_1d
 op_handler["Conv2d"] = linear_1d

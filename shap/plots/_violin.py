@@ -2,14 +2,22 @@
 
 import warnings
 
-import matplotlib.pyplot as pl
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from packaging import version
 from scipy.stats import gaussian_kde
 
 from ..utils._exceptions import DimensionError
 from . import colors
 from ._labels import labels
+
+# TODO: simplify this when we drop support for matplotlib 3.9
+if version.parse(matplotlib.__version__) >= version.parse("3.10"):
+    ORIENTATION_KWARG = dict(orientation="horizontal")
+else:
+    ORIENTATION_KWARG = dict(vert=False)  # type: ignore[dict-item]
 
 
 # TODO: remove unused title argument / use title argument
@@ -33,44 +41,62 @@ def violin(
     class_inds=None,
     color_bar_label=labels["FEATURE_VALUE"],
     cmap=colors.red_blue,
+    color_bar_label_size=12,
+    color_bar_tick_size=11,
+    axhline_lw=0.5,
     use_log_scale=False,
 ):
     """Create a SHAP violin plot, colored by feature values when they are provided.
 
     Parameters
     ----------
-    shap_values : Explanation, or numpy.array
+    shap_values : Explanation or numpy.ndarray
         For single output explanations, this is a matrix of SHAP values (# samples x # features).
-
-    features : numpy.array or pandas.DataFrame or list
-        Matrix of feature values (# samples x # features) or a ``feature_names`` list as
-        shorthand.
-
-    feature_names : list
+    features : numpy.ndarray or pandas.DataFrame or list, optional
+        Matrix of feature values (# samples x # features), or a ``feature_names`` list as shorthand.
+    feature_names : list, optional
         Names of the features (length: # features).
-
-    max_display : int
+    max_display : int, optional
         How many top features to include in the plot (default is 20).
-
-    plot_type : "violin", or "layered_violin".
+    plot_type : {"violin", "layered_violin"}, optional
         What type of summary plot to produce. A "layered_violin" plot shows the
         distribution of the SHAP values of each variable. A "violin" plot is the same,
         except with outliers drawn as scatter points.
-
-    color_bar : bool
-        Whether to draw the color bar (legend).
-
-    show : bool
+    color : str or None, optional
+        Color or colormap to use for the plot. If None, a default is chosen.
+    axis_color : str, optional
+        Color for the plot axes.
+    title : str or None, optional
+        Plot title (currently unused).
+    alpha : float, optional
+        Opacity of the plot elements.
+    show : bool, optional
         Whether :external+mpl:func:`matplotlib.pyplot.show()` is called before returning.
-        Setting this to ``False`` allows the plot
-        to be customized further after it has been created.
-
-    plot_size : "auto" (default), float, (float, float), or None
+        Setting this to ``False`` allows the plot to be customized further after it has been created.
+    sort : bool, optional
+        Whether to sort features by the sum of their effect magnitudes.
+    color_bar : bool, optional
+        Whether to draw the color bar (legend).
+    plot_size : {"auto", float, (float, float), None}, optional
         What size to make the plot. By default, the size is auto-scaled based on the number of
         features that are being displayed. Passing a single float will cause each row to be that
         many inches high. Passing a pair of floats will scale the plot by that
         number of inches. If ``None`` is passed, then the size of the current figure will be left
         unchanged.
+    layered_violin_max_num_bins : int, optional
+        Maximum number of bins for layered violin plots.
+    color_bar_label : str, optional
+        Label for the color bar.
+    cmap : str or Colormap, optional
+        Colormap to use for coloring points by feature value.
+    color_bar_label_size : int, optional
+        Font size for the color bar label. Default is 11.
+    color_bar_tick_size : int, optional
+        Font size for the color bar ticks. Default is 11.
+    axhline_lw : float, optional
+        Line width for horizontal lines in the plot.
+    use_log_scale : bool, optional
+        Whether to use a symmetric log scale for the x-axis.
 
     Examples
     --------
@@ -139,7 +165,7 @@ def violin(
         feature_names = np.array([labels["FEATURE"] % str(i) for i in range(num_features)])
 
     if use_log_scale:
-        pl.xscale("symlog")
+        plt.xscale("symlog")
 
     if max_display is None:
         max_display = 20
@@ -153,16 +179,16 @@ def violin(
 
     row_height = 0.4
     if plot_size == "auto":
-        pl.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
+        plt.gcf().set_size_inches(8, len(feature_order) * row_height + 1.5)
     elif type(plot_size) in (list, tuple):
-        pl.gcf().set_size_inches(plot_size[0], plot_size[1])
+        plt.gcf().set_size_inches(plot_size[0], plot_size[1])
     elif plot_size is not None:
-        pl.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
-    pl.axvline(x=0, color="#999999", zorder=-1)
+        plt.gcf().set_size_inches(8, len(feature_order) * plot_size + 1.5)
+    plt.axvline(x=0, color="#999999", zorder=-1)
 
     if plot_type == "violin":
         for pos in range(len(feature_order)):
-            pl.axhline(y=pos, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+            plt.axhline(y=pos, color="#cccccc", lw=axhline_lw, dashes=(1, 5), zorder=-1)
 
         if features is not None:
             global_low = np.nanpercentile(shap_values[:, : len(feature_names)].flatten(), 1)
@@ -207,7 +233,7 @@ def violin(
                 vmin, vmax, cvals = _trim_crange(values, nan_mask)
 
                 # plot the nan values in the interaction feature as grey
-                pl.scatter(
+                plt.scatter(
                     shaps[nan_mask],
                     np.ones(shap_values[nan_mask].shape[0]) * pos,
                     color="#777777",
@@ -217,7 +243,7 @@ def violin(
                     zorder=1,
                 )
                 # plot the non-nan values colored by the trimmed feature value
-                pl.scatter(
+                plt.scatter(
                     shaps[np.invert(nan_mask)],
                     np.ones(shap_values[np.invert(nan_mask)].shape[0]) * pos,
                     cmap=cmap,
@@ -236,7 +262,7 @@ def violin(
                     smooth_values /= vmax - vmin
                 for i in range(len(xs) - 1):
                     if ds[i] > 0.05 or ds[i + 1] > 0.05:
-                        pl.fill_between(
+                        plt.fill_between(
                             [xs[i], xs[i + 1]],
                             [pos + ds[i], pos + ds[i + 1]],
                             [pos - ds[i], pos - ds[i + 1]],
@@ -245,11 +271,11 @@ def violin(
                         )
 
         else:
-            parts = pl.violinplot(
+            parts = plt.violinplot(
                 shap_values[:, feature_order],
                 range(len(feature_order)),
                 points=200,
-                vert=False,
+                **ORIENTATION_KWARG,  # type: ignore[arg-type]
                 widths=0.7,
                 showmeans=False,
                 showextrema=False,
@@ -320,46 +346,46 @@ def violin(
             for i in range(nbins - 1, -1, -1):
                 y = ys[i, :] / scale
                 c = (
-                    pl.get_cmap(color)(i / (nbins - 1)) if color in pl.colormaps else color
+                    plt.get_cmap(color)(i / (nbins - 1)) if color in plt.colormaps else color
                 )  # if color is a cmap, use it, otherwise use a color
-                pl.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
-        pl.xlim(shap_min, shap_max)
+                plt.fill_between(x_points, pos - y, pos + y, facecolor=c, edgecolor="face")
+        plt.xlim(shap_min, shap_max)
 
     # draw the color bar
     if (
         color_bar
         and features is not None
         and plot_type != "bar"
-        and (plot_type != "layered_violin" or color in pl.colormaps)
+        and (plot_type != "layered_violin" or color in plt.colormaps)
     ):
         import matplotlib.cm as cm
 
-        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else pl.get_cmap(color))
+        m = cm.ScalarMappable(cmap=cmap if plot_type != "layered_violin" else plt.get_cmap(color))
         m.set_array([0, 1])
-        cb = pl.colorbar(m, ax=pl.gca(), ticks=[0, 1], aspect=80)
+        cb = plt.colorbar(m, ax=plt.gca(), ticks=[0, 1], aspect=80)
         cb.set_ticklabels([labels["FEATURE_VALUE_LOW"], labels["FEATURE_VALUE_HIGH"]])
-        cb.set_label(color_bar_label, size=12, labelpad=0)
-        cb.ax.tick_params(labelsize=11, length=0)
+        cb.set_label(color_bar_label, size=color_bar_label_size, labelpad=0)
+        cb.ax.tick_params(labelsize=color_bar_tick_size, length=0)
         cb.set_alpha(1)
         cb.outline.set_visible(False)  # type: ignore
-        # bbox = cb.ax.get_window_extent().transformed(pl.gcf().dpi_scale_trans.inverted())
+        # bbox = cb.ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
         # cb.ax.set_aspect((bbox.height - 0.9) * 20)
         # cb.draw_all()
 
-    pl.gca().xaxis.set_ticks_position("bottom")
-    pl.gca().yaxis.set_ticks_position("none")
-    pl.gca().spines["right"].set_visible(False)
-    pl.gca().spines["top"].set_visible(False)
-    pl.gca().spines["left"].set_visible(False)
-    pl.gca().tick_params(color=axis_color, labelcolor=axis_color)
-    pl.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
-    pl.gca().tick_params("y", length=20, width=0.5, which="major")
-    pl.gca().tick_params("x", labelsize=11)
-    pl.ylim(-1, len(feature_order))
-    pl.xlabel(labels["VALUE"], fontsize=13)
+    plt.gca().xaxis.set_ticks_position("bottom")
+    plt.gca().yaxis.set_ticks_position("none")
+    plt.gca().spines["right"].set_visible(False)
+    plt.gca().spines["top"].set_visible(False)
+    plt.gca().spines["left"].set_visible(False)
+    plt.gca().tick_params(color=axis_color, labelcolor=axis_color)
+    plt.yticks(range(len(feature_order)), [feature_names[i] for i in feature_order], fontsize=13)
+    plt.gca().tick_params("y", length=20, width=0.5, which="major")
+    plt.gca().tick_params("x", labelsize=11)
+    plt.ylim(-1, len(feature_order))
+    plt.xlabel(labels["VALUE"], fontsize=13)
 
     if show:
-        pl.show()
+        plt.show()
 
 
 def _trim_crange(values, nan_mask):

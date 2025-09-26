@@ -317,6 +317,10 @@ TORCH_DEVICES = [
 ]
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("interim", [True, False])
 def test_pytorch_mnist_cnn_call(torch_device, interim):
@@ -356,6 +360,7 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
                 nn.ConvTranspose2d(20, 20, 1),
                 nn.AdaptiveAvgPool2d(output_size=(4, 4)),
                 nn.Softplus(),
+                nn.Flatten(),
             )
             self.fc_layers = nn.Sequential(
                 nn.Linear(320, 50), nn.BatchNorm1d(50), nn.ReLU(), nn.Linear(50, 10), nn.ELU(), nn.Softmax(dim=1)
@@ -364,7 +369,7 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
         def forward(self, x):
             """Run the model."""
             x = self.conv_layers(x)
-            x = x.view(-1, 320)
+            x = x.view(-1, 320)  # Redundant as `Flatten`, left as a test
             x = self.fc_layers(x)
             return x
 
@@ -433,6 +438,10 @@ def test_pytorch_mnist_cnn_call(torch_device, interim):
     )
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_custom_nested_models(torch_device):
     """Testing single outputs"""
@@ -450,6 +459,7 @@ def test_pytorch_custom_nested_models(torch_device):
             super().__init__()
             self.net = nn.Sequential(
                 nn.Sequential(
+                    nn.Identity(),
                     nn.Conv1d(1, 1, 1),
                     nn.ConvTranspose1d(1, 1, 1),
                 ),
@@ -553,6 +563,10 @@ def test_pytorch_custom_nested_models(torch_device):
     )
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 def test_pytorch_single_output(torch_device):
     """Testing single outputs"""
@@ -647,6 +661,10 @@ def test_pytorch_single_output(torch_device):
     )
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
 @pytest.mark.parametrize("activation", ["relu", "selu", "gelu"])
 @pytest.mark.parametrize("torch_device", TORCH_DEVICES)
 @pytest.mark.parametrize("disconnected", [True, False])

@@ -24,6 +24,7 @@ from ..utils._exceptions import (
     InvalidModelError,
 )
 from ..utils._legacy import DenseData
+from ..utils._warnings import ExperimentalWarning
 from ._explainer import Explainer
 from .other._ubjson import decode_ubjson_buffer
 
@@ -51,6 +52,41 @@ feature_perturbation_codes = {
     "tree_path_dependent": 1,
     "global_path_dependent": 2,
 }
+
+
+def _safe_check_tree_instance_experimental(tree_instance: Any) -> None:
+    """
+    This function checks if a tree instance has an experimental integration with shap TreeExplainer class.
+
+    To add experimental message support for your library add package name and its versions
+    verified to be used with shap to the 'experimental' dictionary below.
+
+    Parameters
+    ----------
+    tree_instance: object, tree instance from an external library
+    """
+    experimental = {
+        "causalml": "0.15.3",
+    }
+
+    safe_instance = None
+    if hasattr(tree_instance, "__class__"):
+        if hasattr(tree_instance.__class__, "__module__"):
+            safe_instance = tree_instance
+
+    if safe_instance:
+        library = safe_instance.__class__.__module__.split(".")[0]
+        if experimental.get(library):
+            warnings.warn(
+                f"You are using experimental integration with {library}. "
+                f"The {library} support is verified for the following versions: {experimental.get(library)}. "
+                f"As experimental functionality, this integration may be removed or significantly changed in future releases without following semantic versioning. Use in production systems at your own risk.",
+                ExperimentalWarning,
+            )
+    else:
+        warnings.warn(
+            f"Unable to check experimental integration status for {tree_instance} object", ExperimentalWarning
+        )
 
 
 def _check_xgboost_version(v: str):
@@ -233,6 +269,9 @@ class TreeExplainer(Explainer):
                 "using shap.sample(data, 100) to create a smaller background data set."
             )
             warnings.warn(wmsg)
+
+        _safe_check_tree_instance_experimental(model)
+
         self.data_missing = None if self.data is None else pd.isna(self.data)
         self.feature_perturbation = feature_perturbation
         self.expected_value = None
@@ -539,7 +578,10 @@ class TreeExplainer(Explainer):
                 assert not approximate, "approximate=True is not supported for LightGBM models!"
                 phi = self.model.original_model.predict(X, num_iteration=tree_limit, pred_contrib=True)
                 # Note: the data must be joined on the last axis
-                if self.model.original_model.params["objective"] == "binary":
+                if (
+                    "objective" in self.model.original_model.params
+                    and self.model.original_model.params["objective"] == "binary"
+                ):
                     if not from_call:
                         warnings.warn(
                             "LightGBM binary classifier with TreeExplainer shap values output has changed to a list of ndarray"
@@ -912,6 +954,7 @@ class TreeEnsemble:
                 "sklearn.ensemble.RandomForestRegressor",
                 "sklearn.ensemble.forest.RandomForestRegressor",
                 "econml.grf._base_grf.BaseGRF",
+                "causalml.inference.tree.CausalRandomForestRegressor",
             ],
         ):
             assert hasattr(model, "estimators_"), "Model has no `estimators_`! Have you called `model.fit`?"
@@ -969,6 +1012,7 @@ class TreeEnsemble:
                 "sklearn.tree.DecisionTreeRegressor",
                 "sklearn.tree.tree.DecisionTreeRegressor",
                 "econml.grf._base_grftree.GRFTree",
+                "causalml.inference.tree.causal.causaltree.CausalTreeRegressor",
             ],
         ):
             self.internal_dtype = model.tree_.value.dtype.type
@@ -1676,10 +1720,19 @@ class SingleTree:
     def __init__(self, tree, normalize=False, scaling=1.0, data=None, data_missing=None):
         assert_import("cext")
 
-        if safe_isinstance(tree, ["sklearn.tree._tree.Tree", "econml.tree._tree.Tree"]):
+        if safe_isinstance(
+            tree,
+            [
+                "sklearn.tree._tree.Tree",
+                "econml.tree._tree.Tree",
+                "causalml.inference.tree._tree._tree.Tree",
+            ],
+        ):
             self.children_left = tree.children_left.astype(np.int32)
             self.children_right = tree.children_right.astype(np.int32)
-            self.children_default = self.children_left  # missing values not supported in sklearn
+            self.children_default = self.children_left
+            if hasattr(tree, "missing_go_to_left"):
+                self.children_default = np.where(tree.missing_go_to_left, self.children_left, self.children_right)
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
             self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])

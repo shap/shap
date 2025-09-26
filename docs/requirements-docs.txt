@@ -173,7 +173,7 @@ referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.3
+requests==2.32.4
     # via
     #   shap (pyproject.toml)
     #   sphinx
@@ -234,7 +234,7 @@ threadpoolctl==3.5.0
     # via scikit-learn
 tinycss2==1.3.0
     # via nbconvert
-tornado==6.4.1
+tornado==6.5.1
     # via jupyter-client
 tqdm==4.66.5
     # via shap (pyproject.toml)
@@ -256,7 +256,7 @@ typing-extensions==4.12.2
     #   ipython
 tzdata==2024.2
     # via pandas
-urllib3==2.2.3
+urllib3==2.5.0
     # via requests
 wcwidth==0.2.13
     # via prompt-toolkit
