@@ -1,0 +1,16 @@
+# Requirements for running notebooks
+-e .
+
+# For running tests
+# nose
+
+# For neural network examples
+# keras
+# tensorflow
+# torch
+# torchvision
+
+# For decision tree examples
+# xgboost
+# catboost
+# lightgbm

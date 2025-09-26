@@ -206,6 +206,7 @@ def configure_pyspark_python(monkeypatch):
     monkeypatch.setenv("PYSPARK_DRIVER_PYTHON", sys.executable)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -261,6 +262,7 @@ def test_pyspark_classifier_decision_tree(configure_pyspark_python):
     spark.stop()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="fails due to OOM errors, see #4021")
 def test_pyspark_regression_decision_tree(configure_pyspark_python):
     pyspark = pytest.importorskip("pyspark")
     pytest.importorskip("pyspark.ml")
@@ -308,6 +310,171 @@ def create_binary_newsgroups_data():
     newsgroups_test = sklearn.datasets.fetch_20newsgroups(subset="test", categories=categories)
     class_names = ["atheism", "christian"]
     return newsgroups_train, newsgroups_test, class_names
+
+
+def create_random_forest_vectorizer():
+    from sklearn.base import TransformerMixin
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.pipeline import Pipeline
+
+    vectorizer = CountVectorizer(lowercase=False, min_df=0.0, binary=True)
+
+    class DenseTransformer(TransformerMixin):
+        def fit(self, X, y=None, **fit_params):
+            return self
+
+        def transform(self, X, y=None, **fit_params):
+            return X.toarray()
+
+    rf = RandomForestClassifier(n_estimators=500, random_state=777)
+    return Pipeline([("vectorizer", vectorizer), ("to_dense", DenseTransformer()), ("rf", rf)])
+
+
+def test_sklearn_random_forest_newsgroups():
+    import shap
+    # from sklearn.ensemble import RandomForestClassifier
+
+    # note: this test used to fail in native TreeExplainer code due to memory corruption
+    newsgroups_train, newsgroups_test, _ = create_binary_newsgroups_data()
+    pipeline = create_random_forest_vectorizer()
+    pipeline.fit(newsgroups_train.data, newsgroups_train.target)
+    rf = pipeline.named_steps["rf"]
+    vectorizer = pipeline.named_steps["vectorizer"]
+    densifier = pipeline.named_steps["to_dense"]
+
+    dense_bg = densifier.transform(vectorizer.transform(newsgroups_test.data[0:20]))
+
+    test_row = newsgroups_test.data[83:84]
+    explainer = shap.TreeExplainer(rf, dense_bg, feature_perturbation="interventional")
+    vec_row = vectorizer.transform(test_row)
+    dense_row = densifier.transform(vec_row)
+    explainer.shap_values(dense_row)
+
+
+def test_sklearn_decision_tree_multiclass():
+    import numpy as np
+    from sklearn.tree import DecisionTreeClassifier
+
+    import shap
+
+    X, y = shap.datasets.iris()
+    y[y == 2] = 1
+    model = DecisionTreeClassifier(max_depth=None, min_samples_split=2, random_state=0)
+    model.fit(X, y)
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X)
+    assert np.abs(shap_values[0][0, 0] - 0.05) < 1e-1
+    assert np.abs(shap_values[1][0, 0] + 0.05) < 1e-1
+
+
+def _common_lightgbm_regressor_test(create_model):
+    import numpy as np
+
+    import shap
+
+    # train lightgbm model on california housing price regression dataset
+    X, y = shap.datasets.california()
+    model = create_model()
+    model.fit(X, y)
+
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(model)
+    shap_values = ex.shap_values(X)
+
+    predicted = model.predict(X, raw_score=True)
+
+    assert np.abs(shap_values.sum(1) + ex.expected_value - predicted).max() < 1e-4, (
+        "SHAP values don't sum to model output!"
+    )
+
+
+def test_lightgbm():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8])
+
+    _common_lightgbm_regressor_test(create_model)
+
+
+def test_lightgbm_mse_regressor():
+    lightgbm = pytest.importorskip("lightgbm")
+
+    # train the lightgbm model on a dataset with MSE objective
+    def create_model():
+        return lightgbm.sklearn.LGBMRegressor(categorical_feature=[8], objective="mean_squared_error")
+
+    _common_lightgbm_regressor_test(create_model)
+
+
+def _common_lightgbm_nonsklearn_api(dataset, params, validation):
+    import lightgbm
+    from sklearn.model_selection import train_test_split
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    X_train, X_test, y_train, y_test = train_test_split(*dataset, test_size=0.2, random_state=0)
+    lgb_train = lightgbm.Dataset(X_train, y_train)
+    lgb_test = lightgbm.Dataset(X_test, y_test, reference=lgb_train)
+
+    booster = lightgbm.train(params, lgb_train, valid_sets=[lgb_train, lgb_test])
+    # explain the model's predictions using SHAP values
+    ex = shap.TreeExplainer(booster)
+    shap_values = ex.shap_values(X_test)
+
+    predicted = booster.predict(X_test, raw_score=True)
+
+    validation(shap_values, ex.expected_value, predicted)
+
+
+def test_lightgbm_nonsklearn_api_binary():
+    import numpy as np
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with binary classification dataset
+    params = {
+        "objective": "binary",
+        "num_threads": 4,
+        "n_estimators": 8000,
+        "early_stopping_round": 50,
+        "metric": ["binary_error"],
+        "random_state": 7,
+        "verbose": 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
+            "SHAP values don't sum to model output!"
+        )
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.iris(), params=params, validation=validation)
+
+
+def test_lightgbm_nonsklearn_api_regressor():
+    import numpy as np
+
+    import shap
+
+    # train the lightgbm model using non-sklearn API with regression dataset
+    params = {
+        "num_threads": 4,
+        "n_estimators": 8000,
+        "early_stopping_round": 50,
+        "metric": ["rmse"],
+        "random_state": 7,
+        "verbose": 1,
+    }
+
+    def validation(shap_values, expected_value, predicted):
+        assert np.abs(shap_values.sum(1) + expected_value - predicted).max() < 1e-4, (
+            "SHAP values don't sum to model output!"
+        )
+
+    _common_lightgbm_nonsklearn_api(dataset=shap.datasets.adult(), params=params, validation=validation)
 
 
 def test_gpboost():
