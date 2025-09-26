@@ -1,5 +1,4 @@
-""" This file contains tests for the `shap.datasets` module.
-"""
+"""This file contains tests for the `shap.datasets` module."""
 
 import pytest
 

@@ -1,11 +1,20 @@
+ci:
+  autoupdate_schedule: monthly
+
+exclude: '.*tree_shap_paper.*|.*user_studies.*|.*__snapshots__.*'
+
 repos:
-- repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.270
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.12.11
   hooks:
   - id: ruff
+    types_or: [python, pyi, jupyter]
+    args: [ --fix, --exit-non-zero-on-fix ]
+  - id: ruff-format
+    types_or: [python, pyi, jupyter]
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v6.0.0
   hooks:
   - id: check-added-large-files
   - id: check-merge-conflict
@@ -14,3 +23,26 @@ repos:
   - id: mixed-line-ending
   - id: trailing-whitespace
   - id: end-of-file-fixer
+
+- repo: https://github.com/stefsmeets/nbcheckorder/
+  rev: v0.3.0
+  hooks:
+  - id: nbcheckorder
+    # TODO: get passing on all notebooks
+    exclude: |
+      (?x)^(
+        notebooks/api_examples/plots/decision_plot.ipynb|
+        notebooks/api_examples/plots/heatmap.ipynb|
+        notebooks/api_examples/plots/text.ipynb|
+        notebooks/api_examples/plots/violin.ipynb|
+        notebooks/image_examples/image_captioning/Image.Captioning.using.Azure.Cognitive.Services.ipynb|
+        notebooks/image_examples/image_captioning/Image.Captioning.using.Open.Source.ipynb|
+        notebooks/image_examples/image_classification/Image.Multi.Class.ipynb|
+        notebooks/tabular_examples/model_agnostic/Census.income.classification.with.scikit-learn.ipynb|
+        notebooks/tabular_examples/model_agnostic/Squashing.Effect.ipynb|
+        notebooks/tabular_examples/tree_based_models/Fitting.a.Linear.Simulation.with.XGBoost.ipynb|
+        notebooks/tabular_examples/tree_based_models/Perfomance.Comparison.ipynb|
+        notebooks/text_examples/sentiment_analysis/Emotion.classification.multiclass.example.ipynb|
+        notebooks/text_examples/sentiment_analysis/Keras.LSTM.for.IMDB.Sentiment.Classification.ipynb|
+        notebooks/text_examples/sentiment_analysis/Positive.vs..Negative.Sentiment.Classification.ipynb
+      )$

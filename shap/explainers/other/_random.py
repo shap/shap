@@ -8,12 +8,15 @@ from .._explainer import Explainer
 
 
 class Random(Explainer):
-    """ Simply returns random (normally distributed) feature attributions.
+    """Simply returns random (normally distributed) feature attributions.
 
     This is only for benchmark comparisons. It supports both fully random attributions and random
-    attributions that are constant across all explainations.
+    attributions that are constant across all explanations.
     """
-    def __init__(self, model, masker, link=links.identity, feature_names=None, linearize_link=True, constant=False, **call_args):
+
+    def __init__(
+        self, model, masker, link=links.identity, feature_names=None, linearize_link=True, constant=False, **call_args
+    ):
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
         if not isinstance(model, Model):
@@ -26,9 +29,7 @@ class Random(Explainer):
         self.constant_attributions = None
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
-        """ Explains a single row.
-        """
-
+        """Explains a single row."""
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
@@ -40,7 +41,9 @@ class Random(Explainer):
             elif callable(self.masker.clustering):
                 row_clustering = self.masker.clustering(*row_args)
             else:
-                raise NotImplementedError("The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!")
+                raise NotImplementedError(
+                    "The masker passed has a .clustering attribute that is not yet supported by the Permutation explainer!"
+                )
 
         # compute the correct expected value
         masks = np.zeros(1, dtype=int)
@@ -58,7 +61,7 @@ class Random(Explainer):
             "main_effects": None,
             "clustering": row_clustering,
             "error_std": None,
-            "output_names": self.model.output_names if hasattr(self.model, "output_names") else None
+            "output_names": self.model.output_names if hasattr(self.model, "output_names") else None,
         }
 
     # def __call__(self, X):

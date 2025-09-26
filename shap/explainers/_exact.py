@@ -13,11 +13,11 @@ from ..utils import (
 )
 from ._explainer import Explainer
 
-log = logging.getLogger('shap')
+log = logging.getLogger("shap")
 
 
-class Exact(Explainer):
-    """ Computes SHAP values via an optimized exact enumeration.
+class ExactExplainer(Explainer):
+    """Computes SHAP values via an optimized exact enumeration.
 
     This works well for standard Shapley value maskers for models with less than ~15 features that vary
     from the background per sample. It also works well for Owen values from hclustering structured
@@ -28,7 +28,7 @@ class Exact(Explainer):
     """
 
     def __init__(self, model, masker, link=links.identity, linearize_link=True, feature_names=None):
-        """ Build an explainers.Exact object for the given model using the given masker object.
+        """Build an explainers.Exact object for the given model using the given masker object.
 
         Parameters
         ----------
@@ -56,7 +56,8 @@ class Exact(Explainer):
             many samples. This for example means that a linear logistic regression model would have interaction effects
             that arise from the non-linear changes in expectation averaging. To retain the additively of the model with
             still respecting the link function we linearize the link function by default.
-        """ # TODO link to the link linearization paper when done
+
+        """  # TODO link to the link linearization paper when done
         super().__init__(model, masker, link=link, linearize_link=linearize_link, feature_names=feature_names)
 
         self.model = Model(model)
@@ -65,17 +66,29 @@ class Exact(Explainer):
             self._partition_masks, self._partition_masks_inds = partition_masks(masker.clustering)
             self._partition_delta_indexes = partition_delta_indexes(masker.clustering, self._partition_masks)
 
-        self._gray_code_cache = {} # used to avoid regenerating the same gray code patterns
+        self._gray_code_cache = {}  # used to avoid regenerating the same gray code patterns
 
-    def __call__(self, *args, max_evals=100000, main_effects=False, error_bounds=False, batch_size="auto", interactions=1, silent=False):
-        """ Explains the output of model(*args), where args represents one or more parallel iterators.
-        """
-
+    def __call__(
+        self,
+        *args,
+        max_evals=100000,
+        main_effects=False,
+        error_bounds=False,
+        batch_size="auto",
+        interactions=1,
+        silent=False,
+    ):
+        """Explains the output of model(*args), where args represents one or more parallel iterators."""
         # we entirely rely on the general call implementation, we override just to remove **kwargs
         # from the function signature
         return super().__call__(
-            *args, max_evals=max_evals, main_effects=main_effects, error_bounds=error_bounds,
-            batch_size=batch_size, interactions=interactions, silent=silent
+            *args,
+            max_evals=max_evals,
+            main_effects=main_effects,
+            error_bounds=error_bounds,
+            batch_size=batch_size,
+            interactions=interactions,
+            silent=silent,
         )
 
     def _cached_gray_codes(self, n):
@@ -84,23 +97,20 @@ class Exact(Explainer):
         return self._gray_code_cache[n]
 
     def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, interactions, silent):
-        """ Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes).
-        """
-
+        """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         # build a masked version of the model for the current input sample
         fm = MaskedModel(self.model, self.masker, self.link, self.linearize_link, *row_args)
 
         # do the standard Shapley values
         inds = None
         if getattr(self.masker, "clustering", None) is None:
-
             # see which elements we actually need to perturb
             inds = fm.varying_inputs()
 
             # make sure we have enough evals
-            if max_evals is not None and max_evals != "auto" and max_evals < 2**len(inds):
+            if max_evals is not None and max_evals != "auto" and max_evals < 2 ** len(inds):
                 raise ValueError(
-                    f"It takes {2**len(inds)} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
+                    f"It takes {2 ** len(inds)} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
                 )
 
             # generate the masks in gray code order (so that we change the inputs as little
@@ -109,8 +119,8 @@ class Exact(Explainer):
             delta_indexes = self._cached_gray_codes(len(inds))
 
             # map to a larger mask that includes the invariant entries
-            extended_delta_indexes = np.zeros(2**len(inds), dtype=int)
-            for i in range(2**len(inds)):
+            extended_delta_indexes = np.zeros(2 ** len(inds), dtype=int)
+            for i in range(2 ** len(inds)):
                 if delta_indexes[i] == MaskedModel.delta_mask_noop_value:
                     extended_delta_indexes[i] = delta_indexes[i]
                 else:
@@ -122,32 +132,35 @@ class Exact(Explainer):
             # Shapley values
             # Care: Need to distinguish between `True` and `1`
             if interactions is False or (interactions == 1 and interactions is not True):
-
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm),) + outputs.shape[1:])
                 mask = np.zeros(len(fm), dtype=bool)
-                _compute_grey_code_row_values(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
+                _compute_grey_code_row_values(
+                    row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value
+                )
 
             # Shapley-Taylor interaction values
             elif interactions is True or interactions == 2:
-
                 # loop over all the outputs to update the rows
                 coeff = shapley_coefficients(len(inds))
                 row_values = np.zeros((len(fm), len(fm)) + outputs.shape[1:])
                 mask = np.zeros(len(fm), dtype=bool)
-                _compute_grey_code_row_values_st(row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value)
+                _compute_grey_code_row_values_st(
+                    row_values, mask, inds, outputs, coeff, extended_delta_indexes, MaskedModel.delta_mask_noop_value
+                )
 
             elif interactions > 2:
-                raise NotImplementedError("Currently the Exact explainer does not support interactions higher than order 2!")
+                raise NotImplementedError(
+                    "Currently the Exact explainer does not support interactions higher than order 2!"
+                )
 
         # do a partition tree constrained version of Shapley values
         else:
-
             # make sure we have enough evals
-            if max_evals is not None and max_evals != "auto" and max_evals < len(fm)**2:
+            if max_evals is not None and max_evals != "auto" and max_evals < len(fm) ** 2:
                 raise ValueError(
-                    f"It takes {len(fm)**2} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
+                    f"It takes {len(fm) ** 2} masked evaluations to run the Exact explainer on this instance, but max_evals={max_evals}!"
                 )
 
             # generate the masks in a hclust order (so that we change the inputs as little
@@ -180,15 +193,15 @@ class Exact(Explainer):
             "expected_values": outputs[0],
             "mask_shapes": fm.mask_shapes,
             "main_effects": main_effect_values if main_effects else None,
-            "clustering": getattr(self.masker, "clustering", None)
+            "clustering": getattr(self.masker, "clustering", None),
         }
+
 
 @njit
 def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
     set_size = 0
     M = len(inds)
     for i in range(2**M):
-
         # update the mask
         delta_ind = extended_delta_indexes[i]
         if delta_ind != noop_code:
@@ -199,7 +212,7 @@ def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff
                 set_size -= 1
 
         # update the output row values
-        on_coeff = shapley_coeff[set_size-1]
+        on_coeff = shapley_coeff[set_size - 1]
         if set_size < M:
             off_coeff = shapley_coeff[set_size]
         out = outputs[i]
@@ -209,12 +222,12 @@ def _compute_grey_code_row_values(row_values, mask, inds, outputs, shapley_coeff
             else:
                 row_values[j] -= out * off_coeff
 
+
 @njit
 def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_coeff, extended_delta_indexes, noop_code):
     set_size = 0
     M = len(inds)
     for i in range(2**M):
-
         # update the mask
         delta_ind = extended_delta_indexes[i]
         if delta_ind != noop_code:
@@ -227,49 +240,47 @@ def _compute_grey_code_row_values_st(row_values, mask, inds, outputs, shapley_co
         # distribute the effect of this mask set over all the terms it impacts
         out = outputs[i]
         for j in range(M):
-            for k in range(j+1, M):
+            for k in range(j + 1, M):
                 if not mask[j] and not mask[k]:
-                    delta = out * shapley_coeff[set_size] # * 2
+                    delta = out * shapley_coeff[set_size]  # * 2
                 elif (not mask[j] and mask[k]) or (mask[j] and not mask[k]):
-                    delta = -out * shapley_coeff[set_size - 1] # * 2
-                else: # both true
-                    delta = out * shapley_coeff[set_size - 2] # * 2
-                row_values[j,k] += delta
-                row_values[k,j] += delta
+                    delta = -out * shapley_coeff[set_size - 1]  # * 2
+                else:  # both true
+                    delta = out * shapley_coeff[set_size - 2]  # * 2
+                row_values[j, k] += delta
+                row_values[k, j] += delta
+
 
 def partition_delta_indexes(partition_tree, all_masks):
-    """ Return an delta index encoded array of all the masks possible while following the given partition tree.
-    """
-
+    """Return an delta index encoded array of all the masks possible while following the given partition tree."""
     # convert the masks to delta index format
     mask = np.zeros(all_masks.shape[1], dtype=bool)
     delta_inds = []
     for i in range(len(all_masks)):
-        inds = np.where(mask ^ all_masks[i,:])[0]
+        inds = np.where(mask ^ all_masks[i, :])[0]
 
         for j in inds[:-1]:
-            delta_inds.append(-j - 1) # negative + (-1) means we have more inds still to change...
+            delta_inds.append(-j - 1)  # negative + (-1) means we have more inds still to change...
         if len(inds) == 0:
             delta_inds.append(MaskedModel.delta_mask_noop_value)
         else:
             delta_inds.extend(inds[-1:])
-        mask = all_masks[i,:]
+        mask = all_masks[i, :]
 
     return np.array(delta_inds)
 
-def partition_masks(partition_tree):
-    """ Return an array of all the masks possible while following the given partition tree.
-    """
 
+def partition_masks(partition_tree):
+    """Return an array of all the masks possible while following the given partition tree."""
     M = partition_tree.shape[0] + 1
     mask_matrix = make_masks(partition_tree)
     all_masks = []
     m00 = np.zeros(M, dtype=bool)
     all_masks.append(m00)
     all_masks.append(~m00)
-    #inds_stack = [0,1]
+    # inds_stack = [0,1]
     inds_lists = [[[], []] for i in range(M)]
-    _partition_masks_recurse(len(partition_tree)-1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
+    _partition_masks_recurse(len(partition_tree) - 1, m00, 0, 1, inds_lists, mask_matrix, partition_tree, M, all_masks)
 
     all_masks = np.array(all_masks)
 
@@ -281,12 +292,16 @@ def partition_masks(partition_tree):
     order = delta_minimization_order(all_masks)
     inverse_order = np.arange(len(order))[np.argsort(order)]
 
-    for inds_list0,inds_list1 in inds_lists:
+    for inds_list0, inds_list1 in inds_lists:
         for i in range(len(inds_list0)):
             inds_list0[i] = inverse_order[inds_list0[i]]
             inds_list1[i] = inverse_order[inds_list1[i]]
 
-    return all_masks[order], np.array([[np.array(on), np.array(off)] for on,off in inds_lists])
+    # Care: inds_lists have different lengths, so partition_masks_inds is a "ragged" array. See GH #3063
+    partition_masks = all_masks[order]
+    partition_masks_inds = [[np.array(on), np.array(off)] for on, off in inds_lists]
+    return partition_masks, partition_masks_inds
+
 
 # TODO: this should be a jit function... which would require preallocating the inds_lists (sizes are 2**depth of that ind)
 # TODO: we could also probable avoid making the masks at all and just record the deltas if we want...
@@ -297,14 +312,14 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
         return
 
     # get our children indexes
-    left_index = int(partition_tree[index,0] - M)
-    right_index = int(partition_tree[index,1] - M)
+    left_index = int(partition_tree[index, 0] - M)
+    right_index = int(partition_tree[index, 1] - M)
 
     # build more refined masks
-    m10 = m00.copy() # we separate the copy from the add so as to not get converted to a matrix
-    m10[:] += mask_matrix[left_index+M, :]
+    m10 = m00.copy()  # we separate the copy from the add so as to not get converted to a matrix
+    m10[:] += mask_matrix[left_index + M, :]
     m01 = m00.copy()
-    m01[:] += mask_matrix[right_index+M, :]
+    m01[:] += mask_matrix[right_index + M, :]
 
     # record the new masks we made
     ind01 = len(all_masks)
@@ -323,41 +338,42 @@ def _partition_masks_recurse(index, m00, ind00, ind11, inds_lists, mask_matrix, 
 
 
 def gray_code_masks(nbits):
-    """ Produces an array of all binary patterns of size nbits in gray code order.
+    """Produces an array of all binary patterns of size nbits in gray code order.
 
     This is based on code from: http://code.activestate.com/recipes/576592-gray-code-generatoriterator/
     """
     out = np.zeros((2**nbits, nbits), dtype=bool)
     li = np.zeros(nbits, dtype=bool)
 
-    for term in range(2, (1<<nbits)+1):
-        if term % 2 == 1: # odd
-            for i in range(-1,-nbits,-1):
+    for term in range(2, (1 << nbits) + 1):
+        if term % 2 == 1:  # odd
+            for i in range(-1, -nbits, -1):
                 if li[i] == 1:
-                    li[i-1] = li[i-1]^1
+                    li[i - 1] = li[i - 1] ^ 1
                     break
-        else: # even
-            li[-1] = li[-1]^1
+        else:  # even
+            li[-1] = li[-1] ^ 1
 
-        out[term-1,:] = li
+        out[term - 1, :] = li
     return out
 
+
 def gray_code_indexes(nbits):
-    """ Produces an array of which bits flip at which position.
+    """Produces an array of which bits flip at which position.
 
     We assume the masks start at all zero and -1 means don't do a flip.
     This is a more efficient representation of the gray_code_masks version.
     """
     out = np.ones(2**nbits, dtype=int) * MaskedModel.delta_mask_noop_value
     li = np.zeros(nbits, dtype=bool)
-    for term in range((1<<nbits)-1):
-        if term % 2 == 1: # odd
-            for i in range(-1,-nbits,-1):
+    for term in range((1 << nbits) - 1):
+        if term % 2 == 1:  # odd
+            for i in range(-1, -nbits, -1):
                 if li[i] == 1:
-                    li[i-1] = li[i-1]^1
-                    out[term+1] = nbits + (i-1)
+                    li[i - 1] = li[i - 1] ^ 1
+                    out[term + 1] = nbits + (i - 1)
                     break
-        else: # even
-            li[-1] = li[-1]^1
-            out[term+1] = nbits-1
+        else:  # even
+            li[-1] = li[-1] ^ 1
+            out[term + 1] = nbits - 1
     return out

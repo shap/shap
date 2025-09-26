@@ -1,97 +1,140 @@
 name: tests
 
 on:
-  # only run tests and coverage when src code changes
+  workflow_dispatch:
   push:
     branches:
       - master
   pull_request:
     branches:
       - master
-    # Interim measure: run all tests on all PRs, as these Checks
-    # are configured as Required Status Checks. See #2951
-    # paths:
-    #   - "shap/**"
-    #   - "tests/**"
-    #   - "data/**"
-    #   - ".github/workflows/run_tests.yml"
-    #   - "setup.py"
+    paths:
+      - "shap/**"
+      - "tests/**"
+      - "data/**"
+      - "javascript/**"  # Include JS changes that affect bundle.js
+      - ".github/workflows/run_tests.yml"
+      - "pyproject.toml"
+      - "setup.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel only PR intermediate builds
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    - uses: pre-commit/action@v3.0.0
-
   run_tests:
-
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        os: ["ubuntu-latest"]
+        # The total number of matrix jobs should match codecov.yml `after_n_builds`.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        extras: ["test"]
+        include:
+          # Test on windows/mac, just one job each
+          - os: windows-latest
+            python-version: "3.12"
+            extras: "test"
+          - os: macos-latest
+            python-version: "3.12"
+            extras: "test"
+          # Run tests with only the core dependencies, to ensure we
+          # cover the latest version of numpy/pandas. See GH dsgibbons#46
+          - os: ubuntu-latest
+            python-version: "3.12"
+            extras: "test-core"
       fail-fast: false
-
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - 'javascript/**'
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache python libs
-        uses: actions/cache@v3
+      # Build JavaScript bundle if JS files have changed
+      - name: Set up Node.js
+        if: steps.filter.outputs.js == 'true'
+        uses: actions/setup-node@v3
         with:
-          path: |
-            # Only cache a subset of libraries, ensuring cache size remains under 10GB. See dsgibbons#42
-            ${{ env.pythonLocation }}/**/site-packages/pyspark*
-            ${{ env.pythonLocation }}/**/site-packages/nvidia*
-            ${{ env.pythonLocation }}/**/site-packages/torch*
-          #  ${{ env.pythonLocation }}/**/site-packages/tensorflow*
-          #  ${{ env.pythonLocation }}/**/site-packages/xgboost*
-          key: ${{ runner.os }}-${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-0
+          node-version: lts/Hydrogen
+      - name: Build JavaScript bundle conditionally
+        if: steps.filter.outputs.js == 'true'
+        shell: bash
+        run: |
+          cd javascript
+          npm ci
+          npm run build
+          cp build/bundle.js ../shap/plots/resources/bundle.js
+      - name: Install libomp (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install libomp
       - name: Install dependencies
+        # Do regular install NOT editable install: see GH #3020
         run: |
-          python -m pip install --upgrade pip
-          # Use "eager" update strategy in case cached dependencies are outdated
-          pip install --upgrade --upgrade-strategy eager -e '.[test,plots]'
+          python -m pip install --upgrade uv
+          uv pip install --system '.[${{ matrix.extras }},plots]'
       - name: Test with pytest
-        run: |
-          python -m pytest --durations=20 \
-          --cov=shap --cov-report=xml --cov-report=term-missing \
+        # Ensure we avoid adding current working directory to sys.path:
+        # - Use "pytest" over "python -m pytest"
+        # - Use "append" import mode rather than default "prepend"
+        run: >
+          pytest --durations=20
+          --cov --cov-report=xml
           --mpl-generate-summary=html --mpl-results-path=./mpl-results
+          --import-mode=append
       - name: Upload mpl test report
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: mpl-results-${{ matrix.python-version }}
+          name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
           path: mpl-results/
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-  run_tests_core:
-    name: run_tests (core only)
-    # Run tests with only the core dependencies, to ensure we
-    # cover the latest version of numpy/pandas. See dsgibbons#46
+  test_oldest_supported_numpy:
+    # Package is built with numpy 2.X, and tested against numpy 1.X.
+    # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
+    # The "oldest supported numpy" is determined by SPEC 0:
+    # https://scientific-python.org/specs/spec-0000/
+    name: run tests (oldest supported numpy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install core dependencies
+          python-version: 3.9
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[test-core,plots]'
+          python -m pip install --upgrade uv
+          uv pip install --system numpy==1.24.0 '.[test-core,plots]'
       - name: Test with pytest
+        run: pytest --durations=20 --import-mode=append
+
+  run_mypy:
+    # Run mypy on the latest Python version
+    name: run mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install dependencies
         run: |
-          python -m pytest
+          python -m pip install --upgrade uv
+          uv pip install --system '.[test-core]'
+          uv pip install --system --reinstall -r requirements.ci.txt
+      - name: Run mypy
+        run: mypy shap tests

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .._serializable import Deserializer, Serializer
@@ -6,13 +8,13 @@ from ._model import Model
 
 
 class TextGeneration(Model):
-    """ Generates target sentence/ids using a base model.
+    """Generates target sentence/ids using a base model.
 
     It generates target sentence/ids for a model (a pretrained transformer model or a function).
     """
 
     def __init__(self, model=None, tokenizer=None, target_sentences=None, device=None):
-        """ Create a text generator model from a pretrained transformer model or a function.
+        """Create a text generator model from a pretrained transformer model or a function.
 
         For a pretrained transformer model, a tokenizer should be passed.
 
@@ -34,6 +36,7 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Array of target sentence/ids.
+
         """
         super().__init__(model)
 
@@ -45,6 +48,7 @@ class TextGeneration(Model):
         self.device = device
         if self.device is None:
             self.device = getattr(self.inner_model, "device", None)
+        self.model_type: str | None  # Type hint for mypy
         if safe_isinstance(model, "transformers.PreTrainedModel"):
             self.model_agnostic = False
             self.model_type = "pt"
@@ -60,7 +64,7 @@ class TextGeneration(Model):
         self.target_X = None
 
     def __call__(self, X):
-        """ Generates target sentence/ids from X.
+        """Generates target sentence/ids from X.
 
         Parameters
         ----------
@@ -71,9 +75,13 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Array of target sentence/ids.
+
         """
-        if (self.X is None) or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X)) or \
-                (isinstance(self.X, str) and (self.X != X)):
+        if (
+            (self.X is None)
+            or (isinstance(self.X, np.ndarray) and not np.array_equal(self.X, X))
+            or (isinstance(self.X, str) and (self.X != X))
+        ):
             self.X = X
             # wrap text input in a numpy array
             if isinstance(X, str):
@@ -87,8 +95,8 @@ class TextGeneration(Model):
             self.explanation_row += 1
         return np.array(self.target_X)
 
-    def get_inputs(self, X, padding_side='right'):
-        """ The function tokenizes source sentences.
+    def get_inputs(self, X, padding_side="right"):
+        """The function tokenizes source sentences.
 
         In model agnostic case, the function calls model(X) which is expected to
         return a batch of output sentences which is tokenized to compute inputs.
@@ -102,17 +110,18 @@ class TextGeneration(Model):
         -------
         dict
             Dictionary of padded source sentence ids and attention mask as tensors("pt" or "tf" based on model_type).
+
         """
         # set tokenizer padding to prepare inputs for batch inferencing
         # padding_side="left" for only decoder models text generation eg. GPT2
         self.tokenizer.padding_side = padding_side
         inputs = self.tokenizer(X.tolist(), return_tensors=self.model_type, padding=True)
         # set tokenizer padding to default
-        self.tokenizer.padding_side = 'right'
+        self.tokenizer.padding_side = "right"
         return inputs
 
     def model_generate(self, X):
-        """ This function performs text generation for tensorflow and pytorch models.
+        """This function performs text generation for tensorflow and pytorch models.
 
         Parameters
         ----------
@@ -123,19 +132,23 @@ class TextGeneration(Model):
         -------
         numpy.ndarray
             Returns target sentence ids.
+
         """
-        if (hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder) \
-                and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
+        if (
+            hasattr(self.inner_model.config, "is_encoder_decoder") and not self.inner_model.config.is_encoder_decoder
+        ) and (hasattr(self.inner_model.config, "is_decoder") and not self.inner_model.config.is_decoder):
             pass
             # TODOmaybe: Is this okay? I am just assuming we want is_decoder when neither are set
-            #self.inner_model.config.is_decoder = True
+            # self.inner_model.config.is_decoder = True
             # raise ValueError(
             #     "Please assign either of is_encoder_decoder or is_decoder to True in model config for extracting target sentence ids"
             # )
         # check if user assigned any text generation specific kwargs
         text_generation_params = {}
-        if self.inner_model.config.__dict__.get("task_specific_params") is not None and \
-                self.inner_model.config.task_specific_params.get("text-generation") is not None:
+        if (
+            self.inner_model.config.__dict__.get("task_specific_params") is not None
+            and self.inner_model.config.task_specific_params.get("text-generation") is not None
+        ):
             text_generation_params = self.inner_model.config.task_specific_params["text-generation"]
             if not isinstance(text_generation_params, dict):
                 raise ValueError(
@@ -148,11 +161,12 @@ class TextGeneration(Model):
                     del text_generation_params[k]
         if self.model_type == "pt":
             # create torch tensors and move to device
-            # TODOmaybe: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks piplines)
+            # TODOmaybe: SML: why move the model from where it was? the could mess with the user env (i.e. it breaks pipelines)
             # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if self.device is None else self.device
             # self.inner_model = self.inner_model.to(device)
             # self.inner_model.eval()
-            import torch  # pylint: disable=import-outside-toplevel
+            import torch
+
             with torch.no_grad():
                 if self.inner_model.config.is_encoder_decoder:
                     inputs = self.get_inputs(X)
@@ -170,17 +184,18 @@ class TextGeneration(Model):
                 outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
             else:
                 try:
-                    import tensorflow as tf  # pylint: disable=import-outside-toplevel
+                    import tensorflow as tf
+
                     with tf.device(self.device):
                         outputs = self.inner_model.generate(inputs, **text_generation_params).numpy()
                 except RuntimeError as err:
                     print(err)
         if getattr(self.inner_model.config, "is_decoder", True):
             # slice the output ids after the input ids
-            outputs = outputs[:, inputs["input_ids"].shape[1]:]
+            outputs = outputs[:, inputs["input_ids"].shape[1] :]
         # parse output ids to find special tokens in prefix and suffix
         parsed_tokenizer_dict = self.parse_prefix_suffix_for_model_generate_output(outputs[0, :].tolist())
-        keep_prefix, keep_suffix = parsed_tokenizer_dict['keep_prefix'], parsed_tokenizer_dict['keep_suffix']
+        keep_prefix, keep_suffix = parsed_tokenizer_dict["keep_prefix"], parsed_tokenizer_dict["keep_suffix"]
         # extract target sentence ids by slicing off prefix and suffix
         if keep_suffix > 0:
             target_X = outputs[:, keep_prefix:-keep_suffix]
@@ -189,7 +204,7 @@ class TextGeneration(Model):
         return target_X
 
     def parse_prefix_suffix_for_model_generate_output(self, output):
-        """ Calculates if special tokens are present in the begining/end of the model generated output.
+        """Calculates if special tokens are present in the beginning/end of the model generated output.
 
         Parameters
         ----------
@@ -200,21 +215,22 @@ class TextGeneration(Model):
         -------
         dict
             Dictionary of prefix and suffix lengths concerning special tokens in output ids.
+
         """
         keep_prefix, keep_suffix = 0, 0
         if self.tokenizer.convert_ids_to_tokens(output[0]) in self.tokenizer.special_tokens_map.values():
             keep_prefix = 1
-        if len(output) > 1 and self.tokenizer.convert_ids_to_tokens(output[-1]) in self.tokenizer.special_tokens_map.values():
+        if (
+            len(output) > 1
+            and self.tokenizer.convert_ids_to_tokens(output[-1]) in self.tokenizer.special_tokens_map.values()
+        ):
             keep_suffix = 1
-        return {
-            'keep_prefix' : keep_prefix,
-            'keep_suffix' : keep_suffix
-        }
+        return {"keep_prefix": keep_prefix, "keep_suffix": keep_suffix}
 
     def save(self, out_file):
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.models.TextGeneration", version=0) as s:
             s.save("tokenizer", self.tokenizer)
             s.save("device", self.device)

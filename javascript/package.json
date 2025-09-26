@@ -8,28 +8,33 @@
     "visualizers"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "webpack-dev-server --content-base build/ --open",
-    "build": "webpack -p",
+    "test": "jest --verbose ./tests",
+    "dev": "webpack-dev-server --mode development --open",
+    "build": "webpack --mode production",
     "pub": "npm run build && npm publish"
   },
   "author": "Scott Lundberg",
-  "repository": "https://github.com/slundberg/shap",
+  "repository": "https://github.com/shap/shap",
   "license": "MIT",
   "dependencies": {
-    "d3": "^4",
+    "d3": "^7",
     "lodash": "^4",
-    "react": "^15",
-    "react-dom": "^15",
-    "react-tap-event-plugin": "^2"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",
-    "@babel/preset-env": "^7.9.5",
-    "@babel/preset-react": "^7.9.4",
-    "babel-loader": "^8.1.0",
-    "webpack": "^4.42.1",
-    "webpack-cli": "^3.3.11",
-    "webpack-dev-server": "^3.10.3"
+    "@babel/preset-env": "^7.22.9",
+    "@babel/preset-react": "^7.22.5",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.2.0",
+    "babel-jest": "^30.0.2",
+    "babel-loader": "^10.0.0",
+    "jest": "^30.0.3",
+    "jest-environment-jsdom": "^30.0.2",
+    "react-test-renderer": "^19.0.0",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.0.2"
   }
 }

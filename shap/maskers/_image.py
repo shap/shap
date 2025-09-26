@@ -1,22 +1,14 @@
 # TODO: heapq in numba does not yet support Typed Lists so we can move to them yet...
 import heapq
-import warnings
 
+import numba.typed
 import numpy as np
 from numba import njit
-from numba.core.errors import NumbaPendingDeprecationWarning
 
 from .._serializable import Deserializer, Serializer
 from ..utils import assert_import, record_import_error, safe_isinstance
 from ..utils._exceptions import DimensionError
 from ._masker import Masker
-
-try:
-    import torch  # noqa: F401
-except ImportError as e:
-    record_import_error("torch", "torch could not be imported!", e)
-
-warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 try:
     import cv2
@@ -25,11 +17,11 @@ except ImportError as e:
 
 
 class Image(Masker):
-    """ This masks out image regions with blurring or inpainting.
-    """
+    """Masks out image regions with blurring or inpainting."""
 
     def __init__(self, mask_value, shape=None):
-        """ Build a new Image masker with the given masking value.
+        """Build a new Image masker with the given masking value.
+
         Parameters
         ----------
         mask_value : np.array, "blur(kernel_xsize, kernel_xsize)", "inpaint_telea", or "inpaint_ns"
@@ -37,18 +29,24 @@ class Image(Masker):
         shape : None or tuple
             If the mask_value is an auto-generated masker instead of a dataset then the input
             image shape needs to be provided.
+
         """
         if shape is None:
             if isinstance(mask_value, str):
                 raise TypeError("When the mask_value is a string the shape parameter must be given!")
-            self.input_shape = mask_value.shape # the (1,) is because we only return a single masked sample to average over
+            self.input_shape = (
+                mask_value.shape
+            )  # the (1,) is because we only return a single masked sample to average over
         else:
             self.input_shape = shape
 
         self.input_mask_value = mask_value
 
         # This is the shape of the masks we expect
-        self.shape = (1, np.prod(self.input_shape)) # the (1, ...) is because we only return a single masked sample to average over
+        self.shape = (
+            1,
+            np.prod(self.input_shape),
+        )  # the (1, ...) is because we only return a single masked sample to average over
 
         self.image_data = True
 
@@ -68,27 +66,30 @@ class Image(Masker):
         # note if this masker can use different background for different samples
         self.fixed_background = not isinstance(self.mask_value, str)
 
-        #self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=bool)
+        # self.scratch_mask = np.zeros(self.input_shape[:-1], dtype=bool)
         self.last_xid = None
 
         # flag that we return outputs that will not get changed by later masking calls
         self.immutable_outputs = True
 
     def __call__(self, mask, x):
-
         if safe_isinstance(x, "torch.Tensor"):
             x = x.cpu().numpy()
 
         if np.prod(x.shape) != np.prod(self.input_shape):
-            raise DimensionError("The length of the image to be masked must match the shape given in the " + \
-                            "ImageMasker contructor: "+" * ".join([str(i) for i in x.shape])+ \
-                            " != "+" * ".join([str(i) for i in self.input_shape]))
+            raise DimensionError(
+                "The length of the image to be masked must match the shape given in the "
+                "ImageMasker constructor: "
+                + " * ".join([str(i) for i in x.shape])
+                + " != "
+                + " * ".join([str(i) for i in self.input_shape])
+            )
 
         # unwrap single element lists (which are how single input models look in multi-input format)
         if isinstance(x, list) and len(x) == 1:
             x = x[0]
 
-        # we preserve flattend inputs as flattened and full-shaped inputs as their original shape
+        # we preserve flattened inputs as flattened and full-shaped inputs as their original shape
         in_shape = x.shape
         if len(x.shape) > 1:
             x = x.ravel()
@@ -116,55 +117,50 @@ class Image(Masker):
         return (out.reshape(1, *in_shape),)
 
     def inpaint(self, x, mask, method):
-        """ Fill in the masked parts of the image through inpainting.
-        """
+        """Fill in the masked parts of the image through inpainting."""
         reshaped_mask = mask.reshape(self.input_shape).astype(np.uint8).max(2)
         if reshaped_mask.sum() == np.prod(self.input_shape[:-1]):
             out = x.reshape(self.input_shape).copy()
             out[:] = out.mean((0, 1))
             return out.ravel()
 
-        return cv2.inpaint(
-            x.reshape(self.input_shape).astype(np.uint8),
-            reshaped_mask,
-            inpaintRadius=3,
-            flags=getattr(cv2, method)
-        ).astype(x.dtype).ravel()
+        return (
+            cv2.inpaint(
+                x.reshape(self.input_shape).astype(np.uint8), reshaped_mask, inpaintRadius=3, flags=getattr(cv2, method)
+            )
+            .astype(x.dtype)
+            .ravel()
+        )
 
     def build_partition_tree(self):
-        """ This partitions an image into a herarchical clustering based on axis-aligned splits.
-        """
-
+        """This partitions an image into a herarchical clustering based on axis-aligned splits."""
         xmin = 0
         xmax = self.input_shape[0]
         ymin = 0
         ymax = self.input_shape[1]
         zmin = 0
         zmax = self.input_shape[2]
-        #total_xwidth = xmax - xmin
+        # total_xwidth = xmax - xmin
         total_ywidth = ymax - ymin
         total_zwidth = zmax - zmin
-        q = [(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)]
-        # q = numba.typed.List([(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)]) # TODO: won't work until the next numba rel (as of dec 2021)
+        q = numba.typed.List([(0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False)])
         M = int((xmax - xmin) * (ymax - ymin) * (zmax - zmin))
         clustering = np.zeros((M - 1, 4))
         _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q)
         self.clustering = clustering
 
     def save(self, out_file):
-        """ Write a Image masker to a file stream.
-        """
+        """Write a Image masker to a file stream."""
         super().save(out_file)
 
-        # Increment the verison number when the encoding changes!
+        # Increment the version number when the encoding changes!
         with Serializer(out_file, "shap.maskers.Image", version=0) as s:
             s.save("mask_value", self.input_mask_value)
             s.save("shape", self.input_shape)
 
     @classmethod
     def load(cls, in_file, instantiate=True):
-        """ Load a Image masker from a file stream.
-        """
+        """Load a Image masker from a file stream."""
         if instantiate:
             return cls._instantiated_load(in_file)
 
@@ -174,17 +170,16 @@ class Image(Masker):
             kwargs["shape"] = s.load("shape")
         return kwargs
 
+
 @njit
 def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, total_zwidth, M, clustering, q):
-    """ This partitions an image into a herarchical clustering based on axis-aligned splits.
-    """
-
+    """This partitions an image into a herarchical clustering based on axis-aligned splits."""
     # heapq.heappush(q, (0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
 
     # q.put((0, xmin, xmax, ymin, ymax, zmin, zmax, -1, False))
     ind = len(clustering) - 1
-    while len(q) > 0: # q.empty()
-        _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left =  heapq.heappop(q)
+    while len(q) > 0:  # q.empty()
+        _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = heapq.heappop(q)
         # _, xmin, xmax, ymin, ymax, zmin, zmax, parent_ind, is_left = q.get()
 
         if parent_ind >= 0:
@@ -200,7 +195,6 @@ def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, 
         if xwidth == 1 and ywidth == 1 and zwidth == 1:
             pass
         else:
-
             # by default our ranges remain unchanged
             lxmin = rxmin = xmin
             lxmax = rxmax = xmax
@@ -241,6 +235,6 @@ def _jit_build_partition_tree(xmin, xmax, ymin, ymax, zmin, zmax, total_ywidth, 
     for i in range(len(clustering)):
         li = int(clustering[i, 0])
         ri = int(clustering[i, 1])
-        lsize = 1 if li < M else clustering[li-M, 3]
-        rsize = 1 if ri < M else clustering[ri-M, 3]
+        lsize = 1 if li < M else clustering[li - M, 3]
+        rsize = 1 if ri < M else clustering[ri - M, 3]
         clustering[i, 3] = lsize + rsize

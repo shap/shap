@@ -1,2 +1,14 @@
-include shap/cext/*
-include shap/plots/resources/*
+# This file controls what files are included in the source distribution.
+
+# Note: setuptools-scm will by default include everything managed by git,
+# so we need to manually exclude things that we don't wish to include.
+# See: https://github.com/pypa/setuptools_scm/issues/190
+
+prune .github
+prune appveyor
+prune data
+prune docs
+prune javascript
+prune notebooks
+exclude .git-blame-ignore-revs .gitattributes .gitignore .pre-commit-config.yaml .readthedocs.yml
+exclude CONTRIBUTING.md requirements.txt MANIFEST.in

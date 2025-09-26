@@ -17,10 +17,11 @@
 #pragma once
 #include <thrust/device_allocator.h>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include <thrust/iterator/discard_iterator.h>
 #include <thrust/logical.h>
 #include <thrust/reduce.h>
-#include <thrust/host_vector.h>
+#include <thrust/sort.h>
 #if (CUDART_VERSION >= 11000)
 #include <cub/cub.cuh>
 #else
@@ -849,7 +850,7 @@ void GetBinSegments(const PathVectorT& paths, const SizeVectorT& bin_map,
 
 struct DeduplicateKeyTransformOp {
   template <typename SplitConditionT>
-  __device__ thrust::pair<size_t, int64_t> operator()(
+  __host__ __device__ thrust::pair<size_t, int64_t> operator()(
       const PathElement<SplitConditionT>& e) {
     return {e.path_idx, e.feature_idx};
   }
@@ -875,13 +876,17 @@ void DeduplicatePaths(PathVectorT* device_paths,
   // Sort by feature
   thrust::sort(thrust::cuda::par(alloc), device_paths->begin(),
                device_paths->end(),
-               [=] __device__(const PathElement<SplitConditionT>& a,
-                              const PathElement<SplitConditionT>& b) {
-                 if (a.path_idx < b.path_idx) return true;
-                 if (b.path_idx < a.path_idx) return false;
+               [=] __host__ __device__(const PathElement<SplitConditionT> &a,
+                                       const PathElement<SplitConditionT> &b) {
+                 if (a.path_idx < b.path_idx)
+                   return true;
+                 if (b.path_idx < a.path_idx)
+                   return false;
 
-                 if (a.feature_idx < b.feature_idx) return true;
-                 if (b.feature_idx < a.feature_idx) return false;
+                 if (a.feature_idx < b.feature_idx)
+                   return true;
+                 if (b.feature_idx < a.feature_idx)
+                   return false;
                  return false;
                });
 
@@ -895,13 +900,13 @@ void DeduplicatePaths(PathVectorT* device_paths,
   size_t* h_num_runs_out;
   CheckCuda(cudaMallocHost(&h_num_runs_out, sizeof(size_t)));
 
-  auto combine = [] __device__(PathElement<SplitConditionT> a,
-                               PathElement<SplitConditionT> b) {
+  auto combine = [] __host__ __device__(PathElement<SplitConditionT> a,
+                                        PathElement<SplitConditionT> b) {
     // Combine duplicate features
     a.split_condition.Merge(b.split_condition);
     a.zero_fraction *= b.zero_fraction;
     return a;
-  };  // NOLINT
+  }; // NOLINT
   size_t temp_size = 0;
   CheckCuda(cub::DeviceReduce::ReduceByKey(
       nullptr, temp_size, key_transform, DiscardOverload<Pair>(),
@@ -926,18 +931,24 @@ void SortPaths(PathVectorT* paths, const SizeVectorT& bin_map) {
   auto d_bin_map = bin_map.data();
   DeviceAllocatorT alloc;
   thrust::sort(thrust::cuda::par(alloc), paths->begin(), paths->end(),
-               [=] __device__(const PathElement<SplitConditionT>& a,
-                              const PathElement<SplitConditionT>& b) {
+               [=] __host__ __device__(const PathElement<SplitConditionT> &a,
+                                       const PathElement<SplitConditionT> &b) {
                  size_t a_bin = d_bin_map[a.path_idx];
                  size_t b_bin = d_bin_map[b.path_idx];
-                 if (a_bin < b_bin) return true;
-                 if (b_bin < a_bin) return false;
+                 if (a_bin < b_bin)
+                   return true;
+                 if (b_bin < a_bin)
+                   return false;
 
-                 if (a.path_idx < b.path_idx) return true;
-                 if (b.path_idx < a.path_idx) return false;
+                 if (a.path_idx < b.path_idx)
+                   return true;
+                 if (b.path_idx < a.path_idx)
+                   return false;
 
-                 if (a.feature_idx < b.feature_idx) return true;
-                 if (b.feature_idx < a.feature_idx) return false;
+                 if (a.feature_idx < b.feature_idx)
+                   return true;
+                 if (b.feature_idx < a.feature_idx)
+                   return false;
                  return false;
                });
 }

@@ -35,10 +35,7 @@ def test_violin_wrong_features_shape():
             show=False,
         )
 
-    emsg = (
-        "The shape of the shap_values matrix does not match the shape of "
-        "the provided data matrix."
-    )
+    emsg = "The shape of the shap_values matrix does not match the shape of the provided data matrix."
     with pytest.raises(DimensionError, match=emsg):
         expln = shap.Explanation(
             values=rs.randn(20, 5),
@@ -59,7 +56,7 @@ def test_violin(explainer):
     """Make sure the violin plot is unchanged."""
     fig = plt.figure()
     shap_values = explainer.shap_values(explainer.data)
-    shap.plots.violin(shap_values)
+    shap.plots.violin(shap_values, show=False)
     plt.tight_layout()
     return fig
 
@@ -68,27 +65,29 @@ def test_violin(explainer):
 # ------ "legacy" violin plots -------
 # Currently using the same files as the `test_summary.py` violin tests for comparison
 @pytest.mark.mpl_image_compare(
-    filename="test_random_summary_violin_with_data.png",
+    filename="test_summary_violin_with_data.png",
+    tolerance=5,
 )
-def test_random_summary_violin_with_data2():
+def test_summary_violin_with_data2():
     """Check a violin chart with shap_values as a np.array."""
-    np.random.seed(0)
+    rs = np.random.RandomState(0)
     fig = plt.figure()
     shap.plots.violin(
-        np.random.randn(20, 5),
-        np.random.randn(20, 5),
+        rs.standard_normal(size=(20, 5)),
+        rs.standard_normal(size=(20, 5)),
         plot_type="violin",
         show=False,
     )
-    plt.tight_layout()
+    fig.set_layout_engine("tight")
     return fig
 
 
 # Currently using the same files as the `test_summary.py` violin tests for comparison
 @pytest.mark.mpl_image_compare(
-    filename="test_random_summary_layered_violin_with_data.png",
+    filename="test_summary_layered_violin_with_data.png",
+    tolerance=5,
 )
-def test_random_summary_layered_violin_with_data2():
+def test_summary_layered_violin_with_data2():
     """Check a layered violin chart with shap_values as a np.array."""
     rs = np.random.RandomState(0)
     fig = plt.figure()
@@ -100,5 +99,5 @@ def test_random_summary_layered_violin_with_data2():
         plot_type="layered_violin",
         show=False,
     )
-    plt.tight_layout()
+    fig.set_layout_engine("tight")
     return fig

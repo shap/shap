@@ -1,18 +1,22 @@
-import warnings
-
+import matplotlib.pyplot as plt
 import numpy as np
 
-try:
-    import matplotlib.pyplot as pl
-except ImportError:
-    warnings.warn("matplotlib could not be loaded!")
-    pass
 from . import colors
 
 
-def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, xmin=None, xmax=None,
-                     max_display=None, sort=True, show=True):
-    """ This plots the difference in mean SHAP values between two groups.
+def group_difference(
+    shap_values,
+    group_mask,
+    feature_names=None,
+    xlabel=None,
+    xmin=None,
+    xmax=None,
+    max_display=None,
+    sort=True,
+    show=True,
+    ax=None,
+):
+    """This plots the difference in mean SHAP values between two groups.
 
     It is useful to decompose many group level metrics about the model output among the
     input features. Quantitative fairness metrics for machine learning models are
@@ -28,16 +32,16 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
 
     feature_names : list
         A list of feature names.
-    """
 
-    # compute confidence bounds for the group difference value
+    """
+    # Compute confidence bounds for the group difference value
     vs = []
     gmean = group_mask.mean()
-    for i in range(200):
+    for _ in range(200):
         r = np.random.rand(shap_values.shape[0]) > gmean
         vs.append(shap_values[r].mean(0) - shap_values[~r].mean(0))
-    vs = np.array(vs)
-    xerr = np.vstack([np.percentile(vs, 95, axis=0), np.percentile(vs, 5, axis=0)])
+    vs_ = np.array(vs)
+    xerr = np.vstack([np.percentile(vs_, 95, axis=0), np.percentile(vs_, 5, axis=0)])
 
     # See if we were passed a single model output vector and not a matrix of SHAP values
     if len(shap_values.shape) == 1:
@@ -45,9 +49,9 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
         if feature_names is None:
             feature_names = [""]
 
-    # fill in any missing feature names
+    # Fill in any missing feature names
     if feature_names is None:
-        feature_names = ["Feature %d" % i for i in range(shap_values.shape[1])]
+        feature_names = [f"Feature {i}" for i in range(shap_values.shape[1])]
 
     diff = shap_values[group_mask].mean(0) - shap_values[~group_mask].mean(0)
 
@@ -58,36 +62,31 @@ def group_difference(shap_values, group_mask, feature_names=None, xlabel=None, x
 
     if max_display is not None:
         inds = inds[:max_display]
-    # draw the figure
-    figsize = [6.4, 0.2 + 0.9 * len(inds)]
-    pl.figure(figsize=figsize)
-    ticks = range(len(inds)-1, -1, -1)
-    pl.axvline(0, color="#999999", linewidth=0.5)
-    pl.barh(
-        ticks, diff[inds], color=colors.blue_rgb,
-        capsize=3, xerr=np.abs(xerr[:,inds])
-    )
+    if ax:
+        # Disable plotting out if an ax has been provided
+        show = False
+    else:
+        # Draw the figure if no ax has been provided
+        figsize = (6.4, 0.2 + 0.9 * len(inds))
+        _, ax = plt.subplots(figsize=figsize)
+    ticks = range(len(inds) - 1, -1, -1)
+    ax.axvline(0, color="#999999", linewidth=0.5)
+    ax.barh(ticks, diff[inds], color=colors.blue_rgb, capsize=3, xerr=np.abs(xerr[:, inds]))
 
     for i in range(len(inds)):
-        pl.axhline(y=i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
+        ax.axhline(y=i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
-    ax = pl.gca()
-    ax.set_yticklabels([feature_names[i] for i in inds])
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('none')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("none")
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([feature_names[i] for i in inds], fontsize=13)
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["left"].set_visible(False)
     ax.tick_params(labelsize=11)
     if xlabel is None:
         xlabel = "Group SHAP value difference"
     ax.set_xlabel(xlabel, fontsize=13)
-    pl.yticks(ticks, fontsize=13)
-    xlim = list(pl.xlim())
-    if xmin is not None:
-        xlim[0] = xmin
-    if xmax is not None:
-        xlim[1] = xmax
-    pl.xlim(*xlim)
+    ax.set_xlim(xmin, xmax)
     if show:
-        pl.show()
+        plt.show()

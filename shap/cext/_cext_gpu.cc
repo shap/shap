@@ -1,4 +1,4 @@
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NPY_NO_DEPRECATED_API NPY_2_0_API_VERSION
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
@@ -150,7 +150,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     tfloat *base_offset = (tfloat*)PyArray_DATA(base_offset_array);
 
     // these are just a wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         node_sample_weights, max_depth, tree_limit, base_offset,

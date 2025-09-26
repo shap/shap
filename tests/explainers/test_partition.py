@@ -1,9 +1,7 @@
-""" This file contains tests for partition explainer.
-"""
+"""This file contains tests for partition explainer."""
 
-# pylint: disable=missing-function-docstring
 import pickle
-import sys
+import platform
 
 import pytest
 
@@ -12,43 +10,76 @@ import shap
 from . import common
 
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
-def test_translation():
-    model, tokenizer, data = common.basic_translation_scenario()
-    common.test_additivity(shap.explainers.Partition, model, tokenizer, data)
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_translation(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
+    common.test_additivity(shap.explainers.PartitionExplainer, model, tokenizer, data)
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
-def test_translation_auto():
-    model, tokenizer, data = common.basic_translation_scenario()
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_translation_auto(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
     common.test_additivity(shap.Explainer, model, tokenizer, data)
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
-def test_translation_algorithm_arg():
-    model, tokenizer, data = common.basic_translation_scenario()
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_translation_algorithm_arg(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
     common.test_additivity(shap.Explainer, model, tokenizer, data, algorithm="partition")
+
 
 def test_tabular_single_output():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.Partition, model.predict, shap.maskers.Partition(data), data)
+    common.test_additivity(shap.explainers.PartitionExplainer, model.predict, shap.maskers.Partition(data), data)
+
 
 def test_tabular_multi_output():
     model, data = common.basic_xgboost_scenario(100)
-    common.test_additivity(shap.explainers.Partition, model.predict_proba, shap.maskers.Partition(data), data)
+    common.test_additivity(shap.explainers.PartitionExplainer, model.predict_proba, shap.maskers.Partition(data), data)
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
-def test_serialization():
-    model, tokenizer, data = common.basic_translation_scenario()
-    common.test_serialization(shap.explainers.Partition, model, tokenizer, data)
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
-def test_serialization_no_model_or_masker():
-    model, tokenizer, data = common.basic_translation_scenario()
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_serialization(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
+    common.test_serialization(shap.explainers.PartitionExplainer, model, tokenizer, data)
+
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_serialization_no_model_or_masker(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
     common.test_serialization(
-        shap.explainers.Partition, model, tokenizer, data, model_saver=None, masker_saver=None,
-        model_loader=lambda _: model, masker_loader=lambda _: tokenizer
+        shap.explainers.Partition,
+        model,
+        tokenizer,
+        data,
+        model_saver=None,
+        masker_saver=None,
+        model_loader=lambda _: model,
+        masker_loader=lambda _: tokenizer,
     )
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="Integer division bug in HuggingFace on Windows")
-def test_serialization_custom_model_save():
-    model, tokenizer, data = common.basic_translation_scenario()
-    common.test_serialization(shap.explainers.Partition, model, tokenizer, data, model_saver=pickle.dump, model_loader=pickle.load)
+
+@pytest.mark.skipif(
+    platform.system() == "Darwin",
+    reason="Skipping on MacOS due to torch segmentation error, see GH #4075.",
+)
+def test_serialization_custom_model_save(basic_translation_scenario):
+    model, tokenizer, data = basic_translation_scenario
+    common.test_serialization(
+        shap.explainers.PartitionExplainer, model, tokenizer, data, model_saver=pickle.dump, model_loader=pickle.load
+    )

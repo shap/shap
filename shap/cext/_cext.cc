@@ -1,4 +1,4 @@
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NPY_NO_DEPRECATED_API NPY_2_0_API_VERSION
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
@@ -209,7 +209,7 @@ static PyObject *_cext_dense_tree_shap(PyObject *self, PyObject *args)
     tfloat *base_offset = (tfloat*)PyArray_DATA(base_offset_array);
 
     // these are just a wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         node_sample_weights, max_depth, tree_limit, base_offset,
@@ -329,7 +329,7 @@ static PyObject *_cext_dense_tree_predict(PyObject *self, PyObject *args)
     tfloat *out_pred = (tfloat*)PyArray_DATA(out_pred_array);
 
     // these are just wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         NULL, max_depth, tree_limit, base_offset,
@@ -424,7 +424,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     bool *X_missing = (bool*)PyArray_DATA(X_missing_array);
 
     // these are just wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         node_sample_weight, 0, tree_limit, 0, max_nodes, 0
@@ -530,7 +530,7 @@ static PyObject *_cext_dense_tree_saabas(PyObject *self, PyObject *args)
     tfloat *out_pred = (tfloat*)PyArray_DATA(out_pred_array);
 
     // these are just wrapper objects for all the pointers and numbers associated with
-    // the ensemble tree model and the datset we are explaing
+    // the ensemble tree model and the dataset we are explaining
     TreeEnsemble trees = TreeEnsemble(
         children_left, children_right, children_default, features, thresholds, values,
         NULL, max_depth, tree_limit, base_offset,

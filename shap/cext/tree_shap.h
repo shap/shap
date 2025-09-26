@@ -125,7 +125,7 @@ struct ExplanationDataset {
 
 // data we keep about our decision path
 // note that pweight is included for convenience and is not tied with the other attributes
-// the pweight of the i'th path element is the permuation weight of paths with i-1 ones in them
+// the pweight of the i'th path element is the permutation weight of paths with i-1 ones in them
 struct PathElement {
     int feature_index;
     tfloat zero_fraction;
@@ -371,7 +371,7 @@ inline void unwind_path(PathElement *unique_path, unsigned unique_depth, unsigne
     }
 }
 
-// determine what the total permuation weight would be if
+// determine what the total permutation weight would be if
 // we unwound a previous extension in the decision path
 inline tfloat unwound_path_sum(const PathElement *unique_path, unsigned unique_depth,
                                unsigned path_index) {
@@ -709,7 +709,8 @@ inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &
 // Independent Tree SHAP functions below here
 // ------------------------------------------
 struct Node {
-    short cl, cr, cd, pnode, feat, pfeat; // uint_16
+    short cl, cr, cd, pnode; // uint_16
+    long feat, pfeat;
     float thres, value;
     char from_flag;
 };
@@ -746,7 +747,8 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
 //     }
     int ns_ctr = 0;
     std::fill_n(feat_hist, num_feats, 0);
-    short node = 0, feat, cl, cr, cd, pnode, pfeat = -1;
+    short node = 0, cl, cr, cd, pnode;
+    long feat, pfeat = -1;
     short next_xnode = -1, next_rnode = -1;
     short next_node = -1, from_child = -1;
     float thres, pos_x = 0, neg_x = 0, pos_r = 0, neg_r = 0;
@@ -760,7 +762,7 @@ inline void tree_shap_indep(const unsigned max_depth, const unsigned num_feats,
     cr = curr_node.cr;
     cd = curr_node.cd;
 
-    // short circut when this is a stump tree (with no splits)
+    // short circuit when this is a stump tree (with no splits)
     if (cl < 0) {
         out_contribs[num_feats] += curr_node.value;
         return;
@@ -1169,7 +1171,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
     time_t start_time = time(NULL);
     tfloat last_print = 0;
     for (unsigned oind = 0; oind < trees.num_outputs; ++oind) {
-        // set the values int he reformated tree to the current output index
+        // set the values in the reformatted tree to the current output index
         for (unsigned i = 0; i < trees.tree_limit; ++i) {
             Node *node_tree = node_trees + i * trees.max_nodes;
             for (unsigned j = 0; j < trees.max_nodes; ++j) {
@@ -1273,7 +1275,7 @@ inline void dense_tree_path_dependent(const TreeEnsemble& trees, const Explanati
 
     // build explanation for each sample
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
 
         // aggregate the effect of explaining each tree

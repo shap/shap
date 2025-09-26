@@ -15,6 +15,7 @@ Explanation
     :toctree: generated/
 
     shap.Explanation
+    shap.Cohorts
 
 
 .. _explainers_api:
@@ -25,16 +26,18 @@ explainers
     :toctree: generated/
 
     shap.Explainer
-    shap.explainers.Tree
-    shap.explainers.GPUTree
-    shap.explainers.Linear
-    shap.explainers.Permutation
-    shap.explainers.Partition
-    shap.explainers.Sampling
-    shap.explainers.Additive
-    shap.explainers.Deep
-    shap.explainers.Exact
-    shap.explainers.other.Coefficent
+    shap.TreeExplainer
+    shap.GPUTreeExplainer
+    shap.LinearExplainer
+    shap.PermutationExplainer
+    shap.PartitionExplainer
+    shap.SamplingExplainer
+    shap.AdditiveExplainer
+    shap.DeepExplainer
+    shap.KernelExplainer
+    shap.GradientExplainer
+    shap.ExactExplainer
+    shap.explainers.other.Coefficient
     shap.explainers.other.Random
     shap.explainers.other.LimeTabular
     shap.explainers.other.Maple
@@ -130,8 +133,9 @@ datasets
 .. autosummary::
     :toctree: generated/
 
+    shap.datasets.a1a
     shap.datasets.adult
-    shap.datasets.boston
+    shap.datasets.california
     shap.datasets.communitiesandcrime
     shap.datasets.corrgroups60
     shap.datasets.diabetes
@@ -139,4 +143,6 @@ datasets
     shap.datasets.imdb
     shap.datasets.independentlinear60
     shap.datasets.iris
+    shap.datasets.linnerud
     shap.datasets.nhanesi
+    shap.datasets.rank

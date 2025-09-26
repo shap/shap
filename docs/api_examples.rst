@@ -7,8 +7,14 @@ API Examples
 
 These examples parallel the namespace structure of SHAP. Each object or function in SHAP has a
 corresponding example notebook here that demonstrates its API usage. The source notebooks
-are `available on GitHub <https://github.com/slundberg/shap/tree/master/notebooks/api_examples>`_.
+are `available on GitHub <https://github.com/shap/shap/tree/master/notebooks/api_examples>`_.
 
+
+.. toctree::
+    :glob:
+    :maxdepth: 1
+
+    example_notebooks/api_examples/migrating-to-new-api.ipynb
 
 .. _explainers_examples:
 
@@ -44,11 +50,12 @@ models
 
 Work in progress.
 
-.. toctree::
-    :glob:
-    :maxdepth: 1
+.. TODO: Uncomment this toctree once we have at least one example to share
+    .. toctree::
+        :glob:
+        :maxdepth: 1
 
-    example_notebooks/api_examples/models/*
+        example_notebooks/api_examples/models/*
 
 
 .. _plots_examples:

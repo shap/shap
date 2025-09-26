@@ -4,10 +4,11 @@ from .._explainer import Explainer
 
 
 class TreeGain(Explainer):
-    """ Simply returns the global gain/gini feature importances for tree models.
+    """Simply returns the global gain/gini feature importances for tree models.
 
     This is only for benchmark comparisons and is not meant to approximate SHAP values.
     """
+
     def __init__(self, model):
         if str(type(model)).endswith("sklearn.tree.tree.DecisionTreeRegressor'>"):
             pass
@@ -23,7 +24,9 @@ class TreeGain(Explainer):
             pass
         else:
             raise NotImplementedError("The passed model is not yet supported by TreeGainExplainer: " + str(type(model)))
-        assert hasattr(model, "feature_importances_"), "The passed model does not have a feature_importances_ attribute!"
+        assert hasattr(model, "feature_importances_"), (
+            "The passed model does not have a feature_importances_ attribute!"
+        )
         self.model = model
 
     def attributions(self, X):
