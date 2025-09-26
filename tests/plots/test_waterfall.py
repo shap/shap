@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeRegressor
 
 import shap
@@ -90,3 +91,29 @@ def test_waterfall_plot_for_decision_tree_explanation():
     explainer = shap.TreeExplainer(model)
     explanation = explainer(X)
     shap.plots.waterfall(explanation[0], show=False)
+
+
+def test_waterfall_plot_for_data_with_number_columns():
+    model = KNeighborsClassifier()
+
+    def f(x):
+        return model.predict_proba(x)[:, 1]
+
+    X = pd.DataFrame(
+        [
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 0, 0],
+        ]
+    )
+    y = pd.Series([0, 1, 2, 3, 4, 3, 2, 1])
+    model.fit(X, y)
+    med = X.median().values.reshape((1, X.shape[1]))
+    explainer = shap.Explainer(f, med)
+    shap_values = explainer(X)
+    shap.plots.waterfall(shap_values[0], show=False)
