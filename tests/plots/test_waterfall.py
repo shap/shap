@@ -94,6 +94,7 @@ def test_waterfall_plot_for_decision_tree_explanation():
 
 
 def test_waterfall_plot_for_data_with_number_columns():
+    #GH 4150
     model = KNeighborsClassifier()
 
     def f(x):
