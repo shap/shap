@@ -9,4 +9,5 @@ def _exp_val(
     y: list[float] | np.ndarray,
     ey: list[float] | np.ndarray,
 ) -> tuple[np.ndarray, int]: ...
+
 VERSION: str
