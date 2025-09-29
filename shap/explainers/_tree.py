@@ -637,6 +637,7 @@ class TreeExplainer(Explainer):
                 self.model.children_default,
                 self.model.features,
                 self.model.thresholds,
+                self.model.threshold_types,
                 self.model.values,
                 self.model.node_sample_weight,
                 self.model.max_depth,
@@ -659,6 +660,7 @@ class TreeExplainer(Explainer):
                 self.model.children_default,
                 self.model.features,
                 self.model.thresholds,
+                self.model.threshold_types,
                 self.model.values,
                 self.model.max_depth,
                 tree_limit,
@@ -798,6 +800,7 @@ class TreeExplainer(Explainer):
             self.model.children_default,
             self.model.features,
             self.model.thresholds,
+            self.model.threshold_types,
             self.model.values,
             self.model.node_sample_weight,
             self.model.max_depth,
@@ -1452,6 +1455,7 @@ class TreeEnsemble:
             self.features = -np.ones((num_trees, max_nodes), dtype=np.int32)
 
             self.thresholds = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
+            self.threshold_types = np.zeros((num_trees, max_nodes), dtype=np.int32)
             self.values = np.zeros((num_trees, max_nodes, self.num_outputs), dtype=self.internal_dtype)
             self.node_sample_weight = np.zeros((num_trees, max_nodes), dtype=self.internal_dtype)
 
@@ -1461,6 +1465,7 @@ class TreeEnsemble:
                 self.children_default[i, : len(self.trees[i].children_default)] = self.trees[i].children_default
                 self.features[i, : len(self.trees[i].features)] = self.trees[i].features
                 self.thresholds[i, : len(self.trees[i].thresholds)] = self.trees[i].thresholds
+                self.threshold_types[i, : len(self.trees[i].threshold_types)] = self.trees[i].threshold_types
 
                 # XGBoost supports boosting forest, which is not compatible with the
                 # current assumption here that the number of stacked models represents
@@ -1627,6 +1632,7 @@ class TreeEnsemble:
             self.children_default,
             self.features,
             self.thresholds,
+            self.threshold_types,
             self.values,
             self.max_depth,
             tree_limit,
@@ -1715,6 +1721,7 @@ class SingleTree:
                 self.children_default = np.where(tree.missing_go_to_left, self.children_left, self.children_right)
             self.features = tree.feature.astype(np.int32)
             self.thresholds = tree.threshold.astype(np.float64)
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree.value.reshape(tree.value.shape[0], tree.value.shape[1] * tree.value.shape[2])
             if normalize:
                 self.values = (self.values.T / self.values.sum(1)).T
@@ -1726,7 +1733,8 @@ class SingleTree:
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["features"].astype(np.int32)
-            self.thresholds = tree["thresholds"]
+            self.thresholds = tree["thresholds"] 
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -1737,6 +1745,7 @@ class SingleTree:
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["feature"].astype(np.int32)
             self.thresholds = tree["threshold"]
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["value"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
 
@@ -1762,6 +1771,7 @@ class SingleTree:
             self.children_default = np.full(num_nodes, -2, dtype=np.int32)
             self.features = np.full(num_nodes, -2, dtype=np.int32)
             self.thresholds = np.full(num_nodes, -2, dtype=np.float64)
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = [-2] * num_nodes
             self.node_sample_weight = np.full(num_nodes, -2, dtype=np.float64)
 
@@ -1814,6 +1824,7 @@ class SingleTree:
             self.children_default = np.empty(num_nodes, dtype=np.int32)
             self.features = np.empty(num_nodes, dtype=np.int32)
             self.thresholds = np.empty(num_nodes, dtype=np.float64)
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = [-2 for _ in range(num_nodes)]
             self.node_sample_weight = np.empty(num_nodes, dtype=np.float64)
 
@@ -1845,7 +1856,22 @@ class SingleTree:
                         self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
 
                     self.features[vsplit_idx] = vertex["split_feature"]
-                    self.thresholds[vsplit_idx] = vertex["threshold"]
+                    if type(vertex["threshold"]) in [int, float]:
+                        self.thresholds[vsplit_idx] = vertex["threshold"]
+                        self.threshold_types[vsplit_idx] = 0
+                    elif type(vertex["threshold"]) is str:
+                        threshold = 0.0
+                        categories = [int(x) for x in vertex["threshold"].split("||")]
+                        for cat in categories:
+                            threshold += 2 ** (cat - 1)
+                        self.thresholds[vsplit_idx] = threshold
+                        self.threshold_types[
+                            vsplit_idx
+                        ] = 1  # Indicates that this is a categorical split
+                    else:
+                        raise TypeError(
+                            f"Threshold type {type(vertex['threshold'])} not supported"
+                        )
                     self.values[vsplit_idx] = [vertex["internal_value"]]
                     self.node_sample_weight[vsplit_idx] = vertex["internal_count"]
                     visited.append(vsplit_idx)
@@ -1863,7 +1889,8 @@ class SingleTree:
                     self.children_right[vleaf_idx] = -1
                     self.children_default[vleaf_idx] = -1
                     self.features[vleaf_idx] = -1
-                    self.thresholds[vleaf_idx] = -1
+                    self.thresholds[vleaf_idx] = -1 
+                    self.threshold_types[vleaf_idx] = -1
                     self.values[vleaf_idx] = [vertex["leaf_value"]]
                     # FIXME: "leaf_count" currently doesn't exist if we have a stump tree.
                     # We should be technically be assigning the number of samples used to
@@ -1890,6 +1917,7 @@ class SingleTree:
             self.children_default = -np.ones(m, dtype=np.int32)
             self.features = -np.ones(m, dtype=np.int32)
             self.thresholds = np.zeros(m, dtype=np.float64)
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = np.zeros((m, 1), dtype=np.float64)
             self.node_sample_weight = np.empty(m, dtype=np.float64)
 
@@ -1963,6 +1991,7 @@ class SingleTree:
             self.children_default = children_default
             self.features = features
             self.thresholds = thresholds
+            self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = values[:, np.newaxis] * scaling
             self.node_sample_weight = node_sample_weight
         else:
@@ -1977,6 +2006,7 @@ class SingleTree:
                 self.children_default,
                 self.features,
                 self.thresholds,
+                self.threshold_types,
                 self.values,
                 1,
                 self.node_sample_weight,
