@@ -1733,7 +1733,7 @@ class SingleTree:
             self.children_right = tree["children_right"].astype(np.int32)
             self.children_default = tree["children_default"].astype(np.int32)
             self.features = tree["features"].astype(np.int32)
-            self.thresholds = tree["thresholds"] 
+            self.thresholds = tree["thresholds"]
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = tree["values"] * scaling
             self.node_sample_weight = tree["node_sample_weight"]
@@ -1865,13 +1865,9 @@ class SingleTree:
                         for cat in categories:
                             threshold += 2 ** (cat - 1)
                         self.thresholds[vsplit_idx] = threshold
-                        self.threshold_types[
-                            vsplit_idx
-                        ] = 1  # Indicates that this is a categorical split
+                        self.threshold_types[vsplit_idx] = 1  # Indicates that this is a categorical split
                     else:
-                        raise TypeError(
-                            f"Threshold type {type(vertex['threshold'])} not supported"
-                        )
+                        raise TypeError(f"Threshold type {type(vertex['threshold'])} not supported")
                     self.values[vsplit_idx] = [vertex["internal_value"]]
                     self.node_sample_weight[vsplit_idx] = vertex["internal_count"]
                     visited.append(vsplit_idx)
@@ -1889,7 +1885,7 @@ class SingleTree:
                     self.children_right[vleaf_idx] = -1
                     self.children_default[vleaf_idx] = -1
                     self.features[vleaf_idx] = -1
-                    self.thresholds[vleaf_idx] = -1 
+                    self.thresholds[vleaf_idx] = -1
                     self.threshold_types[vleaf_idx] = -1
                     self.values[vleaf_idx] = [vertex["leaf_value"]]
                     # FIXME: "leaf_count" currently doesn't exist if we have a stump tree.
