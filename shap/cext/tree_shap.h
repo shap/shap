@@ -728,6 +728,7 @@ inline void build_merged_tree(TreeEnsemble &out_tree, const ExplanationDataset &
 struct Node {
     short cl, cr, cd, pnode; // uint_16
     long feat, pfeat;
+    float thres, value;
     char from_flag;
 };
 
