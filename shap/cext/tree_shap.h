@@ -1200,7 +1200,7 @@ inline void dense_independent(const TreeEnsemble& trees, const ExplanationDatase
         for (unsigned i = 0; i < data.num_X; ++i) {
             const tfloat *x = data.X + i * data.M;
             const bool *x_missing = data.X_missing + i * data.M;
-            instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
+            instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
             const tfloat y_i = data.y == NULL ? 0 : data.y[i];
 
             print_progress_bar(last_print, start_time, oind * data.num_X + i, data.num_X * trees.num_outputs);
@@ -1291,7 +1291,7 @@ inline void dense_tree_path_dependent(const TreeEnsemble& trees, const Explanati
 
     // build explanation for each sample
     for (unsigned i = 0; i < data.num_X; ++i) {
-        instance_out_contribs = out_contribs + i * (data.M + 1) * trees.num_outputs;
+        instance_out_contribs = out_contribs + static_cast<unsigned long long>(i) * (data.M + 1) * trees.num_outputs;
         data.get_x_instance(instance, i);
 
         // aggregate the effect of explaining each tree
