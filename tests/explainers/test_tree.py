@@ -1808,6 +1808,28 @@ class TestExplainerLightGBM:
         assert isinstance(shap_values, np.ndarray)
         assert (explanation.values == shap_values).all()
 
+    def test_lightgbm_categorical_split(self):
+        # GH 480
+        """Checks that shap interaction values are computed without error when the LightGBM model has categorical splits."""
+        lightgbm = pytest.importorskip("lightgbm")
+        X, y = shap.datasets.california(n_points=10000)
+        # Add HouseAgeGroup categorical variable
+        X["HouseAgeGroup"] = pd.cut(
+            X["HouseAge"],
+            bins=[-float("inf"), 17, 27, 37, float("inf")],
+            labels=[0, 1, 2, 3],
+            right=False,
+        ).astype(int)
+        model = lightgbm.LGBMRegressor(n_estimators=400, max_cat_to_onehot=1)
+        model.fit(X, y, categorical_feature=[8])  # Set HouseAgeGroup as categorical variable
+        preds = model.predict(X, raw_score=True)
+
+        explainer = shap.TreeExplainer(model)
+
+        # Check SHAP interaction values sum to model output
+        shap_interaction_values = explainer.shap_interaction_values(X.iloc[:10, :])
+        assert np.allclose(shap_interaction_values.sum(axis=(1, 2)) + explainer.expected_value, preds[:10], atol=1e-4)
+
 
 def test_check_consistent_outputs_binary_classification():
     # GH 3187
