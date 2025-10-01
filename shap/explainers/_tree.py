@@ -2137,6 +2137,7 @@ class XGBTreeModelLoader:
 
         self.values = []
         self.thresholds = []
+        self.threshold_types = []
         self.features = []
 
         # Categorical features, not supported by the SHAP package yet.
@@ -2185,9 +2186,11 @@ class XGBTreeModelLoader:
             # Xgboost uses < for thresholds where shap uses <= Move the threshold down
             # by the smallest possible increment
             thresholds = np.where(is_leaf, 0.0, np.nextafter(thresholds, -np.float32(np.inf)))
+            threshold_types = np.zeros_like(thresholds, dtype=np.int32)
 
             self.values.append(leaf_weight.reshape(leaf_weight.size, 1))
             self.thresholds.append(thresholds)
+            self.threshold_types.append(threshold_types)
 
             split_idx = np.asarray(tree["split_indices"], dtype=np.int64)
             self.features.append(split_idx)
@@ -2262,6 +2265,7 @@ class XGBTreeModelLoader:
                 "children_default": self.children_default[i],
                 "feature": self.features[i],
                 "threshold": self.thresholds[i],
+                "threshold_type": self.threshold_types[i],
                 "value": self.values[i],
                 "node_sample_weight": self.sum_hess[i],
             }

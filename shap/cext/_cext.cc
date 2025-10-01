@@ -403,7 +403,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
 
     /* If that didn't work, throw an exception. */
     if (children_left_array == NULL || children_right_array == NULL ||
-        children_default_array == NULL || features_array == NULL || thresholds_array == NULL ||
+        children_default_array == NULL || features_array == NULL || thresholds_array == NULL || threshold_types_array == NULL ||
         values_array == NULL || node_sample_weight_array == NULL || X_array == NULL ||
         X_missing_array == NULL) {
         Py_XDECREF(children_left_array);
@@ -431,7 +431,7 @@ static PyObject *_cext_dense_tree_update_weights(PyObject *self, PyObject *args)
     int *children_default = (int*)PyArray_DATA(children_default_array);
     int *features = (int*)PyArray_DATA(features_array);
     tfloat *thresholds = (tfloat*)PyArray_DATA(thresholds_array);
-    int *threshold_types = (int*)PyArray_DATA(thresholds_array);
+    int *threshold_types = (int*)PyArray_DATA(threshold_types_array);
     tfloat *values = (tfloat*)PyArray_DATA(values_array);
     tfloat *node_sample_weight = (tfloat*)PyArray_DATA(node_sample_weight_array);
     tfloat *X = (tfloat*)PyArray_DATA(X_array);
