@@ -85,7 +85,7 @@ void RecurseTree(
 
   RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
 
-  // Add right split to the path
+  // Add left split to the path
   tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
       0, tree.features[pos], 0,
       ShapSplitCondition{tree.thresholds[pos], inf, false},
