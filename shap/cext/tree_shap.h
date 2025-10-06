@@ -178,7 +178,7 @@ inline transform_f get_transform(unsigned model_transform) {
     return transform;
 }
 
-bool category_in_threshold(float threshold, float category) {
+inline bool category_in_threshold(float threshold, float category) {
     int category_flag = (1 << (int(category) - 1));
     return (int(threshold) & category_flag) != 0;
 }

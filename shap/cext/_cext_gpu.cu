@@ -85,7 +85,7 @@ void RecurseTree(
 
   RecurseTree(left_child, tree, tmp_path, paths, path_idx, num_outputs);
 
-  // Add left split to the path
+  // Add right split to the path
   tmp_path->back() = gpu_treeshap::PathElement<ShapSplitCondition>(
       0, tree.features[pos], 0,
       ShapSplitCondition{tree.thresholds[pos], inf, false},
@@ -320,6 +320,19 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
                          const ExplanationDataset &data, tfloat *out_contribs,
                          const int feature_dependence, unsigned model_transform,
                          bool interactions) {
+  // Check for categorical features
+  bool has_categorical = false;
+  for (unsigned i = 0; i < trees.tree_limit * trees.max_nodes; i++) {
+    if (trees.threshold_types[i] != 0) {
+      has_categorical = true;
+      break;
+    }
+  }
+  if (has_categorical) {
+    std::cerr << "Warning: Categorical features detected. GPU TreeSHAP currently "
+                 "only supports numerical features. Results may be incorrect.\n";
+  }
+
   // see what transform (if any) we have
   transform_f transform = get_transform(model_transform);
 
