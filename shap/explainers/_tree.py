@@ -1856,10 +1856,10 @@ class SingleTree:
                         self.children_default[vsplit_idx] = self.children_right[vsplit_idx]
 
                     self.features[vsplit_idx] = vertex["split_feature"]
-                    if type(vertex["threshold"]) in [int, float]:
+                    if isinstance(vertex["threshold"], (int, float)):
                         self.thresholds[vsplit_idx] = vertex["threshold"]
                         self.threshold_types[vsplit_idx] = 0
-                    elif type(vertex["threshold"]) is str:
+                    elif isinstance(vertex["threshold"], str):
                         threshold = 0.0
                         categories = [int(x) for x in vertex["threshold"].split("||")]
                         for cat in categories:
