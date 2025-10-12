@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import operator
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
