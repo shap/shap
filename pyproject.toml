@@ -13,7 +13,7 @@ license = {text = "MIT License"}
 authors = [
   {name = "Scott Lundberg", email = "slund1@cs.washington.edu"},
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
   'numpy',
   'scipy',
@@ -31,11 +31,10 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: Unix",
   "Operating System :: MacOS",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",

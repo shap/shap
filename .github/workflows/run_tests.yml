@@ -28,20 +28,20 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
-            python-version: "3.12"
+            python-version: "3.13"
             extras: "test"
           - os: macos-latest
-            python-version: "3.12"
+            python-version: "3.13"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
-            python-version: "3.12"
+            python-version: "3.13"
             extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
