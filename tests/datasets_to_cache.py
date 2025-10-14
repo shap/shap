@@ -34,16 +34,6 @@ SKLEARN_FETCH_DATASETS = [
     },
 ]
 
-# Sklearn datasets that are bundled (no download, but we load them to ensure they work)
-SKLEARN_LOAD_DATASETS = [
-    "load_breast_cancer",
-    "load_digits",
-    "load_iris",
-    "load_wine",
-    "load_diabetes",
-    "load_linnerud",
-]
-
 
 def download_all_datasets():
     """Download all datasets used in tests."""
@@ -68,16 +58,6 @@ def download_all_datasets():
             kwargs_str = ", ".join(f"{k}={v}" for k, v in dataset_config["kwargs"].items())
             print(f"  - {dataset_config['name']}({kwargs_str})...", end=" ")
             dataset_func(**dataset_config["kwargs"])
-            print("✓")
-        except Exception as e:
-            print(f"✗ (Error: {e})")
-
-    print("\nLoading sklearn bundled datasets...")
-    for dataset_name in SKLEARN_LOAD_DATASETS:
-        try:
-            dataset_func = getattr(sklearn_datasets, dataset_name)
-            print(f"  - {dataset_name}...", end=" ")
-            dataset_func()
             print("✓")
         except Exception as e:
             print(f"✗ (Error: {e})")

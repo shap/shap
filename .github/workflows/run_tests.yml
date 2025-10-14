@@ -38,20 +38,18 @@ jobs:
           uv pip install --system '.[test,plots]'
       - name: Pre-download datasets
         run: python tests/datasets_to_cache.py
-      - name: Upload scikit-learn data
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          ls -la /tmp/test_data_cache/
+      - name: Upload cached datasets
         uses: actions/upload-artifact@v4
         with:
-          name: sklearn-data
-          path: ~/scikit_learn_data
+          name: test-data-cache
+          path: /tmp/test_data_cache
           retention-days: 1
-          if-no-files-found: warn
-      - name: Upload shap cached data
-        uses: actions/upload-artifact@v4
-        with:
-          name: shap-cached-data
-          path: shap/cached_data
-          retention-days: 1
-          if-no-files-found: warn
 
   run_tests:
     needs: prepare_data
@@ -69,16 +67,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Download pre-cached sklearn datasets
+      - name: Download pre-cached datasets
         uses: actions/download-artifact@v4
         with:
-          name: sklearn-data
-          path: ~/scikit_learn_data
-      - name: Download pre-cached shap datasets
-        uses: actions/download-artifact@v4
-        with:
-          name: shap-cached-data
-          path: shap/cached_data
+          name: test-data-cache
+          path: /tmp/test_data_cache
+      - name: Restore datasets to correct locations
+        run: |
+          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          cp -r /tmp/test_data_cache/cached_data shap/cached_data || true
+          ls -la ~/scikit_learn_data/ || echo "No sklearn data"
+          ls -la shap/cached_data/ || echo "No shap data"
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
