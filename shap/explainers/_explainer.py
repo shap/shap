@@ -8,8 +8,6 @@ import scipy.sparse
 from .. import explainers, links, maskers, models
 from .._explanation import Explanation
 from .._serializable import Deserializer, Serializable, Serializer
-from ..maskers import Masker
-from ..models import Model
 from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
 from ..utils.transformers import is_transformers_lm
@@ -505,11 +503,14 @@ class Explainer(Serializable):
         super().save(out_file)
         with Serializer(out_file, "shap.Explainer", version=0) as s:
             s.save("model", self.model, model_saver)
-            s.save("masker", self.masker, masker_saver)
+            if hasattr(self, "masker"):
+                s.save("masker", self.masker, masker_saver)
+            if hasattr(self, "data"):
+                s.save("data", self.data)
             s.save("link", self.link)
 
     @classmethod
-    def load(cls, in_file, model_loader=Model.load, masker_loader=Masker.load, instantiate=True):
+    def load(cls, in_file, model_loader=None, masker_loader=None, instantiate=True):
         """Load an Explainer from the given file stream.
 
         Parameters
@@ -523,7 +524,10 @@ class Explainer(Serializable):
         kwargs = super().load(in_file, instantiate=False)
         with Deserializer(in_file, "shap.Explainer", min_version=0, max_version=0) as s:
             kwargs["model"] = s.load("model", model_loader)
-            kwargs["masker"] = s.load("masker", masker_loader)
+            if cls.__name__ == "KernelExplainer":
+                kwargs["data"] = s.load("data")
+            else:
+                kwargs["masker"] = s.load("masker", masker_loader)
             kwargs["link"] = s.load("link")
         return kwargs
 

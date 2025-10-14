@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system '.[test,plots,test_notebooks]'
+          uv pip install --system '.[test,plots,test_notebooks,nbtest]'
       - name: Run notebooks
         run: |
           python scripts/run_notebooks_timeouts.py

@@ -8,6 +8,8 @@ import sklearn
 
 import shap
 
+from . import common
+
 
 def sigm(x):
     return np.exp(x) / (1 + np.exp(x))
@@ -386,3 +388,8 @@ def test_explainer_non_number_dtype(dt):
     explainer = shap.KernelExplainer(model=rf.predict_proba, data=X, random_state=seed)
     shap_values = explainer(X)
     np.testing.assert_allclose(shap_values.values.max(), 0.26548, rtol=1e-2)
+
+
+def test_serialization():
+    model, data = common.basic_sklearn_scenario()
+    common.test_serialization(shap.explainers.KernelExplainer, model.predict, data, data)
