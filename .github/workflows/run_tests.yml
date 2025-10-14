@@ -23,15 +23,95 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  prepare_data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade uv
+          uv pip install --system '.[test,plots]'
+      - name: Pre-download datasets
+        run: |
+          python -c "
+          import shap
+          from sklearn.datasets import (
+              fetch_california_housing,
+              fetch_20newsgroups,
+              load_breast_cancer,
+              load_digits,
+              load_iris,
+              load_wine,
+              load_diabetes,
+              load_linnerud
+          )
+
+          # Fetch sklearn datasets that download data
+          fetch_california_housing()
+          fetch_20newsgroups(subset='train', categories=['alt.atheism', 'talk.religion.misc'])
+          fetch_20newsgroups(subset='test', categories=['alt.atheism', 'talk.religion.misc'])
+
+          # Load datasets that are bundled with sklearn (no download needed)
+          load_breast_cancer()
+          load_digits()
+          load_iris()
+          load_wine()
+          load_diabetes()
+          load_linnerud()
+
+          # Pre-download shap datasets that fetch from URLs
+          try:
+              shap.datasets.imagenet50()
+          except:
+              pass
+          try:
+              shap.datasets.imdb()
+          except:
+              pass
+          try:
+              shap.datasets.adult()
+          except:
+              pass
+          try:
+              shap.datasets.nhanesi()
+          except:
+              pass
+          try:
+              shap.datasets.a1a()
+          except:
+              pass
+          try:
+              shap.datasets.rank()
+          except:
+              pass
+          try:
+              shap.datasets.communitiesandcrime()
+          except:
+              pass
+          "
+      - name: Upload scikit-learn data
+        uses: actions/upload-artifact@v4
+        with:
+          name: sklearn-data
+          path: ~/scikit_learn_data
+          retention-days: 1
+          if-no-files-found: warn
+      - name: Upload shap cached data
+        uses: actions/upload-artifact@v4
+        with:
+          name: shap-cached-data
+          path: shap/cached_data
+          retention-days: 1
+          if-no-files-found: warn
+
   run_tests:
-    strategy:
-      matrix:
-        os: ["macos-latest"]
-        # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        extras: ["test"]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
+    needs: prepare_data
+    runs-on: macos-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
@@ -41,10 +121,20 @@ jobs:
           filters: |
             js:
               - 'javascript/**'
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
+      - name: Download pre-cached sklearn datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: sklearn-data
+          path: ~/scikit_learn_data
+      - name: Download pre-cached shap datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: shap-cached-data
+          path: shap/cached_data
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
