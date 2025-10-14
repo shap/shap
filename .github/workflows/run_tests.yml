@@ -150,13 +150,12 @@ jobs:
           npm run build
           cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
-        if: matrix.os == 'macos-latest'
         run: brew install libomp
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system '.[${{ matrix.extras }},plots]'
+          uv pip install --system '.[test,plots]'
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
       - name: Test with pytest
@@ -172,7 +171,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
+          name: mpl-results-3.12-macOS-test
           path: mpl-results/
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
