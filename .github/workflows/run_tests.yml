@@ -116,17 +116,29 @@ jobs:
           name: test-data-cache
           path: /tmp/test_data_cache
       - name: Restore datasets to correct locations
+        shell: bash
         run: |
           # Restore sklearn data
-          cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp -r /d/a/_temp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          else
+            cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          fi
+
           # Restore shap cached data to the installed package location
           SHAP_CACHE_DIR=$(python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
           mkdir -p "$SHAP_CACHE_DIR"
-          cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" || true
+
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp -r /d/a/_temp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+          else
+            cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+          fi
+
           echo "Sklearn data:"
-          ls -la ~/scikit_learn_data/ || echo "No sklearn data"
+          ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
           echo "Shap cache data:"
-          ls -la "$SHAP_CACHE_DIR" || echo "No shap data"
+          ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"
