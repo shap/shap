@@ -23,6 +23,7 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  # we need this test since we run into 403 errors on MacOS, see GH #4179
   prepare_data:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -53,7 +54,27 @@ jobs:
 
   run_tests:
     needs: prepare_data
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        # The total number of matrix jobs should match codecov.yml `after_n_builds`.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        extras: ["test"]
+        include:
+          # Test on windows/mac, just one job each
+          - os: windows-latest
+            python-version: "3.12"
+            extras: "test"
+          - os: macos-latest
+            python-version: "3.12"
+            extras: "test"
+          # Run tests with only the core dependencies, to ensure we
+          # cover the latest version of numpy/pandas. See GH dsgibbons#46
+          - os: ubuntu-latest
+            python-version: "3.12"
+            extras: "test-core"
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
@@ -63,10 +84,10 @@ jobs:
           filters: |
             js:
               - 'javascript/**'
-      - name: Set up Python 3.12
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       # Build JavaScript bundle if JS files have changed
       - name: Set up Node.js
         if: steps.filter.outputs.js == 'true'
@@ -82,12 +103,13 @@ jobs:
           npm run build
           cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
+        if: matrix.os == 'macos-latest'
         run: brew install libomp
       - name: Install dependencies
         # Do regular install NOT editable install: see GH #3020
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system '.[test,plots]'
+          uv pip install --system '.[${{ matrix.extras }},plots]'
       - name: Download pre-cached datasets
         uses: actions/download-artifact@v4
         with:
@@ -118,7 +140,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: mpl-results-3.12-macOS-test
+          name: mpl-results-${{ matrix.python-version }}-${{ runner.os }}-${{ matrix.extras }}
           path: mpl-results/
           if-no-files-found: ignore
       - name: Upload coverage to Codecov
