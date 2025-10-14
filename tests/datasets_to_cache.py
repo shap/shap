@@ -4,6 +4,21 @@ Configuration file listing all datasets used in tests.
 This file is used by the CI pipeline to pre-download datasets before running tests.
 """
 
+from __future__ import annotations
+
+from typing import TypedDict
+
+
+class DictKwargs(TypedDict, total=False):
+    subset: str
+    categories: list[str]
+
+
+class Dataset(TypedDict):
+    name: str
+    kwargs: DictKwargs
+
+
 # Shap datasets that download from URLs
 SHAP_DATASETS = [
     "imagenet50",
@@ -19,7 +34,7 @@ SHAP_DATASETS = [
 ]
 
 # Sklearn datasets that need to be fetched (download from internet)
-SKLEARN_FETCH_DATASETS = [
+SKLEARN_FETCH_DATASETS: list[Dataset] = [
     {
         "name": "fetch_california_housing",
         "kwargs": {},
