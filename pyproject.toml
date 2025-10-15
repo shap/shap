@@ -15,7 +15,7 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-  'numpy>2',
+  'numpy>=2',
   'scipy',
   'scikit-learn',
   'pandas',
@@ -86,14 +86,14 @@ test = [
   "transformers",  # TODO: pending 3.13 support, fix once tests pass for 4.54.0
   "tf-keras",
   "protobuf",  # See GH #3046
-  "torch",  # TODO: pending 3.13 support
+  "torch; python_version <= 3.13",  # TODO: pending 3.13 support
   "torchvision",  # TODO: pending 3.13 support
   "tensorflow",  # TODO: pending 3.13 support
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
-  "numpy>2.0",
+  "numpy>=2.0",
   "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
   "causalml",
   "selenium",  # needed to test the javascript based plots

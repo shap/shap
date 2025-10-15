@@ -123,7 +123,7 @@ jobs:
         run: |
           # Restore sklearn data
           if [ "$RUNNER_OS" == "Windows" ]; then
-            cp -r /d/a/_temp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+            cp -r /d/tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
           else
             cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
           fi
