@@ -85,7 +85,7 @@ test = [
   "pyod",
   "transformers",  # TODO: pending 3.13 support, fix once tests pass for 4.54.0
   "tf-keras",
-  "protobuf==3.20.3",  # See GH #3046
+  "protobuf",  # See GH #3046
   "torch",  # TODO: pending 3.13 support
   "torchvision",  # TODO: pending 3.13 support
   "tensorflow",  # TODO: pending 3.13 support
