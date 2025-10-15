@@ -8,6 +8,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  # we need this test since we run into 403 errors on MacOS, see GH #4179
+  prepare_data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies for dataset download
+        run: |
+          python -m pip install --upgrade uv
+          uv pip install --system '.[download_datasets]'
+      - name: Pre-download datasets
+        run: python tests/datasets_to_cache.py
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          ls -la /tmp/test_data_cache/
+      - name: Upload cached datasets
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+          retention-days: 1
+
   generate-wheels-matrix:
     # Create a matrix of all architectures & versions to build.
     # This enables the next step to run cibuildwheel in parallel.
@@ -39,7 +68,7 @@ jobs:
 
   build_wheels:
     name: Build ${{ matrix.only }}
-    needs: generate-wheels-matrix
+    needs: [generate-wheels-matrix, prepare_data]
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +87,12 @@ jobs:
       - name: Fetch all tags
         run: git fetch --tags
 
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data-cache
+          path: ${{ runner.temp }}/test_data_cache
+
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
@@ -68,6 +103,16 @@ jobs:
         uses: pypa/cibuildwheel@v2.23.3
         with:
           only: ${{ matrix.only }}
+        env:
+          # Pass the cache location to cibuildwheel tests
+          CIBW_BEFORE_TEST: |
+            python -c "import os, shutil; cache_path = os.environ.get('CACHE_PATH', '${{ runner.temp }}/test_data_cache'); home = os.path.expanduser('~'); sklearn_cache = os.path.join(home, 'scikit_learn_data'); os.makedirs(sklearn_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'scikit_learn_data'), sklearn_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'scikit_learn_data')) else None"
+          CIBW_TEST_COMMAND_MACOS: |
+            python -c "import shap, os, shutil; cache_path = '${{ runner.temp }}/test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
+          CIBW_TEST_COMMAND_LINUX: |
+            python -c "import shap, os, shutil; cache_path = '${{ runner.temp }}/test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
+          CIBW_TEST_COMMAND_WINDOWS: |
+            python -c "import shap, os, shutil; cache_path = r'${{ runner.temp }}\test_data_cache'; shap_cache = os.path.join(os.path.dirname(shap.__file__), 'cached_data'); os.makedirs(shap_cache, exist_ok=True); shutil.copytree(os.path.join(cache_path, 'cached_data'), shap_cache, dirs_exist_ok=True) if os.path.exists(os.path.join(cache_path, 'cached_data')) else None" && pytest -v {project}/tests --import-mode=append
 
       - uses: actions/upload-artifact@v4
         with:

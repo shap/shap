@@ -47,6 +47,11 @@ dynamic = ["version"]
 [project.optional-dependencies]
 plots = ["matplotlib", "ipython"]
 others = ["lime"]
+download_datasets = [
+  # Dependencies needed to download datasets for testing
+  # scikit-learn is already in core dependencies, but listed here for clarity
+  "scikit-learn",
+]
 docs = [
   "matplotlib",
   "ipython",
