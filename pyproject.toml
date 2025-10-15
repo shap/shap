@@ -22,7 +22,8 @@ dependencies = [
   'tqdm>=4.27.0',
   'packaging>20.9',
   'slicer==0.0.8',
-  'numba>=0.54',
+  'numba==0.63.0b1; python_version >= "3.14"',  # todo: remove once numba officially releases support for 3.14
+  'numba>=0.54; python_version < "3.14"',
   'cloudpickle',
   'typing-extensions',
 ]
