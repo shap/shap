@@ -115,6 +115,9 @@ jobs:
         with:
           name: test-data-cache
           path: /tmp/test_data_cache
+      - name: Setup tmate session (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: mxschmitt/action-tmate@v3
       - name: Restore datasets to correct locations
         shell: bash
         run: |
