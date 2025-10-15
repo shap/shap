@@ -78,17 +78,17 @@ test = [
   "pytest-cov",
   "xgboost",
   "lightgbm",
-  'catboost; python_version < "3.14"',  # TODO: pending 3.13 support
-  "gpboost<=1.6.1",  # TODO: can be relaxed once https://github.com/fabsig/GPBoost/issues/165 is solved
+  'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
+  'gpboost; python_version < "3.14"',  # TODO: pending 3.14 support
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers",  # TODO: pending 3.13 support, fix once tests pass for 4.54.0
+  "transformers < 4.54.0",  # TODO: fix once tests pass for 4.54.0
   "tf-keras",
   "protobuf",  # See GH #3046
-  'torch; python_version < "3.14"',  # TODO: pending 3.13 support
-  'torchvision; python_version < "3.14"',  # TODO: pending 3.13 support
-  'tensorflow; python_version < "3.14"',  # TODO: pending 3.13 support
+  'torch; python_version < "3.14"',  # TODO: pending 3.14 support
+  'torchvision; python_version < "3.14"',  # TODO: pending 3.14 support
+  'tensorflow; python_version < "3.14"',  # TODO: pending 3.14 support
   "sentencepiece",
   "opencv-python",
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
