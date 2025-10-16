@@ -48,6 +48,11 @@ dynamic = ["version"]
 [project.optional-dependencies]
 plots = ["matplotlib", "ipython"]
 others = ["lime"]
+download_datasets = [
+  # Dependencies needed to download datasets for testing
+  # scikit-learn is already in core dependencies, but listed here for clarity
+  "scikit-learn",
+]
 docs = [
   "matplotlib",
   "ipython",
@@ -73,15 +78,14 @@ test = [
   "xgboost",
   "lightgbm",
   "catboost; python_version < '3.13'",  # TODO: pending 3.13 support
-  "gpboost",
+  "gpboost<=1.6.1",  # TODO: can be relaxed once https://github.com/fabsig/GPBoost/issues/165 is solved
   "ngboost",
   "pyspark",
   "pyod",
-  "transformers; python_version < '3.13'",  # TODO: pending 3.13 support
+  "transformers < 4.54.0; python_version < '3.13'",  # TODO: pending 3.13 support, fix once tests pass for 4.54.0
   "tf-keras; python_version < '3.13'",
   "protobuf==3.20.3",  # See GH #3046
-  "torch==2.2.0; sys_platform == 'darwin' and python_version < '3.13'",  # see GH #3524
-  "torch; sys_platform != 'darwin' and python_version < '3.13'",  # TODO: pending 3.13 support
+  "torch; python_version < '3.13'",  # TODO: pending 3.13 support
   "torchvision; python_version < '3.13'",  # TODO: pending 3.13 support
   "tensorflow; python_version < '3.13'",  # TODO: pending 3.13 support
   "sentencepiece",
@@ -89,6 +93,7 @@ test = [
   # Constraint to prevent the combination of tf<2.15 and numpy>=2.0.
   # See GH #3707, #3768, 3922
   "numpy<2.0",
+  "scikit-learn<=1.6.1",  # needed since causalml doesn't support scikit-learn 1.7.0 and above as of 2025-06-11
   "causalml",
   "selenium",  # needed to test the javascript based plots
 ]
@@ -101,6 +106,12 @@ test_notebooks = [
   "transformers",
   "datasets",
   "keras",
+]
+
+nbtest = [
+  "nbtest-plugin",
+  "nbtest-gen",
+  "nbtest-lab-extension"
 ]
 
 [project.urls]

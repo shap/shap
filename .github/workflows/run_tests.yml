@@ -12,6 +12,7 @@ on:
       - "shap/**"
       - "tests/**"
       - "data/**"
+      - "javascript/**"  # Include JS changes that affect bundle.js
       - ".github/workflows/run_tests.yml"
       - "pyproject.toml"
       - "setup.py"
@@ -22,7 +23,37 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  # we need this test since we run into 403 errors on MacOS, see GH #4179
+  prepare_data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies for dataset download
+        run: |
+          python -m pip install --upgrade uv
+          uv pip install --system '.[download_datasets]'
+      - name: Pre-download datasets
+        run: python tests/datasets_to_cache.py
+      - name: Create unified cache directory
+        run: |
+          mkdir -p /tmp/test_data_cache
+          cp -r ~/scikit_learn_data /tmp/test_data_cache/ || true
+          cp -r shap/cached_data /tmp/test_data_cache/ || true
+          ls -la /tmp/test_data_cache/
+      - name: Upload cached datasets
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+          retention-days: 1
+
   run_tests:
+    needs: prepare_data
     strategy:
       matrix:
         os: ["ubuntu-latest"]
@@ -47,10 +78,30 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - 'javascript/**'
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # Build JavaScript bundle if JS files have changed
+      - name: Set up Node.js
+        if: steps.filter.outputs.js == 'true'
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/Hydrogen
+      - name: Build JavaScript bundle conditionally
+        if: steps.filter.outputs.js == 'true'
+        shell: bash
+        run: |
+          cd javascript
+          npm ci
+          npm run build
+          cp build/bundle.js ../shap/plots/resources/bundle.js
       - name: Install libomp (macOS)
         if: matrix.os == 'macos-latest'
         run: brew install libomp
@@ -59,6 +110,35 @@ jobs:
         run: |
           python -m pip install --upgrade uv
           uv pip install --system '.[${{ matrix.extras }},plots]'
+      - name: Download pre-cached datasets
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data-cache
+          path: /tmp/test_data_cache
+      - name: Restore datasets to correct locations
+        shell: bash
+        run: |
+          # Restore sklearn data
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp -r /d/a/_temp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          else
+            cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+          fi
+
+          # Restore shap cached data to the installed package location
+          SHAP_CACHE_DIR=$(python -c "import shap, os; print(os.path.join(os.path.dirname(shap.__file__), 'cached_data'))")
+          mkdir -p "$SHAP_CACHE_DIR"
+
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp -r /d/a/_temp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+          else
+            cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+          fi
+
+          echo "Sklearn data:"
+          ls -la ~/scikit_learn_data/ 2>/dev/null || echo "No sklearn data"
+          echo "Shap cache data:"
+          ls -la "$SHAP_CACHE_DIR" 2>/dev/null || echo "No shap data"
       - name: Test with pytest
         # Ensure we avoid adding current working directory to sys.path:
         # - Use "pytest" over "python -m pytest"

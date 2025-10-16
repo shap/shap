@@ -321,6 +321,19 @@ void dense_tree_shap_gpu(const TreeEnsemble &trees,
                          const ExplanationDataset &data, tfloat *out_contribs,
                          const int feature_dependence, unsigned model_transform,
                          bool interactions) {
+  // Check for categorical features
+  bool has_categorical = false;
+  for (unsigned i = 0; i < trees.tree_limit * trees.max_nodes; i++) {
+    if (trees.threshold_types[i] != 0) {
+      has_categorical = true;
+      break;
+    }
+  }
+  if (has_categorical) {
+    std::cerr << "Warning: Categorical features detected. GPU TreeSHAP currently "
+                 "only supports numerical features. Results may be incorrect.\n";
+  }
+
   // see what transform (if any) we have
   transform_f transform = get_transform(model_transform);
 
