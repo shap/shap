@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, TypeAlias
 
 import matplotlib.pyplot as plt
 import numpy as np
-from typing_extensions import TypeAlias
 
 from .. import Explanation
 from ..utils import OpChain
@@ -240,7 +239,7 @@ def sort_inds(partition_tree, leaf_values, pos=None, inds=None):
 
 
 # Various ways to specify a desired axis limit in plots
-AxisLimitSpec: TypeAlias = Union[Explanation, str, float, None]
+AxisLimitSpec: TypeAlias = Explanation | str | float | None
 
 
 def parse_axis_limit(ax_limit: AxisLimitSpec, ax_values: np.ndarray, *, is_shap_axis: bool) -> float | None:
