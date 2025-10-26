@@ -7,6 +7,7 @@ import time
 import warnings
 from typing import Any
 
+import ast
 import numpy as np
 import pandas as pd
 import scipy.sparse
@@ -2101,13 +2102,21 @@ class XGBTreeModelLoader:
         # Accounts for number of classes, targets, forest size.
         self.n_trees_per_iter = int(diff[0])
         self.n_targets = n_targets
-        self.base_score = float(learner_model_param["base_score"])
         assert self.n_trees_per_iter > 0
 
         self.name_obj = objective["name"]
         self.name_gbm = booster["name"]
         # handle the link function.
-        base_score = float(learner_model_param["base_score"])
+        base_score = learner_model_param["base_score"]
+        if isinstance(base_score, str):
+            try:
+                base_score = ast.literal_eval(base_score)
+            except Exception:
+                pass
+        if isinstance(base_score, (list, tuple, np.ndarray)):
+            base_score = base_score[0]
+        base_score = float(base_score)
+        self.base_score = base_score
         if self.name_obj in ("binary:logistic", "reg:logistic"):
             self.base_score = scipy.special.logit(base_score)
         elif self.name_obj in (
