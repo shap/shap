@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import io
 import json
 import os
@@ -7,7 +8,6 @@ import time
 import warnings
 from typing import Any
 
-import ast
 import numpy as np
 import pandas as pd
 import scipy.sparse
