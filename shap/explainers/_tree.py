@@ -2112,7 +2112,7 @@ class XGBTreeModelLoader:
             try:
                 base_score = ast.literal_eval(base_score)
                 if not isinstance(base_score, (list, float, int, tuple, np.ndarray)):
-                    raise ValueError   
+                    raise ValueError
             except ValueError as e:
                 emsg = f"Expected the base_score to contain a list or float, received {base_score}"
                 raise ValueError(emsg) from e
