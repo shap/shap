@@ -1,4 +1,4 @@
-type TFloat = f64;
+pub type TFloat = f64;
 
 pub mod feature_dependence {
     pub const INDEPENDENT: u32 = 0;
@@ -60,3 +60,89 @@ impl TreeEnsemble {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct ExplanationDataset {
+    pub X: Vec<TFloat>,
+    pub X_missing: Vec<bool>,
+    pub y: Vec<TFloat>,
+    pub R: Vec<TFloat>,
+    pub R_missing: Vec<bool>,
+    pub num_X: u32,
+    pub M: u32,
+    pub num_R: u32,
+}
+
+impl ExplanationDataset {
+    #[inline]
+    pub fn get_X_instance(&self, instance_index: usize) -> &[TFloat] {
+        let start = instance_index * self.M as usize;
+        let end = start + self.M as usize;
+        &self.X[start..end]
+    }
+}
+
+
+#[derive(Debug, Clone, Copy)]
+pub struct PathElement {
+    pub feature_index: i32,
+    pub zero_fraction: TFloat,
+    pub one_fraction: TFloat,
+    pub pweight: TFloat,
+}
+
+impl PathElement {
+    #[inline]
+    pub fn new(feature_index: i32, zero_fraction: TFloat, one_fraction: TFloat, pweight: TFloat) -> Self {
+        PathElement {
+            feature_index,
+            zero_fraction,
+            one_fraction,
+            pweight,
+        }
+    }
+}
+
+// Model transformation types
+pub mod model_transform {
+    pub const IDENTITY: u32 = 0;
+    pub const LOGISTIC: u32 = 1;
+    pub const LOGISTIC_NLOGLOSS: u32 = 2;
+    pub const SQUARED_LOSS: u32 = 3;
+}
+
+// Transform functions
+#[inline]
+pub fn logistic_transform(margin: TFloat, _y: TFloat) -> TFloat {
+    1.0 / (1.0 + (-margin).exp())
+}
+
+#[inline]
+pub fn logistic_nlogloss_transform(margin: TFloat, y: TFloat) -> TFloat {
+    (1.0 + margin.exp()).ln() - y * margin
+}
+
+#[inline]
+pub fn squared_loss_transform(margin: TFloat, y: TFloat) -> TFloat {
+    (margin - y) * (margin - y)
+}
+
+pub type TransformFn = fn(TFloat, TFloat) -> TFloat;
+
+#[inline]
+pub fn get_transform(model_transform: u32) -> Option<TransformFn> {
+    match model_transform {
+        model_transform::LOGISTIC => Some(logistic_transform),
+        model_transform::LOGISTIC_NLOGLOSS => Some(logistic_nlogloss_transform),
+        model_transform::SQUARED_LOSS => Some(squared_loss_transform),
+        _ => None,
+    }
+}
+
+// Helper function for categorical thresholds
+#[inline]
+pub fn category_in_threshold(threshold: TFloat, category: TFloat) -> bool {
+    let category_flag = 1 << (category as i32 - 1);
+    (threshold as i32 & category_flag) != 0
+}
+
