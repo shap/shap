@@ -2101,13 +2101,30 @@ class XGBTreeModelLoader:
         # Accounts for number of classes, targets, forest size.
         self.n_trees_per_iter = int(diff[0])
         self.n_targets = n_targets
-        self.base_score = float(learner_model_param["base_score"])
+
+        # Handle base_score - can be a float or array string like '[2.0693364E0]' or '[3.3E-1,3.3E-1,3.3E-1]'
+        base_score_raw = learner_model_param["base_score"]
+        if isinstance(base_score_raw, str) and base_score_raw.startswith('['):
+            # Parse array format
+            import re
+            # Remove brackets and split by comma
+            scores_str = base_score_raw.strip('[]')
+            if ',' in scores_str:
+                # Multi-class case: '[3.3E-1,3.3E-1,3.3E-1]' -> take first value
+                self.base_score = float(scores_str.split(',')[0])
+            else:
+                # Single value case: '[2.0693364E0]' -> 2.0693364
+                self.base_score = float(scores_str)
+        else:
+            self.base_score = float(base_score_raw)
+
         assert self.n_trees_per_iter > 0
 
         self.name_obj = objective["name"]
         self.name_gbm = booster["name"]
         # handle the link function.
-        base_score = float(learner_model_param["base_score"])
+        # Use the already parsed self.base_score from above
+        base_score = self.base_score
         if self.name_obj in ("binary:logistic", "reg:logistic"):
             self.base_score = scipy.special.logit(base_score)
         elif self.name_obj in (
