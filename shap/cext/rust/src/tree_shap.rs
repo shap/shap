@@ -1,4 +1,5 @@
 use crate::types::*;
+use rayon::prelude::*;
 
 /// Extend the decision path with a fraction of one and zero extensions
 #[inline]
@@ -357,56 +358,59 @@ pub fn dense_tree_predict(
     }
 }
 
-/// Dense tree path dependent SHAP computation
+/// Dense tree path dependent SHAP computation (multi-threaded)
 pub fn dense_tree_path_dependent(
     trees: &TreeEnsemble,
     data: &ExplanationDataset,
     out_contribs: &mut [TFloat],
     _model_transform: u32,
 ) {
-    // Build explanation for each sample
-    for i in 0..data.num_X as usize {
-        let contrib_offset = i * (data.M as usize + 1) * trees.num_outputs as usize;
-        let instance_out_contribs = &mut out_contribs[contrib_offset..];
+    // Calculate chunk size for each sample's output
+    let chunk_size = (data.M as usize + 1) * trees.num_outputs as usize;
 
-        // Create instance view
-        let instance = ExplanationDataset {
-            X: data.X[i * data.M as usize..(i + 1) * data.M as usize].to_vec(),
-            X_missing: data.X_missing[i * data.M as usize..(i + 1) * data.M as usize].to_vec(),
-            y: if data.y.is_empty() { vec![] } else { vec![data.y[i]] },
-            R: data.R.clone(),
-            R_missing: data.R_missing.clone(),
-            num_X: 1,
-            M: data.M,
-            num_R: data.num_R,
-        };
-
-        // Aggregate the effect of explaining each tree
-        for j in 0..trees.tree_limit as usize {
-            // Create a single-tree ensemble for this tree
-            let tree_ensemble = TreeEnsemble {
-                children_left: trees.children_left[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                children_right: trees.children_right[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                children_default: trees.children_default[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                features: trees.features[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                thresholds: trees.thresholds[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                thresholds_types: trees.thresholds_types[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                values: trees.values[j * trees.max_nodes as usize * trees.num_outputs as usize..(j + 1) * trees.max_nodes as usize * trees.num_outputs as usize].to_vec(),
-                node_sample_weights: trees.node_sample_weights[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
-                max_depth: trees.max_depth,
-                tree_limit: 1,
-                base_offset: trees.base_offset.clone(),
-                max_nodes: trees.max_nodes,
-                num_outputs: trees.num_outputs,
+    // Build explanation for each sample IN PARALLEL
+    out_contribs
+        .par_chunks_mut(chunk_size)
+        .enumerate()
+        .for_each(|(i, instance_out_contribs)| {
+            // Create instance view for this sample
+            let instance = ExplanationDataset {
+                X: data.X[i * data.M as usize..(i + 1) * data.M as usize].to_vec(),
+                X_missing: data.X_missing[i * data.M as usize..(i + 1) * data.M as usize].to_vec(),
+                y: if data.y.is_empty() { vec![] } else { vec![data.y[i]] },
+                R: data.R.clone(),
+                R_missing: data.R_missing.clone(),
+                num_X: 1,
+                M: data.M,
+                num_R: data.num_R,
             };
-            tree_shap(&tree_ensemble, &instance, instance_out_contribs, 0, 0);
-        }
 
-        // Apply the base offset to the bias term
-        for j in 0..trees.num_outputs as usize {
-            instance_out_contribs[data.M as usize * trees.num_outputs as usize + j] += trees.base_offset[j];
-        }
-    }
+            // Aggregate the effect of explaining each tree
+            for j in 0..trees.tree_limit as usize {
+                // Create a single-tree ensemble for this tree
+                let tree_ensemble = TreeEnsemble {
+                    children_left: trees.children_left[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    children_right: trees.children_right[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    children_default: trees.children_default[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    features: trees.features[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    thresholds: trees.thresholds[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    thresholds_types: trees.thresholds_types[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    values: trees.values[j * trees.max_nodes as usize * trees.num_outputs as usize..(j + 1) * trees.max_nodes as usize * trees.num_outputs as usize].to_vec(),
+                    node_sample_weights: trees.node_sample_weights[j * trees.max_nodes as usize..(j + 1) * trees.max_nodes as usize].to_vec(),
+                    max_depth: trees.max_depth,
+                    tree_limit: 1,
+                    base_offset: trees.base_offset.clone(),
+                    max_nodes: trees.max_nodes,
+                    num_outputs: trees.num_outputs,
+                };
+                tree_shap(&tree_ensemble, &instance, instance_out_contribs, 0, 0);
+            }
+
+            // Apply the base offset to the bias term
+            for j in 0..trees.num_outputs as usize {
+                instance_out_contribs[data.M as usize * trees.num_outputs as usize + j] += trees.base_offset[j];
+            }
+        });
 }
 
 /// Main entry point for dense tree SHAP computation
