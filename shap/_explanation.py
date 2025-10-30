@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import copy
 import operator
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,9 @@ from .utils._exceptions import DimensionError
 from .utils._general import OpChain
 
 op_chain_root = OpChain("shap.Explanation")
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass

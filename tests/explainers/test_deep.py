@@ -250,6 +250,7 @@ def test_tf_keras_imdb_lstm(random_seed):
 )
 def test_tf_deep_imbdb_transformers():
     # GH 3522
+    pytest.importorskip("torch")
     transformers = pytest.importorskip("transformers")
 
     from shap import models
