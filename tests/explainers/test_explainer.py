@@ -26,7 +26,6 @@ def test_explainer_to_permutationexplainer():
         _ = explainer(X_test)
 
 
-
 def test_transformers_label_to_id_mapping_enforces_ints():
     """This tests that when we construct our TransformersPipeline, we enforce that label2id values are ints."""
     pytest.importorskip("torch")
