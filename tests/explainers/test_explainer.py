@@ -43,6 +43,7 @@ def test_transformers_label_to_id_mapping_enforces_ints():
     explainer = shap.Explainer(pipe, seed=1)
 
     # Check that the label2id values are all ints after construction
+    assert isinstance(explainer.model, shap.models.TransformersPipeline)
     assert all(isinstance(v, int) for v in explainer.model.label2id.values())
 
 
