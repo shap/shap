@@ -45,6 +45,26 @@ def test_wrapping_for_text_to_text_teacher_forcing_model():
     assert shap.utils.safe_isinstance(explainer.masker, "shap.maskers.OutputComposite")
 
 
+def test_transformers_label_to_id_mapping_enforces_ints():
+    """This tests that when we construct our TransformersPipeline, we enforce that label2id values are ints."""
+    pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+
+    name = "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
+    pipe = transformers.pipeline("text-classification", name)
+
+    # Make the model label2id mapping have str values
+    # to test that our TransformersPipeline converts them to int
+    pipe.model.config.label2id = {k: str(v) for k, v in pipe.model.config.label2id.items()}
+
+    # Finish constructing the Explainer
+    explainer = shap.Explainer(pipe, seed=1)
+
+    # Check that the label2id values are all ints after construction
+    assert isinstance(explainer.model, shap.models.TransformersPipeline)
+    assert all(isinstance(v, int) for v in explainer.model.label2id.values())
+
+
 def test_wrapping_for_topk_lm_model():
     """This tests using the Explainer class to auto wrap a masker in a language modelling scenario."""
     pytest.importorskip("torch")
