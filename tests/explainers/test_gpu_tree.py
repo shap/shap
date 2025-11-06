@@ -231,6 +231,11 @@ def test_gpu_tree_explainer_shap(task, feature_perturbation):
     host_shap = ex.shap_values(X, check_additivity=True)
     gpu_shap = gpu_ex.shap_values(X, check_additivity=True)
 
+    # todo: this should actually happen in the GPUTreeExplainer
+    if np.array(gpu_shap).ndim == 3:
+        gpu_shap = np.moveaxis(np.array(gpu_shap), [0, 1, 2], [2, 0, 1])
+    else:
+        gpu_shap = np.array(gpu_shap, copy=False)
     # Check outputs roughly the same as CPU algorithm
     assert np.allclose(ex.expected_value, gpu_ex.expected_value, 1e-3, 1e-3)
     assert np.allclose(host_shap, gpu_shap, 1e-3, 1e-3)
@@ -243,14 +248,7 @@ def test_gpu_tree_explainer_shap_interactions(task, feature_perturbation):
     ex = shap.GPUTreeExplainer(model, X, feature_perturbation=feature_perturbation)
     shap_values = np.array(ex.shap_interaction_values(X), copy=False)
 
-    assert (
-        np.abs(
-            np.sum(shap_values, axis=(len(shap_values.shape) - 1, len(shap_values.shape) - 2)).T
-            + ex.expected_value
-            - margin
-        ).max()
-        < 1e-4
-    ), "SHAP values don't sum to model output!"
+    assert np.allclose(np.sum(shap_values, axis=(1, 2)) + ex.expected_value, margin, atol=1e-4)
 
 
 @pytest.mark.xfail(reason="Categorical features not correctly implemented for GPU TreeSHAP")
