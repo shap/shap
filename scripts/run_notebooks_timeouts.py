@@ -34,7 +34,7 @@ allow_to_fail = [
     Path("tabular_examples/tree_based_models/tree_shap_paper/Tree SHAP in Python.ipynb"),
     Path("tabular_examples/model_agnostic/Squashing Effect.ipynb"),
     Path("tabular_examples/model_agnostic/Simple Kernel SHAP.ipynb"),
-    Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb")
+    Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
 ]
 
 allow_to_timeout = [
@@ -71,7 +71,7 @@ allow_to_timeout = [
     Path("text_examples/translation/Machine Translation Explanations.ipynb"),
     Path("tabular_examples/model_agnostic/Squashing Effect.ipynb"),
     Path("tabular_examples/model_agnostic/Simple Kernel SHAP.ipynb"),
-    Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb")
+    Path("tabular_examples/model_agnostic/Census income classification with scikit-learn.ipynb"),
 ]
 
 
