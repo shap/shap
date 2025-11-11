@@ -58,20 +58,20 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         # The total number of matrix jobs should match codecov.yml `after_n_builds`.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         extras: ["test"]
         include:
           # Test on windows/mac, just one job each
           - os: windows-latest
-            python-version: "3.12"
+            python-version: "3.13"
             extras: "test"
           - os: macos-latest
-            python-version: "3.12"
+            python-version: "3.13"
             extras: "test"
           # Run tests with only the core dependencies, to ensure we
           # cover the latest version of numpy/pandas. See GH dsgibbons#46
           - os: ubuntu-latest
-            python-version: "3.12"
+            python-version: "3.13"
             extras: "test-core"
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -120,7 +120,7 @@ jobs:
         run: |
           # Restore sklearn data
           if [ "$RUNNER_OS" == "Windows" ]; then
-            cp -r /d/a/_temp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
+            cp -r /d/tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
           else
             cp -r /tmp/test_data_cache/scikit_learn_data ~/scikit_learn_data || true
           fi
@@ -130,7 +130,7 @@ jobs:
           mkdir -p "$SHAP_CACHE_DIR"
 
           if [ "$RUNNER_OS" == "Windows" ]; then
-            cp -r /d/a/_temp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
+            cp -r /d/tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
           else
             cp -r /tmp/test_data_cache/cached_data/* "$SHAP_CACHE_DIR/" 2>/dev/null || true
           fi
@@ -161,7 +161,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test_oldest_supported_numpy:
-    # Package is built with numpy 2.X, and tested against numpy 1.X.
+    # Package is built with numpy 2.X
     # This job is recommended by https://numpy.org/doc/stable/dev/depending_on_numpy.html#numpy-2-0-specific-advice
     # The "oldest supported numpy" is determined by SPEC 0:
     # https://scientific-python.org/specs/spec-0000/
@@ -169,14 +169,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.9
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.12
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
-          uv pip install --system numpy==1.24.0 '.[test-core,plots]'
+          uv pip install --system numpy==2.0 '.[test-core,plots]'
       - name: Test with pytest
         run: pytest --durations=20 --import-mode=append
 
@@ -186,10 +186,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
