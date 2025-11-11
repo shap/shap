@@ -79,7 +79,7 @@ test = [
   "xgboost",
   "lightgbm",
   'catboost; python_version < "3.14"',  # TODO: pending 3.14 support
-  'gpboost; python_version < "3.14"',  # TODO: pending 3.14 support
+  'gpboost==1.6.3.1; python_version < "3.14"',  # TODO: pending 3.14 support
   "ngboost",
   "pyspark",
   "pyod",
