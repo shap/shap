@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
@@ -24,7 +25,9 @@ def __change_shap_base_value(base_value, new_base_value, shap_values) -> np.ndar
     # cube of shap_interaction_values
     main_effects = shap_values.shape[1]
     all_effects = main_effects * (main_effects + 1) // 2
-    temp = (base_value - new_base_value) / all_effects / 2  # divided by 2 because interaction effects are halved
+    temp = (
+        (base_value - new_base_value) / all_effects / 2
+    )  # divided by 2 because interaction effects are halved
     shap_values = shap_values + temp
     # Add the other half to the main effects on the diagonal
     idx = np.diag_indices_from(shap_values[0])
@@ -51,7 +54,7 @@ def __decision_plot_matplotlib(
     show,
     legend_labels,
     legend_location,
-):
+) -> Axes:
     """Matplotlib rendering for decision_plot()"""
     # image size
     row_height = 0.4
@@ -82,7 +85,11 @@ def __decision_plot_matplotlib(
     lines = []
     for i in range(cumsum.shape[0]):
         o = plt.plot(
-            cumsum[i, :], y_pos, color=m.to_rgba(cumsum[i, -1], alpha), linewidth=linewidth[i], linestyle=linestyle[i]
+            cumsum[i, :],
+            y_pos,
+            color=m.to_rgba(cumsum[i, -1], alpha),
+            linewidth=linewidth[i],
+            linestyle=linestyle[i],
         )
         lines.append(o[0])
 
@@ -141,7 +148,10 @@ def __decision_plot_matplotlib(
 
         # place the colorbar
         plt.ylim(0, feature_display_count + 0.25)
-        ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
+        ax_cb = ax.inset_axes(
+            (xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25),
+            transform=ax.transData,
+        )
         cb = plt.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
         cb.ax.tick_params(labelsize=11, length=0)
@@ -163,6 +173,8 @@ def __decision_plot_matplotlib(
 
     if show:
         plt.show()
+
+    return ax
 
 
 class DecisionPlotResult:
@@ -232,7 +244,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> DecisionPlotResult | None:
+) -> DecisionPlotResult | Axes:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -363,7 +375,9 @@ def decision(
 
     # validate shap_values
     if not isinstance(shap_values, np.ndarray):
-        raise TypeError("The shap_values arg is the wrong type. Try explainer.shap_values().")
+        raise TypeError(
+            "The shap_values arg is the wrong type. Try explainer.shap_values()."
+        )
 
     # calculate the various dimensions involved (observations, features, interactions, display, etc.
     if shap_values.ndim == 1:
@@ -399,7 +413,9 @@ def decision(
     if feature_names is None:
         feature_names = [labels["FEATURE"] % str(i) for i in range(feature_count)]
     elif len(feature_names) != feature_count:
-        raise ValueError("The feature_names arg must include all features represented in shap_values.")
+        raise ValueError(
+            "The feature_names arg must include all features represented in shap_values."
+        )
     elif not isinstance(feature_names, (list, np.ndarray)):
         raise TypeError("The feature_names arg requires a list or numpy array.")
 
@@ -409,14 +425,18 @@ def decision(
         triu_count = feature_count * (feature_count - 1) // 2
         idx_diag = np.diag_indices_from(shap_values[0])
         idx_triu = np.triu_indices_from(shap_values[0], 1)
-        a: np.ndarray = np.ndarray((observation_count, feature_count + triu_count), shap_values.dtype)
+        a: np.ndarray = np.ndarray(
+            (observation_count, feature_count + triu_count), shap_values.dtype
+        )
         a[:, :feature_count] = shap_values[:, idx_diag[0], idx_diag[1]]
         a[:, feature_count:] = shap_values[:, idx_triu[0], idx_triu[1]] * 2
         shap_values = a
         # names
         b: list[str | None] = [None] * shap_values.shape[1]
         b[:feature_count] = feature_names
-        for i, row, col in zip(range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]):
+        for i, row, col in zip(
+            range(feature_count, shap_values.shape[1]), idx_triu[0], idx_triu[1]
+        ):
             b[i] = f"{feature_names[row]} *\n{feature_names[col]}"
         feature_names = b
         feature_count = shap_values.shape[1]
@@ -439,7 +459,9 @@ def decision(
             "of feature indices."
         )
 
-    if (feature_idx.shape != (feature_count,)) or (not np.issubdtype(feature_idx.dtype, np.integer)):
+    if (feature_idx.shape != (feature_count,)) or (
+        not np.issubdtype(feature_idx.dtype, np.integer)
+    ):
         raise ValueError(
             "A list or array has been specified for the feature_order arg. The length must match the "
             "feature count and the data type must be integer."
@@ -447,18 +469,24 @@ def decision(
 
     # validate and convert feature_display_range to a slice. prevents out of range errors later.
     if feature_display_range is None:
-        feature_display_range = slice(-1, -21, -1)  # show last 20 features in descending order.
+        feature_display_range = slice(
+            -1, -21, -1
+        )  # show last 20 features in descending order.
     elif not isinstance(feature_display_range, (slice, range)):
         raise TypeError("The feature_display_range arg requires a slice or a range.")
     elif feature_display_range.step not in (-1, 1, None):
-        raise ValueError("The feature_display_range arg supports a step of 1, -1, or None.")
+        raise ValueError(
+            "The feature_display_range arg supports a step of 1, -1, or None."
+        )
     elif isinstance(feature_display_range, range):
         # Negative values in a range are not the same as negs in a slice. Consider range(2, -1, -1) == [2, 1, 0],
         # but slice(2, -1, -1) == [] when len(features) > 2. However, range(2, -1, -1) == slice(2, -inf, -1) after
         # clipping.
         c = np.iinfo(np.integer).min
         feature_display_range = slice(
-            feature_display_range.start if feature_display_range.start >= 0 else c,  # should never happen, but...
+            (
+                feature_display_range.start if feature_display_range.start >= 0 else c
+            ),  # should never happen, but...
             feature_display_range.stop if feature_display_range.stop >= 0 else c,
             feature_display_range.step,
         )
@@ -480,7 +508,9 @@ def decision(
     feature_display_count = d[1] - d[0]
     shap_values = shap_values[:, feature_idx]
     if d[0] == 0:
-        cumsum: np.ndarray = np.ndarray((observation_count, feature_display_count + 1), shap_values.dtype)
+        cumsum: np.ndarray = np.ndarray(
+            (observation_count, feature_display_count + 1), shap_values.dtype
+        )
         cumsum[:, 0] = base_value
         cumsum[:, 1:] = base_value + np.nancumsum(shap_values[:, 0 : d[1]], axis=1)
     else:
@@ -490,7 +520,9 @@ def decision(
     feature_names = np.array(feature_names)
     feature_names_display = feature_names[feature_idx[d[0] : d[1]]].tolist()
     feature_names = feature_names[feature_idx].tolist()
-    features_display = None if features is None else features[:, feature_idx[d[0] : d[1]]]
+    features_display = (
+        None if features is None else features[:, feature_idx[d[0] : d[1]]]
+    )
 
     # throw large data errors
     if not ignore_warnings:
@@ -542,7 +574,7 @@ def decision(
     if plot_color is None:
         plot_color = colors.red_blue
 
-    __decision_plot_matplotlib(
+    ax = __decision_plot_matplotlib(
         base_value,
         cumsum,
         ascending,
@@ -564,12 +596,16 @@ def decision(
     )
 
     if not return_objects:
-        return None
+        return ax
 
-    return DecisionPlotResult(base_value_saved, shap_values, feature_names, feature_idx, xlim)
+    return DecisionPlotResult(
+        base_value_saved, shap_values, feature_names, feature_idx, xlim
+    )
 
 
-def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> DecisionPlotResult | None:
+def multioutput_decision(
+    base_values, shap_values, row_index, **kwargs
+) -> DecisionPlotResult | None:
     """Decision plot for multioutput models.
 
     Plots all outputs for a single observation. By default, the plotted base value will be the mean of base_values
@@ -606,14 +642,18 @@ def multioutput_decision(base_values, shap_values, row_index, **kwargs) -> Decis
         raise ValueError("The base_values arg should be a list of scalars.")
     shap_values = np.array(shap_values)
     if shap_values.ndim not in [3, 4]:
-        raise ValueError("The shap_values arg should be a list of two or three dimensional SHAP arrays.")
+        raise ValueError(
+            "The shap_values arg should be a list of two or three dimensional SHAP arrays."
+        )
     if shap_values.shape[0] != base_values.shape[0]:
         raise ValueError("The base_values output length is different than shap_values.")
 
     # shift shap base values to mean of base values
     base_values_mean = base_values.mean()
     for i in range(shap_values.shape[0]):
-        shap_values[i] = __change_shap_base_value(base_values[i], base_values_mean, shap_values[i])
+        shap_values[i] = __change_shap_base_value(
+            base_values[i], base_values_mean, shap_values[i]
+        )
 
     # select the feature row corresponding to row_index
     if (kwargs is not None) and ("features" in kwargs):
