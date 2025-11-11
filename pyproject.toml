@@ -302,7 +302,7 @@ combine = ["shap", "*/site-packages/shap"]
 # skip cp38-musllinux_x86_64 since numpy never provided cp38 musllinux wheels
 #  they introduced musllinux in 1.25 when they already dropped cp38
 # skip *t (free-threaded builds) since dependencies like llvmlite don't support it yet
-skip = ["pp*", "*-musllinux_aarch64", "*t"]
+skip = ["cp314-macosx_x86_64", "cp314t-manylinux_x86_64", "cp314t-macosx_x86_64", "cp314t-win_amd64"]
 build-verbosity = 2
 # Change import-mode to ensure we test against installed package, not local project
 test-command = "pytest -v {project}/tests --import-mode=append"
