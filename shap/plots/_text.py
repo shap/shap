@@ -88,14 +88,18 @@ def text(
     uuid = "".join(random.choices(string.ascii_lowercase, k=20))
 
     # loop when we get multi-row inputs
-    if len(shap_values.shape) == 2 and (shap_values.output_names is None or isinstance(shap_values.output_names, str)):
+    if len(shap_values.shape) == 2 and (
+        shap_values.output_names is None or isinstance(shap_values.output_names, str)
+    ):
         xmin = 0
         xmax = 0
         cmax = 0
 
         for i, v in enumerate(shap_values):
             values, clustering = unpack_shap_explanation_contents(v)
-            tokens, values, group_sizes = process_shap_values(v.data, values, grouping_threshold, separator, clustering)
+            tokens, values, group_sizes = process_shap_values(
+                v.data, values, grouping_threshold, separator, clustering
+            )
 
             if i == 0:
                 xmin, xmax, cmax = values_min_max(values, v.base_values)
@@ -140,14 +144,20 @@ def text(
         for i in range(shap_values.shape[-1]):
             values, clustering = unpack_shap_explanation_contents(shap_values[:, i])
             tokens, values, group_sizes = process_shap_values(
-                shap_values[:, i].data, values, grouping_threshold, separator, clustering
+                shap_values[:, i].data,
+                values,
+                grouping_threshold,
+                separator,
+                clustering,
             )
 
             # if i == 0:
             #     xmin, xmax, cmax = values_min_max(values, shap_values[:,i].base_values)
             #     continue
 
-            xmin_i, xmax_i, cmax_i = values_min_max(values, shap_values[:, i].base_values)
+            xmin_i, xmax_i, cmax_i = values_min_max(
+                values, shap_values[:, i].base_values
+            )
             if xmin_computed is None or xmin_i < xmin_computed:
                 xmin_computed = xmin_i
             if xmax_computed is None or xmax_i > xmax_computed:
@@ -250,12 +260,20 @@ def text(
 
         for i in range(shap_values.shape[-1]):
             for j in range(shap_values.shape[0]):
-                values, clustering = unpack_shap_explanation_contents(shap_values[j, :, i])
+                values, clustering = unpack_shap_explanation_contents(
+                    shap_values[j, :, i]
+                )
                 tokens, values, group_sizes = process_shap_values(
-                    shap_values[j, :, i].data, values, grouping_threshold, separator, clustering
+                    shap_values[j, :, i].data,
+                    values,
+                    grouping_threshold,
+                    separator,
+                    clustering,
                 )
 
-                xmin_i, xmax_i, cmax_i = values_min_max(values, shap_values[j, :, i].base_values)
+                xmin_i, xmax_i, cmax_i = values_min_max(
+                    values, shap_values[j, :, i].base_values
+                )
                 if xmin_computed is None or xmin_i < xmin_computed:
                     xmin_computed = xmin_i
                 if xmax_computed is None or xmax_i > xmax_computed:
@@ -295,7 +313,9 @@ def text(
             return out
 
     # set any unset bounds
-    xmin_new, xmax_new, cmax_new = values_min_max(shap_values.values, shap_values.base_values)
+    xmin_new, xmax_new, cmax_new = values_min_max(
+        shap_values.values, shap_values.base_values
+    )
     if xmin is None:
         xmin = xmin_new
     if xmax is None:
@@ -316,8 +336,12 @@ def text(
     # fx_str = str(shap_values.base_values + values.sum())
 
     # uuid = ''.join(random.choices(string.ascii_lowercase, k=20))
-    encoded_tokens = [t.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "") for t in tokens]
-    output_name = shap_values.output_names if isinstance(shap_values.output_names, str) else ""
+    encoded_tokens = [
+        t.replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "") for t in tokens
+    ]
+    output_name = (
+        shap_values.output_names if isinstance(shap_values.output_names, str) else ""
+    )
     out += svg_force_plot(
         values,
         shap_values.base_values,
@@ -328,9 +352,7 @@ def text(
         xmax,
         output_name,
     )
-    out += (
-        "<div align='center'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
-    )
+    out += "<div align='center'><div style=\"color: rgb(120,120,120); font-size: 12px; margin-top: -15px;\">inputs</div>"
     for i, token in enumerate(tokens):
         scaled_value = 0.5 + 0.5 * values[i] / (cmax + 1e-8)
         color = colors.red_transparent_blue(scaled_value)
@@ -375,7 +397,14 @@ def text(
         return out
 
 
-def process_shap_values(tokens, values, grouping_threshold, separator, clustering=None, return_meta_data=False):
+def process_shap_values(
+    tokens,
+    values,
+    grouping_threshold,
+    separator,
+    clustering=None,
+    return_meta_data=False,
+):
     # See if we got hierarchical input data. If we did then we need to reprocess the
     # shap_values and tokens to get the groups we want to display
     M = len(tokens)
@@ -399,7 +428,9 @@ def process_shap_values(tokens, values, grouping_threshold, separator, clusterin
             ri = int(clustering[i, 1])
             groups.append(groups[li] + groups[ri])
             lower_values[M + i] = lower_values[li] + lower_values[ri] + values[M + i]
-            max_values[i + M] = max(abs(values[M + i]) / len(groups[M + i]), max_values[li], max_values[ri])
+            max_values[i + M] = max(
+                abs(values[M + i]) / len(groups[M + i]), max_values[li], max_values[ri]
+            )
 
         # compute the upper_values
         upper_values = np.zeros(len(values))
@@ -490,7 +521,13 @@ def process_shap_values(tokens, values, grouping_threshold, separator, clusterin
         collapsed_node_ids = np.arange(M)
 
     if return_meta_data:
-        return tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids
+        return (
+            tokens,
+            values,
+            group_sizes,
+            token_id_to_node_id_mapping,
+            collapsed_node_ids,
+        )
     else:
         return tokens, values, group_sizes
 
@@ -527,7 +564,9 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     s += draw_tick_mark(xcenter)
     #    np.log10(xmax - xmin)
 
-    tick_interval = round((xmax - xmin) / 7, int(round(1 - np.log10(xmax - xmin + 1e-8))))
+    tick_interval = round(
+        (xmax - xmin) / 7, int(round(1 - np.log10(xmax - xmin + 1e-8)))
+    )
 
     # tick_interval = (xmax - xmin) / 7
     side_buffer = (xmax - xmin) / 14
@@ -543,12 +582,15 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         s += draw_tick_mark(pos)
     s += draw_tick_mark(base_values, label="base value", backing=True)
     s += draw_tick_mark(
-        fx, bold=True, label=f'f<tspan baseline-shift="sub" font-size="8px">{output_name}</tspan>(inputs)', backing=True
+        fx,
+        bold=True,
+        label=f'f<tspan baseline-shift="sub" font-size="8px">{output_name}</tspan>(inputs)',
+        backing=True,
     )
 
     ### Positive value marks ###
 
-    red = tuple(colors.red_rgb * 255)
+    red = tuple((colors.red_rgb * 255).tolist())
     light_red = (255, 195, 213)
 
     # draw base red bar
@@ -646,7 +688,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
 
     ### Negative value marks ###
 
-    blue = tuple(colors.blue_rgb * 255)
+    blue = tuple((colors.blue_rgb * 255).tolist())
     light_blue = (208, 230, 250)
 
     # draw base blue bar
@@ -746,7 +788,14 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     return s
 
 
-def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, grouping_threshold=1, separator=""):
+def text_old(
+    shap_values,
+    tokens,
+    partition_tree=None,
+    num_starting_labels=0,
+    grouping_threshold=1,
+    separator="",
+):
     """Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
@@ -779,8 +828,14 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
             li = partition_tree[i, 0]
             ri = partition_tree[i, 1]
             groups.append(groups[li] + groups[ri])
-            lower_values[M + i] = lower_values[li] + lower_values[ri] + shap_values[M + i]
-            max_values[i + M] = max(abs(shap_values[M + i]) / len(groups[M + i]), max_values[li], max_values[ri])
+            lower_values[M + i] = (
+                lower_values[li] + lower_values[ri] + shap_values[M + i]
+            )
+            max_values[i + M] = max(
+                abs(shap_values[M + i]) / len(groups[M + i]),
+                max_values[li],
+                max_values[ri],
+            )
 
         # compute the upper_values
         upper_values = np.zeros(len(shap_values))
@@ -865,7 +920,11 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
         if group_sizes[i] == 1:
             value_label = str(shap_values[i].round(3))
         else:
-            value_label = str((shap_values[i] * group_sizes[i]).round(3)) + " / " + str(group_sizes[i])
+            value_label = (
+                str((shap_values[i] * group_sizes[i]).round(3))
+                + " / "
+                + str(group_sizes[i])
+            )
 
         # the HTML for this token
         out += (
@@ -957,15 +1016,19 @@ def saliency_plot(shap_values):
     uuid = "".join(random.choices(string.ascii_lowercase, k=20))
 
     unpacked_values, clustering = unpack_shap_explanation_contents(shap_values)
-    tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(
-        shap_values.data, unpacked_values[:, 0], 1, "", clustering, True
+    tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = (
+        process_shap_values(
+            shap_values.data, unpacked_values[:, 0], 1, "", clustering, True
+        )
     )
 
     def compress_shap_matrix(shap_matrix, group_sizes):
         compressed_matrix = np.zeros((group_sizes.shape[0], shap_matrix.shape[1]))
         counter = 0
         for index in range(len(group_sizes)):
-            compressed_matrix[index, :] = np.sum(shap_matrix[counter : counter + group_sizes[index], :], axis=0)
+            compressed_matrix[index, :] = np.sum(
+                shap_matrix[counter : counter + group_sizes[index], :], axis=0
+            )
             counter += group_sizes[index]
 
         return compressed_matrix
@@ -980,9 +1043,13 @@ def saliency_plot(shap_values):
         for row_index in range(compressed_shap_matrix.shape[0]):
             input_colors_row = []
             for col_index in range(compressed_shap_matrix.shape[1]):
-                scaled_value = 0.5 + 0.5 * compressed_shap_matrix[row_index, col_index] / cmax
+                scaled_value = (
+                    0.5 + 0.5 * compressed_shap_matrix[row_index, col_index] / cmax
+                )
                 color = colors.red_transparent_blue(scaled_value)
-                color = "rgba" + str((color[0] * 255, color[1] * 255, color[2] * 255, color[3]))
+                color = "rgba" + str(
+                    (color[0] * 255, color[1] * 255, color[2] * 255, color[3])
+                )
                 input_colors_row.append(color)
             input_colors.append(input_colors_row)
 
@@ -1001,7 +1068,12 @@ def saliency_plot(shap_values):
     for j in range(compressed_shap_matrix.shape[0]):
         out += (
             "<th>"
-            + tokens[j].replace("<", "&lt;").replace(">", "&gt;").replace(" ##", "").replace("▁", "").replace("Ġ", "")
+            + tokens[j]
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace(" ##", "")
+            .replace("▁", "")
+            .replace("Ġ", "")
             + "</th>"
         )
     out += "</tr>"
@@ -1066,7 +1138,13 @@ def heatmap(shap_values):
         max_val = 0
 
         for index, output_token in enumerate(shap_values.output_names):
-            tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(
+            (
+                tokens,
+                values,
+                group_sizes,
+                token_id_to_node_id_mapping,
+                collapsed_node_ids,
+            ) = process_shap_values(
                 shap_values.data, unpacked_values[:, index], 1, "", clustering, True
             )
             processed_value = {
@@ -1104,8 +1182,8 @@ def heatmap(shap_values):
             color_values[uuid + "_output_flat_token_" + str(col_index)] = "rgba" + str(
                 get_color(shap_values.values[row_index][col_index], cmax)
             )
-            shap_values_list[uuid + "_output_flat_value_label_" + str(col_index)] = round(
-                shap_values.values[row_index][col_index], 3
+            shap_values_list[uuid + "_output_flat_value_label_" + str(col_index)] = (
+                round(shap_values.values[row_index][col_index], 3)
             )
 
         colors_dict[f"{uuid}_input_node_{row_index}_content"] = color_values
@@ -1117,29 +1195,49 @@ def heatmap(shap_values):
         color_values = {}
         shap_values_list = {}
 
-        for row_index in range(processed_values[col_index]["collapsed_node_ids"].shape[0]):
+        for row_index in range(
+            processed_values[col_index]["collapsed_node_ids"].shape[0]
+        ):
             color_values[
-                uuid + "_input_node_" + str(processed_values[col_index]["collapsed_node_ids"][row_index]) + "_content"
-            ] = "rgba" + str(get_color(processed_values[col_index]["values"][row_index], cmax))
-            shap_label_value_str = str(round(processed_values[col_index]["values"][row_index], 3))
+                uuid
+                + "_input_node_"
+                + str(processed_values[col_index]["collapsed_node_ids"][row_index])
+                + "_content"
+            ] = "rgba" + str(
+                get_color(processed_values[col_index]["values"][row_index], cmax)
+            )
+            shap_label_value_str = str(
+                round(processed_values[col_index]["values"][row_index], 3)
+            )
             if processed_values[col_index]["group_sizes"][row_index] > 1:
-                shap_label_value_str += "/" + str(processed_values[col_index]["group_sizes"][row_index])
+                shap_label_value_str += "/" + str(
+                    processed_values[col_index]["group_sizes"][row_index]
+                )
 
             shap_values_list[
-                uuid + "_input_node_" + str(processed_values[col_index]["collapsed_node_ids"][row_index]) + "_label"
+                uuid
+                + "_input_node_"
+                + str(processed_values[col_index]["collapsed_node_ids"][row_index])
+                + "_label"
             ] = shap_label_value_str
 
         colors_dict[uuid + "_output_flat_token_" + str(col_index)] = color_values
-        shap_values_dict[uuid + "_output_flat_token_" + str(col_index)] = shap_values_list
+        shap_values_dict[uuid + "_output_flat_token_" + str(col_index)] = (
+            shap_values_list
+        )
 
         token_id_to_node_id_mapping_dict = {}
 
-        for index, node_id in enumerate(processed_values[col_index]["token_id_to_node_id_mapping"].tolist()):
+        for index, node_id in enumerate(
+            processed_values[col_index]["token_id_to_node_id_mapping"].tolist()
+        ):
             token_id_to_node_id_mapping_dict[f"{uuid}_input_node_{index}_content"] = (
                 f"{uuid}_input_node_{int(node_id)}_content"
             )
 
-        token_id_to_node_id_mapping[uuid + "_output_flat_token_" + str(col_index)] = token_id_to_node_id_mapping_dict
+        token_id_to_node_id_mapping[uuid + "_output_flat_token_" + str(col_index)] = (
+            token_id_to_node_id_mapping_dict
+        )
 
     # convert python dictionary into json to be inserted into the runtime javascript environment
     colors_json = json.dumps(colors_dict)
@@ -1192,21 +1290,21 @@ def heatmap(shap_values):
 
     def populate_input_tree(input_index, token_list_subtree, input_text_html):
         content = token_list_subtree[input_index]
-        input_text_html += (
-            f'<div id="{uuid}_input_node_{input_index}_container" style="display:inline;text-align:center">'
-        )
+        input_text_html += f'<div id="{uuid}_input_node_{input_index}_container" style="display:inline;text-align:center">'
 
-        input_text_html += (
-            f'<div id="{uuid}_input_node_{input_index}_label" style="display:none; padding-top: 0px; font-size:12px;">'
-        )
+        input_text_html += f'<div id="{uuid}_input_node_{input_index}_label" style="display:none; padding-top: 0px; font-size:12px;">'
 
         input_text_html += "</div>"
 
         if token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN]:
             input_text_html += f'<div id="{uuid}_input_node_{input_index}_content" style="display:inline;">'
-            for child_index, child_content in token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN].items():
+            for child_index, child_content in token_list_subtree[input_index][
+                TREE_NODE_KEY_CHILDREN
+            ].items():
                 input_text_html = populate_input_tree(
-                    child_index, token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN], input_text_html
+                    child_index,
+                    token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN],
+                    input_text_html,
                 )
             input_text_html += "</div>"
         else:
