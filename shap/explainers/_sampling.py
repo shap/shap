@@ -131,11 +131,7 @@ class SamplingExplainer(KernelExplainer):
             self.X_masked = np.zeros((nsamples_each1.max() * 2, self.data.data.shape[1]))
             for i, ind in enumerate(self.varyingInds):
                 phi[ind, :], phi_var[ind, :] = self.sampling_estimate(
-                    ind,
-                    self.model.f,
-                    instance.x,
-                    self.data.data,
-                    nsamples=nsamples_each1[i],
+                    ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each1[i]
                 )
 
             # optimally allocate samples according to the variance
@@ -158,11 +154,7 @@ class SamplingExplainer(KernelExplainer):
             for i, ind in enumerate(self.varyingInds):
                 if nsamples_each2[i] > 0:
                     val, var = self.sampling_estimate(
-                        ind,
-                        self.model.f,
-                        instance.x,
-                        self.data.data,
-                        nsamples=nsamples_each2[i],
+                        ind, self.model.f, instance.x, self.data.data, nsamples=nsamples_each2[i]
                     )
 
                     total_samples = nsamples_each1[i] + nsamples_each2[i]
