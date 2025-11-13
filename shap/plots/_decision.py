@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import matplotlib.axes as axes
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.axes import Axes
 
 from ..utils import hclust_ordering
 from ..utils._legacy import LogitLink, convert_to_link
@@ -52,7 +52,7 @@ def __decision_plot_matplotlib(
     show,
     legend_labels,
     legend_location,
-) -> Axes:
+) -> axes.Axes:
     """Matplotlib rendering for decision_plot()"""
     # image size
     row_height = 0.4
@@ -83,11 +83,7 @@ def __decision_plot_matplotlib(
     lines = []
     for i in range(cumsum.shape[0]):
         o = plt.plot(
-            cumsum[i, :],
-            y_pos,
-            color=m.to_rgba(cumsum[i, -1], alpha),
-            linewidth=linewidth[i],
-            linestyle=linestyle[i],
+            cumsum[i, :], y_pos, color=m.to_rgba(cumsum[i, -1], alpha), linewidth=linewidth[i], linestyle=linestyle[i]
         )
         lines.append(o[0])
 
@@ -146,10 +142,7 @@ def __decision_plot_matplotlib(
 
         # place the colorbar
         plt.ylim(0, feature_display_count + 0.25)
-        ax_cb = ax.inset_axes(
-            (xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25),
-            transform=ax.transData,
-        )
+        ax_cb = ax.inset_axes((xlim[0], feature_display_count, xlim[1] - xlim[0], 0.25), transform=ax.transData)
         cb = plt.colorbar(m, ticks=[0, 1], orientation="horizontal", cax=ax_cb)
         cb.set_ticklabels([])
         cb.ax.tick_params(labelsize=11, length=0)
@@ -242,7 +235,7 @@ def decision(
     new_base_value=None,
     legend_labels=None,
     legend_location="best",
-) -> DecisionPlotResult | Axes:
+) -> DecisionPlotResult | axes.Axes:
     """Visualize model decisions using cumulative SHAP values.
 
     Each plotted line explains a single model prediction. If a single prediction is plotted, feature values will be
@@ -468,7 +461,7 @@ def decision(
         # clipping.
         c = np.iinfo(np.integer).min
         feature_display_range = slice(
-            (feature_display_range.start if feature_display_range.start >= 0 else c),  # should never happen, but...
+            feature_display_range.start if feature_display_range.start >= 0 else c,  # should never happen, but...
             feature_display_range.stop if feature_display_range.stop >= 0 else c,
             feature_display_range.step,
         )
