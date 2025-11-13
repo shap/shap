@@ -140,11 +140,7 @@ def text(
         for i in range(shap_values.shape[-1]):
             values, clustering = unpack_shap_explanation_contents(shap_values[:, i])
             tokens, values, group_sizes = process_shap_values(
-                shap_values[:, i].data,
-                values,
-                grouping_threshold,
-                separator,
-                clustering,
+                shap_values[:, i].data, values, grouping_threshold, separator, clustering
             )
 
             # if i == 0:
@@ -256,11 +252,7 @@ def text(
             for j in range(shap_values.shape[0]):
                 values, clustering = unpack_shap_explanation_contents(shap_values[j, :, i])
                 tokens, values, group_sizes = process_shap_values(
-                    shap_values[j, :, i].data,
-                    values,
-                    grouping_threshold,
-                    separator,
-                    clustering,
+                    shap_values[j, :, i].data, values, grouping_threshold, separator, clustering
                 )
 
                 xmin_i, xmax_i, cmax_i = values_min_max(values, shap_values[j, :, i].base_values)
@@ -383,14 +375,7 @@ def text(
         return out
 
 
-def process_shap_values(
-    tokens,
-    values,
-    grouping_threshold,
-    separator,
-    clustering=None,
-    return_meta_data=False,
-):
+def process_shap_values(tokens, values, grouping_threshold, separator, clustering=None, return_meta_data=False):
     # See if we got hierarchical input data. If we did then we need to reprocess the
     # shap_values and tokens to get the groups we want to display
     M = len(tokens)
@@ -505,13 +490,7 @@ def process_shap_values(
         collapsed_node_ids = np.arange(M)
 
     if return_meta_data:
-        return (
-            tokens,
-            values,
-            group_sizes,
-            token_id_to_node_id_mapping,
-            collapsed_node_ids,
-        )
+        return tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids
     else:
         return tokens, values, group_sizes
 
@@ -564,10 +543,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
         s += draw_tick_mark(pos)
     s += draw_tick_mark(base_values, label="base value", backing=True)
     s += draw_tick_mark(
-        fx,
-        bold=True,
-        label=f'f<tspan baseline-shift="sub" font-size="8px">{output_name}</tspan>(inputs)',
-        backing=True,
+        fx, bold=True, label=f'f<tspan baseline-shift="sub" font-size="8px">{output_name}</tspan>(inputs)', backing=True
     )
 
     ### Positive value marks ###
@@ -770,14 +746,7 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     return s
 
 
-def text_old(
-    shap_values,
-    tokens,
-    partition_tree=None,
-    num_starting_labels=0,
-    grouping_threshold=1,
-    separator="",
-):
+def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, grouping_threshold=1, separator=""):
     """Plots an explanation of a string of text using coloring and interactive labels.
 
     The output is interactive HTML and you can click on any token to toggle the display of the
@@ -811,11 +780,7 @@ def text_old(
             ri = partition_tree[i, 1]
             groups.append(groups[li] + groups[ri])
             lower_values[M + i] = lower_values[li] + lower_values[ri] + shap_values[M + i]
-            max_values[i + M] = max(
-                abs(shap_values[M + i]) / len(groups[M + i]),
-                max_values[li],
-                max_values[ri],
-            )
+            max_values[i + M] = max(abs(shap_values[M + i]) / len(groups[M + i]), max_values[li], max_values[ri])
 
         # compute the upper_values
         upper_values = np.zeros(len(shap_values))
@@ -1101,13 +1066,9 @@ def heatmap(shap_values):
         max_val = 0
 
         for index, output_token in enumerate(shap_values.output_names):
-            (
-                tokens,
-                values,
-                group_sizes,
-                token_id_to_node_id_mapping,
-                collapsed_node_ids,
-            ) = process_shap_values(shap_values.data, unpacked_values[:, index], 1, "", clustering, True)
+            tokens, values, group_sizes, token_id_to_node_id_mapping, collapsed_node_ids = process_shap_values(
+                shap_values.data, unpacked_values[:, index], 1, "", clustering, True
+            )
             processed_value = {
                 "tokens": tokens,
                 "values": values,
@@ -1245,9 +1206,7 @@ def heatmap(shap_values):
             input_text_html += f'<div id="{uuid}_input_node_{input_index}_content" style="display:inline;">'
             for child_index, child_content in token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN].items():
                 input_text_html = populate_input_tree(
-                    child_index,
-                    token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN],
-                    input_text_html,
+                    child_index, token_list_subtree[input_index][TREE_NODE_KEY_CHILDREN], input_text_html
                 )
             input_text_html += "</div>"
         else:
