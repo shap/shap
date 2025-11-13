@@ -121,18 +121,14 @@ class SamplingExplainer(KernelExplainer):
                 round1_samples -= round2_samples
 
             # divide up the samples among the features for round 1
-            nsamples_each1 = (
-                np.ones(self.M, dtype=np.int64) * 2 * (round1_samples // (self.M * 2))
-            )
+            nsamples_each1 = np.ones(self.M, dtype=np.int64) * 2 * (round1_samples // (self.M * 2))
             for i in range((round1_samples % (self.M * 2)) // 2):
                 nsamples_each1[i] += 2
 
             # explain every feature in round 1
             phi = np.zeros((self.P, self.D))
             phi_var = np.zeros((self.P, self.D))
-            self.X_masked = np.zeros(
-                (nsamples_each1.max() * 2, self.data.data.shape[1])
-            )
+            self.X_masked = np.zeros((nsamples_each1.max() * 2, self.data.data.shape[1]))
             for i, ind in enumerate(self.varyingInds):
                 phi[ind, :], phi_var[ind, :] = self.sampling_estimate(
                     ind,
@@ -146,9 +142,7 @@ class SamplingExplainer(KernelExplainer):
             if phi_var.sum() == 0:
                 phi_var += 1  # spread samples uniformally if we found no variability
             phi_var /= phi_var.sum(0)[np.newaxis, :]
-            nsamples_each2 = (
-                phi_var[self.varyingInds, :].mean(1) * round2_samples
-            ).astype(int)
+            nsamples_each2 = (phi_var[self.varyingInds, :].mean(1) * round2_samples).astype(int)
             for i in range(len(nsamples_each2)):
                 if nsamples_each2[i] % 2 == 1:
                     nsamples_each2[i] += 1
@@ -160,9 +154,7 @@ class SamplingExplainer(KernelExplainer):
                 else:
                     break
 
-            self.X_masked = np.zeros(
-                (nsamples_each2.max() * 2, self.data.data.shape[1])
-            )
+            self.X_masked = np.zeros((nsamples_each2.max() * 2, self.data.data.shape[1]))
             for i, ind in enumerate(self.varyingInds):
                 if nsamples_each2[i] > 0:
                     val, var = self.sampling_estimate(
@@ -174,12 +166,8 @@ class SamplingExplainer(KernelExplainer):
                     )
 
                     total_samples = nsamples_each1[i] + nsamples_each2[i]
-                    phi[ind, :] = (
-                        phi[ind, :] * nsamples_each1[i] + val * nsamples_each2[i]
-                    ) / total_samples
-                    phi_var[ind, :] = (
-                        phi_var[ind, :] * nsamples_each1[i] + var * nsamples_each2[i]
-                    ) / total_samples
+                    phi[ind, :] = (phi[ind, :] * nsamples_each1[i] + val * nsamples_each2[i]) / total_samples
+                    phi_var[ind, :] = (phi_var[ind, :] * nsamples_each1[i] + var * nsamples_each2[i]) / total_samples
 
             # convert from the variance of the differences to the variance of the mean (phi)
             for i, ind in enumerate(self.varyingInds):
