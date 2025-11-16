@@ -4,9 +4,9 @@ import copy
 import os
 import re
 import sys
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
-from collections.abc import Iterator
 
 import numpy as np
 import numpy.typing as npt
@@ -168,9 +168,7 @@ def approximate_interactions(
     return np.argsort(-np.abs(interactions))
 
 
-def encode_array_if_needed(
-    arr: npt.NDArray[Any], dtype: type[Any] = np.float64
-) -> npt.NDArray[Any]:
+def encode_array_if_needed(arr: npt.NDArray[Any], dtype: type[Any] = np.float64) -> npt.NDArray[Any]:
     try:
         return arr.astype(dtype)
     except ValueError:
