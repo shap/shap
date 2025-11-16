@@ -112,3 +112,46 @@ def test_scatter_plot_value_input(input):
     shap.plots.scatter(explanations, show=False)
     plt.tight_layout()
     return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_scatter_no_histogram(explainer):
+    """Test scatter plot without histogram."""
+    explanation = explainer(explainer.data)
+    shap.plots.scatter(explanation[:, "Age"], hist=False, show=False)
+    plt.tight_layout()
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_scatter_with_title(explainer):
+    """Test scatter plot with custom title."""
+    explanation = explainer(explainer.data)
+    shap.plots.scatter(explanation[:, "Age"], title="Custom Title", show=False)
+    plt.tight_layout()
+    return plt.gcf()
+
+
+def test_scatter_show_true(explainer, monkeypatch):
+    """Test scatter plot with show=True."""
+    explanation = explainer(explainer.data)
+    show_called = []
+    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    shap.plots.scatter(explanation[:, "Age"], show=True)
+    assert len(show_called) == 1
+    plt.close()
+
+
+def test_scatter_multiple_features_with_ax_raises_error(explainer):
+    """Test that passing ax with multiple features raises ValueError."""
+    explanation = explainer(explainer.data)
+    fig, ax = plt.subplots()
+    with pytest.raises(ValueError, match="The ax parameter is not supported when plotting multiple features"):
+        shap.plots.scatter(explanation[:, ["Age", "Workclass"]], ax=ax, show=False)
+    plt.close()
+
+
+def test_scatter_invalid_type_raises_error():
+    """Test that passing invalid type raises TypeError."""
+    with pytest.raises(TypeError, match="The shap_values parameter must be a shap.Explanation object"):
+        shap.plots.scatter([1, 2, 3], show=False)
