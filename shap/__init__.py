@@ -1,3 +1,5 @@
+from typing import Any, NoReturn
+
 from ._explanation import Cohorts, Explanation
 
 # explainers
@@ -29,7 +31,6 @@ _no_matplotlib_warning = (
 
 
 # plotting (only loaded if matplotlib is present)
-from typing import Any, NoReturn
 
 
 def unsupported(*args: Any, **kwargs: Any) -> NoReturn:

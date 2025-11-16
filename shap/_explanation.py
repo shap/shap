@@ -107,8 +107,8 @@ class Explanation(metaclass=MetaExplanation):
 
     def __init__(
         self,
-        values: npt.NDArray[Any] | Explanation,
-        base_values: npt.NDArray[Any] | float | None = None,
+        values: npt.NDArray[Any] | list[Any] | Explanation,
+        base_values: npt.NDArray[Any] | list[Any] | float | None = None,
         data: npt.NDArray[Any] | pd.DataFrame | list[Any] | None = None,
         display_data: npt.NDArray[Any] | pd.DataFrame | None = None,
         instance_names: Sequence[str] | npt.NDArray[Any] | None = None,
@@ -119,8 +119,8 @@ class Explanation(metaclass=MetaExplanation):
         upper_bounds: npt.NDArray[Any] | None = None,
         error_std: npt.NDArray[Any] | None = None,
         main_effects: npt.NDArray[Any] | None = None,
-        hierarchical_values: npt.NDArray[Any] | None = None,
-        clustering: npt.NDArray[Any] | None = None,
+        hierarchical_values: npt.NDArray[Any] | list[Any] | None = None,
+        clustering: npt.NDArray[Any] | list[Any] | None = None,
         compute_time: float | None = None,
     ) -> None:
         self.op_history: list[OpHistoryItem] = []
@@ -483,19 +483,19 @@ class Explanation(metaclass=MetaExplanation):
     def __add__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.add, "__add__")
 
-    def __radd__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    def __radd__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
         return self._apply_binary_operator(other, operator.add, "__add__")
 
     def __sub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.sub, "__sub__")
 
-    def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
         return self._apply_binary_operator(other, operator.sub, "__sub__")
 
     def __mul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.mul, "__mul__")
 
-    def __rmul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
+    def __rmul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
         return self._apply_binary_operator(other, operator.mul, "__mul__")
 
     def __truediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:

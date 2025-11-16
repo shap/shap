@@ -15,6 +15,8 @@ import scipy.special
 import sklearn
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from ._types import _ArrayT
 
 import_errors: dict[str, tuple[str, Exception]] = {}

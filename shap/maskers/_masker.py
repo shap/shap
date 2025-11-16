@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import numpy.typing as npt
 
 from .._serializable import Serializable
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class Masker(Serializable):

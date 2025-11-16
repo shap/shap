@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Literal, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -34,6 +34,14 @@ class Model(Serializable):
         with Serializer(out_file, "shap.Model", version=0) as s:
             s.save("model", self.inner_model)
 
+    @overload
+    @classmethod
+    def load(cls, in_file: BinaryIO, instantiate: Literal[True] = True) -> Model: ...
+
+    @overload
+    @classmethod
+    def load(cls, in_file: BinaryIO, instantiate: Literal[False]) -> dict[str, Any]: ...
+
     @classmethod
     def load(cls, in_file: BinaryIO, instantiate: bool = True) -> Model | dict[str, Any]:
         if instantiate:
@@ -42,4 +50,4 @@ class Model(Serializable):
         kwargs = super().load(in_file, instantiate=False)
         with Deserializer(in_file, "shap.Model", min_version=0, max_version=0) as s:
             kwargs["model"] = s.load("model")
-        return kwargs
+        return kwargs  # type: ignore[return-value]
