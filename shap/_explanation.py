@@ -102,6 +102,25 @@ class Explanation(metaclass=MetaExplanation):
 
     The *class* methods such as `Explanation.max` return OpChain objects that represent
     a set of dot chained operations without actually running them.
+
+    Args:
+        values: The SHAP values for each feature in the input data.
+        base_values: The base values for the model output.
+        data: The input data for the explanation.
+        display_data: The input data for the explanation.
+        instance_names: The names of the data instances.
+        feature_names: The names of the features in the data.
+        output_names: The names of the model outputs.
+        output_indexes: The indexes of the model outputs.
+        lower_bounds: The lower bounds for the SHAP values.
+        upper_bounds: The upper bounds for the SHAP values.
+        error_std: standard deviation of the errors in the SHAP values.
+        main_effects: The main effects of each feature in the input data.
+        hierarchical_values: The hierarchical values for each feature in the input data.
+        clustering: The clustering of the features.
+        compute_time: The time it took to compute the explanation.
+        interaction_order: The order of interactions in the SHAP values. Can be either 0 (for no interactions) or 1 (for interactions).
+                           Can be set to None if no information is provided, can then be infered.
     """
 
     def __init__(
@@ -121,6 +140,7 @@ class Explanation(metaclass=MetaExplanation):
         hierarchical_values=None,
         clustering=None,
         compute_time=None,
+        interaction_order: int | None = None,
     ):
         self.op_history: list[OpHistoryItem] = []
 
@@ -133,7 +153,9 @@ class Explanation(metaclass=MetaExplanation):
             base_values = e.base_values
             data = e.data
 
-        self.output_dims = compute_output_dims(values, base_values, data, output_names)
+        self.output_dims, self.interaction_order = compute_output_dims(
+            values, base_values, data, output_names, interaction_order
+        )
         values_shape = _compute_shape(values)
 
         if output_names is None and len(self.output_dims) == 1:
@@ -776,8 +798,18 @@ def group_features(shap_values, feature_map) -> Explanation:
     )
 
 
-def compute_output_dims(values, base_values, data, output_names) -> tuple[int, ...]:
-    """Uses the passed data to infer which dimensions correspond to the model's output."""
+def compute_output_dims(
+    values, base_values, data, output_names, interaction_order: int | None = None
+) -> tuple[tuple[int, ...], int]:
+    """Uses the passed data to infer which dimensions correspond to the model's output.
+    Args:
+        values: The SHAP values for each feature in the input data.
+        base_values: The base values for the model output.
+        data: The input data for the explanation.
+        output_names: The names of the model outputs.
+        interaction_order: The order of interactions in the SHAP values. Can be either 0 (for no interactions) or 1 (for interactions).
+                           Can be set to None if no information is provided, can then be infered. We need this information in cases where no base_values or output_names are provided to correctly calculate the output dimensions.
+    """
     values_shape = _compute_shape(values)
 
     # input shape matches the data shape
@@ -800,14 +832,20 @@ def compute_output_dims(values, base_values, data, output_names) -> tuple[int, .
         ):
             output_shape = output_shape[1:]
 
+    # todo: this does not work well e.g. in the case of
+    #  values_shape (2, 32, 32, 3, 10)  (#num_observations, #width, #height, #channels, #num_classes)
+    #  data_shape (2, 32, 32, 3) (#num_observations, #width, #height, #channels)
+    #  and no provided output_names
+    #  base_values (2,)
     elif base_values is not None:
         output_shape = _compute_shape(base_values)[1:]
     else:
         output_shape = tuple()
 
-    interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
+    if interaction_order is None:
+        interaction_order = len(values_shape) - len(data_shape) - len(output_shape)
     output_dims = range(len(data_shape) + interaction_order, len(values_shape))
-    return tuple(output_dims)
+    return tuple(output_dims), interaction_order
 
 
 def is_1d(val):

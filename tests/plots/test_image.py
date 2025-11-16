@@ -94,6 +94,98 @@ def test_image_multi_labels_per_row_ndarray(explanation_multi_example):
     return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
+def test_image_multi_tf_bug():
+    # GH 3874
+    tf = pytest.importorskip("tensorflow")
+    ssl = pytest.importorskip("ssl")
+
+    ssl._create_default_https_context = ssl._create_unverified_context
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    # reshape and normalize data
+    subset_size = 200
+    x_train_subset = x_train[:subset_size]
+    y_train_subset = y_train[:subset_size]
+    x_test_subset = x_test[:subset_size]
+    y_test_subset = y_test[:subset_size]
+
+    # Normalize the data
+    x_train_subset = x_train_subset.astype("float32") / 255
+    x_test_subset = x_test_subset.astype("float32") / 255
+
+    # Reshape the labels
+    y_train_subset = y_train_subset.reshape(
+        subset_size,
+    )
+    y_test_subset = y_test_subset.reshape(
+        subset_size,
+    )
+
+    values = np.zeros((4, 32, 32, 3, 10))
+    values[:, :, 1, :, :] = 1
+    base_values = np.array(
+        [
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+            [
+                0.07891912,
+                0.09854519,
+                0.05281105,
+                0.15599695,
+                0.0990723,
+                0.08133183,
+                0.06189632,
+                0.11470755,
+                0.13689415,
+                0.11982552,
+            ],
+        ],
+        dtype=np.float32,
+    )
+    shap_values = shap.Explanation(values=values, data=x_test_subset[:4], base_values=base_values, interaction_order=0)
+
+    shap.image_plot(
+        shap_values,
+        labels=["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"],
+        show=False,
+    )
+    return plt.gcf()
+
+
 def test_random_single_image():
     """Just make sure the image_plot function doesn't crash."""
     shap.image_plot(np.random.randn(3, 20, 20), np.random.randn(3, 20, 20), show=False)
