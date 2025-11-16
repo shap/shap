@@ -142,3 +142,61 @@ def test_partial_dependence_model_expected_value(simple_model_data):
         show=False
     )
     plt.close(fig)
+
+
+def test_partial_dependence_with_ax(simple_model_data):
+    """Test partial dependence plot with custom axes."""
+    model, X = simple_model_data
+    fig, ax = plt.subplots()
+    returned_fig, returned_ax = shap.plots.partial_dependence(
+        "Age", model, X,
+        ax=ax,
+        ice=False,
+        show=False
+    )
+    assert returned_ax == ax
+    plt.close(fig)
+
+
+def test_partial_dependence_numpy_array(simple_model_data):
+    """Test partial dependence plot with numpy array (not DataFrame)."""
+    model, X = simple_model_data
+    X_numpy = X.values
+
+    # Create model that accepts numpy arrays
+    def numpy_model(x):
+        return model(x)
+
+    fig, ax = shap.plots.partial_dependence(
+        0,  # Use index since no feature names
+        numpy_model, X_numpy,
+        ice=True,
+        show=False
+    )
+    plt.close(fig)
+
+
+def test_partial_dependence_no_feature_names(simple_model_data):
+    """Test partial dependence with numpy array and no feature names."""
+    model, X = simple_model_data
+    X_numpy = X.values
+
+    def numpy_model(x):
+        return model(x)
+
+    fig, ax = shap.plots.partial_dependence(
+        0, numpy_model, X_numpy,
+        ice=False,
+        show=False
+    )
+    plt.close(fig)
+
+
+def test_partial_dependence_show_true(simple_model_data, monkeypatch):
+    """Test partial dependence with show=True."""
+    model, X = simple_model_data
+    show_called = []
+    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    shap.plots.partial_dependence("Age", model, X, ice=False, show=True)
+    assert len(show_called) == 1
+    plt.close()
