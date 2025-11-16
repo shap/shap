@@ -1,4 +1,9 @@
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 
 from ._masker import Masker
 
@@ -14,13 +19,16 @@ class Fixed(Masker):
     label inputs.
     """
 
-    def __init__(self):
+    shape: tuple[None, int]
+    clustering: npt.NDArray[Any]
+
+    def __init__(self) -> None:
         self.shape = (None, 0)
         self.clustering = np.zeros((0, 4))
 
-    def __call__(self, mask, x):
+    def __call__(self, mask: Any, x: Any) -> tuple[list[Any], ...]:  # type: ignore[override]
         return ([x],)
 
-    def mask_shapes(self, x):
+    def mask_shapes(self, x: Any) -> list[tuple[int, ...]]:
         """The shape of the masks we expect."""
         return [(0,)]

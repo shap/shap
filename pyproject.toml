@@ -128,11 +128,13 @@ disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
 mypy_path = "stubs"
 
-plugins = ["numpy.typing.mypy_plugin"]
+# NOTE: numpy.typing.mypy_plugin is deprecated in NumPy 2.3+ and will be removed in a future release
+# plugins = ["numpy.typing.mypy_plugin"]
 
 [[tool.mypy.overrides]]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
+# NOTE: Modules with added type hints have been removed from this list
 module = [
   "shap.explainers._additive",
   "shap.explainers._deep.deep_pytorch",
@@ -150,10 +152,10 @@ module = [
   "shap.explainers.other._random",
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
-  "shap.maskers._composite",
-  "shap.maskers._fixed",
+  # "shap.maskers._composite",  # NOW TYPE CHECKED - type hints added
+  # "shap.maskers._fixed",      # NOW TYPE CHECKED - type hints added
   "shap.maskers._image",
-  "shap.maskers._masker",
+  # "shap.maskers._masker",     # NOW TYPE CHECKED - type hints added
   "shap.maskers._tabular",
   "shap.maskers._text",
   "shap.plots._benchmark",

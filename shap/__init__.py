@@ -29,12 +29,15 @@ _no_matplotlib_warning = (
 
 
 # plotting (only loaded if matplotlib is present)
-def unsupported(*args, **kwargs):
+from typing import Any, NoReturn
+
+
+def unsupported(*args: Any, **kwargs: Any) -> NoReturn:
     raise ImportError(_no_matplotlib_warning)
 
 
 class UnsupportedModule:
-    def __getattribute__(self, item):
+    def __getattribute__(self, item: str) -> NoReturn:
         raise ImportError(_no_matplotlib_warning)
 
 
