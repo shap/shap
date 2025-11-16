@@ -120,7 +120,7 @@ def test_independent_masker_with_dataframe_init():
     masker = shap.maskers.Independent(df)
 
     # Should preserve feature names
-    assert hasattr(masker, 'feature_names')
+    assert hasattr(masker, "feature_names")
     assert list(masker.feature_names) == ["a", "b", "c"]
     assert masker.shape == (5, 3)
 
@@ -216,7 +216,7 @@ def test_partition_masker_with_dataframe_init():
     masker = shap.maskers.Partition(df, clustering=None)
 
     # Should preserve feature names and shape
-    assert hasattr(masker, 'feature_names')
+    assert hasattr(masker, "feature_names")
     assert masker.shape == (3, 3)
 
 
