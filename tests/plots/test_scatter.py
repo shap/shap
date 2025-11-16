@@ -154,7 +154,7 @@ def test_scatter_multiple_features_with_ax_raises_error(explainer):
 def test_scatter_invalid_type_raises_error():
     """Test that passing invalid type raises TypeError."""
     with pytest.raises(TypeError, match="The shap_values parameter must be a shap.Explanation object"):
-        shap.plots.scatter([1, 2, 3], show=False)
+        shap.plots.scatter([1, 2, 3], show=False)  # type: ignore[arg-type]
 
 
 @pytest.mark.mpl_image_compare
@@ -176,7 +176,7 @@ def test_scatter_with_color_as_numpy_array(explainer):
     age_explanation = explanation[:, "Age"]
     # Pass numpy array as color (will be wrapped as Explanation)
     color_values = np.random.randn(len(age_explanation))
-    shap.plots.scatter(age_explanation, color=color_values, show=False)
+    shap.plots.scatter(age_explanation, color=color_values, show=False)  # type: ignore[arg-type]
     plt.tight_layout()
     return plt.gcf()
 

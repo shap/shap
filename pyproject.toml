@@ -134,6 +134,8 @@ plugins = ["numpy.typing.mypy_plugin"]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
 module = [
+  "shap.benchmark._explanation_error",
+  "shap.benchmark._sequential",
   "shap.explainers._additive",
   "shap.explainers._deep.deep_pytorch",
   "shap.explainers._deep.deep_tf",
@@ -175,6 +177,7 @@ ignore_errors = true
 # Ignore missing types for 3rd party libraries
 module = [
   "catboost.*",
+  "causalml.*",
   "cloudpickle",
   "cv2",
   "IPython.*",
@@ -185,14 +188,14 @@ module = [
   "pyod.*",
   "pyspark.*",
   "scipy.*",
+  "selenium.*",
   "sklearn.*",
   "slicer",
   "tensorflow.*",
-  "transformers.*",
   "torch.*",
   "tqdm.*",
+  "transformers.*",
   "xgboost.*",
-  "causalml.*",
 ]
 ignore_missing_imports = true
 
