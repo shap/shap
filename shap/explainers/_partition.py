@@ -236,9 +236,9 @@ class PartitionExplainer(Explainer):
             self._clustering = self.masker.clustering(*row_args)
             self._mask_matrix = make_masks(self._clustering)
 
-        if hasattr(self._curr_base_value, "shape") and len(self._curr_base_value.shape) > 0:
+        if hasattr(self._curr_base_value, "shape") and len(self._curr_base_value.shape) > 0:  # type: ignore[union-attr]
             if outputs is None:
-                outputs = np.arange(len(self._curr_base_value))
+                outputs = np.arange(len(self._curr_base_value))  # type: ignore[arg-type]
             elif isinstance(outputs, OpChain):
                 outputs = outputs.apply(Explanation(f11)).values
 
@@ -252,7 +252,7 @@ class PartitionExplainer(Explainer):
         self.values = np.zeros(out_shape)
         self.dvalues = np.zeros(out_shape)
 
-        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)
+        self.owen(fm, self._curr_base_value, f11, max_evals - 2, outputs, fixed_context, batch_size, silent)  # type: ignore[arg-type]
 
         # if False:
         #     if self.multi_output:
@@ -267,7 +267,7 @@ class PartitionExplainer(Explainer):
 
         return {
             "values": self.values[:M].copy(),
-            "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],
+            "expected_values": self._curr_base_value if outputs is None else self._curr_base_value[outputs],  # type: ignore[index]
             "mask_shapes": [s + out_shape[1:] for s in fm.mask_shapes],
             "main_effects": None,
             "hierarchical_values": self.dvalues.copy(),

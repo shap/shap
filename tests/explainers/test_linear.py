@@ -95,8 +95,8 @@ def test_sklearn_linear_new():
     # explain the model's predictions using SHAP values
     explainer = shap.explainers.LinearExplainer(model, X)
     shap_values = explainer(X)
-    assert np.abs(shap_values.values.sum(1) + shap_values.base_values - model.predict(X)).max() < 1e-6
-    assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6
+    assert np.abs(shap_values.values.sum(1) + shap_values.base_values - model.predict(X)).max() < 1e-6  # type: ignore[union-attr, union-attr]
+    assert np.abs(shap_values.base_values[0] - model.predict(X).mean()) < 1e-6  # type: ignore[union-attr]
 
 
 def test_sklearn_multiclass_no_intercept():
@@ -213,7 +213,9 @@ def test_sparse_multi_class():
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer(X)
     np.testing.assert_allclose(
-        scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values), pred, atol=1e-6
+        scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values),
+        pred,
+        atol=1e-6,  # type: ignore[union-attr, union-attr]
     )
 
 
@@ -224,7 +226,7 @@ def test_invalid_feature_perturbation_raises():
     model = Ridge(0.1).fit(X, y)
 
     with pytest.raises(InvalidFeaturePerturbationError, match="feature_perturbation must be one of "):
-        shap.LinearExplainer(model, X, feature_perturbation="nonsense")
+        shap.LinearExplainer(model, X, feature_perturbation="nonsense")  # type: ignore[arg-type]
 
 
 @pytest.mark.filterwarnings("ignore:The feature_perturbation option is now deprecated")

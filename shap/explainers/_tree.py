@@ -502,7 +502,7 @@ class TreeExplainer(Explainer):
             )
             check_additivity = False
 
-        return X, y, X_missing, flat_output, tree_limit, check_additivity
+        return X, y, X_missing, flat_output, tree_limit, check_additivity  # type: ignore[return-value]
 
     def shap_values(
         self,
@@ -697,7 +697,7 @@ class TreeExplainer(Explainer):
         # in this case the output shape corresponds to [num_samples, num_features, num_outputs]
         if isinstance(out, list):
             out = np.stack(out, axis=-1)  # type: ignore[assignment]
-        return out
+        return out  # type: ignore[return-value]
 
     def _get_shap_output(self, phi: npt.NDArray[Any], flat_output: bool) -> Any:
         """Pull off the last column of ``phi`` and keep it as our expected_value."""
@@ -1479,7 +1479,7 @@ class TreeEnsemble:
             for idx, shap_tree in enumerate(shap_trees):
                 tree_ = shap_tree.tree_
                 values = tree_.value.reshape(tree_.value.shape[0], tree_.value.shape[1] * tree_.value.shape[2])
-                values = values * scaling[idx]
+                values = values * scaling[idx]  # type: ignore[index]
                 tree = {
                     "children_left": tree_.children_left.astype(np.int32),
                     "children_right": tree_.children_right.astype(np.int32),
@@ -2064,7 +2064,7 @@ class SingleTree:
             self.children_right = children_right
             self.children_default = children_default
             self.features = features
-            self.thresholds = thresholds
+            self.thresholds = thresholds  # type: ignore[assignment]
             self.threshold_types = np.zeros_like(self.thresholds, dtype=np.int32)
             self.values = values[:, np.newaxis] * scaling
             self.node_sample_weight = node_sample_weight
