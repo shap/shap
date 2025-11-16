@@ -125,3 +125,41 @@ def test_image_to_text_single():
 
     shap_values_test = MockImageExplanation(test_data, test_values, test_output_names)
     shap.plots.image_to_text(shap_values_test)
+
+
+@pytest.mark.mpl_image_compare
+def test_image_with_true_labels(imagenet50_example):
+    """Test image plot with true labels."""
+    set_reproducible_mpl_rcparams()
+    images, labels = imagenet50_example
+    images = images[:2]
+    shap_values = (images - images.mean()) / images.max(keepdims=True)
+    explanation = shap.Explanation(values=shap_values, data=images)
+    true_labels = ["Label A", "Label B"]
+    shap.image_plot(explanation, true_labels=true_labels, show=False)
+    return plt.gcf()
+
+
+@pytest.mark.mpl_image_compare
+def test_image_hspace_auto(imagenet50_example):
+    """Test image plot with hspace='auto'."""
+    set_reproducible_mpl_rcparams()
+    images, _ = imagenet50_example
+    images = images[:2]
+    shap_values = (images - images.mean()) / images.max(keepdims=True)
+    explanation = shap.Explanation(values=shap_values, data=images)
+    shap.image_plot(explanation, hspace="auto", show=False)
+    return plt.gcf()
+
+
+def test_image_show_true(imagenet50_example, monkeypatch):
+    """Test image plot with show=True."""
+    images, _ = imagenet50_example
+    images = images[0]
+    shap_values = (images - images.mean()) / images.max(keepdims=True)
+    explanation = shap.Explanation(values=shap_values, data=images)
+    show_called = []
+    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    shap.image_plot(explanation, show=True)
+    assert len(show_called) == 1
+    plt.close()
