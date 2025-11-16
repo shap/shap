@@ -1778,9 +1778,9 @@ class TestExplainerLightGBM:
         interaction_vals = ex(X.iloc[0, :], interactions=True)  # type: ignore[assignment]
         prediction = model.predict(X.iloc[[0], :], raw_score=True)
         np.testing.assert_allclose(
-            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0],
+            interaction_vals.values.sum((0, 1)) + interaction_vals.base_values[0],  # type: ignore[attr-defined]
             prediction[0],
-            atol=1e-4,  # type: ignore[attr-defined, attr-defined]
+            atol=1e-4,
         )
 
     def test_lightgbm_call_explanation(self):

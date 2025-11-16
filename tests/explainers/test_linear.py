@@ -213,9 +213,9 @@ def test_sparse_multi_class():
     explainer = shap.LinearExplainer(model, X)
     shap_values = explainer(X)
     np.testing.assert_allclose(
-        scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values),
+        scipy.special.expit(shap_values.values.sum(1) + shap_values.base_values),  # type: ignore[union-attr]
         pred,
-        atol=1e-6,  # type: ignore[union-attr, union-attr]
+        atol=1e-6,
     )
 
 
