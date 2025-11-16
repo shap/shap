@@ -3,13 +3,18 @@ from __future__ import annotations
 
 import math
 from itertools import chain, combinations, product
+from typing import TYPE_CHECKING, Any
 
 import numpy as np  # numpy base
+import numpy.typing as npt
 
 from .. import links  # shap modules
 from ..explainers._explainer import Explainer
 from ..models import Model
 from ..utils import MaskedModel, make_masks, safe_isinstance
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class CoalitionExplainer(Explainer):
@@ -60,17 +65,34 @@ class CoalitionExplainer(Explainer):
     >>> shap_values = explainer(X[:5]
     """
 
+    input_shape: tuple[int, ...] | None
+    expected_value: Any
+    _curr_base_value: npt.NDArray[np.floating[Any]] | float | None
+    _reshaped_model: Any
+    partition_tree: dict[str, Any]
+    _clustering: Any
+    _mask_matrix: npt.NDArray[np.bool_] | None
+    root: Node
+    combinations_list: list[tuple[str, tuple[Any, ...], float]]
+    masks: list[npt.NDArray[np.bool_]]
+    keys: list[tuple[Any, ...] | str]
+    masks_dict: dict[tuple[Any, ...] | str, npt.NDArray[np.bool_]]
+    mask_permutations: list[tuple[str, npt.NDArray[np.bool_], float]]
+    masks_list: list[npt.NDArray[np.bool_]]
+    unique_masks_set: set[tuple[bool, ...]]
+    unique_masks: list[npt.NDArray[np.bool_]]
+
     def __init__(
         self,
-        model,
-        masker,
+        model: Any,
+        masker: Any,
         *,
-        output_names=None,
-        link=links.identity,
-        linearize_link=True,
-        feature_names=None,
-        partition_tree=None,
-    ):
+        output_names: list[str] | None = None,
+        link: Any = links.identity,
+        linearize_link: bool = True,
+        feature_names: list[str] | None = None,
+        partition_tree: dict[str, Any] | None = None,
+    ) -> None:
         """Initialize the coalition explainer with a model and masker.
 
         Parameters
@@ -159,16 +181,16 @@ class CoalitionExplainer(Explainer):
 
     def __call__(
         self,
-        *args,
-        max_evals=500,
-        fixed_context=None,
-        main_effects=False,
-        error_bounds=False,
-        batch_size="auto",
-        outputs=None,
-        silent=False,
-        **kwargs,
-    ):
+        *args: Any,
+        max_evals: int = 500,
+        fixed_context: int | None = None,
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | str = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        **kwargs: Any,
+    ) -> Any:
         return super().__call__(
             *args,
             max_evals=max_evals,
@@ -184,15 +206,15 @@ class CoalitionExplainer(Explainer):
     # mypy: disable=override
     def explain_row(
         self,
-        *row_args,
-        max_evals=100,
-        main_effects=False,
-        error_bounds=False,
-        batch_size="auto",
-        outputs=None,
-        silent=False,
-        fixed_context="auto",
-    ):
+        *row_args: Any,
+        max_evals: int = 100,
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | str = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        fixed_context: int | str | None = "auto",
+    ) -> dict[str, Any]:
         if fixed_context == "auto":
             fixed_context = None
         elif fixed_context not in [0, 1, None]:
@@ -285,24 +307,29 @@ class CoalitionExplainer(Explainer):
             "output_names": getattr(self.model, "output_names", None),
         }
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "shap.explainers.CoalitionExplainer()"
 
 
 ####################### HELPER FUNCTIONS THAT PROBABLY CAN STAY####################
 class Node:
-    def __init__(self, key):
+    key: str
+    child: list[Node]
+    permutations: dict[Any, Any] | list[tuple[str, ...]]
+    weights: list[float]
+
+    def __init__(self, key: str) -> None:
         self.key = key
         self.child = []
         self.permutations = []  # this may not be the greatest idea??
         self.weights = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"({self.key}): {self.child} -> {self.permutations} \\ {self.weights}"
 
 
 # This function is to encode the dictionary to our specific structure
-def _build_tree(d, root):
+def _build_tree(d: dict[str, Any] | list[Any], root: Node) -> None:
     if isinstance(d, dict):
         for key, value in d.items():
             node = Node(key)
@@ -320,13 +347,14 @@ def _build_tree(d, root):
 
 
 def create_partition_hierarchy(
-    linkage_matrix, columns
-):  # this is a helper to turn scipy linkage matrix to partition_tree dict
+    linkage_matrix: npt.NDArray[Any],
+    columns: list[str],
+) -> dict[str, Any] | str:  # this is a helper to turn scipy linkage matrix to partition_tree dict
     """Converts a SciPy linkage matrix into a SHAP partition_tree dictionary."""
 
     # Build a partition tree that `_build_tree` can parse
     # The simplest way to implement this is to always create a new group for each merge.
-    def build_final_tree(i):
+    def build_final_tree(i: int) -> dict[str, Any] | str:
         if i < len(columns):
             return columns[i]
         left = int(linkage_matrix[i - len(columns), 0])
@@ -337,20 +365,20 @@ def create_partition_hierarchy(
     return build_final_tree(root_node)
 
 
-def _combine_masks(masks):
+def _combine_masks(masks: list[npt.NDArray[np.bool_]]) -> npt.NDArray[np.bool_]:
     combined_mask = np.logical_or.reduce(masks)
     return combined_mask
 
 
-def _compute_weight(total, selected):
+def _compute_weight(total: int, selected: int) -> float:
     return 1 / (total * math.comb(total - 1, selected))
 
 
-def _all_subsets(iterable):
+def _all_subsets(iterable: list[str]) -> Iterable[tuple[str, ...]]:
     return chain.from_iterable(combinations(iterable, n) for n in range(len(iterable) + 1))
 
 
-def _get_all_leaf_values(node):
+def _get_all_leaf_values(node: Node) -> list[str]:
     leaves = []
     if not node.child:
         leaves.append(node.key)
@@ -361,7 +389,7 @@ def _get_all_leaf_values(node):
 
 
 # generate all permutations of sibling nodes and assign it to the nodes
-def _generate_permutations(node):
+def _generate_permutations(node: Node) -> None:
     if not node.child:  # Leaf node
         node.permutations = []
         return
@@ -384,9 +412,9 @@ def _generate_permutations(node):
 ##########################################################
 
 
-def _create_masks(node, columns):
+def _create_masks(node: Node, columns: Any) -> tuple[list[npt.NDArray[np.bool_]], list[tuple[Any, ...] | str]]:
     masks = [np.zeros(len(columns), dtype=bool)]
-    keys = [()]
+    keys: list[tuple[Any, ...] | str] = [()]
 
     if not node.child:
         if hasattr(columns, "isin"):
@@ -412,10 +440,13 @@ def _create_masks(node, columns):
     return masks, keys
 
 
-def _generate_paths_and_combinations(node):
-    paths = []
+def _generate_paths_and_combinations(node: Node) -> list[tuple[str, tuple[Any, ...], float]]:
+    paths: list[list[tuple[str, dict[Any, Any] | list[tuple[str, ...]], list[float]]]] = []
 
-    def dfs(current_node, current_path):
+    def dfs(
+        current_node: Node,
+        current_path: list[tuple[str, dict[Any, Any] | list[tuple[str, ...]], list[float]]],
+    ) -> None:
         current_path.append((current_node.key, current_node.permutations, current_node.weights))
 
         if not current_node.child:  # Leaf node
@@ -428,7 +459,7 @@ def _generate_paths_and_combinations(node):
 
     dfs(node, [])
 
-    combinations_list = []
+    combinations_list: list[tuple[str, tuple[Any, ...], float]] = []
 
     for path in paths:
         filtered_path = [(key, perms, weight) for key, perms, weight in path if perms]
@@ -447,10 +478,13 @@ def _generate_paths_and_combinations(node):
     return combinations_list
 
 
-def _create_combined_masks(combinations, masks_dict):
-    combined_masks = []
+def _create_combined_masks(
+    combinations: list[tuple[str, tuple[Any, ...], float]],
+    masks_dict: dict[tuple[Any, ...] | str, npt.NDArray[np.bool_]],
+) -> list[tuple[str, npt.NDArray[np.bool_], float]]:
+    combined_masks: list[tuple[str, npt.NDArray[np.bool_], float]] = []
     for last_key, combination, weights in combinations:
-        masks = []
+        masks: list[npt.NDArray[np.bool_]] = []
         for keys in combination:
             if isinstance(keys, tuple) and not keys:
                 continue
@@ -475,11 +509,14 @@ def _create_combined_masks(combinations, masks_dict):
     return combined_masks
 
 
-def _map_combinations_to_unique_masks(combined_masks, unique_masks):
+def _map_combinations_to_unique_masks(
+    combined_masks: list[tuple[str, npt.NDArray[np.bool_], float]],
+    unique_masks: list[npt.NDArray[np.bool_]],
+) -> tuple[dict[str, list[int]], dict[str, list[int]], dict[str, list[float]]]:
     unique_mask_index_map = {tuple(mask): idx for idx, mask in enumerate(unique_masks)}
-    last_key_to_off_indexes: dict[int | str, list[int]] = {}
-    last_key_to_on_indexes: dict[int | str, list[int]] = {}
-    weights: dict[int | str, list[int]] = {}
+    last_key_to_off_indexes: dict[str, list[int]] = {}
+    last_key_to_on_indexes: dict[str, list[int]] = {}
+    weights: dict[str, list[float]] = {}
 
     for i, (last_key, combined_mask, weight) in enumerate(combined_masks):
         mask_tuple = tuple(combined_mask)

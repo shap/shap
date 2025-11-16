@@ -1,4 +1,7 @@
+from typing import Any, Literal
+
 import numpy as np
+import numpy.typing as npt
 
 from ..utils import MaskedModel, safe_isinstance
 from ._explainer import Explainer
@@ -12,7 +15,18 @@ class AdditiveExplainer(Explainer):
     you will get incorrect answers that fail additivity).
     """
 
-    def __init__(self, model, masker, link=None, feature_names=None, linearize_link=True):
+    _expected_value: float | npt.NDArray[np.floating[Any]]
+    _zero_offset: float | npt.NDArray[np.floating[Any]]
+    _input_offsets: npt.NDArray[np.floating[Any]]
+
+    def __init__(
+        self,
+        model: Any,
+        masker: Any,
+        link: Any = None,
+        feature_names: list[str] | None = None,
+        linearize_link: bool = True,
+    ) -> None:
         """Build an Additive explainer for the given model using the given masker object.
 
         Parameters
@@ -68,14 +82,32 @@ class AdditiveExplainer(Explainer):
 
         self._expected_value = self._input_offsets.sum() + self._zero_offset
 
-    def __call__(self, *args, max_evals=None, silent=False):
+    def __call__(
+        self,
+        *args: Any,
+        max_evals: int | Literal["auto"] = "auto",
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | Literal["auto"] = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        **kwargs: Any,
+    ) -> Any:
         """Explains the output of model(*args), where args represents one or more parallel iterable args."""
-        # we entirely rely on the general call implementation, we override just to remove **kwargs
-        # from the function signature
-        return super().__call__(*args, max_evals=max_evals, silent=silent)
+        # we entirely rely on the general call implementation
+        return super().__call__(
+            *args,
+            max_evals=max_evals,
+            main_effects=main_effects,
+            error_bounds=error_bounds,
+            batch_size=batch_size,
+            outputs=outputs,
+            silent=silent,
+            **kwargs,
+        )
 
     @staticmethod
-    def supports_model_with_masker(model, masker):
+    def supports_model_with_masker(model: Any, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
@@ -87,7 +119,16 @@ class AdditiveExplainer(Explainer):
 
         return False
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(
+        self,
+        *row_args: Any,
+        max_evals: int | Literal["auto"],
+        main_effects: bool,
+        error_bounds: bool,
+        outputs: Any,
+        silent: bool,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         x = row_args[0]
         inputs = np.zeros((len(x), len(x)))

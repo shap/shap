@@ -128,35 +128,34 @@ disallow_incomplete_defs = false
 exclude = ["shap/benchmark/*", "tests/benchmark/*"]
 mypy_path = "stubs"
 
-plugins = ["numpy.typing.mypy_plugin"]
+# NOTE: numpy.typing.mypy_plugin is deprecated in NumPy 2.3+ and will be removed in a future release
+# plugins = ["numpy.typing.mypy_plugin"]
 
 [[tool.mypy.overrides]]
 # Disable some checks from certain shap modules
 # TODO: get these passing!
+# NOTE: Modules with added type hints have been removed from this list
 module = [
-  "shap.benchmark._explanation_error",
-  "shap.benchmark._sequential",
-  "shap.explainers._additive",
+  # "shap.explainers._additive",       # NOW TYPE CHECKED - type hints added
   "shap.explainers._deep.deep_pytorch",
   "shap.explainers._deep.deep_tf",
-  "shap.explainers._exact",
-  "shap.explainers._explainer",
-  "shap.explainers._gradient",
-  "shap.explainers._kernel",
-  "shap.explainers._linear",
-  "shap.explainers._partition",
-  "shap.explainers._partition",
-  "shap.explainers._permutation",
-  "shap.explainers._sampling",
-  "shap.explainers._tree",
+  # "shap.explainers._exact",          # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._explainer",      # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._gradient",       # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._kernel",         # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._linear",         # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._partition",      # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._permutation",    # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._sampling",       # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._tree",           # NOW TYPE CHECKED - type hints added
+  # "shap.explainers._coalition",      # NOW TYPE CHECKED - type hints added
   "shap.explainers.other._random",
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
-  "shap.links",
-  "shap.maskers._composite",
-  "shap.maskers._fixed",
+  # "shap.maskers._composite",  # NOW TYPE CHECKED - type hints added
+  # "shap.maskers._fixed",      # NOW TYPE CHECKED - type hints added
   "shap.maskers._image",
-  "shap.maskers._masker",
+  # "shap.maskers._masker",     # NOW TYPE CHECKED - type hints added
   "shap.maskers._tabular",
   "shap.maskers._text",
   "shap.plots._bar",         # TODO: Dead code documented - bar_legacy marked

@@ -26,7 +26,7 @@ def test_exact_second_order(random_seed):
     right_answer[:, 3] += (data[:, 2] * data[:, 3]) / 2
     shap_values = shap.explainers.PermutationExplainer(model, np.zeros((1, 5)))(data)
 
-    assert np.allclose(right_answer, shap_values.values)
+    assert np.allclose(right_answer, shap_values.values)  # type: ignore[union-attr]
 
 
 def test_tabular_single_output_auto_masker():
