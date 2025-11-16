@@ -113,34 +113,29 @@ def test_independent_masker_with_dataframe_output():
     """Test that Independent masker returns DataFrame when initialized with DataFrame."""
     import pandas as pd
 
-    df = pd.DataFrame({
-        'a': [0.0, 1.0, 2.0, 3.0, 4.0],
-        'b': [5.0, 6.0, 7.0, 8.0, 9.0],
-        'c': [10.0, 11.0, 12.0, 13.0, 14.0]
-    })
+    df = pd.DataFrame(
+        {"a": [0.0, 1.0, 2.0, 3.0, 4.0], "b": [5.0, 6.0, 7.0, 8.0, 9.0], "c": [10.0, 11.0, 12.0, 13.0, 14.0]}
+    )
 
     masker = shap.maskers.Independent(df)
 
     # Test masking - should return DataFrame
     result = masker(np.array([True, False, True]), np.array([20.0, 21.0, 22.0]))
     assert isinstance(result[0], pd.DataFrame)
-    assert list(result[0].columns) == ['a', 'b', 'c']
+    assert list(result[0].columns) == ["a", "b", "c"]
 
 
 def test_independent_masker_with_dict_mean_cov():
     """Test Independent masker with dictionary containing mean and cov."""
-    data_dict = {
-        'mean': np.array([1.5, 2.5, 3.5]),
-        'cov': np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    }
+    data_dict = {"mean": np.array([1.5, 2.5, 3.5]), "cov": np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])}
 
     masker = shap.maskers.Independent(data_dict)
 
     # Should have mean and cov attributes
-    assert hasattr(masker, 'mean')
-    assert hasattr(masker, 'cov')
-    assert np.allclose(masker.mean, data_dict['mean'])
-    assert np.allclose(masker.cov, data_dict['cov'])
+    assert hasattr(masker, "mean")
+    assert hasattr(masker, "cov")
+    assert np.allclose(masker.mean, data_dict["mean"])
+    assert np.allclose(masker.cov, data_dict["cov"])
 
     # Should work for masking
     result = masker(True, np.array([5, 6, 7]))
@@ -219,11 +214,7 @@ def test_partition_masker_with_dataframe_output():
     """Test Partition masker returns DataFrame when initialized with DataFrame."""
     import pandas as pd
 
-    df = pd.DataFrame({
-        'x': [0.0, 1.0, 2.0],
-        'y': [3.0, 4.0, 5.0],
-        'z': [6.0, 7.0, 8.0]
-    })
+    df = pd.DataFrame({"x": [0.0, 1.0, 2.0], "y": [3.0, 4.0, 5.0], "z": [6.0, 7.0, 8.0]})
 
     # Use clustering=None to avoid clustering issues with small DataFrame
     masker = shap.maskers.Partition(df, clustering=None)

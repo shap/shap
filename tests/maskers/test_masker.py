@@ -64,5 +64,3 @@ def test_output_composite_with_false_mask():
 
     assert isinstance(result, tuple)
     assert len(result) == 2
-
-

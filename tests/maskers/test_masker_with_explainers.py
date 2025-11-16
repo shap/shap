@@ -11,6 +11,7 @@ import shap
 
 def test_masker_with_kernel_explainer():
     """Test masker functionality through KernelExplainer (public API)."""
+
     # Create simple model
     def model(x):
         return np.sum(x, axis=1)
@@ -110,8 +111,6 @@ def test_partition_masker_with_false_mask():
 
     result = masker(False, background[0])
     assert isinstance(result, tuple)
-
-
 
 
 def test_masker_with_explainer_auto_detection():

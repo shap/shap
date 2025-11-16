@@ -122,8 +122,6 @@ def test_composite_masker_clustering():
     assert hasattr(composite, "clustering")
 
 
-
-
 def test_composite_masker_single_masker():
     """Test Composite masker with a single submasker."""
     masker = shap.maskers.Fixed()
