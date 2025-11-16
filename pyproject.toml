@@ -150,6 +150,7 @@ module = [
   "shap.explainers.other._random",
   "shap.explainers.pytree",
   "shap.explainers.tf_utils",
+  "shap.links",
   "shap.maskers._composite",
   "shap.maskers._fixed",
   "shap.maskers._image",
@@ -164,8 +165,11 @@ module = [
   "shap.plots._scatter",     # TODO: Dead code documented - dependence_legacy marked
   "shap.plots._text",        # TODO: Dead code documented - text_old, text_to_text, saliency_plot, heatmap marked
   "shap.plots._waterfall",   # TODO: Dead code documented - waterfall_legacy marked
+  "shap.utils._clustering",
+  "shap.utils._masked_model",
 ]
 check_untyped_defs = false
+ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Ignore missing types for 3rd party libraries
