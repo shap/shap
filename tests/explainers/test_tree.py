@@ -10,6 +10,8 @@ import pandas as pd
 import pytest
 import sklearn
 import sklearn.pipeline
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import check_array
 
 import shap
