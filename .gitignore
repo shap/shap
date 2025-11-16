@@ -17,6 +17,7 @@ __pycache__
 .vscode
 .python-version
 *.pyc
+*.so
 **/.coverage*
 /build
 /data/*
