@@ -131,12 +131,7 @@ def test_force_plot_with_explanation_object():
     features = np.random.randn(10)
     feature_names = [f"Feature {i}" for i in range(10)]
 
-    explanation = shap.Explanation(
-        values=shap_values,
-        base_values=0.5,
-        data=features,
-        feature_names=feature_names
-    )
+    explanation = shap.Explanation(values=shap_values, base_values=0.5, data=features, feature_names=feature_names)
 
     # Pass Explanation object as first parameter
     shap.force_plot(explanation, matplotlib=True, show=False)
@@ -272,5 +267,7 @@ def test_force_plot_not_implemented_multi_sample_matplotlib():
     base_value = 0.5
     shap_values = np.random.randn(3, 5)  # Multi-sample
 
-    with pytest.raises(NotImplementedError, match="matplotlib = True is not yet supported for force plots with multiple samples"):
+    with pytest.raises(
+        NotImplementedError, match="matplotlib = True is not yet supported for force plots with multiple samples"
+    ):
         shap.force_plot(base_value, shap_values, matplotlib=True, show=False)

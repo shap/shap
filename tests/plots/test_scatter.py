@@ -136,7 +136,7 @@ def test_scatter_show_true(explainer, monkeypatch):
     """Test scatter plot with show=True."""
     explanation = explainer(explainer.data)
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.scatter(explanation[:, "Age"], show=True)
     assert len(show_called) == 1
     plt.close()
@@ -238,9 +238,6 @@ def test_scatter_with_custom_cmap(explainer):
     """Test scatter plot with custom colormap."""
     explanation = explainer(explainer.data)
     shap.plots.scatter(
-        explanation[:, "Age"],
-        color=explanation[:, "Workclass"],
-        cmap=plt.get_cmap("viridis"),
-        show=False
+        explanation[:, "Age"], color=explanation[:, "Workclass"], cmap=plt.get_cmap("viridis"), show=False
     )
     plt.close()

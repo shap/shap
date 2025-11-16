@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pytest
 
 import shap
@@ -82,7 +81,7 @@ def test_monitoring_show_true(monitoring_data, monkeypatch):
     shap_values, features, feature_names = monitoring_data
     # Mock plt.show() to avoid actually displaying
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.monitoring(0, shap_values, features, feature_names=feature_names, show=True)
     assert len(show_called) == 1
     plt.close()

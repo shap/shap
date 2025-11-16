@@ -14,11 +14,7 @@ def test_benchmark_single_with_curve():
     curve_y_std = np.ones_like(curve_y) * 0.1
 
     result = BenchmarkResult(
-        metric="remove absolute",
-        method="Method A",
-        curve_x=curve_x,
-        curve_y=curve_y,
-        curve_y_std=curve_y_std
+        metric="remove absolute", method="Method A", curve_x=curve_x, curve_y=curve_y, curve_y_std=curve_y_std
     )
 
     fig = plt.figure()
@@ -37,13 +33,11 @@ def test_benchmark_multiple_single_metric():
         curve_y = np.sin(curve_x * np.pi + i * 0.5) * 0.5 + 0.5
         curve_y_std = np.ones_like(curve_y) * 0.05
 
-        results.append(BenchmarkResult(
-            metric="remove absolute",
-            method=method,
-            curve_x=curve_x,
-            curve_y=curve_y,
-            curve_y_std=curve_y_std
-        ))
+        results.append(
+            BenchmarkResult(
+                metric="remove absolute", method=method, curve_x=curve_x, curve_y=curve_y, curve_y_std=curve_y_std
+            )
+        )
 
     fig = plt.figure()
     shap.plots.benchmark(results, show=False)
@@ -88,15 +82,11 @@ def test_benchmark_multiple_metrics():
 def test_benchmark_keep_positive():
     """Test benchmark plot with 'keep positive' metric."""
     curve_x = np.linspace(0, 1, 30)
-    curve_y = curve_x ** 2
+    curve_y = curve_x**2
     curve_y_std = np.ones_like(curve_y) * 0.05
 
     result = BenchmarkResult(
-        metric="keep positive",
-        method="Method A",
-        curve_x=curve_x,
-        curve_y=curve_y,
-        curve_y_std=curve_y_std
+        metric="keep positive", method="Method A", curve_x=curve_x, curve_y=curve_y, curve_y_std=curve_y_std
     )
 
     fig = plt.figure()
@@ -137,11 +127,7 @@ def test_benchmark_value_calculation():
     curve_y = np.linspace(0, 1, 50)
 
     result = BenchmarkResult(
-        metric="remove absolute",
-        method="Method A",
-        curve_x=curve_x,
-        curve_y=curve_y,
-        curve_y_std=None
+        metric="remove absolute", method="Method A", curve_x=curve_x, curve_y=curve_y, curve_y_std=None
     )
 
     # Value should be calculated as AUC

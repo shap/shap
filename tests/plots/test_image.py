@@ -159,7 +159,7 @@ def test_image_show_true(imagenet50_example, monkeypatch):
     shap_values = (images - images.mean()) / images.max(keepdims=True)
     explanation = shap.Explanation(values=shap_values, data=images)
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.image_plot(explanation, show=True)
     assert len(show_called) == 1
     plt.close()

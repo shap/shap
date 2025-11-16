@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as np
 import pytest
 
 import shap
@@ -54,11 +53,7 @@ def test_partial_dependence_percentile(simple_model_data):
     """Test partial dependence plot with percentile bounds."""
     model, X = simple_model_data
     fig, ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        xmin="percentile(5)",
-        xmax="percentile(95)",
-        ice=False,
-        show=False
+        "Age", model, X, xmin="percentile(5)", xmax="percentile(95)", ice=False, show=False
     )
     plt.tight_layout()
     return fig
@@ -68,13 +63,7 @@ def test_partial_dependence_percentile(simple_model_data):
 def test_partial_dependence_custom_opacity(simple_model_data):
     """Test partial dependence plot with custom opacity settings."""
     model, X = simple_model_data
-    fig, ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        ice=True,
-        ace_opacity=0.3,
-        pd_opacity=1.0,
-        show=False
-    )
+    fig, ax = shap.plots.partial_dependence("Age", model, X, ice=True, ace_opacity=0.3, pd_opacity=1.0, show=False)
     plt.tight_layout()
     return fig
 
@@ -85,11 +74,7 @@ def test_partial_dependence_with_dataframe(simple_model_data):
     model, X = simple_model_data
 
     # Test that it works with DataFrame input
-    fig, ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        ice=False,
-        show=False
-    )
+    fig, ax = shap.plots.partial_dependence("Age", model, X, ice=False, show=False)
     plt.close(fig)
 
 
@@ -99,9 +84,10 @@ def test_partial_dependence_2d(simple_model_data):
     model, X = simple_model_data
     fig, ax = shap.plots.partial_dependence(
         ("Age", "Education-Num"),
-        model, X,
+        model,
+        X,
         npoints=10,  # Use fewer points for faster test
-        show=False
+        show=False,
     )
     plt.tight_layout()
     return fig
@@ -110,12 +96,7 @@ def test_partial_dependence_2d(simple_model_data):
 def test_partial_dependence_custom_ylabel(simple_model_data):
     """Test partial dependence plot with custom y-axis label."""
     model, X = simple_model_data
-    fig, ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        ylabel="Custom Y Label",
-        ice=False,
-        show=False
-    )
+    fig, ax = shap.plots.partial_dependence("Age", model, X, ylabel="Custom Y Label", ice=False, show=False)
     assert ax.get_ylabel() == "Custom Y Label"
     plt.close(fig)
 
@@ -123,24 +104,14 @@ def test_partial_dependence_custom_ylabel(simple_model_data):
 def test_partial_dependence_feature_expected_value(simple_model_data):
     """Test partial dependence plot with feature expected value marker."""
     model, X = simple_model_data
-    fig, ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        feature_expected_value=True,
-        ice=False,
-        show=False
-    )
+    fig, ax = shap.plots.partial_dependence("Age", model, X, feature_expected_value=True, ice=False, show=False)
     plt.close(fig)
 
 
 def test_partial_dependence_model_expected_value(simple_model_data):
     """Test partial dependence plot with model expected value marker."""
     model, X = simple_model_data
-    fig, ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        model_expected_value=True,
-        ice=False,
-        show=False
-    )
+    fig, ax = shap.plots.partial_dependence("Age", model, X, model_expected_value=True, ice=False, show=False)
     plt.close(fig)
 
 
@@ -148,12 +119,7 @@ def test_partial_dependence_with_ax(simple_model_data):
     """Test partial dependence plot with custom axes."""
     model, X = simple_model_data
     fig, ax = plt.subplots()
-    returned_fig, returned_ax = shap.plots.partial_dependence(
-        "Age", model, X,
-        ax=ax,
-        ice=False,
-        show=False
-    )
+    returned_fig, returned_ax = shap.plots.partial_dependence("Age", model, X, ax=ax, ice=False, show=False)
     assert returned_ax == ax
     plt.close(fig)
 
@@ -169,9 +135,10 @@ def test_partial_dependence_numpy_array(simple_model_data):
 
     fig, ax = shap.plots.partial_dependence(
         0,  # Use index since no feature names
-        numpy_model, X_numpy,
+        numpy_model,
+        X_numpy,
         ice=True,
-        show=False
+        show=False,
     )
     plt.close(fig)
 
@@ -184,11 +151,7 @@ def test_partial_dependence_no_feature_names(simple_model_data):
     def numpy_model(x):
         return model(x)
 
-    fig, ax = shap.plots.partial_dependence(
-        0, numpy_model, X_numpy,
-        ice=False,
-        show=False
-    )
+    fig, ax = shap.plots.partial_dependence(0, numpy_model, X_numpy, ice=False, show=False)
     plt.close(fig)
 
 
@@ -196,7 +159,7 @@ def test_partial_dependence_show_true(simple_model_data, monkeypatch):
     """Test partial dependence with show=True."""
     model, X = simple_model_data
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.partial_dependence("Age", model, X, ice=False, show=True)
     assert len(show_called) == 1
     plt.close()

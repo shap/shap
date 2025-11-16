@@ -227,7 +227,7 @@ def test_beeswarm_show_true(explainer, monkeypatch):
     """Test beeswarm plot with show=True."""
     shap_values = explainer(explainer.data)
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.beeswarm(shap_values, show=True)
     assert len(show_called) == 1
     plt.close()
@@ -238,11 +238,10 @@ def test_beeswarm_with_sparse_features(explainer):
     shap_values = explainer(explainer.data)
     # Convert data to sparse matrix
     import scipy.sparse
+
     sparse_data = scipy.sparse.csr_matrix(shap_values.data)
     shap_values_sparse = shap.Explanation(
-        values=shap_values.values,
-        data=sparse_data,
-        feature_names=shap_values.feature_names
+        values=shap_values.values, data=sparse_data, feature_names=shap_values.feature_names
     )
     shap.plots.beeswarm(shap_values_sparse, show=False)
     plt.close()

@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 import shap
 
@@ -70,13 +69,7 @@ def test_text_with_custom_params():
         data=[test_data],
         output_names=test_output_names,
     )
-    html_output = shap.plots.text(
-        shap_values_test,
-        xmin=-20,
-        xmax=20,
-        cmax=15,
-        display=False
-    )
+    html_output = shap.plots.text(shap_values_test, xmin=-20, xmax=20, cmax=15, display=False)
     assert isinstance(html_output, str)
 
 
@@ -93,11 +86,7 @@ def test_text_with_num_starting_labels():
         data=[test_data],
         output_names=test_output_names,
     )
-    html_output = shap.plots.text(
-        shap_values_test,
-        num_starting_labels=2,
-        display=False
-    )
+    html_output = shap.plots.text(shap_values_test, num_starting_labels=2, display=False)
     assert isinstance(html_output, str)
 
 
@@ -114,27 +103,16 @@ def test_text_with_grouping_threshold():
         data=[test_data],
         output_names=test_output_names,
     )
-    html_output = shap.plots.text(
-        shap_values_test,
-        grouping_threshold=0.05,
-        separator=" ",
-        display=False
-    )
+    html_output = shap.plots.text(shap_values_test, grouping_threshold=0.05, separator=" ", display=False)
     assert isinstance(html_output, str)
 
 
 def test_text_multi_row_single_output():
     """Test text plot with multiple rows and single output (or string output_names)."""
     # This tests the path: len(shap_values.shape) == 2 and (output_names is None or isinstance(output_names, str))
-    test_values = np.array([
-        [[10.0, 3.0], [-3.0, 10.0], [0.0, 0.0]],
-        [[5.0, 2.0], [-2.0, 5.0], [0.0, 0.0]]
-    ])
+    test_values = np.array([[[10.0, 3.0], [-3.0, 10.0], [0.0, 0.0]], [[5.0, 2.0], [-2.0, 5.0], [0.0, 0.0]]])
     test_base_values = np.array([[-6.0, -12.0], [-5.0, -11.0]])
-    test_data = np.array([
-        ["Hello ", "world ", " "],
-        ["Goodbye ", "world ", " "]
-    ], dtype="<U10")
+    test_data = np.array([["Hello ", "world ", " "], ["Goodbye ", "world ", " "]], dtype="<U10")
 
     shap_values_test = shap.Explanation(
         values=test_values,

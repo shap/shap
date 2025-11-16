@@ -112,7 +112,6 @@ def test_bar_raises_error_for_empty_explanation(explainer):
         shap.plots.bar(shap_values[0:0], show=False)
 
 
-
 @pytest.mark.mpl_image_compare(tolerance=3)
 def test_bar_legacy():
     """Test legacy bar plot function."""
@@ -120,11 +119,10 @@ def test_bar_legacy():
     shap_values = np.random.randn(10) * 0.5
     feature_names = [f"Feature {i}" for i in range(10)]
     features = np.random.randn(10) * 2
-    
+
     fig = plt.figure()
     with pytest.warns(DeprecationWarning):
-        shap.plots._bar.bar_legacy(shap_values, features=features, 
-                                   feature_names=feature_names, show=False)
+        shap.plots._bar.bar_legacy(shap_values, features=features, feature_names=feature_names, show=False)
     plt.tight_layout()
     return fig
 
@@ -134,8 +132,7 @@ def test_bar_legacy_no_features():
     np.random.seed(42)
     shap_values = np.random.randn(10) * 0.5
     feature_names = [f"Feature {i}" for i in range(10)]
-    
+
     with pytest.warns(DeprecationWarning):
         shap.plots._bar.bar_legacy(shap_values, feature_names=feature_names, show=False)
     plt.close()
-

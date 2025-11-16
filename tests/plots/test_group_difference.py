@@ -89,7 +89,7 @@ def test_group_difference_show_true(explainer, monkeypatch):
     group_mask = np.random.randint(2, size=shap_values.shape[0])
     feature_names = explainer.data_feature_names
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.group_difference(shap_values, group_mask, feature_names, show=True)
     assert len(show_called) == 1
     plt.close()

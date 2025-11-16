@@ -69,7 +69,7 @@ def test_embedding_show_true(explainer, monkeypatch):
     shap_values = explainer.shap_values(explainer.data)
     # Mock plt.show() to avoid actually displaying
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.embedding("Age", shap_values, feature_names=explainer.feature_names, show=True)
     assert len(show_called) == 1
     plt.close()

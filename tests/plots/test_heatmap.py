@@ -31,7 +31,7 @@ def test_heatmap_show_true(explainer, monkeypatch):
     """Test heatmap plot with show=True."""
     shap_values = explainer(explainer.data)
     show_called = []
-    monkeypatch.setattr(plt, 'show', lambda: show_called.append(True))
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
     shap.plots.heatmap(shap_values, show=True)
     assert len(show_called) == 1
     plt.close()
