@@ -4,8 +4,10 @@ import itertools
 import logging
 import time
 import warnings
+from typing import Any, Literal
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import scipy.sparse
 import sklearn
@@ -82,7 +84,44 @@ class KernelExplainer(Explainer):
 
     """
 
-    def __init__(self, model, data, feature_names=None, link="identity", **kwargs):
+    data_feature_names: list[str]
+    link: Any
+    keep_index: bool
+    keep_index_ordered: bool
+    model: Any
+    data: DenseData | SparseData
+    N: int
+    P: int
+    linkfv: np.vectorize
+    nsamplesAdded: int
+    nsamplesRun: int
+    fnull: npt.NDArray[np.floating[Any]]
+    expected_value: float | npt.NDArray[np.floating[Any]]
+    vector_out: bool
+    D: int
+    varyingInds: npt.NDArray[np.intp]
+    varyingFeatureGroups: npt.NDArray[Any] | list[Any]
+    M: int
+    fx: npt.NDArray[np.floating[Any]]
+    l1_reg: str | float | bool
+    nsamples: int
+    max_samples: int
+    synth_data: npt.NDArray[Any] | scipy.sparse.lil_matrix
+    maskMatrix: npt.NDArray[np.floating[Any]]
+    kernelWeights: npt.NDArray[np.floating[Any]]
+    y: npt.NDArray[np.floating[Any]]
+    ey: npt.NDArray[np.floating[Any]]
+    lastMask: npt.NDArray[np.floating[Any]]
+    synth_data_index: npt.NDArray[Any]
+
+    def __init__(
+        self,
+        model: Any,
+        data: Any,
+        feature_names: list[str] | None = None,
+        link: Literal["identity", "logit"] | Any = "identity",
+        **kwargs: Any,
+    ) -> None:
         if feature_names is not None:
             self.data_feature_names = feature_names
         elif isinstance(data, pd.DataFrame):
@@ -142,7 +181,7 @@ class KernelExplainer(Explainer):
             self.D = self.fnull.shape[0]
 
     @staticmethod
-    def _convert_symbolic_tensor(symbolic_tensor) -> np.ndarray:
+    def _convert_symbolic_tensor(symbolic_tensor: Any) -> npt.NDArray[Any]:
         import tensorflow as tf
 
         if tf.__version__ >= "2.0.0":
@@ -156,13 +195,18 @@ class KernelExplainer(Explainer):
                 tensor_as_np_array = sess.run(symbolic_tensor)
         return tensor_as_np_array
 
-    def __call__(self, X, l1_reg="num_features(10)", silent=False):
+    def __call__(  # type: ignore[override]
+        self,
+        X: npt.NDArray[Any] | pd.DataFrame | scipy.sparse.spmatrix,
+        l1_reg: str | float | bool = "num_features(10)",
+        silent: bool = False,
+    ) -> Explanation:
         start_time = time.time()
 
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
         else:
-            feature_names = getattr(self, "data_feature_names", None)
+            feature_names = getattr(self, "data_feature_names", None)  # type: ignore[assignment]
 
         v = self.shap_values(X, l1_reg=l1_reg, silent=silent)
         if isinstance(v, list):
@@ -182,7 +226,11 @@ class KernelExplainer(Explainer):
             compute_time=time.time() - start_time,
         )
 
-    def shap_values(self, X, **kwargs):
+    def shap_values(
+        self,
+        X: npt.NDArray[Any] | pd.DataFrame | pd.Series | scipy.sparse.spmatrix,
+        **kwargs: Any,
+    ) -> npt.NDArray[Any]:
         """Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -249,7 +297,7 @@ class KernelExplainer(Explainer):
         arr_type = "'numpy.ndarray'>"
         # if sparse, convert to lil for performance
         if scipy.sparse.issparse(X) and not scipy.sparse.isspmatrix_lil(X):
-            X = X.tolil()
+            X = X.tolil()  # type: ignore[union-attr]
         assert x_type.endswith(arr_type) or scipy.sparse.isspmatrix_lil(X), "Unknown instance type: " + x_type
 
         # single instance
@@ -283,8 +331,8 @@ class KernelExplainer(Explainer):
                 for i in range(X.shape[0]):
                     for j in range(s[1]):
                         outs[j][i] = explanations[i][:, j]
-                outs = np.stack(outs, axis=-1)
-                return outs
+                outs = np.stack(outs, axis=-1)  # type: ignore[assignment]
+                return outs  # type: ignore[return-value]
 
             # single-output
             else:
@@ -297,7 +345,7 @@ class KernelExplainer(Explainer):
             emsg = "Instance must have 1 or 2 dimensions!"
             raise DimensionError(emsg)
 
-    def explain(self, incoming_instance, **kwargs):
+    def explain(self, incoming_instance: Any, **kwargs: Any) -> npt.NDArray[Any]:
         # convert incoming input to a standardized iml object
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
@@ -493,7 +541,7 @@ class KernelExplainer(Explainer):
         return phi
 
     @staticmethod
-    def not_equal(i, j):
+    def not_equal(i: Any, j: Any) -> int:
         number_types = (int, float, np.number)
         if isinstance(i, number_types) and isinstance(j, number_types):
             return 0 if np.allclose(i, j, equal_nan=True) else 1
@@ -506,11 +554,11 @@ class KernelExplainer(Explainer):
         else:
             return 0 if i == j else 1
 
-    def varying_groups(self, x):
+    def varying_groups(self, x: npt.NDArray[Any] | scipy.sparse.spmatrix) -> npt.NDArray[np.intp]:
         if not scipy.sparse.issparse(x):
             varying = np.zeros(self.data.groups_size)
             for i in range(self.data.groups_size):
-                inds = self.data.groups[i]
+                inds = self.data.groups[i]  # type: ignore[index]
                 x_group = x[0, inds]
                 if scipy.sparse.issparse(x_group):
                     if all(j not in x.nonzero()[1] for j in inds):
@@ -521,7 +569,7 @@ class KernelExplainer(Explainer):
             varying_indices = np.nonzero(varying)[0]
             return varying_indices
         else:
-            varying_indices = []
+            varying_indices = []  # type: ignore[assignment]
             # go over all nonzero columns in background and evaluation data
             # if both background and evaluation are zero, the column does not vary
             varying_indices = np.unique(np.union1d(self.data.data.nonzero()[1], x.nonzero()[1]))
@@ -547,7 +595,7 @@ class KernelExplainer(Explainer):
             varying_indices = varying_indices[mask]
             return varying_indices
 
-    def allocate(self):
+    def allocate(self) -> None:
         if scipy.sparse.issparse(self.data.data):
             # We tile the sparse matrix in csr format but convert it to lil
             # for performance when adding samples
@@ -583,9 +631,14 @@ class KernelExplainer(Explainer):
         self.nsamplesAdded = 0
         self.nsamplesRun = 0
         if self.keep_index:
-            self.synth_data_index = np.tile(self.data.index_value, self.nsamples)
+            self.synth_data_index = np.tile(self.data.index_value, self.nsamples)  # type: ignore[union-attr]
 
-    def addsample(self, x, m, w):
+    def addsample(
+        self,
+        x: npt.NDArray[Any] | scipy.sparse.spmatrix,
+        m: npt.NDArray[Any],
+        w: float,
+    ) -> None:
         offset = self.nsamplesAdded * self.N
         if isinstance(self.varyingFeatureGroups, (list,)):
             for j in range(self.M):
@@ -611,14 +664,14 @@ class KernelExplainer(Explainer):
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1
 
-    def run(self):
+    def run(self) -> None:
         num_to_run = self.nsamplesAdded * self.N - self.nsamplesRun * self.N
         data = self.synth_data[self.nsamplesRun * self.N : self.nsamplesAdded * self.N, :]
         if self.keep_index:
             index = self.synth_data_index[self.nsamplesRun * self.N : self.nsamplesAdded * self.N]
-            index = pd.DataFrame(index, columns=[self.data.index_name])
+            index = pd.DataFrame(index, columns=[self.data.index_name])  # type: ignore[union-attr]
             data = pd.DataFrame(data, columns=self.data.group_names)
-            data = pd.concat([index, data], axis=1).set_index(self.data.index_name)
+            data = pd.concat([index, data], axis=1).set_index(self.data.index_name)  # type: ignore[union-attr]
             if self.keep_index_ordered:
                 data = data.sort_index()
         modelOut = self.model.f(data)
@@ -634,7 +687,11 @@ class KernelExplainer(Explainer):
             self.nsamplesRun, self.nsamplesAdded, self.D, self.N, self.data.weights, self.y, self.ey
         )
 
-    def solve(self, fraction_evaluated, dim):
+    def solve(
+        self,
+        fraction_evaluated: float,
+        dim: int,
+    ) -> tuple[npt.NDArray[Any], npt.NDArray[Any]]:
         eyAdj = self.linkfv(self.ey[:, dim]) - self.link.f(self.fnull[dim])
         s = np.sum(self.maskMatrix, 1)
 

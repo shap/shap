@@ -4,9 +4,10 @@ import copy
 import operator
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import scipy.cluster
 import scipy.sparse
@@ -21,7 +22,7 @@ from .utils._general import OpChain
 op_chain_root = OpChain("shap.Explanation")
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 
 @dataclass
@@ -38,7 +39,7 @@ class OpHistoryItem:
 class MetaExplanation(type):
     """This metaclass exposes the Explanation object's class methods for creating template op chains."""
 
-    def __getitem__(cls, item):
+    def __getitem__(cls, item: Any) -> OpChain:
         return op_chain_root.__getitem__(item)
 
     @property
@@ -106,22 +107,22 @@ class Explanation(metaclass=MetaExplanation):
 
     def __init__(
         self,
-        values,
-        base_values=None,
-        data=None,
-        display_data=None,
-        instance_names=None,
-        feature_names=None,
-        output_names=None,
-        output_indexes=None,
-        lower_bounds=None,
-        upper_bounds=None,
-        error_std=None,
-        main_effects=None,
-        hierarchical_values=None,
-        clustering=None,
-        compute_time=None,
-    ):
+        values: npt.NDArray[Any] | list[Any] | Explanation,
+        base_values: npt.NDArray[Any] | list[Any] | float | None = None,
+        data: npt.NDArray[Any] | pd.DataFrame | list[Any] | None = None,
+        display_data: npt.NDArray[Any] | pd.DataFrame | None = None,
+        instance_names: Sequence[str] | npt.NDArray[Any] | None = None,
+        feature_names: Sequence[str] | npt.NDArray[Any] | Alias | None = None,
+        output_names: Sequence[str] | npt.NDArray[Any] | str | Alias | None = None,
+        output_indexes: npt.NDArray[Any] | None = None,
+        lower_bounds: npt.NDArray[Any] | None = None,
+        upper_bounds: npt.NDArray[Any] | None = None,
+        error_std: npt.NDArray[Any] | None = None,
+        main_effects: npt.NDArray[Any] | None = None,
+        hierarchical_values: npt.NDArray[Any] | list[Any] | None = None,
+        clustering: npt.NDArray[Any] | list[Any] | None = None,
+        compute_time: float | None = None,
+    ) -> None:
         self.op_history: list[OpHistoryItem] = []
 
         self.compute_time = compute_time
@@ -142,17 +143,17 @@ class Explanation(metaclass=MetaExplanation):
             output_names = [f"Output {i}" for i in range(num_names)]
 
         if (
-            len(_compute_shape(feature_names)) == 1
+            feature_names is not None and len(_compute_shape(feature_names)) == 1
         ):  # TODO: should always be an alias once slicer supports per-row aliases
             if len(values_shape) >= 2 and len(feature_names) == values_shape[1]:
-                feature_names = Alias(list(feature_names), 1)
+                feature_names = Alias(list(feature_names), 1)  # type: ignore[arg-type]
             elif len(values_shape) >= 1 and len(feature_names) == values_shape[0]:
-                feature_names = Alias(list(feature_names), 0)
+                feature_names = Alias(list(feature_names), 0)  # type: ignore[arg-type]
 
         if (
-            len(_compute_shape(output_names)) == 1
+            output_names is not None and len(_compute_shape(output_names)) == 1
         ):  # TODO: should always be an alias once slicer supports per-row aliases
-            output_names = Alias(list(output_names), self.output_dims[0])
+            output_names = Alias(list(output_names), self.output_dims[0])  # type: ignore[arg-type]
             # if len(values_shape) >= 1 and len(output_names) == values_shape[0]:
             #     output_names = Alias(list(output_names), 0)
             # elif len(values_shape) >= 2 and len(output_names) == values_shape[1]:
@@ -169,7 +170,7 @@ class Explanation(metaclass=MetaExplanation):
             else:
                 raise ValueError("shap.Explanation does not yet support output_names of order greater than 3!")
 
-        if not hasattr(base_values, "__len__") or len(base_values) == 0:
+        if base_values is None or not hasattr(base_values, "__len__") or len(base_values) == 0:
             pass
         elif len(_compute_shape(base_values)) == len(self.output_dims):
             base_values = Obj(base_values, list(self.output_dims))
@@ -304,7 +305,7 @@ class Explanation(metaclass=MetaExplanation):
         self._s.clustering = new_clustering
 
     # =================== Data model ===================
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Display some basic printable info, but not everything."""
         out = f".values =\n{self.values!r}"
         if self.base_values is not None:
@@ -431,7 +432,7 @@ class Explanation(metaclass=MetaExplanation):
         # shape will always be of tuple[int, ...] type, not tuple[int|None, ...].
         return cast("tuple[int, ...]", shap_values_shape)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.shape[0]
 
     def __copy__(self) -> Explanation:
@@ -456,7 +457,12 @@ class Explanation(metaclass=MetaExplanation):
 
     # =================== Operations ===================
 
-    def _apply_binary_operator(self, other, binary_op, op_name):
+    def _apply_binary_operator(
+        self,
+        other: Explanation | npt.NDArray[Any] | float | int,
+        binary_op: Callable[[Any, Any], Any],
+        op_name: str,
+    ) -> Explanation:
         new_exp = self.__copy__()
         new_exp.op_history.append(OpHistoryItem(name=op_name, args=(other,), prev_shape=self.shape))
 
@@ -474,28 +480,28 @@ class Explanation(metaclass=MetaExplanation):
                 new_exp.base_values = binary_op(new_exp.base_values, other)
         return new_exp
 
-    def __add__(self, other):
+    def __add__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.add, "__add__")
 
-    def __radd__(self, other):
+    def __radd__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
         return self._apply_binary_operator(other, operator.add, "__add__")
 
-    def __sub__(self, other):
+    def __sub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.sub, "__sub__")
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
         return self._apply_binary_operator(other, operator.sub, "__sub__")
 
-    def __mul__(self, other):
+    def __mul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.mul, "__mul__")
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:  # type: ignore[misc]
         return self._apply_binary_operator(other, operator.mul, "__mul__")
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: Explanation | npt.NDArray[Any] | float | int) -> Explanation:
         return self._apply_binary_operator(other, operator.truediv, "__truediv__")
 
-    def _numpy_func(self, fname, **kwargs):
+    def _numpy_func(self, fname: str, **kwargs: Any) -> Explanation:
         """Apply a numpy-style function to this Explanation."""
         new_self = copy.copy(self)
         axis = kwargs.get("axis", None)
@@ -540,34 +546,34 @@ class Explanation(metaclass=MetaExplanation):
         return new_self
 
     @property
-    def abs(self):
+    def abs(self) -> Explanation:
         return self._numpy_func("abs")
 
     @property
-    def identity(self):
+    def identity(self) -> Explanation:
         return self
 
     @property
-    def argsort(self):
+    def argsort(self) -> Explanation:
         return self._numpy_func("argsort")
 
     @property
-    def flip(self):
+    def flip(self) -> Explanation:
         return self._numpy_func("flip")
 
-    def mean(self, axis: int):
+    def mean(self, axis: int) -> Explanation:
         """Numpy-style mean function."""
         return self._numpy_func("mean", axis=axis)
 
-    def max(self, axis: int):
-        """Numpy-style mean function."""
+    def max(self, axis: int) -> Explanation:
+        """Numpy-style max function."""
         return self._numpy_func("max", axis=axis)
 
-    def min(self, axis: int):
-        """Numpy-style mean function."""
+    def min(self, axis: int) -> Explanation:
+        """Numpy-style min function."""
         return self._numpy_func("min", axis=axis)
 
-    def sum(self, axis: int | None = None, grouping=None):
+    def sum(self, axis: int | None = None, grouping: dict[str, str] | None = None) -> Explanation:
         """Numpy-style sum function."""
         if grouping is None:
             return self._numpy_func("sum", axis=axis)
@@ -575,7 +581,7 @@ class Explanation(metaclass=MetaExplanation):
             return group_features(self, grouping)
         raise DimensionError("Only axis = 1 is supported for grouping right now...")
 
-    def percentile(self, q, axis=None) -> Explanation:
+    def percentile(self, q: float, axis: int | None = None) -> Explanation:
         new_self = copy.deepcopy(self)
         if self.feature_names is not None and not is_1d(self.feature_names) and axis == 0:
             new_values = self._flatten_feature_names()
@@ -618,7 +624,7 @@ class Explanation(metaclass=MetaExplanation):
         inds = rng.choice(length, size=min(max_samples, length), replace=replace)
         return self[list(inds)]
 
-    def hclust(self, metric: str = "sqeuclidean", axis: int = 0):
+    def hclust(self, metric: str = "sqeuclidean", axis: Literal[0, 1] = 0) -> npt.NDArray[np.int64]:
         """Computes an optimal leaf ordering sort order using hclustering.
 
         hclust(metric="sqeuclidean")
@@ -707,8 +713,8 @@ class Explanation(metaclass=MetaExplanation):
             return Cohorts(**{name: self[cohorts == name] for name in np.unique(cohorts)})
         raise TypeError("The given set of cohort indicators is not recognized! Please give an array or int.")
 
-    def _flatten_feature_names(self) -> dict:
-        new_values: dict[Any, Any] = {}
+    def _flatten_feature_names(self) -> dict[Any, list[Any]]:
+        new_values: dict[Any, list[Any]] = {}
         for i in range(len(self.values)):
             for s, v in zip(self.feature_names[i], self.values[i]):
                 if s not in new_values:
@@ -716,8 +722,8 @@ class Explanation(metaclass=MetaExplanation):
                 new_values[s].append(v)
         return new_values
 
-    def _use_data_as_feature_names(self):
-        new_values: dict[Any, Any] = {}
+    def _use_data_as_feature_names(self) -> dict[Any, list[Any]]:
+        new_values: dict[Any, list[Any]] = {}
         for i in range(len(self.values)):
             for s, v in zip(self.data[i], self.values[i]):
                 if s not in new_values:
@@ -726,7 +732,7 @@ class Explanation(metaclass=MetaExplanation):
         return new_values
 
 
-def group_features(shap_values, feature_map) -> Explanation:
+def group_features(shap_values: Explanation, feature_map: dict[str, str]) -> Explanation:
     # TODO: support and deal with clusterings
     reverse_map: dict[Any, list[Any]] = {}
     for name in feature_map:
@@ -810,7 +816,7 @@ def compute_output_dims(values, base_values, data, output_names) -> tuple[int, .
     return tuple(output_dims)
 
 
-def is_1d(val):
+def is_1d(val: Sequence[Any] | npt.NDArray[Any]) -> bool:
     return not (isinstance(val[0], (list, np.ndarray)))
 
 
@@ -903,7 +909,7 @@ class Cohorts:
         return self._cohorts
 
     @cohorts.setter
-    def cohorts(self, cval):
+    def cohorts(self, cval: dict[str, Explanation]) -> None:
         if not isinstance(cval, dict):
             emsg = "self.cohorts must be a dictionary!"
             raise TypeError(emsg)
@@ -930,7 +936,7 @@ class Cohorts:
                 new_cohorts._cohorts[k] = result
         return new_cohorts
 
-    def __call__(self, *args, **kwargs) -> Cohorts:
+    def __call__(self, *args: Any, **kwargs: Any) -> Cohorts:
         """Call the bound methods on the Explanation objects retrieved during attribute access.
 
         For example,
@@ -943,16 +949,16 @@ class Cohorts:
             emsg = "No methods to __call__!"
             raise ValueError(emsg)
 
-        new_cohorts = {}
+        new_cohorts: dict[str, Explanation] = {}
         for k, bound_method in self._callables.items():
             new_cohorts[k] = bound_method(*args, **kwargs)
         return Cohorts(**new_cohorts)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<shap._explanation.Cohorts object with {len(self._cohorts)} cohorts of sizes: {[v.shape for v in self._cohorts.values()]}>"
 
 
-def _auto_cohorts(shap_values, max_cohorts) -> Cohorts:
+def _auto_cohorts(shap_values: Explanation, max_cohorts: int) -> Cohorts:
     """This uses a DecisionTreeRegressor to build a group of cohorts with similar SHAP values."""
     # fit a decision tree that well separates the SHAP values
     m = sklearn.tree.DecisionTreeRegressor(max_leaf_nodes=max_cohorts)
@@ -988,7 +994,7 @@ def _auto_cohorts(shap_values, max_cohorts) -> Cohorts:
     return Cohorts(**cohorts)
 
 
-def list_wrap(x):
+def list_wrap(x: npt.NDArray[Any] | Any) -> list[npt.NDArray[Any]] | Any:
     """A helper to patch things since slicer doesn't handle arrays of arrays (it does handle lists of arrays)"""
     if isinstance(x, np.ndarray) and len(x.shape) == 1 and isinstance(x[0], np.ndarray):
         return [v for v in x]
