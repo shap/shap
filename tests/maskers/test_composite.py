@@ -175,3 +175,83 @@ def test_composite_with_output_composite():
     # But it looks like the arg counting isn't working as expected
     # Just verify the composite was created successfully
     assert composite.total_args >= 1
+
+
+def test_composite_masker_with_independent_maskers():
+    """Test Composite masker with Independent maskers that have actual data."""
+    data1 = np.random.randn(5, 2)
+    data2 = np.random.randn(5, 3)
+
+    masker1 = shap.maskers.Independent(data1)
+    masker2 = shap.maskers.Independent(data2)
+
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    # Shape should combine both maskers
+    shape = composite.shape(data1[0], data2[0])
+    assert shape == (5, 5)  # 5 rows, 2+3=5 cols
+
+    # Test __call__ with actual data
+    mask = np.array([True, False, True, True, False])
+    result = composite(mask, data1[0], data2[0])
+
+    assert isinstance(result, tuple)
+    assert len(result) == 2  # Two maskers return two outputs
+
+
+def test_composite_masker_compatible_rows():
+    """Test Composite masker with maskers that have compatible number of rows."""
+    data1 = np.random.randn(10, 2)
+    data2 = np.random.randn(10, 3)
+
+    masker1 = shap.maskers.Independent(data1)
+    masker2 = shap.maskers.Independent(data2)
+
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    mask = np.array([True, False, True, True, False])
+    result = composite(mask, data1[0], data2[0])
+
+    # Should work with same number of rows
+    assert isinstance(result, tuple)
+
+
+def test_composite_masker_with_text_data_attribute():
+    """Test Composite masker text_data attribute."""
+    masker1 = shap.maskers.Fixed()
+    masker2 = shap.maskers.Fixed()
+
+    # Manually set text_data on one masker
+    masker1.text_data = True
+
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    # Should propagate text_data
+    assert composite.text_data is True
+
+
+def test_composite_masker_with_image_data_attribute():
+    """Test Composite masker image_data attribute."""
+    masker1 = shap.maskers.Fixed()
+    masker2 = shap.maskers.Fixed()
+
+    # Manually set image_data on one masker
+    masker2.image_data = True
+
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    # Should propagate image_data
+    assert composite.image_data is True
+
+
+def test_composite_masker_with_kwargs():
+    """Test Composite masker with maskers that have default keyword arguments."""
+    # Use maskers that have kwargs in their __call__ signature
+    # Independent masker doesn't have kwargs, so test with Fixed
+    masker1 = shap.maskers.Fixed()
+    masker2 = shap.maskers.Fixed()
+
+    composite = shap.maskers.Composite(masker1, masker2)
+
+    # arg_counts should handle kwargs correctly
+    assert len(composite.arg_counts) == 2
