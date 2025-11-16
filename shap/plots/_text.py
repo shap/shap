@@ -746,6 +746,9 @@ def svg_force_plot(values, base_values, fx, tokens, uuid, xmin, xmax, output_nam
     return s
 
 
+# TODO: determine if this is dead code
+# This function is deprecated (has FutureWarning) and is not exposed in the public API.
+# Coverage: 0% (lines 757-898 never executed in tests)
 def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, grouping_threshold=1, separator=""):
     """Plots an explanation of a string of text using coloring and interactive labels.
 
@@ -898,6 +901,9 @@ def text_old(shap_values, tokens, partition_tree=None, num_starting_labels=0, gr
     return _ipython_display_html(out)
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap.plots.__init__.py).
+# Coverage: 0% (lines 903-953 never executed in tests)
 def text_to_text(shap_values):
     # unique ID added to HTML elements and function to avoid collision of different instances
     uuid = "".join(random.choices(string.ascii_lowercase, k=20))
@@ -953,6 +959,9 @@ def text_to_text(shap_values):
     _ipython_display_html(javascript + html)
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap.plots.__init__.py).
+# Coverage: 0% (lines 957-1045 never executed in tests)
 def saliency_plot(shap_values):
     uuid = "".join(random.choices(string.ascii_lowercase, k=20))
 
@@ -1045,6 +1054,10 @@ def saliency_plot(shap_values):
     return saliency_plot_html
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap.plots.__init__.py).
+# This is a different heatmap than shap.plots.heatmap (which is in _heatmap.py).
+# Coverage: 0% (lines 1051-1448 never executed in tests)
 def heatmap(shap_values):
     # constants
 

@@ -514,6 +514,10 @@ def _plot_histogram(ax: plt.Axes, xv, xv_no_jitter):
     ax2.spines["bottom"].set_visible(False)
 
 
+# TODO: determine if this is dead code
+# This function is not exposed in the public API (shap/plots/__init__.py).
+# Only the `scatter` function above is exposed as the public API.
+# Coverage: 0% (lines 517-860 never executed in tests through public API)
 def dependence_legacy(
     ind,
     shap_values=None,
