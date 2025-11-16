@@ -144,83 +144,105 @@ def test_beeswarm_ax_and_plot_size_raises_error(explainer):
     plt.close()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_max_display(explainer):
     """Test beeswarm plot with max_display parameter."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, max_display=5, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_custom_ax(explainer):
     """Test beeswarm plot with custom axes."""
-    shap_values = explainer(explainer.data)
     fig, ax = plt.subplots()
+    shap_values = explainer(explainer.data)
     returned_ax = shap.plots.beeswarm(shap_values, ax=ax, plot_size=None, show=False)
     assert returned_ax == ax
-    plt.close()
+    plt.tight_layout()
+    return fig
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_alpha(explainer):
     """Test beeswarm plot with custom alpha."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, alpha=0.5, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_custom_s(explainer):
     """Test beeswarm plot with custom marker size."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, s=30, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_log_scale(explainer):
     """Test beeswarm plot with log scale."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, log_scale=True, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_no_color_bar(explainer):
     """Test beeswarm plot without color bar."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, color_bar=False, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_custom_color_bar_label(explainer):
     """Test beeswarm plot with custom color bar label."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, color_bar_label="Custom Label", show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_axis_color(explainer):
     """Test beeswarm plot with custom axis color."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, axis_color="#FF0000", show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_plot_size_float(explainer):
     """Test beeswarm plot with plot_size as float."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, plot_size=0.5, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_plot_size_tuple(explainer):
     """Test beeswarm plot with plot_size as tuple."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, plot_size=(10, 8), show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_plot_size_none(explainer):
     """Test beeswarm plot with plot_size=None."""
     shap_values = explainer(explainer.data)
     shap.plots.beeswarm(shap_values, plot_size=None, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
 
 
 def test_beeswarm_show_true(explainer, monkeypatch):
@@ -233,6 +255,7 @@ def test_beeswarm_show_true(explainer, monkeypatch):
     plt.close()
 
 
+@pytest.mark.mpl_image_compare
 def test_beeswarm_with_sparse_features(explainer):
     """Test beeswarm plot with sparse feature matrix."""
     shap_values = explainer(explainer.data)
@@ -244,4 +267,5 @@ def test_beeswarm_with_sparse_features(explainer):
         values=shap_values.values, data=sparse_data, feature_names=shap_values.feature_names
     )
     shap.plots.beeswarm(shap_values_sparse, show=False)
-    plt.close()
+    plt.tight_layout()
+    return plt.gcf()
