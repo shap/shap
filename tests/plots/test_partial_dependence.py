@@ -70,7 +70,6 @@ def test_partial_dependence_custom_opacity(simple_model_data):
 
 def test_partial_dependence_with_dataframe(simple_model_data):
     """Test partial dependence plot with DataFrame input."""
-    pd = pytest.importorskip("pandas")
     model, X = simple_model_data
 
     # Test that it works with DataFrame input

@@ -145,10 +145,10 @@ def test_text_multi_output_with_names():
     # Test with display=True (but we can't actually display in tests)
     # This should still generate HTML even if display fails
     try:
-        result = shap.plots.text(shap_values_test, display=True)
+        shap.plots.text(shap_values_test, display=True)
         # If display=True and have_ipython, it returns None
         # If no ipython, it might error
-    except:
+    except Exception:
         pass  # Expected if not in IPython
 
     # Test with display=False

@@ -13,7 +13,6 @@ def monitoring_data():
     X_train = X.iloc[:100]
     y_train = y[:100]
     X_test = X.iloc[100:300]  # Need >100 samples for monitoring plots
-    y_test = y[100:300]
 
     model = xgboost.XGBClassifier(random_state=0, tree_method="exact", base_score=0.5).fit(X_train, y_train)
     explainer = shap.TreeExplainer(model)
