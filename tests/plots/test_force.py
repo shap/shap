@@ -122,3 +122,155 @@ def test_force_plot_positive_sign():
         show=False,
     )
     return plt.gcf()
+
+
+def test_force_plot_with_explanation_object():
+    """Test force plot by passing an Explanation object as base_value."""
+    np.random.seed(42)
+    shap_values = np.random.randn(10)
+    features = np.random.randn(10)
+    feature_names = [f"Feature {i}" for i in range(10)]
+
+    explanation = shap.Explanation(
+        values=shap_values,
+        base_values=0.5,
+        data=features,
+        feature_names=feature_names
+    )
+
+    # Pass Explanation object as first parameter
+    shap.force_plot(explanation, matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_dataframe_features():
+    """Test force plot with pandas DataFrame features."""
+    pd = pytest.importorskip("pandas")
+    np.random.seed(42)
+
+    shap_values = np.random.randn(3)
+    features_df = pd.DataFrame([[1, 2, 3]], columns=["A", "B", "C"])
+
+    shap.force_plot(0.0, shap_values, features_df.iloc[0], matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_series_features():
+    """Test force plot with pandas Series features."""
+    pd = pytest.importorskip("pandas")
+    np.random.seed(42)
+
+    shap_values = np.random.randn(3)
+    features_series = pd.Series([1, 2, 3], index=["A", "B", "C"])
+
+    shap.force_plot(0.0, shap_values, features_series, matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_feature_names_only():
+    """Test force plot with feature names instead of feature values."""
+    np.random.seed(42)
+    shap_values = np.random.randn(5)
+    feature_names = ["Feat1", "Feat2", "Feat3", "Feat4", "Feat5"]
+
+    shap.force_plot(0.0, shap_values, feature_names, matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_no_features():
+    """Test force plot without providing features."""
+    np.random.seed(42)
+    shap_values = np.random.randn(5)
+
+    shap.force_plot(0.0, shap_values, matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_out_names():
+    """Test force plot with custom output names."""
+    np.random.seed(42)
+    shap_values = np.random.randn(5)
+    features = np.random.randn(5)
+
+    shap.force_plot(0.0, shap_values, features, out_names="Prediction", matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_logit_link():
+    """Test force plot with logit link."""
+    np.random.seed(42)
+    shap_values = np.random.randn(5) * 0.1
+    features = np.random.randn(5)
+
+    shap.force_plot(0.0, shap_values, features, link="logit", matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_figsize():
+    """Test force plot with custom figsize."""
+    np.random.seed(42)
+    shap_values = np.random.randn(5)
+    features = np.random.randn(5)
+
+    shap.force_plot(0.0, shap_values, features, figsize=(10, 5), matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_with_contribution_threshold():
+    """Test force plot with custom contribution_threshold."""
+    np.random.seed(42)
+    shap_values = np.random.randn(10) * 0.5
+    features = np.random.randn(10)
+
+    shap.force_plot(0.0, shap_values, features, contribution_threshold=0.1, matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_dimension_error():
+    """Test that force plot raises DimensionError for mismatched features."""
+    np.random.seed(42)
+    shap_values = np.random.randn(5)
+    features = np.random.randn(3)  # Wrong size
+
+    with pytest.raises(shap.utils._exceptions.DimensionError, match="Length of features is not equal"):
+        shap.force_plot(0.0, shap_values, features, matplotlib=True, show=False)
+
+
+def test_force_plot_list_shap_values_error():
+    """Test that force plot raises TypeError for list shap_values (multi-output)."""
+    np.random.seed(42)
+    shap_values = [np.random.randn(5), np.random.randn(5)]
+
+    with pytest.raises(TypeError, match="shap_values arg looks multi output"):
+        shap.force_plot(0.0, shap_values, matplotlib=True, show=False)
+
+
+def test_force_plot_base_value_unwrap():
+    """Test force plot with base_value as single-element array."""
+    np.random.seed(42)
+    base_value = np.array([0.5])  # Single element array
+    shap_values = np.random.randn(5)
+    features = np.random.randn(5)
+
+    shap.force_plot(base_value, shap_values, features, matplotlib=True, show=False)
+    plt.close()
+
+
+def test_force_plot_base_value_all_same():
+    """Test force plot with base_value array where all values are same."""
+    np.random.seed(42)
+    base_value = np.array([0.5, 0.5, 0.5])  # All same
+    shap_values = np.random.randn(3, 5)
+
+    # Multi-sample force plots don't support matplotlib=True
+    shap.force_plot(base_value, shap_values, matplotlib=False, show=False)
+
+
+def test_force_plot_not_implemented_multi_sample_matplotlib():
+    """Test that multi-sample matplotlib force plot raises NotImplementedError."""
+    np.random.seed(42)
+    base_value = 0.5
+    shap_values = np.random.randn(3, 5)  # Multi-sample
+
+    with pytest.raises(NotImplementedError, match="matplotlib = True is not yet supported for force plots with multiple samples"):
+        shap.force_plot(base_value, shap_values, matplotlib=True, show=False)
