@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import copy
 import time
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,6 +15,9 @@ from ..utils import safe_isinstance, show_progress
 from ..utils._exceptions import InvalidAlgorithmError
 from ..utils.transformers import is_transformers_lm
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 class Explainer(Serializable):
     """Uses Shapley values to explain any machine learning model or python function.
@@ -21,18 +27,25 @@ class Explainer(Serializable):
     the particular estimation algorithm that was chosen.
     """
 
+    model: Any
+    masker: Any
+    output_names: list[str] | None
+    feature_names: list[str] | list[list[str]] | None
+    link: Callable[..., Any]
+    linearize_link: bool
+
     def __init__(
         self,
-        model,
-        masker=None,
-        link=links.identity,
-        algorithm="auto",
-        output_names=None,
-        feature_names=None,
-        linearize_link=True,
-        seed=None,
-        **kwargs,
-    ):
+        model: Any,
+        masker: Any = None,
+        link: Callable[..., Any] = links.identity,
+        algorithm: Literal["auto", "permutation", "partition", "tree", "linear", "deep", "exact", "additive"] = "auto",
+        output_names: list[str] | None = None,
+        feature_names: list[str] | list[list[str]] | None = None,
+        linearize_link: bool = True,
+        seed: int | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Build a new explainer for the passed model.
 
         Parameters
@@ -291,15 +304,15 @@ class Explainer(Serializable):
 
     def __call__(
         self,
-        *args,
-        max_evals="auto",
-        main_effects=False,
-        error_bounds=False,
-        batch_size="auto",
-        outputs=None,
-        silent=False,
-        **kwargs,
-    ):
+        *args: Any,
+        max_evals: int | Literal["auto"] = "auto",
+        main_effects: bool = False,
+        error_bounds: bool = False,
+        batch_size: int | Literal["auto"] = "auto",
+        outputs: Any = None,
+        silent: bool = False,
+        **kwargs: Any,
+    ) -> Explanation | list[Explanation]:
         """Explains the output of model(*args), where args is a list of parallel iterable datasets.
 
         Note this default version could be an abstract method that is implemented by each algorithm-specific
@@ -473,7 +486,16 @@ class Explainer(Serializable):
             )
         return out[0] if len(out) == 1 else out
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, outputs, silent, **kwargs):
+    def explain_row(
+        self,
+        *row_args: Any,
+        max_evals: int | Literal["auto"],
+        main_effects: bool,
+        error_bounds: bool,
+        outputs: Any,
+        silent: bool,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes, main_effects).
 
         This is an abstract method meant to be implemented by each subclass.
@@ -491,14 +513,19 @@ class Explainer(Serializable):
         return {}
 
     @staticmethod
-    def supports_model_with_masker(model, masker):
+    def supports_model_with_masker(model: Any, masker: Any) -> bool:
         """Determines if this explainer can handle the given model.
 
         This is an abstract static method meant to be implemented by each subclass.
         """
         return False
 
-    def save(self, out_file, model_saver=".save", masker_saver=".save"):
+    def save(
+        self,
+        out_file: Any,
+        model_saver: str | Callable[..., Any] = ".save",
+        masker_saver: str | Callable[..., Any] = ".save",
+    ) -> None:
         """Write the explainer to the given file stream."""
         super().save(out_file)
         with Serializer(out_file, "shap.Explainer", version=0) as s:
@@ -510,7 +537,13 @@ class Explainer(Serializable):
             s.save("link", self.link)
 
     @classmethod
-    def load(cls, in_file, model_loader=None, masker_loader=None, instantiate=True):
+    def load(
+        cls,
+        in_file: Any,
+        model_loader: Callable[..., Any] | None = None,
+        masker_loader: Callable[..., Any] | None = None,
+        instantiate: bool = True,
+    ) -> Explainer | dict[str, Any]:
         """Load an Explainer from the given file stream.
 
         Parameters
@@ -532,7 +565,7 @@ class Explainer(Serializable):
         return kwargs
 
 
-def pack_values(values):
+def pack_values(values: Any) -> np.ndarray | None | Any:
     """Used the clean up arrays before putting them into an Explanation object."""
     if not hasattr(values, "__len__"):
         return values

@@ -1,6 +1,8 @@
 import logging
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from .._explanation import Explanation
@@ -40,7 +42,12 @@ class SamplingExplainer(KernelExplainer):
 
     """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(
+        self,
+        model: Any,
+        data: npt.NDArray[Any] | pd.DataFrame,
+        **kwargs: Any,
+    ) -> None:
         # silence warning about large datasets
         level = log.level
         log.setLevel(logging.ERROR)
@@ -51,7 +58,12 @@ class SamplingExplainer(KernelExplainer):
             emsg = f"SamplingExplainer only supports the identity link, not {self.link}"
             raise ValueError(emsg)
 
-    def __call__(self, X, y=None, nsamples=2000):
+    def __call__(
+        self,
+        X: npt.NDArray[Any] | pd.DataFrame,
+        y: Any = None,
+        nsamples: int = 2000,
+    ) -> Explanation:
         if isinstance(X, pd.DataFrame):
             feature_names = list(X.columns)
             X = X.values
@@ -64,7 +76,11 @@ class SamplingExplainer(KernelExplainer):
         e = Explanation(v, self.expected_value, X, feature_names=feature_names)
         return e
 
-    def explain(self, incoming_instance, **kwargs):
+    def explain(
+        self,
+        incoming_instance: Any,
+        **kwargs: Any,
+    ) -> npt.NDArray[np.floating[Any]]:
         # convert incoming input to a standardized iml object
         instance = convert_to_instance(incoming_instance)
         match_instance_to_data(instance, self.data)
@@ -181,7 +197,14 @@ class SamplingExplainer(KernelExplainer):
 
         return phi
 
-    def sampling_estimate(self, j, f, x, X, nsamples=10):
+    def sampling_estimate(
+        self,
+        j: int,
+        f: Any,
+        x: npt.NDArray[Any],
+        X: npt.NDArray[Any],
+        nsamples: int = 10,
+    ) -> tuple[npt.NDArray[np.floating[Any]], npt.NDArray[np.floating[Any]]]:
         X_masked = self.X_masked[: nsamples * 2, :]
         inds = np.arange(X.shape[1])
 

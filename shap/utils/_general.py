@@ -298,7 +298,7 @@ class OpChain:
     """A way to represent a set of dot chained operations on an object without actually running them."""
 
     def __init__(self, root_name: str = "") -> None:
-        self._ops: list[list[Any]] = []
+        self._ops = []
         self._root_name = root_name
 
     def apply(self, obj: Any) -> Any:

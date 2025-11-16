@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Iterable, Iterator
-from typing import Any, TypeVar
+from typing import TypeVar
 
 import tqdm
 
@@ -20,14 +20,14 @@ class ShowProgress(Iterator[T]):
         silent: bool,
         start_delay: float,
     ) -> None:
-        self.iter: Iterator[T] = iter(iterable)
-        self.start_time: float = time.time()
-        self.pbar: tqdm.tqdm[Any] | None = None
-        self.total: int | None = total
-        self.desc: str | None = desc
-        self.start_delay: float = start_delay
-        self.silent: bool = silent
-        self.unshown_count: int = 0
+        self.iter = iter(iterable)
+        self.start_time = time.time()
+        self.pbar = None
+        self.total = total
+        self.desc = desc
+        self.start_delay = start_delay
+        self.silent = silent
+        self.unshown_count = 0
 
     def __next__(self) -> T:
         if self.pbar is None and time.time() - self.start_time > self.start_delay:

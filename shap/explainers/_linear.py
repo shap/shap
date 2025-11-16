@@ -1,6 +1,9 @@
 import warnings
+from collections.abc import Callable
+from typing import Any, Literal
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from scipy.sparse import issparse
 from tqdm.auto import tqdm
@@ -86,7 +89,28 @@ class LinearExplainer(Explainer):
 
     """
 
-    def __init__(self, model, masker, link=links.identity, nsamples=1000, feature_perturbation=None, **kwargs):
+    feature_perturbation: Literal["interventional", "correlation_dependent"]
+    nsamples: int
+    coef: Any
+    intercept: Any
+    mean: npt.NDArray[np.floating[Any]]
+    cov: npt.NDArray[np.floating[Any]]
+    expected_value: float | npt.NDArray[np.floating[Any]]
+    M: int
+    valid_inds: npt.NDArray[np.intp]
+    avg_proj: npt.NDArray[np.floating[Any]]
+    mean_transformed: npt.NDArray[np.floating[Any]]
+    x_transform: npt.NDArray[np.floating[Any]]
+
+    def __init__(
+        self,
+        model: Any,
+        masker: Any,
+        link: Callable[[Any], Any] = links.identity,
+        nsamples: int = 1000,
+        feature_perturbation: None | Literal["interventional", "correlation_dependent"] = None,
+        **kwargs: Any,
+    ) -> None:
         if "feature_dependence" in kwargs:
             emsg = "The option feature_dependence has been renamed to feature_perturbation!"
             raise ValueError(emsg)
@@ -223,7 +247,9 @@ class LinearExplainer(Explainer):
                 "Unknown type of feature_perturbation provided: " + self.feature_perturbation
             )
 
-    def _estimate_transforms(self, nsamples):
+    def _estimate_transforms(
+        self, nsamples: int
+    ) -> tuple[npt.NDArray[np.floating[Any]], npt.NDArray[np.floating[Any]]]:
         """Uses block matrix inversion identities to quickly estimate transforms.
 
         After a bit of matrix math we can isolate a transform matrix (# features x # features)
@@ -288,7 +314,7 @@ class LinearExplainer(Explainer):
         return mean_transform, x_transform
 
     @staticmethod
-    def _parse_model(model):
+    def _parse_model(model: Any) -> tuple[Any, Any]:
         """Attempt to pull out the coefficients and intercept from the given model object."""
         # raw coefficients
         if isinstance(model, tuple) and len(model) == 2:
@@ -313,7 +339,7 @@ class LinearExplainer(Explainer):
         return coef, intercept
 
     @staticmethod
-    def supports_model_with_masker(model, masker):
+    def supports_model_with_masker(model: Any, masker: Any) -> bool:
         """Determines if we can parse the given model."""
         if not isinstance(masker, (maskers.Independent, maskers.Partition, maskers.Impute)):
             return False
@@ -324,7 +350,16 @@ class LinearExplainer(Explainer):
             return False
         return True
 
-    def explain_row(self, *row_args, max_evals, main_effects, error_bounds, batch_size, outputs, silent):
+    def explain_row(
+        self,
+        *row_args: Any,
+        max_evals: int | Literal["auto"],
+        main_effects: bool,
+        error_bounds: bool,
+        outputs: Any,
+        silent: bool,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Explains a single row and returns the tuple (row_values, row_expected_values, row_mask_shapes)."""
         assert len(row_args) == 1, "Only single-argument functions are supported by the Linear explainer!"
 
@@ -377,7 +412,7 @@ class LinearExplainer(Explainer):
             "clustering": None,
         }
 
-    def shap_values(self, X):
+    def shap_values(self, X: npt.NDArray[np.floating[Any]] | pd.DataFrame | pd.Series) -> npt.NDArray[np.floating[Any]]:
         """Estimate the SHAP values for a set of samples.
 
         Parameters
@@ -444,7 +479,9 @@ class LinearExplainer(Explainer):
                     )
 
 
-def duplicate_components(C):
+def duplicate_components(
+    C: npt.NDArray[np.floating[Any]],
+) -> tuple[npt.NDArray[np.floating[Any]], npt.NDArray[np.floating[Any]]]:
     D = np.diag(1 / np.sqrt(np.diag(C)))
     C = np.matmul(np.matmul(D, C), D)
     components = -np.ones(C.shape[0], dtype=int)

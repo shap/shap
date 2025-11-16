@@ -1,6 +1,8 @@
 import warnings
+from typing import Any, Literal
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from packaging import version
 
@@ -35,7 +37,17 @@ class GradientExplainer(Explainer):
 
     """
 
-    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
+    features: npt.NDArray[Any] | None
+    explainer: "_TFGradient | _PyTorchGradient"
+
+    def __init__(
+        self,
+        model: Any,
+        data: npt.NDArray[Any] | pd.DataFrame | list[Any],
+        session: Any = None,
+        batch_size: int = 50,
+        local_smoothing: float = 0,
+    ) -> None:
         """An explainer object for a differentiable model using a given background dataset.
 
         Parameters
@@ -84,7 +96,7 @@ class GradientExplainer(Explainer):
         elif framework == "pytorch":
             self.explainer = _PyTorchGradient(model, data, batch_size, local_smoothing)
 
-    def __call__(self, X, nsamples=200):
+    def __call__(self, X: Any, nsamples: int = 200) -> Explanation:
         """Return an explanation object for the model applied to X.
 
         Parameters
@@ -106,8 +118,14 @@ class GradientExplainer(Explainer):
         return Explanation(values=shap_values, data=X, feature_names=self.features)
 
     def shap_values(
-        self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False
-    ):
+        self,
+        X: Any,
+        nsamples: int = 200,
+        ranked_outputs: int | list[int] | None = None,
+        output_rank_order: Literal["max", "min", "max_abs", "custom"] = "max",
+        rseed: int | None = None,
+        return_variances: bool = False,
+    ) -> npt.NDArray[Any] | list[npt.NDArray[Any]] | tuple[Any, ...]:
         """Return the values for the model applied to X.
 
         Parameters
@@ -161,7 +179,28 @@ class GradientExplainer(Explainer):
 
 
 class _TFGradient(Explainer):
-    def __init__(self, model, data, session=None, batch_size=50, local_smoothing=0):
+    model_inputs: list[Any]
+    model_output: Any
+    multi_output: bool
+    multi_input: bool
+    data: list[npt.NDArray[Any]]
+    _num_vinputs: dict[Any, Any]
+    batch_size: int
+    local_smoothing: float
+    session: Any
+    graph: Any
+    keras_phase_placeholder: Any | None
+    gradients: list[Any]
+    model: Any
+
+    def __init__(
+        self,
+        model: Any,
+        data: npt.NDArray[Any] | pd.DataFrame | list[Any],
+        session: Any = None,
+        batch_size: int = 50,
+        local_smoothing: float = 0,
+    ) -> None:
         # try and import keras and tensorflow
         global tf, keras
         if tf is None:
@@ -226,7 +265,7 @@ class _TFGradient(Explainer):
         else:
             self.gradients = [None for i in range(self.model_output.shape[1])]
 
-    def gradient(self, i):
+    def gradient(self, i: int) -> Any:
         global tf, keras
 
         if self.gradients[i] is None:
@@ -270,8 +309,14 @@ class _TFGradient(Explainer):
         return self.gradients[i]
 
     def shap_values(
-        self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False
-    ):
+        self,
+        X: Any,
+        nsamples: int = 200,
+        ranked_outputs: int | list[int] | None = None,
+        output_rank_order: Literal["max", "min", "max_abs", "custom"] = "max",
+        rseed: int | None = None,
+        return_variances: bool = False,
+    ) -> npt.NDArray[Any] | list[npt.NDArray[Any]] | tuple[Any, ...]:
         global tf, keras
 
         import tensorflow as tf
@@ -398,7 +443,7 @@ class _TFGradient(Explainer):
             else:
                 return output_phis
 
-    def run(self, out, model_inputs, X):
+    def run(self, out: Any, model_inputs: list[Any], X: list[Any]) -> Any:
         global tf, keras
 
         if not tf.executing_eagerly():
@@ -418,7 +463,25 @@ class _TFGradient(Explainer):
 
 
 class _PyTorchGradient(Explainer):
-    def __init__(self, model, data, batch_size=50, local_smoothing=0):
+    multi_input: bool
+    model_inputs: list[Any]
+    batch_size: int
+    local_smoothing: float
+    layer: Any | None
+    input_handle: Any | None
+    interim: bool
+    data: list[Any]
+    model: Any
+    multi_output: bool
+    gradients: list[Any]
+
+    def __init__(
+        self,
+        model: Any,
+        data: npt.NDArray[Any] | list[Any],
+        batch_size: int = 50,
+        local_smoothing: float = 0,
+    ) -> None:
         import torch
 
         if version.parse(torch.__version__) < version.parse("0.4"):
@@ -474,7 +537,7 @@ class _PyTorchGradient(Explainer):
         else:
             self.gradients = [None for _ in range(outputs.shape[1])]
 
-    def gradient(self, idx, inputs):
+    def gradient(self, idx: int, inputs: list[Any]) -> list[npt.NDArray[Any]]:
         import torch
 
         self.model.zero_grad()
@@ -498,20 +561,26 @@ class _PyTorchGradient(Explainer):
         return grads
 
     @staticmethod
-    def get_interim_input(self, input, output):
+    def get_interim_input(self: Any, input: Any, output: Any) -> None:
         try:
             del self.target_input
         except AttributeError:
             pass
         self.target_input = input
 
-    def add_handles(self, layer):
+    def add_handles(self, layer: Any) -> None:
         input_handle = layer.register_forward_hook(self.get_interim_input)
         self.input_handle = input_handle
 
     def shap_values(
-        self, X, nsamples=200, ranked_outputs=None, output_rank_order="max", rseed=None, return_variances=False
-    ):
+        self,
+        X: Any,
+        nsamples: int = 200,
+        ranked_outputs: int | None = None,
+        output_rank_order: Literal["max", "min", "max_abs"] = "max",
+        rseed: int | None = None,
+        return_variances: bool = False,
+    ) -> npt.NDArray[Any] | list[npt.NDArray[Any]] | tuple[Any, ...]:
         import torch
         # X ~ self.model_input
         # X_data ~ self.data
