@@ -2256,18 +2256,17 @@ def test_check_consistent_outputs_for_causalml_causal_trees(causalml_synth_data,
         individual_effects = y_outcomes[:, 1] - y_outcomes[:, 0]
 
         np.testing.assert_allclose(preds, individual_effects, atol=1e-4)
+
+
 """Additional tests for TreeExplainer to increase coverage.
 
 These tests use synthetic data and don't rely on external datasets.
 """
 
 import numpy as np
-import pandas as pd
 import pytest
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-
-import shap
 
 
 def test_tree_explainer_with_single_tree():
