@@ -156,11 +156,14 @@ module = [
   "shap.maskers._masker",
   "shap.maskers._tabular",
   "shap.maskers._text",
+  # "shap.plots._bar",         # NOW DOCUMENTED - bar_legacy marked as potentially dead code
+  # "shap.plots._beeswarm",    # NOW DOCUMENTED - summary_legacy marked as potentially dead code
   "shap.plots._benchmark",
   "shap.plots._force_matplotlib",
   "shap.plots._force",
-  "shap.plots._text",
-  "shap.plots._waterfall",
+  # "shap.plots._scatter",     # NOW DOCUMENTED - dependence_legacy marked as potentially dead code
+  # "shap.plots._text",        # NOW DOCUMENTED - text_old, text_to_text, saliency_plot, heatmap marked as potentially dead code
+  # "shap.plots._waterfall",   # NOW DOCUMENTED - waterfall_legacy marked as potentially dead code
 ]
 check_untyped_defs = false
 
