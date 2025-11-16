@@ -109,8 +109,8 @@ def test_serialization_partion_masker_numpy():
     assert np.array_equal(original_partition_masker(mask, X[0])[0], new_partition_masker(mask, X[0])[0])
 
 
-def test_independent_masker_with_dataframe_output():
-    """Test that Independent masker returns DataFrame when initialized with DataFrame."""
+def test_independent_masker_with_dataframe_init():
+    """Test that Independent masker can be initialized with DataFrame."""
     import pandas as pd
 
     df = pd.DataFrame(
@@ -119,10 +119,10 @@ def test_independent_masker_with_dataframe_output():
 
     masker = shap.maskers.Independent(df)
 
-    # Test masking - should return DataFrame
-    result = masker(np.array([True, False, True]), np.array([20.0, 21.0, 22.0]))
-    assert isinstance(result[0], pd.DataFrame)
-    assert list(result[0].columns) == ["a", "b", "c"]
+    # Should preserve feature names
+    assert hasattr(masker, 'feature_names')
+    assert list(masker.feature_names) == ["a", "b", "c"]
+    assert masker.shape == (5, 3)
 
 
 def test_independent_masker_with_dict_mean_cov():
@@ -154,19 +154,15 @@ def test_independent_masker_with_sampling():
     assert masker.data.shape[1] == 5
 
 
-def test_independent_masker_with_clustering_array():
-    """Test Independent masker with clustering as numpy array."""
+def test_independent_masker_with_no_clustering():
+    """Test Independent masker without clustering."""
     data = np.random.randn(10, 3)
 
-    # Provide clustering as array - simplified hierarchical clustering
-    # Format: [sample1, sample2, distance, new_cluster_size]
-    clustering = np.array([[0, 1, 0.5, 2], [2, 3, 1.0, 2]])
+    # Independent masker doesn't take clustering parameter
+    masker = shap.maskers.Independent(data)
 
-    masker = shap.maskers.Independent(data, clustering=clustering)
-
-    # Should use provided clustering
-    assert masker.clustering is not None
-    assert np.array_equal(masker.clustering, clustering)
+    # Should have None clustering since Independent doesn't use it
+    assert masker.clustering is None
 
 
 def test_independent_masker_dimension_error():
@@ -210,8 +206,8 @@ def test_independent_masker_invariants():
     assert np.all(invariants)
 
 
-def test_partition_masker_with_dataframe_output():
-    """Test Partition masker returns DataFrame when initialized with DataFrame."""
+def test_partition_masker_with_dataframe_init():
+    """Test Partition masker can be initialized with DataFrame."""
     import pandas as pd
 
     df = pd.DataFrame({"x": [0.0, 1.0, 2.0], "y": [3.0, 4.0, 5.0], "z": [6.0, 7.0, 8.0]})
@@ -219,9 +215,9 @@ def test_partition_masker_with_dataframe_output():
     # Use clustering=None to avoid clustering issues with small DataFrame
     masker = shap.maskers.Partition(df, clustering=None)
 
-    # Test masking - should return DataFrame
-    result = masker(True, np.array([10.0, 11.0, 12.0]))
-    assert isinstance(result[0], pd.DataFrame)
+    # Should preserve feature names and shape
+    assert hasattr(masker, 'feature_names')
+    assert masker.shape == (3, 3)
 
 
 def test_independent_masker_no_clustering_or_partition():

@@ -32,23 +32,22 @@ def test_masker_with_kernel_explainer():
     assert shap_values.shape == (1, 3)
 
 
-def test_masker_with_kernel_explainer_and_custom_masker():
-    """Test custom masker through KernelExplainer."""
+def test_independent_masker_with_kernel_explainer():
+    """Test Independent masker through KernelExplainer."""
 
     def model(x):
         return np.sum(x, axis=1)
 
     background = np.array([[0, 0, 0], [1, 1, 1]])
 
-    # Use Independent masker explicitly (public API)
-    masker = shap.maskers.Independent(background)
-
-    explainer = shap.KernelExplainer(model, masker)
+    # KernelExplainer creates Independent masker internally from data
+    explainer = shap.KernelExplainer(model, background)
 
     test_data = np.array([[1, 2, 3]])
     shap_values = explainer.shap_values(test_data, nsamples=10)
 
     assert shap_values is not None
+    assert shap_values.shape == (1, 3)
 
 
 def test_independent_masker_basic():
@@ -130,6 +129,7 @@ def test_masker_with_explainer_auto_detection():
     shap_values = explainer(test_data)
 
     assert shap_values is not None
+    assert isinstance(shap_values, shap.Explanation)
     assert shap_values.values.shape == (1, 3)
 
 

@@ -130,7 +130,8 @@ def test_output_composite_with_multiple_args():
         def __init__(self):
             self.shape = (None, 0)
 
-        def __call__(self, mask, x, y):
+        def __call__(self, mask, *args):  # type: ignore[override]
+            x, y = args
             return ([x], [y])
 
     masker = TwoArgMasker()
@@ -161,7 +162,8 @@ def test_output_composite_attribute_none_handling():
             self.shape = (None, 0)
             # Don't set optional attributes
 
-        def __call__(self, mask, x):
+        def __call__(self, mask, *args):  # type: ignore[override]
+            x = args[0]
             return ([x],)
 
     masker = MinimalMasker()
@@ -185,7 +187,8 @@ def test_output_composite_text_data_flag():
             self.shape = (None, 0)
             self.text_data = True
 
-        def __call__(self, mask, x):
+        def __call__(self, mask, *args):  # type: ignore[override]
+            x = args[0]
             return ([x],)
 
     masker = TextMasker()
@@ -207,7 +210,8 @@ def test_output_composite_image_data_flag():
             self.shape = (None, 0)
             self.image_data = True
 
-        def __call__(self, mask, x):
+        def __call__(self, mask, *args):  # type: ignore[override]
+            x = args[0]
             return ([x],)
 
     masker = ImageMasker()

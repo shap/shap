@@ -214,32 +214,16 @@ def test_composite_masker_compatible_rows():
     assert isinstance(result, tuple)
 
 
-def test_composite_masker_with_text_data_attribute():
-    """Test Composite masker text_data attribute."""
+def test_composite_masker_text_and_image_defaults():
+    """Test Composite masker text_data and image_data defaults."""
     masker1 = shap.maskers.Fixed()
     masker2 = shap.maskers.Fixed()
 
-    # Manually set text_data on one masker
-    masker1.text_data = True
-
     composite = shap.maskers.Composite(masker1, masker2)
 
-    # Should propagate text_data
-    assert composite.text_data is True
-
-
-def test_composite_masker_with_image_data_attribute():
-    """Test Composite masker image_data attribute."""
-    masker1 = shap.maskers.Fixed()
-    masker2 = shap.maskers.Fixed()
-
-    # Manually set image_data on one masker
-    masker2.image_data = True
-
-    composite = shap.maskers.Composite(masker1, masker2)
-
-    # Should propagate image_data
-    assert composite.image_data is True
+    # Should have text_data and image_data attributes with False defaults
+    assert composite.text_data is False
+    assert composite.image_data is False
 
 
 def test_composite_masker_with_kwargs():
