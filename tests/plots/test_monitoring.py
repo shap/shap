@@ -25,10 +25,9 @@ def monitoring_data():
 def test_monitoring_basic(monitoring_data):
     """Test basic monitoring plot."""
     shap_values, features, feature_names = monitoring_data
-    fig = plt.figure()
     shap.plots.monitoring(0, shap_values, features, feature_names=feature_names, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
@@ -38,10 +37,9 @@ def test_monitoring_dataframe():
     np.random.seed(42)
     shap_values = np.random.randn(200, 3)
     features_df = pd.DataFrame(np.random.randn(200, 3), columns=["Feature 1", "Feature 2", "Feature 3"])
-    fig = plt.figure()
     shap.plots.monitoring(1, shap_values, features_df, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare(tolerance=3)
@@ -49,10 +47,9 @@ def test_monitoring_age_feature(monitoring_data):
     """Test monitoring plot for Age feature."""
     shap_values, features, feature_names = monitoring_data
     age_idx = feature_names.index("Age")
-    fig = plt.figure()
     shap.plots.monitoring(age_idx, shap_values, features, feature_names=feature_names, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 def test_monitoring_no_feature_names(monitoring_data):
@@ -69,10 +66,9 @@ def test_monitoring_long_feature_name():
     shap_values = np.random.randn(200, 3)
     features = np.random.randn(200, 3)
     feature_names = ["Short", "This is a very long feature name that should be truncated in the plot", "Medium"]
-    fig = plt.figure()
     shap.plots.monitoring(1, shap_values, features, feature_names=feature_names, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 def test_monitoring_show_true(monitoring_data, monkeypatch):

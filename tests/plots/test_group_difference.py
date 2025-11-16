@@ -38,10 +38,9 @@ def test_group_difference_1d_values(explainer):
     # Use just model outputs (1D) instead of SHAP values matrix
     model_outputs = np.random.randn(100)
     group_mask = np.random.randint(2, size=100).astype(bool)
-    fig = plt.figure()
     shap.plots.group_difference(model_outputs, group_mask, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
@@ -50,10 +49,9 @@ def test_group_difference_no_feature_names(explainer):
     np.random.seed(0)
     shap_values = explainer(explainer.data).values
     group_mask = np.random.randint(2, size=shap_values.shape[0])
-    fig = plt.figure()
     shap.plots.group_difference(shap_values, group_mask, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
@@ -63,10 +61,9 @@ def test_group_difference_no_sort(explainer):
     shap_values = explainer(explainer.data).values
     group_mask = np.random.randint(2, size=shap_values.shape[0])
     feature_names = explainer.data_feature_names
-    fig = plt.figure()
     shap.plots.group_difference(shap_values, group_mask, feature_names, sort=False, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 @pytest.mark.mpl_image_compare
@@ -76,10 +73,9 @@ def test_group_difference_max_display(explainer):
     shap_values = explainer(explainer.data).values
     group_mask = np.random.randint(2, size=shap_values.shape[0])
     feature_names = explainer.data_feature_names
-    fig = plt.figure()
     shap.plots.group_difference(shap_values, group_mask, feature_names, max_display=5, show=False)
     plt.tight_layout()
-    return fig
+    return plt.gcf()
 
 
 def test_group_difference_show_true(explainer, monkeypatch):
